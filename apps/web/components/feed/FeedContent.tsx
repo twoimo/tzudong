@@ -571,6 +571,8 @@ export default function FeedContent({
                 !isOverlay && "bg-muted/30 overflow-y-auto"
             )}
             data-testid="feed-content-container"
+            data-layout-primitives="stack"
+            data-scroll-owner="feed-list"
             onScroll={feedBottomNavAutoHide.onScroll}
             onTouchStart={feedBottomNavAutoHide.onTouchStart}
             onTouchMove={feedBottomNavAutoHide.onTouchMove}

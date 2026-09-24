@@ -433,13 +433,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "...(hosted ? { TZUDONG_HOSTED_DEV: '1' } : {}),",
     );
     expect(packageSource).toContain(
-      '"dev:clean": "node scripts/run-local-dev.mjs --port 8080 --clean"',
+      '"dev:clean": "node scripts/run-local-dev.mjs --port 3000 --clean"',
     );
     expect(packageSource).toContain(
-      '"dev:playwright": "node scripts/run-local-dev.mjs --port 8080"',
+      '"dev:playwright": "node scripts/run-local-dev.mjs --port 3000"',
     );
     expect(packageSource).toContain(
-      '"dev:turbopack": "node scripts/run-local-dev.mjs --port 8080 --turbopack"',
+      '"dev:turbopack": "node scripts/run-local-dev.mjs --port 3000 --turbopack"',
     );
   });
   test("keeps admin module state URL-backed and easy to recover", () => {
@@ -875,7 +875,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="mt-1.5 rounded-xl bg-primary/5 p-1.5"',
     );
     expect(overviewSource).toContain(
-      'className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-[11px] text-muted-foreground"',
+      'className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-2xs text-muted-foreground"',
     );
     expect(overviewSource).not.toContain(
       'className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
@@ -1632,7 +1632,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
     expect(consoleSource).toContain("min-w-44 space-y-1");
     expect(consoleSource).toContain(
-      "text-[10px] font-semibold leading-3 text-muted-foreground",
+      "text-2xs font-semibold leading-3 text-muted-foreground",
     );
     expect(consoleSource).toContain(
       "rounded-xl border border-border bg-popover px-2.5 py-1.5",
@@ -1656,7 +1656,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("dark:text-slate-950");
     expect(consoleSource).toContain("bg-teal-500 text-white dark:bg-teal-500 dark:text-white");
     expect(consoleSource).toContain("bg-muted-foreground/42 text-foreground");
-    expect(consoleSource).toContain("text-[11px] font-black leading-none");
+    expect(consoleSource).toContain("text-2xs font-black leading-none");
     expect(consoleSource).toContain(
       "bg-muted text-foreground ring-1 ring-inset ring-border/60",
     );
@@ -1709,7 +1709,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'const adminDashboardControlGroupClassName =\n  "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5"',
     );
     expect(consoleSource).toContain(
-      'const adminDashboardControlButtonClassName =\n  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-[10px] font-extrabold leading-none transition',
+      'const adminDashboardControlButtonClassName =\n  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-2xs font-extrabold leading-none transition',
     );
     expect(consoleSource).toContain(
       '"h-7 w-7 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground"',
@@ -1731,7 +1731,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-card-title-row="single-line"',
     );
     expect(consoleSource).toContain(
-      "truncate whitespace-nowrap text-[11px] font-extrabold leading-none text-foreground",
+      "truncate whitespace-nowrap text-2xs font-extrabold leading-none text-foreground",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-card-title-actions="single-line-scroll"',
@@ -1923,7 +1923,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex min-w-fit flex-nowrap items-center justify-end gap-1",
     );
     expect(consoleSource).not.toContain(
-      "grid grid-cols-3 gap-2 rounded-xl border border-border/70 bg-background/80 p-2 text-[11px]",
+      "grid grid-cols-3 gap-2 rounded-xl border border-border/70 bg-background/80 p-2 text-2xs",
     );
     expect(consoleSource).toContain("영상 성과 신호 진단");
     expect(consoleSource).toContain("score: number");
@@ -2171,13 +2171,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(topContentMetricSource).toContain("<AdminDashboardInlineTooltip");
     expect(topContentMetricSource).not.toContain('aria-hidden="true"');
     expect(consoleSource).not.toContain(
-      "mt-1 block truncate text-[11px] font-extrabold leading-4 tabular-nums text-teal-800",
+      "mt-1 block truncate text-2xs font-extrabold leading-4 tabular-nums text-teal-800",
     );
     expect(consoleSource).not.toContain(
-      "mt-0.5 block truncate text-[10px] font-black tabular-nums text-foreground/75",
+      "mt-0.5 block truncate text-2xs font-black tabular-nums text-foreground/75",
     );
     expect(consoleSource).toContain(
-      "mt-0.5 block truncate text-[10px] font-semibold tabular-nums text-foreground/70",
+      "mt-0.5 block truncate text-2xs font-semibold tabular-nums text-foreground/70",
     );
     expect(consoleSource).toContain("...row.viewBenchmarkTooltipLines");
     expect(consoleSource).toContain(
@@ -2582,7 +2582,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("calculateDashboardMetricChange");
     expect(consoleSource).toContain("calculateRecentWindowChange");
     expect(consoleSource).toContain(
-      "delta={formatDashboardChangeLabel(viewChange)}",
+      "delta={formatDashboardChangeLabel(viewCardChange)}",
     );
     expect(consoleSource).toContain(
       "delta={formatDashboardChangeLabel(likeChange)}",
@@ -2711,7 +2711,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-kpi-title-row="single-line"',
     );
     expect(consoleSource).toContain(
-      "truncate whitespace-nowrap text-[11px] font-extrabold tracking-[0.04em] text-muted-foreground",
+      "truncate whitespace-nowrap text-2xs font-extrabold tracking-[0.04em] text-muted-foreground",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-actions="single-line-scroll"',
@@ -2741,7 +2741,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "flex h-full min-h-[320px] flex-col p-3 text-xs sm:min-h-[280px]",
     );
-    expect(consoleSource).toContain("text-[12px] font-extrabold tabular-nums text-foreground sm:text-[13px]");
+    expect(consoleSource).toContain("text-[12px] font-extrabold tabular-nums text-foreground sm:text-sm");
     expect(consoleSource).toContain(
       'data-admin-dashboard-ops-summary-visual="progress-bars"',
     );
@@ -3247,7 +3247,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "--admin-sidebar-expanded-max-width: min(17.5rem, 27vw);",
     );
     expect(appGlobalsSource).toContain(
-      "--admin-sidebar-expanded-width: 14rem;",
+      "--admin-sidebar-expanded-width: calc(8.75rem * var(--phi));",
     );
     expect(appGlobalsSource).toContain(
       "width: max-content;",
@@ -4774,7 +4774,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(componentSource).toContain('variant="ghost"');
     expect(componentSource).toContain(
-      "h-8 w-full min-w-0 gap-1 rounded-lg bg-background/80 px-1.5 text-[11px] leading-none shadow-sm hover:bg-background",
+      "h-8 w-full min-w-0 gap-1 rounded-lg bg-background/80 px-1.5 text-2xs leading-none shadow-sm hover:bg-background",
     );
     expect(componentSource).toContain(
       "[&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5",
@@ -8324,9 +8324,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("adminDashboardTooltipPortalClassName");
     expect(consoleSource).toContain('side="right"');
     expect(consoleSource).toContain('dataAttribute="sidebar-collapsed"');
-    expect(consoleSource).toContain("getSidebarBadgeClassName");
     expect(consoleSource).toContain('sectionLabel === "실험실"');
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       "data-admin-sidebar-badge-tone={section.label}",
     );
     expect(appGlobalsSource).toContain(".dark {");
@@ -8783,7 +8782,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border",
     );
     expect(bannersSource).toContain(
-      'Badge variant="secondary" className="rounded-full text-[10px]"',
+      'Badge variant="secondary" className="rounded-full text-2xs"',
     );
     expect(bannersSource).not.toContain("bannersLoading && <Loader2");
     expect(bannersSource).toContain(

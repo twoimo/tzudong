@@ -968,7 +968,7 @@ function MobileControlOverlayComponent({
                             onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
                             className="flex w-max max-w-full items-center justify-between whitespace-nowrap hover:bg-accent rounded px-1 py-0.5 transition-colors"
                         >
-                            <span className="text-[10px] text-muted-foreground">{siteConfig.operator.copyrightLabel}</span>
+                            <span className="text-2xs text-muted-foreground">{siteConfig.operator.copyrightLabel}</span>
                             {isBusinessInfoExpanded ? (
                                 <ChevronUp className="h-3 w-3 text-muted-foreground ml-1" />
                             ) : (
@@ -976,7 +976,7 @@ function MobileControlOverlayComponent({
                             )}
                         </button>
                         {isBusinessInfoExpanded && (
-                            <div className="mt-1 w-max max-w-[calc(100vw-2rem)] border-t border-border pt-1 text-[9px] text-muted-foreground space-y-0.5 px-1">
+                            <div className="mt-1 w-max max-w-[calc(100vw-2rem)] border-t border-border pt-1 text-2xs text-muted-foreground space-y-0.5 px-1">
                                 <p className="font-medium text-foreground">{siteConfig.operator.companyName}</p>
                                 <p>대표: {siteConfig.operator.representative}</p>
                                 <p>사업자: {siteConfig.operator.businessRegistrationNumber}</p>
@@ -1022,7 +1022,7 @@ function MobileControlOverlayComponent({
                             className="rounded-md object-contain shrink-0"
                         />
                         <span className={cn(
-                            'text-[15px] truncate',
+                            'text-sm truncate',
                             searchQuery.trim() ? 'text-foreground' : 'text-muted-foreground'
                         )}>
                             {searchQuery.trim() || '쯔동여지도 검색하기'}
@@ -1508,11 +1508,11 @@ function MobileControlOverlayComponent({
                             >
                                 <div className="sticky top-0 z-10 -mx-1 -mt-1 bg-background/95 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/85">
                                     <div className="flex min-w-0 items-center justify-between gap-2">
-                                        <h2 className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold leading-5 text-foreground">
+                                        <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-bold leading-5 text-foreground">
                                             <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
                                             <span className="truncate">맛집 목록</span>
                                             <span
-                                                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold leading-4 text-primary-foreground"
+                                                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-2xs font-semibold leading-4 text-primary-foreground"
                                                 aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}
                                             >
                                                 {visibleMarkerRestaurantCount}곳

@@ -211,6 +211,7 @@ export function MyPageLayoutContent({
       <div
         className="flex h-full min-h-0 w-full max-w-none"
         data-mypage-viewport-layout="edge-to-edge"
+        data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
       >
         {/* 사이드바는 자체 높이를 가지며 레이아웃 내에 고정됨 */}
         {shouldShowSidebarFrame &&
@@ -224,6 +225,8 @@ export function MyPageLayoutContent({
         <div
           ref={scrollRef}
           className="flex-1 h-full min-h-0 overflow-y-auto min-w-0 overscroll-contain"
+          data-layout-primitives="scroll-body-shell"
+          data-scroll-owner="mypage-content"
           onScroll={myPageBottomNavAutoHide.onScroll}
           onTouchStart={myPageBottomNavAutoHide.onTouchStart}
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}

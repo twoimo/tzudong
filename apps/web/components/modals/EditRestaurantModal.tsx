@@ -444,7 +444,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     };
 
     const draftStatus = lastSavedAt && (
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-1 text-2xs text-muted-foreground">
             {isSaving ? (
                 <>
                     <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -803,7 +803,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     {EDIT_RESTAURANT_REQUEST_STEPS.map((step) => (
                         <div key={step.id} className="space-y-1">
                             <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
-                            <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                            <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                 {step.shortTitle}
                             </span>
                         </div>
@@ -906,7 +906,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     <DialogHeader className="relative">
                         {/* 자동 저장 상태 표시 - 좌측 상단 */}
                         {lastSavedAt && (
-                            <div className="absolute -top-1 left-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <div className="absolute -top-1 left-0 flex items-center gap-1 text-2xs text-muted-foreground">
                                 {isSaving ? (
                                     <>
                                         <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />

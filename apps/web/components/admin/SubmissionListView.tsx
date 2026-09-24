@@ -220,7 +220,7 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
             <Badge
                 variant={labelVariant === 'receipt' ? 'default' : 'secondary'}
                 className={cn(
-                    "absolute top-1 left-1 text-[10px] px-1",
+                    "absolute top-1 left-1 text-2xs px-1",
                     labelVariant === 'receipt' && "bg-yellow-600"
                 )}
             >
@@ -1070,7 +1070,7 @@ export function SubmissionListView({
         reviews.length,
     ]);
     const tabTriggerClassName = cn(
-        "h-8 gap-1.5 px-2 text-[11px] xl:h-9 xl:min-w-[128px] xl:justify-center xl:px-3 xl:text-sm",
+        "h-8 gap-1.5 px-2 text-2xs xl:h-9 xl:min-w-[128px] xl:justify-center xl:px-3 xl:text-sm",
         isMobile && "justify-center gap-1"
     );
     const listContainerClassName = "h-full min-h-0 overflow-hidden rounded-lg border bg-card";
@@ -1082,19 +1082,19 @@ export function SubmissionListView({
     );
     const listSearchInputClassName = "h-9 pl-8 pr-8 text-sm xl:h-9 xl:text-sm";
     const listCardBaseClassName = "cursor-pointer rounded-lg border p-3 transition-colors hover:bg-muted/40 xl:p-3.5";
-    const listTitleClassName = "truncate text-sm font-semibold xl:text-[15px]";
-    const listSubTextClassName = "mt-1 line-clamp-2 text-xs text-muted-foreground xl:text-[13px]";
-    const listMetaClassName = "mt-2 flex items-center justify-between text-[11px] text-muted-foreground xl:text-xs";
+    const listTitleClassName = "truncate text-sm font-semibold xl:text-sm";
+    const listSubTextClassName = "mt-1 line-clamp-2 text-xs text-muted-foreground xl:text-sm";
+    const listMetaClassName = "mt-2 flex items-center justify-between text-2xs text-muted-foreground xl:text-xs";
     const listActionButtonClassName = "h-8 px-2 text-xs xl:h-8 xl:px-2.5 xl:text-xs";
     const listActionIconButtonClassName = "ml-auto h-8 w-8 p-0";
-    const listCategoryBadgeClassName = "px-1.5 py-0 text-[10px] xl:text-[11px]";
-    const summaryBadgeBaseClassName = "px-2 py-0 text-[11px] leading-none tabular-nums xl:px-2.5 xl:text-sm";
+    const listCategoryBadgeClassName = "px-1.5 py-0 text-2xs xl:text-2xs";
+    const summaryBadgeBaseClassName = "px-2 py-0 text-2xs leading-none tabular-nums xl:px-2.5 xl:text-sm";
     const summaryBadgeWithIconClassName = cn(summaryBadgeBaseClassName, "gap-1");
-    const summaryLabelClassName = "text-[11px] text-muted-foreground xl:text-sm";
+    const summaryLabelClassName = "text-2xs text-muted-foreground xl:text-sm";
     const getTabCountBadgeVariant = (count: number) => (count > 0 ? "secondary" : "outline");
     const getTabCountBadgeClassName = (count: number) =>
         cn(
-            "ml-1 min-w-[20px] justify-center px-1.5 py-0 text-[11px] leading-none tabular-nums xl:text-sm",
+            "ml-1 min-w-[20px] justify-center px-1.5 py-0 text-2xs leading-none tabular-nums xl:text-sm",
             count > 0 ? "bg-yellow-100 text-yellow-700" : "border-border bg-muted text-muted-foreground",
             isMobile && "ml-0 min-w-[18px] px-1"
         );
@@ -1290,9 +1290,9 @@ export function SubmissionListView({
     };
     const getSubmissionQueueReasonBadgeClassName = (reason: AdminSubmissionQueueReason) =>
         cn(
-            "max-w-full rounded-full px-2 py-0 text-[10px] font-semibold leading-5 xl:text-[11px]",
+            "max-w-full rounded-full px-2 py-0 text-2xs font-semibold leading-5 xl:text-2xs",
             reason.severity === 'danger' && "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/25 dark:text-red-200",
-            reason.severity === 'warning' && "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/25 dark:text-amber-200",
+            reason.severity === 'warning' && "border-border bg-secondary text-foreground",
             reason.severity === 'info' && "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/25 dark:text-blue-200"
         );
 
@@ -1324,7 +1324,7 @@ export function SubmissionListView({
                 {placement === 'card' && summary.reasons.length > reasons.length && (
                     <Badge
                         variant="outline"
-                        className="rounded-full px-2 py-0 text-[10px] leading-5 text-muted-foreground xl:text-[11px]"
+                        className="rounded-full px-2 py-0 text-2xs leading-5 text-muted-foreground xl:text-2xs"
                         data-admin-submission-safety-badge="more"
                     >
                         +{summary.reasons.length - reasons.length}
@@ -2049,7 +2049,7 @@ export function SubmissionListView({
         >
             <div className="flex min-h-12 items-center justify-between gap-2 border-b px-3 py-2">
                 <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-primary">제보 상세 작업</p>
+                    <p className="text-2xs font-semibold text-primary">제보 상세 작업</p>
                     <h3 className="truncate text-sm font-bold">{selectedSubmission?.restaurant_name || '왼쪽 목록에서 제보를 선택하세요'}</h3>
                 </div>
                 {selectedSubmission && (
@@ -2214,7 +2214,7 @@ export function SubmissionListView({
                 </Button>
             </Label>
             {ocrRerunningIds.has(review.id) && !review.ocr_processed_at && (
-                <Card className="border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 shadow-none dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                <Card className="border-border bg-secondary p-3 text-sm text-foreground shadow-none">
                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin motion-reduce:animate-none" />
                     OCR 처리 중... {ocrCountdowns[review.id] || 0}초 후 완료 예정
                 </Card>
@@ -2281,7 +2281,7 @@ export function SubmissionListView({
         >
             <div className="flex min-h-12 items-center justify-between gap-2 border-b px-3 py-2">
                 <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-primary">리뷰 상세 작업</p>
+                    <p className="text-2xs font-semibold text-primary">리뷰 상세 작업</p>
                     <h3 className="truncate text-sm font-bold">{selectedReview?.restaurants?.name || '왼쪽 목록에서 리뷰를 선택하세요'}</h3>
                 </div>
                 {selectedReview && (
@@ -2325,7 +2325,7 @@ export function SubmissionListView({
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                         <Avatar className="h-4 w-4">
-                                            <AvatarFallback className="text-[10px]">
+                                            <AvatarFallback className="text-2xs">
                                                 {selectedReview.profiles?.nickname?.[0] || '?'}
                                             </AvatarFallback>
                                         </Avatar>
@@ -2661,7 +2661,7 @@ export function SubmissionListView({
                                     variant="outline"
                                     onClick={handleRunOcr}
                                     disabled={isOcrRunning || (ocrStatus?.pending === 0)}
-                                    className="h-8 justify-center gap-1 text-[11px]"
+                                    className="h-8 justify-center gap-1 text-2xs"
                                 >
                                     {isOcrRunning ? (
                                         <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" />
@@ -2676,7 +2676,7 @@ export function SubmissionListView({
                                     onClick={handleResetAllOcr}
                                     disabled={isOcrRunning}
                                     className={cn(
-                                        "h-8 justify-center gap-1 text-[11px] text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30"
+                                        "h-8 justify-center gap-1 text-2xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30"
                                     )}
                                 >
                                     <RefreshCw className="h-3 w-3" />
@@ -2879,7 +2879,7 @@ export function SubmissionListView({
                                                 type="button"
                                                 variant={isSelected ? "default" : "outline"}
                                                 size="sm"
-                                                className="h-7 rounded-full px-2 text-[11px]"
+                                                className="h-7 rounded-full px-2 text-2xs"
                                                 aria-pressed={isSelected}
                                                 disabled={isUnavailable}
                                                 data-admin-submission-queue-reason-filter-option={option.value}
@@ -2887,7 +2887,7 @@ export function SubmissionListView({
                                             >
                                                 {option.label}
                                                 <span className={cn(
-                                                    "ml-1 rounded-full px-1.5 py-0 text-[10px] leading-4 tabular-nums",
+                                                    "ml-1 rounded-full px-1.5 py-0 text-2xs leading-4 tabular-nums",
                                                     isSelected ? "bg-primary-foreground/15 text-primary-foreground" : "bg-muted text-muted-foreground"
                                                 )}>
                                                     {option.count}
@@ -2917,7 +2917,7 @@ export function SubmissionListView({
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
                                                         <p className={listTitleClassName}>{submission.restaurant_name}{submission.submission_type === 'recommend' && <span className="ml-1 text-xs font-normal text-primary">쯔양 제보</span>}</p>
-                                                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground xl:text-[13px]">
+                                                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground xl:text-sm">
                                                             {submission.restaurant_address || '-'}
                                                         </p>
                                                     </div>
@@ -2937,7 +2937,7 @@ export function SubmissionListView({
                                                         </Badge>
                                                     ))}
                                                     {!submission.restaurant_categories?.length && (
-                                                        <span className="text-[11px] text-muted-foreground">카테고리 없음</span>
+                                                        <span className="text-2xs text-muted-foreground">카테고리 없음</span>
                                                     )}
                                                 </div>
 
@@ -2948,7 +2948,7 @@ export function SubmissionListView({
                                                                 {submission.recommendation_reason || submission.items[0]?.tzuyang_review || '추천 사유 없음'}
                                                             </p>
                                                             {submission.items[0]?.youtube_link && (
-                                                                <p className="line-clamp-1 text-[11px] text-primary">{submission.items[0].youtube_link}</p>
+                                                                <p className="line-clamp-1 text-2xs text-primary">{submission.items[0].youtube_link}</p>
                                                             )}
                                                         </>
                                                     ) : (
@@ -2959,7 +2959,7 @@ export function SubmissionListView({
                                                                 </p>
                                                             ))}
                                                             {submission.items.length > 2 && (
-                                                                <span className="text-[10px] text-muted-foreground">
+                                                                <span className="text-2xs text-muted-foreground">
                                                                     +{submission.items.length - 2}개 리뷰
                                                                 </span>
                                                             )}

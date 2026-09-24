@@ -70,7 +70,7 @@ export function MyPageSectionFrame({
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-primary sm:text-xs">
+              <p className="text-2xs font-semibold text-primary sm:text-xs">
                 {eyebrow}
               </p>
               <h1 className="mt-0.5 truncate text-lg font-bold tracking-tight sm:mt-1 sm:text-2xl">

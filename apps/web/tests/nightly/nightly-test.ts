@@ -30,7 +30,7 @@ const LOCAL_SUPABASE_ORIGIN = (() => {
 })();
 const LOCAL_APP_ORIGIN = (() => {
     try {
-        const value = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080');
+        const value = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000');
         if (
             (value.protocol === 'http:' || value.protocol === 'https:')
             && LOOPBACK_HOSTS.has(value.hostname)
@@ -495,7 +495,7 @@ function isAllowedSupabaseFixturePath(url: URL): boolean {
 }
 function isAllowedApplicationUrl(url: URL): boolean {
     const appPort = process.env.APP_PORT?.trim()
-        || configuredUrlPort(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080');
+        || configuredUrlPort(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000');
     if (!isLoopbackUrl(url) || !appPort || url.port !== appPort) return false;
     return LOCAL_APP_PATHS.has(url.pathname)
         || url.pathname.startsWith('/_next/')

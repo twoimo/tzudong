@@ -62,7 +62,7 @@ export function AdminSystemStatusCenter({
               run_daily, 나이틀리 회귀, GDrive 후속, 검수 대기 상태를 한 곳에서 fail-closed로 봅니다.
             </p>
           </div>
-          <Badge className={cn('rounded-full px-2 py-1 text-[11px] font-semibold', tone.badge)}>
+          <Badge className={cn('rounded-full px-2 py-1 text-2xs font-semibold', tone.badge)}>
             <StatusIcon className="mr-1 h-3.5 w-3.5" />
             {viewModel.overallLabel}
           </Badge>
@@ -84,7 +84,7 @@ export function AdminSystemStatusCenter({
             >
               <p className="text-xs font-semibold">{viewModel.summary}</p>
               {hasError ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-2xs text-muted-foreground">
                   일부 API 응답을 읽지 못해 보수적으로 표시 중입니다.
                 </p>
               ) : null}
@@ -104,8 +104,8 @@ export function AdminSystemStatusCenter({
                     data-admin-system-status-pending-counts={metric.id === 'pending' ? 'true' : undefined}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11px] font-semibold text-muted-foreground">{metric.label}</p>
-                      <Badge className={cn('rounded-full px-2 py-0.5 text-[10px]', metricTone.badge)}>
+                      <p className="text-2xs font-semibold text-muted-foreground">{metric.label}</p>
+                      <Badge className={cn('rounded-full px-2 py-0.5 text-2xs', metricTone.badge)}>
                         {metric.value}
                       </Badge>
                     </div>
@@ -116,8 +116,8 @@ export function AdminSystemStatusCenter({
             </div>
             <div className="rounded-2xl border border-border/70 bg-muted/20 px-3 py-2.5" data-admin-system-status-checklist="true">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold text-muted-foreground">즉시 확인할 체크리스트</p>
-                <span className="text-[10px] text-muted-foreground">
+                <p className="text-2xs font-semibold text-muted-foreground">즉시 확인할 체크리스트</p>
+                <span className="text-2xs text-muted-foreground">
                   as of {systemStatusQuery.data?.asOf ?? '—'}
                 </span>
               </div>

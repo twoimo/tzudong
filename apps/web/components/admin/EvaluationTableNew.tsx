@@ -392,7 +392,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
               <div className="line-clamp-2 text-xs font-medium sm:text-sm">
                 {getAdminEvaluationVideoLabel(record)}
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
+              <div className="mt-1 text-2xs text-muted-foreground sm:text-xs">
                 {hasAdminEvaluationYoutubeTitle(record) ? null : '제목 없음 · '}
                 {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
               </div>
@@ -1163,7 +1163,7 @@ export function EvaluationTable({
                 <h2 id={titleId} className="line-clamp-2 text-sm font-semibold">
                   {record.restaurant_name || record.name || '이름 없음'}
                 </h2>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-2xs text-muted-foreground">
                   {publishedAt} | ID {record.id.slice(0, 8)}
                 </p>
               </div>
@@ -1209,14 +1209,14 @@ export function EvaluationTable({
                   {getAdminEvaluationVideoLabel(record)}
                 </p>
                 {!hasAdminEvaluationYoutubeTitle(record) && (
-                  <p className="mt-1 text-[11px] text-amber-700">제목 없음 · 메타 백필 필요</p>
+                  <p className="mt-1 text-2xs text-amber-700">제목 없음 · 메타 백필 필요</p>
                 )}
                 {canonicalYoutubeUrl && (
                   <a
                     href={canonicalYoutubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 truncate text-[11px] text-blue-600 hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 truncate text-2xs text-blue-600 hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
                     영상 열기
@@ -1228,10 +1228,10 @@ export function EvaluationTable({
 
             <div className="-mx-1 mt-3 overflow-x-auto px-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex min-w-max flex-nowrap gap-1.5">
-                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">방문 {visitValue}</Badge>
-                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">추론 {inferenceValue}</Badge>
-                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">근거 {groundingValue}</Badge>
-                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">주소 {geocodingText}</Badge>
+                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">방문 {visitValue}</Badge>
+                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">추론 {inferenceValue}</Badge>
+                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">근거 {groundingValue}</Badge>
+                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">주소 {geocodingText}</Badge>
               </div>
             </div>
 
@@ -1339,7 +1339,7 @@ export function EvaluationTable({
             </Button>
 
             {isExpanded && (
-              <div className="mt-2 space-y-2 rounded-xl bg-muted/35 p-2.5 text-[11px]">
+              <div className="mt-2 space-y-2 rounded-xl bg-muted/35 p-2.5 text-2xs">
                 <div>
                   <p className="font-semibold text-foreground">평가 항목</p>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">

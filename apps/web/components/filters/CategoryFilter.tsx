@@ -192,7 +192,7 @@ const CategoryFilter = ({
                             <div className="flex items-center justify-between px-2 py-2">
                                 <span className="text-xs font-medium text-muted-foreground">전체 {totalCount}개</span>
                                 {selectedCategories.length > 0 && (
-                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
                                         {selectedCategories.length}개 선택
                                     </span>
                                 )}
@@ -216,7 +216,7 @@ const CategoryFilter = ({
                                             />
                                             <span className="truncate text-sm font-medium">{category}</span>
                                         </div>
-                                        <span className="ml-3 shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                                        <span className="ml-3 shrink-0 rounded-full bg-muted px-2 py-0.5 text-2xs tabular-nums text-muted-foreground">
                                             {count}개
                                         </span>
                                     </CommandItem>

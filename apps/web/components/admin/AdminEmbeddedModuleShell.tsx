@@ -71,7 +71,7 @@ export function AdminEmbeddedModuleShell({
                 </h2>
               </div>
               <div
-                className="mt-0.5 min-w-0 truncate text-[11px] text-muted-foreground"
+                className="mt-0.5 min-w-0 truncate text-2xs text-muted-foreground"
                 data-admin-module-summary="true"
               >
                 {summary}

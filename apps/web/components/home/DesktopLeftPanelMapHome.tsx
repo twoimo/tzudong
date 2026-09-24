@@ -330,12 +330,12 @@ export default function DesktopLeftPanelMapHome({
             data-desktop-left-panel-visible-marker-restaurants="true"
           >
             <div className="mb-1 flex min-w-0 items-center justify-between gap-2 px-1">
-              <h2 className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold leading-5 text-foreground">
+              <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-bold leading-5 text-foreground">
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
                 <span className="truncate">맛집 목록</span>
               </h2>
               <span
-                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold leading-4 text-primary-foreground"
+                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-2xs font-semibold leading-4 text-primary-foreground"
                 aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}
               >
                 {visibleMarkerRestaurantCount}곳
@@ -375,11 +375,11 @@ export default function DesktopLeftPanelMapHome({
                 <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
                 <span>인기 검색 맛집</span>
               </h2>
-              <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+              <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">
                 처음 방문해도 바로 눌러볼 만한 맛집 5곳
               </p>
             </div>
-            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-2xs font-semibold text-primary">
               TOP 5
             </span>
           </div>
@@ -434,7 +434,7 @@ export default function DesktopLeftPanelMapHome({
                         </span>
                         {trendBadge ? (
                           <span
-                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${trendBadge.className}`}
+                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-bold leading-none ${trendBadge.className}`}
                             title={trendBadge.title}
                             aria-label={trendBadge.title}
                           >
@@ -471,7 +471,7 @@ export default function DesktopLeftPanelMapHome({
                 <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
                 <span>최근 추가된 맛집</span>
               </h2>
-              <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+              <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">
                 먼저 3곳을 보여주고 스크롤하면 이어서 불러와요
               </p>
             </div>
@@ -482,7 +482,7 @@ export default function DesktopLeftPanelMapHome({
               }
             >
               <SelectTrigger
-                className="!h-7 !w-[4.75rem] shrink-0 gap-1 rounded-full border-primary/15 bg-primary/10 !px-2 !text-[10px] !leading-none font-semibold text-primary shadow-none hover:bg-primary/15 focus:ring-1 focus:ring-primary [&>span]:line-clamp-1 [&>span]:text-[10px] [&>svg]:!h-3 [&>svg]:!w-3"
+                className="!h-7 !w-[4.75rem] shrink-0 gap-1 rounded-full border-primary/15 bg-primary/10 !px-2 !text-2xs !leading-none font-semibold text-primary shadow-none hover:bg-primary/15 focus:ring-1 focus:ring-primary [&>span]:line-clamp-1 [&>span]:text-2xs [&>svg]:!h-3 [&>svg]:!w-3"
                 aria-label="최근 맛집 정렬"
               >
                 <SelectValue placeholder="정렬" />

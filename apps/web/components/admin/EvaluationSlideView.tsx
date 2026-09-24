@@ -219,7 +219,7 @@ export function EvaluationSlideView({
             pending: { label: '미처리', variant: 'secondary' },
             approved: { label: '승인됨', variant: 'default' },
             hold: { label: '보류', variant: 'outline' },
-            missing: { label: 'Missing', variant: 'destructive' },
+            missing: { label: '누락', variant: 'destructive' },
             geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
             not_selected: { label: '평가 미대상', variant: 'outline' },
             deleted: { label: '삭제됨', variant: 'destructive' },

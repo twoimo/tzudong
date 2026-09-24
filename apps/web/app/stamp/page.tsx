@@ -874,6 +874,8 @@ export default function StampPage() {
                         ref={mainScrollRef}
                         className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
                         data-stamp-scroll-container="true"
+                        data-layout-primitives="list-detail stack"
+                        data-scroll-owner="stamp-list"
                         onScroll={handleMainScroll}
                         onTouchStart={stampBottomNavAutoHide.onTouchStart}
                         onTouchMove={stampBottomNavAutoHide.onTouchMove}
@@ -930,7 +932,7 @@ export default function StampPage() {
                                         >
                                             <Filter className="h-4 w-4" aria-hidden="true" />
                                             {activeFilterCount > 0 && (
-                                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
+                                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-2xs font-medium rounded-full flex items-center justify-center">
                                                     {activeFilterCount}
                                                 </span>
                                             )}

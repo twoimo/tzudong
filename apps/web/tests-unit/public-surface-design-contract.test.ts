@@ -436,7 +436,7 @@ describe('public surface design contract', () => {
     }
 
     expect(readApp('app/app-globals.css')).toContain('--primary: 0 74% 50%');
-    expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: 14rem');
+    expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: calc(8.75rem * var(--phi))');
   });
 
   test('horizontal allowlist enumerates data-horizontal-scroll-owner values only', () => {

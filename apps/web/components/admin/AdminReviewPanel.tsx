@@ -698,7 +698,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                             <span className="flex items-center gap-1">
                                                 <Avatar className="h-4 w-4">
-                                                    <AvatarFallback className="text-[10px]">
+                                                    <AvatarFallback className="text-2xs">
                                                         {selectedReview.profiles?.nickname?.[0] || '익'}
                                                     </AvatarFallback>
                                                 </Avatar>
@@ -780,7 +780,7 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                     <Avatar className="h-4 w-4">
-                                        <AvatarFallback className="text-[10px]">
+                                        <AvatarFallback className="text-2xs">
                                             {review.profiles?.nickname?.[0] || '익'}
                                         </AvatarFallback>
                                     </Avatar>

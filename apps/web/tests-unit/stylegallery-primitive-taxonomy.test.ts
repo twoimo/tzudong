@@ -494,7 +494,7 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     expect(responsiveOverflowSource).not.toContain('admin-module-header-actions');
     expect(responsiveOverflowSource).toContain('unapprovedPolicyExceptions');
   });
-  test('records the pinned unlicensed clean-room adoption boundary', () => {
+  test('records the pinned clean-room adoption boundary', () => {
     const matrix = JSON.parse(readSource('stylegallery-adoption.v1.json')) as {
       schemaVersion: number;
       source: {
@@ -514,8 +514,8 @@ describe('StyleGallery primitive taxonomy source contract', () => {
 
     expect(matrix.schemaVersion).toBe(1);
     expect(matrix.source.repository).toBe('changeroa/StyleGallery');
-    expect(matrix.source.commit).toBe('775430bbaf4ee208a642220f440f6926d79c90a3');
-    expect(matrix.source.licenseStatus).toBe('unlicensed');
+    expect(matrix.source.commit).toBe('2a9ae14e1ed1e6ebc9ec525a7c305a7cc9830b34');
+    expect(matrix.source.licenseStatus).toBe('MIT source, CC-BY-4.0 documentation');
     expect(matrix.source.usageBoundary).toContain('no upstream code, CSS, prose, names, tests, assets');
     expect(matrix.entries).toHaveLength(4);
 

@@ -200,7 +200,7 @@ function ManagementStatusSummary({ items }: { items: StatusSummaryItem[] }) {
 
 function RefreshWorkflowSteps() {
   return (
-    <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground sm:flex sm:flex-wrap">
+    <div className="grid grid-cols-2 gap-1 text-2xs text-muted-foreground sm:flex sm:flex-wrap">
       {[
         "1. 승인 맛집 스냅샷 수집",
         "2. 외부 후보와 현재값 비교",
@@ -526,13 +526,13 @@ function RefreshCandidateDetailPanel({
                   {readbackLabel(selectedCandidate.readback_state)}
                 </Badge>
                 {selectedCandidate.readback_state.checked_at ? (
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-2xs text-muted-foreground">
                     {formatDate(selectedCandidate.readback_state.checked_at)}
                   </span>
                 ) : null}
               </div>
               <p
-                className="mt-2 text-[11px]"
+                className="mt-2 text-2xs"
                 data-admin-restaurant-refresh-evidence-summary="true"
               >
                 근거:{" "}
@@ -571,7 +571,7 @@ function RefreshCandidateDetailPanel({
               />
               <span>
                 승인과 동시에 현재 맛집 값 guarded apply
-                <span className="block text-[11px]">
+                <span className="block text-2xs">
                   상호·전화·주소·좌표 변경 후보만 적용됩니다. 폐업 의심 후보는
                   자동 적용할 수 없습니다.
                 </span>

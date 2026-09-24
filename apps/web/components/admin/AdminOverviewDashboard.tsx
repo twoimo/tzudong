@@ -982,7 +982,7 @@ function AdminMapOverviewCanvas({
             {showAdminMapOverlays && (
               <span
                 className={cn(
-                  "rounded-full border px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur sm:px-2.5 sm:py-1 sm:text-[11px]",
+                  "rounded-full border px-2 py-0.5 text-2xs font-semibold shadow-sm backdrop-blur sm:px-2.5 sm:py-1 sm:text-2xs",
                   hasOverlayError
                     ? "border-destructive/30 bg-destructive/10 text-destructive"
                     : "border-border/70 bg-card/90 text-muted-foreground"
@@ -1232,7 +1232,7 @@ function AdminMapInfoPanel({
 
               <div className="absolute inset-x-0 bottom-0 bg-black/75 p-2.5 text-white">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold tracking-[0.14em] text-white/75">
+                  <p className="text-2xs font-bold tracking-[0.14em] text-white/75">
                     선택한 마커
                   </p>
                   <h2
@@ -1247,7 +1247,7 @@ function AdminMapInfoPanel({
                   {selectedRestaurant.address ?? "주소 정보 확인 필요"}
                 </p>
 
-                <div className="mt-1.5 flex flex-wrap gap-1 text-[11px] font-semibold">
+                <div className="mt-1.5 flex flex-wrap gap-1 text-2xs font-semibold">
                   <span className="max-w-full break-words rounded-full bg-white/15 px-2 py-0.5 text-white backdrop-blur [overflow-wrap:anywhere]">
                     {selectedRestaurant.category ?? "카테고리 확인"}
                   </span>
@@ -1267,7 +1267,7 @@ function AdminMapInfoPanel({
         ) : (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-bold tracking-[0.12em] text-primary">
+              <p className="text-2xs font-bold tracking-[0.12em] text-primary">
                 선택한 마커
               </p>
               <h2
@@ -1307,7 +1307,7 @@ function AdminMapInfoPanel({
         data-admin-route-export="tzudong-json-v1"
       >
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold tracking-[0.12em] text-muted-foreground">
+          <p className="text-2xs font-bold tracking-[0.12em] text-muted-foreground">
             촬영 동선
           </p>
           {isLoading ? (
@@ -1370,7 +1370,7 @@ function AdminMapInfoPanel({
               <span className="block text-xs font-bold text-foreground">
                 {preset.label}
               </span>
-              <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+              <span className="mt-0.5 block text-2xs leading-4 text-muted-foreground">
                 {preset.description}
               </span>
             </button>
@@ -1411,7 +1411,7 @@ function AdminMapInfoPanel({
           data-admin-route-readiness-panel="local-heuristic"
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold tracking-[0.12em] text-primary">
+            <p className="text-2xs font-bold tracking-[0.12em] text-primary">
               동선 준비도
             </p>
             <Badge
@@ -1426,7 +1426,7 @@ function AdminMapInfoPanel({
               {routeAhpAssessment.score.toFixed(1)}점 후보
             </Badge>
           </div>
-          <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+          <p className="mt-1 text-2xs leading-4 text-muted-foreground">
             로컬 후보 품질, 도로 경로 확보, 좌표 데이터 충분성 기준의
             준비도입니다.
             {routeModeOption
@@ -1434,7 +1434,7 @@ function AdminMapInfoPanel({
               : null}
           </p>
           {routeAhpAssessment.blockers.length > 0 && (
-            <ul className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
+            <ul className="mt-1.5 space-y-0.5 text-2xs leading-4 text-muted-foreground">
               {routeAhpAssessment.blockers.map((blocker) => (
                 <li key={blocker}>• {blocker}</li>
               ))}
@@ -1443,7 +1443,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-[11px] text-muted-foreground"
+          className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-2xs text-muted-foreground"
           data-admin-route-quality-panel="true"
         >
           <div>
@@ -1478,7 +1478,7 @@ function AdminMapInfoPanel({
 
         {directionsStatus === "fallback" && directionsFallbackMessage ? (
           <div
-            className="mt-1.5 rounded-xl border border-amber-200 bg-amber-50/80 p-2 text-[11px] leading-4 text-amber-900"
+            className="mt-1.5 rounded-xl border border-amber-200 bg-amber-50/80 p-2 text-2xs leading-4 text-amber-900"
             data-admin-directions-unavailable="true"
             role="status"
           >
@@ -1489,7 +1489,7 @@ function AdminMapInfoPanel({
 
         {routePlan.warnings.length > 0 ? (
           <div
-            className="mt-1.5 rounded-xl bg-amber-50 p-1.5 text-[11px] leading-4 text-amber-900"
+            className="mt-1.5 rounded-xl bg-amber-50 p-1.5 text-2xs leading-4 text-amber-900"
             data-admin-route-warning-list="true"
           >
             <p className="font-bold">동선 주의사항</p>
@@ -1525,7 +1525,7 @@ function AdminMapInfoPanel({
                         {restaurant.category ?? "카테고리 확인"}
                       </p>
                       {index > 0 && routePlan.legs[index - 1] && (
-                        <p className="mt-0.5 text-[11px] font-semibold text-primary">
+                        <p className="mt-0.5 text-2xs font-semibold text-primary">
                           이전 지점에서{" "}
                           {routePlan.legs[index - 1].distanceKm.toFixed(1)}km ·
                           약{" "}
@@ -1546,7 +1546,7 @@ function AdminMapInfoPanel({
               데이터가 부족하면 임의 동선을 만들지 않습니다.
             </p>
           )}
-          <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+          <p className="mt-2 text-2xs leading-4 text-muted-foreground">
             {directionsStatus === "ready"
               ? "네이버 Directions 5 기준 실제 도로 주행 경로를 지도에 표시합니다."
               : routeMode === "driving"
@@ -1554,7 +1554,7 @@ function AdminMapInfoPanel({
                 : "네이버 Directions 5는 자동차만 지원하므로 도보·혼합은 근거리 촬영 초안으로 표시합니다."}
           </p>
           <div
-            className="mt-2 rounded-xl bg-background/70 p-2 text-[11px] leading-4 text-muted-foreground"
+            className="mt-2 rounded-xl bg-background/70 p-2 text-2xs leading-4 text-muted-foreground"
             data-admin-route-export="tzudong-json-v1"
             data-admin-route-provider-cache={routeDirectionsReadback.providerCache}
             data-admin-route-candidate-source={routeCandidateReadback.candidateSource}

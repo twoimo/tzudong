@@ -720,12 +720,12 @@ export function SubmissionDetailView({
                                     <div>
                                         <p className="font-medium text-gray-900">{sanitizePlainText(result.title)}</p>
                                         <p className="text-gray-500 mt-0.5">{result.address}</p>
-                                        {result.roadAddress && <p className="text-gray-400 text-[10px]">{result.roadAddress}</p>}
+                                        {result.roadAddress && <p className="text-gray-400 text-2xs">{result.roadAddress}</p>}
                                     </div>
                                     {result.isMatch ? (
-                                        <Badge variant="default" className="bg-green-600 text-[10px] shrink-0">주소 일치</Badge>
+                                        <Badge variant="default" className="bg-green-600 text-2xs shrink-0">주소 일치</Badge>
                                     ) : (
-                                        <Badge variant="outline" className="text-gray-500 text-[10px] shrink-0">불일치</Badge>
+                                        <Badge variant="outline" className="text-gray-500 text-2xs shrink-0">불일치</Badge>
                                     )}
                                 </div>
                             ))}
@@ -927,18 +927,18 @@ export function SubmissionDetailView({
                                                     <p className="font-medium line-clamp-2">{metaData.title}</p>
                                                     <p className="text-muted-foreground">
                                                         {new Date(metaData.publishedAt).toLocaleDateString('ko-KR')} · {formatDuration(metaData.duration)}
-                                                        {metaData.is_shorts && <Badge variant="outline" className="ml-1 text-[10px]">Shorts</Badge>}
+                                                        {metaData.is_shorts && <Badge variant="outline" className="ml-1 text-2xs">Shorts</Badge>}
                                                     </p>
                                                     <div className="flex items-center gap-1">
                                                         {metaData.ads_info.is_ads ? (
                                                             <>
-                                                                <Badge variant="destructive" className="text-[10px]">광고</Badge>
+                                                                <Badge variant="destructive" className="text-2xs">광고</Badge>
                                                                 {metaData.ads_info.what_ads && metaData.ads_info.what_ads.length > 0 && (
                                                                     <span className="text-muted-foreground">({metaData.ads_info.what_ads.join(', ')})</span>
                                                                 )}
                                                             </>
                                                         ) : (
-                                                            <Badge variant="secondary" className="text-[10px]">광고 아님</Badge>
+                                                            <Badge variant="secondary" className="text-2xs">광고 아님</Badge>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1011,18 +1011,18 @@ export function SubmissionDetailView({
                                                                 <p className="text-muted-foreground">
                                                                     {originalMeta.published_at ? new Date(originalMeta.published_at).toLocaleDateString('ko-KR') : '-'}
                                                                     {originalMeta.duration && ` · ${formatDuration(originalMeta.duration)}`}
-                                                                    {originalMeta.is_shorts && <Badge variant="outline" className="ml-1 text-[10px]">Shorts</Badge>}
+                                                                    {originalMeta.is_shorts && <Badge variant="outline" className="ml-1 text-2xs">Shorts</Badge>}
                                                                 </p>
                                                                 <div className="flex items-center gap-1">
                                                                     {originalMeta.is_ads ? (
                                                                         <>
-                                                                            <Badge variant="destructive" className="text-[10px]">광고</Badge>
+                                                                            <Badge variant="destructive" className="text-2xs">광고</Badge>
                                                                             {originalMeta.what_ads && originalMeta.what_ads.length > 0 && (
                                                                                 <span className="text-muted-foreground">({originalMeta.what_ads.join(', ')})</span>
                                                                             )}
                                                                         </>
                                                                     ) : (
-                                                                        <Badge variant="secondary" className="text-[10px]">광고 아님</Badge>
+                                                                        <Badge variant="secondary" className="text-2xs">광고 아님</Badge>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -1039,7 +1039,7 @@ export function SubmissionDetailView({
                                                                         {originalYoutubeUrl}
                                                                     </a>
                                                                 ) : <span className="text-gray-400 text-xs">기존 YouTube 링크 없음</span>}
-                                                                <p className="text-[10px] text-gray-400 mt-1">메타데이터 없음</p>
+                                                                <p className="text-2xs text-gray-400 mt-1">메타데이터 없음</p>
                                                             </div>
                                                         )}
                                                     </div>

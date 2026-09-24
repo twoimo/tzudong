@@ -1335,7 +1335,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
 
                                 <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-[11px] text-muted-foreground">모드</span>
+                                    <span className="text-2xs text-muted-foreground">모드</span>
                                     <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                         {VIEW_MODE_OPTIONS.map((option) => (
                                             <Button
@@ -1343,7 +1343,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                                 size="sm"
                                                 variant={viewMode === option.value ? 'default' : 'ghost'}
                                                 onClick={() => handleSetViewMode(option.value)}
-                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
                                             >
                                                 {option.label}
                                             </Button>
@@ -1352,7 +1352,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </div>
 
                                 <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-[11px] text-muted-foreground">지표</span>
+                                    <span className="text-2xs text-muted-foreground">지표</span>
                                     <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                         {METRIC_OPTIONS.map((option) => (
                                             <Button
@@ -1360,7 +1360,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                                 size="sm"
                                                 variant={metricMode === option.value ? 'default' : 'ghost'}
                                                 onClick={() => handleSetMetricMode(option.value)}
-                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
                                             >
                                                 {option.label}
                                             </Button>
@@ -1369,7 +1369,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </div>
 
                                 <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-[11px] text-muted-foreground">기준</span>
+                                    <span className="text-2xs text-muted-foreground">기준</span>
                                     <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                         {periodOptionsForView.map((option) => (
                                             <Button
@@ -1377,7 +1377,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                                 size="sm"
                                                 variant={period === option.value ? 'default' : 'ghost'}
                                                 onClick={() => handleSetPeriod(option.value)}
-                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
                                             >
                                                 {option.label}
                                             </Button>
@@ -1386,13 +1386,13 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </div>
 
                                 <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-[11px] text-muted-foreground">클러스터</span>
+                                    <span className="text-2xs text-muted-foreground">클러스터</span>
                                     <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                         <Button
                                             size="sm"
                                             variant={clusterStep === null ? 'default' : 'ghost'}
                                             onClick={() => handleSetClusterStep(null)}
-                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                            className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
                                         >
                                             전체
                                         </Button>
@@ -1402,7 +1402,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                                 size="sm"
                                                 variant={clusterStep === step ? 'default' : 'ghost'}
                                                 onClick={() => handleSetClusterStep(step)}
-                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
                                             >
                                                 {formatClusterValueByMode(metricMode, step)}
                                             </Button>
@@ -1411,7 +1411,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </div>
 
                                 <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0 self-center order-99">
-                                    <span className="text-[11px] text-muted-foreground">색상</span>
+                                    <span className="text-2xs text-muted-foreground">색상</span>
                                     <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
                                         <div
                                             className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
@@ -1460,7 +1460,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         <div
                             id="insights-treemap-context"
                             data-insights-treemap-context="true"
-                            className="flex flex-col gap-0.5 border-t border-border/60 pt-2 text-[11px] leading-snug text-muted-foreground md:flex-row md:flex-wrap md:items-center md:gap-x-3"
+                            className="flex flex-col gap-0.5 border-t border-border/60 pt-2 text-2xs leading-snug text-muted-foreground md:flex-row md:flex-wrap md:items-center md:gap-x-3"
                         >
                             <p className="font-medium text-foreground/80">{treemapContextText}</p>
                             <p>{treemapLegendText}</p>
@@ -1525,7 +1525,11 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     }
 
     return (
-        <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">
+        <div
+            className="flex h-full min-h-0 flex-col bg-background overflow-hidden"
+            data-layout-primitives="card-grid stack"
+            data-scroll-owner="insights-dashboard"
+        >
             <div className="flex-1 min-h-0 overflow-hidden p-2 md:p-4">
                 {insightsContent}
             </div>

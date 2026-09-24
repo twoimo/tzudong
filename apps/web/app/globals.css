@@ -88,6 +88,16 @@ html[data-local-workspace="true"] [data-local-workspace-app="true"] {
 }
 
 @layer base {
+  /* `border` sets width only. Without this, the preflight shorthand paints every
+     unspecified edge with currentColor, so chips and toasts look black. */
+  *,
+  ::before,
+  ::after,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: hsl(var(--border));
+  }
+
   button,
   input,
   textarea,
