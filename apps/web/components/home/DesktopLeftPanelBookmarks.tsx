@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, type MouseEvent as ReactMouseEvent } from "react";
-import { MapPin, Trash2 } from "lucide-react";
+import { Bookmark, MapPin, Trash2 } from "lucide-react";
 import { MapPanelHeader } from "@/components/home/map-panel-chrome";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
