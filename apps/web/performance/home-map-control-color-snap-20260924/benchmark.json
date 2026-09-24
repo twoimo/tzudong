@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T17:20:00.000Z",
+  "model": "Home map controls on the desktop panel, the mobile overlay, the panel edge handle, and the left map home rows faded their colors for the default 150ms. The color now changes in one frame.",
+  "colorFramesPerHover": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "controls": 12,
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). One control is hovered at a time. Not a sampled compositor trace."
+  }
+}

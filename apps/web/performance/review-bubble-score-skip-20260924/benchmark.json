@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:36:00.000Z",
+  "model": "Bubble placement built a score object for every visible restaurant, then threw those objects away when any restaurant was already in the safe box. Scoring now stops once one restaurant is inside, and later restaurants are kept without a score.",
+  "scoreObjectsWhenAnyRestaurantIsInside": { "before": "n", "after": "k", "absolute": "n - k" },
+  "example80VisibleFirstIsInside": { "before": 80, "after": 0, "absolute": 80 },
+  "noise": {
+    "madObjects": 0,
+    "rule": "n is the visible count and k is how many restaurants were outside before the first inside one. 80 assumes the first candidate is inside. The projection and LatLng still run for every candidate. Not a sampled allocator trace."
+  }
+}

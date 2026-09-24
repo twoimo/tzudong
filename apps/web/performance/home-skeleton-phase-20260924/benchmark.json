@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-09-24T11:52:00.000Z",
+  "model": "The home static skeleton used to hide as soon as the control panel mounted. The popular and latest lists then painted their own skeletons. The static skeleton now stays until both of those first queries have settled, so the second skeleton is covered.",
+  "skeletonPhases": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "warmLoad": {
+    "homeChromeReady": true,
+    "homePanelReady": true,
+    "staticSkeletonDisplay": "none",
+    "sampledGapMs": null,
+    "rule": "This navigation reused cached list queries, so the two flags were already true together and no cold gap was sampled."
+  },
+  "noise": {
+    "madPhases": 0,
+    "rule": "Phase count is the authored sequence, not a distribution of cold loads."
+  }
+}

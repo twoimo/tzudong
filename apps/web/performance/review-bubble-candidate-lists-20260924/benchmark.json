@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:48:00.000Z",
+  "model": "Bubble selection copied every identified restaurant into one list and every reviewed restaurant into another. When any restaurant has a review, only the reviewed list is built. When every row has an id and none has a review, the input list is used.",
+  "copiedListsWhenAnyReviewExists": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "copiedListsWhenEveryRowHasAnIdAndNoReview": { "before": 2, "after": 0, "absolute": 2 },
+  "noise": {
+    "madLists": 0,
+    "rule": "Rows without ids and without reviews still copy one list in a second pass. Not a sampled allocator trace."
+  }
+}

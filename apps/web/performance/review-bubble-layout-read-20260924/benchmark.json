@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T16:34:00.000Z",
+  "model": "Review-bubble placement read the map element's layout box on every eligible render. Naver's getSize supplies the same width and height without that read. The element box is used only when getSize is missing.",
+  "forcedLayoutsPerEligibleRender": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madLayouts": 0,
+    "rule": "The projection and one LatLng per candidate restaurant still run. Not a sampled layout trace."
+  }
+}

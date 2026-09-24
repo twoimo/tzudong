@@ -10,9 +10,7 @@ import {
 } from '../lib/naver-map-toast-helpers';
 import {
     NAVER_MAP_ANNOUNCEMENT_HIDE_DELAY_MS,
-    NAVER_MAP_ONLINE_USERS_HIDE_DELAY_MS,
     NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES,
-    NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS,
     NAVER_MAP_TOAST_HIDE_DELAY_MS,
 } from '../lib/naver-map-overlay-timings';
 
@@ -104,16 +102,10 @@ describe('naver map toast helpers', () => {
         });
     });
 
-    test('keeps temporary overlay animation durations equal to their hide timers', () => {
-        expect(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.announcement).toContain(
-            `mapOverlayFade_${NAVER_MAP_ANNOUNCEMENT_HIDE_DELAY_MS / 1000}s`,
-        );
-        expect(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.restaurantCount).toContain(
-            `mapOverlayFade_${NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS / 1000}s`,
-        );
-        expect(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.onlineUsers).toContain(
-            `mapOverlayFade_${NAVER_MAP_ONLINE_USERS_HIDE_DELAY_MS / 1000}s`,
-        );
+    test('keeps temporary overlays from fading out over the map', () => {
+        expect(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.announcement).not.toContain('mapOverlayFade');
+        expect(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.restaurantCount).not.toContain('mapOverlayFade');
+        expect(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.onlineUsers).not.toContain('mapOverlayFade');
     });
 
     test('rotates through every banner announcement when multiple notices are exposed', () => {

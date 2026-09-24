@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T15:54:00.000Z",
+  "model": "Each individual marker render built an 11-part cache key string even when the restaurant object was unchanged. The visual is now stored on that object. A changed category, review, or link still rebuilds it.",
+  "keyStringsPerUnchangedMarker": { "before": 1, "after": 0, "absolute": 1 },
+  "keyArraysPerUnchangedMarker": { "before": 1, "after": 0, "absolute": 1 },
+  "example80VisibleMarkers": { "before": 160, "after": 0, "absolute": 160 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "160 is 80 markers times 2 allocations. 80 is an example, not a live Seoul count. Overlay markers still use the string key. Field comparisons still run."
+  }
+}

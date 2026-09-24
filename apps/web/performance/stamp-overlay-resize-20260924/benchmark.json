@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-09-24T10:43:00.000Z",
+  "model": "The stamp overlay draws at most 224 CSS pixels (w-56). 224*3 = 672 device pixels. The source is now 768px wide, so 768/224 = 3.43 device pixels per CSS pixel. The old 1280px frame decoded 1280*1260/768*756 = 2.78 times as many pixels. Browsers take the WebP source.",
+  "pixels": { "before": 1612800, "after": 580608, "ratio": 2.778 },
+  "webpBytes": {
+    "clear": 82216,
+    "dark": 74392,
+    "total": 156608
+  },
+  "pngBytes": {
+    "clear": { "before": 934794, "after": 343803 },
+    "dark": { "before": 913040, "after": 338795 }
+  },
+  "requestedBytes": {
+    "before": 1847834,
+    "after": 156608,
+    "absolute": 1691226,
+    "relative": 11.799
+  },
+  "noise": { "madBytes": 0, "rule": "File sizes are deterministic." }
+}

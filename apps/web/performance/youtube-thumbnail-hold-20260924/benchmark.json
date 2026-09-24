@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T11:58:00.000Z",
+  "model": "A YouTube thumbnail used to swap its visible src as soon as the next candidate was chosen. The previous bitmap now stays until the next image's load event.",
+  "visibleSrcChangesBeforeLoadPerFallback": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madCount": 0,
+    "rule": "One authored fallback step. The number of fallbacks on a real page and the blank duration were not sampled."
+  }
+}

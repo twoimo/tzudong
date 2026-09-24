@@ -28,6 +28,11 @@ function parseCanonicalOrigin(value: string, production: boolean) {
 function expectedOrigin(request: Request, env: NodeJS.ProcessEnv) {
   const production = env.NODE_ENV === 'production';
   const configured = env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!production) {
+    const requestOrigin = parseCanonicalOrigin(new URL(request.url).origin, false);
+    const requestHost = requestOrigin ? new URL(requestOrigin).hostname : '';
+    if (requestOrigin && LOOPBACK_HOSTS.has(requestHost)) return requestOrigin;
+  }
   if (configured) return parseCanonicalOrigin(configured, production);
   if (production) return null;
   return parseCanonicalOrigin(new URL(request.url).origin, false);

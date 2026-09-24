@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:52:00.000Z",
+  "model": "Every marker effect allocated a new extended-bounds object, including renders that return immediately. The map now writes south, north, west, and east into one reused object.",
+  "boundsObjectsPerMarkerEffect": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madObjects": 0,
+    "rule": "The map still reads getBounds, getSW, and getNE. Callers that want a fresh object still allocate one. Not a sampled allocator trace."
+  }
+}

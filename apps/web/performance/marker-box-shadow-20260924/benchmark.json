@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:08:00.000Z",
+  "model": "Each individual marker painted a box-shadow. While the map pans, that shadow is redrawn with the marker. The marker image no longer has a shadow.",
+  "shadowPaintsPerVisibleMarkerPerFrame": { "before": 1, "after": 0, "absolute": 1 },
+  "panShadowPaintsPerVisibleMarkerPerSecondAt60fps": { "before": 60, "after": 0, "absolute": 60 },
+  "noise": {
+    "madPaints": 0,
+    "rule": "60 is one marker times 60 frames. The live total is 60 times the visible individual marker count. Not a sampled paint trace."
+  }
+}

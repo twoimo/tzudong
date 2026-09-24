@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T16:24:00.000Z",
+  "model": "The profile avatar ring is a box-shadow, and the avatar transitioned box-shadow for the default 150ms. The ring now appears in one frame. The static shadow on the avatar stays.",
+  "ringFramesPerHover": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000), the default transition duration. The hover is mobile only because the avatar ignores pointers from md up. Not a sampled compositor trace."
+  }
+}

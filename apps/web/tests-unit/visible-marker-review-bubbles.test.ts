@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   buildVisibleMarkerReviewBubbleMapSignature,
+  buildVisibleMarkerReviewBubbleRenderToken,
+  buildVisibleRestaurantIdSignature,
   type VisibleMarkerReviewBubble,
 } from '../lib/visible-marker-review-bubbles';
 
@@ -14,6 +16,14 @@ const baseBubble: VisibleMarkerReviewBubble = {
 };
 
 describe('visible marker review bubble signatures', () => {
+  test('reuses the id signature for the same restaurant list', () => {
+    const restaurants = [{ id: 'a' }, { id: 'b' }];
+    const first = buildVisibleRestaurantIdSignature(restaurants);
+    expect(buildVisibleRestaurantIdSignature(restaurants)).toBe(first);
+    expect(first).toBe('a|b');
+    expect(buildVisibleRestaurantIdSignature([{ id: 'a' }, { id: 'b' }])).toBe('a|b');
+  });
+
   test('changes when rendered bubble content changes under the same review id', () => {
     const baseSignature = buildVisibleMarkerReviewBubbleMapSignature({
       [baseBubble.restaurantId]: baseBubble,
@@ -45,5 +55,14 @@ describe('visible marker review bubble signatures', () => {
       [secondBubble.restaurantId]: secondBubble,
       [baseBubble.restaurantId]: baseBubble,
     }));
+  });
+
+  test('reuses one bubble render token until its fields change', () => {
+    const bubble = { ...baseBubble };
+    const first = buildVisibleMarkerReviewBubbleRenderToken(bubble, false);
+    expect(buildVisibleMarkerReviewBubbleRenderToken(bubble, false)).toBe(first);
+    expect(buildVisibleMarkerReviewBubbleRenderToken(bubble, true)).not.toBe(first);
+    bubble.content = '다른 내용';
+    expect(buildVisibleMarkerReviewBubbleRenderToken(bubble, false)).not.toBe(first);
   });
 });

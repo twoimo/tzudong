@@ -233,14 +233,8 @@ describe('marker pool', () => {
 
       markerPool.release('restaurant-1');
       expect(markerPool.has('restaurant-1')).toBe(false);
-      expect(marker.classes.has('marker-fade-out')).toBe(true);
-      expect(marker.getMap()).toBe('map-1');
-      expect(markerPool.getStats().poolSize).toBe(0);
-      expect(timers.callbacks).toHaveLength(1);
-
-      timers.flush();
-      expect(marker.getMap()).toBeNull();
       expect(marker.classes.has('marker-fade-out')).toBe(false);
+      expect(marker.getMap()).toBeNull();
       expect(markerPool.getStats()).toMatchObject({ released: 1, poolSize: 1 });
 
       const reused = markerPool.acquire(
@@ -254,6 +248,38 @@ describe('marker pool', () => {
       expect(listenerRegistrations).toBe(1);
       expect(markerPool.getStats()).toMatchObject({ created: 1, reused: 1, activeCount: 1, poolSize: 0 });
       expect(markerPool.getStats().hitRate).toBe(0.5);
+    } finally {
+      timers.restore();
+    }
+  });
+
+  test('reclaims a fading marker instead of creating a second node', () => {
+    const timers = captureTimeouts();
+    try {
+      const marker = markerPool.acquire(
+        'restaurant-1',
+        makePosition('p1'),
+        { content: 'icon-1', anchor: null },
+        'map-1',
+      ) as unknown as FakeMarker;
+
+      markerPool.release('restaurant-1');
+      expect(marker.getMap()).toBeNull();
+      const reclaimed = markerPool.acquire(
+        'restaurant-1',
+        makePosition('p1'),
+        { content: 'icon-1', anchor: null },
+        'map-1',
+      ) as unknown as FakeMarker;
+
+      expect(reclaimed).toBe(marker);
+      expect(createdMarkers).toHaveLength(1);
+      expect(marker.classes.has('marker-fade-out')).toBe(false);
+      expect(marker.getMap()).toBe('map-1');
+      expect(markerPool.getStats()).toMatchObject({ created: 1, reused: 1, activeCount: 1, poolSize: 0 });
+
+      timers.flush();
+      expect(marker.getMap()).toBe('map-1');
     } finally {
       timers.restore();
     }
@@ -303,8 +329,6 @@ describe('marker pool', () => {
 
       markerPool.releaseAll();
       expect(markerPool.getStats().activeCount).toBe(0);
-      expect(timers.callbacks).toHaveLength(3);
-      timers.flush();
       expect(markerPool.getStats()).toMatchObject({ released: 3, poolSize: 3 });
     } finally {
       timers.restore();
@@ -320,10 +344,11 @@ describe('marker pool', () => {
       markerPool.clear();
       expect(markerPool.getStats().poolSize).toBe(0);
       expect(markerPool.getStats().activeCount).toBe(0);
+      expect(markerPool.getStats().released).toBe(1);
 
       timers.flush();
       expect(markerPool.getStats().poolSize).toBe(0);
-      expect(markerPool.getStats().released).toBe(0);
+      expect(markerPool.getStats().released).toBe(1);
     } finally {
       timers.restore();
     }
@@ -340,6 +365,87 @@ describe('marker pool', () => {
       expect(markerPool.getStats()).toMatchObject({ activeCount: 0, poolSize: 0 });
     } finally {
       timers.restore();
+    }
+  });
+
+  test('keeps the category image when only the review bubble changes', () => {
+    const inserted: unknown[] = [];
+    const image = {
+      getAttribute: (name: string) => (name === 'src' ? '/marker.webp' : null),
+    };
+    const markerNode = {
+      getAttribute: (name: string) => (name === 'style' ? 'width:32px' : null),
+      querySelector: (selector: string) => (selector === 'img' ? image : null),
+      querySelectorAll: () => [],
+      insertBefore: (node: unknown) => {
+        inserted.push(node);
+      },
+      parentElement: null,
+    };
+    const element = {
+      querySelector: (selector: string) => (
+        selector === '[data-testid="marker"]' ? markerNode : null
+      ),
+      classList: FakeMarker.prototype ? {
+        add: () => undefined,
+        remove: () => undefined,
+      } : undefined,
+      style: { opacity: '' },
+    };
+
+    class BubbleMarker extends FakeMarker {
+      getElement() {
+        return element as unknown as HTMLElement;
+      }
+    }
+
+    const maps = (globalThis as { window: { naver: { maps: { Marker: typeof FakeMarker } } } }).window.naver.maps;
+    maps.Marker = BubbleMarker as unknown as typeof FakeMarker;
+
+    const bubble = { id: 'bubble' };
+    const previousDocument = (globalThis as { document?: Document }).document;
+    (globalThis as { document?: unknown }).document = {
+      createElement() {
+        const content = {
+          querySelector(selector: string) {
+            if (selector === '[data-testid="marker"]') {
+              return {
+                getAttribute: (name: string) => (name === 'style' ? 'width:32px' : null),
+                querySelector: (inner: string) => (inner === 'img' ? image : null),
+              };
+            }
+            if (selector === '[data-visible-marker-review-bubble="true"]') return bubble;
+            return null;
+          },
+        };
+        return { content, innerHTML: '' };
+      },
+    };
+
+    const base = '<div data-testid="marker" style="width:32px"><img src="/marker.webp"></div>';
+    const next = `<div data-visible-marker-review-bubble="true"></div>${base}`;
+
+    try {
+      const marker = markerPool.acquire(
+        'restaurant-bubble',
+        makePosition('p'),
+        { content: base, anchor: { x: 1, y: 1 } },
+        'map',
+      ) as unknown as FakeMarker;
+
+      markerPool.acquire(
+        'restaurant-bubble',
+        makePosition('p'),
+        { content: next, anchor: { x: 1, y: 1 } },
+        'map',
+      );
+
+      expect(marker.setIconCalls).toBe(0);
+      expect(inserted).toEqual([bubble]);
+      expect(marker.getIcon().content).toBe(next);
+    } finally {
+      (globalThis as { document?: Document }).document = previousDocument;
+      installFakeNaverMaps();
     }
   });
 });

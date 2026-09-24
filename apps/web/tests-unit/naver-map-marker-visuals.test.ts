@@ -3,6 +3,14 @@ import { describe, expect, test } from 'bun:test';
 import { getNaverIndividualMarkerVisual } from '../lib/naver-map-marker-visuals';
 
 describe('naver map marker visuals', () => {
+    test('reuses the visual for the same restaurant until a displayed field changes', () => {
+        const restaurant = { categories: ['한식'], category: [] as string[] };
+        const first = getNaverIndividualMarkerVisual(restaurant, false);
+        expect(getNaverIndividualMarkerVisual(restaurant, false)).toBe(first);
+        restaurant.categories = ['분식'];
+        expect(getNaverIndividualMarkerVisual(restaurant, false).content).toContain('snack_bar');
+    });
+
     test('returns selected marker payload', () => {
         const visual = getNaverIndividualMarkerVisual({ categories: ['한식'], category: [] }, true);
         expect(visual.anchor).toEqual({ x: 18, y: 18 });

@@ -198,38 +198,76 @@ const restaurantMatchesCountryKeywords = (
  * 두 값 모두 부작용이 없어, 분기가 실제로 쓰는 것만 계산해도 결과는 같습니다.
  * 해외 국가가 선택된 경우 좌표 검사는 원래도 사용되지 않았습니다.
  */
+const modeListCache = new WeakMap<readonly Restaurant[], Partial<Record<HomeMapMode, {
+    result: Restaurant[];
+    derived: RestaurantDerivedEntry[];
+}>>>();
+let lastModeFilterExaminationCount = 0;
+
+export function getLastModeFilterExaminationCount() {
+    return lastModeFilterExaminationCount;
+}
+
 export const filterHomeMapRestaurantsByMode = (
     restaurants: readonly Restaurant[],
     mode: HomeMapMode,
     countryKeywords: readonly string[] | null,
 ) => {
-    if (!restaurants.length) return [] as Restaurant[];
+    if (!restaurants.length) return restaurants as Restaurant[];
+
+    if (!countryKeywords?.length) {
+        const cached = modeListCache.get(restaurants)?.[mode];
+        if (cached && cached.derived.length === restaurants.length) {
+            let sameDerived = true;
+            for (let index = 0; index < restaurants.length; index += 1) {
+                const restaurant = restaurants[index];
+                if (!restaurant || resolveRestaurantDerived(restaurant) !== cached.derived[index]) {
+                    sameDerived = false;
+                    break;
+                }
+            }
+            if (sameDerived) {
+                lastModeFilterExaminationCount = 0;
+                return cached.result;
+            }
+        }
+    }
 
     const countryBuckets = mode === 'overseas' && countryKeywords && countryKeywords.length
         ? resolveKeywordBuckets(countryKeywords)
         : null;
 
-    const kept: Restaurant[] = [];
+    const derived: RestaurantDerivedEntry[] = [];
+    let kept: Restaurant[] | null = null;
     for (let index = 0; index < restaurants.length; index += 1) {
         const restaurant = restaurants[index];
-        if (!restaurant) continue;
-
-        const derived = resolveRestaurantDerived(restaurant);
-
-        if (countryBuckets) {
-            if (restaurantMatchesCountryKeywords(derived, countryKeywords!, countryBuckets)) {
-                kept.push(restaurant);
-            }
+        if (!restaurant) {
+            if (!kept) kept = restaurants.slice(0, index).filter((item): item is Restaurant => Boolean(item));
             continue;
         }
 
-        if (mode === 'domestic') {
-            if (!derived.overseasByCoordinate && !derived.hasOverseasKeyword) kept.push(restaurant);
+        const entry = resolveRestaurantDerived(restaurant);
+        derived.push(entry);
+        const matches = countryBuckets
+            ? restaurantMatchesCountryKeywords(entry, countryKeywords!, countryBuckets)
+            : mode === 'domestic'
+                ? !entry.overseasByCoordinate && !entry.hasOverseasKeyword
+                : entry.overseasByCoordinate || entry.hasOverseasKeyword;
+        if (matches) {
+            if (kept) kept.push(restaurant);
             continue;
         }
-
-        if (derived.overseasByCoordinate || derived.hasOverseasKeyword) kept.push(restaurant);
+        if (!kept) {
+            kept = restaurants.slice(0, index).filter((item): item is Restaurant => Boolean(item));
+        }
     }
 
-    return kept;
+    const result = kept ?? (restaurants as Restaurant[]);
+    lastModeFilterExaminationCount = restaurants.length;
+    if (!countryBuckets && derived.length === restaurants.length) {
+        const entry = modeListCache.get(restaurants) ?? {};
+        entry[mode] = { result, derived };
+        modeListCache.set(restaurants, entry);
+    }
+    return result;
 };

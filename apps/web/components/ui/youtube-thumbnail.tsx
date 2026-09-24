@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactEventHandler } from 'react';
 import {
     getYoutubeThumbnailCandidates,
+    resolveYoutubeThumbnailCeiling,
     shouldTryNextYoutubeThumbnailCandidate,
 } from '@/lib/youtube-thumbnail';
 
@@ -47,13 +48,15 @@ export function YoutubeThumbnail({
     onError,
 }: YoutubeThumbnailProps) {
     const candidates = useMemo(
-        () => getYoutubeThumbnailCandidates(videoId),
-        [videoId],
+        () => getYoutubeThumbnailCandidates(videoId, resolveYoutubeThumbnailCeiling(sizes)),
+        [sizes, videoId],
     );
     const [candidateIndex, setCandidateIndex] = useState(0);
+    const [paintedSrc, setPaintedSrc] = useState<string | null>(null);
 
     useEffect(() => {
         setCandidateIndex(0);
+        setPaintedSrc(null);
     }, [videoId]);
 
     const safeCandidateIndex = Math.min(candidateIndex, Math.max(candidates.length - 1, 0));
@@ -68,8 +71,9 @@ export function YoutubeThumbnail({
         );
     }, [candidates.length, safeCandidateIndex]);
 
+    const probesPlaceholder = candidateDimensions?.width === 1280;
     useEffect(() => {
-        if (!src) return;
+        if (!src || !probesPlaceholder) return;
 
         let cancelled = false;
         const probe = new window.Image();
@@ -96,36 +100,64 @@ export function YoutubeThumbnail({
             probe.onload = null;
             probe.onerror = null;
         };
-    }, [advanceCandidate, candidates.length, safeCandidateIndex, src]);
+    }, [advanceCandidate, candidates.length, probesPlaceholder, safeCandidateIndex, src]);
 
     if (!src || !candidateDimensions) return null;
 
+    const paintedDimensions = paintedSrc ? getYoutubeThumbnailDimensions(paintedSrc) : undefined;
+    const incomingVisible = paintedSrc === src;
+
     return (
-        <Image
-            src={src}
-            alt={alt}
-            width={candidateDimensions.width}
-            height={candidateDimensions.height}
-            sizes={sizes}
-            quality={85}
-            priority={priority}
-            className={className}
-            style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                ...style,
-            }}
-            data-youtube-thumbnail-quality={src.split('/').pop()?.replace('.jpg', '')}
-            onLoad={onLoad}
-            onError={(event) => {
-                if (safeCandidateIndex < candidates.length - 1) {
-                    advanceCandidate();
-                } else {
-                    onError?.(event);
-                }
-            }}
-        />
+        <>
+            {paintedSrc && paintedDimensions && paintedSrc !== src ? (
+                <Image
+                    src={paintedSrc}
+                    alt=""
+                    aria-hidden
+                    width={paintedDimensions.width}
+                    height={paintedDimensions.height}
+                    sizes={sizes}
+                    quality={85}
+                    className={className}
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        ...style,
+                    }}
+                />
+            ) : null}
+            <Image
+                src={src}
+                alt={alt}
+                width={candidateDimensions.width}
+                height={candidateDimensions.height}
+                sizes={sizes}
+                quality={85}
+                priority={priority}
+                className={className}
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    ...style,
+                    opacity: incomingVisible || !paintedSrc ? style?.opacity : 0,
+                }}
+                data-youtube-thumbnail-quality={src.split('/').pop()?.replace('.jpg', '')}
+                onLoad={(event) => {
+                    setPaintedSrc(src);
+                    onLoad?.(event);
+                }}
+                onError={(event) => {
+                    if (safeCandidateIndex < candidates.length - 1) {
+                        advanceCandidate();
+                    } else {
+                        onError?.(event);
+                    }
+                }}
+            />
+        </>
     );
 }

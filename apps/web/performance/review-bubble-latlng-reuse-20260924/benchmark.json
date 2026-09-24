@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-24T17:16:00.000Z",
+  "model": "Each review-bubble viewport pass built a Naver LatLng for every candidate. The same restaurant now keeps that object while its latitude and longitude stay equal, so a repeat pass allocates none.",
+  "latLngObjectsPerRepeatPass": {
+    "before": 80,
+    "after": 0,
+    "absolute": 80,
+    "relative": null,
+    "exampleCandidates": 80
+  },
+  "noise": {
+    "madObjects": 0,
+    "rule": "Count is one constructor call per candidate on the first pass and zero on a repeat of the same restaurant objects and coordinates. A moved coordinate still allocates one. Not a sampled heap trace. Relative is unbounded because the after count is zero."
+  }
+}

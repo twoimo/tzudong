@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:56:00.000Z",
+  "model": "Each marker render built two new lists for restaurants that already had numeric coordinates. The coordinate pass now returns the same list when nothing needs a copy. A missing or string coordinate still builds one new list.",
+  "listAllocationsPerMarkerRenderWhenCoordinatesAreNumeric": { "before": 2, "after": 0, "absolute": 2 },
+  "coordinatePassesWhenCoordinatesAreNumeric": { "before": 1, "after": 1, "relative": 1 },
+  "noise": {
+    "madAllocations": 0,
+    "rule": "The marker effect calls the coordinate filter twice, once for the contextual list and once for review bubbles. Each call previously allocated one array. Not a sampled heap trace."
+  }
+}

@@ -9,7 +9,6 @@ import { LayoutProvider } from '@/contexts/LayoutContext';
 import { AnonymousHomeAuthProvider, useAuth } from '@/contexts/AuthContextBase';
 import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
 import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
-import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
 import {
     AUTH_PRIVACY_ONBOARDING_REASON,
@@ -237,7 +236,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
         <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
             <DeferredUserDataPrefetcher enabled={Boolean(user)} />
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden transition-[margin] duration-300">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <a href="#main-content" className="skip-link">
                     본문 바로가기
                 </a>
@@ -250,12 +249,10 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
             </div>
 
             {!isPublicRestrictedMode && (
-                <div className={cn('min-[1600px]:hidden transition-transform duration-300')}>
+                <div className="min-[1600px]:hidden">
                     <MobileBottomNav
-                        className="transition-transform duration-300"
                         style={{
                             transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
-                            willChange: 'transform',
                         }}
                     />
                 </div>

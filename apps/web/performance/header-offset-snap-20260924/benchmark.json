@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:24:00.000Z",
+  "model": "Dragging the home sheet between half and full height wrote a fractional header offset on every frame. That offset is the main column's top margin, so each write laid out the map. The offset now stays 0 until the sheet is fully open, then becomes the full header height once.",
+  "marginWritesPerInBetweenFrame": { "before": 1, "after": 0, "absolute": 1 },
+  "exampleWritesDuring300msDrag": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madWrites": 0,
+    "rule": "18 is round(300ms * 60 / 1000). The final 1 is the write when progress reaches 1. A drag that never reaches full height writes 0. Not a sampled layout trace."
+  }
+}

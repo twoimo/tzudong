@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:46:00.000Z",
+  "model": "When one searched restaurant stays on screen, every later viewport pass scanned the whole list again to find the same nearest neighbor. That result is cached on the list and the visible restaurant id.",
+  "fullListScansPerRepeatViewport": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madScans": 0,
+    "rule": "A new list or a different sole visible restaurant still scans once. Not a sampled trace."
+  }
+}

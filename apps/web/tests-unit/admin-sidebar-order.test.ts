@@ -16,7 +16,6 @@ describe("admin sidebar order normalization", () => {
     ]);
 
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["운영"]).toEqual([
-      "map-overlays",
       "users",
       "banners",
       "insights",
@@ -50,7 +49,7 @@ describe("admin sidebar order normalization", () => {
     expect(ADMIN_CONSOLE_MODULE_IDS.slice(0, 3)).toEqual([
       "overview",
       "routes",
-      "map-overlays",
+      "restaurants",
     ]);
   });
 
@@ -73,7 +72,6 @@ describe("admin sidebar order normalization", () => {
     ]);
 
     expect(normalized.items["운영"]).toEqual([
-      "map-overlays",
       "users",
       "banners",
       "insights",
@@ -107,7 +105,6 @@ describe("admin sidebar order normalization", () => {
     ]);
 
     expect(normalized.items["운영"]).toEqual([
-      "map-overlays",
       "banners",
       "users",
       "insights",

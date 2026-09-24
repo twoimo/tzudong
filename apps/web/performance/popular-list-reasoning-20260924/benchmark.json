@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-24T10:58:00.000Z",
+  "model": "The home popular and latest list select included reasoning_basis, which the cards do not render. Detail hydration still loads that column with the full restaurant row.",
+  "rows": 40,
+  "order": "review_count desc",
+  "bytes": { "before": 70935, "after": 59103, "absolute": 11832, "relative": 1.2 },
+  "noise": { "madBytes": 0, "rule": "Payload byte counts are one read of the live approved set." }
+}

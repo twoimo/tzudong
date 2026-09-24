@@ -1,4 +1,4 @@
-export const MARKER_IMAGE_FALLBACK = '/images/maker-images/chicken.png';
+export const MARKER_IMAGE_FALLBACK = '/images/maker-images/webp/chicken.webp';
 
 const MAX_MARKER_IMAGE_URL_LENGTH = 2048;
 const MAX_PERCENT_DECODE_PASSES = 4;

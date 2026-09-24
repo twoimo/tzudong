@@ -1,0 +1,7 @@
+{
+  "generatedAt": "2026-09-24T10:56:00.000Z",
+  "model": "The compact map query already filters status=approved, and cluster layout does not read created_at. Those two columns were still copied into every row. Detail hydration still loads the full row.",
+  "rows": 763,
+  "bytes": { "before": 341736, "after": 293608, "absolute": 48128, "relative": 1.164 },
+  "noise": { "madBytes": 0, "rule": "Payload byte counts are one read of the live approved set." }
+}

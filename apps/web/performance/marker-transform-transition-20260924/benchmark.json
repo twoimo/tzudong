@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:10:00.000Z",
+  "model": "Selecting a marker interpolated its scale for 200ms, and that transition also fought the one-shot bounce on the same transform. The scale now changes in one frame. The one-shot bounce remains.",
+  "selectionScaleFramesAt60fps": { "before": 12, "after": 1, "absolute": 11, "relative": 12 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "12 is round(200ms * 60fps / 1000). Not a sampled compositor trace."
+  }
+}

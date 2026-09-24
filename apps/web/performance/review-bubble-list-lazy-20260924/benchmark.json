@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T16:52:00.000Z",
+  "model": "Bubble placement allocated both the inside list and the score list before looking at any restaurant. Each list is now created on the first push. A placement that finds an inside restaurant and had no earlier outside restaurant does not allocate the score list.",
+  "unusedScoreListsWhenTheFirstRestaurantIsInside": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madLists": 0,
+    "rule": "An outside restaurant before the first inside one still creates the score list for those earlier rows. A placement with no projected restaurants allocates neither list. Not a sampled allocator trace."
+  }
+}

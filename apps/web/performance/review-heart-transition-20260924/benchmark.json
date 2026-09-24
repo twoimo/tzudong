@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T16:32:00.000Z",
+  "model": "The review heart animated every property for the default 150ms while the pointer was pressed. The fill now changes in one frame.",
+  "framesPerPress": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). It runs only during the active press. Not a sampled compositor trace."
+  }
+}

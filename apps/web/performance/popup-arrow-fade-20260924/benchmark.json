@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:22:00.000Z",
+  "model": "The home popup's previous and next buttons faded in over the default 150ms when the pointer entered the banner. They still appear only while the banner is hovered, in one frame.",
+  "hoverFadeFramesPerButton": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). Two buttons can fade together, so a hover can be 18 frames before this change. Not a sampled compositor trace."
+  }
+}

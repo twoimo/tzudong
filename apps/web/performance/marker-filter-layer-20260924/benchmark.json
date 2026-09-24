@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T12:18:00.000Z",
+  "model": "Each individual marker rasterized a CSS filter drop-shadow, and selection interpolated that filter for 200ms. The shadow is now a box-shadow, so pan and selection do not resample the marker bitmap through a filter.",
+  "filterLayersPerVisibleMarker": { "before": 1, "after": 0, "absolute": 1 },
+  "panSamplesPerVisibleMarkerPerSecondAt60fps": { "before": 60, "after": 0, "absolute": 60 },
+  "selectionFilterFrames": { "before": 12, "after": 0, "absolute": 12 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "60 is one filtered marker times 60 frames. 12 is round(200ms * 60fps / 1000) for the marker whose shadow changes on selection. The live pan total is 60 times the visible individual marker count. Not a sampled compositor trace."
+  }
+}

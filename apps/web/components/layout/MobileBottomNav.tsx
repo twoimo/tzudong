@@ -178,7 +178,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                 'fixed bottom-0 left-0 right-0 z-50',
                 'font-sans',
                 // 배경 및 테두리
-                'bg-background/95 backdrop-blur-md border-t border-border',
+                'bg-background/95 border-t border-border',
                 // 그리드 레이아웃
                 'grid',
                 // iOS safe area 지원
@@ -209,7 +209,6 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                         className={cn(
                             'flex flex-col items-center justify-center py-2.5 px-1',
                             'min-h-[60px]',
-                            'transition-all duration-200',
                             'relative',
                             isActive
                                 ? 'text-red-800'
@@ -218,12 +217,12 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                     >
                         {/* 활성 상태 배경 원 */}
                         {isActive && (
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-red-50 rounded-full -z-10 transition-all duration-200" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-red-50 rounded-full -z-10" />
                         )}
 
                         <Icon
                             className={cn(
-                                'h-6 w-6 mb-1 transition-all duration-200',
+                                'h-6 w-6 mb-1',
                                 isActive && 'fill-red-800/20 scale-110'
                             )}
                         />

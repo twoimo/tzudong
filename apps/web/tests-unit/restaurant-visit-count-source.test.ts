@@ -8,7 +8,8 @@ describe('restaurant visit count source contracts', () => {
 
         expect(source).toContain('export function buildRestaurantSelectFields');
         expect(source).toContain('const RESTAURANT_COMPACT_SELECT');
-        expect(source).toContain('review_count, youtube_link, tzuyang_review, source_type, status, created_at');
+        expect(source).toContain('review_count, youtube_link, source_type');
+        expect(source).toContain("'tzuyang_review'");
         expect(source).toContain('const selectFields = buildRestaurantSelectFields({');
     });
 });

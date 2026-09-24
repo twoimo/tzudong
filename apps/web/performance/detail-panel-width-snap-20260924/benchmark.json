@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T12:12:00.000Z",
+  "model": "The in-map detail shell animated its width from 0 to min(400px, 100vw-1rem) for 300ms beside a flex-1 map. Each interpolated width is a map layout. The width now changes in one frame. The home desktop detail panel already slides with transform and is outside this path.",
+  "mapLayoutFramesPerToggle": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000). Not a tile-request sample."
+  }
+}

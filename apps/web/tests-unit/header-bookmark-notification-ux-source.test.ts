@@ -37,11 +37,8 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(bookmarkSource).toContain('북마크한 맛집이 없습니다');
     expect(bookmarkSource).toContain('MapPin className="h-8 w-8 shrink-0 rounded-full bg-primary/10 p-2 text-primary');
     expect(leftPanelBookmarkSource).toContain('onClose?: () => void;');
-    expect(leftPanelBookmarkSource).toContain('aria-label="북마크 패널 닫기"');
-    expect(leftPanelBookmarkSource).toContain('className="h-9 w-9 rounded-full hover:bg-muted"');
-    expect(leftPanelBookmarkSource).toContain('flex flex-wrap items-start justify-between gap-2');
-    expect(leftPanelBookmarkSource).toContain('basis-[min(10rem,100%)]');
-    expect(leftPanelBookmarkSource).toContain('text-pretty');
+    expect(leftPanelBookmarkSource).toContain('closeLabel="북마크 패널 닫기"');
+    expect(leftPanelBookmarkSource).toContain('<MapPanelHeader');
     expect(leftPanelBookmarkSource).toContain(
       'className="group rounded-xl border border-border bg-card shadow-sm transition-colors hover:bg-accent"',
     );
@@ -89,17 +86,9 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(headerSource).toContain('router.push(`/?r=${restaurantId}&z=13`)');
     expect(headerSource).toContain("router.push('/?panel=announcement')");
     expect(leftPanelNotificationSource).toContain('onClose?: () => void;');
-    expect(leftPanelNotificationSource).toContain('aria-label="알림 패널 닫기"');
-    expect(leftPanelNotificationSource).toContain('className="h-9 w-9 rounded-full hover:bg-muted"');
-    expect(leftPanelNotificationSource).toContain('flex flex-wrap items-start justify-between gap-2');
-    expect(leftPanelNotificationSource).toContain('className="min-w-0 flex-1 basis-[min(10rem,100%)]"');
-    expect(leftPanelNotificationSource).toContain('basis-[min(10rem,100%)]');
-    expect(leftPanelNotificationSource).toContain('className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground"');
-    expect(leftPanelNotificationSource).toContain('리뷰·맛집·공지 소식을 바로 확인해요.');
-    expect(leftPanelNotificationSource).toContain('text-pretty');
-    expect(leftPanelNotificationSource).toContain('variant="secondary"');
-    expect(leftPanelNotificationSource).toContain('{isLoading ? "확인 중" : `${notifications.length}개`}');
-    expect(leftPanelNotificationSource).toContain('className="h-7 rounded-full px-2 text-2xs"');
+    expect(leftPanelNotificationSource).toContain('closeLabel="알림 패널 닫기"');
+    expect(leftPanelNotificationSource).toContain('<MapPanelHeader');
+    expect(leftPanelNotificationSource).toContain('리뷰, 맛집, 공지 소식을 확인해요');
     expect(leftPanelNotificationSource).toContain(
       '"group rounded-xl border border-border bg-card shadow-sm transition-colors hover:bg-accent"',
     );

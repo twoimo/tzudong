@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:02:00.000Z",
+  "model": "Opening mobile search faded a full-screen scrim over the map for 200ms. The scrim now appears in one frame, so the map is not sampled through a changing opacity.",
+  "scrimOpacityFramesAt60fps": { "before": 12, "after": 1, "absolute": 11, "relative": 12 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "12 is round(200ms * 60fps / 1000). Not a sampled compositor trace."
+  }
+}

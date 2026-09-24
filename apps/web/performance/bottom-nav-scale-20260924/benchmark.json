@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:20:00.000Z",
+  "model": "The mobile bottom nav scaled the active icon to 110% over 200ms and transitioned every property on the button and the active circle. The icon scale now changes in one frame. The button only transitions color.",
+  "iconScaleFramesPerTabSwitchAt60fps": { "before": 24, "after": 0, "absolute": 24 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "12 is round(200ms * 60fps / 1000) for one icon. A tab switch starts one icon and stops another, so the before count is 24. Not a sampled compositor trace."
+  }
+}

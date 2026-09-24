@@ -116,7 +116,8 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans tracking-normal;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    background-image: url("/images/ui-noise.png");
+    background-repeat: repeat;
     /* 동적 뷰포트 높이 적용 */
     height: 100%;
     min-height: var(--full-height, 100vh);
@@ -161,48 +162,6 @@ div[style*="z-index"]>div>.custom-marker {
 .custom-marker {
   transform: translateZ(0);  <-- [PERF] Removed to prevent VRAM explosion 
 } */
-
-/* 선택된 마커 애니메이션 */
-@keyframes pulse {
-
-  0%,
-  100% {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.9);
-  }
-
-  50% {
-    transform: scale(1.08);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6), 0 0 0 5px rgba(255, 255, 255, 1);
-  }
-}
-
-/* 맛집 개수 배지 fade-in/out 애니메이션 */
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) scale(0.95);
-  }
-
-  15% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
-  }
-
-  85% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateX(-50%) scale(0.95);
-  }
-}
-
-.selected-marker {
-  animation: pulse 2s infinite !important;
-}
 
 /* 페이드인 애니메이션 (위치 이동 없음) */
 @keyframes fadeIn {

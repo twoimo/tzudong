@@ -9,6 +9,12 @@ export interface RestaurantMergedMedia {
     youtubeMetas: YoutubeMeta[];
 }
 
+export interface TzuyangReviewEntry {
+    text: string;
+    title: string | null;
+    publishedAt: string | null;
+}
+
 const isNonEmptyString = (value: unknown): value is string =>
     typeof value === 'string' && value.trim().length > 0;
 
@@ -24,6 +30,26 @@ const addUniqueString = (items: string[], value: unknown) => {
     if (!items.includes(trimmed)) {
         items.push(trimmed);
     }
+};
+
+const addTzuyangReviewValue = (items: string[], value: unknown) => {
+    if (typeof value === 'string' || value == null) {
+        addUniqueString(items, value);
+        return;
+    }
+
+    if (Array.isArray(value)) {
+        value.forEach((entry) => addTzuyangReviewValue(items, entry));
+        return;
+    }
+
+    if (typeof value !== 'object') return;
+
+    const record = value as Record<string, unknown>;
+    addUniqueString(items, record.review);
+    addUniqueString(items, record.tzuyang_review);
+    addUniqueString(items, record.youtuber_review);
+    addUniqueString(items, record.text);
 };
 
 const addUniqueMeta = (items: YoutubeMeta[], value: unknown) => {
@@ -93,16 +119,54 @@ export const collectRestaurantMergedMedia = (restaurant: Restaurant | null | und
     const youtubeMetas: YoutubeMeta[] = [];
 
     restaurant.mergedYoutubeLinks?.forEach((link) => addUniqueString(youtubeLinks, link));
-    restaurant.mergedTzuyangReviews?.forEach((review) => addUniqueString(tzuyangReviews, review));
+    restaurant.mergedTzuyangReviews?.forEach((review) => addTzuyangReviewValue(tzuyangReviews, review));
+    addTzuyangReviewValue(tzuyangReviews, restaurant.tzuyang_reviews);
     restaurant.mergedYoutubeMetas?.forEach((meta) => addUniqueMeta(youtubeMetas, meta));
 
     getRestaurantRecordsByMediaDate(restaurant).forEach((record) => {
         addUniqueString(youtubeLinks, record.youtube_link);
-        addUniqueString(tzuyangReviews, record.tzuyang_review);
+        addTzuyangReviewValue(tzuyangReviews, record.tzuyang_review);
+        addTzuyangReviewValue(tzuyangReviews, (record as Restaurant).tzuyang_reviews);
         addUniqueMeta(youtubeMetas, record.youtube_meta);
     });
 
     return { youtubeLinks, tzuyangReviews, youtubeMetas };
+};
+
+const readReviewMeta = (record: RestaurantLike | undefined): Pick<TzuyangReviewEntry, 'title' | 'publishedAt'> => {
+    const meta = record?.youtube_meta as YoutubeMeta | null | undefined;
+    const title = typeof meta?.title === 'string' ? meta.title.trim() : '';
+    const publishedAt = typeof meta?.publishedAt === 'string' ? meta.publishedAt : '';
+    return {
+        title: title || null,
+        publishedAt: publishedAt || null,
+    };
+};
+
+export const collectTzuyangReviewEntries = (restaurant: Restaurant | null | undefined): TzuyangReviewEntry[] => {
+    if (!restaurant) return [];
+
+    const entries: TzuyangReviewEntry[] = [];
+    const seen = new Set<string>();
+    const push = (value: unknown, record?: RestaurantLike) => {
+        if (typeof value !== 'string') {
+            if (Array.isArray(value)) value.forEach((entry) => push(entry, record));
+            return;
+        }
+        const text = value.trim();
+        if (!text || seen.has(text)) return;
+        seen.add(text);
+        entries.push({ text, ...readReviewMeta(record) });
+    };
+
+    getRestaurantRecordsByMediaDate(restaurant).forEach((record) => {
+        push(record.tzuyang_review, record);
+        push((record as Restaurant).tzuyang_reviews, record);
+    });
+    restaurant.mergedTzuyangReviews?.forEach((review) => push(review));
+    push(restaurant.tzuyang_reviews);
+
+    return entries;
 };
 
 export const hydrateRestaurantDetailWithMergeContext = (
@@ -132,9 +196,13 @@ export const hydrateRestaurantDetailWithMergeContext = (
             ...(detailRestaurant?.mergedYoutubeLinks ?? []),
         ],
         mergedTzuyangReviews: [
+            mergeContextRestaurant?.tzuyang_review,
+            ...(mergeContextRestaurant?.tzuyang_reviews ?? []),
             ...(mergeContextRestaurant?.mergedTzuyangReviews ?? []),
+            detailRestaurant?.tzuyang_review,
+            ...(detailRestaurant?.tzuyang_reviews ?? []),
             ...(detailRestaurant?.mergedTzuyangReviews ?? []),
-        ],
+        ].filter((review): review is string => typeof review === 'string'),
         mergedYoutubeMetas: [
             ...(mergeContextRestaurant?.mergedYoutubeMetas ?? []),
             ...(detailRestaurant?.mergedYoutubeMetas ?? []),

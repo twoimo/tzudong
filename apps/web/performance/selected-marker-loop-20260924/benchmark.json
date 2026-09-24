@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:20:00.000Z",
+  "model": "A selected marker looped forever. The Naver marker bounced every 1s and the Google marker pulsed every 2s, so the compositor kept sampling that one node after the selection had settled. Each animation now runs once.",
+  "naverBounceFramesFor10sSelectionAt60fps": { "before": 600, "after": 60, "absolute": 540, "relative": 10 },
+  "googlePulseFramesFor10sSelectionAt60fps": { "before": 600, "after": 120, "absolute": 480, "relative": 5 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "60fps times the 10s hold. The Naver animation is 1s and the Google animation is 2s, so the after counts are 60 and 120. The four stylesheet copies are one rule, not four animations. Not a sampled compositor trace."
+  }
+}

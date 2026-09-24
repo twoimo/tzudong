@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:14:00.000Z",
+  "model": "The contextual restaurant signature joined visible ids on every update. It now uses the same stored id string as the swipe list. A new restaurant list still joins once.",
+  "idJoinsPerRepeatList": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madJoins": 0,
+    "rule": "The mode, zoom, and eligibility fields are still concatenated. Only the id join is skipped on a repeat of the same list. Not a sampled allocator trace."
+  }
+}

@@ -10,7 +10,7 @@ export function MapViewLoadingIndicator() {
 
 export function MapViewRestaurantCountBadge({ count }: { count: number }) {
     return (
-        <MapOverlayNotice className="absolute top-4 left-1/2 -translate-x-1/2 animate-in fade-in zoom-in duration-300 motion-reduce:animate-none">
+        <MapOverlayNotice className="absolute top-4 left-1/2 -translate-x-1/2">
             {count}개의 맛집 발견
         </MapOverlayNotice>
     );

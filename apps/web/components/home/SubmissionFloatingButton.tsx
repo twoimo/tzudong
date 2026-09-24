@@ -89,7 +89,6 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     className={cn(
                         isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
                         "rounded-full shadow-sm",
-                        "transition-colors duration-150 ease-out motion-reduce:transition-none",
                         "flex items-center justify-center",
                         "border",
                         showUserSubmittedMarkers
@@ -115,7 +114,6 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
                     "rounded-full shadow-sm",
                     "bg-red-800 hover:bg-red-900 text-white",
-                    "transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none",
                     "active:scale-95",
                     "flex items-center justify-center",
                     "border border-border/20"
@@ -134,7 +132,6 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     className={cn(
                         isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
                         "rounded-full shadow-sm",
-                        "transition-colors duration-150 ease-out motion-reduce:transition-none",
                         "flex items-center justify-center",
                         "border",
                         isDeviceHeadingMode

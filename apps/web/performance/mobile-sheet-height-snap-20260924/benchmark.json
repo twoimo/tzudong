@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:20:00.000Z",
+  "model": "After a mobile sheet drag, height and corner radius transitioned for the default 150ms. The map offset follows the sheet state immediately, so the animated height lagged behind the map. The sheet now uses the target height in one frame. Dragging still updates height directly.",
+  "heightFramesAfterSheetSettleAt60fps": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60fps / 1000), the default CSS transition duration. Not a sampled layout trace."
+  }
+}

@@ -159,9 +159,9 @@ export const StampCard = memo(function StampCard({
         return (
             <Card
                 className={cn(
-                    "group relative flex min-h-[76px] items-stretch gap-2 overflow-hidden rounded-xl border border-border bg-card p-2 transition-[background-color,box-shadow,border-color] duration-200",
+                    "group relative flex min-h-[76px] items-stretch gap-2 overflow-hidden rounded-xl border border-border bg-card p-2 [content-visibility:auto] [contain-intrinsic-size:auto_76px]",
                     isGuideCard ? "cursor-default" : "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                    showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:bg-accent/35 hover:shadow-md",
+                    showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:bg-accent/35",
                     isSelected && "ring-2 ring-primary"
                 )}
                 onClick={handleCardOpen}
@@ -195,11 +195,6 @@ export const StampCard = memo(function StampCard({
                             <span className="truncate">{displayAddress}</span>
                         </p>
                     )}
-                    {typedRestaurant.tzuyang_review && (
-                        <p className="truncate text-2xs leading-3.5 text-muted-foreground">
-                            “{typedRestaurant.tzuyang_review}”
-                        </p>
-                    )}
                 </div>
 
                 <div className="relative h-16 shrink-0 self-center overflow-hidden rounded-lg bg-muted" style={{ width: '5rem', minWidth: '5rem' }}>
@@ -209,8 +204,8 @@ export const StampCard = memo(function StampCard({
                             alt={`${restaurantDisplayName} 썸네일`}
                             sizes="112px"
                             className={cn(
-                                "h-full w-full object-cover transition-[filter,opacity,transform] duration-300",
-                                showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
+                                "h-full w-full object-cover",
+                                showStamp ? "grayscale opacity-60" : ""
                             )}
                             style={{ objectFit: 'cover' }}
                         />
@@ -226,9 +221,9 @@ export const StampCard = memo(function StampCard({
     return (
         <Card
             className={cn(
-                "relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm transition-[box-shadow,border-color,transform] duration-300 group",
+                "relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm group [content-visibility:auto] [contain-intrinsic-size:auto_148px]",
                 isGuideCard ? "cursor-default" : "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
+                showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "",
                 isSelected && "ring-2 ring-primary"
             )}
             onClick={handleCardOpen}
@@ -243,10 +238,10 @@ export const StampCard = memo(function StampCard({
                         <YoutubeThumbnail
                             videoId={currentVideoId}
                             alt={`${restaurantDisplayName} 썸네일`}
-                            sizes="(max-width: 768px) 100vw, (max-width: 1536px) 25vw, 20vw"
+                            sizes="(max-width: 480px) 100vw, 320px"
                             className={cn(
-                                "w-full h-full object-cover transition-[filter,opacity,transform] duration-300",
-                                showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
+                                "w-full h-full object-cover",
+                                showStamp ? "grayscale opacity-60" : ""
                             )}
                             style={{ objectFit: 'cover' }}
                         />
@@ -326,20 +321,26 @@ export const StampCard = memo(function StampCard({
                                     </button>
                                 )}
                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                    <picture>
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <source srcSet="/images/stamp-clear.webp" type="image/webp" />
                                     <img
                                         src="/images/stamp-clear.png"
                                         alt="방문 완료"
                                         className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg dark:hidden")}
                                         style={stampImageStyle}
                                     />
+                                    </picture>
+                                    <picture>
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <source srcSet="/images/stamp-clear-dark.webp" type="image/webp" />
                                     <img
                                         src="/images/stamp-clear-dark.png"
                                         alt="방문 완료"
                                         className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg hidden dark:block")}
                                         style={stampImageStyle}
                                     />
+                                    </picture>
                                 </div>
                             </div>
                         )}

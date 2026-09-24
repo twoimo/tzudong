@@ -7,13 +7,16 @@ import {
     getRestaurantsWithRenderableCoordinates,
     hasNaverMarkerCoordinates,
     getSeoulIndividualRestaurantsForRender,
+    getLastViewportExaminationCount,
     getVisibleRestaurantsForRender,
+    getVisibleRestaurantIdSet,
     nextEmptyIdentityArray,
     resolveEmptyClusterMarkerCleanupPlan,
     resolveSkippedEmptyThemeMarkerPlan,
     shouldClearEmptyClusterState,
     shouldReportNaverMarkerRenderPerformance,
 } from '../lib/naver-map-render-plan';
+import { isRestaurantInViewport } from '../lib/naver-map-view-helpers';
 
 const makeRestaurant = (overrides: Partial<Restaurant> = {}): Restaurant => ({
     id: overrides.id ?? 'restaurant-1',
@@ -56,6 +59,55 @@ describe('naver map render plan helpers', () => {
         expect(result.map((restaurant) => restaurant.id)).toEqual(['selected', 'visible']);
     });
 
+    test('examines only the viewport cells for a small window in a large list', () => {
+        const restaurants = Array.from({ length: 1000 }, (_, index) => makeRestaurant({
+            id: `r-${index}`,
+            lat: 33 + (index % 50) * 0.1,
+            lng: 126 + Math.floor(index / 50) * 0.1,
+        }));
+        const bounds = { south: 37.45, north: 37.55, west: 126.95, east: 127.05 };
+        const result = getVisibleRestaurantsForRender(restaurants, null, bounds, true);
+        const fullScan = restaurants.filter((restaurant) => isRestaurantInViewport(restaurant, bounds));
+        expect(result.map((restaurant) => restaurant.id)).toEqual(fullScan.map((restaurant) => restaurant.id));
+        expect(getLastViewportExaminationCount()).toBeLessThan(restaurants.length);
+    });
+
+    test('reuses the visible list when a small pan keeps the same restaurants', () => {
+        const restaurants = [
+            makeRestaurant({ id: 'a', lat: 37.50, lng: 127.00 }),
+            makeRestaurant({ id: 'b', lat: 37.52, lng: 127.02 }),
+            ...Array.from({ length: 40 }, (_, index) => makeRestaurant({
+                id: `far-${index}`,
+                lat: 33 + index * 0.05,
+                lng: 129,
+            })),
+        ];
+        const first = getVisibleRestaurantsForRender(
+            restaurants,
+            null,
+            { south: 37.40, north: 37.60, west: 126.90, east: 127.10 },
+            true,
+        );
+        const shifted = getVisibleRestaurantsForRender(
+            restaurants,
+            null,
+            { south: 37.41, north: 37.61, west: 126.91, east: 127.11 },
+            true,
+        );
+        const narrowed = getVisibleRestaurantsForRender(
+            restaurants,
+            null,
+            { south: 37.49, north: 37.51, west: 126.99, east: 127.01 },
+            true,
+        );
+
+        expect(first.map((restaurant) => restaurant.id)).toEqual(['a', 'b']);
+        expect(shifted).toBe(first);
+        expect(getVisibleRestaurantIdSet(first)).toBe(getVisibleRestaurantIdSet(first));
+        expect(narrowed.map((restaurant) => restaurant.id)).toEqual(['a']);
+        expect(narrowed).not.toBe(first);
+    });
+
     test('keeps only restaurants that can produce Naver marker coordinates', () => {
         const result = getRestaurantsWithRenderableCoordinates([
             makeRestaurant({ id: 'valid', lat: 37.5, lng: 127.0 }),
@@ -65,6 +117,15 @@ describe('naver map render plan helpers', () => {
         ]);
 
         expect(result.map((restaurant) => restaurant.id)).toEqual(['valid', 'zero-lat']);
+    });
+
+    test('reuses the input list when every restaurant already has numeric coordinates', () => {
+        const restaurants = [
+            makeRestaurant({ id: 'first', lat: 37.5, lng: 127.0 }),
+            makeRestaurant({ id: 'second', lat: 37.6, lng: 127.1 }),
+        ];
+
+        expect(getRestaurantsWithRenderableCoordinates(restaurants)).toBe(restaurants);
     });
 
     test('treats numeric coordinate strings as renderable marker coordinates', () => {
@@ -116,6 +177,43 @@ describe('naver map render plan helpers', () => {
         expect(ids[0]).toContain('restaurant-visible');
         expect(ids[1]).toContain('searched-searched');
         expect(ids[2]).toContain('regional-서울:2:37.500000:127.000000');
+        const again = buildRenderTargetIdsForSignature({
+            activeSearchedRestaurant: makeRestaurant({ id: 'searched', lat: 38, lng: 128 }),
+            selectedRestaurant: null,
+            clusters: [],
+            displayRestaurantIds: new Set(['visible']),
+            displayRestaurants: restaurants,
+            mergedRestaurantById: new Map(),
+            nextIsClusterMode: false,
+            nextIsRegionalClusterMode: true,
+            nextIsSeoulDistrictMode: false,
+            regionalClusters: [{ region: '서울', count: 2, center: { lat: 37.5, lng: 127.0 }, categories: ['한식', '분식'] }] as any,
+            restaurantById: new Map(),
+            seoulClustersToRender: [],
+            seoulIndividualIds: [],
+        });
+        expect(again).not.toBe(ids);
+    });
+
+    test('reuses render target ids when the source lists are the same', () => {
+        const restaurants = [makeRestaurant({ id: 'visible' })];
+        const args = {
+            activeSearchedRestaurant: null,
+            selectedRestaurant: null,
+            clusters: [],
+            displayRestaurantIds: new Set(['visible']),
+            displayRestaurants: restaurants,
+            mergedRestaurantById: new Map<string, Restaurant>(),
+            nextIsClusterMode: false,
+            nextIsRegionalClusterMode: false,
+            nextIsSeoulDistrictMode: false,
+            regionalClusters: [],
+            restaurantById: new Map<string, Restaurant>(),
+            seoulClustersToRender: [],
+            seoulIndividualIds: [],
+        };
+        const first = buildRenderTargetIdsForSignature(args);
+        expect(buildRenderTargetIdsForSignature(args)).toBe(first);
     });
 
     test('includes visit count in marker render signature', () => {

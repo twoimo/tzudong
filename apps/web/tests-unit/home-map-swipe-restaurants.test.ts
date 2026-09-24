@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   dedupeHomeMapRestaurants,
+  getLastDedupeExaminationCount,
   hasSameSwipeCoordinates,
   isSameRestaurantForSwipe,
 } from '../lib/home-map-swipe-restaurants';
@@ -148,7 +149,11 @@ describe('home map swipe restaurant dedupe', () => {
   test('maps an empty list, a single row, and falsy rows without throwing', () => {
     expect(dedupeHomeMapRestaurants([])).toEqual([]);
     const only = makeRestaurant({ id: 'only' });
-    expect(dedupeHomeMapRestaurants([only])).toEqual([only]);
+    const onlyList = [only];
+    expect(dedupeHomeMapRestaurants(onlyList)).toBe(onlyList);
+    expect(getLastDedupeExaminationCount()).toBe(1);
+    expect(dedupeHomeMapRestaurants(onlyList)).toBe(onlyList);
+    expect(getLastDedupeExaminationCount()).toBe(0);
     expect(dedupeHomeMapRestaurants([null as unknown as Restaurant, only]).map((row) => row.id))
       .toEqual(['only']);
   });

@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T12:42:00.000Z",
+  "model": "Stamp thumbnails transitioned opacity for 300ms. A newly loaded image therefore spent 300ms partially transparent on top of the previous frame. Opacity is no longer animated, so the loaded image replaces the previous one in one paint. Filter and transform transitions remain for the visited-stamp state.",
+  "opacityFramesPerThumbnailRevealAt60fps": { "before": 18, "after": 0, "absolute": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000) for one thumbnail. Not a sampled paint trace."
+  }
+}

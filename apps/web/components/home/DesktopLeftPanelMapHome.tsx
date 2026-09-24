@@ -177,6 +177,13 @@ export default function DesktopLeftPanelMapHome({
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
   });
+  useEffect(() => {
+    if (isLoading || isLatestLoading) return;
+    document.documentElement.dataset.homePanelReady = "true";
+  }, [isLatestLoading, isLoading]);
+  useEffect(() => () => {
+    delete document.documentElement.dataset.homePanelReady;
+  }, []);
   const latestRestaurants = useMemo(
     () =>
       latestRestaurantPages?.pages.flatMap((page) => page.restaurants) ?? [],
@@ -418,7 +425,7 @@ export default function DesktopLeftPanelMapHome({
                     key={restaurant.id}
                     type="button"
                     onClick={() => handleRestaurantOpen(restaurant)}
-                    className="group flex w-full items-center gap-2 px-1 py-2 text-left transition-colors hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                    className="group flex w-full items-center gap-2 px-1 py-2 text-left hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                     aria-label={`${restaurant.name} 인기 맛집 상세 보기`}
                   >
                     <span
@@ -564,7 +571,7 @@ export default function DesktopLeftPanelMapHome({
                       <button
                         type="button"
                         onClick={showMoreLatestRestaurants}
-                        className="text-xs font-semibold text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        className="text-xs font-semibold text-primary hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                         aria-label="최근 추가된 맛집 더 보기"
                       >
                         스크롤하면 더 보여드릴게요

@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:00:00.000Z",
+  "model": "A pan that changed which restaurants were visible scanned the viewport cells twice: once to compare with the previous set, then again to build the new set. Both happen in one pass. A matching pan still returns the previous list without a new set. The id buffer is reused.",
+  "cellScansWhenMembershipChanges": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "idSetsWhenMembershipIsUnchanged": { "before": 0, "after": 0, "absolute": 0 },
+  "noise": {
+    "madScans": 0,
+    "rule": "The unchanged path still walks the touched cells. The id buffer grows to the largest visible count and is then reused. Not a sampled profiler trace."
+  }
+}

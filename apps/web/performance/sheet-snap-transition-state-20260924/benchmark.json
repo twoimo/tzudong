@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:58:00.000Z",
+  "model": "Ending a mobile sheet drag stored a 175–295ms height transition and re-rendered to apply it. The sheet height is already set directly, so that transition state is gone.",
+  "snapTransitionRendersPerGesture": { "before": 2, "after": 0, "absolute": 2 },
+  "snapTransitionMs": { "before": 235, "after": 0, "absolute": 235 },
+  "noise": {
+    "madRenders": 0,
+    "rule": "2 is one update when the drag starts and one when it ends. 235ms is the base duration. Flick and long drags used 175ms and 295ms. Not a sampled frame trace."
+  }
+}

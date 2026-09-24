@@ -158,7 +158,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                     <div className="space-y-4">
                         {[1, 2, 3].map((i) => (
                             <Card key={i} className="p-0 overflow-hidden">
-                                <div className="animate-pulse">
+                                <div>
                                     <div className="w-full aspect-square bg-muted" />
                                     <div className="p-3 space-y-2">
                                         <div className="h-3 bg-muted rounded w-1/4" />

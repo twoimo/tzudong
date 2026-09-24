@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import {
   getYoutubeThumbnailCandidates,
+  resolveYoutubeThumbnailCeiling,
   getYoutubeThumbnailUrl,
   shouldTryNextYoutubeThumbnailCandidate,
 } from '@/lib/youtube-thumbnail';
@@ -49,6 +50,13 @@ describe('YouTube link helpers', () => {
       'https://img.youtube.com/vi/abc123DEF45/default.jpg',
     ]);
     expect(getYoutubeThumbnailCandidates(null)).toEqual([]);
+    expect(resolveYoutubeThumbnailCeiling('112px')).toBe('hqdefault');
+    expect(resolveYoutubeThumbnailCeiling('(max-width: 400px) 100vw, 400px')).toBe('sddefault');
+    expect(resolveYoutubeThumbnailCeiling('(max-width: 480px) 100vw, 320px')).toBe('sddefault');
+    expect(resolveYoutubeThumbnailCeiling('(max-width: 1536px) 25vw')).toBe('sddefault');
+    expect(getYoutubeThumbnailCandidates('abc123DEF45', 'sddefault')[0]).toBe(
+      'https://img.youtube.com/vi/abc123DEF45/sddefault.jpg',
+    );
   });
 
   test('skips tiny YouTube placeholder images before the final fallback', () => {

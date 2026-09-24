@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:40:00.000Z",
+  "model": "Selecting a restaurant that was already in the loaded list copied the whole list into a new swipe array. That new array also threw away the viewport cell index. The same list is now returned, so neither the copy nor the index rebuild happens. A restaurant that is not in the list is still appended.",
+  "loadedListCopiesWhenSelectionIsAlreadyVisible": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madCopies": 0,
+    "rule": "One copy of the loaded list per selection of an already listed restaurant. The copy length is the loaded restaurant count. Not a sampled heap trace."
+  }
+}

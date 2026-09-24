@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:22:00.000Z",
+  "model": "A selected marker bounced for 1s by animating transform. The selected scale remains, and the bounce animation no longer runs.",
+  "bounceFramesPerSelectionAt60fps": { "before": 60, "after": 0, "absolute": 60 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "60 is one 1s animation times 60fps. Not a sampled compositor trace."
+  }
+}

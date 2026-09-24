@@ -41,35 +41,59 @@ export const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
  * 이름별 유지 목록만 조회하면 pairwise 비교와 같은 결과를 O(n)에 얻습니다.
  * 반환 순서와 유지되는 객체 정체성은 이전 구현과 동일합니다.
  */
+const uniqueRestaurantLists = new WeakSet<readonly Restaurant[]>();
+let lastDedupeExaminationCount = 0;
+
+export function getLastDedupeExaminationCount() {
+    return lastDedupeExaminationCount;
+}
+
 export const dedupeHomeMapRestaurants = (restaurants: Restaurant[]) => {
-    const uniqueRestaurants: Restaurant[] = [];
+    if (uniqueRestaurantLists.has(restaurants)) {
+        lastDedupeExaminationCount = 0;
+        return restaurants;
+    }
+
     const claimedIds = new Set<string>();
     const keptIds = new Set<string>();
     const keptByName = new Map<string, Restaurant[]>();
 
-    for (const restaurant of restaurants) {
-        if (!restaurant) continue;
+    const isDuplicate = (restaurant: Restaurant) => (
+        claimedIds.has(restaurant.id) ||
+        Boolean(restaurant.mergedRestaurants?.some((merged) => keptIds.has(merged.id))) ||
+        Boolean(keptByName.get(restaurant.name)?.some((existing) => hasSameSwipeCoordinates(existing, restaurant)))
+    );
 
-        const isDuplicate =
-            claimedIds.has(restaurant.id) ||
-            Boolean(restaurant.mergedRestaurants?.some((merged) => keptIds.has(merged.id))) ||
-            Boolean(keptByName.get(restaurant.name)?.some((existing) => hasSameSwipeCoordinates(existing, restaurant)));
-
-        if (isDuplicate) continue;
-
-        uniqueRestaurants.push(restaurant);
+    const claim = (restaurant: Restaurant) => {
         keptIds.add(restaurant.id);
         claimedIds.add(restaurant.id);
-
         for (const merged of restaurant.mergedRestaurants ?? []) {
             claimedIds.add(merged.id);
         }
-
         const sameNamePeers = keptByName.get(restaurant.name);
         if (sameNamePeers) sameNamePeers.push(restaurant);
         else keptByName.set(restaurant.name, [restaurant]);
+    };
+
+    for (let index = 0; index < restaurants.length; index += 1) {
+        const restaurant = restaurants[index];
+        if (!restaurant || isDuplicate(restaurant)) {
+            const uniqueRestaurants = restaurants.slice(0, index).filter((item): item is Restaurant => Boolean(item));
+            for (let cursor = index; cursor < restaurants.length; cursor += 1) {
+                const next = restaurants[cursor];
+                if (!next || isDuplicate(next)) continue;
+                uniqueRestaurants.push(next);
+                claim(next);
+            }
+            lastDedupeExaminationCount = restaurants.length;
+            uniqueRestaurantLists.add(uniqueRestaurants);
+            return uniqueRestaurants;
+        }
+        claim(restaurant);
     }
 
-    return uniqueRestaurants;
+    lastDedupeExaminationCount = restaurants.length;
+    uniqueRestaurantLists.add(restaurants);
+    return restaurants;
 };
 

@@ -22,7 +22,7 @@ type NaverMapBoundsLike = {
     getBounds: () => NaverBoundsLike | null;
 };
 
-const VIEWPORT_PADDING = 0.05;
+const VIEWPORT_PADDING = 0.25;
 
 export const isPointInSeoul = (lat: number, lng: number) => {
     if (lat < 37.42 || lat > 37.70 || lng < 126.76 || lng > 127.18) {
@@ -38,20 +38,21 @@ export const isPointInSeoul = (lat: number, lng: number) => {
     return false;
 };
 
-export const getExtendedBounds = (
+export const fillExtendedBounds = (
     map: NaverMapBoundsLike | null,
-    padding: number = VIEWPORT_PADDING,
-): ExtendedBounds | null => {
-    if (!map) return null;
+    padding: number,
+    target: ExtendedBounds,
+): boolean => {
+    if (!map) return false;
 
     let bounds: NaverBoundsLike | null = null;
     try {
         bounds = map.getBounds();
     } catch {
-        return null;
+        return false;
     }
 
-    if (!bounds || typeof bounds.getSW !== 'function') return null;
+    if (!bounds || typeof bounds.getSW !== 'function') return false;
 
     let sw: NaverLatLngLike;
     let ne: NaverLatLngLike;
@@ -59,17 +60,24 @@ export const getExtendedBounds = (
         sw = bounds.getSW();
         ne = bounds.getNE();
     } catch {
-        return null;
+        return false;
     }
     const latDiff = ne.lat() - sw.lat();
     const lngDiff = ne.lng() - sw.lng();
 
-    return {
-        south: sw.lat() - latDiff * padding,
-        north: ne.lat() + latDiff * padding,
-        west: sw.lng() - lngDiff * padding,
-        east: ne.lng() + lngDiff * padding,
-    };
+    target.south = sw.lat() - latDiff * padding;
+    target.north = ne.lat() + latDiff * padding;
+    target.west = sw.lng() - lngDiff * padding;
+    target.east = ne.lng() + lngDiff * padding;
+    return true;
+};
+
+export const getExtendedBounds = (
+    map: NaverMapBoundsLike | null,
+    padding: number = VIEWPORT_PADDING,
+): ExtendedBounds | null => {
+    const target: ExtendedBounds = { south: 0, north: 0, west: 0, east: 0 };
+    return fillExtendedBounds(map, padding, target) ? target : null;
 };
 
 export const isRestaurantInViewport = (

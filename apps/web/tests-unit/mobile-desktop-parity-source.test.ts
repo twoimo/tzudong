@@ -460,7 +460,7 @@ describe("mobile and desktop parity source contracts", () => {
       "rounded-full border border-border bg-background/95",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
+      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0",

@@ -1,25 +1,25 @@
 import type { Restaurant } from '@/types/restaurant';
 
 export const CATEGORY_ICON_MAP: Record<string, string> = {
-    '고기': '/images/maker-images/meat_bbq.png',
-    '치킨': '/images/maker-images/chicken.png',
-    '한식': '/images/maker-images/korean.png',
-    '중식': '/images/maker-images/chinese.png',
-    '일식': '/images/maker-images/cutlet_sashimi.png',
-    '양식': '/images/maker-images/western.png',
-    '분식': '/images/maker-images/snack_bar.png',
-    '카페·디저트': '/images/maker-images/cafe_dessert.png',
-    '아시안': '/images/maker-images/asian.png',
-    '패스트푸드': '/images/maker-images/fastfood.png',
-    '족발·보쌈': '/images/maker-images/pork_feet.png',
-    '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
-    '피자': '/images/maker-images/pizza.png',
-    '찜·탕': '/images/maker-images/stew.png',
-    '야식': '/images/maker-images/late_night.png',
-    '도시락': '/images/maker-images/lunch_box.png',
+    '고기': '/images/maker-images/webp/meat_bbq.webp',
+    '치킨': '/images/maker-images/webp/chicken.webp',
+    '한식': '/images/maker-images/webp/korean.webp',
+    '중식': '/images/maker-images/webp/chinese.webp',
+    '일식': '/images/maker-images/webp/cutlet_sashimi.webp',
+    '양식': '/images/maker-images/webp/western.webp',
+    '분식': '/images/maker-images/webp/snack_bar.webp',
+    '카페·디저트': '/images/maker-images/webp/cafe_dessert.webp',
+    '아시안': '/images/maker-images/webp/asian.webp',
+    '패스트푸드': '/images/maker-images/webp/fastfood.webp',
+    '족발·보쌈': '/images/maker-images/webp/pork_feet.webp',
+    '돈까스·회': '/images/maker-images/webp/cutlet_sashimi.webp',
+    '피자': '/images/maker-images/webp/pizza.webp',
+    '찜·탕': '/images/maker-images/webp/stew.webp',
+    '야식': '/images/maker-images/webp/late_night.webp',
+    '도시락': '/images/maker-images/webp/lunch_box.webp',
 };
 
-export const DEFAULT_OVERSEAS_ICON = '/images/maker-images/asian.png';
+export const DEFAULT_OVERSEAS_ICON = '/images/maker-images/webp/asian.webp';
 export const DEFAULT_OVERSEAS_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
 export const MIN_OVERSEAS_ZOOM = 2;
 export const MAX_OVERSEAS_ZOOM = 22;

@@ -29,7 +29,7 @@ export const MOBILE_COMPACT_FORM_SHEET: BottomSheetPreset = {
 export const mobileSheetStyles = {
     frame: 'flex min-h-[100dvh] flex-col bg-background',
     centeredFrame: 'flex min-h-0 max-h-[calc(100dvh-2rem)] flex-col bg-background',
-    header: 'sticky top-0 z-10 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur',
+    header: 'sticky top-0 z-10 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
     compactHeader: 'border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
     title: 'text-xl font-semibold leading-tight text-foreground',
     compactTitle: 'text-lg font-semibold leading-tight text-foreground',
@@ -38,7 +38,7 @@ export const mobileSheetStyles = {
     compactContent: 'space-y-4 px-4 py-4',
     section: 'rounded-xl border border-border/70 bg-card/80 p-4 shadow-sm',
     mutedSection: 'rounded-xl border border-border/70 bg-muted/70 p-4 shadow-sm',
-    footer: 'sticky bottom-0 z-10 border-t bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur',
+    footer: 'sticky bottom-0 z-10 border-t bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3',
     actionRow: 'flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center',
     primaryAction: 'bg-primary text-primary-foreground hover:bg-primary/90',
     meta: 'text-2xs leading-none text-muted-foreground',
@@ -114,7 +114,7 @@ export function MobileSheetStepIndicator({ steps, currentStep, className }: Mobi
                     <li
                         key={step.id}
                         className={cn(
-                            'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
+                            'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium',
                             isCurrent && 'border-primary/40 bg-primary/10 text-primary',
                             isComplete && 'border-green-200 bg-green-50 text-green-700 dark:border-green-950 dark:bg-green-950/30 dark:text-green-200',
                             !isCurrent && !isComplete && 'border-border/70 bg-muted/40 text-muted-foreground'

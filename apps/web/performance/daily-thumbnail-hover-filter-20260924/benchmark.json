@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:14:00.000Z",
+  "model": "The daily recommendation thumbnail brightened through a filter transition on hover. The hover filter is gone, so the image does not animate brightness.",
+  "hoverFilterFrames": { "before": 9, "after": 0, "absolute": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000), the default transition duration for transition-all. It runs only while the pointer is over the thumbnail. Not a sampled compositor trace."
+  }
+}

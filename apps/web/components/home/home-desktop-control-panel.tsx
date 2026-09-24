@@ -10,6 +10,7 @@ import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
 } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
@@ -21,12 +22,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+const loadDropdownMenu = () => import("@/components/ui/dropdown-menu");
+const DropdownMenu = dynamic(() => loadDropdownMenu().then((mod) => mod.DropdownMenu), {
+  loading: () => (
+    <Button
+      variant="ghost"
+      size="icon"
+      type="button"
+      aria-label="지도 메뉴 열기"
+      className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+      data-desktop-map-menu-trigger="true"
+    >
+      <Menu className="h-5 w-5" aria-hidden="true" />
+    </Button>
+  ),
+});
+const DropdownMenuContent = dynamic(() =>
+  loadDropdownMenu().then((mod) => mod.DropdownMenuContent),
+);
+const DropdownMenuItem = dynamic(() =>
+  loadDropdownMenu().then((mod) => mod.DropdownMenuItem),
+);
+const DropdownMenuTrigger = dynamic(() =>
+  loadDropdownMenu().then((mod) => mod.DropdownMenuTrigger),
+);
 import RegionSelector from "@/components/region/RegionSelector";
 import DesktopLeftPanelMapHome from "@/components/home/DesktopLeftPanelMapHome";
 import CategoryFilter from "@/components/filters/CategoryFilter";
@@ -43,7 +62,13 @@ import HydratedDetailRestaurant from "@/components/home/HydratedDetailRestaurant
 // Import through the deferred-panel barrel: it carries the
 // app/home-detail-globals.css Tailwind entry, without which restaurant/review
 // utilities (top-2, bg-black/70, ring-1, ...) never reach the home route CSS.
-import { RestaurantDetailPanel } from "@/components/map/map-view-deferred-panels";
+const RestaurantDetailPanel = dynamic(
+  () =>
+    import("@/components/map/map-view-deferred-panels").then(
+      (mod) => mod.RestaurantDetailPanel,
+    ),
+  { loading: () => null },
+);
 import { cn } from "@/lib/utils";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import { toast } from "@/lib/no-toast";
@@ -521,7 +546,7 @@ function DesktopMapSettingsPanel({
                     aria-pressed={isSelected}
                     onClick={() => applyPreset(preset)}
                     className={cn(
-                      "rounded-2xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none",
+                      "rounded-2xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none",
                       isSelected
                         ? "border-primary/40 bg-primary/5 text-foreground"
                         : "border-border bg-background hover:border-primary/25 hover:bg-secondary/50",
@@ -745,7 +770,9 @@ function buildOptimisticDetailRestaurant(
     youtube_meta: restaurant.youtube_meta ?? null,
     evaluation_results: restaurant.evaluation_results ?? null,
     reasoning_basis: restaurant.reasoning_basis ?? null,
-    tzuyang_review: restaurant.tzuyang_review ?? null,
+    ...("tzuyang_review" in restaurant
+      ? { tzuyang_review: restaurant.tzuyang_review ?? null }
+      : {}),
     trace_id: restaurant.trace_id ?? null,
     origin_address: restaurant.origin_address ?? null,
     road_address: restaurant.road_address ?? null,
@@ -1522,7 +1549,7 @@ export default function HomeDesktopControlPanel({
                     aria-label={`${theme.ariaLabel}${isSelected ? " 선택됨" : ""}`}
                     title={`${theme.label}: ${theme.description}`}
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-sm backdrop-blur-sm transition-colors motion-reduce:transition-none",
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-sm motion-reduce:transition-none",
                       "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
@@ -1546,7 +1573,7 @@ export default function HomeDesktopControlPanel({
           >
             {onModeChange && (
               <div
-                className="flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-sm backdrop-blur-sm"
+                className="flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-sm"
                 data-desktop-map-mode-toggle="true"
               >
                 <Button
@@ -1556,7 +1583,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "domestic"}
                   aria-label="국내 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
                     mapMode === "domestic"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1571,7 +1598,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "overseas"}
                   aria-label="해외 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
                     mapMode === "overseas"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1586,7 +1613,7 @@ export default function HomeDesktopControlPanel({
                 selectedRegion={selectedRegion}
                 onRegionChange={onRegionChange}
                 onRegionSelect={onSearchExecute}
-                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm backdrop-blur-sm hover:bg-secondary/80"
+                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80"
                 contentSide="top"
                 contentAlign="start"
               />
@@ -1595,7 +1622,7 @@ export default function HomeDesktopControlPanel({
                 value={selectedCountry || undefined}
                 onValueChange={onCountryChange}
               >
-                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm backdrop-blur-sm hover:bg-secondary/80">
+                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80">
                   <SelectValue placeholder="해외 지역" />
                 </SelectTrigger>
                 <SelectContent
@@ -1617,7 +1644,7 @@ export default function HomeDesktopControlPanel({
               onCategoryChange={onCategoryChange}
               selectedRegion={mapMode === "domestic" ? selectedRegion : null}
               selectedCountry={mapMode === "overseas" ? selectedCountry : null}
-              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm backdrop-blur-sm hover:bg-secondary/80"
+              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80"
               contentSide="top"
               contentAlign="start"
             />
@@ -1631,7 +1658,6 @@ export default function HomeDesktopControlPanel({
         className={cn(
           "desktop-left-panel-scrollbarless absolute inset-y-0 z-[90] flex w-[min(392px,calc(100vw-32px))] flex-col border-border bg-background shadow-sm",
           desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r",
-          "transition-transform duration-300 ease-out motion-reduce:transition-none",
           isPanelCollapsed
             ? desktopPanelSide === "right"
               ? "translate-x-full"
@@ -1652,7 +1678,7 @@ export default function HomeDesktopControlPanel({
             type="button"
             onClick={onTogglePanelCollapse}
             className={cn(
-              "group absolute top-1/2 z-50 flex h-12 w-6 -translate-y-1/2 items-center justify-center border border-border bg-background shadow-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+              "group absolute top-1/2 z-50 flex h-12 w-6 -translate-y-1/2 items-center justify-center border border-border bg-background shadow-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               desktopPanelSide === "right"
                 ? "left-0 -translate-x-full rounded-l-lg border-r-0"
                 : "right-0 translate-x-full rounded-r-lg border-l-0",
@@ -1698,7 +1724,7 @@ export default function HomeDesktopControlPanel({
           >
             <div
               className={cn(
-                "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
+                "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5",
               )}
               data-desktop-left-panel-search-bar="true"
               onClick={activateDesktopSearch}

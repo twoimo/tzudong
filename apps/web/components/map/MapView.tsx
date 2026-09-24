@@ -326,7 +326,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       // 지도 이동
-      map.panTo({ lat: position.lat, lng: adjustedLng });
+      map.setCenter({ lat: position.lat, lng: adjustedLng });
 
       // 이동 완료 표시
       lastCenteredRestaurantId.current = selectedRestaurant.id;

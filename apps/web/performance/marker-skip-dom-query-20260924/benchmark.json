@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T12:56:00.000Z",
+  "model": "A skipped marker render asked the document for a cluster node and then for an individual marker. The pool already knows how many markers are on the map, so the skip uses that count.",
+  "documentWalksPerSkippedRender": { "before": 2, "after": 0, "absolute": 2 },
+  "noise": {
+    "madWalks": 0,
+    "rule": "querySelector stops at the first match, so a walk can be shorter than the whole document. Two calls still start from the document root. Not a sampled trace."
+  }
+}

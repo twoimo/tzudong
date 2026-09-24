@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:26:00.000Z",
+  "model": "Cluster category rotation is already off, but the map still subscribed an icon updater whenever the cluster lists changed. That subscription is skipped while rotation is off.",
+  "listenerRegistrationsPerClusterUpdate": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madRegistrations": 0,
+    "rule": "The updater does not run because rotation is not started. This count is the subscribe and unsubscribe pair that used to happen on each cluster-list change. Not a sampled profiler trace."
+  }
+}

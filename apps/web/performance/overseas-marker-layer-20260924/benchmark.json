@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:18:00.000Z",
+  "model": "Each overseas map marker reserved a transform layer for its whole lifetime. The marker element no longer does that. MapLibre still positions the marker.",
+  "permanentTransformLayersPerMarker": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madLayers": 0,
+    "rule": "One layer per marker element. The count on screen is the visible overseas marker count. Not a sampled compositor trace."
+  }
+}

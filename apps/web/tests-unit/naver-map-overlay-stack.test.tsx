@@ -76,7 +76,7 @@ describe('NaverMapOverlayStack', () => {
         expect(html).toContain('data-map-overlay-kind="announcement"');
         expect(html.match(/<button/g)).toHaveLength(1);
         expect(html).toContain('pointer-events-auto');
-        expect(html).toContain('mapOverlayFade_12s');
+        expect(html).not.toContain('mapOverlayFade');
         expect(html).not.toContain('3개의 맛집 발견');
         expect(html).not.toContain('2명이 함께 보는 중');
     });

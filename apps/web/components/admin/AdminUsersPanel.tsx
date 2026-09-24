@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import {
   Ban,
   CheckCircle2,
@@ -132,11 +133,13 @@ function SummaryMetric({ label, value, tone = "default", isLoading = false }: { 
 }
 
 function UserTableSkeleton() {
+  const mobileSkeleton = useFilledSkeletonCount(112, 4);
+  const desktopSkeleton = useFilledSkeletonCount(56, 6, 36);
   return (
-    <div role="status" aria-busy="true" aria-label="사용자 목록 로딩 중" data-admin-users-loading-list>
+    <div ref={desktopSkeleton.ref} role="status" aria-busy="true" aria-label="사용자 목록 로딩 중" data-admin-users-loading-list className="h-full min-h-0 flex-1">
       <span className="sr-only">사용자 목록을 불러오는 중입니다.</span>
-      <div className="grid gap-2 md:hidden" aria-hidden="true">
-        {Array.from({ length: 4 }).map((_, index) => (
+      <div ref={mobileSkeleton.ref} className="grid gap-2 md:hidden" aria-hidden="true">
+        {Array.from({ length: mobileSkeleton.count }).map((_, index) => (
           <div key={index} className="rounded-2xl border border-border/70 bg-background/80 p-3 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1 space-y-1.5">
@@ -164,7 +167,7 @@ function UserTableSkeleton() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50 bg-background/70">
-            {Array.from({ length: 6 }).map((_, index) => (
+            {Array.from({ length: desktopSkeleton.count }).map((_, index) => (
               <tr key={index}>
                 <td className="min-w-0 px-3 py-3 align-top">
                   <button type="button" tabIndex={-1} className="block min-w-0 text-left" aria-hidden="true">
@@ -220,7 +223,11 @@ function RoleBadge({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-export default function AdminUsersPanel() {
+export default function AdminUsersPanel({
+  onInitialContentReady,
+}: {
+  onInitialContentReady?: () => void;
+} = {}) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -232,6 +239,12 @@ export default function AdminUsersPanel() {
   const [riskConfirmation, setRiskConfirmation] = useState("");
   const [mutationResult, setMutationResult] = useState<AdminUserMutationResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const initialLoadPendingRef = useRef(true);
+  if (initialLoadPendingRef.current && !isLoading) initialLoadPendingRef.current = false;
+  useLayoutEffect(() => {
+    if (!onInitialContentReady || initialLoadPendingRef.current) return;
+    onInitialContentReady();
+  }, [isLoading, onInitialContentReady]);
   const [isMutating, setIsMutating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 

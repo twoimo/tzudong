@@ -966,7 +966,7 @@ function MobileControlOverlayComponent({
                             type="button"
                             aria-label="사업자 정보 펼치기/접기"
                             onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
-                            className="flex w-max max-w-full items-center justify-between whitespace-nowrap hover:bg-accent rounded px-1 py-0.5 transition-colors"
+                            className="flex w-max max-w-full items-center justify-between whitespace-nowrap hover:bg-accent rounded px-1 py-0.5"
                         >
                             <span className="text-2xs text-muted-foreground">{siteConfig.operator.copyrightLabel}</span>
                             {isBusinessInfoExpanded ? (
@@ -1001,7 +1001,7 @@ function MobileControlOverlayComponent({
             >
                 <div
                     className={cn(
-                        'pointer-events-auto flex h-12 w-full min-w-0 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-sm backdrop-blur-sm',
+                        'pointer-events-auto flex h-12 w-full min-w-0 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-sm',
                         activeSheet === 'search' && 'ring-2 ring-primary'
                     )}
                 >
@@ -1056,8 +1056,8 @@ function MobileControlOverlayComponent({
                                 aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}
                                 title={`${theme.label}: ${theme.description}`}
                                 className={cn(
-                                    'pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                    'whitespace-nowrap px-2.5 home-map-floating-control-text text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                    'pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95',
+                                    'whitespace-nowrap px-2.5 home-map-floating-control-text text-xs font-semibold motion-reduce:transition-none hover:bg-secondary/80',
                                     'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                                     isSelected
                                         ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
@@ -1083,14 +1083,14 @@ function MobileControlOverlayComponent({
                 >
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
-                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-sm border border-border w-[clamp(118px,34vw,148px)]">
+                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 rounded-full shadow-sm border border-border w-[clamp(118px,34vw,148px)]">
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1103,7 +1103,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1121,7 +1121,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     data-mobile-map-sheet-trigger="region"
-                    className="rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
@@ -1139,7 +1139,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
                     data-mobile-map-sheet-trigger="category"
-                    className="rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
@@ -1175,8 +1175,7 @@ function MobileControlOverlayComponent({
                         data-mobile-visible-marker-restaurants-restore="true"
                         className={cn(
                             'h-12 w-12 rounded-full shadow-sm',
-                            'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
-                            'transition-colors duration-150 ease-out motion-reduce:transition-none',
+                            'bg-background/95 hover:bg-secondary text-foreground border-border/70',
                             'flex items-center justify-center',
                             'border'
                         )}
@@ -1196,12 +1195,11 @@ function MobileControlOverlayComponent({
                         aria-pressed={showUserSubmittedMarkers}
                         className={cn(
                             'h-12 w-12 rounded-full shadow-sm',
-                            'transition-colors duration-150 ease-out motion-reduce:transition-none',
                             'flex items-center justify-center',
                             'border',
                             showUserSubmittedMarkers
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white border-transparent'
-                                : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm'
+                                : 'bg-background/95 hover:bg-secondary text-foreground border-border/70'
                         )}
                         title={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
                         aria-label={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
@@ -1224,7 +1222,6 @@ function MobileControlOverlayComponent({
                             className={cn(
                                 'h-12 w-12 rounded-full shadow-sm',
                                 'bg-red-800 hover:bg-red-900 text-white',
-                                'transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none',
                                 'active:scale-95',
                                 'flex items-center justify-center',
                                 'border border-border/20'
@@ -1252,14 +1249,13 @@ function MobileControlOverlayComponent({
                             aria-label={deviceLocationButtonLabel}
                             className={cn(
                                 'h-12 w-12 rounded-full shadow-sm',
-                                'transition-colors duration-150 ease-out motion-reduce:transition-none',
                                 'flex items-center justify-center',
                                 'border',
                                 isDeviceHeadingMode
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
                                     : deviceLocation
                                         ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
-                                        : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
+                                        : 'bg-background/95 hover:bg-secondary text-foreground border-border/70',
                                 isDeviceLocationPending && 'opacity-80'
                             )}
                             title={deviceLocationButtonLabel}
@@ -1279,7 +1275,7 @@ function MobileControlOverlayComponent({
             {activeSheet === 'search' && (
                 <div
                     ref={searchLayerRef}
-                    className="fixed inset-0 z-[75] bg-background/95 backdrop-blur-sm pointer-events-auto animate-in fade-in-0 duration-200 motion-reduce:animate-none"
+                    className="fixed inset-0 z-[75] bg-background/95 pointer-events-auto"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="mobile-map-search-title"
@@ -1287,7 +1283,7 @@ function MobileControlOverlayComponent({
                     tabIndex={-1}
                 >
                     <div
-                        className="flex min-h-0 min-w-0 flex-col overflow-hidden animate-in slide-in-from-top-3 duration-300 motion-reduce:animate-none"
+                        className="flex min-h-0 min-w-0 flex-col overflow-hidden"
                         style={{
                             height: searchViewportHeight ? `${searchViewportHeight}px` : '100dvh',
                             paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
@@ -1296,7 +1292,7 @@ function MobileControlOverlayComponent({
                     >
                         <div className="px-3 pb-3">
                             <h2 id="mobile-map-search-title" className="sr-only">쯔동여지도 검색</h2>
-                            <div className="flex min-w-0 items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5">
+                            <div className="flex min-w-0 items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5">
                                 <div className="min-w-0 flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40">
                                     <Image
                                         src="/logo.webp"
@@ -1506,7 +1502,7 @@ function MobileControlOverlayComponent({
                                 data-mobile-visible-marker-restaurants-sheet="true"
                                 data-mobile-visible-marker-restaurants-sheet-frame="true"
                             >
-                                <div className="sticky top-0 z-10 -mx-1 -mt-1 bg-background/95 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+                                <div className="sticky top-0 z-10 -mx-1 -mt-1 bg-background/95 px-1 py-1">
                                     <div className="flex min-w-0 items-center justify-between gap-2">
                                         <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-bold leading-5 text-foreground">
                                             <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />

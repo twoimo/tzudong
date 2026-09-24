@@ -516,8 +516,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
     const getOcrFocusClass = useCallback((target: OcrFocusTarget) => (
         ocrFocusTarget === target
-            ? "rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/5 transition-shadow"
-            : "transition-shadow"
+            ? "rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/5"
+            : ""
     ), [ocrFocusTarget]);
 
     const isOcrNavigationSuppressed = useCallback(() => (
@@ -1697,7 +1697,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                     {foodPhotos.map((photo, index) => (
                         <div key={index} className="relative group">
-                            <Card className="p-2 hover:shadow-md transition-shadow">
+                            <Card className="p-2 hover:shadow-md">
                                 <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
                                     <Image
                                         src={foodPhotoUrls[index] || ''}
@@ -1716,7 +1716,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             <Button
                                 variant="destructive"
                                 size="icon"
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 shadow-lg"
                                 onClick={() => removeFoodPhoto(index)}
                             >
                                 <XIcon className="h-3 w-3" />
@@ -2001,9 +2001,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                 {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                 {isAnalyzing && (
-                                    <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
+                                    <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
                                         <div className="relative mb-4">
-                                            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
                                             <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
                                                 <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                             </div>
@@ -2049,10 +2048,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         </div>
 
                         {/* 하단 폼 영역 (맛집 정보 ~ 리뷰 내용) */}
-                        <div className="space-y-6 relative rounded-xl transition-all">
+                        <div className="space-y-6 relative rounded-xl">
 
                             {/* 방문 맛집 정보 */}
-                            <div data-ocr-focus="restaurant" className={`space-y-2 transition-all duration-500 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
+                            <div data-ocr-focus="restaurant" className={`space-y-2 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
                                 ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                 : ""
                                 }`}>
@@ -2513,9 +2512,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                         {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                         {isAnalyzing && (
-                                            <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
+                                            <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
                                                 <div className="relative mb-4">
-                                                    <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
                                                     <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
                                                         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                                     </div>
@@ -2564,7 +2562,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 {currentStep === 2 && (
                                     <>
                                         {/* 방문 맛집 정보 */}
-                                        <div data-ocr-focus="restaurant" className={`space-y-2 transition-all duration-500 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
+                                        <div data-ocr-focus="restaurant" className={`space-y-2 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
                                     ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                     : ""
                                     }`}>
@@ -2792,7 +2790,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         </div>
 
                         {isSubmitting && (
-                            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-50">
                                 <div className="flex flex-col items-center gap-4">
                                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
                                     <p className="text-lg font-medium">리뷰 등록 중...</p>
@@ -2876,7 +2874,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             return (
                 <section
                     ref={desktopReviewMapPanelRef}
-                    className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                    className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
                     style={{ transform: `translate3d(${desktopReviewMapPanelPosition.x}px, ${desktopReviewMapPanelPosition.y}px, 0)` }}
                     data-desktop-map-review-panel="true"
                     role="dialog"
@@ -3106,9 +3104,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                         {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                         {isAnalyzing && (
-                                            <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
+                                            <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
                                                 <div className="relative mb-4">
-                                                    <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
                                                     <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
                                                         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                                     </div>
@@ -3154,7 +3151,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 </div>
 
                                 {/* 방문 맛집 정보 */}
-                                <div data-ocr-focus="restaurant" className={`space-y-2 transition-all duration-500 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
+                                <div data-ocr-focus="restaurant" className={`space-y-2 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
                                     ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                     : ""
                                     }`}>
@@ -3375,7 +3372,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         </div>
 
                         {isSubmitting && (
-                            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-50">
                                 <div className="flex flex-col items-center gap-4">
                                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
                                     <p className="text-lg font-medium">리뷰 등록 중...</p>

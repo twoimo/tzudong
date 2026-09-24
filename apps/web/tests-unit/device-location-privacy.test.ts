@@ -477,7 +477,7 @@ test('home client keeps the capability boundary before disclosure and confines r
     '현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다.',
   );
   expect(homeClientSource).toContain(
-    '현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요.',
+    '현재 위치를 지금 표시하지 못했어요. 잠시 후 다시 시도해 주세요.',
   );
   expect(homeClientSource).toContain('function describeDeviceLocationFailure');
   expect(homeClientSource).toContain('위치 권한이 거부됐어요');

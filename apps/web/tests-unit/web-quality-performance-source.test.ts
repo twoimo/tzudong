@@ -123,7 +123,7 @@ describe("Tailwind v4 source contracts", () => {
       homeSelectors.push(rule.selector);
     });
     for (const animationClasses of Object.values(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES)) {
-      for (const utility of animationClasses.split(/\s+/)) {
+      for (const utility of animationClasses.split(/\s+/).filter(Boolean)) {
         const selector = escapedClassSelector(utility);
         expect(homeSelectors.some((value) => value.includes(selector)), utility).toBe(true);
       }
@@ -428,7 +428,8 @@ describe("web quality performance source contracts", () => {
       "absolute bottom-12 left-0 right-0 z-20 flex justify-center gap-1.5",
     );
     expect(popupSource).toContain("flex h-5 w-5 items-center justify-center");
-    expect(popupSource).toContain("h-1.5 w-1.5 rounded-full transition-all");
+    expect(popupSource).toContain("h-1.5 w-1.5 rounded-full");
+    expect(popupSource).not.toContain("h-1.5 w-1.5 rounded-full transition-all");
     expect(popupSource).not.toContain("텍스트 전용 배너");
     expect(popupSource).toContain(
       "['pointerdown', 'keydown', 'wheel', 'touchstart']",
@@ -1164,20 +1165,16 @@ describe("web quality performance source contracts", () => {
       "restaurant.status === 'approved'",
     );
     expect(popularRestaurantsSource).toContain(".filter(isApprovedRestaurant)");
-    expect(popularRestaurantsSource).toContain(".gt('weekly_search_count', 0)");
-    expect(popularRestaurantsSource).toContain(
-      ".order('created_at', { ascending: false })",
-    );
-    expect(popularRestaurantsSource).toContain(
-      ".order('weekly_search_count', { ascending: false })",
-    );
+    expect(popularRestaurantsSource).toContain("weekly_search_count', 'gt.0'");
+    expect(popularRestaurantsSource).toContain("'order', 'created_at.desc'");
+    expect(popularRestaurantsSource).toContain("'order', 'weekly_search_count.desc'");
     expect(popularRestaurantsSource).toContain(
       "sort === 'oldest' ? aTime - bTime : bTime - aTime",
     );
-    expect(popularRestaurantsSource).toContain("reasoning_basis");
+    expect(popularRestaurantsSource).not.toContain("reasoning_basis");
     expect(popularRestaurantsSource).toContain("selectedRegion");
     expect(popularRestaurantsSource).toContain("isKoreanOnly");
-    expect(popularRestaurantsSource).toContain(".slice(0, limit)");
+    expect(popularRestaurantsSource).toContain("restaurants.splice(limit)");
     expect(restaurantSearchSource).toContain("fetchPopularRestaurants");
     expect(restaurantSearchSource).toContain("getPopularRestaurantsQueryKey");
     expect(
@@ -1385,7 +1382,7 @@ describe("web quality performance source contracts", () => {
       "rounded-full border border-border bg-background/95",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
+      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0",
@@ -2432,7 +2429,8 @@ describe("web quality performance source contracts", () => {
     );
     expect(stampCardSource).toContain("onKeyDown={handleCardKeyDown}");
     expect(stampCardSource).toContain("focus-visible:ring-primary");
-    expect(stampCardSource).toContain("transition-[filter,opacity,transform]");
+    expect(stampCardSource).not.toContain("transition-[filter,transform]");
+    expect(stampCardSource).not.toContain("transition-[filter,opacity,transform]");
     expect(stampCardSource).toContain("style={{ objectFit: 'cover' }}");
     expect(stampCardSource).toContain("<YoutubeThumbnail");
     expect(stampPageSource).toContain("<YoutubeThumbnail");
@@ -2553,7 +2551,7 @@ describe("web quality performance source contracts", () => {
     expect(userProfilePanelSource).toContain("visibleStampCount");
     expect(userProfilePanelSource).toContain("stampLoadMoreRef");
     expect(userProfilePanelSource).toContain(
-      'className="flex-shrink-0 -mr-2 h-10 w-10"',
+      'className="h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary"',
     );
     expect(userProfilePanelSource).toContain("<StampCard");
     expect(userProfilePanelSource).toContain("<ReviewCard");
@@ -2775,8 +2773,9 @@ describe("web quality performance source contracts", () => {
       'aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}',
     );
     expect(feedContentSource).toContain('aria-label="리뷰 패널 닫기"');
+    expect(feedContentSource).toContain("mapPanelIconButtonClass");
     expect(feedContentSource).toContain(
-      'className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"',
+      '"h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"',
     );
     expect(feedContentSource).not.toContain(
       'className="h-8 w-8 rounded-full hover:bg-muted"',
@@ -2801,24 +2800,11 @@ describe("web quality performance source contracts", () => {
     expect(stampOverlaySource).toContain('"안 가본 곳만 보기"');
     expect(stampOverlaySource).toContain('"도장 필터 접기"');
     expect(stampOverlaySource).toContain('"도장 필터 펼치기"');
-    expect(stampOverlaySource).toContain('aria-label="도장 패널 닫기"');
-    expect(stampOverlaySource).toContain(
-      'className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"',
-    );
-    expect(stampOverlaySource).not.toContain(
-      'className="h-8 w-8 rounded-full hover:bg-muted"',
-    );
-    expect(stampOverlaySource).not.toContain(
-      'className="h-9 w-9 hover:bg-muted rounded-full"',
-    );
+    expect(stampOverlaySource).toContain('closeLabel="도장 패널 닫기"');
+    expect(stampOverlaySource).toContain("<MapPanelHeader");
     expect(stampOverlaySource).toContain(
       'data-desktop-left-panel-stamp-mobile-parity="true"',
     );
-    expect(stampOverlaySource).toContain(
-      "flex flex-wrap items-start justify-between gap-3",
-    );
-    expect(stampOverlaySource).toContain("basis-[min(11rem,100%)]");
-    expect(stampOverlaySource).toContain("tabular-nums");
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
     expect(stampOverlaySource).toContain("const STAMP_PAGE_SIZE = 5");
@@ -2878,15 +2864,11 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardOverlaySource).toContain(
       'aria-label="랭킹 및 티어 산정 기준 보기"',
     );
-    expect(leaderboardOverlaySource).toContain('aria-label="랭킹 패널 닫기"');
+    expect(leaderboardOverlaySource).toContain('closeLabel="랭킹 패널 닫기"');
     expect(leaderboardOverlaySource).toContain(
       'data-desktop-left-panel-leaderboard-list="true"',
     );
-    expect(leaderboardOverlaySource).toContain(
-      "flex flex-wrap items-start justify-between gap-3",
-    );
-    expect(leaderboardOverlaySource).toContain("basis-[min(11rem,100%)]");
-    expect(leaderboardOverlaySource).toContain("text-pretty");
+    expect(leaderboardOverlaySource).toContain("<MapPanelHeader");
     expect(leaderboardOverlaySource).toContain(
       "DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE",
     );
@@ -3757,11 +3739,8 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       "rounded-full border-2 border-border shadow-sm",
     );
-    expect(myPageProfileSource).toContain(
+    expect(myPageProfileSource).not.toContain(
       "transition-[border-color,box-shadow]",
-    );
-    expect(myPageProfileSource).toContain(
-      "border-2 border-border shadow-sm transition-[border-color,box-shadow]",
     );
     expect(myPageProfileSource).toContain("truncate text-lg font-bold");
     expect(myPageProfileSource).toContain(

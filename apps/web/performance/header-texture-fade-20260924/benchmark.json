@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:54:00.000Z",
+  "model": "The header paper texture faded for the default 150ms when the theme changed. The texture still covers the header at 30% opacity in light mode and is hidden in dark mode. The fade is gone.",
+  "themeToggleFrames": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000), the default opacity transition. It runs only when the theme changes. Not a sampled compositor trace."
+  }
+}

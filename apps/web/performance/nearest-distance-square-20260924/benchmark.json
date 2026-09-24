@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:50:00.000Z",
+  "model": "Nearest-neighbor ordering used the square root of the scaled latitude and longitude deltas. The square root does not change which finite distance is smaller, so the comparison now uses the squared length.",
+  "squareRootsPerCandidate": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madRoots": 0,
+    "rule": "Counts one finite candidate. A list of n finite candidates dropped n square roots. Not a sampled timing trace."
+  }
+}

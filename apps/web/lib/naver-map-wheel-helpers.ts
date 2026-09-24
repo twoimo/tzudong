@@ -185,6 +185,14 @@ export function flushQueuedNaverWheelInput({
     } as const;
 }
 
+export function hasNaverWheelProjectionUpdated(
+    before: NaverWheelPoint | null | undefined,
+    after: NaverWheelPoint | null | undefined,
+) {
+    if (!before || !after) return false;
+    return before.x !== after.x || before.y !== after.y;
+}
+
 export function resolveNaverWheelPostAdjustPlan({
     currentZoom,
     hasQueuedWheelInput,
