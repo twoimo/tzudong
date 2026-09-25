@@ -8,7 +8,6 @@ import { QueryProvider } from './providers';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { AnonymousHomeAuthProvider, useAuth } from '@/contexts/AuthContextBase';
 import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
-import { HomeSessionProviderBridge } from '@/components/home/home-session-provider-bridge';
 import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
 import {
@@ -83,19 +82,17 @@ function HomeSessionProviders({ children }: ProviderProps) {
     const AuthProvider = useDeferredComponent<ProviderProps>(hasStoredSession, loadAuthProvider);
     const NotificationProvider = useDeferredComponent<ProviderProps>(hasStoredSession, loadNotificationProvider);
 
+    if (hasStoredSession && AuthProvider && NotificationProvider) {
+        return (
+            <AuthProvider>
+                <NotificationProvider>{children}</NotificationProvider>
+            </AuthProvider>
+        );
+    }
+
     return (
-        <AnonymousHomeAuthProvider
-            key={hasStoredSession ? 'session' : 'anonymous'}
-            isLoading={isPublicRestrictedMode ? false : hasStoredSession}
-        >
-            <StaticNotificationProvider>
-                <HomeSessionProviderBridge
-                    AuthProvider={hasStoredSession ? AuthProvider : null}
-                    NotificationProvider={hasStoredSession ? NotificationProvider : null}
-                >
-                    {children}
-                </HomeSessionProviderBridge>
-            </StaticNotificationProvider>
+        <AnonymousHomeAuthProvider isLoading={isPublicRestrictedMode ? false : hasStoredSession}>
+            <StaticNotificationProvider>{children}</StaticNotificationProvider>
         </AnonymousHomeAuthProvider>
     );
 }

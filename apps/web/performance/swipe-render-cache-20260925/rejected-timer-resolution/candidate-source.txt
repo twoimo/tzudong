@@ -291,33 +291,23 @@ export const buildRestaurantsForSwipe = ({
     return [...displayRestaurants, ...restaurantsToAdd];
 };
 
-// List-reference caches require replacing catalog/visible arrays on edits.
-// Bound query history while retaining common back-and-forth searches.
-const MAX_SEARCH_CACHE_ENTRIES = 64;
-const rememberSelectionResult = <T>(cache: Map<string, T>, id: string, value: T) => {
-    cache.delete(id);
-    cache.set(id, value);
-    if (cache.size > MAX_SEARCH_CACHE_ENTRIES) {
-        const oldest = cache.keys().next().value;
-        if (oldest !== undefined) cache.delete(oldest);
-    }
-};
-
-const nearestSwipeFallbackCache = new WeakMap<readonly Restaurant[], Map<string, {
+// Catalog/visible arrays retain their existing immutable-input contract. Only
+// one selection is retained per array; changing a search must not grow a Map.
+const nearestSwipeFallbackCache = new WeakMap<readonly Restaurant[], {
     searched: SelectionCacheKey;
     visible: SelectionCacheKey;
     restaurant: Restaurant | null;
-}>>();
+}>();
 let nearestFallbackScanCount = 0;
 
 export function getNearestFallbackScanCount() {
     return nearestFallbackScanCount;
 }
 
-const orderedVisibleCache = new WeakMap<readonly Restaurant[], Map<string, {
+const orderedVisibleCache = new WeakMap<readonly Restaurant[], {
     searched: SelectionCacheKey;
     restaurants: Restaurant[];
-}>>();
+}>();
 let lastSwipeOrderBuildCount = 0;
 
 export function getLastSwipeOrderBuildCount() {
@@ -332,12 +322,7 @@ export const buildPostSearchSwipeCandidates = ({
     const dedupedVisibleRestaurants = dedupeRestaurants(visibleRestaurants);
     let orderedVisibleRestaurants = dedupedVisibleRestaurants;
     if (activeSearchedRestaurant) {
-        let orders = orderedVisibleCache.get(dedupedVisibleRestaurants);
-        if (!orders) {
-            orders = new Map();
-            orderedVisibleCache.set(dedupedVisibleRestaurants, orders);
-        }
-        const cachedOrder = orders.get(activeSearchedRestaurant.id);
+        const cachedOrder = orderedVisibleCache.get(dedupedVisibleRestaurants);
         if (cachedOrder && matchesSelectionCacheKey(cachedOrder.searched, activeSearchedRestaurant)) {
             orderedVisibleRestaurants = cachedOrder.restaurants;
         } else {
@@ -358,7 +343,7 @@ export const buildPostSearchSwipeCandidates = ({
                 orderedVisibleRestaurants[left] = orderedVisibleRestaurants[right];
                 orderedVisibleRestaurants[right] = restaurant;
             }
-            rememberSelectionResult(orders, activeSearchedRestaurant.id, {
+            orderedVisibleCache.set(dedupedVisibleRestaurants, {
                 searched: selectionCacheKey(activeSearchedRestaurant),
                 restaurants: orderedVisibleRestaurants,
             });
@@ -370,12 +355,7 @@ export const buildPostSearchSwipeCandidates = ({
     }
 
     const visibleRestaurant = orderedVisibleRestaurants[0];
-    let fallbacks = nearestSwipeFallbackCache.get(allRestaurants);
-    if (!fallbacks) {
-        fallbacks = new Map();
-        nearestSwipeFallbackCache.set(allRestaurants, fallbacks);
-    }
-    const cached = fallbacks.get(activeSearchedRestaurant.id);
+    const cached = nearestSwipeFallbackCache.get(allRestaurants);
     if (cached && matchesSelectionCacheKey(cached.searched, activeSearchedRestaurant)
         && matchesSelectionCacheKey(cached.visible, visibleRestaurant)) {
         const cachedFallback = cached.restaurant;
@@ -403,7 +383,7 @@ export const buildPostSearchSwipeCandidates = ({
         nearestDistance = candidateDistance;
     }
 
-    rememberSelectionResult(fallbacks, activeSearchedRestaurant.id, {
+    nearestSwipeFallbackCache.set(allRestaurants, {
         searched: selectionCacheKey(activeSearchedRestaurant),
         visible: selectionCacheKey(visibleRestaurant),
         restaurant: nearestFallbackRestaurant,

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "local-performance-artifact-map.v1",
+  "frozenAt": "2026-09-25T04:12:44.593Z",
+  "artifacts": {
+    "baseline-source.txt": "31da7b46ef2acf08a0ca5f8d4a08716f4f5c8d571093b827dc06bf69af030267",
+    "candidate-source.txt": "78d09de12d534743a3d8f44a91e1e0bc22bfd270243d88057833b72e071d58dc",
+    "frozen-tree.patch": "e800a53a4a0ce0bc2b94b7ce9b026c753ec2df556ef9c9a7c2eda8899e4aafff",
+    "measure.mjs": "15c058ab6382dbc4614934cc090c186f7f91af625ce31bf772a0539ede158c2e",
+    "score-and-verify.mjs": "8fd26f02d07a925565481102ff2f60fcbe5fe46cf205f2f86f4988812c3c8d39",
+    "raw.json": "0c1bffd78c74bdd98def95e12b65bc1d1ed6141de2a53b7f541b3b57618b00ca"
+  }
+}

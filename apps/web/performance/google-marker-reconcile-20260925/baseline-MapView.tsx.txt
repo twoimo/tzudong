@@ -14,6 +14,7 @@ import {
 } from "@/components/map/map-view-status-panels";
 import {
   getMapViewCountryConfig,
+  getMapViewMarkerIcon,
   mergeSearchedRestaurant,
 } from "@/lib/map-view-helpers";
 import {
@@ -22,9 +23,10 @@ import {
 } from "@/lib/map-view-movement-helpers";
 import {
   applyMapViewMarkerSelectedState,
+  buildMapViewMarkerHtml,
+  getMapViewMarkerSize,
   isMapViewMarkerSelected,
 } from "@/lib/map-view-marker-helpers";
-import { reconcileMapViewMarkers, type MapViewMarkerEntry } from "@/lib/map-view-marker-reconciliation";
 import {
   buildMapViewBoundsQuery,
   findUpdatedSelectedRestaurant,
@@ -74,9 +76,12 @@ interface GoogleMapLike {
 
 interface GoogleMarkerLike {
   map: GoogleMapLike | null;
-  content: Node | null;
-  position?: unknown;
-  title?: string;
+  content: Element | null;
+}
+
+interface MapMarkerEntry {
+  marker: GoogleMarkerLike;
+  restaurantId: string;
 }
 function normalizeMapViewError(error: unknown): Error {
   if (error instanceof Error) {
@@ -132,7 +137,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const memoizedFilters = useMemo(() => filters, [filters]);
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<GoogleMapLike | null>(null);
-  const markersRef = useRef<MapViewMarkerEntry<GoogleMarkerLike>[]>([]);
+  const markersRef = useRef<MapMarkerEntry[]>([]);
   const detailPanelRef = useRef<HTMLDivElement>(null);
   const selectedCountryRef = useRef<string | null | undefined>(selectedCountry);
 
@@ -487,6 +492,12 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   useEffect(() => {
     if (!googleMapRef.current || !isLoaded) return;
 
+    // 기존 마커 제거 (메모리 누수 방지)
+    markersRef.current.forEach(({ marker }) => {
+      marker.map = null;
+    });
+    markersRef.current = [];
+
     const markerConstructor = google.maps.marker?.AdvancedMarkerElement;
     if (!markerConstructor) {
       console.warn('MapView: Advanced marker support unavailable');
@@ -494,33 +505,65 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       return;
     }
 
-    markersRef.current = reconcileMapViewMarkers({
-      previous: markersRef.current,
-      restaurants: restaurantsToShow,
-      selectedRestaurantId: selectedRestaurant?.id,
-      searchedRestaurantId: searchedRestaurant?.id,
-      createMarker: (options) => {
-        try {
-          return new markerConstructor({ ...options, map: googleMapRef.current });
-        } catch {
-          console.warn('MapView: Advanced marker creation skipped');
-          return null;
-        }
-      },
-      onActivate: (restaurant) => {
+    // 새 마커 생성
+    restaurantsToShow.forEach((restaurant) => {
+      const position = getRestaurantLatLng(restaurant);
+      if (!position || !Number.isFinite(position.lat) || !Number.isFinite(position.lng)) {
+        console.warn('MapView: marker skipped because restaurant coordinates are invalid', { restaurantId: restaurant.id });
+        return;
+      }
+
+      const isSelected = isMapViewMarkerSelected({
+        restaurantId: restaurant.id,
+        searchedRestaurantId: searchedRestaurant?.id,
+        selectedRestaurantId: selectedRestaurant?.id,
+      });
+      const imagePath = getMapViewMarkerIcon(restaurant.categories);
+      const markerSize = getMapViewMarkerSize(isSelected);
+
+      const markerElement = document.createElement("div");
+      markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
+      markerElement.innerHTML = buildMapViewMarkerHtml({
+        imagePath,
+        isSelected,
+        markerSize,
+        name: restaurant.name,
+      });
+
+      let marker: GoogleMarkerLike;
+      try {
+        marker = new markerConstructor({
+          map: googleMapRef.current,
+          position,
+          content: markerElement,
+          title: restaurant.name,
+        });
+      } catch {
+        console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id });
+        return;
+      }
+
+      markerElement.addEventListener("click", () => {
+
+
+        // 1. 패널을 먼저 즉시 열기 (지도 이동 전에)
         onMarkerClick?.(restaurant);
+
+
+        // 2. selectedRestaurant 업데이트
         onRestaurantSelect?.(restaurant);
+
+
+        // 3. 지도 이동은 마지막에 (비동기 작업)
         moveToRestaurant(restaurant);
-      },
+
+      });
+
+      markersRef.current.push({ marker, restaurantId: restaurant.id });
     });
   // Selection IDs are applied in place by the dedicated effect below; changing them must not rebuild every marker.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, moveToRestaurant, onMarkerClick, onRestaurantSelect, restaurantsToShow]);
-
-  useEffect(() => () => {
-    for (const { marker } of markersRef.current) marker.map = null;
-    markersRef.current = [];
-  }, []);
 
   // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
   useEffect(() => {

@@ -1,0 +1,20 @@
+[
+  {
+    "check": "lint",
+    "exitCode": 0,
+    "elapsedSeconds": 3.18,
+    "log": "/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/performance/swipe-render-cache-20260925/checks/lint.log"
+  },
+  {
+    "check": "typecheck-parity",
+    "exitCode": 0,
+    "elapsedSeconds": 24.8,
+    "log": "/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/performance/swipe-render-cache-20260925/checks/typecheck-parity.log"
+  },
+  {
+    "check": "evidence-verify",
+    "exitCode": 0,
+    "elapsedSeconds": 0.05,
+    "log": "/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/performance/swipe-render-cache-20260925/checks/evidence-verify.log"
+  }
+]

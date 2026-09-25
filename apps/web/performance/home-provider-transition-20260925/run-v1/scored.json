@@ -1,0 +1,21 @@
+{
+  "scope": "Production React browser laboratory: real frozen home provider boundary vs current bridge, 200 synthetic rows, synthetic auth/notification contexts. No live login, full-page LCP/INP or visible-blank-frame claim.",
+  "budgets": {
+    "absoluteDeltaMs": 0.05,
+    "relativeDeltaFraction": 0.05,
+    "noiseMadMultiplier": 2
+  },
+  "checks": 29,
+  "failures": 0,
+  "baselineMs": 0.6000000238418579,
+  "candidateMs": 0.2999999523162842,
+  "absoluteReductionMs": 0.30000007152557373,
+  "relativeReductionPercent": 50.00000993410707,
+  "baselineMadMs": 0.09999990463256836,
+  "candidateMadMs": 0.09999990463256836,
+  "noiseMs": 0.19999980926513672,
+  "classification": "local_improvement",
+  "baselineRowRemounts": 200,
+  "candidateRowRemounts": 0,
+  "retainedInputSamples": 31
+}

@@ -1,0 +1,5 @@
+{
+  "scope": "Development React StrictMode correctness only: real frozen and current home provider boundaries, 200 synthetic rows, synthetic auth/notification contexts. No live login, full-page LCP/INP or visible-blank-frame claim.",
+  "checks": 29,
+  "failures": 0
+}
