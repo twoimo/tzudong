@@ -118,6 +118,26 @@ continuation. Do not keep retrying an unchanged stack start under these conditio
 
 The original production observations under `render-field-observation-20260925`
 are single-window observations, not a paired baseline/candidate benchmark or INP.
-Local full-page readiness, live provider interactions, paired page measurements,
-protected `develop → data → main` promotion, GitHub release, production SHA/URL
-readback, and local delivery must all be completed before marking the goal complete.
+
+### Local browser continuation, 2026-09-27
+
+The exact-dependency candidate ran in a local Next.js development server using
+only public browser keys and read-only hosted catalog access. At
+`http://localhost:3000`, the real Naver SDK rendered map tiles and clusters for
+735 restaurants in desktop and 390 × 844 mobile views. Selecting **스시린 불당본점**
+on desktop showed the detail panel; returning to the list restored the visible
+map and clusters. Mobile search opened the same restaurant detail. A separate
+`http://127.0.0.1:3001` run did not initialize the live Naver SDK; the
+project's local map stub rendered there. The host-dependent result must not be
+described as live-provider success on every localhost origin.
+
+These are visual interaction observations, not paired timing or frame-flicker
+measurements. Browser control could not issue a touch swipe, so the actual mobile
+swipe gesture and authenticated session flow remain unverified. The Vercel preview
+deployment returned HTTP 200 through authenticated `vercel curl`; its protected
+browser URL redirected to Vercel login, so preview visuals remain unverified.
+
+Local full-stack readiness, authenticated and touch interactions, paired
+full-page measurements, protected `develop → data → main` promotion, GitHub
+release, production SHA/URL readback, and local delivery must all be completed
+before marking the goal complete.
