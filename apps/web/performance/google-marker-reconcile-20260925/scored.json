@@ -1,0 +1,76 @@
+{
+  "scope": "Chromium DOM laboratory using the real old effect and new helper with a simulated Google marker adapter. Not the live Google SDK, app-page LCP/INP, or production evidence.",
+  "artifactMapSha256": "3421881130b97a47b53d97abe286f0c290f6495da88057daf662c994d917a97b",
+  "budgets": {
+    "absoluteDeltaMs": 0.05,
+    "relativeDeltaFraction": 0.05,
+    "noiseMadMultiplier": 2
+  },
+  "verification": {
+    "checks": 13,
+    "failures": 0,
+    "imageDecoded": true
+  },
+  "results": [
+    {
+      "scenario": "same-list-new-array",
+      "baselineMs": 1.3985000014305116,
+      "candidateMs": 0.2725000023841858,
+      "absoluteReductionMs": 1.1259999990463259,
+      "relativeReductionPercent": 80.51483717515565,
+      "baselineMadMs": 0.06599999666213985,
+      "candidateMadMs": 0.014000010490417492,
+      "noiseMs": 0.1319999933242797,
+      "baselineCreatesPerUpdate": 200,
+      "candidateCreatesPerUpdate": 0,
+      "baselineDetachesPerUpdate": 200,
+      "candidateDetachesPerUpdate": 0,
+      "classification": "local_improvement"
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "baselineMs": 1.4475000023841857,
+      "candidateMs": 0.42950000762939455,
+      "absoluteReductionMs": 1.017999994754791,
+      "relativeReductionPercent": 70.32815150798186,
+      "baselineMadMs": 0.03649998903274532,
+      "candidateMadMs": 0.02050001621246339,
+      "noiseMs": 0.07299997806549063,
+      "baselineCreatesPerUpdate": 200,
+      "candidateCreatesPerUpdate": 20,
+      "baselineDetachesPerUpdate": 200,
+      "candidateDetachesPerUpdate": 20,
+      "classification": "local_improvement"
+    },
+    {
+      "scenario": "coordinate-updates",
+      "baselineMs": 1.437999999523163,
+      "candidateMs": 0.328000009059906,
+      "absoluteReductionMs": 1.109999990463257,
+      "relativeReductionPercent": 77.19054178242908,
+      "baselineMadMs": 0.048500001430511475,
+      "candidateMadMs": 0.014500010013580311,
+      "noiseMs": 0.09700000286102295,
+      "baselineCreatesPerUpdate": 200,
+      "candidateCreatesPerUpdate": 0,
+      "baselineDetachesPerUpdate": 200,
+      "candidateDetachesPerUpdate": 0,
+      "classification": "local_improvement"
+    },
+    {
+      "scenario": "full-turnover",
+      "baselineMs": 1.5434999942779541,
+      "candidateMs": 1.7480000019073487,
+      "absoluteReductionMs": -0.20450000762939458,
+      "relativeReductionPercent": -13.249109710885307,
+      "baselineMadMs": 0.06399999856948857,
+      "candidateMadMs": 0.07900000810623187,
+      "noiseMs": 0.15800001621246373,
+      "baselineCreatesPerUpdate": 200,
+      "candidateCreatesPerUpdate": 200,
+      "baselineDetachesPerUpdate": 200,
+      "candidateDetachesPerUpdate": 200,
+      "classification": "local_regression"
+    }
+  ]
+}

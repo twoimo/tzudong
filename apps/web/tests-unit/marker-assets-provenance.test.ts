@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -48,7 +48,7 @@ async function readAlphaStats(relativePublicPath: string) {
 }
 
 describe('marker GPT Image 2 asset provenance', () => {
-  test('commits exact local-codex gpt-image-2 marker assets with transparent cutout hash readback', async () => {
+  test('retains original marker provenance and verifies delivered transparent cutouts', async () => {
     const manifestPath = join(publicRoot, 'images/maker-images/marker-assets-provenance.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
       providerId: string;
@@ -58,14 +58,23 @@ describe('marker GPT Image 2 asset provenance', () => {
       model: string;
       modelProvenance: string;
       hasOpenAIAPIKey: boolean;
+      deliveryOptimization: {
+        sourceCommit: string;
+        resizeCommit: string;
+        dimensions: number[];
+        assets: Record<string, {
+          png: { sha256: string; bytes: number };
+          webp: { sha256: string; bytes: number };
+        }>;
+      };
       assets: Array<{
         kind: string;
         responseId: string;
         imageCallId: string;
         requestHash: string;
         responseHash: string;
-        png: { path: string; sha256: string };
-        webp: { path: string; sha256: string };
+        png: { path: string; sha256: string; bytes: number };
+        webp: { path: string; sha256: string; bytes: number };
         transparentEdit: {
           providerId: string;
           authMode: string;
@@ -108,6 +117,14 @@ describe('marker GPT Image 2 asset provenance', () => {
       'trend',
       'user-submitted',
     ]);
+    expect(manifest.deliveryOptimization).toMatchObject({
+      sourceCommit: 'b2a0d2a9f8e57fae0cd4817c6c5a308c5217adbb',
+      resizeCommit: '2f78cacd456cc3a286f34111cfc8629562569271',
+      dimensions: [128, 128],
+    });
+    expect(Object.keys(manifest.deliveryOptimization.assets).sort()).toEqual(
+      manifest.assets.map((asset) => asset.kind).sort(),
+    );
 
     for (const asset of manifest.assets) {
       expect(asset.responseId).toStartWith('resp_');
@@ -116,8 +133,15 @@ describe('marker GPT Image 2 asset provenance', () => {
       expect(asset.responseHash).toHaveLength(64);
       expect(existsSync(join(publicRoot, asset.png.path.replace(/^\//, '')))).toBe(true);
       expect(existsSync(join(publicRoot, asset.webp.path.replace(/^\//, '')))).toBe(true);
-      expect(sha256(asset.png.path)).toBe(asset.png.sha256);
-      expect(sha256(asset.webp.path)).toBe(asset.webp.sha256);
+      const optimized = manifest.deliveryOptimization.assets[asset.kind];
+      expect(asset.png.sha256).toHaveLength(64);
+      expect(asset.webp.sha256).toHaveLength(64);
+      expect(sha256(asset.png.path)).toBe(optimized.png.sha256);
+      expect(sha256(asset.webp.path)).toBe(optimized.webp.sha256);
+      expect(statSync(join(publicRoot, asset.png.path.replace(/^\//, ''))).size).toBe(optimized.png.bytes);
+      expect(statSync(join(publicRoot, asset.webp.path.replace(/^\//, ''))).size).toBe(optimized.webp.bytes);
+      expect(optimized.png.bytes).toBeLessThan(asset.png.bytes);
+      expect(optimized.webp.bytes).toBeLessThan(asset.webp.bytes);
       expect(asset.transparentEdit).toMatchObject({
         providerId: 'local-codex',
         authMode: 'codex_oauth',
@@ -135,11 +159,11 @@ describe('marker GPT Image 2 asset provenance', () => {
       const pngAlpha = await readAlphaStats(asset.png.path);
       const webpAlpha = await readAlphaStats(asset.webp.path);
       for (const alphaStats of [pngAlpha, webpAlpha]) {
-        expect(alphaStats.width).toBe(1024);
-        expect(alphaStats.height).toBe(1024);
+        expect(alphaStats.width).toBe(128);
+        expect(alphaStats.height).toBe(128);
         expect(alphaStats.cornerAlpha).toEqual([0, 0, 0, 0, 0]);
-        expect(alphaStats.transparentPixels).toBeGreaterThan(600_000);
-        expect(alphaStats.opaquePixels).toBeGreaterThan(300_000);
+        expect(alphaStats.transparentPixels).toBeGreaterThan(128 * 128 * 0.6);
+        expect(alphaStats.opaquePixels).toBeGreaterThan(128 * 128 * 0.3);
       }
       expect(asset.transparentEdit.alphaExtraction.stats.cornerAlpha).toEqual([0, 0, 0, 0, 0]);
       expect(asset.transparentEdit.alphaExtraction.stats.transparentPixels).toBeGreaterThan(600_000);

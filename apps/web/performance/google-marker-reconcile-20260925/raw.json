@@ -1,0 +1,2760 @@
+{
+  "scope": "Chromium DOM laboratory using the real old effect and new helper with a simulated Google marker adapter. Not the live Google SDK, app-page LCP/INP, or production evidence.",
+  "frozenAt": "2026-09-25T04:30:00.075Z",
+  "environment": {
+    "node": "v24.21.0",
+    "chromium": "151.0.7922.34",
+    "cpu": "Apple M5 Max",
+    "crossOriginIsolated": true
+  },
+  "gitHead": "baa2415d011fcd18b7d0e038d4ce46c39c01bdec",
+  "budgets": {
+    "absoluteDeltaMs": 0.05,
+    "relativeDeltaFraction": 0.05,
+    "noiseMadMultiplier": 2
+  },
+  "scenarios": [
+    "same-list-new-array",
+    "ten-percent-turnover",
+    "coordinate-updates",
+    "full-turnover"
+  ],
+  "size": 200,
+  "iterations": 10,
+  "pairs": 31,
+  "verification": {
+    "checks": 13,
+    "failures": 0,
+    "imageDecoded": true
+  },
+  "samples": [
+    {
+      "scenario": "same-list-new-array",
+      "sample": 0,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 22.77500009536743,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.190000057220459,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 1,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.174999952316284,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.65499997138977,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 2,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.134999990463257,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.210000038146973,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 3,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.0049999952316284,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 18.294999957084656,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 4,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 19.944999933242798,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 6.1549999713897705,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 5,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.8350000381469727,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.055000066757202,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 6,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.31499993801117,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.784999966621399,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 7,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.75,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.139999985694885,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 8,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.835000038146973,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.9700000286102295,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 9,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.740000009536743,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.855000019073486,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 10,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.644999980926514,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.715000033378601,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 11,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.6850000619888306,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.389999985694885,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 12,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.475000023841858,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.995000004768372,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 13,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.7950000762939453,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.56000006198883,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 14,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 19.875,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.4100000858306885,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 15,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.725000023841858,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.290000081062317,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 16,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.289999961853027,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.6050000190734863,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 17,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.6100000143051147,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.634999990463257,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 18,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.440000057220459,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.584999918937683,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 19,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.559999942779541,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.614999890327454,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 20,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 20.399999976158142,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.28000009059906,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 21,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.7300000190734863,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.985000014305115,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 22,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.559999942779541,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.6200000047683716,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 23,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.6549999713897705,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.320000052452087,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 24,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.879999995231628,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.565000057220459,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 25,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.524999976158142,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.78000009059906,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 26,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.934999942779541,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.4450000524520874,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 27,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.4399999380111694,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.269999980926514,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 28,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.480000019073486,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.5399999618530273,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 29,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 2.6299999952316284,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.800000071525574,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "same-list-new-array",
+      "sample": 30,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.079999923706055,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 2.6050000190734863,
+        "created": 0,
+        "detached": 0,
+        "moved": 0,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 0,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.709999918937683,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.629999995231628,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 1,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.739999890327454,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.889999985694885,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 2,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.805000066757202,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.564999938011169,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 3,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.139999985694885,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.324999928474426,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 4,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 16.925000071525574,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 5.169999957084656,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 5,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.450000047683716,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.355000019073486,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 6,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 16.264999985694885,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.399999976158142,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 7,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.159999966621399,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.860000014305115,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 8,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.929999947547913,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.1600000858306885,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 9,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.134999990463257,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.920000076293945,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 10,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 20.399999976158142,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 5.415000081062317,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 11,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.725000023841858,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.784999966621399,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 12,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.03000009059906,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.295000076293945,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 13,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.120000004768372,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.715000033378601,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 14,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.475000023841858,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.674999952316284,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 15,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.585000038146973,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.56000006198883,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 16,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.34500002861023,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.475000023841858,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 17,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.064999938011169,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.440000057220459,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 18,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 18.304999947547913,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 5.179999947547913,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 19,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.189999938011169,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.534999966621399,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 20,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.879999995231628,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.065000057220459,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 21,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.9199999570846558,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.144999980926514,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 22,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.184999942779541,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.170000076293945,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 23,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.0899999141693115,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.045000076293945,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 24,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.725000023841858,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.924999952316284,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 25,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.149999976158142,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.665000081062317,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 26,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.629999995231628,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.245000004768372,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 27,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.09499990940094,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.504999995231628,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 28,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.485000014305115,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 5.024999976158142,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 29,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 4.4700000286102295,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.710000038146973,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "ten-percent-turnover",
+      "sample": 30,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.839999914169312,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.040000081062317,
+        "created": 200,
+        "detached": 200,
+        "moved": 200,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 0,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.039999961853027,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.380000114440918,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 1,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.4049999713897705,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.014999985694885,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 2,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.674999952316284,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.110000014305115,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 3,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.4800000190734863,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.309999942779541,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 4,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.289999961853027,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.225000023841858,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 5,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.7050000429153442,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.120000004768372,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 6,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.134999990463257,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.705000042915344,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 7,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.4950000047683716,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.179999947547913,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 8,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.269999980926514,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.1950000524520874,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 9,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.2049999237060547,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.379999995231628,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 10,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 16.81000006198883,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.810000061988831,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 11,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.5299999713897705,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.199999928474426,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 12,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.945000052452087,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.28000009059906,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 13,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.2049999237060547,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.25,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 14,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.894999980926514,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.1050000190734863,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 15,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.240000009536743,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.835000038146973,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 16,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 21.149999976158142,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.9450000524520874,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 17,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.4550000429153442,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.194999933242798,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 18,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.549999952316284,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.134999990463257,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 19,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.049999952316284,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.125,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 20,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.855000019073486,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.7100000381469727,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 21,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.2350000143051147,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.990000009536743,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 22,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.93500006198883,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.1449999809265137,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 23,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.1399999856948853,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 13.604999899864197,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 24,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 13.679999947547913,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.0850000381469727,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 25,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.149999976158142,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.125,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 26,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.725000023841858,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.1549999713897705,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 27,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.1100000143051147,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.09500002861023,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 28,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.47000002861023,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 3.3200000524520874,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 29,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 3.3100000619888306,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.489999890327454,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "coordinate-updates",
+      "sample": 30,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 21.59500002861023,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 4.135000109672546,
+        "created": 0,
+        "detached": 0,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 0,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.875,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 16.835000038146973,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 1,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 21.335000038146973,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 18.665000081062317,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 2,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 22.419999957084656,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 19.9650000333786,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 3,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 16.99500000476837,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.839999914169312,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 4,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.84500002861023,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 16.68999993801117,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 5,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 16.475000023841858,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.479999899864197,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 6,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.434999942779541,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 17.28500008583069,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 7,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 16.87999999523163,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.90500009059906,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 8,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.429999947547913,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 16.50499999523163,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 9,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 17.2849999666214,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 23.875,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 10,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.099999904632568,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 18.760000109672546,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 11,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 18.960000038146973,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.675000071525574,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 12,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 30.77500009536743,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 15.745000004768372,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 13,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 17.805000066757202,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.399999976158142,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 14,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.089999914169312,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 25.110000014305115,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 15,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 18.37999999523163,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.794999957084656,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 16,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.269999980926514,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 18.44000005722046,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 17,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 17.384999990463257,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 16.5900000333786,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 18,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.759999990463257,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 18.18499994277954,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 19,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 18.174999952316284,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 20.12000000476837,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 20,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.665000081062317,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 17.584999918937683,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 21,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 17.115000009536743,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 16.97000002861023,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 22,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.800000071525574,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 15.950000047683716,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 23,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 15.919999957084656,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 15.434999942779541,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 24,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 20.509999990463257,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 18.180000066757202,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 25,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 16.264999985694885,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 16.070000052452087,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 26,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.06000006198883,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 19.164999961853027,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 27,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 18.274999976158142,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 14.330000042915344,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 28,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 14.504999995231628,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 17.480000019073486,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 29,
+      "order": [
+        1,
+        0
+      ],
+      "candidate": {
+        "totalMs": 17.93999993801117,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "baseline": {
+        "totalMs": 20.479999899864197,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    },
+    {
+      "scenario": "full-turnover",
+      "sample": 30,
+      "order": [
+        0,
+        1
+      ],
+      "baseline": {
+        "totalMs": 15.965000033378601,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      },
+      "candidate": {
+        "totalMs": 16.790000081062317,
+        "created": 2000,
+        "detached": 2000,
+        "moved": 2000,
+        "markerCount": 200
+      }
+    }
+  ]
+}

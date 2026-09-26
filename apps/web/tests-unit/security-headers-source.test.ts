@@ -52,9 +52,10 @@ describe('content-security-policy image source boundary', () => {
     const policy = imagePolicySource();
 
     expect(policy).toContain("return [\"'self'\", 'data:', 'blob:'");
-    expect(policy).toContain('source-controlled CSS imagery');
+    expect(policy).toContain('bounded inline admin image previews');
     expect(policy).toContain('local upload previews');
     expect(source('app/admin/banners/page.tsx')).toContain('URL.createObjectURL');
-    expect(source('app/app-globals.css')).toContain('background-image: url("data:image/svg+xml');
+    expect(source('components/admin/storyboard/AdminStoryboardGenerator.tsx')).toContain('const isInlineImage = /^data:image');
+    expect(source('app/app-globals.css')).toContain('background-image: url("/images/ui-noise.png")');
   });
 });

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo, Suspense, useEffect, useLayoutEffect } from 'react';
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
+import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -148,13 +149,12 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
 
     // 배너 데이터
     const { data: banners = [], isLoading: bannersLoading } = useAdBannersAdmin();
-    const initialLoadPendingRef = useRef(true);
-    if (initialLoadPendingRef.current && !authLoading && !bannersLoading) initialLoadPendingRef.current = false;
+    const initialLoadPending = useInitialLoadPending(!authLoading && !bannersLoading);
     useLayoutEffect(() => {
-        if (!onInitialContentReady || authLoading || initialLoadPendingRef.current) return;
+        if (!onInitialContentReady || authLoading || initialLoadPending) return;
         onInitialContentReady();
-    }, [authLoading, bannersLoading, onInitialContentReady]);
-    const bannerListSkeleton = useFilledSkeletonCount(88, 5);
+    }, [authLoading, bannersLoading, initialLoadPending, onInitialContentReady]);
+    const { ref: bannerListRef, count: bannerListCount } = useFilledSkeletonCount(88, 5);
     const createBanner = useCreateAdBanner();
     const updateBanner = useUpdateAdBanner();
     const deleteBanner = useDeleteAdBanner();
@@ -602,11 +602,11 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                             </div>
                         </div>
 
-                        <div ref={bannerListSkeleton.ref} className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="list" aria-label="배너 목록">
+                        <div ref={bannerListRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="list" aria-label="배너 목록">
                             {bannersLoading ? (
                                 <div className="space-y-2" role="status" aria-busy="true" aria-label="배너 목록 로딩 중">
                                     <span className="sr-only">배너 목록 데이터를 불러오는 중입니다.</span>
-                                    {Array.from({ length: bannerListSkeleton.count }).map((_, index) => <BannerListItemSkeleton key={index} index={index} />)}
+                                    {Array.from({ length: bannerListCount }).map((_, index) => <BannerListItemSkeleton key={index} index={index} />)}
                                 </div>
                             ) : sortedBanners.length === 0 ? (
                                 <Card className="border-dashed border-border bg-background/70 p-4 text-center text-sm text-muted-foreground">

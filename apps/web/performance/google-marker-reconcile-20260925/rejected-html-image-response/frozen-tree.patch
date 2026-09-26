@@ -1,0 +1,419 @@
+diff --git a/apps/web/components/map/MapView.tsx b/apps/web/components/map/MapView.tsx
+index 262f4912..11f0804a 100644
+--- a/apps/web/components/map/MapView.tsx
++++ b/apps/web/components/map/MapView.tsx
+@@ -14,7 +14,6 @@ import {
+ } from "@/components/map/map-view-status-panels";
+ import {
+   getMapViewCountryConfig,
+-  getMapViewMarkerIcon,
+   mergeSearchedRestaurant,
+ } from "@/lib/map-view-helpers";
+ import {
+@@ -23,10 +22,9 @@ import {
+ } from "@/lib/map-view-movement-helpers";
+ import {
+   applyMapViewMarkerSelectedState,
+-  buildMapViewMarkerHtml,
+-  getMapViewMarkerSize,
+   isMapViewMarkerSelected,
+ } from "@/lib/map-view-marker-helpers";
++import { reconcileMapViewMarkers, type MapViewMarkerEntry } from "@/lib/map-view-marker-reconciliation";
+ import {
+   buildMapViewBoundsQuery,
+   findUpdatedSelectedRestaurant,
+@@ -76,12 +74,9 @@ interface GoogleMapLike {
+ 
+ interface GoogleMarkerLike {
+   map: GoogleMapLike | null;
+-  content: Element | null;
+-}
+-
+-interface MapMarkerEntry {
+-  marker: GoogleMarkerLike;
+-  restaurantId: string;
++  content: Node | null;
++  position?: unknown;
++  title?: string;
+ }
+ function normalizeMapViewError(error: unknown): Error {
+   if (error instanceof Error) {
+@@ -137,7 +132,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
+   const memoizedFilters = useMemo(() => filters, [filters]);
+   const mapRef = useRef<HTMLDivElement>(null);
+   const googleMapRef = useRef<GoogleMapLike | null>(null);
+-  const markersRef = useRef<MapMarkerEntry[]>([]);
++  const markersRef = useRef<MapViewMarkerEntry<GoogleMarkerLike>[]>([]);
+   const detailPanelRef = useRef<HTMLDivElement>(null);
+   const selectedCountryRef = useRef<string | null | undefined>(selectedCountry);
+ 
+@@ -492,12 +487,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
+   useEffect(() => {
+     if (!googleMapRef.current || !isLoaded) return;
+ 
+-    // 기존 마커 제거 (메모리 누수 방지)
+-    markersRef.current.forEach(({ marker }) => {
+-      marker.map = null;
+-    });
+-    markersRef.current = [];
+-
+     const markerConstructor = google.maps.marker?.AdvancedMarkerElement;
+     if (!markerConstructor) {
+       console.warn('MapView: Advanced marker support unavailable');
+@@ -505,66 +494,34 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
+       return;
+     }
+ 
+-    // 새 마커 생성
+-    restaurantsToShow.forEach((restaurant) => {
+-      const position = getRestaurantLatLng(restaurant);
+-      if (!position || !Number.isFinite(position.lat) || !Number.isFinite(position.lng)) {
+-        console.warn('MapView: marker skipped because restaurant coordinates are invalid', { restaurantId: restaurant.id });
+-        return;
+-      }
+-
+-      const isSelected = isMapViewMarkerSelected({
+-        restaurantId: restaurant.id,
+-        searchedRestaurantId: searchedRestaurant?.id,
+-        selectedRestaurantId: selectedRestaurant?.id,
+-      });
+-      const imagePath = getMapViewMarkerIcon(restaurant.categories);
+-      const markerSize = getMapViewMarkerSize(isSelected);
+-
+-      const markerElement = document.createElement("div");
+-      markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
+-      markerElement.innerHTML = buildMapViewMarkerHtml({
+-        imagePath,
+-        isSelected,
+-        markerSize,
+-        name: restaurant.name,
+-      });
+-
+-      let marker: GoogleMarkerLike;
+-      try {
+-        marker = new markerConstructor({
+-          map: googleMapRef.current,
+-          position,
+-          content: markerElement,
+-          title: restaurant.name,
+-        });
+-      } catch {
+-        console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id });
+-        return;
+-      }
+-
+-      markerElement.addEventListener("click", () => {
+-
+-
+-        // 1. 패널을 먼저 즉시 열기 (지도 이동 전에)
++    markersRef.current = reconcileMapViewMarkers({
++      previous: markersRef.current,
++      restaurants: restaurantsToShow,
++      selectedRestaurantId: selectedRestaurant?.id,
++      searchedRestaurantId: searchedRestaurant?.id,
++      createMarker: (options) => {
++        try {
++          return new markerConstructor({ ...options, map: googleMapRef.current });
++        } catch {
++          console.warn('MapView: Advanced marker creation skipped');
++          return null;
++        }
++      },
++      onActivate: (restaurant) => {
+         onMarkerClick?.(restaurant);
+-
+-
+-        // 2. selectedRestaurant 업데이트
+         onRestaurantSelect?.(restaurant);
+-
+-
+-        // 3. 지도 이동은 마지막에 (비동기 작업)
+         moveToRestaurant(restaurant);
+-
+-      });
+-
+-      markersRef.current.push({ marker, restaurantId: restaurant.id });
++      },
+     });
+   // Selection IDs are applied in place by the dedicated effect below; changing them must not rebuild every marker.
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [isLoaded, moveToRestaurant, onMarkerClick, onRestaurantSelect, restaurantsToShow]);
+ 
++  useEffect(() => () => {
++    for (const { marker } of markersRef.current) marker.map = null;
++    markersRef.current = [];
++  }, []);
++
+   // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
+   useEffect(() => {
+     if (!isLoaded || markersRef.current.length === 0) return;
+diff --git a/apps/web/lib/mobile-home-search-selection.ts b/apps/web/lib/mobile-home-search-selection.ts
+index a3b5681a..436c89dc 100644
+--- a/apps/web/lib/mobile-home-search-selection.ts
++++ b/apps/web/lib/mobile-home-search-selection.ts
+@@ -44,6 +44,59 @@ export const isSameRestaurantSelection = (left: RestaurantMatch, right: Restaura
+     return hasSameNameAndCoordinate(left, right);
+ };
+ 
++// A render pass compares many candidates with one selection. Build its merged-id
++// index at most once, instead of allocating a Set and arrays for every candidate.
++const createRestaurantSelectionMatcher = (selection: Restaurant) => {
++    let selectionIds: Set<string> | undefined;
++    return (candidate: Restaurant): boolean => {
++        if (candidate.id === selection.id || hasSameNameAndCoordinate(candidate, selection)) return true;
++        const selectionMerged = selection.mergedRestaurants;
++        const candidateMerged = candidate.mergedRestaurants;
++        if (!selectionMerged?.length) {
++            if (candidateMerged) {
++                for (let index = 0; index < candidateMerged.length; index += 1) {
++                    if (candidateMerged[index].id === selection.id) return true;
++                }
++            }
++            return false;
++        }
++        if (!selectionIds) {
++            selectionIds = new Set([selection.id]);
++            for (let index = 0; index < selectionMerged.length; index += 1) {
++                selectionIds.add(selectionMerged[index].id);
++            }
++        }
++        if (selectionIds.has(candidate.id)) return true;
++        if (candidateMerged) {
++            for (let index = 0; index < candidateMerged.length; index += 1) {
++                if (selectionIds.has(candidateMerged[index].id)) return true;
++            }
++        }
++        return false;
++    };
++};
++
++type SelectionCacheKey = Pick<Restaurant, 'id' | 'name' | 'lat' | 'lng'> & { mergedIds: string[] };
++
++const selectionCacheKey = (selection: Restaurant): SelectionCacheKey => ({
++    id: selection.id,
++    name: selection.name,
++    lat: selection.lat,
++    lng: selection.lng,
++    mergedIds: selection.mergedRestaurants?.map((item) => item.id) ?? [],
++});
++
++const matchesSelectionCacheKey = (key: SelectionCacheKey, selection: Restaurant): boolean => {
++    if (key.id !== selection.id || key.name !== selection.name
++        || !Object.is(key.lat, selection.lat) || !Object.is(key.lng, selection.lng)) return false;
++    const merged = selection.mergedRestaurants;
++    if (key.mergedIds.length !== (merged?.length ?? 0)) return false;
++    for (let index = 0; index < key.mergedIds.length; index += 1) {
++        if (key.mergedIds[index] !== merged![index].id) return false;
++    }
++    return true;
++};
++
+ type SearchSelectionInput = {
+     searchedRestaurant: Restaurant | null;
+     selectedRestaurant: Restaurant | null;
+@@ -141,7 +194,16 @@ export const resolveReleasedSearchSelectionResetPlan = ({
+     return { nextReleasedSearchSelectionId: releasedSearchSelectionId } as const;
+ };
+ 
++const rememberedUniqueSwipeLists = new WeakSet<Restaurant[]>();
++let lastPostSearchDedupeExaminationCount = 0;
++
++export function getLastPostSearchDedupeExaminationCount() {
++    return lastPostSearchDedupeExaminationCount;
++}
++
+ const dedupeRestaurants = (restaurants: Restaurant[]): Restaurant[] => {
++    if (rememberedUniqueSwipeLists.has(restaurants)) return restaurants;
++    lastPostSearchDedupeExaminationCount += 1;
+     const seenIds = new Set<string>();
+     const seenMergedIds = new Set<string>();
+     const restaurantsByName = new Map<string, Restaurant[]>();
+@@ -166,6 +228,11 @@ const dedupeRestaurants = (restaurants: Restaurant[]): Restaurant[] => {
+         else restaurantsByName.set(restaurant.name, [restaurant]);
+     });
+ 
++    if (uniqueRestaurants.length === restaurants.length) {
++        rememberedUniqueSwipeLists.add(restaurants);
++        return restaurants;
++    }
++    rememberedUniqueSwipeLists.add(uniqueRestaurants);
+     return uniqueRestaurants;
+ };
+ 
+@@ -224,13 +291,39 @@ export const buildRestaurantsForSwipe = ({
+     return [...displayRestaurants, ...restaurantsToAdd];
+ };
+ 
+-const nearestSwipeFallbackCache = new WeakMap<readonly Restaurant[], Map<string, Restaurant | null>>();
++// List-reference caches require replacing catalog/visible arrays on edits.
++// Bound query history while retaining common back-and-forth searches.
++const MAX_SEARCH_CACHE_ENTRIES = 64;
++const rememberSelectionResult = <T>(cache: Map<string, T>, id: string, value: T) => {
++    cache.delete(id);
++    cache.set(id, value);
++    if (cache.size > MAX_SEARCH_CACHE_ENTRIES) {
++        const oldest = cache.keys().next().value;
++        if (oldest !== undefined) cache.delete(oldest);
++    }
++};
++
++const nearestSwipeFallbackCache = new WeakMap<readonly Restaurant[], Map<string, {
++    searched: SelectionCacheKey;
++    visible: SelectionCacheKey;
++    restaurant: Restaurant | null;
++}>>();
+ let nearestFallbackScanCount = 0;
+ 
+ export function getNearestFallbackScanCount() {
+     return nearestFallbackScanCount;
+ }
+ 
++const orderedVisibleCache = new WeakMap<readonly Restaurant[], Map<string, {
++    searched: SelectionCacheKey;
++    restaurants: Restaurant[];
++}>>();
++let lastSwipeOrderBuildCount = 0;
++
++export function getLastSwipeOrderBuildCount() {
++    return lastSwipeOrderBuildCount;
++}
++
+ export const buildPostSearchSwipeCandidates = ({
+     visibleRestaurants,
+     allRestaurants,
+@@ -239,16 +332,37 @@ export const buildPostSearchSwipeCandidates = ({
+     const dedupedVisibleRestaurants = dedupeRestaurants(visibleRestaurants);
+     let orderedVisibleRestaurants = dedupedVisibleRestaurants;
+     if (activeSearchedRestaurant) {
+-        const matchedRestaurants: Restaurant[] = [];
+-        const otherRestaurants: Restaurant[] = [];
+-        dedupedVisibleRestaurants.forEach((restaurant) => {
+-            if (isSameRestaurantSelection(restaurant, activeSearchedRestaurant)) {
+-                matchedRestaurants.push(restaurant);
+-            } else {
+-                otherRestaurants.push(restaurant);
++        let orders = orderedVisibleCache.get(dedupedVisibleRestaurants);
++        if (!orders) {
++            orders = new Map();
++            orderedVisibleCache.set(dedupedVisibleRestaurants, orders);
++        }
++        const cachedOrder = orders.get(activeSearchedRestaurant.id);
++        if (cachedOrder && matchesSelectionCacheKey(cachedOrder.searched, activeSearchedRestaurant)) {
++            orderedVisibleRestaurants = cachedOrder.restaurants;
++        } else {
++            lastSwipeOrderBuildCount += 1;
++            const matches = createRestaurantSelectionMatcher(activeSearchedRestaurant);
++            orderedVisibleRestaurants = new Array<Restaurant>(dedupedVisibleRestaurants.length);
++            let head = 0;
++            let tail = dedupedVisibleRestaurants.length - 1;
++            for (let index = 0; index < dedupedVisibleRestaurants.length; index += 1) {
++                const restaurant = dedupedVisibleRestaurants[index];
++                if (matches(restaurant)) orderedVisibleRestaurants[head++] = restaurant;
++                else orderedVisibleRestaurants[tail--] = restaurant;
+             }
+-        });
+-        orderedVisibleRestaurants = matchedRestaurants.concat(otherRestaurants);
++            // Non-matches were written backwards; restore their input order.
++            // This stable partition needs one result array, not two + concat.
++            for (let left = head, right = orderedVisibleRestaurants.length - 1; left < right; left += 1, right -= 1) {
++                const restaurant = orderedVisibleRestaurants[left];
++                orderedVisibleRestaurants[left] = orderedVisibleRestaurants[right];
++                orderedVisibleRestaurants[right] = restaurant;
++            }
++            rememberSelectionResult(orders, activeSearchedRestaurant.id, {
++                searched: selectionCacheKey(activeSearchedRestaurant),
++                restaurants: orderedVisibleRestaurants,
++            });
++        }
+     }
+ 
+     if (!activeSearchedRestaurant || orderedVisibleRestaurants.length !== 1) {
+@@ -256,14 +370,15 @@ export const buildPostSearchSwipeCandidates = ({
+     }
+ 
+     const visibleRestaurant = orderedVisibleRestaurants[0];
+-    const cacheKey = `${activeSearchedRestaurant.id}:${visibleRestaurant.id}`;
+-    let cachedFallbacks = nearestSwipeFallbackCache.get(allRestaurants);
+-    if (!cachedFallbacks) {
+-        cachedFallbacks = new Map();
+-        nearestSwipeFallbackCache.set(allRestaurants, cachedFallbacks);
++    let fallbacks = nearestSwipeFallbackCache.get(allRestaurants);
++    if (!fallbacks) {
++        fallbacks = new Map();
++        nearestSwipeFallbackCache.set(allRestaurants, fallbacks);
+     }
+-    if (cachedFallbacks.has(cacheKey)) {
+-        const cachedFallback = cachedFallbacks.get(cacheKey) ?? null;
++    const cached = fallbacks.get(activeSearchedRestaurant.id);
++    if (cached && matchesSelectionCacheKey(cached.searched, activeSearchedRestaurant)
++        && matchesSelectionCacheKey(cached.visible, visibleRestaurant)) {
++        const cachedFallback = cached.restaurant;
+         return cachedFallback
+             ? [...orderedVisibleRestaurants, cachedFallback]
+             : orderedVisibleRestaurants;
+@@ -271,11 +386,12 @@ export const buildPostSearchSwipeCandidates = ({
+ 
+     nearestFallbackScanCount += 1;
+     const dedupedRestaurants = dedupeRestaurants(allRestaurants);
++    const matchesVisible = createRestaurantSelectionMatcher(visibleRestaurant);
+     let nearestFallbackRestaurant: Restaurant | null = null;
+     let nearestDistance = Number.POSITIVE_INFINITY;
+     for (let index = 0; index < dedupedRestaurants.length; index += 1) {
+         const candidateRestaurant = dedupedRestaurants[index];
+-        if (isSameRestaurantSelection(candidateRestaurant, orderedVisibleRestaurants[0])) continue;
++        if (matchesVisible(candidateRestaurant)) continue;
+ 
+         const candidateDistance = getApproximateRestaurantDistance(
+             activeSearchedRestaurant,
+@@ -287,7 +403,11 @@ export const buildPostSearchSwipeCandidates = ({
+         nearestDistance = candidateDistance;
+     }
+ 
+-    cachedFallbacks.set(cacheKey, nearestFallbackRestaurant);
++    rememberSelectionResult(fallbacks, activeSearchedRestaurant.id, {
++        searched: selectionCacheKey(activeSearchedRestaurant),
++        visible: selectionCacheKey(visibleRestaurant),
++        restaurant: nearestFallbackRestaurant,
++    });
+ 
+     return nearestFallbackRestaurant
+         ? [...orderedVisibleRestaurants, nearestFallbackRestaurant]
+diff --git a/apps/web/tests-unit/mobile-home-search-selection.test.ts b/apps/web/tests-unit/mobile-home-search-selection.test.ts
+index 93e2c091..62ea969c 100644
+--- a/apps/web/tests-unit/mobile-home-search-selection.test.ts
++++ b/apps/web/tests-unit/mobile-home-search-selection.test.ts
+@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test';
+ import type { Restaurant } from '../types/restaurant';
+ import {
+     buildPostSearchSwipeCandidates,
++    getLastPostSearchDedupeExaminationCount,
++    getLastSwipeOrderBuildCount,
+     getNearestFallbackScanCount,
+     buildRestaurantsForSwipe,
+     getActiveSearchedRestaurant,
+@@ -254,4 +256,25 @@ describe('mobile home search selection helpers', () => {
+ 
+         expect(getNearestFallbackScanCount()).toBe(scansBefore + 1);
+     });
++
++    test('reuses the searched swipe order for the same visible list', () => {
++        const searchedRestaurant = makeRestaurant({ id: 'search-1', lat: 37.2, lng: 127.2 });
++        const otherRestaurant = makeRestaurant({ id: 'other-1', lat: 37.8, lng: 127.8 });
++        const visibleRestaurants = [otherRestaurant, searchedRestaurant];
++        buildPostSearchSwipeCandidates({
++            visibleRestaurants,
++            allRestaurants: visibleRestaurants,
++            activeSearchedRestaurant: searchedRestaurant,
++        });
++        const dedupes = getLastPostSearchDedupeExaminationCount();
++        const orders = getLastSwipeOrderBuildCount();
++        const again = buildPostSearchSwipeCandidates({
++            visibleRestaurants,
++            allRestaurants: visibleRestaurants,
++            activeSearchedRestaurant: searchedRestaurant,
++        });
++        expect(getLastPostSearchDedupeExaminationCount()).toBe(dedupes);
++        expect(getLastSwipeOrderBuildCount()).toBe(orders);
++        expect(again.map((restaurant) => restaurant.id)).toEqual(['search-1', 'other-1']);
++    });
+ });

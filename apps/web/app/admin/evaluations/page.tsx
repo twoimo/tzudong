@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -1430,7 +1431,7 @@ function AdminEvaluationStaticCardSkeleton({ count }: { count: number }) {
 }
 function AdminEvaluationRouteSkeleton() {
   const frameRef = useRef<HTMLDivElement>(null);
-  const mobileCards = useFilledSkeletonCount(104, 4, 48);
+  const { ref: mobileCardsRef, count: mobileCardsCount } = useFilledSkeletonCount(104, 4, 48);
   const [rowCount, setRowCount] = useState(6);
   useLayoutEffect(() => {
     const node = frameRef.current;
@@ -1477,9 +1478,9 @@ function AdminEvaluationRouteSkeleton() {
           </div>
         </div>
       </div>
-      <div ref={mobileCards.ref} className="flex min-h-0 flex-1 flex-col gap-3 p-2">
+      <div ref={mobileCardsRef} className="flex min-h-0 flex-1 flex-col gap-3 p-2">
         <AdminEvaluationStaticMobileLoadingControls />
-        <AdminEvaluationStaticCardSkeleton count={mobileCards.count} />
+        <AdminEvaluationStaticCardSkeleton count={mobileCardsCount} />
         <div ref={frameRef} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
           <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
             {Array.from({ length: 9 }).map((_, index) => (
@@ -3502,15 +3503,11 @@ function AdminEvaluationPage({
   const initialContentLoading = initialView === 'submissions'
     ? submissionsLoading || recommendationRequestsLoading || reviewsLoading
     : loading;
-  const initialLoadPendingRef = useRef(true);
-  if (
-    initialLoadPendingRef.current
-    && !authLoading
-    && (hasE2EAdminShellBypass || (user && isAdmin))
-    && !initialContentLoading
-  ) {
-    initialLoadPendingRef.current = false;
-  }
+  const initialLoadPending = useInitialLoadPending(
+    !authLoading
+    && (hasE2EAdminShellBypass || Boolean(user && isAdmin))
+    && !initialContentLoading,
+  );
 
   useLayoutEffect(() => {
     if (!onInitialContentReady || authLoading) return;
@@ -3518,19 +3515,19 @@ function AdminEvaluationPage({
       onInitialContentReady();
       return;
     }
-    if (initialLoadPendingRef.current) return;
+    if (initialLoadPending) return;
     onInitialContentReady();
-  }, [initialContentLoading, authLoading, onInitialContentReady, user, isAdmin, hasE2EAdminShellBypass]);
+  }, [initialContentLoading, initialLoadPending, authLoading, onInitialContentReady, user, isAdmin, hasE2EAdminShellBypass]);
 
   if (!hasE2EAdminShellBypass && !authLoading && (!user || !isAdmin)) {
     return null;
   }
 
-  if (!embedded && initialLoadPendingRef.current && (authLoading || initialContentLoading)) {
+  if (!embedded && initialLoadPending && (authLoading || initialContentLoading)) {
     return <AdminEvaluationRouteSkeleton />;
   }
 
-  if (embedded && initialLoadPendingRef.current && (authLoading || initialContentLoading)) {
+  if (embedded && initialLoadPending && (authLoading || initialContentLoading)) {
     return null;
   }
 
