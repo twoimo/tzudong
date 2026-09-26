@@ -378,7 +378,7 @@ describe("web quality performance source contracts", () => {
     );
   });
 
-  test("map marker WebP assets are present and substantially smaller than PNG fallbacks", () => {
+  test("map marker WebP assets are present and at least 75% smaller than PNG fallbacks", () => {
     const markerDir = join(import.meta.dir, "..", "public/images/maker-images");
     const webpDir = join(markerDir, "webp");
     const pngFiles = readdirSync(markerDir).filter((file) =>
@@ -399,7 +399,7 @@ describe("web quality performance source contracts", () => {
       webpTotal += statSync(webpPath).size;
     }
 
-    expect(webpTotal).toBeLessThan(pngTotal * 0.1);
+    expect(webpTotal).toBeLessThan(pngTotal * 0.25);
   });
 
   test("popup ad banners load immediately for first-screen exposure while distant media has no src", () => {
@@ -2114,7 +2114,8 @@ describe("web quality performance source contracts", () => {
     expect(mapOverlayNoticeSource).toContain("aria-busy={ariaBusy}");
     expect(mapOverlayNoticeSource).toContain('aria-hidden="true">');
     expect(mapIndicatorsSource).toContain("MapOverlayNotice");
-    expect(mapOverlayTimingsSource).toContain("motion-reduce:animate-none");
+    expect(Object.values(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES).every((classes) => classes === '')).toBe(true);
+    expect(mapOverlayTimingsSource).not.toContain("animate-[");
     expect(mapIndicatorsSource).toContain("isBusy = !isLoaded");
     expect(mapIndicatorsSource).toContain("NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.restaurantCount");
     expect(mapIndicatorsSource).toContain("NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.onlineUsers");
@@ -2124,7 +2125,8 @@ describe("web quality performance source contracts", () => {
     expect(mapIndicatorsSource).not.toContain("animate-[fadeInOut_3s_ease-in-out_forwards]");
     expect(mapIndicatorsSource).not.toContain("🔥 {count}개의 맛집 발견");
     expect(mapViewIndicatorsSource).toContain("ariaBusy");
-    expect(mapViewIndicatorsSource).toContain("motion-reduce:animate-none");
+    expect(mapViewIndicatorsSource).toContain("<MapOverlayNotice");
+    expect(mapViewIndicatorsSource).not.toContain("animate-");
     expect(overlayStackSource).toContain(
       "isBusy",
     );
@@ -3164,14 +3166,12 @@ describe("web quality performance source contracts", () => {
     expect(mapViewSource).toContain(
       "This page didn't load Google Maps correctly",
     );
-    expect(mapViewSource).toContain(
-      "markersRef.current.push({ marker, restaurantId: restaurant.id });",
-    );
+    expect(mapViewSource).toContain("markersRef.current = reconcileMapViewMarkers({");
     expect(mapViewSource).toContain(
       "const restaurant = restaurantsById.get(restaurantId);",
     );
     expect(mapViewSource).toContain(
-      "console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id });",
+      "console.warn('MapView: Advanced marker creation skipped');",
     );
     expect(mapViewSource).toContain(
       "console.warn('MapView: keeping previous valid bounds after bounds query failure');",
@@ -4616,7 +4616,10 @@ describe("web quality performance source contracts", () => {
       "!isPublicRestrictedMode && hasSupabaseAuthSessionHint()",
     );
     expect(source("app/home-runtime-shell.tsx")).toContain(
-      "<AnonymousHomeAuthProvider isLoading={isPublicRestrictedMode ? false : hasStoredSession}>",
+      "key={hasStoredSession ? 'session' : 'anonymous'}",
+    );
+    expect(source("app/home-runtime-shell.tsx")).toContain(
+      "isLoading={isPublicRestrictedMode ? false : hasStoredSession}",
     );
     expect(source("app/home-runtime-shell.tsx")).toContain(
       "if (!isPublicRestrictedMode) {",

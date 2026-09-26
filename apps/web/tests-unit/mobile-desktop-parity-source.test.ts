@@ -357,6 +357,7 @@ describe("mobile and desktop parity source contracts", () => {
     const stampOverlaySource = source(
       "components/overlay-pages/StampOverlay.tsx",
     );
+    const mapPanelChromeSource = source("components/home/map-panel-chrome.tsx");
     const stampPageSource = source("app/stamp/page.tsx");
     const stampCardSource = source("components/stamp/StampCard.tsx");
     const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
@@ -996,12 +997,12 @@ describe("mobile and desktop parity source contracts", () => {
     expect(stampOverlaySource).toContain(
       "h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']",
     );
-    expect(stampOverlaySource).toContain(
-      "shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4",
-    );
-    expect(stampOverlaySource).toContain(
-      "flex flex-wrap items-start justify-between gap-3",
-    );
+    expect(stampOverlaySource).toContain("<MapPanelHeader");
+    expect(stampOverlaySource).toContain('title="도장"');
+    expect(stampOverlaySource).toContain('titleAs="h1"');
+    expect(mapPanelChromeSource).toContain("shrink-0 border-b border-border bg-background px-4 py-3");
+    expect(mapPanelChromeSource).toContain("flex items-center gap-2");
+    expect(mapPanelChromeSource).toContain('aria-label={closeLabel}');
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
     expect(stampPageSource).toContain(
