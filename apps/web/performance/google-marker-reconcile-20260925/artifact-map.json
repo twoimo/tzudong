@@ -1,0 +1,14 @@
+{
+  "artifacts": {
+    "baseline-MapView.tsx.txt": "0d13c1b5408c3b7118a76f64b0087293e87393e2ea8361ff621e533e90908da3",
+    "baseline-effect.mjs": "66c4222684af59f89b1e173602d0b01abaede1a117f78d2f0ea4133bcdbd270b",
+    "browser-entry.mjs": "caa4eca0b57706f933ca4b38fbdf978558e6d3200a67cdc050e13628a364b91f",
+    "browser-bundle.mjs": "77a31bb0249fb4f78596660c682e8c3a7d40a56e6900937d7cc3243178bb32ff",
+    "candidate-MapView.tsx.txt": "ddcb81ef3f5d71afaac15fe5f6752d56632dd70b2d2c54d8e6e52642cdd62c02",
+    "candidate-helper.ts.txt": "9e1f4b4d583f657f727c7a4eabb61ab67b99390373abf6dbb2fb23af58ba509a",
+    "frozen-tree.patch": "059bdc36a5618cb4b0f05d384a019017c1934d0406932981d2a640a33e4e061e",
+    "raw.json": "79caf77eec84b09ebba1db2272863ed28e7fd3bc7c8568e76bcef86886d52c77",
+    "measure.mjs": "cbeb6d4598e2e23cbe0e9ba0d1cfab09203e828bd27db6f702d66e1bcfa84160",
+    "score-and-verify.mjs": "bdb7a4a3231a5e9fdbf98fa82c6988e2b4c74a73887a63a0a38dfd468806e2d4"
+  }
+}

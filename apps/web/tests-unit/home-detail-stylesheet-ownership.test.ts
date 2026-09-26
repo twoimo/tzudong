@@ -95,13 +95,13 @@ describe('home detail stylesheet ownership', () => {
 
     const css = readFileSync(outputPath, 'utf8');
 
-    // Without these the video play badge and its `영상 N` chip render unstyled:
-    // no background, no ring, and the chip falls back to its static position.
+    // The play badge and its `영상 N` chip retain their background, ring and
+    // placement while the removed one-pixel blur stays out of this CSS entry.
     expect(css).toContain('.top-2');
     expect(css).toContain('.bg-black\\/55');
     expect(css).toContain('.bg-black\\/70');
     expect(css).toContain('.ring-1');
-    expect(css).toContain('.backdrop-blur-\\[1px\\]');
+    expect(css).not.toContain('.backdrop-blur-\\[1px\\]');
     expect(css).toContain('.aspect-video');
   }, 60_000);
 });

@@ -1,0 +1,59 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/swipe-render-cache.test.ts:
+(pass) swipe render cache correctness and capacity > invalidates search ordering when the same search id gets different merged ids [0.57ms]
+(pass) swipe render cache correctness and capacity > invalidates ordering when the same search id gets a new name or coordinates [0.03ms]
+(pass) swipe render cache correctness and capacity > detects an in-place edit of the active search merged ids [0.03ms]
+(pass) swipe render cache correctness and capacity > recomputes the nearest fallback when search coordinates change with the same id [0.06ms]
+(pass) swipe render cache correctness and capacity > recomputes fallback exclusion when the visible selection changes with the same id [0.06ms]
+(pass) swipe render cache correctness and capacity > bounds ordering history to 64 searches per visible list [0.23ms]
+(pass) swipe render cache correctness and capacity > bounds fallback history to 64 searches per catalog [0.39ms]
+(pass) swipe render cache correctness and capacity > preserves the order within both matched and unmatched groups [0.09ms]
+(pass) swipe render cache correctness and capacity > preserves empty, unavailable, invalid-coordinate and tie behavior [0.97ms]
+(pass) swipe render cache correctness and capacity > matches an uncached reference across 2,000 deterministic selection changes [97.70ms]
+
+tests-unit/mobile-home-search-selection.test.ts:
+(pass) mobile home search selection helpers > treats merged or coordinate-matched restaurants as the same selection [0.11ms]
+(pass) mobile home search selection helpers > keeps searched restaurant active only while it still matches the selected restaurant [0.05ms]
+(pass) mobile home search selection helpers > handles a searched restaurant only once until search state is cleared [0.03ms]
+(pass) mobile home search selection helpers > releases search ownership while keeping the current panel selection open [0.02ms]
+(pass) mobile home search selection helpers > plans search selection release only once for an active searched restaurant [0.02ms]
+(pass) mobile home search selection helpers > resets released search selection id when active search changes or clears [0.02ms]
+(pass) mobile home search selection helpers > adds active searched restaurant to swipe candidates when it is outside display ids [0.09ms]
+(pass) mobile home search selection helpers > does not duplicate active searched restaurant already present in display ids [0.01ms]
+(pass) mobile home search selection helpers > keeps selected search result in swipe candidates after search ownership is released [0.02ms]
+(pass) mobile home search selection helpers > does not duplicate selected restaurant that matches an existing display restaurant [0.02ms]
+(pass) mobile home search selection helpers > adds the nearest fallback restaurant when only one visible restaurant remains after search [0.20ms]
+(pass) mobile home search selection helpers > reuses the nearest fallback when the list and visible restaurant are unchanged [0.34ms]
+(pass) mobile home search selection helpers > reuses the searched swipe order for the same visible list [0.23ms]
+
+tests-unit/mobile-home-map-regressions.test.ts:
+(pass) mobile home map regression guards > search-selected restaurant can still swipe to a different visible restaurant [0.07ms]
+(pass) mobile home map regression guards > marker render is not skipped when another marker takes over after a search selection [0.15ms]
+(pass) mobile home map regression guards > marker render is not skipped when the sheet closes and a new marker opens with cleared search state [0.02ms]
+(pass) mobile home map regression guards > single-visible post-search swipe falls back to the nearest restaurant [0.07ms]
+(pass) mobile home map regression guards > search ownership release keeps the current detail selection active [0.02ms]
+(pass) mobile home map regression guards > peek-state downward sheet gesture dismisses only after intentional distance or speed [0.09ms]
+(pass) mobile home map regression guards > blank map taps collapse the sheet, enter fullscreen map, then restore the peek sheet [0.05ms]
+(pass) mobile home map regression guards > blank map fullscreen toggle is inactive outside a mobile restaurant panel [0.01ms]
+(pass) mobile home map regression guards > cluster marker zoom jumps immediately without Naver morph animation [0.69ms]
+(pass) mobile home map regression guards > mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence [1.92ms]
+(pass) mobile home map regression guards > mobile visible marker sheet receives map interaction epoch before requesting peek height [1.22ms]
+(pass) mobile home map regression guards > G002 mobile category sheet commits immediately without delayed apply affordance [0.68ms]
+(pass) mobile home map regression guards > G012 mobile sheets and details own fixed map-control safe area [0.25ms]
+(pass) mobile home map regression guards > home detail route history uses app-owned list/detail states and browser back restoration contracts [0.50ms]
+
+tests-unit/map-view-marker-helpers.test.ts:
+(pass) map view marker helpers > detects selected marker from selected or searched id [0.04ms]
+(pass) map view marker helpers > returns marker size by selection state
+(pass) map view marker helpers > builds class-only marker HTML with valid local and HTTPS images [0.28ms]
+(pass) map view marker helpers > fails closed for unsafe marker image values and escapes alt text [0.15ms]
+(pass) map view marker helpers > normalizes non-canonical marker sizes to the selection state size classes [0.14ms]
+(pass) map view marker helpers > toggles only the fixed selected and size classes without style mutation [0.13ms]
+(pass) map view marker helpers > treats empty marker content as a safe no-op [0.01ms]
+(pass) map view marker helpers > updates selection in place without rebuilding every Google marker [0.12ms]
+
+ 45 pass
+ 0 fail
+ 2246 expect() calls
+Ran 45 tests across 4 files. [148.00ms]

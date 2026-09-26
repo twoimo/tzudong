@@ -1035,7 +1035,7 @@ function AdminMapOverviewCanvas({
 }
 
 function AdminMapInfoPanelSkeleton() {
-  const routeSkeleton = useFilledSkeletonCount(76, 4);
+  const { ref: routeSkeletonRef, count: routeSkeletonCount } = useFilledSkeletonCount(76, 4);
   return (
     <aside
       className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden"
@@ -1058,13 +1058,13 @@ function AdminMapInfoPanelSkeleton() {
           </div>
         </div>
       </section>
-      <section ref={routeSkeleton.ref} className="rounded-xl bg-card/80 p-2.5 shadow-sm lg:min-h-0 lg:flex-1">
+      <section ref={routeSkeletonRef} className="rounded-xl bg-card/80 p-2.5 shadow-sm lg:min-h-0 lg:flex-1">
         <div className="flex items-center justify-between gap-2">
           <Skeleton className="h-5 w-28 rounded-full motion-reduce:animate-none" />
           <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
         </div>
         <div className="mt-3 space-y-1.5">
-          {Array.from({ length: routeSkeleton.count }).map((_, index) => (
+          {Array.from({ length: routeSkeletonCount }).map((_, index) => (
             <Skeleton
               key={index}
               className="h-[4.75rem] rounded-xl motion-reduce:animate-none"

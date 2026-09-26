@@ -1,0 +1,158 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/swipe-render-cache.test.ts:
+17 | 
+18 | describe('swipe render cache correctness and capacity', () => {
+19 |     test('invalidates search ordering when the same search id gets different merged ids', () => {
+20 |         const visible = [restaurant('a'), restaurant('b')];
+21 |         expect(ids(order(visible, restaurant('search', { mergedRestaurants: merged('a') })))).toEqual(['a', 'b']);
+22 |         expect(ids(order(visible, restaurant('search', { mergedRestaurants: merged('b') })))).toEqual(['b', 'a']);
+                                                                                                   ^
+error: expect(received).toEqual(expected)
+
+  [
+-   "b",
+    "a",
++   "b",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:22:95)
+(fail) swipe render cache correctness and capacity > invalidates search ordering when the same search id gets different merged ids [1.59ms]
+23 |     });
+24 | 
+25 |     test('invalidates ordering when the same search id gets a new name or coordinates', () => {
+26 |         const visible = [restaurant('a'), restaurant('b', { lat: 38 })];
+27 |         expect(ids(order(visible, restaurant('search', { name: 'b', lat: 38 })))).toEqual(['b', 'a']);
+28 |         expect(ids(order(visible, restaurant('search', { name: 'a', lat: 37.5 })))).toEqual(['a', 'b']);
+                                                                                         ^
+error: expect(received).toEqual(expected)
+
+  [
+-   "a",
+    "b",
++   "a",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:28:85)
+(fail) swipe render cache correctness and capacity > invalidates ordering when the same search id gets a new name or coordinates [0.14ms]
+31 |     test('detects an in-place edit of the active search merged ids', () => {
+32 |         const visible = [restaurant('a'), restaurant('b')];
+33 |         const searched = restaurant('search', { mergedRestaurants: merged('a') });
+34 |         expect(ids(order(visible, searched))).toEqual(['a', 'b']);
+35 |         searched.mergedRestaurants![0].id = 'b';
+36 |         expect(ids(order(visible, searched))).toEqual(['b', 'a']);
+                                                   ^
+error: expect(received).toEqual(expected)
+
+  [
+-   "b",
+    "a",
++   "b",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:36:47)
+(fail) swipe render cache correctness and capacity > detects an in-place edit of the active search merged ids [0.07ms]
+38 | 
+39 |     test('recomputes the nearest fallback when search coordinates change with the same id', () => {
+40 |         const visible = [restaurant('visible')];
+41 |         const all = [restaurant('west', { lng: 126 }), restaurant('east', { lng: 128 })];
+42 |         expect(ids(order(visible, restaurant('search', { lng: 126 }), all))).toEqual(['visible', 'west']);
+43 |         expect(ids(order(visible, restaurant('search', { lng: 128 }), all))).toEqual(['visible', 'east']);
+                                                                                  ^
+error: expect(received).toEqual(expected)
+
+  [
+    "visible",
+-   "east",
++   "west",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:43:78)
+(fail) swipe render cache correctness and capacity > recomputes the nearest fallback when search coordinates change with the same id [0.11ms]
+45 | 
+46 |     test('recomputes fallback exclusion when the visible selection changes with the same id', () => {
+47 |         const all = [restaurant('near', { lng: 127.001 }), restaurant('far', { lng: 127.01 })];
+48 |         const searched = restaurant('search');
+49 |         expect(ids(order([restaurant('visible')], searched, all))).toEqual(['visible', 'near']);
+50 |         expect(ids(order([restaurant('visible', { mergedRestaurants: merged('near') })], searched, all))).toEqual(['visible', 'far']);
+                                                                                                               ^
+error: expect(received).toEqual(expected)
+
+  [
+    "visible",
+-   "far",
++   "near",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:50:107)
+(fail) swipe render cache correctness and capacity > recomputes fallback exclusion when the visible selection changes with the same id [0.08ms]
+55 |         const first = restaurant('first');
+56 |         order(visible, first);
+57 |         for (let index = 0; index < 64; index += 1) order(visible, restaurant(`query-${index}`));
+58 |         const builds = getLastSwipeOrderBuildCount();
+59 |         order(visible, first);
+60 |         expect(getLastSwipeOrderBuildCount()).toBe(builds + 1);
+                                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 72
+Received: 71
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:60:47)
+(fail) swipe render cache correctness and capacity > retains only the most recent ordering per visible list [0.20ms]
+69 |         const first = restaurant('first');
+70 |         order(visible, first, all);
+71 |         order(visible, restaurant('second'), all);
+72 |         const scans = getNearestFallbackScanCount();
+73 |         order(visible, first, all);
+74 |         expect(getNearestFallbackScanCount()).toBe(scans + 1);
+                                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 5
+Received: 4
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:74:47)
+(fail) swipe render cache correctness and capacity > retains only the most recent fallback per catalog [0.10ms]
+(pass) swipe render cache correctness and capacity > preserves the order within both matched and unmatched groups [0.12ms]
+(pass) swipe render cache correctness and capacity > preserves empty, unavailable, invalid-coordinate and tie behavior [0.04ms]
+126 |                         + ((Number(searched.lng) - Number(candidate.lng)) * 88) ** 2;
+127 |                     if (Number.isFinite(d) && d < distance) { nearest = candidate; distance = d; }
+128 |                 }
+129 |                 if (nearest) expected.push(nearest);
+130 |             }
+131 |             expect(ids(order(visible, searched, all))).toEqual(ids(expected));
+                                                             ^
+error: expect(received).toEqual(expected)
+
+  [
+    "r-0",
+-   "r-28",
++   "r-32",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-swipe-render-perf-20260925/apps/web/tests-unit/swipe-render-cache.test.ts:131:56)
+(fail) swipe render cache correctness and capacity > matches an uncached reference across 2,000 deterministic selection changes [3.63ms]
+
+ 2 pass
+ 8 fail
+ 28 expect() calls
+Ran 10 tests across 1 file. [41.00ms]

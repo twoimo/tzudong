@@ -69,10 +69,10 @@ export function UserProfileProgressiveSkeleton({
 }
 
 export function UserProfileTabSkeleton({ label, live = true }: { label: string; live?: boolean }) {
-    const filled = useFilledSkeletonCount(92, 3);
+    const { ref: filledRef, count: filledCount } = useFilledSkeletonCount(92, 3);
     return (
         <div
-            ref={filled.ref}
+            ref={filledRef}
             role={live ? "status" : undefined}
             aria-live={live ? "polite" : undefined}
             aria-label={live ? label : undefined}
@@ -80,7 +80,7 @@ export function UserProfileTabSkeleton({ label, live = true }: { label: string; 
             className="space-y-3 p-4"
             data-user-profile-tab-skeleton="true"
         >
-            {Array.from({ length: filled.count }, (_, item) => (
+            {Array.from({ length: filledCount }, (_, item) => (
                 <div key={item} className="rounded-xl border border-border bg-card/80 p-3 shadow-sm">
                     <Skeleton className="h-4 w-2/3 rounded" />
                     <Skeleton className="mt-2 h-3 w-full rounded" />

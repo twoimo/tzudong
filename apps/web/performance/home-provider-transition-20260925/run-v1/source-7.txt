@@ -1,0 +1,83 @@
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { createServer } from 'node:http';
+import { fileURLToPath } from 'node:url';
+import { chromium } from '@playwright/test';
+
+const here = new URL('./', import.meta.url);
+const label = process.argv[2] ?? 'run-v1';
+if (!/^[a-z0-9-]+$/.test(label)) throw new Error('Expected unique lowercase run label');
+const output = new URL(`${label}/`, here);
+await mkdir(output);
+const baseline = await readFile(new URL('baseline-home-runtime-shell.tsx.txt', here), 'utf8');
+const start = baseline.indexOf('    if (hasStoredSession && AuthProvider && NotificationProvider) {');
+const end = baseline.indexOf('\nfunction DeferredAuthModal', start);
+if (start < 0 || end < start) throw new Error('Frozen baseline boundary not found');
+const oldBoundary = `import React from 'react';\nimport { AnonymousHomeAuthProvider } from '../../contexts/AuthContextBase';\nimport { StaticNotificationProvider } from '../../contexts/NotificationContextBase';\nconst isPublicRestrictedMode = false;\nexport function BaselineBoundary({children, hasStoredSession, AuthProvider, NotificationProvider}) {\n${baseline.slice(start, end)}`;
+await writeFile(new URL('baseline-boundary.jsx', here), oldBoundary);
+execFileSync('bun', ['build', fileURLToPath(new URL('browser-entry.jsx', here)), '--target=browser', '--format=esm',
+    '--minify', '--define', 'process.env.NODE_ENV="production"', '--outfile', fileURLToPath(new URL('browser-bundle.mjs', output))],
+    { cwd: fileURLToPath(new URL('../../', here)), stdio: 'pipe' });
+const bundle = await readFile(new URL('browser-bundle.mjs', output));
+const server = createServer((request, response) => {
+    response.writeHead(200, { 'Content-Type': request.url === '/bundle.mjs' ? 'text/javascript' : 'text/html' });
+    response.end(request.url === '/bundle.mjs' ? bundle : '<!doctype html><html><head><meta charset="utf-8"></head><body><script type="module" src="/bundle.mjs"></script></body></html>');
+});
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+const browser = await chromium.launch({ headless: true });
+const errors = [];
+const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+const mad = values => median(values.map(value => Math.abs(value - median(values))));
+const sha = value => createHash('sha256').update(value).digest('hex');
+try {
+    const page = await browser.newPage();
+    page.on('pageerror', error => errors.push(error.name));
+    await page.goto(`http://127.0.0.1:${server.address().port}/`);
+    await page.waitForFunction(() => window.providerTransitionHarness);
+    const checks = await page.evaluate(() => window.providerTransitionHarness.verify());
+    const pairs = [];
+    for (let index = 0; index < 35; index++) {
+        const pair = {};
+        for (const kind of index % 2 ? ['candidate', 'baseline'] : ['baseline', 'candidate']) {
+            pair[kind] = await page.evaluate(kind => window.providerTransitionHarness.sample(kind, 200), kind);
+        }
+        if (index >= 4) pairs.push(pair);
+    }
+    const before = pairs.map(pair => pair.baseline.durationMs);
+    const after = pairs.map(pair => pair.candidate.durationMs);
+    const baselineMs = median(before), candidateMs = median(after);
+    const reductionMs = baselineMs - candidateMs;
+    const noiseMs = 2 * Math.max(mad(before), mad(after));
+    const budgets = { absoluteDeltaMs: 0.05, relativeDeltaFraction: 0.05, noiseMadMultiplier: 2 };
+    const scope = 'Production React browser laboratory: real frozen home provider boundary vs current bridge, 200 synthetic rows, synthetic auth/notification contexts. No live login, full-page LCP/INP or visible-blank-frame claim.';
+    const raw = { scope, observedAt: new Date().toISOString(), chromium: browser.version(), node: process.version,
+        samples: 31, warmupPairs: 4, checks, errors, pairs };
+    await writeFile(new URL('raw.json', output), JSON.stringify(raw, null, 2) + '\n', { flag: 'wx' });
+    const score = { scope, budgets, checks: checks.length, failures: checks.filter(check => !check.ok).length + errors.length,
+        baselineMs, candidateMs, absoluteReductionMs: reductionMs, relativeReductionPercent: 100 * reductionMs / baselineMs,
+        baselineMadMs: mad(before), candidateMadMs: mad(after), noiseMs,
+        classification: Math.abs(reductionMs) > Math.max(0.05, 0.05 * baselineMs, noiseMs)
+            ? reductionMs > 0 ? 'local_improvement' : 'local_regression' : 'below_budget_or_noise',
+        baselineRowRemounts: pairs[0].baseline.rowMounts, candidateRowRemounts: pairs[0].candidate.rowMounts,
+        retainedInputSamples: pairs.filter(pair => pair.candidate.inputRetained && pair.candidate.draftRetained).length };
+    await writeFile(new URL('scored.json', output), JSON.stringify(score, null, 2) + '\n', { flag: 'wx' });
+    const sources = ['../../components/home/home-session-provider-bridge.tsx', '../../app/home-runtime-shell.tsx',
+        '../../contexts/AuthContextBase.tsx', '../../contexts/NotificationContextBase.tsx',
+        'baseline-home-runtime-shell.tsx.txt', 'baseline-boundary.jsx', 'browser-entry.jsx', 'measure.mjs'];
+    const artifacts = {};
+    for (const [index, source] of sources.entries()) {
+        const bytes = await readFile(new URL(source, here));
+        const frozen = `source-${index}.txt`;
+        await writeFile(new URL(frozen, output), bytes, { flag: 'wx' });
+        artifacts[frozen] = { sha256: sha(bytes), original: source };
+    }
+    for (const file of ['raw.json', 'scored.json', 'browser-bundle.mjs']) artifacts[file] = { sha256: sha(await readFile(new URL(file, output))) };
+    const map = JSON.stringify({ scope, artifacts }, null, 2) + '\n';
+    await writeFile(new URL('artifact-map.json', output), map, { flag: 'wx' });
+    console.log(JSON.stringify({ ...score, artifactMapSha256: sha(map) }, null, 2));
+    if (score.failures || score.retainedInputSamples !== 31) process.exitCode = 1;
+} finally {
+    await browser.close();
+    await new Promise(resolve => server.close(resolve));
+}

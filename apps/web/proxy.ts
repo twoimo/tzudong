@@ -242,7 +242,7 @@ function buildImageSources() {
         ? SUPABASE_IMAGE_PUBLIC_PATHS.map((path) => `${configuredSupabaseOrigin}${path}`)
         : []
 
-    // `data:` is limited to source-controlled CSS imagery, and `blob:` to local upload previews.
+    // `data:` supports bounded inline admin image previews; `blob:` supports local upload previews.
     return ["'self'", 'data:', 'blob:', ...TRUSTED_IMAGE_SOURCES, ...configuredStorageSources].join(' ')
 }
 

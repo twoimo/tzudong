@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test';
 import type { Restaurant } from '../types/restaurant';
 import {
     buildPostSearchSwipeCandidates,
+    getLastPostSearchDedupeExaminationCount,
+    getLastSwipeOrderBuildCount,
     getNearestFallbackScanCount,
     buildRestaurantsForSwipe,
     getActiveSearchedRestaurant,
@@ -253,5 +255,26 @@ describe('mobile home search selection helpers', () => {
         });
 
         expect(getNearestFallbackScanCount()).toBe(scansBefore + 1);
+    });
+
+    test('reuses the searched swipe order for the same visible list', () => {
+        const searchedRestaurant = makeRestaurant({ id: 'search-1', lat: 37.2, lng: 127.2 });
+        const otherRestaurant = makeRestaurant({ id: 'other-1', lat: 37.8, lng: 127.8 });
+        const visibleRestaurants = [otherRestaurant, searchedRestaurant];
+        buildPostSearchSwipeCandidates({
+            visibleRestaurants,
+            allRestaurants: visibleRestaurants,
+            activeSearchedRestaurant: searchedRestaurant,
+        });
+        const dedupes = getLastPostSearchDedupeExaminationCount();
+        const orders = getLastSwipeOrderBuildCount();
+        const again = buildPostSearchSwipeCandidates({
+            visibleRestaurants,
+            allRestaurants: visibleRestaurants,
+            activeSearchedRestaurant: searchedRestaurant,
+        });
+        expect(getLastPostSearchDedupeExaminationCount()).toBe(dedupes);
+        expect(getLastSwipeOrderBuildCount()).toBe(orders);
+        expect(again.map((restaurant) => restaurant.id)).toEqual(['search-1', 'other-1']);
     });
 });

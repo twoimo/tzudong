@@ -1,0 +1,50 @@
+{
+  "scope": "Development React StrictMode correctness only: real frozen and current home provider boundaries, 200 synthetic rows, synthetic auth/notification contexts. No live login, full-page LCP/INP or visible-blank-frame claim.",
+  "artifacts": {
+    "source-0.txt": {
+      "sha256": "413ad06b0578c21a9e92cd6d53a44abd5cc4125f149cc20baa83d520c018ee77",
+      "original": "../../components/home/home-session-provider-bridge.tsx"
+    },
+    "source-1.txt": {
+      "sha256": "669cd2e84cd3010cd74f84e7484313d9792fa65e1941801edda47f5069847b58",
+      "original": "../../app/home-runtime-shell.tsx"
+    },
+    "source-2.txt": {
+      "sha256": "8a80c8f913e39b557326afa6d8741145b0cce3966778691426855548442c635e",
+      "original": "../../contexts/AuthContextBase.tsx"
+    },
+    "source-3.txt": {
+      "sha256": "2c8194be9fea0c4bb0188c0799863bd72260d54c2dfad05e55c9e0b4fdca8837",
+      "original": "../../contexts/NotificationContextBase.tsx"
+    },
+    "source-4.txt": {
+      "sha256": "99545d84af1b4aeac2c35b467e443b728363b55af34ec8939763aaaad130cb38",
+      "original": "baseline-home-runtime-shell.tsx.txt"
+    },
+    "source-5.txt": {
+      "sha256": "6a582ba672d34d8c86d6c570d1d76352d4eb6e0c8da18cc96b5c74cac157124a",
+      "original": "baseline-boundary.jsx"
+    },
+    "source-6.txt": {
+      "sha256": "291c6cc0cbb8355a15ffcecfa96a8514fe01e2abcd2e6683fd3d0126337860f3",
+      "original": "candidate-boundary.jsx"
+    },
+    "source-7.txt": {
+      "sha256": "a0f33d499f93c08fee19d27cda68c1a9aeb1a9aef1f6770dff8a06e8d160b16d",
+      "original": "browser-entry.jsx"
+    },
+    "source-8.txt": {
+      "sha256": "77be5187d1448736dea57c87dd83e5b25a9ba9a4525432b78a19c44d25d0bf55",
+      "original": "measure.mjs"
+    },
+    "raw.json": {
+      "sha256": "2b4e5be6a9d9e9572f3bda43cc662d3f1e0044bb89eb9c54b3a4845703899e79"
+    },
+    "scored.json": {
+      "sha256": "5aaf26acf5fb8442a73e6a2a97a9fc681d90170928c6833bf732a4967bb4d166"
+    },
+    "browser-bundle.mjs": {
+      "sha256": "8fe7eefb481be9eb83aa7d73f0fd549de5b5cd58c0ac034f487b5a81b65ea44c"
+    }
+  }
+}
