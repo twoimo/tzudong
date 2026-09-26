@@ -713,8 +713,8 @@ function loadAdminRouteRecommendationModule() {
 const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ["전체", "미처리", "승인대기", "승인됨", "누락", "삭제됨"] as const;
 
 function AdminEvaluationModuleStaticShell() {
-  const mobileSkeleton = useFilledSkeletonCount(96, 4);
-  const desktopSkeleton = useFilledSkeletonCount(64, 6, 44);
+  const { ref: mobileSkeletonRef, count: mobileSkeletonCount } = useFilledSkeletonCount(96, 4);
+  const { ref: desktopSkeletonRef, count: desktopSkeletonCount } = useFilledSkeletonCount(64, 6, 44);
   return (
     <div
       role="status"
@@ -794,8 +794,8 @@ function AdminEvaluationModuleStaticShell() {
           </div>
         </div>
 
-        <div ref={mobileSkeleton.ref} className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-          {Array.from({ length: mobileSkeleton.count }).map((_, index) => (
+        <div ref={mobileSkeletonRef} className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
+          {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
             <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
@@ -813,7 +813,7 @@ function AdminEvaluationModuleStaticShell() {
           ))}
         </div>
 
-        <div ref={desktopSkeleton.ref} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
+        <div ref={desktopSkeletonRef} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
           <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
             {Array.from({ length: 9 }).map((_, index) => (
               <div key={index} className="px-2 py-2">
@@ -822,7 +822,7 @@ function AdminEvaluationModuleStaticShell() {
             ))}
           </div>
           <div className="divide-y divide-border">
-            {Array.from({ length: desktopSkeleton.count }).map((_, rowIndex) => (
+            {Array.from({ length: desktopSkeletonCount }).map((_, rowIndex) => (
               <div
                 key={rowIndex}
                 className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
@@ -3566,16 +3566,16 @@ function AdminDashboardPanelBodySkeleton({
 }: {
   variant?: AdminDashboardSkeletonVariant;
 }) {
-  const tableSkeleton = useFilledSkeletonCount(28, 5);
+  const { ref: tableSkeletonRef, count: tableSkeletonCount } = useFilledSkeletonCount(28, 5);
   if (variant === "table") {
     return (
       <div
-        ref={tableSkeleton.ref}
+        ref={tableSkeletonRef}
         className="min-h-0 flex-1 space-y-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
         data-admin-dashboard-dynamic-skeleton="table"
         aria-hidden="true"
       >
-        {Array.from({ length: tableSkeleton.count }).map((_, index) => (
+        {Array.from({ length: tableSkeletonCount }).map((_, index) => (
           <div
             key={index}
             className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] gap-3"

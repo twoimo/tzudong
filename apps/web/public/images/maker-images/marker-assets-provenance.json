@@ -173,5 +173,24 @@
       }
     }
   ],
-  "assetPostProcessing": "GPT Image 2 produced cutout edits; deterministic alpha extraction converted generated exterior transparency/checkerboard pixels into real PNG/WebP transparency."
+  "assetPostProcessing": "GPT Image 2 produced cutout edits; deterministic alpha extraction converted generated exterior transparency/checkerboard pixels into real PNG/WebP transparency.",
+  "deliveryOptimization": {
+    "sourceCommit": "b2a0d2a9f8e57fae0cd4817c6c5a308c5217adbb",
+    "resizeCommit": "2f78cacd456cc3a286f34111cfc8629562569271",
+    "dimensions": [128, 128],
+    "assets": {
+      "user-submitted": {
+        "png": { "sha256": "159d6310ff3c5c852f621c3efac662e2b0468e5aaf020e91d82844b5ed549c34", "bytes": 12856 },
+        "webp": { "sha256": "eb6a9a9b57b0c271ac7a00c7886974825e95c56d8c0beaef648c3c6cd05184fa", "bytes": 2698 }
+      },
+      "trend": {
+        "png": { "sha256": "c85fec60d83ceb524b02f7e07c9aee3218dd87d27cd3e8545cdd6bd0291f99a5", "bytes": 12418 },
+        "webp": { "sha256": "f80477e337d7608612aca643f89f9635242800863999e4b9f3ee157261e4acab", "bytes": 2718 }
+      },
+      "seasonal": {
+        "png": { "sha256": "5e766e8eb1f28e73f0f4c51d5d708f1f0d55024af3df4dddbf5874becdb6b18f", "bytes": 16192 },
+        "webp": { "sha256": "9562d7a6c269d10cdeab82066aae7c4e3e64b0d6e421d7e080e8b2b141f078dc", "bytes": 3232 }
+      }
+    }
+  }
 }

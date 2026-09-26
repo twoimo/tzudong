@@ -1,0 +1,129 @@
+{
+  "scope": "Development React StrictMode correctness only: real frozen and current home provider boundaries, 200 synthetic rows, synthetic auth/notification contexts. No live login, full-page LCP/INP or visible-blank-frame claim.",
+  "observedAt": "2026-09-25T05:15:00.305Z",
+  "chromium": "151.0.7922.34",
+  "node": "v24.21.0",
+  "samples": 0,
+  "warmupPairs": 0,
+  "development": true,
+  "checks": [
+    {
+      "name": "partial module readiness stays anonymous (false)",
+      "ok": true
+    },
+    {
+      "name": "module readiness retains DOM and draft (false)",
+      "ok": true
+    },
+    {
+      "name": "module readiness retains React state (false)",
+      "ok": true
+    },
+    {
+      "name": "module readiness causes no row remount (false)",
+      "ok": true
+    },
+    {
+      "name": "source providers mounted once (false)",
+      "ok": true
+    },
+    {
+      "name": "fresh contexts forwarded (false)",
+      "ok": true
+    },
+    {
+      "name": "forwarded actions work (false)",
+      "ok": true
+    },
+    {
+      "name": "no publish feedback loop (false)",
+      "ok": true
+    },
+    {
+      "name": "provider replacement drops old snapshot (false)",
+      "ok": true
+    },
+    {
+      "name": "provider replacement retains application DOM (false)",
+      "ok": true
+    },
+    {
+      "name": "disabled runtime clears projected values (false)",
+      "ok": true
+    },
+    {
+      "name": "session boundary resets private draft (false)",
+      "ok": true
+    },
+    {
+      "name": "source provider cleanup (false)",
+      "ok": true
+    },
+    {
+      "name": "partial module readiness stays anonymous (true)",
+      "ok": true
+    },
+    {
+      "name": "module readiness retains DOM and draft (true)",
+      "ok": true
+    },
+    {
+      "name": "module readiness retains React state (true)",
+      "ok": true
+    },
+    {
+      "name": "module readiness causes no row remount (true)",
+      "ok": true
+    },
+    {
+      "name": "source providers mounted once (true)",
+      "ok": true
+    },
+    {
+      "name": "fresh contexts forwarded (true)",
+      "ok": true
+    },
+    {
+      "name": "forwarded actions work (true)",
+      "ok": true
+    },
+    {
+      "name": "no publish feedback loop (true)",
+      "ok": true
+    },
+    {
+      "name": "provider replacement drops old snapshot (true)",
+      "ok": true
+    },
+    {
+      "name": "provider replacement retains application DOM (true)",
+      "ok": true
+    },
+    {
+      "name": "disabled runtime clears projected values (true)",
+      "ok": true
+    },
+    {
+      "name": "session boundary resets private draft (true)",
+      "ok": true
+    },
+    {
+      "name": "source provider cleanup (true)",
+      "ok": true
+    },
+    {
+      "name": "SSR hydration preserves DOM",
+      "ok": true
+    },
+    {
+      "name": "SSR hydration has no recoverable errors",
+      "ok": true
+    },
+    {
+      "name": "baseline reproduces DOM replacement and draft loss",
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "pairs": []
+}
