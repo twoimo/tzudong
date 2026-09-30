@@ -39,25 +39,35 @@ export const buildRestaurantLookup = (restaurants: Restaurant[]): RestaurantLook
 };
 
 export const findMatchingRestaurantInList = (
-    target: Restaurant,
-    candidates: Restaurant[],
+    target: Restaurant | null | undefined,
+    candidates: Restaurant[] | null | undefined,
 ): Restaurant | null => {
-    if (target.mergedRestaurants && target.mergedRestaurants.length > 0) {
-        const mergedIds = target.mergedRestaurants.map((restaurant) => restaurant.id);
-        return (
-            candidates.find((candidate) =>
-                mergedIds.includes(candidate.id) ||
-                candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.includes(mergedRestaurant.id)) ||
+    if (!target || !candidates || candidates.length === 0) return null;
+
+    const mergedRestaurants = target.mergedRestaurants;
+    if (mergedRestaurants && mergedRestaurants.length > 0) {
+        const mergedIds = new Set(mergedRestaurants.map((restaurant) => restaurant.id));
+        for (const candidate of candidates) {
+            if (
+                mergedIds.has(candidate.id) ||
+                candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.has(mergedRestaurant.id)) ||
                 hasSameNameAndCoordinate(candidate, target)
-            ) ?? null
-        );
+            ) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
-    return (
-        candidates.find((candidate) =>
-            candidate.id === target.id ||
-            candidate.mergedRestaurants?.some((mergedRestaurant) => mergedRestaurant.id === target.id) ||
+    const targetId = target.id;
+    for (const candidate of candidates) {
+        if (
+            candidate.id === targetId ||
+            candidate.mergedRestaurants?.some((mergedRestaurant) => mergedRestaurant.id === targetId) ||
             hasSameNameAndCoordinate(candidate, target)
-        ) ?? null
-    );
+        ) {
+            return candidate;
+        }
+    }
+    return null;
 };

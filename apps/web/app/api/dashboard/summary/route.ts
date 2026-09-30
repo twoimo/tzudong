@@ -22,7 +22,10 @@ export async function GET() {
             },
         });
     } catch (error) {
-        console.error('[dashboard/summary] failed:');
+        console.error(
+            '[dashboard/summary] failed',
+            error instanceof Error && error.name ? error.name : 'non-error',
+        );
         return NextResponse.json(
             { error: 'Failed to build dashboard summary.' },
             { status: 500 },

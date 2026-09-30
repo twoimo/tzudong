@@ -356,6 +356,37 @@ describe('mergeRestaurants', () => {
         expect(detail?.mergedTzuyangReviews).toEqual([]);
     });
 
+    test('keeps a singleton restaurant without merging unrelated rows', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        const only = makeRestaurant({
+            id: 'solo',
+            approved_name: '혼자식당',
+            categories: ['한식', '한식', '분식'],
+            youtube_link: 'https://youtu.be/soloVideo1',
+            tzuyang_review: '혼밥',
+            youtube_meta: { publishedAt: '2026-04-01T00:00:00Z', title: 'solo' },
+            review_count: 4,
+            lat: 0,
+            lng: 127,
+        });
+
+        const [merged] = mergeRestaurants([only]) as Array<Record<string, unknown>>;
+        expect(merged.id).toBe('solo');
+        expect(merged.name).toBe('혼자식당');
+        expect(merged.categories).toEqual(['한식', '분식']);
+        expect(merged.youtube_link).toBe('https://youtu.be/soloVideo1');
+        expect(merged.mergedYoutubeLinks).toEqual(['https://youtu.be/soloVideo1']);
+        expect(merged.tzuyang_review).toBe('혼밥');
+        expect(merged.mergedTzuyangReviews).toEqual(['혼밥']);
+        expect(merged.review_count).toBe(4);
+        expect(merged.lat).toBe(0);
+        expect(merged.lng).toBe(127);
+        expect(merged.mergedRestaurants).toEqual([only]);
+
+        const empty = mergeRestaurants([]);
+        expect(empty).toEqual([]);
+    });
+
     test('mergeRestaurants exposes merge performance counters when available', async () => {
         const { mergeRestaurants, ...maybePerfHelpers } = await import('../hooks/use-restaurants') as Record<string, unknown>;
 

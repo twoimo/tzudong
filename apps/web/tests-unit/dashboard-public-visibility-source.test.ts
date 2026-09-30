@@ -45,6 +45,9 @@ describe('dashboard public Supabase visibility contracts', () => {
     expect(summaryRouteSource).toContain('getDashboardSummary(false)');
     expect(restaurantsRouteSource).toContain('getDashboardRestaurants({');
     expect(videoRouteSource).toContain('getDashboardVideoDetail(safeVideoId)');
+    expect(videoRouteSource).toContain('classifyDashboardVideoId(videoId)');
+    expect(videoRouteSource).toContain("reason: 'invalid-shape'");
+    expect(videoRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
     expect(summaryRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
     expect(restaurantsRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
     expect(videoRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
