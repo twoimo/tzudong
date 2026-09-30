@@ -140,7 +140,7 @@ function DeferredUserDataPrefetcher({ enabled }: { enabled: boolean }) {
     return <UserDataPrefetcher />;
 }
 
-function MobileHomeLayout() {
+function MobileHomeLayout({ children }: { children: ReactNode }) {
     const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -236,8 +236,20 @@ function MobileHomeLayout() {
 
 
     return (
-        <>
+        <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
             <DeferredUserDataPrefetcher enabled={Boolean(user)} />
+
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <a href="#main-content" className="skip-link">
+                    본문 바로가기
+                </a>
+                <main id="main-content" className="relative flex-1 overflow-hidden" aria-label="쯔동여지도 지도 본문">
+                    <HomeStaticSkeleton />
+                    <div className="h-full w-full">
+                        {children}
+                    </div>
+                </main>
+            </div>
 
             {!isPublicRestrictedMode && (
                 <div className="min-[1600px]:hidden">
@@ -281,20 +293,21 @@ function MobileHomeLayout() {
                     />
                 </Suspense>
             )}
-        </>
+        </div>
     );
 }
 
 function HomeLayoutContent({ children }: { children: ReactNode }) {
     const viewportMode = useHomeViewportMode();
 
-    // 모든 뷰포트에서 지도 본문의 부모와 위치를 유지한다.
-    // 모바일 레이아웃을 조상으로 교체하면 지도와 검색/선택 상태가 다시 마운트된다.
+    if (viewportMode === 'mobileOrTablet') {
+        return <MobileHomeLayout>{children}</MobileHomeLayout>;
+    }
+
+    // 지도 본문은 pending과 desktop에서 같은 부모에 둔다.
+    // 오버레이 청크가 도착할 때 자식을 다른 부모로 옮기면 인기/최신 스켈레톤이 다시 마운트된다.
     return (
-        <HomeRuntimePendingShell
-            isMobile={viewportMode === 'mobileOrTablet'}
-            mobileChrome={viewportMode === 'mobileOrTablet' ? <MobileHomeLayout /> : null}
-        >
+        <HomeRuntimePendingShell>
             {children}
             {viewportMode === 'desktop' && !isPublicRestrictedMode ? (
                 <Suspense fallback={null}>
@@ -330,28 +343,16 @@ function HomeStaticSkeleton() {
     );
 }
 
-function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
-    children: ReactNode;
-    isMobile: boolean;
-    mobileChrome: ReactNode;
-}) {
+function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
     return (
-        <div
-            className={`flex flex-col bg-background text-foreground${isMobile ? ' overflow-hidden' : ''}`}
-            style={{ height: 'var(--full-height, 100vh)' }}
-        >
+        <div className="flex flex-col bg-background text-foreground" style={{ height: 'var(--full-height, 100vh)' }}>
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>
-            <main
-                id="main-content"
-                className={`relative h-full min-h-0 w-full flex-1 bg-background${isMobile ? ' overflow-hidden' : ''}`}
-                aria-label="쯔동여지도 지도 본문"
-            >
+            <main id="main-content" className="relative h-full min-h-0 w-full flex-1 bg-background" aria-label="쯔동여지도 지도 본문">
                 <HomeStaticSkeleton />
                 {children}
             </main>
-            {mobileChrome}
         </div>
     );
 }

@@ -745,7 +745,6 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeRuntimeShellSource).not.toContain("if (!hasMounted)");
     expect(homeRuntimeShellSource).not.toContain("setHasMounted");
-    expect(homeRuntimeShellSource).toContain("if (viewportMode === 'mobileOrTablet')");
     expect(homeRuntimeShellSource).toContain(
       "viewportMode === 'desktop' && !isPublicRestrictedMode",
     );
