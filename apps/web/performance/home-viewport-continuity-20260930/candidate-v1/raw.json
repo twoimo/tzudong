@@ -1,0 +1,1102 @@
+{
+  "scope": "Production React structural browser lab: actual frozen/current HomeRuntimeShell source; controlled viewport input, service/chrome stubs, 200 memoized synthetic rows. No live SDK, auth, full-page or visible-frame performance claim.",
+  "observedAt": "2026-09-30T02:59:42.451Z",
+  "node": "v24.21.0",
+  "chromium": "151.0.7922.34",
+  "isolatedTimer": true,
+  "warmupPairs": 4,
+  "checks": [
+    {
+      "kind": "baseline",
+      "from": "pending",
+      "to": "desktop",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.8299999237060547,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": null
+      }
+    },
+    {
+      "kind": "candidate",
+      "from": "pending",
+      "to": "desktop",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.23999977111816406,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": null
+      }
+    },
+    {
+      "kind": "baseline",
+      "from": "pending",
+      "to": "mobileOrTablet",
+      "hydration": false,
+      "result": {
+        "durationMs": 2.5250000953674316,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "kind": "candidate",
+      "from": "pending",
+      "to": "mobileOrTablet",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.37999987602233887,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "kind": "baseline",
+      "from": "desktop",
+      "to": "mobileOrTablet",
+      "hydration": false,
+      "result": {
+        "durationMs": 1.0350000858306885,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "kind": "candidate",
+      "from": "desktop",
+      "to": "mobileOrTablet",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.3599998950958252,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "kind": "baseline",
+      "from": "mobileOrTablet",
+      "to": "desktop",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.7350001335144043,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "desktop"
+      }
+    },
+    {
+      "kind": "candidate",
+      "from": "mobileOrTablet",
+      "to": "desktop",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.1549999713897705,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "desktop"
+      }
+    },
+    {
+      "kind": "baseline",
+      "from": "mobileOrTablet",
+      "to": "mobileOrTablet",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.10500001907348633,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "kind": "candidate",
+      "from": "mobileOrTablet",
+      "to": "mobileOrTablet",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.08500003814697266,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "kind": "baseline",
+      "from": "desktop",
+      "to": "desktop",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.14499998092651367,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "desktop"
+      }
+    },
+    {
+      "kind": "candidate",
+      "from": "desktop",
+      "to": "desktop",
+      "hydration": false,
+      "result": {
+        "durationMs": 0.07500004768371582,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "desktop"
+      }
+    },
+    {
+      "kind": "baseline",
+      "from": "pending",
+      "to": "mobileOrTablet",
+      "hydration": true,
+      "result": {
+        "durationMs": 0.9499998092651367,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "kind": "candidate",
+      "from": "pending",
+      "to": "mobileOrTablet",
+      "hydration": true,
+      "result": {
+        "durationMs": 0.12000012397766113,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "index": 4,
+      "baseline": {
+        "durationMs": 0.619999885559082,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.1099998950958252,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 5,
+      "candidate": {
+        "durationMs": 0.1099998950958252,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.8199999332427979,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 6,
+      "baseline": {
+        "durationMs": 0.8599998950958252,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.2200000286102295,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 7,
+      "candidate": {
+        "durationMs": 0.17499995231628418,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.6749999523162842,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 8,
+      "baseline": {
+        "durationMs": 0.5949997901916504,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.11500000953674316,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 9,
+      "candidate": {
+        "durationMs": 0.09999990463256836,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.5849997997283936,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 10,
+      "baseline": {
+        "durationMs": 0.5399999618530273,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.09500002861022949,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 11,
+      "candidate": {
+        "durationMs": 0.09500002861022949,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.49000000953674316,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 12,
+      "baseline": {
+        "durationMs": 0.5600001811981201,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.18000006675720215,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 13,
+      "candidate": {
+        "durationMs": 0.06999993324279785,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.5349998474121094,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 14,
+      "baseline": {
+        "durationMs": 0.5250000953674316,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.17500019073486328,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 15,
+      "candidate": {
+        "durationMs": 0.10500001907348633,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.5199999809265137,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 16,
+      "baseline": {
+        "durationMs": 0.5799999237060547,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.10500001907348633,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 17,
+      "candidate": {
+        "durationMs": 0.11500000953674316,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.5699999332427979,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 18,
+      "baseline": {
+        "durationMs": 0.7050001621246338,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.09999990463256836,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 19,
+      "candidate": {
+        "durationMs": 0.11500000953674316,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.6400001049041748,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 20,
+      "baseline": {
+        "durationMs": 0.565000057220459,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.125,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 21,
+      "candidate": {
+        "durationMs": 0.09500002861022949,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.565000057220459,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 22,
+      "baseline": {
+        "durationMs": 0.619999885559082,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.1549999713897705,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 23,
+      "candidate": {
+        "durationMs": 0.07500004768371582,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.5849997997283936,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 24,
+      "baseline": {
+        "durationMs": 0.5850000381469727,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.10500001907348633,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 25,
+      "candidate": {
+        "durationMs": 0.11500000953674316,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.559999942779541,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 26,
+      "baseline": {
+        "durationMs": 0.5999999046325684,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.11500000953674316,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 27,
+      "candidate": {
+        "durationMs": 0.11999988555908203,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.505000114440918,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 28,
+      "baseline": {
+        "durationMs": 0.4700000286102295,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.07500004768371582,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 29,
+      "candidate": {
+        "durationMs": 0.14499998092651367,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.5299999713897705,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 30,
+      "baseline": {
+        "durationMs": 0.6499998569488525,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.08500003814697266,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 31,
+      "candidate": {
+        "durationMs": 0.08500003814697266,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.5799999237060547,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 32,
+      "baseline": {
+        "durationMs": 0.5250000953674316,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.07000017166137695,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 33,
+      "candidate": {
+        "durationMs": 0.11500000953674316,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "baseline": {
+        "durationMs": 0.690000057220459,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    },
+    {
+      "index": 34,
+      "baseline": {
+        "durationMs": 0.6749999523162842,
+        "mounts": 200,
+        "unmounts": 200,
+        "mapRetained": false,
+        "mainRetained": false,
+        "selectionRetained": false,
+        "focusRetained": false,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      },
+      "candidate": {
+        "durationMs": 0.10500001907348633,
+        "mounts": 0,
+        "unmounts": 0,
+        "mapRetained": true,
+        "mainRetained": true,
+        "selectionRetained": true,
+        "focusRetained": true,
+        "mainCount": 1,
+        "skeletonCount": 1,
+        "chrome": "mobile"
+      }
+    }
+  ],
+  "errors": []
+}

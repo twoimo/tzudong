@@ -1,0 +1,25 @@
+{
+  "scope": "Independent review repair checks in clean scratch; Git object database explicitly provided, no .next trees.",
+  "results": [
+    {
+      "case": "retained_full_tree_receipts_with_explicit_git_objects",
+      "accepted": true
+    },
+    {
+      "case": "raw_receipt_mismatch_with_consistent_map",
+      "rejected": true
+    },
+    {
+      "case": "wrong_git_tree_with_matching_retained_receipt_and_map",
+      "rejected": true
+    },
+    {
+      "case": "layout_specific_detail_dom_replacement",
+      "accepted": true
+    },
+    {
+      "case": "incorrect_detail_dom_identity_with_consistent_hashes",
+      "rejected": true
+    }
+  ]
+}

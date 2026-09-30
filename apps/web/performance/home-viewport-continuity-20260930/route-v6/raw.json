@@ -1,0 +1,1920 @@
+{
+  "scope": "Paired local Next production bundles, 3 public restaurant fixtures and simulated Naver provider. Real browser resize/touch event pipeline; no live provider, hosted auth, field LCP/INP or visible-pixel flicker claim.",
+  "builds": {
+    "baseline": {
+      "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+      "kind": "baseline",
+      "distDir": ".next-viewport-baseline-v2-20260930",
+      "buildId": "SOooVljg5Fl8fCk8zXa-Y",
+      "retainedBuildId": "build-baseline-v2/BUILD_ID",
+      "inputs": [
+        {
+          "original": "app/home-runtime-shell.tsx",
+          "retained": "build-baseline-v2/input-0.txt",
+          "sha256": "669cd2e84cd3010cd74f84e7484313d9792fa65e1941801edda47f5069847b58"
+        },
+        {
+          "original": "app/home-client.tsx",
+          "retained": "build-baseline-v2/input-1.txt",
+          "sha256": "2d49b1366e83ea26ef3baa7df1e5f85e3343850e7796e3d85b3cc50620e033ee"
+        },
+        {
+          "original": "components/home/home-map-container.tsx",
+          "retained": "build-baseline-v2/input-2.txt",
+          "sha256": "3f9d6d6c556109fc50c4536a3040338d6fdb6df2a7b966aa7baf84e013322934"
+        },
+        {
+          "original": "hooks/useHomeViewportMode.ts",
+          "retained": "build-baseline-v2/input-3.txt",
+          "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+        },
+        {
+          "original": "package-lock.json",
+          "retained": "build-baseline-v2/input-4.txt",
+          "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+        }
+      ],
+      "node": "v24.21.0",
+      "sourceSha256": "669cd2e84cd3010cd74f84e7484313d9792fa65e1941801edda47f5069847b58",
+      "logSha256": "38fee12ce179d0945d3f533aade7d591ffda602ce2ffc31dca088ff010c14c61"
+    },
+    "candidate": {
+      "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+      "kind": "candidate",
+      "distDir": ".next-viewport-candidate-v2-20260930",
+      "buildId": "rR3K1XrqzsVOFtgEXuisj",
+      "retainedBuildId": "build-candidate-v2/BUILD_ID",
+      "inputs": [
+        {
+          "original": "app/home-runtime-shell.tsx",
+          "retained": "build-candidate-v2/input-0.txt",
+          "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+        },
+        {
+          "original": "app/home-client.tsx",
+          "retained": "build-candidate-v2/input-1.txt",
+          "sha256": "17f1f804d646bb2b23c2aeb75f13d45ad700e468644a0ec15732710740fdc02d"
+        },
+        {
+          "original": "components/home/home-map-container.tsx",
+          "retained": "build-candidate-v2/input-2.txt",
+          "sha256": "cbf3d21b8e70ab0b5c9e46a3e993618c8e16af8bc5b06686fe2aac38d7b38ef9"
+        },
+        {
+          "original": "hooks/useHomeViewportMode.ts",
+          "retained": "build-candidate-v2/input-3.txt",
+          "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+        },
+        {
+          "original": "package-lock.json",
+          "retained": "build-candidate-v2/input-4.txt",
+          "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+        }
+      ],
+      "node": "v24.21.0",
+      "sourceSha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede",
+      "logSha256": "9012979f30a7e9c5e281d0a1f3cc3833142565865f3eb755a95aeb1959cdeb9d"
+    }
+  },
+  "observedAt": "2026-09-30T04:27:09.206Z",
+  "chromium": "151.0.7922.34",
+  "runner": "Bun 1.4.0",
+  "warmupPairs": 2,
+  "pairs": [
+    {
+      "index": 2,
+      "baseline": {
+        "load": {
+          "lcpMs": 564,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 212,
+          "observedUntilMs": 1314,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 27.09999990463257,
+          "observedFrames": 124,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 492,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 148,
+          "observedUntilMs": 1202.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 21.09999990463257,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 3,
+      "candidate": {
+        "load": {
+          "lcpMs": 504,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 160,
+          "observedUntilMs": 1264.5999999046326,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 23.5,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 524,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 168,
+          "observedUntilMs": 1265.8999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 32.5,
+          "observedFrames": 124,
+          "markerlessFrames": 2,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 4,
+      "baseline": {
+        "load": {
+          "lcpMs": 504,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 160,
+          "observedUntilMs": 1248.8999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 29.799999952316284,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 524,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 168,
+          "observedUntilMs": 861.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 17.299999952316284,
+          "observedFrames": 123,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 5,
+      "candidate": {
+        "load": {
+          "lcpMs": 536,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 176,
+          "observedUntilMs": 869.6000001430511,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 18.5,
+          "observedFrames": 123,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 524,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 168,
+          "observedUntilMs": 1261.4000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 32.10000014305115,
+          "observedFrames": 124,
+          "markerlessFrames": 2,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 6,
+      "baseline": {
+        "load": {
+          "lcpMs": 504,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 160,
+          "observedUntilMs": 1266.9000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 28.40000009536743,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 560,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 204,
+          "observedUntilMs": 1322.8000001907349,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 25.09999990463257,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.200000000000273,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 7,
+      "candidate": {
+        "load": {
+          "lcpMs": 504,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 148,
+          "observedUntilMs": 1255.5,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 21.299999952316284,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 464,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 124,
+          "observedUntilMs": 1220.7999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 30,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 8,
+      "baseline": {
+        "load": {
+          "lcpMs": 468,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1219.4000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 29.200000047683716,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 492,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 136,
+          "observedUntilMs": 1213.3999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 17.200000047683716,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 9,
+      "candidate": {
+        "load": {
+          "lcpMs": 476,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 132,
+          "observedUntilMs": 1230.2999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 18,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.399999999999864,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 468,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 124,
+          "observedUntilMs": 1216.4000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 29.09999990463257,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 10,
+      "baseline": {
+        "load": {
+          "lcpMs": 476,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 128,
+          "observedUntilMs": 1227.5,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 30.600000143051147,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 480,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 136,
+          "observedUntilMs": 1235.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 14.100000143051147,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 11,
+      "candidate": {
+        "load": {
+          "lcpMs": 468,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 128,
+          "observedUntilMs": 1224.6000001430511,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 21.59999990463257,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 456,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 112,
+          "observedUntilMs": 1183.3999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 25.600000143051147,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 12,
+      "baseline": {
+        "load": {
+          "lcpMs": 468,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 116,
+          "observedUntilMs": 1217.8999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 29.09999990463257,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 456,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 116,
+          "observedUntilMs": 1201.7000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 16.799999952316284,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.399999999999864,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 13,
+      "candidate": {
+        "load": {
+          "lcpMs": 456,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 116,
+          "observedUntilMs": 1211.8999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 17.799999952316284,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 460,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 108,
+          "observedUntilMs": 1193.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 22.799999952316284,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999727,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 14,
+      "baseline": {
+        "load": {
+          "lcpMs": 448,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 112,
+          "observedUntilMs": 1194.5999999046326,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 25.600000143051147,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 456,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1186.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 16.40000009536743,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 15,
+      "candidate": {
+        "load": {
+          "lcpMs": 472,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 124,
+          "observedUntilMs": 1222.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 16.799999952316284,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.199999999999818,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 472,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 132,
+          "observedUntilMs": 1202.7999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 26.199999809265137,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 16,
+      "baseline": {
+        "load": {
+          "lcpMs": 496,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 144,
+          "observedUntilMs": 1251.5,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 28.699999809265137,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 528,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 164,
+          "observedUntilMs": 1266.5999999046326,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 19.899999856948853,
+          "observedFrames": 123,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 17,
+      "candidate": {
+        "load": {
+          "lcpMs": 528,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 172,
+          "observedUntilMs": 1274.5,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 20,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 536,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 176,
+          "observedUntilMs": 1284.1000001430511,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 30.600000143051147,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 18,
+      "baseline": {
+        "load": {
+          "lcpMs": 504,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 148,
+          "observedUntilMs": 1252.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 31.40000009536743,
+          "observedFrames": 124,
+          "markerlessFrames": 2,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 508,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 156,
+          "observedUntilMs": 1239,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 22.40000009536743,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 19,
+      "candidate": {
+        "load": {
+          "lcpMs": 480,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 136,
+          "observedUntilMs": 1235.5,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 18.600000143051147,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 504,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 148,
+          "observedUntilMs": 1249.5999999046326,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 26,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 20,
+      "baseline": {
+        "load": {
+          "lcpMs": 488,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 140,
+          "observedUntilMs": 1234.8999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 25.90000009536743,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 488,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 140,
+          "observedUntilMs": 1242.4000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 20,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 21,
+      "candidate": {
+        "load": {
+          "lcpMs": 480,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 140,
+          "observedUntilMs": 1238.4000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 21.5,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 472,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 124,
+          "observedUntilMs": 1220.9000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 24.5,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.200000000000045,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 22,
+      "baseline": {
+        "load": {
+          "lcpMs": 468,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 124,
+          "observedUntilMs": 1225,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 24.100000143051147,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 476,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 136,
+          "observedUntilMs": 1212.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 19.700000047683716,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 23,
+      "candidate": {
+        "load": {
+          "lcpMs": 484,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 136,
+          "observedUntilMs": 1234.7000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 21.200000047683716,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 460,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 124,
+          "observedUntilMs": 1222,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 31.699999809265137,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 24,
+      "baseline": {
+        "load": {
+          "lcpMs": 452,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 108,
+          "observedUntilMs": 1204.4000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 30.399999856948853,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 448,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 112,
+          "observedUntilMs": 1202.2999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 13.399999856948853,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 25,
+      "candidate": {
+        "load": {
+          "lcpMs": 452,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 104,
+          "observedUntilMs": 1182.7000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 14.799999952316284,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 484,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 132,
+          "observedUntilMs": 1233.5,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 29.90000009536743,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 26,
+      "baseline": {
+        "load": {
+          "lcpMs": 460,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1173.6999998092651,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 25.40000009536743,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 452,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1214.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 17.299999952316284,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 27,
+      "candidate": {
+        "load": {
+          "lcpMs": 448,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 108,
+          "observedUntilMs": 1202.7000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 19.200000047683716,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 464,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 128,
+          "observedUntilMs": 1228.7999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 30.399999856948853,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 28,
+      "baseline": {
+        "load": {
+          "lcpMs": 460,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 116,
+          "observedUntilMs": 1196.4000000953674,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 27.5,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 444,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 108,
+          "observedUntilMs": 1205.7999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 15.700000047683716,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 29,
+      "candidate": {
+        "load": {
+          "lcpMs": 440,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 100,
+          "observedUntilMs": 1193.8000001907349,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 15.900000095367432,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 448,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 104,
+          "observedUntilMs": 1165.2000000476837,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 22.299999952316284,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 30,
+      "baseline": {
+        "load": {
+          "lcpMs": 472,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1215.7999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 26.399999856948853,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.200000000000045,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 468,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1220,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 23,
+          "observedFrames": 123,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 31,
+      "candidate": {
+        "load": {
+          "lcpMs": 488,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 140,
+          "observedUntilMs": 1230.1000001430511,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 17,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.399999999999864,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "baseline": {
+        "load": {
+          "lcpMs": 460,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1223,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 27.5,
+          "observedFrames": 124,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.300000000000182,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    },
+    {
+      "index": 32,
+      "baseline": {
+        "load": {
+          "lcpMs": 452,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 120,
+          "observedUntilMs": 1213.8999998569489,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 23.90000009536743,
+          "observedFrames": 123,
+          "markerlessFrames": 1,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.299999999999955,
+          "gapsOver50Ms": 0,
+          "mapRetained": false,
+          "providerRetained": false,
+          "newMaps": 1,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      },
+      "candidate": {
+        "load": {
+          "lcpMs": 472,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "trustedTouchStarts": 0,
+          "fcpMs": 124,
+          "observedUntilMs": 1220.2999999523163,
+          "mapsCreated": 1
+        },
+        "resize": {
+          "firstReadyMs": 15.5,
+          "observedFrames": 122,
+          "markerlessFrames": 0,
+          "missingMapFrames": 0,
+          "maxFrameGapMs": 9.400000000000091,
+          "gapsOver50Ms": 0,
+          "mapRetained": true,
+          "providerRetained": true,
+          "newMaps": 0,
+          "horizontalOverflowPx": 0,
+          "mainCount": 1
+        },
+        "errors": {
+          "page": 0,
+          "console": 2
+        }
+      }
+    }
+  ],
+  "touch": {
+    "nativeChromiumTouch": true,
+    "selectionChanged": true,
+    "trustedTouchStarts": 1
+  },
+  "regressionExit": 0
+}

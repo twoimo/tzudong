@@ -1,0 +1,29 @@
+{
+  "types": {
+    "passed": true,
+    "logicalInputs": 2517,
+    "diagnostics": 0
+  },
+  "lint": {
+    "passed": true,
+    "generatedBuildDirectoriesExcluded": [
+      ".next-viewport-baseline-20260930",
+      ".next-viewport-candidate-20260930"
+    ]
+  },
+  "unitFullInitial": {
+    "passed": 2444,
+    "skipped": 1,
+    "failed": 1,
+    "failure": "stale source-string assertion for mobile ancestor branch"
+  },
+  "affectedUnitAfterRepair": {
+    "passed": 38,
+    "failed": 0,
+    "expectations": 2457
+  },
+  "browserRegression": {
+    "passed": 1,
+    "failed": 0
+  }
+}

@@ -745,7 +745,6 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeRuntimeShellSource).not.toContain("if (!hasMounted)");
     expect(homeRuntimeShellSource).not.toContain("setHasMounted");
-    expect(homeRuntimeShellSource).toContain("if (viewportMode === 'mobileOrTablet')");
     expect(homeRuntimeShellSource).toContain(
       "viewportMode === 'desktop' && !isPublicRestrictedMode",
     );
@@ -920,9 +919,6 @@ describe("web quality performance source contracts", () => {
       "onClick={() => onActivate('user')}",
     );
     expect(homeControlPanelSource).toContain(
-      "Boolean(initialIntent) || (typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax)",
-    );
-    expect(homeControlPanelSource).toContain(
       "setPendingMobileOverlayIntent(initialIntent)",
     );
     expect(homeControlPanelSource).toContain(
@@ -949,10 +945,6 @@ describe("web quality performance source contracts", () => {
     expect(homeControlPanelSource).not.toContain(
       "function DesktopControlPanelLoadingShell()",
     );
-    expect(homeControlPanelSource).toContain(
-      "setShouldLoadDesktopPanel(window.innerWidth > BREAKPOINTS.tabletMax)",
-    );
-    expect(homeControlPanelSource).toContain("window.requestAnimationFrame");
     expect(homeControlPanelSource).not.toContain(
       "return <DesktopControlPanelLoadingShell />;",
     );

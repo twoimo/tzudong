@@ -1,0 +1,10 @@
+{
+  "scope": "Five isolated anonymous Chromium production visits with the real Naver SDK and catalog. Before/after groups are sequential, not alternating paired performance evidence. Image and DOM predicates are observations, not field INP/LCP or physical-device evidence.",
+  "expectedSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+  "artifacts": {
+    "raw.json": "1a18b1f710cda68d8822e5303bbb4cebb13161c5e58b1768a2db2a46d558ec61",
+    "desktop.png": "1d000a82585f7e01c2841bb5ca51f912e69b49391d6a8af8aa417bc8faf6373e",
+    "mobile.png": "4ab43ee11ca9ffdf05dd916b6502e0d6f5b1c811f42579870115a85f1a3457be",
+    "../live-readback.mjs": "7dff99308424ff42767b808074c180f704abc22a93d93e06f1fedcbf5447e396"
+  }
+}

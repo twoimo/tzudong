@@ -1,0 +1,81 @@
+{
+  "scope": "Paired local Next production bundles, 3 public restaurant fixtures and simulated Naver provider. Real browser resize/touch event pipeline; no live provider, hosted auth, field LCP/INP or visible-pixel flicker claim.",
+  "samples": 31,
+  "scores": {
+    "firstReadyMs": {
+      "baseline": 27.09999990463257,
+      "candidate": 19.899999856948853,
+      "absoluteDelta": -7.200000047683716,
+      "relativeDeltaPercent": -26.56826595210771,
+      "baselineMad": 2.299999952316284,
+      "candidateMad": 1.3000001907348633,
+      "noise": 4.599999904632568,
+      "absoluteBudget": 1,
+      "relativeBudget": 0.05,
+      "classification": "local_improvement"
+    },
+    "markerlessFrames": {
+      "baseline": 1,
+      "candidate": 0,
+      "absoluteDelta": -1,
+      "relativeDeltaPercent": -100,
+      "baselineMad": 0,
+      "candidateMad": 0,
+      "noise": 0,
+      "absoluteBudget": 0,
+      "relativeBudget": 0.05,
+      "classification": "local_improvement"
+    },
+    "maxFrameGapMs": {
+      "baseline": 9.300000000000182,
+      "candidate": 9.300000000000182,
+      "absoluteDelta": 0,
+      "relativeDeltaPercent": 0,
+      "baselineMad": 0.09999999999990905,
+      "candidateMad": 4.547473508864641e-13,
+      "noise": 0.1999999999998181,
+      "absoluteBudget": 1,
+      "relativeBudget": 0.05,
+      "classification": "below_budget_or_noise"
+    }
+  },
+  "retainedMapSamples": 31,
+  "baselineNewMaps": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "touch": {
+    "nativeChromiumTouch": true,
+    "selectionChanged": true,
+    "trustedTouchStarts": 1
+  }
+}

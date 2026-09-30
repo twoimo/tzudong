@@ -1,0 +1,42 @@
+{
+  "scope": "Production React structural browser lab: actual frozen/current HomeRuntimeShell source; controlled viewport input, service/chrome stubs, 200 memoized synthetic rows. No live SDK, auth, full-page or visible-frame performance claim.",
+  "baseCommit": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+  "artifacts": {
+    "source-0.txt": {
+      "original": "baseline-home-runtime-shell.tsx.txt",
+      "sha256": "669cd2e84cd3010cd74f84e7484313d9792fa65e1941801edda47f5069847b58"
+    },
+    "source-1.txt": {
+      "original": "../../app/home-runtime-shell.tsx",
+      "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+    },
+    "source-2.txt": {
+      "original": "../../hooks/useHomeViewportMode.ts",
+      "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+    },
+    "source-3.txt": {
+      "original": "service-stubs.jsx",
+      "sha256": "e0b6ff0ba7b7a55d4f4283142a5d5b49d0f27236845204f8303a5a377ce09ab9"
+    },
+    "source-4.txt": {
+      "original": "browser-entry.jsx",
+      "sha256": "9e7afc420653068ae60be85f0f0b0af11833434f4e8970fec6ae1af303323219"
+    },
+    "source-5.txt": {
+      "original": "measure.mjs",
+      "sha256": "85c1031830db34c1c5717b4a8893d1764cec934dfdc6e33f00311653520828b0"
+    },
+    "build.mjs": {
+      "sha256": "dffa97cc8b83bbb10a658d6ab95a903c819988b609b7a965d1656071a3eaadfd"
+    },
+    "browser-bundle.mjs": {
+      "sha256": "3b7ee1d5aa2d92360fdac200b3633aee86384127e4c2857b193cb9af805badc3"
+    },
+    "raw.json": {
+      "sha256": "570ceee3ca4b29253ab83fc6277432a9f95fa85804e5ae935513d1191ea39c23"
+    },
+    "scored.json": {
+      "sha256": "d5c91b95610520b2eb9d9f066e232337b17d51d019e60bd167e1a1bf5b028063"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "verified": true,
+  "samples": 31,
+  "retainedMapSamples": 31,
+  "nativeTouch": {
+    "nativeChromiumTouch": true,
+    "selectionChanged": true,
+    "trustedTouchStarts": 1
+  },
+  "fullTreeReceipts": 2,
+  "artifactMapSha256": "100c44205fe507c307046a0ce84b965d83b99e4b5040f99c25dad7ed7f1f4de8",
+  "scope": "Retained artifacts in clean scratch; Git objects explicitly provided, no transient .next trees."
+}
