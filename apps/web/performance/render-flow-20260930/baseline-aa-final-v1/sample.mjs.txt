@@ -1,0 +1,75 @@
+import {panMockMap} from '../../tests/mobile-home-map-helpers.ts';
+import {setup,ready,metrics,catalog} from './runtime.mjs';
+export async function clusterSample(browser,{mobile=false,count=735,cpu=4,delay=120,throttle=false}={},capture) {
+ const t=await setup(browser,{mobile,count,cpu,delay,throttle});
+ try{
+  await ready(t.page);
+  if(mobile){await panMockMap(t.page,0,-180);await t.page.waitForTimeout(350);}
+  const load=await metrics(t.page),cluster=t.page.locator('.cluster-marker-container').first();
+  const clickedCluster={text:await cluster.innerText(),memberIds:catalog(count).map(r=>r.id),region:'single-Seoul-synthetic-fixture',position:await cluster.evaluate(el=>{const m=Array.from(window.__TZUDONG_DEBUG_MAP__._markers).find(m=>m._element.contains(el));const p=m?.getPosition();return p?{lat:p.lat(),lng:p.lng()}:null;})};
+  if(Number(clickedCluster.text)!==count||Math.abs(clickedCluster.position?.lat-37.5512)>1e-7||Math.abs(clickedCluster.position?.lng-126.9882)>1e-7)throw Error('clicked cluster differs from fixture Seoul membership');
+  await t.page.evaluate(rows=>{
+   window.__click=0;window.__firstExpansion=0;window.__firstMarker=null;window.__idleEpoch=0;window.__clickIdleEpoch=0;window.__stableFrames=0;window.__transientFirst=0;window.__pendingFirst=0;window.__stableKey=null;
+   const map=window.__TZUDONG_DEBUG_MAP__,rect=r=>({x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom});
+   const geo=()=>{const b=map.getBounds(),c=map.getCenter();return {zoom:map.getZoom(),lat:c.lat(),lng:c.lng(),south:b.getSW().lat(),west:b.getSW().lng(),north:b.getNE().lat(),east:b.getNE().lng(),idleEpoch:window.__idleEpoch};};
+   window.__initialGeo=geo();window.naver.maps.Event.addListener(map,'idle',()=>window.__idleEpoch++);
+   document.addEventListener('click',e=>{if(e.target.closest('.cluster-marker-container')){window.__click=performance.now();window.__clickIdleEpoch=window.__idleEpoch;}},true);
+   window.__clusterRows=rows;
+   const byCoord=new Map(rows.map(r=>[`${r.lat.toFixed(7)},${r.lng.toFixed(7)}`,r]));
+   window.__visibleMember=()=>{
+    const container=document.querySelector('[data-testid="map-container"]'),mr=container.getBoundingClientRect();
+    for(const marker of map._markers){
+     const element=marker._element.querySelector('[data-testid="marker"]');if(!element)continue;
+     const p=marker.getPosition(),row=byCoord.get(`${p.lat().toFixed(7)},${p.lng().toFixed(7)}`);if(!row)continue;
+     const b=element.getBoundingClientRect(),style=getComputedStyle(element);
+     const left=Math.max(0,mr.left,b.left),right=Math.min(innerWidth,mr.right,b.right),top=Math.max(0,mr.top,b.top),bottom=Math.min(innerHeight,mr.bottom,b.bottom);
+     if(left>=right||top>=bottom||style.visibility==='hidden'||style.display==='none'||Number(style.opacity)===0)continue;
+     const x=(left+right)/2,y=(top+bottom)/2,hit=document.elementFromPoint(x,y);
+     if(!hit||!marker._element.contains(hit))continue;
+     window.__observedMarker=element;return {id:row.id,rect:rect(b),mapRect:rect(mr),hitTest:true,geo:geo()};
+    }return null;
+   };
+   function observe(){
+    if(window.__click&&window.__idleEpoch>window.__clickIdleEpoch){
+     const state=geo(),target=state.zoom===14&&Math.abs(state.lat-37.5512)<1e-7&&Math.abs(state.lng-126.9882)<1e-7;
+     let match=null;
+     if(target){
+      const element=window.__observedMarker;
+      if(element?.isConnected){
+       const b=element.getBoundingClientRect(),mr=document.querySelector('[data-testid="map-container"]').getBoundingClientRect();
+       const left=Math.max(0,mr.left,b.left),right=Math.min(innerWidth,mr.right,b.right),top=Math.max(0,mr.top,b.top),bottom=Math.min(innerHeight,mr.bottom,b.bottom);
+       const hit=left<right&&top<bottom?document.elementFromPoint((left+right)/2,(top+bottom)/2):null;
+       if(hit&&element.parentElement.contains(hit))match={id:element.getAttribute('data-restaurant-id'),rect:rect(b),mapRect:rect(mr),hitTest:true,geo:state};
+      }
+      if(!match)match=window.__visibleMember();
+     }
+     const key=match?JSON.stringify([match.id,match.geo,match.mapRect]):null;
+     if(key&&key===window.__stableKey)window.__stableFrames++;
+     else{window.__stableKey=key;window.__stableFrames=key?1:0;window.__pendingFirst=key?performance.now():0;window.__pendingMarker=match;}
+     if(match&&!window.__transientFirst)window.__transientFirst=performance.now();
+     if(window.__stableFrames>=2&&!window.__firstExpansion){window.__firstExpansion=window.__pendingFirst;window.__firstMarker=window.__pendingMarker;}
+    }requestAnimationFrame(observe);
+   }requestAnimationFrame(observe);
+  },catalog(count));
+  await cluster.click();
+  await t.page.waitForFunction(()=>window.__firstExpansion>0);
+  await t.page.waitForTimeout(600);
+  const summary=await t.page.evaluate(()=>{
+   const start=window.__click,end=performance.now(),frames=window.__perf.frames.filter(f=>f.t>=start);
+   const gaps=frames.map(f=>f.gap),tasks=window.__perf.longTasks.filter(f=>f.start+f.duration>=start&&f.start<=end);
+   const all=window.__perf.frames.filter(f=>f.t<start&&f.gap>0),sorted=all.map(f=>f.gap).sort((a,b)=>a-b);const frameBudget=sorted[Math.floor(sorted.length/2)];
+   const intervals=gaps.reduce((s,g)=>s+Math.max(1,Math.round(g/frameBudget)),0),map=window.__TZUDONG_DEBUG_MAP__,bounds=map.getBounds(),sw=bounds.getSW(),ne=bounds.getNE();
+   const geo={zoom:map.getZoom(),lat:map.getCenter().lat(),lng:map.getCenter().lng(),south:sw.lat(),west:sw.lng(),north:ne.lat(),east:ne.lng(),idleEpoch:window.__idleEpoch};
+   const latPad=(geo.north-geo.south)*.25,lngPad=(geo.east-geo.west)*.25;
+   const expected=window.__clusterRows.filter(r=>r.lat>=geo.south-latPad&&r.lat<=geo.north+latPad&&r.lng>=geo.west-lngPad&&r.lng<=geo.east+lngPad).map(r=>r.id);
+   const actual=[];for(const m of map._markers){if(!m._element.querySelector('[data-testid="marker"]'))continue;const p=m.getPosition(),r=window.__clusterRows.find(r=>Math.abs(r.lat-p.lat())<1e-7&&Math.abs(r.lng-p.lng())<1e-7);if(r)actual.push(r.id);}
+   const missing=expected.filter(id=>!actual.includes(id));
+   return {clickToExpandedMs:window.__firstExpansion-start,transientFirstReactionMs:window.__transientFirst-start,clickIdleEpoch:window.__clickIdleEpoch,maxFrameGapMs:Math.max(...gaps),longTaskMs:tasks.reduce((s,x)=>s+Math.max(0,Math.min(end,x.start+x.duration)-Math.max(start,x.start)),0),longTaskCount:tasks.length,markerlessFrames:frames.filter(f=>f.markers===0).length,frames:frames.length,frameBudgetMs:frameBudget,missedFrameFraction:(intervals-gaps.length)/intervals,markerCount:document.querySelectorAll('[data-testid="marker"]').length,domCount:document.querySelectorAll('*').length,heapBytes:performance.memory.usedJSHeapSize,mapCount:window.__viewportMapCreates,detailCount:document.querySelectorAll('[data-testid="restaurant-detail-panel"]').length,viewportOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),zoom:geo.zoom,start,end,firstMarker:window.__firstMarker,initialGeo:window.__initialGeo,finalGeo:geo,stableFrames:window.__stableFrames,expectedIds:expected,actualIds:actual,missingIds:missing,finalVisibleMember:window.__visibleMember(),valid:missing.length===0&&actual.length>0&&window.__stableFrames>1&&geo.idleEpoch>window.__clickIdleEpoch&&geo.zoom===14&&Math.abs(geo.lat-37.5512)<1e-7&&Math.abs(geo.lng-126.9882)<1e-7&&JSON.stringify(window.__firstMarker.geo)===JSON.stringify(geo)};
+  });
+  if(!summary.valid)throw new Error('final cluster member invariant failed');
+  if(capture)await t.page.screenshot({path:capture});
+  return {summary,load,clickedCluster,requests:t.requests,errors:t.errors};
+ }catch(error){
+  error.safeState=await t.page.evaluate(()=>({click:window.__click,first:window.__firstMarker,markerCount:document.querySelectorAll('[data-testid="marker"]').length,mapCount:window.__viewportMapCreates,zoom:window.__TZUDONG_DEBUG_MAP__?.getZoom(),geo:window.__initialGeo})).catch(()=>null);throw error;
+ }finally{await t.context.close();}
+}

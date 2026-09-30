@@ -1,0 +1,7 @@
+{
+  "surface": "Codex In-app Browser1 owned by this task",
+  "readback": "enabled browser tabs empty before and after viewport reset",
+  "temporaryViewportReset": true,
+  "otherSessionsTouched": false,
+  "scope": "Public read-only desktop/mobile observation occurred earlier. No hosted write, sign-in, deployment or provider timing result."
+}

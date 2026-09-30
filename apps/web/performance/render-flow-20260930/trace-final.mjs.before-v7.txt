@@ -1,0 +1,29 @@
+import {launch,setup,ready,metrics} from './runtime.mjs';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+const label=process.argv[2],kind=process.argv[3];if(!/^[a-z0-9-]+$/.test(label)||!['baseline','candidate'].includes(kind))throw Error('trace identity');
+const root=new URL(label+'/',import.meta.url);await mkdir(root);
+for(const file of ['trace-final.mjs','runtime.mjs','sample.mjs','plan-v5.json'])await writeFile(new URL(file+'.txt',root),await readFile(new URL(file,import.meta.url)),{flag:'wx'});
+function sanitize(value,key=''){
+ if(/headers|cookies|postData|responseBody|authorization|access.token|refresh.token/i.test(key))return undefined;
+ if(typeof value==='string'&&/url|src|href/i.test(key)){try{const u=new URL(value);return u.protocol==='http:'||u.protocol==='https:'?u.origin+u.pathname:value;}catch{return value;}}
+ if(Array.isArray(value))return value.map(x=>sanitize(x)).filter(x=>x!==undefined);
+ if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,sanitize(v,k)]).filter(([,v])=>v!==undefined));return value;
+}
+const run=await launch(kind),t=await setup(run.browser,{count:735,cpu:4}),events=[];
+try{
+ await ready(t.page);t.cdp.on('Tracing.dataCollected',d=>events.push(...d.value));
+ await t.cdp.send('Tracing.start',{categories:'devtools.timeline,blink.user_timing,disabled-by-default-devtools.timeline,disabled-by-default-devtools.screenshot',transferMode:'ReportEvents'});
+ await t.cdp.send('Profiler.enable');await t.cdp.send('Profiler.start');
+ const before=await t.page.evaluate(()=>{performance.mark('flow.nativeCluster.beforeClick');return {now:performance.now(),timeOrigin:performance.timeOrigin};});
+ await t.page.locator('.cluster-marker-container').first().click();await t.page.waitForTimeout(700);
+ await t.page.evaluate(()=>performance.mark('flow.nativeCluster.observedEnd'));
+ const profile=await t.cdp.send('Profiler.stop'),complete=new Promise(r=>t.cdp.once('Tracing.tracingComplete',r));await t.cdp.send('Tracing.end');await complete;
+ const raw={kind,receipt:run.receipt,browser:run.browser.version(),cpu:4,count:735,scope:'Diagnostic n=1 trace+profile, instrumentation overhead; simulated SDK and synthetic data. Not paired timing.',before,metrics:await metrics(t.page),errors:t.errors,geo:await t.page.evaluate(()=>{const m=window.__TZUDONG_DEBUG_MAP__;return {zoom:m.getZoom(),lat:m.getCenter().lat(),lng:m.getCenter().lng()};})};
+ await writeFile(new URL('raw.json',root),JSON.stringify(raw,null,2)+'\n',{flag:'wx'});
+ await writeFile(new URL('trace.json',root),JSON.stringify(sanitize({traceEvents:events}))+'\n',{flag:'wx'});
+ await writeFile(new URL('profile.json',root),JSON.stringify(sanitize(profile))+'\n',{flag:'wx'});
+ await t.page.screenshot({path:new URL('after.png',root).pathname});
+ const sum={};for(const e of events)if(e.ph==='X'&&['Layout','UpdateLayoutTree','Paint','CompositeLayers'].includes(e.name)){const row=sum[e.name]||={count:0,totalMs:0};row.count++;row.totalMs+=(e.dur||0)/1000;}
+ const screens=events.filter(e=>e.name==='Screenshot').map(e=>e.ts),gaps=screens.slice(1).map((ts,i)=>(ts-screens[i])/1000);
+ const summary={kind,mainWindow:sum,screenFrames:screens.length,screenGapsMs:gaps,markerCount:raw.metrics.frames.at(-1)?.markers,scope:raw.scope};await writeFile(new URL('summary.json',root),JSON.stringify(summary,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(summary));
+}finally{await t.context.close();await run.close();}

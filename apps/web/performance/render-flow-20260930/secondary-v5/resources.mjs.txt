@@ -1,0 +1,7 @@
+import {execFileSync} from 'node:child_process';import os from 'node:os';
+export function resourceSnapshot(ownerPid=process.pid){
+ const rows=execFileSync('ps',['-axo','pid,ppid,pcpu'],{encoding:'utf8'}).trim().split('\n').slice(1).map(s=>s.trim().split(/\s+/).map(Number));
+ const own=new Set([ownerPid]);let changed=true;while(changed){changed=false;for(const [pid,ppid] of rows)if(own.has(ppid)&&!own.has(pid)){own.add(pid);changed=true;}}
+ const other=rows.filter(([pid])=>!own.has(pid));const cpu=other.map(r=>r[2]);const total=cpu.reduce((a,b)=>a+b,0),load=os.loadavg();
+ return {observedAt:new Date().toISOString(),logicalCores:os.cpus().length,hostCpuPercent:rows.reduce((sum,row)=>sum+row[2],0),otherCpuPercent:total,maxOtherProcessCpuPercent:Math.max(0,...cpu),otherProcessesOver80Percent:cpu.filter(n=>n>=80).length,loadAverage:load,heavyOverlap:cpu.some(n=>n>=80),saturated:total>os.cpus().length*85||load[0]>os.cpus().length,gpuLoad:'unavailable'};
+}

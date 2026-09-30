@@ -1,0 +1,25 @@
+{
+  "kind": "baseline",
+  "mainWindow": {
+    "UpdateLayoutTree": {
+      "count": 740,
+      "totalMs": 662.7149999999999
+    },
+    "Layout": {
+      "count": 741,
+      "totalMs": 929.0189999999997
+    },
+    "Paint": {
+      "count": 33,
+      "totalMs": 8.268999999999997
+    }
+  },
+  "screenFrames": 4,
+  "screenGapsMs": [
+    2434.622,
+    81.51,
+    28.461
+  ],
+  "markerCount": 735,
+  "scope": "Diagnostic n=1 trace+profile, instrumentation overhead; simulated SDK and synthetic data. Not paired timing."
+}

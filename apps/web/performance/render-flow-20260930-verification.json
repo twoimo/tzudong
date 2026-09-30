@@ -1,0 +1,71 @@
+{
+  "verified": true,
+  "artifactMapSha256": "86762a796ed9dce21d87dc97d4590c77401d44cd1974fc1e577859528ba0b994",
+  "artifacts": 1829,
+  "validQuietPairs": [
+    0,
+    0
+  ],
+  "admittedLocalImprovements": 0,
+  "admittedFieldSlices": 0,
+  "supplementalValidation": {
+    "scope": "supplemental_QA_readback_only",
+    "performanceAdmissionEffect": "none",
+    "markerDomReadback": {
+      "build": "candidate-v7",
+      "independentContexts": 2,
+      "roundsPerContext": 3,
+      "exactPrimaryExpectedIds": true,
+      "fixtureCoordinatesRecomputed": true,
+      "bindingSha256": "96b30a86f4e92c5bb96ab13829000c85f9367c61ab70340e81a42d1f8094458f",
+      "rawSha256": "fb81716ecb45735e43949be833d33dd8140b3ba70dddc8285c99c94e7d70800b",
+      "planSha256": "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af",
+      "buildReceiptSha256": "e621394510a3e2abfa79bcde546ab3f35b74ecc69bbc8a792e8dd80b5b14a1f2",
+      "blockedTransportObservations": 1
+    },
+    "nativeTouch": {
+      "build": "candidate-v7",
+      "checks": 63,
+      "trustedCdpSwipes": 5,
+      "domPanelPresent": true,
+      "mapIdentityCount": 1,
+      "horizontalOverflow": 0,
+      "blockedTransportObservations": 8
+    },
+    "poolDom": {
+      "candidateSteps": 8,
+      "candidateAccuracyFailures": 0,
+      "sameImageOnBubbleOnly": true,
+      "baselineSteps": 8,
+      "baselineAccuracyFailures": 7,
+      "baselineRole": "retained_descriptive_fixture_not_performance_baseline"
+    },
+    "flickerPan": {
+      "build": "candidate-v7",
+      "freshContextsPerCell": 5,
+      "desktopFinalMarkers": 143,
+      "mobileFinalMarkers": 55,
+      "observedZeroMarkerSpansOver250Ms": 0,
+      "samplerSha256": "486eefa8bf2580515445ee9d3f7c5a459a20d51fd9742c391453b30eec286967",
+      "domObservationOnly": true,
+      "physicalPixelFlickerVerified": false,
+      "rafBlindWarning": "desktop 2/5 contexts had max rAF gaps above 250ms; blocked intervals are unobserved and this is not a no-pixel-flicker guarantee or gate waiver",
+      "candidateV6ComparisonRole": "intermediate_QA_regression_not_original_baseline_flicker_prevalence",
+      "blockedTransportObservations": 5
+    }
+  },
+  "command": [
+    "/opt/homebrew/opt/node@24/bin/node",
+    "/Users/twoimo/.codex/worktrees/179f/tzudong/apps/web/performance/render-flow-20260930/verify-evidence.mjs",
+    "verify",
+    "--scored",
+    "/Users/twoimo/.codex/worktrees/179f/tzudong/apps/web/performance/render-flow-20260930/scored.json",
+    "--artifact-map",
+    "/Users/twoimo/.codex/worktrees/179f/tzudong/apps/web/performance/render-flow-20260930/artifact-map.json",
+    "--artifact-map-sha256",
+    "86762a796ed9dce21d87dc97d4590c77401d44cd1974fc1e577859528ba0b994"
+  ],
+  "exitCode": 0,
+  "detachedPinPath": "/Users/twoimo/.codex/worktrees/179f/tzudong/apps/web/performance/render-flow-20260930-artifact-map.sha256",
+  "privacy": "numeric aggregate, local source hashes and synthetic QA only"
+}

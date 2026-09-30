@@ -1,0 +1,1531 @@
+{
+  "kind": "candidate",
+  "receipt": {
+    "planSha256": "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af",
+    "patchSha256": "7157ecbccd22d9315f0d3cd344b003741ac30fbcafb36b5dc1ba59b77fc68819",
+    "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+    "kind": "candidate",
+    "sourceCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+    "sourceTree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+    "distDir": ".next-flow-candidate-v7-20260930",
+    "buildId": "IudS4C9U60JOVFefHNMHz",
+    "retainedBuildId": "build-candidate-v7/BUILD_ID",
+    "inputs": [
+      {
+        "original": "app/home-runtime-shell.tsx",
+        "retained": "build-candidate-v7/input-0.txt",
+        "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+      },
+      {
+        "original": "app/home-client.tsx",
+        "retained": "build-candidate-v7/input-1.txt",
+        "sha256": "eda61b97da7173d53f71a76dfcdf0b219c826c1e3069afd787ad116a3be963a5"
+      },
+      {
+        "original": "components/home/home-map-container.tsx",
+        "retained": "build-candidate-v7/input-2.txt",
+        "sha256": "dcf8c744fb6c0adb9b16c764c2b32ade9c77c6225e10b55296385560d0df42ae"
+      },
+      {
+        "original": "hooks/useHomeViewportMode.ts",
+        "retained": "build-candidate-v7/input-3.txt",
+        "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+      },
+      {
+        "original": "package-lock.json",
+        "retained": "build-candidate-v7/input-4.txt",
+        "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+      },
+      {
+        "original": "components/home/home-control-panel.tsx",
+        "retained": "build-candidate-v7/input-5.txt",
+        "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+      },
+      {
+        "original": "components/search/RestaurantSearch.tsx",
+        "retained": "build-candidate-v7/input-6.txt",
+        "sha256": "aa988ea121fc475e8ad9495039b628f3bbea33ddcce9b2a5bde48b74e9c21695"
+      },
+      {
+        "original": "components/map/NaverMapView.tsx",
+        "retained": "build-candidate-v7/input-7.txt",
+        "sha256": "9236d84284cc28b1e569db22e979bd1f8a6800a577a234c549126548e5503287"
+      },
+      {
+        "original": "lib/naver-map-render-plan.ts",
+        "retained": "build-candidate-v7/input-8.txt",
+        "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+      },
+      {
+        "original": "lib/marker-pool.ts",
+        "retained": "build-candidate-v7/input-9.txt",
+        "sha256": "0816449fe7d1d94f59f555198a77a266b9d346ffbf797275695e0eecd67edade"
+      }
+    ],
+    "node": "v24.21.0",
+    "sourceSha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede",
+    "logSha256": "765661b4bde2fe51fa7df7640b80d6d71d3c3bc0d20d6622f76f7b3068312fc0"
+  },
+  "browser": "151.0.7922.34",
+  "cpu": 4,
+  "count": 735,
+  "scope": "Diagnostic n=1 trace+profile, instrumentation overhead; simulated SDK and synthetic data. Not paired timing.",
+  "before": {
+    "now": 1998.2000000476837,
+    "timeOrigin": 1790761372309.8
+  },
+  "metrics": {
+    "longTasks": [
+      {
+        "start": 108.79999995231628,
+        "duration": 52
+      },
+      {
+        "start": 176.60000014305115,
+        "duration": 87
+      },
+      {
+        "start": 787.1000001430511,
+        "duration": 82
+      },
+      {
+        "start": 2032.6000001430511,
+        "duration": 198
+      },
+      {
+        "start": 2231.5,
+        "duration": 56
+      }
+    ],
+    "shifts": [
+      {
+        "start": 1041.7000000476837,
+        "value": 0.000009035932543509946,
+        "recentInput": false
+      },
+      {
+        "start": 1080.9000000953674,
+        "value": 0.0032746752829218104,
+        "recentInput": false
+      }
+    ],
+    "frames": [
+      {
+        "t": 105.1,
+        "gap": 0,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 155.1,
+        "gap": 50,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 163.4,
+        "gap": 8.300000000000011,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 288.5,
+        "gap": 125.1,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 313.4,
+        "gap": 24.899999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 321.3,
+        "gap": 7.900000000000034,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 330.2,
+        "gap": 8.899999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 338.5,
+        "gap": 8.300000000000011,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 346.8,
+        "gap": 8.300000000000011,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 355,
+        "gap": 8.199999999999989,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 363.5,
+        "gap": 8.5,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 371.8,
+        "gap": 8.300000000000011,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 380.2,
+        "gap": 8.399999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 412.7,
+        "gap": 32.5,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 421.8,
+        "gap": 9.100000000000023,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 430.1,
+        "gap": 8.300000000000011,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 438.1,
+        "gap": 8,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 471.9,
+        "gap": 33.799999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 479.9,
+        "gap": 8,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 496.9,
+        "gap": 17,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 505,
+        "gap": 8.100000000000023,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 512.9,
+        "gap": 7.899999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 521.9,
+        "gap": 9,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 530.1,
+        "gap": 8.200000000000045,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 538.5,
+        "gap": 8.399999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 545.9,
+        "gap": 7.399999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 554.9,
+        "gap": 9,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 562.8,
+        "gap": 7.899999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 571.6,
+        "gap": 8.800000000000068,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 579.9,
+        "gap": 8.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 588.3,
+        "gap": 8.399999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 596,
+        "gap": 7.7000000000000455,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 604.7,
+        "gap": 8.700000000000045,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 613.5,
+        "gap": 8.799999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 621.8,
+        "gap": 8.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 630.2,
+        "gap": 8.400000000000091,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 638.4,
+        "gap": 8.199999999999932,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 646.8,
+        "gap": 8.399999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 654.6,
+        "gap": 7.800000000000068,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 663.6,
+        "gap": 9,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 671.8,
+        "gap": 8.199999999999932,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 679.7,
+        "gap": 7.900000000000091,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 688.5,
+        "gap": 8.799999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 696.8,
+        "gap": 8.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 704.9,
+        "gap": 8.100000000000023,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 713.5,
+        "gap": 8.600000000000023,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 746.8,
+        "gap": 33.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 763.5,
+        "gap": 16.700000000000045,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 771.8,
+        "gap": 8.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 871.8,
+        "gap": 100,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 912.7,
+        "gap": 40.90000000000009,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 921.9,
+        "gap": 9.199999999999932,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 930,
+        "gap": 8.100000000000023,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 946.8,
+        "gap": 16.799999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 987.6,
+        "gap": 40.80000000000007,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1005,
+        "gap": 17.399999999999977,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1013.5,
+        "gap": 8.5,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1021.8,
+        "gap": 8.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1038.3,
+        "gap": 16.5,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1055.1,
+        "gap": 16.799999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1063.1,
+        "gap": 8,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1079.2,
+        "gap": 16.100000000000136,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1088.5,
+        "gap": 9.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1096.8,
+        "gap": 8.299999999999955,
+        "markers": 0,
+        "detail": 0
+      },
+      {
+        "t": 1104.2,
+        "gap": 7.400000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1113.6,
+        "gap": 9.399999999999864,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1121.8,
+        "gap": 8.200000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1130.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1138.5,
+        "gap": 8.400000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1146.8,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1155.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1162.7,
+        "gap": 7.600000000000136,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1171.5,
+        "gap": 8.799999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1180.2,
+        "gap": 8.700000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1188.4,
+        "gap": 8.200000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1196.8,
+        "gap": 8.399999999999864,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1205.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1213.2,
+        "gap": 8.100000000000136,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1221.9,
+        "gap": 8.700000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1230.2,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1238.5,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1246.8,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1255.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1263.5,
+        "gap": 8.400000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1271,
+        "gap": 7.5,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1280.1,
+        "gap": 9.099999999999909,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1288.4,
+        "gap": 8.300000000000182,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1296.2,
+        "gap": 7.7999999999999545,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1305.2,
+        "gap": 9,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1313.4,
+        "gap": 8.200000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1321.8,
+        "gap": 8.399999999999864,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1330.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1338.5,
+        "gap": 8.400000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1346.8,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1355.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1363.1,
+        "gap": 8,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1371,
+        "gap": 7.900000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1380,
+        "gap": 9,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1388.4,
+        "gap": 8.400000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1396.8,
+        "gap": 8.399999999999864,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1405.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1413.4,
+        "gap": 8.300000000000182,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1421.6,
+        "gap": 8.199999999999818,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1430.2,
+        "gap": 8.600000000000136,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1437.9,
+        "gap": 7.7000000000000455,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1446.5,
+        "gap": 8.599999999999909,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1455.2,
+        "gap": 8.700000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1463.5,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1471.8,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1479.4,
+        "gap": 7.600000000000136,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1487.9,
+        "gap": 8.5,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1496.8,
+        "gap": 8.899999999999864,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1504.7,
+        "gap": 7.900000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1513.6,
+        "gap": 8.899999999999864,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1521.2,
+        "gap": 7.600000000000136,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1529.8,
+        "gap": 8.599999999999909,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1538.5,
+        "gap": 8.700000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1546.8,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1555.1,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1562.6,
+        "gap": 7.5,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1571.9,
+        "gap": 9.300000000000182,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1580.1,
+        "gap": 8.199999999999818,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1588.5,
+        "gap": 8.400000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1596.5,
+        "gap": 8,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1605.2,
+        "gap": 8.700000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1613.5,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1621.8,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1629.7,
+        "gap": 7.900000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1638,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1646.3,
+        "gap": 8.299999999999955,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1654.3,
+        "gap": 8,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1663.5,
+        "gap": 9.200000000000045,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1671.4,
+        "gap": 7.900000000000091,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1680.1,
+        "gap": 8.699999999999818,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 1995.9,
+        "gap": 315.8000000000002,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 2004.9,
+        "gap": 9,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 2013.1,
+        "gap": 8.199999999999818,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 2021.7,
+        "gap": 8.600000000000136,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 2029.4,
+        "gap": 7.7000000000000455,
+        "markers": 1,
+        "detail": 0
+      },
+      {
+        "t": 2038.6,
+        "gap": 9.199999999999818,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2280.1,
+        "gap": 241.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2321.9,
+        "gap": 41.80000000000018,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2330.1,
+        "gap": 8.199999999999818,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2338.5,
+        "gap": 8.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2346.1,
+        "gap": 7.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2355.1,
+        "gap": 9,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2363.5,
+        "gap": 8.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2371.6,
+        "gap": 8.099999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2380.2,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2388.5,
+        "gap": 8.300000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2396.4,
+        "gap": 7.900000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2405.2,
+        "gap": 8.799999999999727,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2412.6,
+        "gap": 7.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2421.2,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2430.2,
+        "gap": 9,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2438.1,
+        "gap": 7.900000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2446.1,
+        "gap": 8,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2455.1,
+        "gap": 9,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2462.8,
+        "gap": 7.700000000000273,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2471.8,
+        "gap": 9,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2480.2,
+        "gap": 8.399999999999636,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2488.2,
+        "gap": 8,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2496.3,
+        "gap": 8.100000000000364,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2505.2,
+        "gap": 8.899999999999636,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2513.5,
+        "gap": 8.300000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2521.8,
+        "gap": 8.300000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2530.2,
+        "gap": 8.399999999999636,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2537.9,
+        "gap": 7.700000000000273,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2546.9,
+        "gap": 9,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2554.2,
+        "gap": 7.299999999999727,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2563.3,
+        "gap": 9.100000000000364,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2571.5,
+        "gap": 8.199999999999818,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2580.1,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2587.7,
+        "gap": 7.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2596.2,
+        "gap": 8.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2605.2,
+        "gap": 9,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2613.5,
+        "gap": 8.300000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2621.7,
+        "gap": 8.199999999999818,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2630.1,
+        "gap": 8.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2638,
+        "gap": 7.900000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2646.6,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2655.2,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2662.8,
+        "gap": 7.600000000000364,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2671.4,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2679.6,
+        "gap": 8.199999999999818,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2687.7,
+        "gap": 8.099999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2696.9,
+        "gap": 9.200000000000273,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2705,
+        "gap": 8.099999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2713.5,
+        "gap": 8.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2721.8,
+        "gap": 8.300000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2730.1,
+        "gap": 8.299999999999727,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2738,
+        "gap": 7.900000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2746.9,
+        "gap": 8.900000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2754.4,
+        "gap": 7.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2763.5,
+        "gap": 9.099999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2771.3,
+        "gap": 7.800000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2780.2,
+        "gap": 8.899999999999636,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2787.6,
+        "gap": 7.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2796,
+        "gap": 8.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2804.8,
+        "gap": 8.800000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2813.3,
+        "gap": 8.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2821.8,
+        "gap": 8.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2830.1,
+        "gap": 8.299999999999727,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2837.6,
+        "gap": 7.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2846.8,
+        "gap": 9.200000000000273,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2854.3,
+        "gap": 7.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2862.7,
+        "gap": 8.399999999999636,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2871.1,
+        "gap": 8.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2880.2,
+        "gap": 9.099999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2887.8,
+        "gap": 7.600000000000364,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2896.4,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2904.9,
+        "gap": 8.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2913.5,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2921.1,
+        "gap": 7.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2929.9,
+        "gap": 8.800000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2938.5,
+        "gap": 8.599999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2946.6,
+        "gap": 8.099999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2955.1,
+        "gap": 8.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2963.2,
+        "gap": 8.099999999999909,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2971,
+        "gap": 7.800000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2979.5,
+        "gap": 8.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2988.2,
+        "gap": 8.699999999999818,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 2995.9,
+        "gap": 7.700000000000273,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3005.2,
+        "gap": 9.299999999999727,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3012.6,
+        "gap": 7.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3021.3,
+        "gap": 8.700000000000273,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3029.7,
+        "gap": 8.399999999999636,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3038.5,
+        "gap": 8.800000000000182,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3046,
+        "gap": 7.5,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3055.2,
+        "gap": 9.199999999999818,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3063.4,
+        "gap": 8.200000000000273,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3071.8,
+        "gap": 8.400000000000091,
+        "markers": 143,
+        "detail": 0
+      },
+      {
+        "t": 3079.6,
+        "gap": 7.799999999999727,
+        "markers": 143,
+        "detail": 0
+      }
+    ],
+    "mutations": 13,
+    "lcp": 884,
+    "fcp": 424,
+    "now": 3088.4000000953674,
+    "heap": 18817465,
+    "dom": 1279,
+    "maps": 1
+  },
+  "errors": {
+    "page": 0,
+    "console": 1,
+    "blockedTransport": 1,
+    "unexpectedConsole": 0
+  },
+  "geo": {
+    "zoom": 14,
+    "lat": 37.5512,
+    "lng": 126.9882
+  }
+}

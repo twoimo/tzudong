@@ -1,0 +1,13 @@
+{
+  "schema": "readback-binding.v1",
+  "rawPath": "marker-dom-readback-final-v4/raw.json",
+  "rawSha256": "fb81716ecb45735e43949be833d33dd8140b3ba70dddc8285c99c94e7d70800b",
+  "actualPlanPath": "plan-v6.json",
+  "actualPlanSha256": "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af",
+  "actualBuildReceiptPath": "build-candidate-v7/receipt.json",
+  "actualBuildReceiptSha256": "e621394510a3e2abfa79bcde546ab3f35b74ecc69bbc8a792e8dd80b5b14a1f2",
+  "historicalPlanCopy": "marker-dom-readback-final-v4/plan-v5.json.txt",
+  "historicalPlanIsActualBinding": false,
+  "reason": "The copied old plan is retained as a historical reference. Exact v7 receipt and its plan-v6 SHA are the authoritative executable-source binding; raw and earlier copied evidence were not changed.",
+  "statisticalUnit": "2freshcontexts(oneperviewport)with3panroundsinsideeach, not6independentruns"
+}

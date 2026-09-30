@@ -1,0 +1,54 @@
+{
+  "comparand": "Intermediatecandidate-v6 introduced offscreen-culling regression to finalcandidate-v7. Original baseline flicker prevalence not established.",
+  "thresholdBeforeV7": 250,
+  "results": [
+    {
+      "label": "flicker-pan-before-v3",
+      "mobile": false,
+      "n": 5,
+      "over250ms": 0,
+      "medianZeroSpanMs": 158.4000000000001,
+      "minMs": 150,
+      "maxMs": 158.5,
+      "rAFMedianGapMs": 8.300000000000182,
+      "rAFMaximumGapMs": 191.60000000000036,
+      "capture": "bounded2000ms; frames in a case not independent; DOM presence, not physical pixels"
+    },
+    {
+      "label": "flicker-pan-before-v3",
+      "mobile": true,
+      "n": 5,
+      "over250ms": 5,
+      "medianZeroSpanMs": 308.2000000000003,
+      "minMs": 307.4000000000001,
+      "maxMs": 316.0999999999999,
+      "rAFMedianGapMs": 8.300000000000182,
+      "rAFMaximumGapMs": 59.19999999999982,
+      "capture": "bounded2000ms; frames in a case not independent; DOM presence, not physical pixels"
+    },
+    {
+      "label": "flicker-pan-after-v1",
+      "mobile": false,
+      "n": 5,
+      "over250ms": 0,
+      "medianZeroSpanMs": 8.400000000000091,
+      "minMs": 7.599999999999909,
+      "maxMs": 16.699999999999818,
+      "rAFMedianGapMs": 8.300000000000182,
+      "rAFMaximumGapMs": 291.8000000000002,
+      "capture": "bounded2000ms; frames in a case not independent; DOM presence, not physical pixels"
+    },
+    {
+      "label": "flicker-pan-after-v1",
+      "mobile": true,
+      "n": 5,
+      "over250ms": 0,
+      "medianZeroSpanMs": 16.700000000000273,
+      "minMs": 16.299999999999727,
+      "maxMs": 16.90000000000009,
+      "rAFMedianGapMs": 8.300000000000182,
+      "rAFMaximumGapMs": 92.40000000000009,
+      "capture": "bounded2000ms; frames in a case not independent; DOM presence, not physical pixels"
+    }
+  ]
+}

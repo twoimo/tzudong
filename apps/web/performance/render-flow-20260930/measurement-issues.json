@@ -1,0 +1,74 @@
+{
+  "scope": "read-only derived diagnostic; raw samples and strict capture gates remain unchanged",
+  "separateClockReads": [
+    {
+      "raw": "paired-v6/raw.json",
+      "cell": 0,
+      "index": 9,
+      "variant": "baseline",
+      "stableMs": 1918.5999999046326,
+      "transientMs": 1918.7999999523163,
+      "transientMinusStableMs": 0.20000004768371582
+    },
+    {
+      "raw": "paired-v6/raw.json",
+      "cell": 1,
+      "index": 0,
+      "variant": "baseline",
+      "stableMs": 1798.8999998569489,
+      "transientMs": 1799,
+      "transientMinusStableMs": 0.10000014305114746
+    },
+    {
+      "raw": "paired-v6/raw.json",
+      "cell": 1,
+      "index": 4,
+      "variant": "baseline",
+      "stableMs": 1737.3000001907349,
+      "transientMs": 1737.4000000953674,
+      "transientMinusStableMs": 0.09999990463256836
+    },
+    {
+      "raw": "paired-v6/raw.json",
+      "cell": 1,
+      "index": 25,
+      "variant": "candidate",
+      "stableMs": 113.60000014305115,
+      "transientMs": 113.70000004768372,
+      "transientMinusStableMs": 0.09999990463256836
+    },
+    {
+      "raw": "paired-v6/raw.json",
+      "cell": 1,
+      "index": 28,
+      "variant": "baseline",
+      "stableMs": 2197.7000000476837,
+      "transientMs": 2197.7999999523163,
+      "transientMinusStableMs": 0.09999990463256836
+    },
+    {
+      "raw": "secondary-v5/raw.json",
+      "cell": 0,
+      "index": 2,
+      "variant": "candidate",
+      "stableMs": 60.09999990463257,
+      "transientMs": 60.200000047683716,
+      "transientMinusStableMs": 0.10000014305114746
+    },
+    {
+      "raw": "secondary-v5/raw.json",
+      "cell": 2,
+      "index": 4,
+      "variant": "baseline",
+      "stableMs": 185.60000014305115,
+      "transientMs": 185.70000004768372,
+      "transientMinusStableMs": 0.09999990463256836
+    }
+  ],
+  "source": "sample.mjs pendingFirst=performance.now() occurs before transientFirst=performance.now() in the same rAF callback",
+  "interpretation": "0.1 to 0.2ms ordering inconsistency is compatible with separate clock reads; it is not proof of a product flicker. No capture gate is waived.",
+  "rawHashes": {
+    "paired-v6/raw.json": "0cdd2d1d90c4630abd3b5c3f1d45069baf7487de859ab74754e6a6d2bf2c0930",
+    "secondary-v5/raw.json": "e8007926280f8f793955c7761fca6d50cf260c07767768f0a1886f63327ace5a"
+  }
+}

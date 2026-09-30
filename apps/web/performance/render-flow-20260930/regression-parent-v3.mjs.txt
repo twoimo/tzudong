@@ -1,0 +1,791 @@
+import {
+  panMockMap,
+  swipeDetailPanelLeft,
+  zoomMockMap,
+} from '../../tests/mobile-home-map-helpers.ts';
+import { catalog, launch, origin, ready, save, setup } from './runtime.mjs';
+
+const EXPECTED_ORIGIN = 'http://localhost:3310';
+const OUTPUT_LABEL = process.argv[2] || null;
+const MAX_FAILURES_PER_CASE = 24;
+const MAX_TRACE_ENTRIES = 48;
+const SEARCH_OLD_DELAY_MS = 280;
+const SEARCH_NEW_DELAY_MS = 25;
+
+if (origin !== EXPECTED_ORIGIN) {
+  throw new Error(`Regression runtime origin mismatch: ${origin}`);
+}
+
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function waitUntil(label, predicate, timeoutMs = 12_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    try {
+      if (await predicate()) return;
+    } catch (error) {
+      lastError = error;
+    }
+    await sleep(25);
+  }
+  const suffix = lastError instanceof Error ? ` (${lastError.message.slice(0, 180)})` : '';
+  throw new Error(`Timed out waiting for ${label}${suffix}`);
+}
+
+function bounded(value) {
+  if (typeof value === 'string') return value.slice(0, 240);
+  if (Array.isArray(value)) return value.slice(0, 12).map(bounded);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value).slice(0, 16).map(([key, item]) => [key, bounded(item)]));
+}
+
+function recordInvariant(caseResult, at, condition, expected, observed) {
+  caseResult.checks += 1;
+  if (condition || caseResult.failures.length >= MAX_FAILURES_PER_CASE) return condition;
+  caseResult.failures.push({
+    at,
+    expected: bounded(expected),
+    observed: bounded(observed),
+  });
+  return false;
+}
+
+function recordError(caseResult, at, error) {
+  recordInvariant(
+    caseResult,
+    at,
+    false,
+    'step completes without an exception',
+    error instanceof Error ? error.message : String(error),
+  );
+}
+
+function readPostgrestTerm(value) {
+  if (!value) return null;
+  return value
+    .replace(/^(?:ilike|eq)\./, '')
+    .replace(/^[%*]/, '')
+    .replace(/[%*]$/, '');
+}
+
+function filterCatalogRows(rows, url) {
+  let filtered = rows;
+  const approvedName = readPostgrestTerm(url.searchParams.get('approved_name'));
+  if (approvedName) {
+    filtered = filtered.filter((row) => row.approved_name.includes(approvedName));
+  }
+  const id = readPostgrestTerm(url.searchParams.get('id'));
+  if (id) filtered = filtered.filter((row) => row.id === id);
+  const categories = url.searchParams.get('categories');
+  if (categories) {
+    filtered = filtered.filter((row) => row.categories.some((category) => categories.includes(category)));
+  }
+  for (const dimension of ['lat', 'lng']) {
+    for (const filter of url.searchParams.getAll(dimension)) {
+      const separator = filter.indexOf('.');
+      if (separator < 0) continue;
+      const operator = filter.slice(0, separator);
+      const value = Number(filter.slice(separator + 1));
+      if (!Number.isFinite(value)) continue;
+      filtered = filtered.filter((row) => operator === 'gte'
+        ? row[dimension] >= value
+        : operator === 'lte'
+          ? row[dimension] <= value
+          : true);
+    }
+  }
+  const offset = Number(url.searchParams.get('offset') || 0);
+  const limit = Number(url.searchParams.get('limit') || filtered.length);
+  return filtered.slice(offset, offset + limit);
+}
+
+async function installScenarioRestaurantRoute(page, count) {
+  const state = {
+    coordinateRevision: 0,
+    reverseSearchEnabled: false,
+    trace: [],
+    sequence: 0,
+  };
+  const baseRows = catalog(count);
+  const changedRestaurantId = baseRows[0].id;
+
+  await page.route('**/rest/v1/restaurants**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 204,
+        headers: {
+          'access-control-allow-origin': origin,
+          'access-control-allow-headers': '*',
+        },
+      });
+      return;
+    }
+
+    const revision = state.coordinateRevision;
+    const rows = baseRows.map((row) => row.id === changedRestaurantId && revision > 0
+      ? { ...row, lat: row.lat + 0.0015, lng: row.lng + 0.0015 }
+      : row);
+    const approvedName = readPostgrestTerm(url.searchParams.get('approved_name'));
+    const isSearch = Boolean(approvedName && url.searchParams.get('approved_name')?.startsWith('ilike.'));
+    const event = {
+      sequence: ++state.sequence,
+      kind: isSearch ? 'search' : 'catalog',
+      term: isSearch ? approvedName : null,
+      revision,
+      startedAt: Date.now(),
+      completedAt: null,
+      aborted: false,
+      rowCount: 0,
+    };
+    state.trace.push(event);
+    if (state.trace.length > MAX_TRACE_ENTRIES * 2) state.trace.shift();
+
+    if (isSearch && state.reverseSearchEnabled) {
+      const delay = approvedName === baseRows[0].name
+        ? SEARCH_OLD_DELAY_MS
+        : approvedName === baseRows[1]?.name
+          ? SEARCH_NEW_DELAY_MS
+          : 15;
+      await sleep(delay);
+    } else {
+      await sleep(15);
+    }
+
+    const data = filterCatalogRows(rows, url);
+    event.rowCount = data.length;
+    try {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: {
+          'access-control-allow-origin': origin,
+          'access-control-allow-headers': '*',
+        },
+        body: JSON.stringify(data),
+      });
+      event.completedAt = Date.now();
+    } catch {
+      event.aborted = true;
+    }
+  });
+
+  return { state, baseRows, changedRestaurantId };
+}
+
+async function seedIdentityAndTrustedInputProbe(page) {
+  return page.evaluate(() => {
+    window.__RENDER_FLOW_MAP_IDENTITY__ = window.__TZUDONG_DEBUG_MAP__;
+    window.__RENDER_FLOW_MAP_ELEMENT__ = document.querySelector('[data-testid="map-container"]');
+    window.__RENDER_FLOW_TRUSTED_INPUTS__ = [];
+    document.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const kind = target?.closest('.cluster-marker-container')
+        ? 'cluster'
+        : target?.closest('[data-testid="marker"]')
+          ? 'marker'
+          : target?.closest('button')
+            ? 'button'
+            : 'other';
+      window.__RENDER_FLOW_TRUSTED_INPUTS__.push({ kind, trusted: event.isTrusted });
+      if (window.__RENDER_FLOW_TRUSTED_INPUTS__.length > 24) {
+        window.__RENDER_FLOW_TRUSTED_INPUTS__.shift();
+      }
+    }, true);
+    return {
+      mapCreates: window.__viewportMapCreates ?? null,
+      hasMap: Boolean(window.__TZUDONG_DEBUG_MAP__),
+    };
+  });
+}
+
+async function readUiSnapshot(page) {
+  return page.evaluate(() => ({
+    mainCount: document.querySelectorAll('main#main-content').length,
+    horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+    mapContainerCount: document.querySelectorAll('[data-testid="map-container"]').length,
+    mapIdentityStable:
+      window.__RENDER_FLOW_MAP_IDENTITY__ === window.__TZUDONG_DEBUG_MAP__
+      && window.__RENDER_FLOW_MAP_ELEMENT__ === document.querySelector('[data-testid="map-container"]'),
+    mapCreates: window.__viewportMapCreates ?? null,
+    markerCount: document.querySelectorAll('[data-testid="marker"]').length,
+    clusterCount: document.querySelectorAll('.cluster-marker-container').length,
+    detailCount: document.querySelectorAll('[data-testid="restaurant-detail-panel"]').length,
+    pathname: location.pathname,
+  }));
+}
+
+async function checkUiContract(page, caseResult, at) {
+  const snapshot = await readUiSnapshot(page);
+  recordInvariant(caseResult, `${at}.main-one`, snapshot.mainCount === 1, 1, snapshot.mainCount);
+  recordInvariant(caseResult, `${at}.no-horizontal-overflow`, snapshot.horizontalOverflow <= 1, '<= 1px', snapshot.horizontalOverflow);
+  recordInvariant(caseResult, `${at}.map-container-one`, snapshot.mapContainerCount === 1, 1, snapshot.mapContainerCount);
+  recordInvariant(caseResult, `${at}.map-identity`, snapshot.mapIdentityStable, true, snapshot.mapIdentityStable);
+  recordInvariant(caseResult, `${at}.map-created-once`, snapshot.mapCreates === 1, 1, snapshot.mapCreates);
+  return snapshot;
+}
+
+async function trustedInputEvidence(page, kind) {
+  return page.evaluate((expectedKind) => {
+    const inputs = window.__RENDER_FLOW_TRUSTED_INPUTS__ || [];
+    return [...inputs].reverse().find((entry) => entry.kind === expectedKind) || null;
+  }, kind);
+}
+
+async function readMarkerIdSnapshot(page) {
+  return page.locator('[data-testid="marker"][data-restaurant-id]').evaluateAll((elements) => elements
+    .map((element) => element.getAttribute('data-restaurant-id'))
+    .filter(Boolean)
+    .sort());
+}
+
+async function installMarkerOperationProbe(page) {
+  await page.evaluate(() => {
+    const prototype = window.naver?.maps?.Marker?.prototype;
+    if (!prototype || prototype.__renderFlowProbeInstalled) return;
+    const counters = { setMap: 0, setIcon: 0, setPosition: 0 };
+    window.__RENDER_FLOW_MARKER_OPERATIONS__ = counters;
+    for (const method of ['setMap', 'setIcon', 'setPosition']) {
+      const original = prototype[method];
+      if (typeof original !== 'function') continue;
+      prototype[method] = function renderFlowMarkerOperationProbe(...args) {
+        counters[method] += 1;
+        return original.apply(this, args);
+      };
+    }
+    prototype.__renderFlowProbeInstalled = true;
+  });
+}
+
+async function resetMarkerOperationProbe(page) {
+  await page.evaluate(() => {
+    const counters = window.__RENDER_FLOW_MARKER_OPERATIONS__;
+    if (!counters) return;
+    counters.setMap = 0;
+    counters.setIcon = 0;
+    counters.setPosition = 0;
+  });
+}
+
+async function readMarkerOperationProbe(page) {
+  return page.evaluate(() => ({
+    ...(window.__RENDER_FLOW_MARKER_OPERATIONS__ || { setMap: -1, setIcon: -1, setPosition: -1 }),
+  }));
+}
+
+async function readMemoryCacheSnapshot(page) {
+  return page.evaluate(() => ({
+    heapBytes: performance.memory?.usedJSHeapSize ?? null,
+    domCount: document.querySelectorAll('*').length,
+    mapCreates: window.__viewportMapCreates ?? null,
+    markerCount: document.querySelectorAll('[data-testid="marker"]').length,
+    mutationCount: window.__perf?.mutations ?? null,
+  }));
+}
+
+async function dismissVisibleMarkerSheet(page) {
+  const close = page.getByLabel('맛집 목록 닫기');
+  if (await close.count() && await close.first().isVisible()) await close.first().click();
+}
+
+async function closeDetail(page) {
+  const detail = page.getByTestId('restaurant-detail-panel').first();
+  for(let attempt=0;attempt<4;attempt++){
+    if(!await detail.count()||!await detail.isVisible())return;
+    const previous=await detail.textContent();
+    const back=page.getByRole('button',{name:/^(이전 목록으로 돌아가기|이전 화면으로 돌아가기)$/}).first();
+    await back.click();
+    await page.waitForFunction(text=>{const e=document.querySelector('[data-testid="restaurant-detail-panel"]');return !e||e.textContent!==text;},previous,{timeout:8000});
+  }
+  await detail.waitFor({state:'hidden',timeout:8000});
+}
+
+async function findClickableMarkerId(page) {
+  const id = await page.locator('[data-testid="marker"][data-restaurant-id]').evaluateAll((elements) => {
+    const candidate = elements.find((element) => {
+      const rect = element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      return rect.width > 0
+        && rect.height > 0
+        && centerX > Math.min(420, innerWidth * 0.35)
+        && centerX < innerWidth - 24
+        && centerY > 90
+        && centerY < innerHeight - 90;
+    }) || elements.find((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.left < innerWidth;
+    });
+    return candidate?.getAttribute('data-restaurant-id') || null;
+  });
+  if (!id) throw new Error('No clickable individual marker was available');
+  return id;
+}
+
+async function clickMarkerById(page, id) {
+  const marker = page.locator(`[data-testid="marker"][data-restaurant-id="${id}"]`).first();
+  await marker.click();
+  await page.getByTestId('restaurant-detail-panel').first().waitFor({ state: 'visible', timeout: 8_000 });
+}
+
+async function openSearch(page) {
+  const input = page.getByLabel('맛집 검색어 입력');
+  if (!await input.count() || !await input.first().isVisible()) {
+    await page.getByLabel('맛집 검색 열기').first().click();
+  }
+  await input.first().waitFor({ state: 'visible', timeout: 8_000 });
+  return input.first();
+}
+
+function searchRootFor(input) {
+  return input.page();
+}
+
+async function selectSearchResult(page, name) {
+  const input = await openSearch(page);
+  await input.fill('');
+  await input.fill(name);
+  const root = searchRootFor(input);
+  const result = root.locator('button.w-full.text-left.p-3.border-b').filter({hasText: name}).first();
+  await result.waitFor({ state: 'visible', timeout: 8_000 });
+  await result.click();
+  const detail = page.getByTestId('restaurant-detail-panel').first();
+  await detail.waitFor({ state: 'visible', timeout: 8_000 });
+  await waitUntil(`detail selection ${name}`, async () => (await detail.textContent())?.includes(name));
+}
+
+async function runExpandedClusterFlow(page, caseResult, fixture, mobile) {
+  const { baseRows } = fixture;
+  caseResult.inputs.push(
+    { at: 'cluster-click', kind: 'trusted-native-pointer' },
+    { at: 'zoom-pan', kind: 'mocked-provider-api' },
+  );
+
+  if (mobile) {
+    await panMockMap(page, 0, -180);
+    await page.waitForTimeout(350);
+  }
+  await page.locator('.cluster-marker-container').first().waitFor({ state: 'visible', timeout: 12_000 });
+  await page.locator('.cluster-marker-container').first().click();
+  const clusterInput = await trustedInputEvidence(page, 'cluster');
+  recordInvariant(caseResult, 'cluster.native-input', clusterInput?.trusted === true, { kind: 'cluster', trusted: true }, clusterInput);
+
+  await page.waitForFunction(() => Number(window.__TZUDONG_DEBUG_MAP__?.getZoom?.()) >= 14, undefined, { timeout: 12_000 });
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid="marker"]').length > 0, undefined, { timeout: 12_000 });
+  await page.waitForFunction(() => document.querySelectorAll('.cluster-marker-container').length === 0, undefined, { timeout: 12_000 });
+
+  const expanded = await readUiSnapshot(page);
+  caseResult.observations.expandedSdkMarkerCount = expanded.markerCount;
+  recordInvariant(caseResult, 'expanded.provider-markers-positive', expanded.markerCount > 0, '> 0', expanded.markerCount);
+  recordInvariant(caseResult, 'expanded.offscreen-sdk-markers-limited', expanded.markerCount < baseRows.length, `< ${baseRows.length}`, expanded.markerCount);
+
+  const listBadge = page.locator(`[aria-label="맛집 목록 ${baseRows.length}곳"]:visible`).first();
+  await listBadge.waitFor({ state: 'visible', timeout: 8_000 });
+  recordInvariant(caseResult, 'expanded.list-candidates-preserved', await listBadge.count() === 1, `${baseRows.length} candidates`, await listBadge.count());
+
+  if (mobile) {
+    const sheet = page.locator('[data-mobile-visible-marker-restaurants-sheet="true"]');
+    if(!await sheet.isVisible()){const trigger=page.getByRole('button',{name:/맛집 목록/}).first();if(await trigger.isVisible())await trigger.click();}
+    await sheet.waitFor({ state: 'visible', timeout: 8_000 });
+    const cardButtons = sheet.getByRole('button').filter({ hasText: /실험맛집/ });
+    const cardCount = await cardButtons.count();
+    caseResult.observations.mobileListCardCount = cardCount;
+    recordInvariant(caseResult, 'expanded.mobile-list-bounded', cardCount === Math.min(baseRows.length, 20), Math.min(baseRows.length, 20), cardCount);
+    const listScroll = await sheet.evaluate((element) => {
+      const scrollContainer = element.closest('[data-bottom-sheet-layout-source="mobile-control-overlay-sheet"]')
+        ?.querySelector(':scope > div.flex-1');
+      if (!(scrollContainer instanceof HTMLElement)) return null;
+      const before = scrollContainer.scrollTop;
+      const max = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
+      scrollContainer.scrollTop = max;
+      const after = scrollContainer.scrollTop;
+      scrollContainer.scrollTop = before;
+      return { before, after, max };
+    });
+    caseResult.observations.mobileListScroll = listScroll;
+    recordInvariant(caseResult, 'expanded.mobile-list-scrollable', Boolean(listScroll && listScroll.max > 0 && listScroll.after > 0), { max: '> 0', after: '> 0' }, listScroll);
+    const cardNames = await cardButtons.evaluateAll((buttons, names) => buttons.map((button) =>
+      names.find((name) => button.textContent?.includes(name)) || null),
+    baseRows.map((row) => row.name));
+    recordInvariant(
+      caseResult,
+      'expanded.mobile-list-order',
+      cardNames.every((name, index) => name === baseRows[index]?.name),
+      baseRows.slice(0, cardCount).map((row) => row.name),
+      cardNames,
+    );
+    await dismissVisibleMarkerSheet(page);
+  } else {
+    const markerId = await findClickableMarkerId(page);
+    await clickMarkerById(page, markerId);
+    const markerInput = await trustedInputEvidence(page, 'marker');
+    recordInvariant(caseResult, 'detail.native-marker-input', markerInput?.trusted === true, { kind: 'marker', trusted: true }, markerInput);
+    const selectedName = baseRows.find((row) => row.id === markerId)?.name;
+    const detailText = await page.getByTestId('restaurant-detail-panel').first().textContent();
+    recordInvariant(caseResult, 'detail.marker-selection', Boolean(selectedName && detailText?.includes(selectedName)), selectedName, detailText?.slice(0, 120));
+    await closeDetail(page);
+  }
+
+  const beforePanMarkerIds = await readMarkerIdSnapshot(page);
+  await panMockMap(page, 50_000, 0);
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid="marker"],.cluster-marker-container').length === 0, undefined, { timeout: 12_000 });
+  const emptyViewport = await readUiSnapshot(page);
+  recordInvariant(caseResult, 'pan-away.no-stale-sdk-markers', emptyViewport.markerCount + emptyViewport.clusterCount === 0, 0, emptyViewport.markerCount + emptyViewport.clusterCount);
+  const awayListBadgeCount = await page.locator(`[aria-label="맛집 목록 ${baseRows.length}곳"]:visible`).count();
+  caseResult.observations.panAwayListBadgeVisible=awayListBadgeCount;
+  await panMockMap(page, -50_000, 0);
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid="marker"]').length > 0, undefined, { timeout: 12_000 });
+  const returnedMarkerIds = await readMarkerIdSnapshot(page);
+  recordInvariant(caseResult, 'pan-return.exact-marker-snapshot', JSON.stringify(returnedMarkerIds) === JSON.stringify(beforePanMarkerIds), beforePanMarkerIds, returnedMarkerIds);
+  const returnedListBadgeCount = await page.locator(`[aria-label="맛집 목록 ${baseRows.length}곳"]:visible`).count();
+  caseResult.observations.panReturnListBadgeVisible=returnedListBadgeCount;
+
+  if (mobile) {
+    const restore = page.locator('[data-mobile-visible-marker-restaurants-restore="true"]:visible');
+    if (await restore.count()) await restore.first().click();
+    const sheet = page.locator('[data-mobile-visible-marker-restaurants-sheet="true"]');
+    if(!await sheet.isVisible()){const trigger=page.getByRole('button',{name:/맛집 목록/}).first();if(await trigger.isVisible())await trigger.click();}
+    await sheet.waitFor({ state: 'visible', timeout: 8_000 });
+    const cardButtons = sheet.getByRole('button').filter({ hasText: /실험맛집/ });
+    const firstCardText = (await cardButtons.first().textContent()) || '';
+    const firstName = baseRows.find((row) => firstCardText.includes(row.name))?.name;
+    if (!firstName) throw new Error('Unable to identify the first restored mobile list restaurant');
+    await cardButtons.first().click();
+    const detail = page.getByTestId('restaurant-detail-panel').first();
+    await waitUntil('restored mobile list detail selection', async () => (await detail.textContent())?.includes(firstName));
+    caseResult.inputs.push({ at: 'detail-swipe-after-pan-return', kind: 'synthetic-touch-helper' });
+    await swipeDetailPanelLeft(page);
+    await waitUntil('restored mobile swipe selection change', async () => !(await detail.textContent())?.includes(firstName));
+    const nextDetailText = (await detail.textContent()) || '';
+    const nextName = baseRows.find((row) => row.name !== firstName && nextDetailText.includes(row.name))?.name;
+    recordInvariant(caseResult, 'pan-return.swipe-candidates-preserved', Boolean(nextName), 'a different snapshot candidate', nextName || nextDetailText.slice(0, 120));
+    await closeDetail(page);
+    await dismissVisibleMarkerSheet(page);
+  }
+
+  await installMarkerOperationProbe(page);
+  await resetMarkerOperationProbe(page);
+  const repeatedIdleIds = await readMarkerIdSnapshot(page);
+  await page.evaluate(() => {
+    const map = window.__TZUDONG_DEBUG_MAP__;
+    window.naver.maps.Event.trigger(map, 'idle');
+    window.naver.maps.Event.trigger(map, 'idle');
+  });
+  await page.waitForTimeout(500);
+  const unchangedIdleOperations = await readMarkerOperationProbe(page);
+  const afterRepeatedIdleIds = await readMarkerIdSnapshot(page);
+  caseResult.observations.repeatedUnchangedIdle = unchangedIdleOperations;
+  recordInvariant(caseResult, 'repeat.unchanged-idle-marker-set', JSON.stringify(afterRepeatedIdleIds) === JSON.stringify(repeatedIdleIds), repeatedIdleIds, afterRepeatedIdleIds);
+  recordInvariant(caseResult, 'repeat.unchanged-idle-no-provider-rerender', Object.values(unchangedIdleOperations).every((count) => count === 0), { setMap: 0, setIcon: 0, setPosition: 0 }, unchangedIdleOperations);
+
+  const memoryCacheCycles = [];
+  const cycleExpectedIds = await readMarkerIdSnapshot(page);
+  for (let cycle = 1; cycle <= 2; cycle += 1) {
+    await panMockMap(page, 50_000, 0);
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="marker"],.cluster-marker-container').length === 0, undefined, { timeout: 12_000 });
+    await panMockMap(page, -50_000, 0);
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="marker"]').length > 0, undefined, { timeout: 12_000 });
+    const cycleIds = await readMarkerIdSnapshot(page);
+    const memory = await readMemoryCacheSnapshot(page);
+    memoryCacheCycles.push({ cycle, ...memory, exactMarkerSnapshot: JSON.stringify(cycleIds) === JSON.stringify(cycleExpectedIds) });
+    recordInvariant(caseResult, `memory-cache-cycle-${cycle}.marker-snapshot`, JSON.stringify(cycleIds) === JSON.stringify(cycleExpectedIds), cycleExpectedIds, cycleIds);
+    recordInvariant(caseResult, `memory-cache-cycle-${cycle}.map-identity`, memory.mapCreates === 1, 1, memory.mapCreates);
+  }
+  caseResult.observations.memoryCacheCycles = memoryCacheCycles;
+
+  await zoomMockMap(page, 15);
+  await page.waitForFunction(() => Number(window.__TZUDONG_DEBUG_MAP__?.getZoom?.()) === 15, undefined, { timeout: 8_000 });
+  recordInvariant(caseResult, 'zoom.provider-state', true, 15, 15);
+  await dismissVisibleMarkerSheet(page);
+
+  const selectedId = await findClickableMarkerId(page);
+  const selectedName = baseRows.find((row) => row.id === selectedId)?.name;
+  await clickMarkerById(page, selectedId);
+  await panMockMap(page, 50_000, 0);
+  await page.locator(`[data-testid="marker"][data-restaurant-id="${selectedId}"]`).waitFor({ state: 'attached', timeout: 8_000 });
+  const selectedException = await readUiSnapshot(page);
+  recordInvariant(caseResult, 'selected.offscreen-marker-exception', selectedException.markerCount === 1, 1, selectedException.markerCount);
+  const selectedDetailText = await page.getByTestId('restaurant-detail-panel').first().textContent();
+  recordInvariant(caseResult, 'selected.detail-preserved', Boolean(selectedName && selectedDetailText?.includes(selectedName)), selectedName, selectedDetailText?.slice(0, 120));
+  await panMockMap(page, -50_000, 0);
+  await closeDetail(page);
+  await dismissVisibleMarkerSheet(page);
+
+  const backId = await findClickableMarkerId(page);
+  await clickMarkerById(page, backId);
+  await page.goBack();
+  await page.getByTestId('restaurant-detail-panel').first().waitFor({ state: 'hidden', timeout: 8_000 });
+  const afterBack = await readUiSnapshot(page);
+  recordInvariant(caseResult, 'back.detail-closed', afterBack.detailCount === 0, 0, afterBack.detailCount);
+  recordInvariant(caseResult, 'back.home-route', afterBack.pathname === '/', '/', afterBack.pathname);
+  recordInvariant(caseResult, 'back.map-identity', afterBack.mapIdentityStable, true, afterBack.mapIdentityStable);
+  await checkUiContract(page, caseResult, 'expanded-final');
+}
+
+async function runSearchAndRefreshFlow(page, caseResult, fixture, mobile) {
+  const { state, baseRows, changedRestaurantId } = fixture;
+  const oldName = baseRows[0].name;
+  const newName = baseRows[1].name;
+  caseResult.inputs.push(
+    { at: 'search-and-selection', kind: 'trusted-native-keyboard-pointer' },
+    { at: 'search-responses', kind: 'mocked-provider-api' },
+    { at: 'coordinate-refresh', kind: 'local-query-invalidation' },
+  );
+
+  await dismissVisibleMarkerSheet(page);
+  const categoryTrigger = mobile
+    ? page.getByLabel(/카테고리 필터 열기/).first()
+    : page.getByLabel('카테고리 필터').first();
+  await categoryTrigger.click();
+  const emptyCategory = mobile
+    ? page.getByRole('button', { name: /중식/ }).first()
+    : page.getByRole('option', { name: /중식/ }).first();
+  await emptyCategory.click();
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid="marker"],.cluster-marker-container').length === 0, undefined, { timeout: 8_000 });
+  recordInvariant(caseResult, 'filter.empty-clears-sdk-markers', true, 0, 0);
+  await page.getByRole('button', { name: /초기화/ }).first().click();
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid="marker"],.cluster-marker-container').length > 0, undefined, { timeout: 8_000 });
+  await page.keyboard.press('Escape');
+  recordInvariant(caseResult, 'filter.reset-restores-markers', true, '> 0', '> 0');
+
+  await dismissVisibleMarkerSheet(page);
+  const input = await openSearch(page);
+  const root = searchRootFor(input);
+  state.reverseSearchEnabled = true;
+  const startSequence = state.sequence;
+  await input.fill(oldName);
+  await waitUntil('older search request start', () => state.trace.some((entry) => entry.sequence > startSequence && entry.kind === 'search' && entry.term === oldName));
+  await input.fill(newName);
+  const newResult = root.locator('button.w-full.text-left.p-3.border-b').filter({hasText: newName}).first();
+  await newResult.waitFor({ state: 'visible', timeout: 8_000 });
+  await waitUntil('reversed search responses complete', () => {
+    const recent = state.trace.filter((entry) => entry.sequence > startSequence && entry.kind === 'search');
+    return recent.some((entry) => entry.term === oldName && entry.completedAt)
+      && recent.some((entry) => entry.term === newName && entry.completedAt);
+  });
+  const oldRequest = state.trace.find((entry) => entry.sequence > startSequence && entry.kind === 'search' && entry.term === oldName);
+  const newRequest = state.trace.find((entry) => entry.sequence > startSequence && entry.kind === 'search' && entry.term === newName);
+  recordInvariant(caseResult, 'search.response-order-reversed', Number(newRequest?.completedAt) < Number(oldRequest?.completedAt), 'new response before old response', {
+    oldCompletedAt: oldRequest?.completedAt,
+    newCompletedAt: newRequest?.completedAt,
+  });
+  const staleResultCount = await root.locator('button.w-full.text-left.p-3.border-b').filter({hasText: oldName}).count();
+  recordInvariant(caseResult, 'search.latest-query-wins', staleResultCount === 0, 0, staleResultCount);
+  caseResult.observations.reversedSearch = {
+    oldDurationMs: Number(oldRequest?.completedAt) - Number(oldRequest?.startedAt),
+    newDurationMs: Number(newRequest?.completedAt) - Number(newRequest?.startedAt),
+  };
+
+  await newResult.click();
+  const detail = page.getByTestId('restaurant-detail-panel').first();
+  await waitUntil('latest search detail selection', async () => (await detail.textContent())?.includes(newName));
+  await panMockMap(page, 50_000, 0);
+  await page.locator(`[data-testid="marker"][data-restaurant-id="${baseRows[1].id}"]`).waitFor({ state: 'attached', timeout: 8_000 });
+  const searchedException = await readUiSnapshot(page);
+  recordInvariant(caseResult, 'searched.offscreen-marker-exception', searchedException.markerCount >= 1, 'selected search marker attached; non-expanded behavior retained', searchedException.markerCount);
+  await panMockMap(page, -50_000, 0);
+  await closeDetail(page);
+
+  state.reverseSearchEnabled = false;
+  const emptyInput = await openSearch(page);
+  await emptyInput.fill('완전빈결과');
+  const emptyRoot = searchRootFor(emptyInput);
+  await emptyRoot.getByText('검색 결과가 없습니다.', { exact: true }).waitFor({ state: 'visible', timeout: 8_000 });
+  recordInvariant(caseResult, 'search.empty-result', true, 'empty result message', 'visible');
+  const searchClose = page.getByLabel('검색 닫기');
+  if (await searchClose.count()) await searchClose.first().click();
+
+  state.coordinateRevision = 0;
+  await selectSearchResult(page, oldName);
+  const fixedCenter = { lat: baseRows[0].lat, lng: baseRows[0].lng, zoom: 16 };
+  await page.evaluate(({ lat, lng, zoom }) => {
+    const map = window.__TZUDONG_DEBUG_MAP__;
+    map.setCenter(new window.naver.maps.LatLng(lat, lng));
+    map.setZoom(zoom);
+  }, fixedCenter);
+  const markerSelector = `[data-testid="marker"][data-restaurant-id="${changedRestaurantId}"]`;
+  await page.locator(markerSelector).waitFor({ state: 'attached', timeout: 8_000 });
+  const beforePosition = await page.locator(markerSelector).evaluate((element) => ({
+    left: element.getBoundingClientRect().left,
+    top: element.getBoundingClientRect().top,
+  }));
+  await closeDetail(page);
+
+  const refreshInput = await openSearch(page);
+  await refreshInput.fill('');
+  await refreshInput.fill(oldName);
+  const refreshRoot = searchRootFor(refreshInput);
+  await refreshRoot.locator('button.w-full.text-left.p-3.border-b').filter({hasText: oldName}).first().waitFor({ state: 'visible', timeout: 8_000 });
+  const refreshStartSequence = state.sequence;
+  state.coordinateRevision = 1;
+  await page.evaluate(() => window.dispatchEvent(new Event('restaurant-discovery-invalidated')));
+  await waitUntil('coordinate refresh request', () => state.trace.some((entry) => entry.sequence > refreshStartSequence
+    && entry.kind === 'search'
+    && entry.term === oldName
+    && entry.revision === 1
+    && entry.completedAt));
+  await sleep(75);
+  await refreshRoot.locator('button.w-full.text-left.p-3.border-b').filter({hasText: oldName}).first().click();
+  await detail.waitFor({ state: 'visible', timeout: 8_000 });
+  await page.evaluate(({ lat, lng, zoom }) => {
+    const map = window.__TZUDONG_DEBUG_MAP__;
+    map.setCenter(new window.naver.maps.LatLng(lat, lng));
+    map.setZoom(zoom);
+  }, fixedCenter);
+  await page.locator(markerSelector).waitFor({ state: 'attached', timeout: 8_000 });
+  const afterPosition = await page.locator(markerSelector).evaluate((element) => ({
+    left: element.getBoundingClientRect().left,
+    top: element.getBoundingClientRect().top,
+  }));
+  const coordinateDeltaPx = Math.hypot(afterPosition.left - beforePosition.left, afterPosition.top - beforePosition.top);
+  caseResult.observations.coordinateRefresh = { beforePosition, afterPosition, deltaPx: coordinateDeltaPx };
+  recordInvariant(caseResult, 'refresh.coordinate-marker-moved', Number.isFinite(coordinateDeltaPx) && coordinateDeltaPx > 100, '> 100px', coordinateDeltaPx);
+  const refreshedDetailText = await detail.textContent();
+  recordInvariant(caseResult, 'refresh.detail-selection-preserved', Boolean(refreshedDetailText?.includes(oldName)), oldName, refreshedDetailText?.slice(0, 120));
+  await closeDetail(page);
+
+  const repeatVisitStartSequence = state.sequence;
+  const repeatVisitCycles = [];
+  for (let cycle = 1; cycle <= 2; cycle += 1) {
+    await selectSearchResult(page, oldName);
+    const cycleDetailText = await detail.textContent();
+    repeatVisitCycles.push({
+      cycle,
+      selected: Boolean(cycleDetailText?.includes(oldName)),
+      mapCreates: (await readUiSnapshot(page)).mapCreates,
+      memory: await readMemoryCacheSnapshot(page),
+    });
+    await closeDetail(page);
+  }
+  const repeatVisitRequests = state.trace.filter((entry) => entry.sequence > repeatVisitStartSequence && entry.kind === 'search');
+  caseResult.observations.repeatVisitCacheLoadCycles = {
+    cycles: repeatVisitCycles,
+    searchRequests: repeatVisitRequests.length,
+    completedSearchRequests: repeatVisitRequests.filter((entry) => entry.completedAt).length,
+  };
+  recordInvariant(caseResult, 'repeat-visit.detail-selection', repeatVisitCycles.every((cycle) => cycle.selected), true, repeatVisitCycles);
+  recordInvariant(caseResult, 'repeat-visit.map-identity', repeatVisitCycles.every((cycle) => cycle.mapCreates === 1), 1, repeatVisitCycles.map((cycle) => cycle.mapCreates));
+  await checkUiContract(page, caseResult, 'search-refresh-final');
+}
+
+async function runCase(browser, spec, flow) {
+  const caseResult = {
+    name: spec.name,
+    viewport: spec.mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 },
+    profile: spec.count === 735 ? 'synthetic-735' : 'mock-3',
+    checks: 0,
+    failures: [],
+    inputs: [],
+    observations: {},
+    fixtureTrace: [],
+    runtimeErrors: null,
+  };
+  const runtime = await setup(browser, {
+    mobile: spec.mobile,
+    count: spec.count,
+    cpu: 1,
+    delay: 20,
+    throttle: false,
+  });
+  const fixture = await installScenarioRestaurantRoute(runtime.page, spec.count);
+  try {
+    await ready(runtime.page);
+    const identity = await seedIdentityAndTrustedInputProbe(runtime.page);
+    recordInvariant(caseResult, 'ready.map-created-once', identity.hasMap && identity.mapCreates === 1, { hasMap: true, mapCreates: 1 }, identity);
+    await checkUiContract(runtime.page, caseResult, 'ready');
+    await flow(runtime.page, caseResult, fixture, spec.mobile);
+    caseResult.runtimeErrors = { ...runtime.errors };
+    caseResult.observations.consoleClassification = {
+      strictConsoleZero: runtime.errors.console === 0,
+      blockedTransport: runtime.errors.blockedTransport,
+      unexpectedConsole: runtime.errors.unexpectedConsole,
+    };
+    recordInvariant(caseResult, 'runtime.page-errors', runtime.errors.page === 0, 0, runtime.errors.page);
+    recordInvariant(caseResult, 'runtime.unexpected-console-errors', runtime.errors.unexpectedConsole === 0, 0, runtime.errors.unexpectedConsole);
+    recordInvariant(
+      caseResult,
+      'runtime.console-classification-consistent',
+      runtime.errors.console === runtime.errors.blockedTransport + runtime.errors.unexpectedConsole,
+      'console = blockedTransport + unexpectedConsole',
+      runtime.errors,
+    );
+  } catch (error) {
+    recordError(caseResult, 'uncaught-step', error);
+    caseResult.runtimeErrors = { ...runtime.errors };
+    try {
+      caseResult.observations.failureSnapshot = await readUiSnapshot(runtime.page);
+    } catch (snapshotError) {
+      caseResult.observations.failureSnapshot = {
+        unavailable: snapshotError instanceof Error ? snapshotError.message.slice(0, 180) : String(snapshotError).slice(0, 180),
+      };
+    }
+  } finally {
+    caseResult.fixtureTrace = fixture.state.trace.slice(-MAX_TRACE_ENTRIES).map((entry) => ({
+      sequence: entry.sequence,
+      kind: entry.kind,
+      term: entry.term,
+      revision: entry.revision,
+      durationMs: entry.completedAt ? entry.completedAt - entry.startedAt : null,
+      completed: Boolean(entry.completedAt),
+      aborted: entry.aborted,
+      rowCount: entry.rowCount,
+    }));
+    caseResult.passed = caseResult.failures.length === 0;
+    await runtime.context.close();
+  }
+  return caseResult;
+}
+
+const execution = await launch('candidate');
+const result = {
+  contract: {
+    origin,
+    build: `candidate-${process.env.RENDER_CANDIDATE_BUILD || execution.receipt.distDir?.match(/candidate-(v\d+)/)?.[1] || 'runtime-default'}`,
+    fixtureOnly: true,
+    persistedRequestData: 'bounded method-free fixture classification only; no cookies, headers, or bodies',
+    inputKinds: {
+      native: 'Playwright pointer/keyboard input; cluster trust is asserted with Event.isTrusted',
+      provider: 'panMockMap/zoomMockMap and fixed-center calls against the mocked Naver provider API',
+      syntheticTouch: 'existing swipeDetailPanelLeft helper only',
+    },
+  },
+  receipt: {
+    buildId: execution.receipt.buildId,
+    sourceTree: execution.receipt.sourceTree,
+    patchSha256: execution.receipt.patchSha256,
+  },
+  browser: execution.browser.version(),
+  cases: [],
+};
+
+try {
+  const specs = [
+    { name: 'desktop-1440x900-synthetic-735', mobile: false, count: 735, flow: runExpandedClusterFlow },
+    { name: 'mobile-390x844-synthetic-735', mobile: true, count: 735, flow: runExpandedClusterFlow },
+    { name: 'desktop-1440x900-mock-3', mobile: false, count: 3, flow: runSearchAndRefreshFlow },
+    { name: 'mobile-390x844-mock-3', mobile: true, count: 3, flow: runSearchAndRefreshFlow },
+  ];
+  for (const spec of specs) {
+    const caseResult=await runCase(execution.browser, spec, spec.flow);result.cases.push(caseResult);console.log(JSON.stringify({case:caseResult.name,passed:caseResult.passed,checks:caseResult.checks,failures:caseResult.failures}));
+  }
+} finally {
+  await execution.close();
+}
+
+result.summary = {
+  passed: result.cases.every((testCase) => testCase.passed),
+  checks: result.cases.reduce((sum, testCase) => sum + testCase.checks, 0),
+  failures: result.cases.reduce((sum, testCase) => sum + testCase.failures.length, 0),
+  cases: result.cases.map((testCase) => ({
+    name: testCase.name,
+    passed: testCase.passed,
+    checks: testCase.checks,
+    failures: testCase.failures.length,
+  })),
+};
+
+if (OUTPUT_LABEL) await save(OUTPUT_LABEL, result);
+console.log(JSON.stringify(result.summary));
+if (!result.summary.passed) process.exitCode = 1;

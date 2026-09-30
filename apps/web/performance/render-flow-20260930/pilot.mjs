@@ -1,0 +1,2 @@
+import {launch,save} from './runtime.mjs';import {clusterSample} from './sample.mjs';import {resourceSnapshot} from './resources.mjs';
+const run=await launch('candidate');try{const pre=resourceSnapshot(),sample=await clusterSample(run.browser,{mobile:false},new URL('pilot-candidate.png',import.meta.url).pathname);const post=resourceSnapshot();await save('pilot-v2',{pre,post,sample});console.log(JSON.stringify({pre,post,summary:sample.summary}));}finally{await run.close();}
