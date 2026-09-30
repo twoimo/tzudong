@@ -1,0 +1,189 @@
+{
+  "scope": "Five isolated anonymous Chromium production visits with the real Naver SDK and catalog. Before/after groups are sequential, not alternating paired performance evidence. Image and DOM predicates are observations, not field INP/LCP or physical-device evidence.",
+  "capturedAt": "2026-09-30T03:56:26.033Z",
+  "environment": {
+    "node": "v24.21.0",
+    "chromium": "151.0.7922.34",
+    "authenticated": false
+  },
+  "expectedSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+  "results": [
+    {
+      "sample": 0,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 51.09999990463257,
+        "observedFrames": 121,
+        "markerlessFrames": 3,
+        "tilelessFrames": 2,
+        "missingMapFrames": 0,
+        "maxGapMs": 16.69999999999891,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {
+        "map_provider:xhr": 2,
+        "persistence:fetch": 1,
+        "application:image": 2
+      }
+    },
+    {
+      "sample": 1,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 58.200000047683716,
+        "observedFrames": 120,
+        "markerlessFrames": 4,
+        "tilelessFrames": 2,
+        "missingMapFrames": 0,
+        "maxGapMs": 17,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {
+        "map_provider:xhr": 2,
+        "persistence:fetch": 1,
+        "application:image": 2
+      }
+    },
+    {
+      "sample": 2,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 65.79999995231628,
+        "observedFrames": 120,
+        "markerlessFrames": 4,
+        "tilelessFrames": 2,
+        "missingMapFrames": 0,
+        "maxGapMs": 25,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {
+        "map_provider:xhr": 2,
+        "persistence:fetch": 1
+      }
+    },
+    {
+      "sample": 3,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 45.10000014305115,
+        "observedFrames": 121,
+        "markerlessFrames": 3,
+        "tilelessFrames": 2,
+        "missingMapFrames": 0,
+        "maxGapMs": 16.700000000000273,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {
+        "map_provider:xhr": 2,
+        "persistence:fetch": 1
+      }
+    },
+    {
+      "sample": 4,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 50.89999985694885,
+        "observedFrames": 121,
+        "markerlessFrames": 3,
+        "tilelessFrames": 2,
+        "missingMapFrames": 0,
+        "maxGapMs": 17.40000000000009,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {
+        "map_provider:xhr": 2,
+        "persistence:fetch": 1
+      }
+    }
+  ]
+}

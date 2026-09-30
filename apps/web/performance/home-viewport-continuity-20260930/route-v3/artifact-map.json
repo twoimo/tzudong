@@ -1,0 +1,57 @@
+{
+  "scope": "Paired local Next production bundles, 3 public restaurant fixtures and simulated Naver provider. Real browser resize/touch event pipeline; no live provider, hosted auth, field LCP/INP or visible-pixel flicker claim.",
+  "artifacts": {
+    "source-0.txt": {
+      "original": "../../app/home-runtime-shell.tsx",
+      "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+    },
+    "source-1.txt": {
+      "original": "../../hooks/useHomeViewportMode.ts",
+      "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+    },
+    "source-2.txt": {
+      "original": "../../tests/home-viewport-continuity-helpers.ts",
+      "sha256": "a99dcea08b0f84a2c6e9d28515a4b6676d77f43e6c222cb337f9f163dd780d47"
+    },
+    "source-3.txt": {
+      "original": "../../tests/mobile-home-map-helpers.ts",
+      "sha256": "3438a490e8bc135fdb7262af53d7ce9b87207f893c0991efb9f9bf02445569e9"
+    },
+    "source-4.txt": {
+      "original": "route-measure.mjs",
+      "sha256": "8c865887c6dd39afd46e364db0bb46f70235ec0ff065ffadd86cd21b3c019912"
+    },
+    "source-5.txt": {
+      "original": "build-baseline/receipt.json",
+      "sha256": "30c5f9628c46e781cefd6a909f32747e5f8009b0ed4370967e56b3a6b3f037c1"
+    },
+    "source-6.txt": {
+      "original": "build-candidate/receipt.json",
+      "sha256": "b21b42b7351822af49e210aea2f910ca9987574179ba623e30528550d5ce00c5"
+    },
+    "raw.json": {
+      "sha256": "9aaad0b92cc5e12cd52edb91a020a992fa4d399452ae9df72134998af523c6c7"
+    },
+    "scored.json": {
+      "sha256": "1115406ee0a99d39c312cd9327c0aad5b1db8a8d67b7f51e38dea7328acb7153"
+    },
+    "regression.log": {
+      "sha256": "75c5898a58c4f1fa76356772ea7f79f613a8adb520e301411f9c1f0d050e6648"
+    },
+    "baseline-desktop.png": {
+      "sha256": "c45be1118f7702b86e95355ea4e57d0cf15f341b20c9e20de9351c6a51313ecf"
+    },
+    "baseline-mobile.png": {
+      "sha256": "329f6eccac5af7aa7d2998fe52a2eb0fea91c033751bcb486f5ccc5b29cfc897"
+    },
+    "candidate-desktop.png": {
+      "sha256": "c45be1118f7702b86e95355ea4e57d0cf15f341b20c9e20de9351c6a51313ecf"
+    },
+    "candidate-mobile.png": {
+      "sha256": "329f6eccac5af7aa7d2998fe52a2eb0fea91c033751bcb486f5ccc5b29cfc897"
+    },
+    "candidate-touch-detail.png": {
+      "sha256": "9423bbe5c5e2a358ef3aff24787c3fa8b3d9bf4ca0cd9d832eb0372182fbb39a"
+    }
+  }
+}

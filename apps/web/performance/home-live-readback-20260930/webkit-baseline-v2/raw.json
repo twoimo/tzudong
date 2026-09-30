@@ -1,0 +1,172 @@
+{
+  "scope": "Five isolated anonymous WebKit production visits with the real Naver SDK and catalog. Before/after groups are sequential, not alternating paired performance evidence. Image and DOM predicates are observations, not field INP/LCP or physical-device evidence.",
+  "capturedAt": "2026-09-30T04:38:50.956Z",
+  "environment": {
+    "node": "v24.21.0",
+    "webkit": "26.5",
+    "authenticated": false
+  },
+  "expectedSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+  "results": [
+    {
+      "sample": 0,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 90,
+        "observedFrames": 57,
+        "markerlessFrames": 2,
+        "tilelessFrames": 1,
+        "missingMapFrames": 0,
+        "maxGapMs": 47,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {}
+    },
+    {
+      "sample": 1,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 76,
+        "observedFrames": 61,
+        "markerlessFrames": 2,
+        "tilelessFrames": 1,
+        "missingMapFrames": 0,
+        "maxGapMs": 47,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {}
+    },
+    {
+      "sample": 2,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 87,
+        "observedFrames": 59,
+        "markerlessFrames": 2,
+        "tilelessFrames": 1,
+        "missingMapFrames": 0,
+        "maxGapMs": 46,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {}
+    },
+    {
+      "sample": 3,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 88,
+        "observedFrames": 62,
+        "markerlessFrames": 2,
+        "tilelessFrames": 1,
+        "missingMapFrames": 0,
+        "maxGapMs": 49,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {}
+    },
+    {
+      "sample": 4,
+      "health": {
+        "ok": true,
+        "gitSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+        "deploymentId": "dpl_AfWiDxscA9Jt4hq7V5QEBRDe9ibn",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+      },
+      "observation": {
+        "newMaps": 1,
+        "firstReadyMs": 66,
+        "observedFrames": 62,
+        "markerlessFrames": 2,
+        "tilelessFrames": 1,
+        "missingMapFrames": 0,
+        "maxGapMs": 36,
+        "mapRetained": false,
+        "detailPanelRetained": false,
+        "loadedMapImages": 89,
+        "markerCount": 16,
+        "mainCount": 1,
+        "horizontalOverflowPx": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": {
+          "other_console_error": 2,
+          "resource_load_failure": 2
+        }
+      },
+      "failedResources": {}
+    }
+  ]
+}

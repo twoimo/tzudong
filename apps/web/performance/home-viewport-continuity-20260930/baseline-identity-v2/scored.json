@@ -1,0 +1,17 @@
+{
+  "scope": "Production React structural browser lab: actual frozen/current HomeRuntimeShell source; controlled viewport input, service/chrome stubs, 200 memoized synthetic rows. No live SDK, auth, full-page or visible-frame performance claim.",
+  "budgets": {
+    "absoluteDeltaMs": 0.05,
+    "relativeDeltaFraction": 0.05,
+    "noiseMadMultiplier": 2
+  },
+  "samples": 31,
+  "baselineMs": 0.38499999046325684,
+  "candidateMs": 0.38499999046325684,
+  "absoluteDeltaMs": 0,
+  "relativeDeltaPercent": 0,
+  "baselineMadMs": 0.029999971389770508,
+  "candidateMadMs": 0.02500009536743164,
+  "noiseMs": 0.059999942779541016,
+  "classification": "below_budget_or_noise"
+}

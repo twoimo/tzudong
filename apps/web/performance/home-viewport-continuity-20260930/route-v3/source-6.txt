@@ -1,0 +1,9 @@
+{
+  "scope": "Local production bundle using fully intercepted public data/provider fixtures. No local DB admission or hosted correctness claim.",
+  "kind": "candidate",
+  "distDir": ".next-viewport-candidate-20260930",
+  "buildId": "SJHbF8YH-YTd0DIcOZngP",
+  "node": "v24.21.0",
+  "sourceSha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede",
+  "logSha256": "f4600123740f3d4341e9449f07e265238523aae1fff00fd6c2ada122a85dbf7e"
+}

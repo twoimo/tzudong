@@ -1,0 +1,10 @@
+{
+  "scope": "Five isolated anonymous WebKit production visits with the real Naver SDK and catalog. Before/after groups are sequential, not alternating paired performance evidence. Image and DOM predicates are observations, not field INP/LCP or physical-device evidence.",
+  "expectedSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+  "artifacts": {
+    "raw.json": "c2e9ce1041fce85d28fabc466babedd6830d415aee0b30af5ae13ccdfeaf7b37",
+    "desktop.png": "03bb67ad5f038d473a68ce062449046c629962fe94e1f4632ef65dc2e3e56c53",
+    "mobile.png": "b01fff0d601c72d97a2d7d2ac953fd12c05cf507c4fed3ef8bb1004db4754273",
+    "../webkit-readback.mjs": "64bf5577bf1ad1bb795606cbbaccfe3bd49053080d6debe535d2ddb96ded3e6d"
+  }
+}

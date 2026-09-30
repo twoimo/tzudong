@@ -1,0 +1,30 @@
+{
+  "scope": "Clean scratch artifact audit; no transient Next output or hosted mutation.",
+  "node": "v24.21.0",
+  "results": [
+    {
+      "case": "route_v7_without_transient_builds",
+      "accepted": true
+    },
+    {
+      "case": "original_live_baseline",
+      "accepted": true
+    },
+    {
+      "case": "altered_raw",
+      "rejected": true
+    },
+    {
+      "case": "wrong_sha",
+      "rejected": true
+    },
+    {
+      "case": "wrong_kind",
+      "rejected": true
+    },
+    {
+      "case": "four_samples_with_consistent_hashes",
+      "rejected": true
+    }
+  ]
+}

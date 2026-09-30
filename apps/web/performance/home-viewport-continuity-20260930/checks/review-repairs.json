@@ -1,0 +1,8 @@
+{
+  "affectedUnit": { "passed": 72, "failed": 0, "expectations": 3321 },
+  "typeParity": { "passed": true, "logicalInputs": 2517, "diagnostics": 0 },
+  "fullSourceLint": { "passed": true, "measurementBuildDirectoriesExcluded": true },
+  "browserAfterMockInputRepair": { "passed": 2, "failed": 0 },
+  "retainedArtifactsWithoutBuildTrees": { "routeV3": "passed" },
+  "remainingRelease": "updated PR CI and protected promotion are pending"
+}
