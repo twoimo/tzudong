@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-const [label, pin] = process.argv.slice(2);
+const [label, pin, mode] = process.argv.slice(2);
+assert.ok(mode === undefined || mode === '--frozen-only');
 assert.match(label ?? '', /^[a-z0-9-]+$/);
 assert.match(pin ?? '', /^[a-f0-9]{64}$/);
 const here = new URL('./', import.meta.url), root = new URL(`${label}/`, here);
@@ -13,7 +14,7 @@ const map = JSON.parse(bytes);
 for (const [name, entry] of Object.entries(map.artifacts)) {
     assert.match(name, /^[a-z0-9.-]+$/);
     assert.equal(hash(await readFile(new URL(name, root))), entry.sha256, name);
-    if (entry.original) assert.equal(hash(await readFile(new URL(entry.original, here))), entry.sha256, `current ${entry.original}`);
+    if (entry.original && mode !== '--frozen-only') assert.equal(hash(await readFile(new URL(entry.original, here))), entry.sha256, `current ${entry.original}`);
 }
 const raw = JSON.parse(await readFile(new URL('raw.json', root)));
 const scored = JSON.parse(await readFile(new URL('scored.json', root)));
@@ -56,9 +57,20 @@ for (const [metric, result] of Object.entries(scored.scores)) {
         ? delta < 0 ? 'local_improvement' : 'local_regression' : 'below_budget_or_noise');
 }
 for (const [kind, receipt] of Object.entries(raw.builds)) {
-    const source = kind === 'baseline' ? new URL('baseline-home-runtime-shell.tsx.txt', here) : new URL('../../app/home-runtime-shell.tsx', here);
-    assert.equal(receipt.sourceSha256, hash(await readFile(source)));
-    assert.equal(receipt.buildId, (await readFile(new URL(`../../${receipt.distDir}/BUILD_ID`, here), 'utf8')).trim());
+    assert.match(receipt.buildId, /^[a-zA-Z0-9_-]+$/);
+    assert.match(receipt.sourceSha256, /^[a-f0-9]{64}$/);
+    if (receipt.retainedBuildId) {
+        assert.equal(receipt.buildId, (await readFile(new URL(receipt.retainedBuildId, here), 'utf8')).trim());
+        for (const input of receipt.inputs) {
+            assert.equal(hash(await readFile(new URL(input.retained, here))), input.sha256, input.original);
+        }
+    }
+    // The immutable receipt is pinned by the run's artifact map. Transient
+    // untracked .next output is not a prerequisite for a clean-checkout audit.
+    if (mode !== '--frozen-only') {
+        const source = kind === 'baseline' ? new URL('baseline-home-runtime-shell.tsx.txt', here) : new URL('../../app/home-runtime-shell.tsx', here);
+        assert.equal(receipt.sourceSha256, hash(await readFile(source)));
+    }
 }
 console.log(JSON.stringify({ verified: true, samples: raw.pairs.length, retainedMapSamples: 31,
     nativeTouch: raw.touch, artifactMapSha256: pin }));

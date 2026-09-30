@@ -1,0 +1,62 @@
+{
+  "scope": "One desktop visit per environment. Fixed classification codes only; no URLs, payloads or provider diagnostics retained.",
+  "records": [
+    {
+      "kind": "local-fixture",
+      "errors": [
+        {
+          "code": "fenced_resource",
+          "sourceGroup": "persistence",
+          "line": 0
+        }
+      ],
+      "failures": [
+        {
+          "group": "persistence",
+          "type": "fetch",
+          "code": "other_network_failure"
+        }
+      ],
+      "statuses": []
+    },
+    {
+      "kind": "live",
+      "errors": [
+        {
+          "code": "csp_block",
+          "sourceGroup": "map_provider",
+          "line": 15
+        },
+        {
+          "code": "resource_load_failure",
+          "sourceGroup": "persistence",
+          "line": 0
+        },
+        {
+          "code": "resource_load_failure",
+          "sourceGroup": "persistence",
+          "line": 0
+        }
+      ],
+      "failures": [
+        {
+          "group": "map_provider",
+          "type": "xhr",
+          "code": "other_network_failure"
+        }
+      ],
+      "statuses": [
+        {
+          "group": "persistence",
+          "type": "fetch",
+          "status": 401
+        },
+        {
+          "group": "persistence",
+          "type": "fetch",
+          "status": 401
+        }
+      ]
+    }
+  ]
+}

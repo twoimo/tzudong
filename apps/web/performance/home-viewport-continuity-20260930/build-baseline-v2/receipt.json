@@ -1,0 +1,37 @@
+{
+  "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+  "kind": "baseline",
+  "distDir": ".next-viewport-baseline-v2-20260930",
+  "buildId": "SOooVljg5Fl8fCk8zXa-Y",
+  "retainedBuildId": "build-baseline-v2/BUILD_ID",
+  "inputs": [
+    {
+      "original": "app/home-runtime-shell.tsx",
+      "retained": "build-baseline-v2/input-0.txt",
+      "sha256": "669cd2e84cd3010cd74f84e7484313d9792fa65e1941801edda47f5069847b58"
+    },
+    {
+      "original": "app/home-client.tsx",
+      "retained": "build-baseline-v2/input-1.txt",
+      "sha256": "2d49b1366e83ea26ef3baa7df1e5f85e3343850e7796e3d85b3cc50620e033ee"
+    },
+    {
+      "original": "components/home/home-map-container.tsx",
+      "retained": "build-baseline-v2/input-2.txt",
+      "sha256": "3f9d6d6c556109fc50c4536a3040338d6fdb6df2a7b966aa7baf84e013322934"
+    },
+    {
+      "original": "hooks/useHomeViewportMode.ts",
+      "retained": "build-baseline-v2/input-3.txt",
+      "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+    },
+    {
+      "original": "package-lock.json",
+      "retained": "build-baseline-v2/input-4.txt",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    }
+  ],
+  "node": "v24.21.0",
+  "sourceSha256": "669cd2e84cd3010cd74f84e7484313d9792fa65e1941801edda47f5069847b58",
+  "logSha256": "38fee12ce179d0945d3f533aade7d591ffda602ce2ffc31dca088ff010c14c61"
+}

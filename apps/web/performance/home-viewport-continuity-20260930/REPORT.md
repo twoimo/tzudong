@@ -23,7 +23,7 @@ exceeds the absolute budget, 5% of the baseline and noise.
 | Measurement | Baseline | Candidate | Absolute delta | Relative delta | Noise | Absolute budget | Classification |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Structural React lab transition, 200 memoized rows | 0.445 ms | 0.075 ms | −0.370 ms | −83.146% | 0.060 ms | 0.05 ms | Local improvement |
-| Local production route: mobile nav and marker DOM ready after resize | 29.3 ms | 18.0 ms | −11.3 ms | −38.567% | 6.2 ms | 1 ms | Local improvement |
+| Local production route: mobile nav and marker DOM ready after resize | 28.4 ms | 18.5 ms | −9.9 ms | −34.859% | 4.4 ms | 1 ms | Local improvement |
 | Local production route: frames with no marker DOM | 1 frame | 0 frames | −1 frame | −100% | 0 frames | 0 frames | Local improvement |
 | Local production route: maximum frame callback gap | 9.3 ms | 9.3 ms | approximately 0 ms | approximately 0% | approximately 0 ms | 1 ms | Below budget/noise |
 
@@ -57,7 +57,7 @@ Frames are then observed for a fixed one-second window. Marker absence is a DOM
 predicate, not a pixel blankness detector; the simulated provider has no real map
 tiles. Screenshots confirm layout geometry and the controlled detail state.
 
-The candidate also passed the persisted Playwright regression for mobile search
+The final candidate also passed the persisted Playwright regression for mobile search
 selection followed by mobile→desktop→mobile, retaining the same map container
 and provider creation count. A Chromium CDP touch gesture emitted one trusted
 `touchstart` and changed the selected detail from 정원분식 to 명동칼국수. This
@@ -82,8 +82,8 @@ claimed to be O(1), and no live SDK initialization complexity is assumed.
 For paired timings B and C, the reported delta is median(C)−median(B), the
 relative delta is 100×delta/median(B), and the noise budget is
 2×max(MAD(B), MAD(C)). For the structural case, 0.370 ms exceeds 0.05 ms,
-0.05×0.445=0.02225 ms, and 0.060 ms. For route readiness, 11.3 ms exceeds 1 ms,
-0.05×29.3=1.465 ms, and 6.2 ms. The maximum callback-gap delta is below its 1 ms
+0.05×0.445=0.02225 ms, and 0.060 ms. For route readiness, 9.9 ms exceeds 1 ms,
+0.05×28.4=1.42 ms, and 4.4 ms. The maximum callback-gap delta is below its 1 ms
 budget and is not an improvement.
 
 ## Provenance and verification
@@ -92,11 +92,14 @@ Detached artifact-map pins, emitted by the measurement commands and independentl
 verified:
 
 - `candidate-v2/artifact-map.json`: `c5c6a7948a6802529643d6d86341ed0c13aa0c7a9eda9130b2a87f0427d97ac9`
-- `route-v3/artifact-map.json`: `26c0f6982bd50182069ce580a6f4c4c20e6f9485ef392cf50b0b876ce81d9bc9`
+- `route-v6/artifact-map.json`: `548eda0fdb98cda21202196673a6a1b214bc013f3bfabeb721c37f689384f0a5`
 
 Both verifiers re-read artifact hashes and current affected source and recompute
 medians, deltas, noise and admission from retained raw pairs. Build receipts bind
-the two route bundles to their build IDs and shell source hashes. Frozen source,
+the two route bundles to retained build IDs and five frozen input hashes. The
+baseline is copied from the exact frozen Git tree; candidate tracked bytes and
+locked dependencies are copied into task-owned scratch. Neither build replaces
+files in the caller checkout. Audits do not require transient `.next` trees. Frozen source,
 the browser bundle, raw pairs, scored outputs, screenshots and regression output
 remain in this directory. Earlier structural runs and failed route setup runs
 are retained separately and are not substituted for the admitted runs.
@@ -107,7 +110,11 @@ diagnostics. The initial full unit suite had 2,444 passes, one skip and one stal
 source-string assertion failure. The assertion that required the old ancestor
 branch was removed from both affected source-contract files; their 38 tests
 then passed. The new browser regression supplies behavioral coverage for the
-replaced shape. Full source lint passed after excluding the two generated local
+replaced shape. After review repairs, all 72 affected unit tests passed with
+3,321 expectations, type parity passed again, and both browser regressions
+passed. The second regression enters fullscreen through the mock SDK click
+event and verifies desktop entry plus return to mobile; it is fixture input
+evidence, not a native or physical-device click claim. Full source lint passed after excluding the two generated local
 measurement build directories; application and measurement scripts were included.
 The route CSS boundary verifier also passed against the candidate build: home
 192,639 raw bytes / 45,626 gzip bytes, general/admin 370,197 raw bytes / 67,656
@@ -126,3 +133,37 @@ gzip bytes. These are validation outputs, not a CSS reduction claim.
 
 This report is local evidence. Protected promotion, deployment and release for
 this continuation were not performed at the time this report was written.
+
+## Review repairs and current evidence
+
+The detail sheet and desktop detail renderer now receive the same viewport value
+from HomeClient, removing their former independent 50 ms debounce window. Mobile
+fullscreen is derived only in mobile mode and its stored flag is cleared on
+desktop entry. The browser test samples every animation frame during both
+breakpoint directions and never observes more than one detail panel. This is a
+state-consistency assertion, not an additional timed performance claim.
+
+The provider mock and map-creation counter execute in one init script, and tests
+require a positive numeric initial count. The Node executable is configurable
+and version-checked. The final route run is `route-v6`; intermediate v4/v5 test
+setup failures are retained and are not admitted measurements. Old v3 raw values
+remain historical evidence, auditable with `--frozen-only`, rather than current
+route results. The source-only structural v2 result remains applicable because
+the measured shell bytes are unchanged.
+
+Five anonymous real-provider visits to production SHA `157ced98...` reproduced
+one new map per breakpoint transition and lost map/detail DOM identity in every
+visit. Two frames per visit had no loaded image anywhere inside the map
+container. This image predicate includes markers/attribution and is not a
+pixel-level tile blankness detector. The retained live baseline is under
+`../home-live-readback-20260930/baseline-v1/`; its detached map hash is
+`df298024193ceff7977e6da0271accbade5b420e2cb2c4af71695062f707cb84`.
+These visits are sequential observations; they establish the live trigger, not
+an alternating paired speedup. Candidate production readback is still pending.
+
+A one-visit diagnostic classified a blocked fixture persistence request and,
+on production, a provider CSP block plus two persistence HTTP 401 responses.
+It does not fully classify the two errors in every historical resize sample.
+Fixed codes only are retained in `../home-live-readback-20260930/diagnostic-v1/`.
+The independent cache revalidation retained all six scenarios and again admitted
+the 128-search over-capacity regression; see its separate report.

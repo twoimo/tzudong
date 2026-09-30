@@ -234,11 +234,7 @@ export default function HomeClient() {
     DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelSide,
   );
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
-  const [mobileMapFullscreen, setIsMapFullscreen] = useState(false);
-  const isMapFullscreen = isMobileOrTablet && mobileMapFullscreen;
-  useEffect(() => {
-    if (isDesktop) setIsMapFullscreen(false);
-  }, [isDesktop]);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [contextualRestaurantsPayload, setContextualRestaurantsPayload] =
     useState<HomeMapContextualRestaurantsPayload | null>(null);
   const [mapInteractionEpoch, setMapInteractionEpoch] = useState(0);
@@ -1273,7 +1269,6 @@ export default function HomeClient() {
       )}
       <HomeMapContainer
         key={mapMountKey}
-        viewportMode={viewportMode}
         mapMode={mapMode}
         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
         filters={state.filters}

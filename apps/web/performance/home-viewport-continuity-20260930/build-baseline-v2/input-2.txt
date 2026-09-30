@@ -4,7 +4,7 @@ import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
-import type { HomeViewportMode } from '@/hooks/useHomeViewportMode';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import {
     filterHomeMapRestaurantsByMode,
@@ -47,7 +47,6 @@ const RestaurantDetailPanel = lazy(() =>
 const HydratedDetailRestaurant = lazy(() => import("@/components/home/HydratedDetailRestaurant"));
 
 interface HomeMapContainerProps {
-    viewportMode: HomeViewportMode;
     mapMode: 'domestic' | 'overseas';
     mapFocusZoom?: number | null; // [New] 줌 레벨 제어
     filters: FilterState;
@@ -144,7 +143,6 @@ const RESTAURANT_CONTENT_SCROLL_SELECTOR = "[data-restaurant-detail-swipe-area='
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
 function HomeMapContainerComponent({
-    viewportMode,
     mapMode,
     mapFocusZoom,
     filters,
@@ -181,8 +179,7 @@ function HomeMapContainerComponent({
     showUserSubmittedMarkers = true,
     renderDesktopDetailPanel = true,
 }: HomeMapContainerProps) {
-    const isMobileOrTablet = viewportMode === 'mobileOrTablet';
-    const isDesktop = viewportMode === 'desktop';
+    const { isMobileOrTablet, isDesktop } = useDeviceType();
 
     // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
     const viewportHeightRef = useRef(typeof window !== 'undefined'

@@ -1,0 +1,84 @@
+{
+  "scope": "Isolated Chromium JavaScript helper; not page rendering, LCP, INP, production, or a release/G003 admission.",
+  "artifactMapSha256": "1c3a393c6ef173277f7a99e99df1c35bbdeb32cf5ea5e591fad68f443893731d",
+  "budgets": {
+    "absoluteDeltaMs": 0.001,
+    "relativeDeltaFraction": 0.05,
+    "noiseMadMultiplier": 2
+  },
+  "equivalenceCases": 752,
+  "results": [
+    {
+      "scenario": "fresh-visible-order",
+      "pairedSamples": 31,
+      "baselineMs": 0.09100000063578288,
+      "candidateMs": 0.06474999984105428,
+      "absoluteReductionMs": 0.026250000794728598,
+      "relativeReductionPercent": 28.84615451794471,
+      "baselineMadMs": 0.005124998092651364,
+      "candidateMadMs": 0.005458333094914759,
+      "noiseMs": 0.010916666189829519,
+      "classification": "local_improvement"
+    },
+    {
+      "scenario": "new-search-same-visible",
+      "pairedSamples": 31,
+      "baselineMs": 0.037762500047683716,
+      "candidateMs": 0.009862499833106995,
+      "absoluteReductionMs": 0.02790000021457672,
+      "relativeReductionPercent": 73.88282073312584,
+      "baselineMadMs": 0.00048749983310699546,
+      "candidateMadMs": 0.0006874996423721323,
+      "noiseMs": 0.0013749992847442646,
+      "classification": "local_improvement"
+    },
+    {
+      "scenario": "same-search-cache-hit",
+      "pairedSamples": 31,
+      "baselineMs": 0.0000206666628519694,
+      "candidateMs": 0.0000293333371480306,
+      "absoluteReductionMs": -0.000008666674296061198,
+      "relativeReductionPercent": -41.9355285279419,
+      "baselineMadMs": 3.333330154418944e-7,
+      "candidateMadMs": 6.666660308837888e-7,
+      "noiseMs": 0.0000013333320617675776,
+      "classification": "below_budget_or_noise"
+    },
+    {
+      "scenario": "nearest-fallback",
+      "pairedSamples": 31,
+      "baselineMs": 0.16429166595141093,
+      "candidateMs": 0.03900000055631002,
+      "absoluteReductionMs": 0.1252916653951009,
+      "relativeReductionPercent": 76.26172920551902,
+      "baselineMadMs": 0.0011249999205271421,
+      "candidateMadMs": 0.0016666670640309647,
+      "noiseMs": 0.0033333341280619294,
+      "classification": "local_improvement"
+    },
+    {
+      "scenario": "revisit-64-searches",
+      "pairedSamples": 31,
+      "baselineMs": 0.000029499995708465576,
+      "candidateMs": 0.00005,
+      "absoluteReductionMs": -0.000020500004291534427,
+      "relativeReductionPercent": -69.49155008063804,
+      "baselineMadMs": 2.4999380111694137e-7,
+      "candidateMadMs": 9.999990463256832e-7,
+      "noiseMs": 0.0000019999980926513664,
+      "classification": "below_budget_or_noise"
+    },
+    {
+      "scenario": "revisit-128-searches-over-capacity",
+      "pairedSamples": 31,
+      "baselineMs": 0.000030500006675720214,
+      "candidateMs": 0.007155999994277954,
+      "absoluteReductionMs": -0.007125499987602234,
+      "relativeReductionPercent": -23362.289927872534,
+      "baselineMadMs": 0.0000015000104904174837,
+      "candidateMadMs": 0.00028149998188018756,
+      "noiseMs": 0.0005629999637603751,
+      "classification": "local_regression"
+    }
+  ]
+}
