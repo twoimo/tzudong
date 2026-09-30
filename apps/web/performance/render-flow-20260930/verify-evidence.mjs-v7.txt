@@ -1,0 +1,241 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { constants } from 'node:fs';
+import { lstat, open, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { aggregate, median, recomputeAa } from './score.mjs';
+
+const HERE = fileURLToPath(new URL('./', import.meta.url));
+const APP = resolve(HERE, '../..');
+const HASH = /^[a-f0-9]{64}$/;
+const GIT = /^[a-f0-9]{40}$/;
+const fail = message => { throw new Error(`render-flow evidence: ${message}`); };
+const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+
+function parseArgs(argv) {
+  const mode = argv.shift();
+  if (!['create-map', 'verify'].includes(mode)) fail('first argument must be create-map or verify');
+  const args = { mode };
+  for (let index = 0; index < argv.length; index += 2) {
+    const flag = argv[index], value = argv[index + 1];
+    if (!value || args[flag.slice(2)] || !['--scored', '--output', '--artifact-map', '--artifact-map-sha256'].includes(flag)) fail('invalid CLI');
+    args[flag.slice(2)] = value;
+  }
+  if (!args.scored) fail('missing --scored');
+  if (mode === 'create-map' && (!args.output || args['artifact-map'] || args['artifact-map-sha256'])) fail('create-map requires only --scored and --output');
+  if (mode === 'verify' && (!args['artifact-map'] || !HASH.test(args['artifact-map-sha256'] ?? '') || args.output)) fail('verify requires --scored, --artifact-map and external SHA-256');
+  return args;
+}
+function absolute(path, base = process.cwd()) { return isAbsolute(path) ? path : resolve(base, path); }
+function underRoot(path) {
+  const result = relative(HERE, path);
+  if (!result || result.startsWith(`..${sep}`) || result === '..' || isAbsolute(result)) fail(`path outside evidence root: ${path}`);
+  return result.split(sep).join('/');
+}
+function fromScore(path) { return isAbsolute(path) ? path : resolve(HERE, path); }
+async function readJson(path, label) {
+  const bytes = await readFile(path); let value;
+  try { value = JSON.parse(bytes); } catch { fail(`${label} is not JSON`); }
+  return { bytes, value, sha256: sha256(bytes) };
+}
+async function safeBytes(path) {
+  const canonicalRoot = await realpath(HERE), canonicalPath = await realpath(path);
+  if (canonicalPath !== path || !canonicalPath.startsWith(`${canonicalRoot}${sep}`)) fail(`aliased artifact ${underRoot(path)}`);
+  const before = await lstat(path, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink()) fail(`non-regular artifact ${underRoot(path)}`);
+  const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const opened = await handle.stat({ bigint: true });
+    if (opened.dev !== before.dev || opened.ino !== before.ino || opened.size !== before.size || opened.mtimeNs !== before.mtimeNs || opened.ctimeNs !== before.ctimeNs) fail(`artifact changed ${underRoot(path)}`);
+    const bytes = await handle.readFile();
+    const after = await handle.stat({ bigint: true });
+    if (after.size !== opened.size || after.mtimeNs !== opened.mtimeNs || after.ctimeNs !== opened.ctimeNs) fail(`artifact changed ${underRoot(path)}`);
+    return bytes;
+  } finally { await handle.close(); }
+}
+async function stableExternalBytes(path) {
+  if (await realpath(path) !== path) fail(`aliased source ${path}`);
+  const before = await lstat(path, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink()) fail(`non-regular source ${path}`);
+  const bytes = await readFile(path), after = await lstat(path, { bigint: true });
+  if (after.size !== before.size || after.mtimeNs !== before.mtimeNs || after.ctimeNs !== before.ctimeNs) fail(`source changed ${path}`);
+  return bytes;
+}
+async function walk(directory, excluded) {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isSymbolicLink()) fail(`symlink in evidence tree ${underRoot(path)}`);
+    if (entry.isDirectory()) files.push(...await walk(path, excluded));
+    else if (entry.isFile() && path !== excluded) files.push(path);
+    else if (!entry.isFile()) fail(`non-regular entry ${underRoot(path)}`);
+  }
+  return files.sort((left, right) => underRoot(left).localeCompare(underRoot(right)));
+}
+
+async function verifyReceipt(receipt, expectedKind, planSha256) {
+  if (receipt.kind !== expectedKind || !GIT.test(receipt.sourceCommit ?? '') || !GIT.test(receipt.sourceTree ?? '') || !HASH.test(receipt.patchSha256 ?? '') || receipt.node !== 'v24.21.0') fail(`invalid ${expectedKind} receipt identity`);
+  if (expectedKind === 'candidate' && (!receipt.retainedBuildId?.startsWith('build-candidate-v7/') || receipt.planSha256 !== planSha256 || receipt.inputs?.length !== 10)) fail('candidate is not v7 with ten retained inputs bound to plan-v6');
+  const buildDirectory = dirname(receipt.retainedBuildId), receiptPath = resolve(HERE, buildDirectory, 'receipt.json');
+  const stored = await readJson(receiptPath, `${expectedKind} receipt`);
+  if (!same(stored.value, receipt)) fail(`${expectedKind} raw receipt differs from retained receipt`);
+  const patchPath = resolve(HERE, buildDirectory, 'source.patch');
+  if (sha256(await safeBytes(patchPath)) !== receipt.patchSha256) fail(`${expectedKind} patch hash mismatch`);
+  if ((await safeBytes(resolve(HERE, receipt.retainedBuildId))).toString('utf8').trim() !== receipt.buildId) fail(`${expectedKind} BUILD_ID mismatch`);
+  if (sha256(await safeBytes(resolve(HERE, buildDirectory, 'build.log'))) !== receipt.logSha256) fail(`${expectedKind} build log mismatch`);
+  const originals = new Set();
+  for (const input of receipt.inputs) {
+    if (originals.has(input.original) || !HASH.test(input.sha256 ?? '')) fail(`${expectedKind} invalid retained input`);
+    originals.add(input.original);
+    if (sha256(await safeBytes(resolve(HERE, input.retained))) !== input.sha256) fail(`${expectedKind} retained input mismatch ${input.original}`);
+  }
+  if (expectedKind === 'candidate') {
+    for (const path of ['components/map/NaverMapView.tsx', 'lib/naver-map-render-plan.ts', 'lib/marker-pool.ts']) {
+      const input = receipt.inputs.find(row => row.original === path);
+      if (!input || sha256(await stableExternalBytes(resolve(APP, path))) !== input.sha256) fail(`current candidate source is not bound: ${path}`);
+    }
+  }
+  return { receiptPath: underRoot(receiptPath), patchPath: underRoot(patchPath) };
+}
+
+function independentCellChecks(score) {
+  assert.equal(score.schemaVersion, 'render-flow-score.v1');
+  assert.equal(score.claimBoundary.g003OrFieldAdmission, false);
+  assert.equal(score.claimBoundary.physicalPixelsVerified, false);
+  assert.equal(score.governance.admittedFieldSlices, 0);
+  assert.equal(score.bootstrapPolicy.resamples, 10_000);
+  assert.equal(score.bootstrapPolicy.pairedIndex, true);
+  assert.equal(score.bootstrapPolicy.adjacentAbBaBlocks, true);
+  const primary = score.cells.filter(cell => cell.kind === 'primary');
+  assert.equal(primary.length, 2, 'both final primary cells are required');
+  for (const cell of primary) {
+    assert.equal(cell.expectedIndependentContexts, 31);
+    assert.ok(cell.observedPairs >= 31);
+    assert.equal(cell.selectedPairIds.length, cell.validQuietPairs >= 31 ? 31 : cell.validQuietPairs);
+    if (cell.validQuietPairs < 31) {
+      assert.equal(cell.classification, null);
+      assert.equal(cell.admission.admittedLocalImprovement, false);
+      assert.ok(cell.admission.reasons.includes('insufficient_valid_quiet_pairs'));
+    }
+    if (cell.classification === 'improvement') {
+      const metric = cell.metrics.clickToExpandedMs;
+      assert.ok(metric.deltaBeforeMinusAfter > cell.budgets.effectiveThresholdMs);
+      assert.ok(metric.pairedBootstrap.ci95.lower > 0);
+      assert.ok(metric.adjacentBlockBootstrap.ci95.lower > 0);
+      assert.equal(cell.sensitivity.directionConsistent, true);
+    }
+    assert.ok(['improvement', 'no_improvement', 'noise', 'regression', null].includes(cell.classification));
+    assert.equal(cell.networkBoundary.actualNetworkTransferBytes, null);
+    for (const metric of Object.values(cell.allObservedDescriptive.metrics)) {
+      assert.ok(metric.baseline.n >= 31 && metric.candidate.n >= 31);
+      assert.equal(metric.deltaBeforeMinusAfter, metric.baseline.median - metric.candidate.median);
+      assert.equal(metric.baseline.n >= 20, metric.baseline.p95 !== null);
+    }
+  }
+}
+
+async function verifyRawSidecars(score) {
+  for (const input of score.rawInputs) {
+    const rawPath = fromScore(input.path), raw = (await readJson(rawPath, input.path)).value, directory = dirname(rawPath);
+    if (raw.pairs.length !== input.measuredPairs || raw.warmups.length !== input.warmupPairs) fail(`raw count drift ${input.path}`);
+    const expectedSidecars = raw.pairs.length + raw.warmups.length;
+    const names = (await readdir(directory)).filter(name => /^pair-\d+-(?:\d{2}|warm[12])\.json$/.test(name));
+    if (names.length !== expectedSidecars) fail(`pair sidecar count mismatch ${input.path}`);
+    for (const pair of [...raw.warmups, ...raw.pairs]) {
+      const suffix = pair.index < 0 ? `warm${-pair.index}` : String(pair.index).padStart(2, '0');
+      const retained = await readJson(resolve(directory, `pair-${pair.cell}-${suffix}.json`), 'pair sidecar');
+      if (!same(retained.value, pair)) fail(`pair sidecar mismatch ${input.path}:${pair.cell}:${pair.index}`);
+    }
+    for (const cell of new Set(raw.pairs.map(pair => pair.cell))) for (const variant of ['baseline', 'candidate']) await safeBytes(resolve(directory, `${variant}-cell-${cell}.png`));
+  }
+}
+
+async function verifyScore(scoredPath) {
+  const scored = await readJson(scoredPath, 'scored');
+  const score = scored.value;
+  independentCellChecks(score);
+  const args = {
+    plan: fromScore(score.plan.path),
+    aa: fromScore(score.plan.aaPath),
+    'additional-aa': (score.plan.additionalAa ?? []).map(input => fromScore(input.path)),
+    'resources-plan': fromScore(score.plan.resourcesPlanPath),
+    raw: score.rawInputs.map(input => fromScore(input.path)),
+  };
+  const recomputed = await aggregate(args);
+  if (!same(recomputed, score)) fail('deterministic score recomputation mismatch');
+  const plan = await readJson(args.plan, 'plan-v6');
+  if (plan.sha256 !== score.plan.sha256 || plan.value.correctnessGate !== score.plan.correctnessGate) fail('plan-v6 hash or correctness gate mismatch');
+  const aa = await readJson(args.aa, 'baseline-aa-v3');
+  if (aa.sha256 !== score.plan.aaSha256) fail('A/A hash mismatch');
+  const aaRecomputed = recomputeAa(aa.value);
+  if (aaRecomputed.desktop.firstThreeVsLastThreeMedianDifferenceMs !== 1320.6999998092651 || aaRecomputed.mobile.firstThreeVsLastThreeMedianDifferenceMs !== 1140.1000001430511) fail('A/A time drift changed');
+  const firstRaw = (await readJson(args.raw[0], 'raw')).value;
+  await verifyReceipt(firstRaw.builds.baseline, 'baseline', score.plan.sha256);
+  await verifyReceipt(firstRaw.builds.candidate, 'candidate', score.plan.sha256);
+  if (firstRaw.builds.baseline.sourceCommit !== score.bindings.baseline.sourceCommit || firstRaw.builds.candidate.patchSha256 !== score.bindings.candidate.patchSha256) fail('score source binding mismatch');
+  const regression = (await readJson(resolve(HERE, 'regression-candidate-v7-v1/raw.json'), 'candidate-v7 regression')).value;
+  if (
+    regression.contract?.build !== 'candidate-v7'
+    || regression.summary?.passed !== true
+    || !Number.isSafeInteger(regression.summary?.checks)
+    || regression.summary.checks < 1
+    || regression.summary?.failures !== 0
+    || !Array.isArray(regression.cases)
+    || regression.cases.length < 1
+    || regression.cases.some(testCase => testCase.failures?.length !== 0)
+    || regression.receipt?.buildId !== firstRaw.builds.candidate.buildId
+    || regression.receipt?.sourceTree !== firstRaw.builds.candidate.sourceTree
+    || regression.receipt?.patchSha256 !== firstRaw.builds.candidate.patchSha256
+  ) fail('candidate-v7 regression is missing, failing or not bound to the final build');
+  await verifyRawSidecars(score);
+  return { score, scored };
+}
+
+const requiredFinalPaths = [
+  'WORKPLAN.md', 'plan-v2.json', 'plan-v3.json', 'plan-v4.json', 'plan-v5.json', 'plan-v6.json', 'resources-plan.json', 'resources.mjs', 'sample.mjs', 'paired.mjs',
+  'score.mjs', 'score.mjs-v6.txt', 'verify-evidence.mjs', 'verify-evidence.mjs-v6.txt', 'canonical.mjs', 'canonical.mjs-v6.txt', 'evidence-notes.md', 'regression.mjs', 'astra-review.md', 'REPORT.md',
+  'baseline-aa-v2/raw.json', 'baseline-aa-v3/raw.json', 'baseline-aa-final-v1/raw.json', 'paired-v1/rejected.json',
+  'build-baseline-v1/receipt.json', 'build-baseline-v1/source.patch', 'build-candidate-v3/receipt.json', 'build-candidate-v3/source.patch',
+  'build-candidate-v4/receipt.json', 'build-candidate-v4/source.patch', 'build-candidate-v5/receipt.json', 'build-candidate-v5/source.patch', 'build-candidate-v6/receipt.json', 'build-candidate-v6/source.patch', 'build-candidate-v7/receipt.json', 'build-candidate-v7/source.patch',
+  'paired-v5/raw.json', 'secondary-v4/raw.json', 'regression-candidate-v6-v1/raw.json',
+  'paired-v6/raw.json', 'secondary-v5/raw.json', 'regression-candidate-v7-v1/raw.json',
+];
+
+async function createMap(args) {
+  const scoredPath = absolute(args.scored), output = absolute(args.output);
+  underRoot(scoredPath); underRoot(output);
+  await verifyScore(scoredPath);
+  try { await lstat(output); fail('map output already exists'); } catch (error) { if (error.message?.startsWith('render-flow evidence:') || error.code !== 'ENOENT') throw error; }
+  for (const path of requiredFinalPaths) await safeBytes(resolve(HERE, path));
+  const files = await walk(HERE, output), artifacts = {};
+  for (const path of files) {
+    const bytes = await safeBytes(path);
+    artifacts[underRoot(path)] = { sha256: sha256(bytes), size: bytes.length };
+  }
+  const map = { schemaVersion: 'render-flow-evidence-map.v1', scope: 'complete frozen local laboratory evidence; external SHA-256 pin required', artifacts };
+  await writeFile(output, `${JSON.stringify(map)}\n`, { flag: 'wx', mode: 0o600 });
+  process.stdout.write(`${JSON.stringify({ artifactMap: underRoot(output), artifactCount: Object.keys(artifacts).length, externalSha256: sha256(await readFile(output)) })}\n`);
+}
+
+async function verifyMap(args) {
+  const scoredPath = absolute(args.scored), mapPath = absolute(args['artifact-map']);
+  underRoot(scoredPath); underRoot(mapPath);
+  const mapBytes = await safeBytes(mapPath);
+  if (sha256(mapBytes) !== args['artifact-map-sha256']) fail('artifact map external pin mismatch');
+  const map = JSON.parse(mapBytes);
+  if (map.schemaVersion !== 'render-flow-evidence-map.v1' || !map.artifacts || typeof map.artifacts !== 'object') fail('invalid artifact map');
+  const files = await walk(HERE, mapPath), actual = files.map(underRoot);
+  if (!same(actual, Object.keys(map.artifacts))) fail('artifact map is not exact full-tree coverage');
+  for (const path of actual) {
+    const entry = map.artifacts[path], bytes = await safeBytes(resolve(HERE, path));
+    if (!entry || entry.size !== bytes.length || entry.sha256 !== sha256(bytes)) fail(`artifact mismatch ${path}`);
+  }
+  for (const path of requiredFinalPaths) if (!map.artifacts[path]) fail(`required final evidence missing ${path}`);
+  const { score } = await verifyScore(scoredPath);
+  process.stdout.write(`${JSON.stringify({ verified: true, artifactMapSha256: args['artifact-map-sha256'], artifacts: actual.length, validQuietPairs: score.cells.filter(cell => cell.kind === 'primary').map(cell => cell.validQuietPairs), admittedLocalImprovements: score.cells.filter(cell => cell.admission.admittedLocalImprovement).length, admittedFieldSlices: 0 })}\n`);
+}
+
+async function main() { const args = parseArgs(process.argv.slice(2)); if (args.mode === 'create-map') await createMap(args); else await verifyMap(args); }
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) main().catch(error => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });

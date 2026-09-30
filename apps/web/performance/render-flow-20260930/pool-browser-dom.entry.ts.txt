@@ -1,0 +1,3 @@
+import { MarkerPool } from '../../lib/marker-pool';
+import { createIndividualMarkerHTML } from '../../lib/cluster-marker';
+(globalThis as unknown as { __poolDOMProbe: unknown }).__poolDOMProbe = { MarkerPool, createIndividualMarkerHTML };

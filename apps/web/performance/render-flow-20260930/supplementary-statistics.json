@@ -1,0 +1,79 @@
+{
+  "panRafGapsMs": {
+    "flicker-pan-before-v3": {
+      "False": [
+        166.0999999999999,
+        175,
+        191.60000000000036,
+        165.80000000000018,
+        140.9000000000001
+      ],
+      "True": [
+        59.19999999999982,
+        42.30000000000018,
+        49.29999999999973,
+        50.69999999999982,
+        58.29999999999973
+      ]
+    },
+    "flicker-pan-after-v1": {
+      "False": [
+        291.8000000000002,
+        233.30000000000018,
+        249.29999999999973,
+        224.80000000000018,
+        274.89999999999964
+      ],
+      "True": [
+        92.40000000000009,
+        92.40000000000009,
+        74.89999999999964,
+        83.70000000000027,
+        92.40000000000009
+      ]
+    }
+  },
+  "gcDiagnostic": {
+    "independentPairedExecutions": 3,
+    "baselineMedianBytes": 19036124,
+    "candidateMedianBytes": 16374364,
+    "separateProtocolNotMemoryBudgetReplacement": true
+  },
+  "initialLayoutShiftPartialSums": [
+    {
+      "cell": "primary:count=735;cpu=4;mobile=false",
+      "sampleCount": 31,
+      "beforeMedian": 0.0032837112154653204,
+      "afterMedian": 0.0032837112154653204,
+      "scope": "sum recorded only before cluster click; not lifetime CLS or pixel flicker"
+    },
+    {
+      "cell": "primary:count=735;cpu=4;mobile=true",
+      "sampleCount": 31,
+      "beforeMedian": 0.006987195325282969,
+      "afterMedian": 0.006987195325282969,
+      "scope": "sum recorded only before cluster click; not lifetime CLS or pixel flicker"
+    },
+    {
+      "cell": "secondary:count=3;cpu=1;mobile=false",
+      "sampleCount": 9,
+      "beforeMedian": 0.010073345336076818,
+      "afterMedian": 0.010073345336076818,
+      "scope": "sum recorded only before cluster click; not lifetime CLS or pixel flicker"
+    },
+    {
+      "cell": "secondary:count=2000;cpu=4;mobile=false",
+      "sampleCount": 9,
+      "beforeMedian": 0.003299872253166795,
+      "afterMedian": 0.003299872253166795,
+      "scope": "sum recorded only before cluster click; not lifetime CLS or pixel flicker"
+    },
+    {
+      "cell": "secondary:count=735;cpu=1;mobile=true;throttle=true",
+      "sampleCount": 9,
+      "beforeMedian": 0.006987195325282969,
+      "afterMedian": 0.006987195325282969,
+      "scope": "sum recorded only before cluster click; not lifetime CLS or pixel flicker"
+    }
+  ]
+}

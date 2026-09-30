@@ -1,0 +1,194 @@
+{
+  "scope": "laboratory production route, simulated SDK and synthetic fixtures. No field metric or live SDK timing claim.",
+  "plan": {
+    "frozenBeforeCandidateBuild": true,
+    "baselineCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+    "baselineAA": {
+      "desktop": {
+        "n": 6,
+        "medianMs": 1880.75,
+        "madMs": 193.25,
+        "noiseMs": 386.5,
+        "AAvsAAmedianDifferenceMs": 339.89999985694885
+      },
+      "mobile": {
+        "n": 6,
+        "medianMs": 1879.2999999523163,
+        "madMs": 351.0499999523163,
+        "noiseMs": 702.0999999046326,
+        "AAvsAAmedianDifferenceMs": -131
+      }
+    },
+    "primary": "native cluster click to first frame containing individual markers",
+    "budgets": {
+      "absoluteMs": 50,
+      "relativeFraction": 0.1,
+      "noiseMultiplier": 2,
+      "admission": "paired bootstrap median reduction 95% CI lower bound > 0, reduction > max(50ms,10% baseline median,2*maxMAD,A/A absolute median difference)",
+      "regressionMs": 50,
+      "regressionRelativeFraction": 0.1,
+      "memoryRegressionFraction": 0.2
+    },
+    "pairsPerPrimaryCell": 31,
+    "warmupPairs": 2,
+    "cells": [
+      {
+        "mobile": false,
+        "count": 735,
+        "cpu": 4
+      },
+      {
+        "mobile": true,
+        "count": 735,
+        "cpu": 4
+      }
+    ],
+    "secondaryCells": [
+      {
+        "mobile": false,
+        "count": 3,
+        "cpu": 1
+      },
+      {
+        "mobile": false,
+        "count": 2000,
+        "cpu": 4
+      },
+      {
+        "mobile": true,
+        "count": 735,
+        "cpu": 1,
+        "throttle": true
+      }
+    ],
+    "scope": "laboratory production route, simulated SDK and synthetic fixtures. No field metric or live SDK timing claim."
+  },
+  "environment": {
+    "node": "v26.3.0",
+    "harness": "1.4.0",
+    "os": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "logicalCores": 18,
+    "cpuModel": "Apple M5 Max",
+    "cache": "Fresh browser context and empty app/query storage every sample; HTTP cache disabled by interception; same warmed Node servers and browser process, alternating order.",
+    "network": "120ms simulated fixture service latency; external traffic blocked. Extra CDP 150ms RTT / 1.6Mbps downstream for throttle secondary cell.",
+    "browser": "151.0.7922.34"
+  },
+  "builds": {
+    "baseline": {
+      "patchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+      "kind": "baseline",
+      "sourceCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+      "sourceTree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+      "distDir": ".next-flow-baseline-v1-20260930",
+      "buildId": "0OxkiMV0zCpf_VLIeTl1i",
+      "retainedBuildId": "build-baseline-v1/BUILD_ID",
+      "inputs": [
+        {
+          "original": "app/home-runtime-shell.tsx",
+          "retained": "build-baseline-v1/input-0.txt",
+          "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+        },
+        {
+          "original": "app/home-client.tsx",
+          "retained": "build-baseline-v1/input-1.txt",
+          "sha256": "eda61b97da7173d53f71a76dfcdf0b219c826c1e3069afd787ad116a3be963a5"
+        },
+        {
+          "original": "components/home/home-map-container.tsx",
+          "retained": "build-baseline-v1/input-2.txt",
+          "sha256": "dcf8c744fb6c0adb9b16c764c2b32ade9c77c6225e10b55296385560d0df42ae"
+        },
+        {
+          "original": "hooks/useHomeViewportMode.ts",
+          "retained": "build-baseline-v1/input-3.txt",
+          "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+        },
+        {
+          "original": "package-lock.json",
+          "retained": "build-baseline-v1/input-4.txt",
+          "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+        },
+        {
+          "original": "components/home/home-control-panel.tsx",
+          "retained": "build-baseline-v1/input-5.txt",
+          "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+        },
+        {
+          "original": "components/search/RestaurantSearch.tsx",
+          "retained": "build-baseline-v1/input-6.txt",
+          "sha256": "aa988ea121fc475e8ad9495039b628f3bbea33ddcce9b2a5bde48b74e9c21695"
+        }
+      ],
+      "node": "v24.21.0",
+      "sourceSha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede",
+      "logSha256": "4aa17d37d5dd556d44d837be8e0416dca9f5bdaba94571a71a1d3dad0a441d8d"
+    },
+    "candidate": {
+      "planSha256": "291693d941b1c1ed6c4e83e0310feb33f56f5bb7c171a434dfc9215617c6ea15",
+      "patchSha256": "51761798e64630a88652a8cbd9cea94e9175dc921555d8d011685c6a41a029b6",
+      "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+      "kind": "candidate",
+      "sourceCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+      "sourceTree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+      "distDir": ".next-flow-candidate-v2-20260930",
+      "buildId": "K6duEoeBE1dtoYqFSPFQU",
+      "retainedBuildId": "build-candidate-v2/BUILD_ID",
+      "inputs": [
+        {
+          "original": "app/home-runtime-shell.tsx",
+          "retained": "build-candidate-v2/input-0.txt",
+          "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+        },
+        {
+          "original": "app/home-client.tsx",
+          "retained": "build-candidate-v2/input-1.txt",
+          "sha256": "eda61b97da7173d53f71a76dfcdf0b219c826c1e3069afd787ad116a3be963a5"
+        },
+        {
+          "original": "components/home/home-map-container.tsx",
+          "retained": "build-candidate-v2/input-2.txt",
+          "sha256": "dcf8c744fb6c0adb9b16c764c2b32ade9c77c6225e10b55296385560d0df42ae"
+        },
+        {
+          "original": "hooks/useHomeViewportMode.ts",
+          "retained": "build-candidate-v2/input-3.txt",
+          "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+        },
+        {
+          "original": "package-lock.json",
+          "retained": "build-candidate-v2/input-4.txt",
+          "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+        },
+        {
+          "original": "components/home/home-control-panel.tsx",
+          "retained": "build-candidate-v2/input-5.txt",
+          "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+        },
+        {
+          "original": "components/search/RestaurantSearch.tsx",
+          "retained": "build-candidate-v2/input-6.txt",
+          "sha256": "aa988ea121fc475e8ad9495039b628f3bbea33ddcce9b2a5bde48b74e9c21695"
+        },
+        {
+          "original": "components/map/NaverMapView.tsx",
+          "retained": "build-candidate-v2/input-7.txt",
+          "sha256": "b76562b930135efc2179345e19cbb6b7ff293e5a3ab0a0836c679accaeba0a76"
+        },
+        {
+          "original": "lib/naver-map-render-plan.ts",
+          "retained": "build-candidate-v2/input-8.txt",
+          "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+        }
+      ],
+      "node": "v24.21.0",
+      "sourceSha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede",
+      "logSha256": "f18d2a19d2bc31f7f44ae4e2ea3dd9868bfe8d146652e8dba7b15fa560b1198e"
+    }
+  },
+  "pairs": [],
+  "warmups": [],
+  "failure": "TimeoutError"
+}

@@ -1,0 +1,18 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.38ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.14ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.10ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.15ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.08ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.32ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.04ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.03ms]
+(pass) marker pool > keeps the category image when only the review bubble changes [0.35ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.21ms]
+
+ 10 pass
+ 0 fail
+ 79 expect() calls
+Ran 10 tests across 1 file. [50.00ms]

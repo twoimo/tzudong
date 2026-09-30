@@ -1,0 +1,15 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/expanded-cluster-flow-invariants.test.ts:
+(pass) expanded cluster flow invariants > provider marker culling does not remove list or swipe candidates [1.54ms]
+(pass) expanded cluster flow invariants > selected and searched offscreen restaurants remain provider exceptions [0.08ms]
+(pass) expanded cluster flow invariants > pan to an empty viewport releases stale candidates and pan back restores the same ordered rows [1.12ms]
+(pass) expanded cluster flow invariants > a refreshed array identity reindexes changed coordinates and changes the render signature [0.85ms]
+(pass) expanded cluster flow invariants > empty viewport cleanup keeps an expanded selection renderable until expansion clears [0.05ms]
+(pass) expanded cluster flow invariants > renderer derives viewport revision from actual dynamic bounds before the cluster-index guard [0.19ms]
+(pass) expanded cluster flow invariants > unchanged repeated idle keeps the marker signature while viewport revision invalidates it [0.23ms]
+
+ 7 pass
+ 0 fail
+ 27 expect() calls
+Ran 7 tests across 1 file. [82.00ms]

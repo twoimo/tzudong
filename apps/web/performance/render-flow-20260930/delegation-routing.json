@@ -1,0 +1,27 @@
+{
+  "evidence": "Native per-agent turn_context and assistant response presence; no vendor transport trace is exposed. No content, private logs or messages copied.",
+  "agents": [
+    {
+      "agent_id": "01a0f139-e069-72d2-8ce6-c2fada6eaf33",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "xhigh",
+      "assistant_response_present": true,
+      "error_codes": []
+    },
+    {
+      "agent_id": "01a0f139-dfa2-7463-98a4-ec74aa7a1538",
+      "model": "gpt-6-astra",
+      "reasoning_effort": "max",
+      "assistant_response_present": true,
+      "error_codes": []
+    },
+    {
+      "agent_id": "01a0f139-e002-75d2-a91e-b60d930b3861",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "xhigh",
+      "assistant_response_present": true,
+      "error_codes": []
+    }
+  ],
+  "scope": "Only the three subagents owned by this goal; extraction corrected to exact IDs."
+}
