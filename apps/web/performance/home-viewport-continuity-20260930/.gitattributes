@@ -1,0 +1,2 @@
+# Keep measurement log bytes immutable; code whitespace checks still apply.
+*.log -whitespace
