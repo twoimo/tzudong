@@ -23,9 +23,9 @@ exceeds the absolute budget, 5% of the baseline and noise.
 | Measurement | Baseline | Candidate | Absolute delta | Relative delta | Noise | Absolute budget | Classification |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Structural React lab transition, 200 memoized rows | 0.445 ms | 0.075 ms | −0.370 ms | −83.146% | 0.060 ms | 0.05 ms | Local improvement |
-| Local production route: mobile nav and marker DOM ready after resize | 27.1 ms | 19.9 ms | −7.2 ms | −26.568% | 4.6 ms | 1 ms | Local improvement |
+| Local production route: mobile nav and marker DOM ready after resize | 27.5 ms | 18.7 ms | −8.8 ms | −32.0% | 4.8 ms | 1 ms | Local improvement |
 | Local production route: frames with no marker DOM | 1 frame | 0 frames | −1 frame | −100% | 0 frames | 0 frames | Local improvement |
-| Local production route: maximum frame callback gap | 9.3 ms | 9.3 ms | 0 ms | 0% | 0.2 ms | 1 ms | Below budget/noise |
+| Local production route: maximum frame callback gap | 9.3 ms | 9.3 ms | 0 ms | 0% | <0.001 ms | 1 ms | Below budget/noise |
 
 Structural lab row mounts/unmounts per boundary transition are **200→0**.
 The complete Next route creates **1→0** new simulated provider map objects per
@@ -82,8 +82,8 @@ claimed to be O(1), and no live SDK initialization complexity is assumed.
 For paired timings B and C, the reported delta is median(C)−median(B), the
 relative delta is 100×delta/median(B), and the noise budget is
 2×max(MAD(B), MAD(C)). For the structural case, 0.370 ms exceeds 0.05 ms,
-0.05×0.445=0.02225 ms, and 0.060 ms. For route readiness, 7.2 ms exceeds 1 ms,
-0.05×27.1=1.355 ms, and 4.6 ms. The maximum callback-gap delta is below its 1 ms
+0.05×0.445=0.02225 ms, and 0.060 ms. For route readiness, 8.8 ms exceeds 1 ms,
+0.05×27.5=1.375 ms, and 4.8 ms. The maximum callback-gap delta is below its 1 ms
 budget and is not an improvement.
 
 ## Provenance and verification
@@ -92,11 +92,12 @@ Detached artifact-map pins, emitted by the measurement commands and independentl
 verified:
 
 - `candidate-v2/artifact-map.json`: `c5c6a7948a6802529643d6d86341ed0c13aa0c7a9eda9130b2a87f0427d97ac9`
-- `route-v7/artifact-map.json`: `bf3ec0a9a1a9c71e69c33fcc0cfa8b4f1e920406b36c7b96aaa72e0b27b9f823`
+- `route-v8/artifact-map.json`: `100c44205fe507c307046a0ce84b965d83b99e4b5040f99c25dad7ed7f1f4de8`
 
 Both verifiers re-read artifact hashes and current affected source and recompute
 medians, deltas, noise and admission from retained raw pairs. Build receipts bind
-the two route bundles to retained build IDs and five frozen input hashes. The
+the two route bundles to retained build IDs, full commit/tree identity, and five
+baseline/six candidate frozen input hashes. The
 baseline is copied from the exact frozen Git tree; candidate code is also archived from its immutable commit and
 locked dependencies are copied into task-owned scratch. Neither build replaces
 files in the caller checkout. Audits do not require transient `.next` trees. Frozen source,
@@ -111,7 +112,7 @@ source-string assertion failure. The assertion that required the old ancestor
 branch was removed from both affected source-contract files; their 38 tests
 then passed. The new browser regression supplies behavioral coverage for the
 replaced shape. After review repairs, all 72 affected unit tests passed with
-3,321 expectations, type parity passed again, and both browser regressions
+3,318 expectations, type parity passed again, and all three browser regressions
 passed. The second regression enters fullscreen through the mock SDK click
 event and verifies desktop entry plus return to mobile; it is fixture input
 evidence, not a native or physical-device click claim. Full source lint passed after excluding the two generated local
@@ -145,7 +146,7 @@ state-consistency assertion, not an additional timed performance claim.
 
 The provider mock and map-creation counter execute in one init script, and tests
 require a positive numeric initial count. The Node executable is configurable
-and version-checked. The final route run is `route-v7`; intermediate v4/v5 test
+and version-checked. The final route run is `route-v8`; intermediate v4/v5 test
 setup failures are retained and are not admitted measurements. Old v3 raw values
 remain historical evidence, auditable with `--frozen-only`, rather than current
 route results. The source-only structural v2 result remains applicable because
@@ -171,13 +172,13 @@ the 128-search over-capacity regression; see its separate report.
 The final baseline build (`build-baseline-v3`) is bound to commit
 `157ced98a2414d434132c99f74c72bbe5f796ca4` and tree
 `2de4984fffa83011c67b7ccb9336a2c163517981`. The final candidate build
-(`build-candidate-v4`) is bound to commit
-`5213864b2cd8e8965c6f529652fe3272f471cbe0` and tree
-`9fd8dfd5aeaa4a6225a022aff38e8d38ca37575d`. Both are archived full code
+(`build-candidate-v5`) is bound to commit
+`5a6d9f5a585656d89cad1e51766f2352522d1fc6` and tree
+`17a82911d123526cccbae7a84a4d55bdb0c4007e`. Both are archived full code
 trees, not caller working-file snapshots. The candidate v3 attempt failed
 Google font fetching; it produced no admitted sample. A direct font endpoint
 check returned HTTP 200 and the subsequent serial v4 build passed. Older v6
-results remain historical and are superseded by v7 for current route claims.
+results and v7 remain historical and are superseded by v8 for current route claims.
 
 WebKit 26.5 also reproduced one provider recreation and lost map DOM identity in
 all five baseline visits. Its retained pin is
@@ -198,8 +199,9 @@ hook and resize subscriber. Mobile sheet layout variables reset synchronously
 before paint on desktop entry; interaction refs reset for the next mobile entry.
 New behavioral checks cover collapsed desktop detail becoming visible on mobile,
 root CSS ownership reset, and frame-level control chrome agreement. The v7 route
-result predates these repairs; a new full-tree candidate run is required before
-it can be described as the final current measurement.
+result predates these repairs. The final v8 run uses the full committed repair
+tree and passes all three browser regressions, including control-chrome frame
+agreement and desktop-collapse/mobile-globals checks.
 
 The live verifier now explicitly expects layout-specific detail DOM replacement
 in both variants: desktop detail is under the control panel, mobile detail under
@@ -212,3 +214,10 @@ Clean scratch audits supply TZUDONG_EVIDENCE_GIT_REPOSITORY for immutable Git
 objects; they still require no transient Next build trees. Negative checks reject
 mis-associated receipts, wrong trees with consistent artifact hashes, and a
 wrong detail DOM identity; see review-audit-v2.json.
+
+The current v8 raw pairs and receipt audit passed in the working checkout and
+in clean scratch with only retained artifacts plus explicit Git objects. See
+route-v8-audit.json. All 31 candidate samples retain the map/provider and the
+trusted Chromium touch changes the selected fixture detail. This remains local
+fixture evidence; the new live pixel baseline is retained separately under
+../home-pixel-capture-20260930/REPORT.md and candidate deployment is pending.

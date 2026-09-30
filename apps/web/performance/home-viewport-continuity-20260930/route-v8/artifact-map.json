@@ -1,0 +1,73 @@
+{
+  "scope": "Paired local Next production bundles, 3 public restaurant fixtures and simulated Naver provider. Real browser resize/touch event pipeline; no live provider, hosted auth, field LCP/INP or visible-pixel flicker claim.",
+  "artifacts": {
+    "source-0.txt": {
+      "original": "../../app/home-runtime-shell.tsx",
+      "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+    },
+    "source-1.txt": {
+      "original": "../../hooks/useHomeViewportMode.ts",
+      "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+    },
+    "source-2.txt": {
+      "original": "../../tests/home-viewport-continuity-helpers.ts",
+      "sha256": "dc38a27325b5a01fe98d003f00768a60e36d7f98f91a03ec57fc94ad5167987a"
+    },
+    "source-3.txt": {
+      "original": "../../tests/mobile-home-map-helpers.ts",
+      "sha256": "e8398491f4d45b860165646a785f01694b6f6262f4f4f25554b555bff38fd0de"
+    },
+    "source-4.txt": {
+      "original": "route-measure.mjs",
+      "sha256": "6a7f7afb7f04920611dce9c818c54fc8018a83226e6e1497dde7973f86718192"
+    },
+    "source-5.txt": {
+      "original": "build-baseline-v3/receipt.json",
+      "sha256": "ac4b4d866844b0662b004ecfe001ea4e8af3c864e8d91b3ac88b2fd8862cb607"
+    },
+    "source-6.txt": {
+      "original": "build-candidate-v5/receipt.json",
+      "sha256": "ef80db6b7f56dad51997a71b9dfebe089cf990c9e9574a164fbdd60793ccd919"
+    },
+    "source-7.txt": {
+      "original": "../../app/home-client.tsx",
+      "sha256": "eda61b97da7173d53f71a76dfcdf0b219c826c1e3069afd787ad116a3be963a5"
+    },
+    "source-8.txt": {
+      "original": "../../components/home/home-map-container.tsx",
+      "sha256": "dcf8c744fb6c0adb9b16c764c2b32ade9c77c6225e10b55296385560d0df42ae"
+    },
+    "source-9.txt": {
+      "original": "../../tests/home-viewport-continuity.spec.ts",
+      "sha256": "6735c15872563f5cbc42beb666b4b5ff8ed4220a5d4b11c8271fa99c047951ab"
+    },
+    "source-10.txt": {
+      "original": "../../components/home/home-control-panel.tsx",
+      "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+    },
+    "raw.json": {
+      "sha256": "a5a20b23a276bf64d38013f99d08c9bddb7a305a9b1db01886cfcb8fc6b5555c"
+    },
+    "scored.json": {
+      "sha256": "eb8d5a5faccfe3e2ee7fa92b819ae9fe13634ebb8019359b6ae4f7558aa0281e"
+    },
+    "regression.log": {
+      "sha256": "870f6284a2d380575eed5d88bb4145a9d34b12dbb40c24bb03a3f4bfd569e8aa"
+    },
+    "baseline-desktop.png": {
+      "sha256": "c45be1118f7702b86e95355ea4e57d0cf15f341b20c9e20de9351c6a51313ecf"
+    },
+    "baseline-mobile.png": {
+      "sha256": "329f6eccac5af7aa7d2998fe52a2eb0fea91c033751bcb486f5ccc5b29cfc897"
+    },
+    "candidate-desktop.png": {
+      "sha256": "c45be1118f7702b86e95355ea4e57d0cf15f341b20c9e20de9351c6a51313ecf"
+    },
+    "candidate-mobile.png": {
+      "sha256": "329f6eccac5af7aa7d2998fe52a2eb0fea91c033751bcb486f5ccc5b29cfc897"
+    },
+    "candidate-touch-detail.png": {
+      "sha256": "c892a78faba33e543cb9d226e512a5cfc4eb72f01bf7eb105532ba76daf981ab"
+    }
+  }
+}
