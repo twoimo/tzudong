@@ -103,7 +103,6 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
         expect(homeRuntimeShellSource).not.toContain('if (!hasMounted)');
         expect(homeRuntimeShellSource).not.toContain('setHasMounted');
-        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'mobileOrTablet')");
         expect(homeRuntimeShellSource).toContain("viewportMode === 'desktop' && !isPublicRestrictedMode");
         expect(homeRuntimeShellSource).not.toContain("if (viewportMode === 'pending')");
         expect(homeRuntimeShellSource).not.toContain("from '@/hooks/useDeviceType'");

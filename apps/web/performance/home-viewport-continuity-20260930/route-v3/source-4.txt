@@ -1,0 +1,262 @@
+import assert from 'node:assert/strict';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
+import { createServer, request as proxyRequest } from 'node:http';
+import { fileURLToPath } from 'node:url';
+import { chromium, expect } from '@playwright/test';
+import { installViewportContinuityMocks } from '../../tests/home-viewport-continuity-helpers.ts';
+import { openMobileSearchAndSelect, waitForVisibleMarkers } from '../../tests/mobile-home-map-helpers.ts';
+import { hidePopupOverlay } from '../../tests/helpers.ts';
+import { redactCliText } from '../../scripts/privacy-safe-cli-log.mjs';
+
+const label = process.argv[2];
+assert.match(label ?? '', /^[a-z0-9-]+$/);
+const here = new URL('./', import.meta.url), app = new URL('../../', here);
+const output = new URL(`${label}/`, here);
+await mkdir(output);
+const nodeExecutable = '/opt/homebrew/opt/node@24/bin/node';
+const scope = 'Paired local Next production bundles, 3 public restaurant fixtures and simulated Naver provider. Real browser resize/touch event pipeline; no live provider, hosted auth, field LCP/INP or visible-pixel flicker claim.';
+const children = [], serverLogs = {}, builds = {}, origins = { baseline: 'http://localhost:3100', candidate: 'http://localhost:3101' };
+const applicationOrigin = 'http://localhost:3000';
+let activeKind, proxy;
+const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+const mad = values => median(values.map(value => Math.abs(value - median(values))));
+let browser;
+async function waitForServer(origin, child) {
+    const until = Date.now() + 30000;
+    while (Date.now() < until) {
+        if (child.exitCode !== null) throw new Error('Owned server terminated');
+        try { if ((await fetch(origin, { signal: AbortSignal.timeout(1000) })).ok) return; } catch { /* Bounded startup wait. */ }
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    throw new Error('Owned server startup timeout');
+}
+async function newPage(kind, viewport = { width: 1440, height: 900 }) {
+    activeKind = kind;
+    const context = await browser.newContext({ viewport, hasTouch: true, locale: 'ko-KR' });
+    await context.routeWebSocket('**/*', socket => socket.close());
+    // Page-level approved fixtures take precedence over this context fence.
+    await context.route('**/*', route => new URL(route.request().url()).origin === applicationOrigin
+        ? route.continue() : route.abort('blockedbyclient'));
+    const page = await context.newPage();
+    await installViewportContinuityMocks(page);
+    // Public profile display is irrelevant to the resize claim. Keep it empty in
+    // both origins rather than forwarding test requests to an external service.
+    await page.route('**/rest/v1/rpc/read_public_profile_summaries', route => route.fulfill({
+        status: 200, contentType: 'application/json', body: '[]', headers: {
+            'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*',
+        },
+    }));
+    await page.addInitScript(() => {
+        const state = { lcpMs: null, longTaskCount: 0, longTaskMs: 0, trustedTouchStarts: 0 };
+        window.__routeMetrics = state;
+        for (const type of ['largest-contentful-paint', 'longtask']) {
+            new PerformanceObserver(list => {
+                for (const entry of list.getEntries()) {
+                    if (type === 'largest-contentful-paint') state.lcpMs = entry.startTime;
+                    else { state.longTaskCount++; state.longTaskMs += entry.duration; }
+                }
+            }).observe({ type, buffered: true });
+        }
+        document.addEventListener('touchstart', event => { if (event.isTrusted) state.trustedTouchStarts++; }, { passive: true });
+    });
+    return { page, context };
+}
+async function sample(kind, screenshot = false) {
+    const { page, context } = await newPage(kind);
+    const errors = { page: 0, console: 0 };
+    page.on('pageerror', () => errors.page++);
+    page.on('console', message => { if (message.type() === 'error') errors.console++; });
+    try {
+        const response = await page.goto(applicationOrigin, { waitUntil: 'domcontentloaded' });
+        assert.equal(response.status(), 200);
+        await expect(page.getByTestId('map-container')).toBeVisible();
+        await page.waitForFunction(() => document.querySelector('[data-testid="marker"], .cluster-marker-container'));
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-home-static-skeleton]')).display === 'none');
+        await hidePopupOverlay(page);
+        await page.waitForTimeout(300); // Fixed pre-resize observation window for both bundles.
+        const load = await page.evaluate(() => ({
+            ...window.__routeMetrics, fcpMs: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null,
+            observedUntilMs: performance.now(), mapsCreated: window.__viewportMapCreates,
+        }));
+        if (screenshot) await page.screenshot({ path: fileURLToPath(new URL(`${kind}-desktop.png`, output)) });
+        await page.evaluate(() => {
+            const map = document.querySelector('[data-testid="map-container"]');
+            const provider = window.__TZUDONG_DEBUG_MAP__;
+            const initialCreates = window.__viewportMapCreates;
+            const resize = { start: performance.now(), firstReadyMs: null, observedFrames: 0,
+                markerlessFrames: 0, missingMapFrames: 0, maxFrameGapMs: 0, gapsOver50Ms: 0, done: false };
+            window.__routeResize = resize;
+            window.__routeResizeIdentity = () => ({ mapRetained: document.querySelector('[data-testid="map-container"]') === map,
+                providerRetained: window.__TZUDONG_DEBUG_MAP__ === provider,
+                newMaps: window.__viewportMapCreates - initialCreates });
+            let previous;
+            const frame = time => {
+                if (innerWidth < 1280) {
+                    resize.observedFrames++;
+                    const marker = document.querySelector('[data-testid="marker"], .cluster-marker-container');
+                    const mapPresent = document.querySelector('[data-testid="map-container"]');
+                    if (!marker) resize.markerlessFrames++;
+                    if (!mapPresent) resize.missingMapFrames++;
+                    if (marker && mapPresent && document.querySelector('[data-testid="bottom-nav"]') && resize.firstReadyMs === null) {
+                        resize.firstReadyMs = performance.now() - resize.start;
+                    }
+                    if (previous !== undefined) {
+                        const gap = time - previous;
+                        resize.maxFrameGapMs = Math.max(resize.maxFrameGapMs, gap);
+                        if (gap > 50) resize.gapsOver50Ms++;
+                    }
+                    previous = time;
+                }
+                if (!resize.done) requestAnimationFrame(frame);
+            };
+            requestAnimationFrame(frame);
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(() => window.__routeResize.firstReadyMs !== null);
+        await page.waitForTimeout(1000); // Fixed post-resize frame observation window.
+        const resize = await page.evaluate(() => {
+            window.__routeResize.done = true;
+            const { start, done, ...counters } = window.__routeResize;
+            return { ...counters, ...window.__routeResizeIdentity(),
+                horizontalOverflowPx: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+                mainCount: document.querySelectorAll('main#main-content').length };
+        });
+        if (screenshot) await page.screenshot({ path: fileURLToPath(new URL(`${kind}-mobile.png`, output)) });
+        return { load, resize, errors };
+    } catch (error) {
+        await page.screenshot({ path: fileURLToPath(new URL(`${kind}-failed.png`, output)) });
+        const diagnostic = await page.evaluate(() => ({
+            markerCount: document.querySelectorAll('[data-testid="marker"], .cluster-marker-container').length,
+            mapCount: document.querySelectorAll('[data-testid="map-container"]').length,
+            navCount: document.querySelectorAll('[data-testid="bottom-nav"]').length,
+            creates: window.__viewportMapCreates, width: innerWidth,
+        }));
+        await writeFile(new URL(`${kind}-failed.json`, output), JSON.stringify({ diagnostic, errors, failure: error.name }, null, 2) + '\n');
+        throw error;
+    } finally { await context.close(); }
+}
+try {
+    for (const kind of ['baseline', 'candidate']) {
+        const receipt = JSON.parse(await readFile(new URL(`build-${kind}/receipt.json`, here)));
+        builds[kind] = receipt;
+        const child = spawn(nodeExecutable, [fileURLToPath(new URL(`${receipt.distDir}/standalone/apps/web/server.js`, app))], {
+            cwd: fileURLToPath(app), env: { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR,
+                NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: kind === 'baseline' ? '3100' : '3101' },
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        children.push(child);
+        serverLogs[kind] = '';
+        for (const stream of [child.stdout, child.stderr]) stream.on('data', bytes => {
+            serverLogs[kind] += redactCliText(bytes.toString('utf8'), 4096);
+        });
+        await waitForServer(origins[kind], child);
+    }
+    // Serialize both variants behind the fixture helper's exact same app origin.
+    // The helper's origin validation remains intact; no header is rewritten.
+    proxy = createServer((incoming, outgoing) => {
+        if (!['baseline', 'candidate'].includes(activeKind)) { outgoing.writeHead(503); outgoing.end(); return; }
+        const upstream = proxyRequest({ hostname: '127.0.0.1', port: activeKind === 'baseline' ? 3100 : 3101,
+            method: incoming.method, path: incoming.url, headers: incoming.headers }, response => {
+            outgoing.writeHead(response.statusCode, response.headers);
+            response.pipe(outgoing);
+        });
+        upstream.on('error', () => { outgoing.writeHead(502); outgoing.end(); });
+        incoming.pipe(upstream);
+    });
+    await new Promise((resolve, reject) => { proxy.once('error', reject); proxy.listen(3000, '127.0.0.1', resolve); });
+    browser = await chromium.launch({ headless: true });
+    const pairs = [];
+    for (let index = 0; index < 33; index++) {
+        const pair = { index };
+        for (const kind of index % 2 ? ['candidate', 'baseline'] : ['baseline', 'candidate']) {
+            pair[kind] = await sample(kind, index === 32);
+        }
+        if (index >= 2) pairs.push(pair);
+        if (index % 5 === 0) console.log(JSON.stringify({ scope: 'local fixture pair progress', completed: index + 1, total: 33 }));
+    }
+    const { page, context } = await newPage('candidate', { width: 390, height: 844 });
+    let touch;
+    try {
+        await page.goto(applicationOrigin);
+        await hidePopupOverlay(page);
+        await expect(page.getByTestId('map-container')).toBeVisible();
+        await openMobileSearchAndSelect(page, '정원분식');
+        await waitForVisibleMarkers(page, 3);
+        const box = await page.locator('[data-restaurant-detail-swipe-area="content"]').boundingBox();
+        assert.ok(box && box.width > 100 && box.height > 100);
+        const session = await context.newCDPSession(page);
+        const y = box.y + Math.min(box.height * 0.35, box.height - 30), from = box.x + box.width - 35, to = box.x + 35;
+        await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from, y, id: 1 }] });
+        for (let step = 1; step <= 8; step++) {
+            await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from + (to - from) * step / 8, y, id: 1 }] });
+            await page.waitForTimeout(16); // Gesture duration, not a state polling sleep.
+        }
+        await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await expect(page.getByTestId('restaurant-detail-panel')).not.toContainText('정원분식');
+        const changed = await page.getByTestId('restaurant-detail-panel').getByText(/명동칼국수|서울돈까스/).first().isVisible();
+        touch = { nativeChromiumTouch: true, selectionChanged: changed,
+            trustedTouchStarts: await page.evaluate(() => window.__routeMetrics.trustedTouchStarts) };
+        assert.equal(touch.selectionChanged, true);
+        assert.ok(touch.trustedTouchStarts > 0);
+        await page.screenshot({ path: fileURLToPath(new URL('candidate-touch-detail.png', output)) });
+        await session.detach();
+    } finally { await context.close(); }
+    activeKind = 'candidate';
+    let regressionLog = '';
+    const regression = spawn(nodeExecutable, ['node_modules/@playwright/test/cli.js', 'test',
+        '--config', fileURLToPath(new URL('playwright.config.mjs', here)), '--project', 'candidate'], {
+        cwd: fileURLToPath(app), env: { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR,
+            PLAYWRIGHT_BASE_URL: applicationOrigin }, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    for (const stream of [regression.stdout, regression.stderr]) stream.on('data', bytes => {
+        const text = redactCliText(bytes.toString('utf8'), 4096);
+        regressionLog += text;
+        process.stdout.write(text);
+    });
+    const regressionExit = await new Promise((resolve, reject) => { regression.on('error', reject); regression.on('exit', resolve); });
+    await writeFile(new URL('regression.log', output), regressionLog, { flag: 'wx' });
+    assert.equal(regressionExit, 0);
+    const scores = {};
+    for (const metric of ['firstReadyMs', 'markerlessFrames', 'maxFrameGapMs']) {
+        const before = pairs.map(pair => pair.baseline.resize[metric]), after = pairs.map(pair => pair.candidate.resize[metric]);
+        const baseline = median(before), candidate = median(after), delta = candidate - baseline;
+        const noise = 2 * Math.max(mad(before), mad(after)), absoluteBudget = metric.endsWith('Frames') ? 0 : 1;
+        scores[metric] = { baseline, candidate, absoluteDelta: delta, relativeDeltaPercent: baseline ? 100 * delta / baseline : null,
+            baselineMad: mad(before), candidateMad: mad(after), noise, absoluteBudget, relativeBudget: 0.05,
+            classification: Math.abs(delta) > Math.max(absoluteBudget, baseline * 0.05, noise)
+                ? delta < 0 ? 'local_improvement' : 'local_regression' : 'below_budget_or_noise' };
+    }
+    const raw = { scope, builds, observedAt: new Date().toISOString(), chromium: browser.version(), runner: `Bun ${Bun.version}`,
+        warmupPairs: 2, pairs, touch, regressionExit };
+    const score = { scope, samples: pairs.length, scores,
+        retainedMapSamples: pairs.filter(pair => pair.candidate.resize.mapRetained && pair.candidate.resize.providerRetained && pair.candidate.resize.newMaps === 0).length,
+        baselineNewMaps: pairs.map(pair => pair.baseline.resize.newMaps), touch };
+    await writeFile(new URL('raw.json', output), JSON.stringify(raw, null, 2) + '\n', { flag: 'wx' });
+    await writeFile(new URL('scored.json', output), JSON.stringify(score, null, 2) + '\n', { flag: 'wx' });
+    const artifacts = {};
+    for (const [index, original] of ['../../app/home-runtime-shell.tsx', '../../hooks/useHomeViewportMode.ts',
+        '../../tests/home-viewport-continuity-helpers.ts', '../../tests/mobile-home-map-helpers.ts', 'route-measure.mjs',
+        'build-baseline/receipt.json', 'build-candidate/receipt.json'].entries()) {
+        const bytes = await readFile(new URL(original, here));
+        const name = `source-${index}.txt`;
+        await writeFile(new URL(name, output), bytes, { flag: 'wx' });
+        artifacts[name] = { original, sha256: hash(bytes) };
+    }
+    for (const name of ['raw.json', 'scored.json', 'regression.log', 'baseline-desktop.png', 'baseline-mobile.png', 'candidate-desktop.png', 'candidate-mobile.png', 'candidate-touch-detail.png']) {
+        artifacts[name] = { sha256: hash(await readFile(new URL(name, output))) };
+    }
+    const map = JSON.stringify({ scope, artifacts }, null, 2) + '\n';
+    await writeFile(new URL('artifact-map.json', output), map, { flag: 'wx' });
+    console.log(JSON.stringify({ ...score, artifactMapSha256: hash(map) }, null, 2));
+    assert.equal(score.retainedMapSamples, 31);
+} finally {
+    if (browser) await browser.close();
+    if (proxy) { proxy.closeAllConnections(); await new Promise(resolve => proxy.close(resolve)); }
+    for (const child of children) {
+        if (child.exitCode === null) child.kill('SIGTERM');
+    }
+    for (const [kind, log] of Object.entries(serverLogs)) await writeFile(new URL(`${kind}-server.log`, output), log, { flag: 'wx' });
+}

@@ -1,0 +1,69 @@
+{
+  "scope": "Paired local Next production bundles, 3 public restaurant fixtures and simulated Naver provider. Real browser resize/touch event pipeline; no live provider, hosted auth, field LCP/INP or visible-pixel flicker claim.",
+  "artifacts": {
+    "source-0.txt": {
+      "original": "../../app/home-runtime-shell.tsx",
+      "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+    },
+    "source-1.txt": {
+      "original": "../../hooks/useHomeViewportMode.ts",
+      "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+    },
+    "source-2.txt": {
+      "original": "../../tests/home-viewport-continuity-helpers.ts",
+      "sha256": "dc38a27325b5a01fe98d003f00768a60e36d7f98f91a03ec57fc94ad5167987a"
+    },
+    "source-3.txt": {
+      "original": "../../tests/mobile-home-map-helpers.ts",
+      "sha256": "e8398491f4d45b860165646a785f01694b6f6262f4f4f25554b555bff38fd0de"
+    },
+    "source-4.txt": {
+      "original": "route-measure.mjs",
+      "sha256": "d42e7461b5db06af663015c45c0599c688563f4bc2202877f92c08dc0222b234"
+    },
+    "source-5.txt": {
+      "original": "build-baseline-v2/receipt.json",
+      "sha256": "0b2b54ed93fff37f1e6f9047df42aa685ded907e547f8ee3af3ae32213e253a7"
+    },
+    "source-6.txt": {
+      "original": "build-candidate-v2/receipt.json",
+      "sha256": "0d4117ba3fa48992136e3a0d1b4c0f4530d2c587f7b66ef12b2bd075d2dca1cd"
+    },
+    "source-7.txt": {
+      "original": "../../app/home-client.tsx",
+      "sha256": "17f1f804d646bb2b23c2aeb75f13d45ad700e468644a0ec15732710740fdc02d"
+    },
+    "source-8.txt": {
+      "original": "../../components/home/home-map-container.tsx",
+      "sha256": "cbf3d21b8e70ab0b5c9e46a3e993618c8e16af8bc5b06686fe2aac38d7b38ef9"
+    },
+    "source-9.txt": {
+      "original": "../../tests/home-viewport-continuity.spec.ts",
+      "sha256": "06ff1277b1189101e7a29706ffae4ba0643c0cf62bb1924f1947458a61db2374"
+    },
+    "raw.json": {
+      "sha256": "3d77d82ffee9b04052c53a186a063da38ce8f4584282b6826149f98cb6ef8063"
+    },
+    "scored.json": {
+      "sha256": "ac9f998125b2899520150169ddf3fe9ed7d8f34ecbc050a647fd214b9dc190a1"
+    },
+    "regression.log": {
+      "sha256": "9e5e77549cb169df2bdab3649173998f1d78000967211dbac5032ab6a8838e31"
+    },
+    "baseline-desktop.png": {
+      "sha256": "c45be1118f7702b86e95355ea4e57d0cf15f341b20c9e20de9351c6a51313ecf"
+    },
+    "baseline-mobile.png": {
+      "sha256": "329f6eccac5af7aa7d2998fe52a2eb0fea91c033751bcb486f5ccc5b29cfc897"
+    },
+    "candidate-desktop.png": {
+      "sha256": "c45be1118f7702b86e95355ea4e57d0cf15f341b20c9e20de9351c6a51313ecf"
+    },
+    "candidate-mobile.png": {
+      "sha256": "329f6eccac5af7aa7d2998fe52a2eb0fea91c033751bcb486f5ccc5b29cfc897"
+    },
+    "candidate-touch-detail.png": {
+      "sha256": "d1cfc67d2da064105ad8fb5b70a8d5166119188151579a3bed6afdcc2bc09cf3"
+    }
+  }
+}

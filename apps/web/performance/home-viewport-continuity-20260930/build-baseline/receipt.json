@@ -1,0 +1,10 @@
+{
+  "scope": "Local production bundle using fully intercepted public data/provider fixtures. No local DB admission or hosted correctness claim.",
+  "kind": "baseline",
+  "distDir": ".next-viewport-baseline-20260930",
+  "buildId": "uh1ezlW1pP_Qv5cU7Rjhm",
+  "node": "v24.21.0",
+  "sourceSha256": "669cd2e84cd3010cd74f84e7484313d9792fa65e1941801edda47f5069847b58",
+  "logSha256": "d341b71796289e0c4c5b5e73b9c9b64e1cab45d31fd715a8c3faf9bf4ac92165",
+  "packagingResumed": true
+}

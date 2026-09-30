@@ -49,6 +49,7 @@ const eslintConfig = [
         files: [
             'performance/swipe-render-cache-20260925/measure.mjs',
             'performance/swipe-render-cache-20260925/rejected-timer-resolution/measure.mjs',
+            'performance/swipe-cache-revalidation-20260930/measure.mjs',
         ],
         rules: {
             // These frozen Node measurement runners bind a local variable named module.

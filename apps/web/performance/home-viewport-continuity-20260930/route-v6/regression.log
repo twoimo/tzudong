@@ -1,0 +1,1 @@
+ Running 2 tests using 1 worker    ✓  1 [candidate] › tests/home-viewport-continuity.spec.ts:8:1 › home keeps its map instance and detail selection across both viewport boundaries (1.6s)   ✓  2 [candidate] › tests/home-viewport-continuity.spec.ts:45:1 › mobile map fullscreen is cleared on desktop and stays cleared when returning (2.5s)    2 passed (4.9s) 
