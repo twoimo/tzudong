@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdir, cp, copyFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, cp, mkdtemp, rm } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 import { redactCliText } from '../../scripts/privacy-safe-cli-log.mjs';
 
 const [kind, label = 'v2'] = process.argv.slice(2);
@@ -23,20 +23,14 @@ const scratch = await mkdtemp(join(tmpdir(), 'tzudong-home-fixture-'));
 const copyRoot = join(scratch, 'source');
 const copyApp = join(copyRoot, 'apps/web');
 await mkdir(copyRoot);
-if (kind === 'baseline') {
-    const archive = join(scratch, 'source.tar');
-    execFileSync('git', ['archive', '--format=tar', `--output=${archive}`, baselineSha], { cwd: repo });
-    execFileSync('tar', ['-xf', archive, '-C', copyRoot, '--exclude=apps/web/performance']);
-} else {
-    // Read current tracked bytes into task-owned scratch; never replace caller files.
-    const names = execFileSync('git', ['ls-files', '-z'], { cwd: repo, encoding: 'utf8' }).split('\0').filter(Boolean);
-    for (const name of names) {
-        if (name.startsWith('apps/web/performance/')) continue;
-        const target = join(copyRoot, name);
-        await mkdir(dirname(target), { recursive: true });
-        await copyFile(join(repo, name), target);
-    }
-}
+const sourceCommit = kind === 'baseline' ? baselineSha
+    : execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim();
+const sourceTree = execFileSync('git', ['rev-parse', `${sourceCommit}^{tree}`], { cwd: repo, encoding: 'utf8' }).trim();
+const archive = join(scratch, 'source.tar');
+// Both variants come from immutable committed trees, including every import.
+// Caller edits are preserved and are never silently included in a measurement.
+execFileSync('git', ['archive', '--format=tar', `--output=${archive}`, sourceCommit], { cwd: repo });
+execFileSync('tar', ['-xf', archive, '-C', copyRoot, '--exclude=apps/web/performance']);
 // Clone/copy the installed exact lockfile dependency tree into scratch, without
 // symlinking it outside the standalone tracing root or touching global runtimes.
 await cp(new URL('node_modules/', app), join(copyApp, 'node_modules'), {
@@ -80,7 +74,7 @@ await writeFile(new URL(retainedBuildId, here), buildIdBytes, { flag: 'wx' });
 await cp(built, new URL(distDir, app), { recursive: true, errorOnExist: true, force: false, mode: constants.COPYFILE_FICLONE });
 await writeFile(new URL('receipt.json', output), JSON.stringify({
     scope: 'Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.',
-    kind, distDir, buildId: buildIdBytes.toString('utf8').trim(), retainedBuildId, inputs,
+    kind, sourceCommit, sourceTree, distDir, buildId: buildIdBytes.toString('utf8').trim(), retainedBuildId, inputs,
     node: process.version, sourceSha256: inputs[0].sha256, logSha256: hash(log),
 }, null, 2) + '\n', { flag: 'wx' });
 await rm(scratch, { recursive: true });

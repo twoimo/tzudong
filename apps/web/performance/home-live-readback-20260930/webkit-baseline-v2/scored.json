@@ -1,0 +1,43 @@
+{
+  "scope": "Five isolated anonymous WebKit production visits with the real Naver SDK and catalog. Before/after groups are sequential, not alternating paired performance evidence. Image and DOM predicates are observations, not field INP/LCP or physical-device evidence.",
+  "expectedSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+  "kind": "baseline",
+  "artifactMapSha256": "ecb324522892c8b8bd46cc36ae10284f6ef43aceedfd1302ccbf971934a9fa38",
+  "samples": 5,
+  "admission": "Identity invariants verified. No paired speedup or pixel-level flicker admission.",
+  "timingBudgets": {
+    "absoluteMs": 1,
+    "relativeFraction": 0.05,
+    "noiseMadMultiplier": 2
+  },
+  "summaries": {
+    "firstReadyMs": {
+      "median": 87,
+      "mad": 3,
+      "min": 66,
+      "max": 90,
+      "classification": "sequential_observation_only"
+    },
+    "markerlessFrames": {
+      "median": 2,
+      "mad": 0,
+      "min": 2,
+      "max": 2,
+      "classification": "sequential_observation_only"
+    },
+    "tilelessFrames": {
+      "median": 1,
+      "mad": 0,
+      "min": 1,
+      "max": 1,
+      "classification": "sequential_observation_only"
+    },
+    "maxGapMs": {
+      "median": 47,
+      "mad": 1,
+      "min": 36,
+      "max": 49,
+      "classification": "sequential_observation_only"
+    }
+  }
+}
