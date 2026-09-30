@@ -23,9 +23,9 @@ exceeds the absolute budget, 5% of the baseline and noise.
 | Measurement | Baseline | Candidate | Absolute delta | Relative delta | Noise | Absolute budget | Classification |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Structural React lab transition, 200 memoized rows | 0.445 ms | 0.075 ms | −0.370 ms | −83.146% | 0.060 ms | 0.05 ms | Local improvement |
-| Local production route: mobile nav and marker DOM ready after resize | 28.4 ms | 18.5 ms | −9.9 ms | −34.859% | 4.4 ms | 1 ms | Local improvement |
+| Local production route: mobile nav and marker DOM ready after resize | 27.1 ms | 19.9 ms | −7.2 ms | −26.568% | 4.6 ms | 1 ms | Local improvement |
 | Local production route: frames with no marker DOM | 1 frame | 0 frames | −1 frame | −100% | 0 frames | 0 frames | Local improvement |
-| Local production route: maximum frame callback gap | 9.3 ms | 9.3 ms | approximately 0 ms | approximately 0% | approximately 0 ms | 1 ms | Below budget/noise |
+| Local production route: maximum frame callback gap | 9.3 ms | 9.3 ms | 0 ms | 0% | 0.2 ms | 1 ms | Below budget/noise |
 
 Structural lab row mounts/unmounts per boundary transition are **200→0**.
 The complete Next route creates **1→0** new simulated provider map objects per
@@ -82,8 +82,8 @@ claimed to be O(1), and no live SDK initialization complexity is assumed.
 For paired timings B and C, the reported delta is median(C)−median(B), the
 relative delta is 100×delta/median(B), and the noise budget is
 2×max(MAD(B), MAD(C)). For the structural case, 0.370 ms exceeds 0.05 ms,
-0.05×0.445=0.02225 ms, and 0.060 ms. For route readiness, 9.9 ms exceeds 1 ms,
-0.05×28.4=1.42 ms, and 4.4 ms. The maximum callback-gap delta is below its 1 ms
+0.05×0.445=0.02225 ms, and 0.060 ms. For route readiness, 7.2 ms exceeds 1 ms,
+0.05×27.1=1.355 ms, and 4.6 ms. The maximum callback-gap delta is below its 1 ms
 budget and is not an improvement.
 
 ## Provenance and verification
@@ -92,12 +92,12 @@ Detached artifact-map pins, emitted by the measurement commands and independentl
 verified:
 
 - `candidate-v2/artifact-map.json`: `c5c6a7948a6802529643d6d86341ed0c13aa0c7a9eda9130b2a87f0427d97ac9`
-- `route-v6/artifact-map.json`: `548eda0fdb98cda21202196673a6a1b214bc013f3bfabeb721c37f689384f0a5`
+- `route-v7/artifact-map.json`: `bf3ec0a9a1a9c71e69c33fcc0cfa8b4f1e920406b36c7b96aaa72e0b27b9f823`
 
 Both verifiers re-read artifact hashes and current affected source and recompute
 medians, deltas, noise and admission from retained raw pairs. Build receipts bind
 the two route bundles to retained build IDs and five frozen input hashes. The
-baseline is copied from the exact frozen Git tree; candidate tracked bytes and
+baseline is copied from the exact frozen Git tree; candidate code is also archived from its immutable commit and
 locked dependencies are copied into task-owned scratch. Neither build replaces
 files in the caller checkout. Audits do not require transient `.next` trees. Frozen source,
 the browser bundle, raw pairs, scored outputs, screenshots and regression output
@@ -145,7 +145,7 @@ state-consistency assertion, not an additional timed performance claim.
 
 The provider mock and map-creation counter execute in one init script, and tests
 require a positive numeric initial count. The Node executable is configurable
-and version-checked. The final route run is `route-v6`; intermediate v4/v5 test
+and version-checked. The final route run is `route-v7`; intermediate v4/v5 test
 setup failures are retained and are not admitted measurements. Old v3 raw values
 remain historical evidence, auditable with `--frozen-only`, rather than current
 route results. The source-only structural v2 result remains applicable because
@@ -167,3 +167,24 @@ It does not fully classify the two errors in every historical resize sample.
 Fixed codes only are retained in `../home-live-readback-20260930/diagnostic-v1/`.
 The independent cache revalidation retained all six scenarios and again admitted
 the 128-search over-capacity regression; see its separate report.
+
+The final baseline build (`build-baseline-v3`) is bound to commit
+`157ced98a2414d434132c99f74c72bbe5f796ca4` and tree
+`2de4984fffa83011c67b7ccb9336a2c163517981`. The final candidate build
+(`build-candidate-v4`) is bound to commit
+`5213864b2cd8e8965c6f529652fe3272f471cbe0` and tree
+`9fd8dfd5aeaa4a6225a022aff38e8d38ca37575d`. Both are archived full code
+trees, not caller working-file snapshots. The candidate v3 attempt failed
+Google font fetching; it produced no admitted sample. A direct font endpoint
+check returned HTTP 200 and the subsequent serial v4 build passed. Older v6
+results remain historical and are superseded by v7 for current route claims.
+
+WebKit 26.5 also reproduced one provider recreation and lost map DOM identity in
+all five baseline visits. Its retained pin is
+`ecb324522892c8b8bd46cc36ae10284f6ef43aceedfd1302ccbf971934a9fa38`.
+`../home-live-readback-20260930/verify-live.mjs` independently checks detached
+pins, retained hashes, exactly five observations, deployment/project SHA,
+anonymous scope, bounded metrics and expected identity invariants. Scored
+outputs classify timings as sequential observations without speedup admission.
+A clean scratch audit accepted the original data and rejected altered raw data,
+wrong expected SHA/kind, and an incomplete run even with consistent new hashes.

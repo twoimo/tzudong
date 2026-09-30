@@ -1,0 +1,39 @@
+{
+  "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+  "kind": "candidate",
+  "sourceCommit": "5213864b2cd8e8965c6f529652fe3272f471cbe0",
+  "sourceTree": "9fd8dfd5aeaa4a6225a022aff38e8d38ca37575d",
+  "distDir": ".next-viewport-candidate-v4-20260930",
+  "buildId": "9F0Y_84fJuKqEauzjQAtY",
+  "retainedBuildId": "build-candidate-v4/BUILD_ID",
+  "inputs": [
+    {
+      "original": "app/home-runtime-shell.tsx",
+      "retained": "build-candidate-v4/input-0.txt",
+      "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+    },
+    {
+      "original": "app/home-client.tsx",
+      "retained": "build-candidate-v4/input-1.txt",
+      "sha256": "17f1f804d646bb2b23c2aeb75f13d45ad700e468644a0ec15732710740fdc02d"
+    },
+    {
+      "original": "components/home/home-map-container.tsx",
+      "retained": "build-candidate-v4/input-2.txt",
+      "sha256": "cbf3d21b8e70ab0b5c9e46a3e993618c8e16af8bc5b06686fe2aac38d7b38ef9"
+    },
+    {
+      "original": "hooks/useHomeViewportMode.ts",
+      "retained": "build-candidate-v4/input-3.txt",
+      "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+    },
+    {
+      "original": "package-lock.json",
+      "retained": "build-candidate-v4/input-4.txt",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    }
+  ],
+  "node": "v24.21.0",
+  "sourceSha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede",
+  "logSha256": "388544bb450725495367432705e0f59df3db9e4716371087a04f93da7d60fc17"
+}
