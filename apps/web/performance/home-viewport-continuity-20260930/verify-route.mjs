@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const [label, pin, mode] = process.argv.slice(2);
 assert.ok(mode === undefined || mode === '--frozen-only');
@@ -56,11 +58,30 @@ for (const [metric, result] of Object.entries(scored.scores)) {
     assert.equal(result.classification, Math.abs(delta) > Math.max(result.absoluteBudget, baseline * 0.05, noise)
         ? delta < 0 ? 'local_improvement' : 'local_regression' : 'below_budget_or_noise');
 }
+let fullTreeReceipts = 0;
 for (const [kind, receipt] of Object.entries(raw.builds)) {
+    const entry = Object.entries(map.artifacts).find(([, artifact]) =>
+        new RegExp(`^build-${kind}(?:-[a-z0-9-]+)?/receipt\\.json$`).test(artifact.original ?? ''));
+    assert.ok(entry, `retained ${kind} receipt`);
+    assert.deepEqual(receipt, JSON.parse(await readFile(new URL(entry[0], root))), `${kind} raw receipt`);
+    if (receipt.sourceCommit && receipt.sourceTree) {
+        assert.match(receipt.sourceCommit, /^[a-f0-9]{40}$/);
+        assert.match(receipt.sourceTree, /^[a-f0-9]{40}$/);
+        const repository = process.env.TZUDONG_EVIDENCE_GIT_REPOSITORY ?? fileURLToPath(new URL('../../../../', here));
+        const git = args => execFileSync('git', ['-C', repository, ...args]);
+        assert.equal(git(['rev-parse', `${receipt.sourceCommit}^{tree}`]).toString().trim(), receipt.sourceTree, `${kind} Git tree`);
+        for (const input of receipt.inputs) {
+            assert.match(input.original, /^[a-zA-Z0-9/_.-]+$/);
+            assert.ok(!input.original.split('/').includes('..'));
+            assert.equal(hash(git(['show', `${receipt.sourceCommit}:apps/web/${input.original}`])), input.sha256, `${kind} committed input`);
+        }
+        fullTreeReceipts++;
+    }
     assert.match(receipt.buildId, /^[a-zA-Z0-9_-]+$/);
     assert.match(receipt.sourceSha256, /^[a-f0-9]{64}$/);
     if (receipt.retainedBuildId) {
         assert.equal(receipt.buildId, (await readFile(new URL(receipt.retainedBuildId, here), 'utf8')).trim());
+        assert.equal(hash(await readFile(new URL(entry[1].original.replace('receipt.json', 'build.log'), here))), receipt.logSha256, `${kind} build log`);
         for (const input of receipt.inputs) {
             assert.equal(hash(await readFile(new URL(input.retained, here))), input.sha256, input.original);
         }
@@ -73,4 +94,4 @@ for (const [kind, receipt] of Object.entries(raw.builds)) {
     }
 }
 console.log(JSON.stringify({ verified: true, samples: raw.pairs.length, retainedMapSamples: 31,
-    nativeTouch: raw.touch, artifactMapSha256: pin }));
+    nativeTouch: raw.touch, fullTreeReceipts, artifactMapSha256: pin }));

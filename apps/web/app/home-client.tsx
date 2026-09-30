@@ -224,9 +224,10 @@ export default function HomeClient() {
   const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(
+  const [desktopPanelCollapsed, setIsPanelCollapsed] = useState(
     () => DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelDefault === "collapsed",
   );
+  const isPanelCollapsed = isDesktop && desktopPanelCollapsed;
   const [desktopMapLayout, setDesktopMapLayout] = useState<HomeMapLayoutMode>(
     DEFAULT_HOME_MAP_USER_PREFERENCES.desktopMapLayout,
   );
@@ -1312,6 +1313,7 @@ export default function HomeClient() {
 
       {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
         <HomeControlPanel
+          viewportMode={viewportMode}
           mapMode={mapMode}
           selectedRegion={state.selectedRegion}
           selectedCountry={state.selectedCountry}

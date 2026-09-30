@@ -188,3 +188,27 @@ anonymous scope, bounded metrics and expected identity invariants. Scored
 outputs classify timings as sequential observations without speedup admission.
 A clean scratch audit accepted the original data and rejected altered raw data,
 wrong expected SHA/kind, and an incomplete run even with consistent new hashes.
+
+
+## Additional boundary-state review
+
+Desktop collapse is now desktop-scoped, and HomeControlPanel consumes the same
+viewport prop as the map detail renderer instead of its independent debounced
+hook and resize subscriber. Mobile sheet layout variables reset synchronously
+before paint on desktop entry; interaction refs reset for the next mobile entry.
+New behavioral checks cover collapsed desktop detail becoming visible on mobile,
+root CSS ownership reset, and frame-level control chrome agreement. The v7 route
+result predates these repairs; a new full-tree candidate run is required before
+it can be described as the final current measurement.
+
+The live verifier now explicitly expects layout-specific detail DOM replacement
+in both variants: desktop detail is under the control panel, mobile detail under
+the map sheet. It verifies map identity, not a false promise of retaining the
+same detail DOM node. Browser regression separately verifies selected detail.
+Updated scoring is retained as scored-v2.json; historical scores are preserved.
+The route verifier binds raw receipts to their pinned retained receipts, checks
+commit^{tree} against Git and rehashes committed frozen inputs and build logs.
+Clean scratch audits supply TZUDONG_EVIDENCE_GIT_REPOSITORY for immutable Git
+objects; they still require no transient Next build trees. Negative checks reject
+mis-associated receipts, wrong trees with consistent artifact hashes, and a
+wrong detail DOM identity; see review-audit-v2.json.

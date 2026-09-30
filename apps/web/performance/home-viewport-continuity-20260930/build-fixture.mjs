@@ -38,7 +38,8 @@ await cp(new URL('node_modules/', app), join(copyApp, 'node_modules'), {
 });
 const inputs = [];
 for (const [index, original] of ['app/home-runtime-shell.tsx', 'app/home-client.tsx',
-    'components/home/home-map-container.tsx', 'hooks/useHomeViewportMode.ts', 'package-lock.json'].entries()) {
+    'components/home/home-map-container.tsx', 'hooks/useHomeViewportMode.ts', 'package-lock.json',
+    'components/home/home-control-panel.tsx'].entries()) {
     const bytes = await readFile(join(copyApp, original));
     const retained = `build-${kind}-${label}/input-${index}.txt`;
     await writeFile(new URL(retained, here), bytes, { flag: 'wx' });

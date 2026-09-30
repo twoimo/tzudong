@@ -4,7 +4,7 @@ import { memo, useEffect, useState, type ComponentType } from 'react';
 import type { Region, Restaurant } from '@/types/restaurant';
 import type { Announcement } from '@/types/announcement';
 import type { FilterState } from '@/components/filters/filter-state';
-import { BREAKPOINTS, useDeviceType } from '@/hooks/useDeviceType';
+import type { HomeViewportMode } from '@/hooks/useHomeViewportMode';
 import type { User } from '@supabase/supabase-js';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapPanelSide } from '@/lib/home-map-user-preferences';
@@ -57,7 +57,7 @@ const loadHomeDesktopControlPanel = async () => {
     return mod.default as ComponentType<HomeDesktopControlPanelProps>;
 };
 
-type MobileControlOverlayProps = HomeControlPanelProps;
+type MobileControlOverlayProps = Omit<HomeControlPanelProps, 'viewportMode'>;
 
 const loadMobileControlOverlay = async () => {
     const mod = await import('@/components/home/MobileControlOverlay');
@@ -65,6 +65,7 @@ const loadMobileControlOverlay = async () => {
 };
 
 export interface HomeControlPanelProps {
+    viewportMode: HomeViewportMode;
     mapMode: 'domestic' | 'overseas';
     selectedRegion: Region | null;
     selectedCountry: string | null;
@@ -110,6 +111,7 @@ export interface HomeControlPanelProps {
 }
 
 function HomeControlPanelComponent({
+    viewportMode,
     mapMode,
     selectedRegion,
     selectedCountry,
@@ -158,17 +160,10 @@ function HomeControlPanelComponent({
             delete document.documentElement.dataset.homeChromeReady;
         };
     }, []);
-    const { isMobileOrTablet } = useDeviceType();
-    const shouldRenderMobile = isMobileOrTablet || (
-        typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax
-    );
-    const [shouldLoadMobileOverlay, setShouldLoadMobileOverlay] = useState(() => (
-        Boolean(initialIntent) || (typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax)
-    ));
+    const shouldRenderMobile = viewportMode === 'mobileOrTablet';
+    const shouldLoadMobileOverlay = shouldRenderMobile;
     const [pendingMobileOverlayIntent, setPendingMobileOverlayIntent] = useState<MobileControlOverlayIntent | null>(initialIntent);
-    const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(() => (
-        typeof window !== 'undefined' ? window.innerWidth > BREAKPOINTS.tabletMax : false
-    ));
+    const shouldLoadDesktopPanel = viewportMode === 'desktop';
     const DeferredMobileControlOverlay = useDeferredComponent<MobileControlOverlayProps>(
         shouldRenderMobile && shouldLoadMobileOverlay,
         loadMobileControlOverlay
@@ -178,38 +173,11 @@ function HomeControlPanelComponent({
         if (!initialIntent) return;
 
         setPendingMobileOverlayIntent(initialIntent);
-        setShouldLoadMobileOverlay(true);
     }, [initialIntent]);
     const DeferredHomeDesktopControlPanel = useDeferredComponent<HomeDesktopControlPanelProps>(
         shouldLoadDesktopPanel,
         loadHomeDesktopControlPanel
     );
-
-    useEffect(() => {
-        let resizeRafId = 0;
-        const updateShouldLoadDesktopPanel = () => {
-            if (resizeRafId) return;
-
-            resizeRafId = window.requestAnimationFrame(() => {
-                resizeRafId = 0;
-                setShouldLoadDesktopPanel(window.innerWidth > BREAKPOINTS.tabletMax);
-            });
-        };
-
-        updateShouldLoadDesktopPanel();
-        window.addEventListener('resize', updateShouldLoadDesktopPanel, { passive: true });
-
-        return () => {
-            window.removeEventListener('resize', updateShouldLoadDesktopPanel);
-            if (resizeRafId) window.cancelAnimationFrame(resizeRafId);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!shouldRenderMobile || shouldLoadMobileOverlay) return;
-
-        setShouldLoadMobileOverlay(true);
-    }, [shouldLoadMobileOverlay, shouldRenderMobile]);
 
     if (shouldRenderMobile) {
         if (!DeferredMobileControlOverlay) {

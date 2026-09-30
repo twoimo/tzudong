@@ -250,7 +250,8 @@ try {
     for (const [index, original] of ['../../app/home-runtime-shell.tsx', '../../hooks/useHomeViewportMode.ts',
         '../../tests/home-viewport-continuity-helpers.ts', '../../tests/mobile-home-map-helpers.ts', 'route-measure.mjs',
         receiptPath('baseline'), receiptPath('candidate'),
-        '../../app/home-client.tsx', '../../components/home/home-map-container.tsx', '../../tests/home-viewport-continuity.spec.ts'].entries()) {
+        '../../app/home-client.tsx', '../../components/home/home-map-container.tsx', '../../tests/home-viewport-continuity.spec.ts',
+        '../../components/home/home-control-panel.tsx'].entries()) {
         const bytes = await readFile(new URL(original, here));
         const name = `source-${index}.txt`;
         await writeFile(new URL(name, output), bytes, { flag: 'wx' });

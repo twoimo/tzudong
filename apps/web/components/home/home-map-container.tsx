@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
+import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
@@ -456,7 +456,13 @@ function HomeMapContainerComponent({
 
     // 패널이 열릴 때 50% 높이로 열기 (헤더 배제)
     useEffect(() => {
-        if (!isMobileOrTablet) return;
+        if (!isMobileOrTablet) {
+            resetSheetInteractionState();
+            wasPanelOpenRef.current = false;
+            lastPanelRestaurantIdRef.current = null;
+            contentScrollResetNeededRef.current = false;
+            return;
+        }
 
         if (!isPanelOpen) {
             onMapFullscreenChange?.(false);
@@ -511,9 +517,7 @@ function HomeMapContainerComponent({
         };
     }, []);
 
-    useEffect(() => {
-        if (!isMobileOrTablet || !isPanelOpen) return;
-
+    useLayoutEffect(() => {
         syncMobileLayout(sheetHeightRef.current);
     }, [isMapFullscreen, isMobileOrTablet, isPanelOpen, syncMobileLayout]);
 

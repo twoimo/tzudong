@@ -1,0 +1,43 @@
+{
+  "scope": "Five isolated anonymous Chromium production visits with the real Naver SDK and catalog. Before/after groups are sequential, not alternating paired performance evidence. Image and DOM predicates are observations, not field INP/LCP or physical-device evidence.",
+  "expectedSha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+  "kind": "baseline",
+  "artifactMapSha256": "df298024193ceff7977e6da0271accbade5b420e2cb2c4af71695062f707cb84",
+  "samples": 5,
+  "admission": "Map identity verified; layout-specific detail DOM replacement verified. Selection persistence is covered separately by browser regression. No paired speedup or pixel-level flicker admission.",
+  "timingBudgets": {
+    "absoluteMs": 1,
+    "relativeFraction": 0.05,
+    "noiseMadMultiplier": 2
+  },
+  "summaries": {
+    "firstReadyMs": {
+      "median": 51.09999990463257,
+      "mad": 5.999999761581421,
+      "min": 45.10000014305115,
+      "max": 65.79999995231628,
+      "classification": "sequential_observation_only"
+    },
+    "markerlessFrames": {
+      "median": 3,
+      "mad": 0,
+      "min": 3,
+      "max": 4,
+      "classification": "sequential_observation_only"
+    },
+    "tilelessFrames": {
+      "median": 2,
+      "mad": 0,
+      "min": 2,
+      "max": 2,
+      "classification": "sequential_observation_only"
+    },
+    "maxGapMs": {
+      "median": 17,
+      "mad": 0.3000000000010914,
+      "min": 16.69999999999891,
+      "max": 25,
+      "classification": "sequential_observation_only"
+    }
+  }
+}
