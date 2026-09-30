@@ -1,0 +1,89 @@
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index d1476065..836a6200 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -127,6 +127,7 @@ import {
+ import {
+     buildRenderTargetIdsForSignature,
+     deriveClusterRenderPlan,
++    shouldRenderExpandedClusterMarker,
+     getRestaurantsWithRenderableCoordinates,
+     getSeoulIndividualRestaurantsForRender,
+     getVisibleRestaurantsForRender,
+@@ -2679,6 +2680,14 @@ const NaverMapView = memo(({
+         const expandedClusterRestaurantIdSet = new Set(expandedClusterRestaurantIds);
+         const shouldSkipExpandedClusterMarker = (restaurantIds: string[]) =>
+             restaurantIds.length > 0 && restaurantIds.every((restaurantId) => expandedClusterRestaurantIdSet.has(restaurantId));
++        const shouldRenderExpandedMarker = (restaurant: Restaurant) =>
++            shouldRenderExpandedClusterMarker(
++                restaurant,
++                markerVisibleSelectedRestaurant?.id ?? null,
++                markerVisibleActiveSearchedRestaurant?.id ?? null,
++                extendedBounds,
++                VIEWPORT_FILTER_ENABLED,
++            );
+         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
+             if (expandedClusterRestaurantIds.length === 0) return;
+             expandedClusterRestaurantIds.forEach((restaurantId) => {
+@@ -2686,6 +2695,7 @@ const NaverMapView = memo(({
+                     resolveMarkerRestaurant(restaurantId),
+                 );
+                 if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
++                if (!shouldRenderExpandedMarker(restaurant)) return;
+ 
+                 activeIds.add(restaurant.id);
+                 const isSelected = selectedRestaurant?.id === restaurant.id;
+@@ -2764,7 +2774,8 @@ const NaverMapView = memo(({
+             });
+ 
+             // 사용하지 않는 마커 반환
+-            if (expandedClusterRestaurantIds.length === 0 || activeIds.size > 0) {
++            if (expandedClusterRestaurantIds.length === 0 || activeIds.size > 0
++                || (extendedBounds && !contextualRestaurants.some(shouldRenderExpandedMarker))) {
+                 markerPool.releaseExcept(activeIds);
+             }
+             if (activeIds.size === 0 && displayRestaurants.length > 0) {
+@@ -2970,6 +2981,7 @@ const NaverMapView = memo(({
+ 
+                 contextualRestaurants.forEach(restaurant => {
+                     if (restaurant.lat == null || restaurant.lng == null) return;
++                    if (expandedClusterRestaurantIds.length > 0 && !shouldRenderExpandedMarker(restaurant)) return;
+                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
+                     if (shouldHideInSeoulDistrictMode({
+                         address: restaurant.road_address || restaurant.jibun_address || '',
+@@ -3000,7 +3012,8 @@ const NaverMapView = memo(({
+             }
+ 
+             // Cleanup
+-            if (expandedClusterRestaurantIds.length === 0 || activeIds.size > 0) {
++            if (expandedClusterRestaurantIds.length === 0 || activeIds.size > 0
++                || (extendedBounds && !contextualRestaurants.some(shouldRenderExpandedMarker))) {
+                 markerPool.releaseExcept(activeIds);
+             }
+             if (activeIds.size === 0 && displayRestaurants.length > 0) {
+diff --git a/apps/web/lib/naver-map-render-plan.ts b/apps/web/lib/naver-map-render-plan.ts
+index 127e0688..a2fce51e 100644
+--- a/apps/web/lib/naver-map-render-plan.ts
++++ b/apps/web/lib/naver-map-render-plan.ts
+@@ -46,6 +46,21 @@ export function normalizeNaverMarkerCoordinates<T extends { lat?: unknown; lng?:
+     return { ...restaurant, lat, lng };
+ }
+ 
++// Expanded IDs remain in the list/swipe snapshot; only provider DOM is culled.
++// Keep the selected/search marker so detail focus and its next pan still work.
++export function shouldRenderExpandedClusterMarker(
++    restaurant: Restaurant,
++    selectedRestaurantId: string | null,
++    searchedRestaurantId: string | null,
++    extendedBounds: ExtendedBounds | null,
++    viewportFilterEnabled: boolean,
++): boolean {
++    return !viewportFilterEnabled || !extendedBounds
++        || restaurant.id === selectedRestaurantId
++        || restaurant.id === searchedRestaurantId
++        || isRestaurantInViewport(restaurant, extendedBounds);
++}
++
+ export function deriveClusterRenderPlan(
+     currentZoom: number,
+     hasSelectedRegion: boolean,

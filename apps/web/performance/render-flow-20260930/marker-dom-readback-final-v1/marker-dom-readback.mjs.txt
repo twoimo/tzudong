@@ -1,0 +1,29 @@
+import {launch,setup,ready,catalog} from './runtime.mjs';
+import {panMockMap} from '../../tests/mobile-home-map-helpers.ts';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+const root=new URL('marker-dom-readback-final-v1/',import.meta.url);await mkdir(root);
+for(const name of ['marker-dom-readback.mjs','runtime.mjs','plan-v5.json'])await writeFile(new URL(name+'.txt',root),await readFile(new URL(name,import.meta.url)),{flag:'wx'});
+const run=await launch('candidate'),rows=catalog(735),raw={receipt:run.receipt,browser:run.browser.version(),scope:'Supplemental production browser DOM identity and coordinate accuracy, simulated provider, 735 synthetic rows, native cluster click; pans use provider mock API. No timing claim.',cases:[]};
+try{
+ for(const mobile of [false,true]){
+  const t=await setup(run.browser,{mobile,count:735,cpu:4});try{
+   await ready(t.page);if(mobile){await panMockMap(t.page,0,-180);await t.page.waitForTimeout(350);}
+   await t.page.locator('.cluster-marker-container').first().click();
+   const inspect=async()=>t.page.evaluate(rows=>{
+    const map=window.__TZUDONG_DEBUG_MAP__,b=map.getBounds(),sw=b.getSW(),ne=b.getNE(),dy=(ne.lat()-sw.lat())*.25,dx=(ne.lng()-sw.lng())*.25;
+    const expected=rows.filter(r=>r.lat>=sw.lat()-dy&&r.lat<=ne.lat()+dy&&r.lng>=sw.lng()-dx&&r.lng<=ne.lng()+dx).map(r=>r.id).sort();
+    const tuples=Array.from(map._markers).flatMap(m=>{const el=m._element.querySelector('[data-testid="marker"]');if(!el)return [];const p=m.getPosition(),domId=el.getAttribute('data-restaurant-id'),row=rows.find(r=>r.id===domId);return [{domId,lat:p.lat(),lng:p.lng(),matchesFixture:Boolean(row&&Math.abs(row.lat-p.lat())<1e-7&&Math.abs(row.lng-p.lng())<1e-7)}];});
+    const actual=tuples.map(x=>x.domId).sort(),duplicates=actual.filter((id,i)=>i>0&&id===actual[i-1]);return {expected,actual,tuples,duplicates,missing:expected.filter(id=>!actual.includes(id)),unexpected:actual.filter(id=>!expected.includes(id)),mapCreates:window.__viewportMapCreates,zoom:map.getZoom(),geo:{lat:map.getCenter().lat(),lng:map.getCenter().lng()},valid:expected.length===actual.length&&duplicates.length===0&&expected.every((id,i)=>id===actual[i])&&tuples.every(x=>x.matchesFixture)};
+   },rows);
+   const settle=async()=>{let state;for(let i=0;i<120;i++){state=await inspect();if(state.valid&&state.zoom===14)return state;await t.page.waitForTimeout(100);}throw Error('DOM identity / SDK coordinate invariant did not settle');};
+   const before=await settle();const rounds=[];
+   for(let cycle=0;cycle<3;cycle++){
+    await panMockMap(t.page,50000,0);await t.page.waitForFunction(()=>document.querySelectorAll('[data-testid="marker"],.cluster-marker-container').length===0);
+    const away=await inspect();await panMockMap(t.page,-50000,0);const returned=await settle();rounds.push({cycle,away,returned,exactIds:JSON.stringify(before.actual)===JSON.stringify(returned.actual)});
+   }
+   raw.cases.push({mobile,before,rounds,errors:t.errors});await t.page.screenshot({path:new URL(mobile?'mobile.png':'desktop.png',root).pathname});
+  }finally{await t.context.close();}
+ }
+ await writeFile(new URL('raw.json',root),JSON.stringify(raw,null,2)+'\n',{flag:'wx'});
+ const valid=raw.cases.every(c=>c.before.valid&&c.rounds.every(r=>r.away.valid&&r.returned.valid&&r.exactIds&&r.returned.mapCreates===1));console.log(JSON.stringify({cases:raw.cases.length,cycles:6,valid}));if(!valid)throw Error('marker DOM readback failed');
+}finally{await run.close();}

@@ -1,0 +1,63 @@
+{
+  "frozenBeforeCandidateBuild": true,
+  "baselineCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+  "baselineAA": {
+    "desktop": {
+      "n": 6,
+      "medianMs": 1880.75,
+      "madMs": 193.25,
+      "noiseMs": 386.5,
+      "AAvsAAmedianDifferenceMs": 339.89999985694885
+    },
+    "mobile": {
+      "n": 6,
+      "medianMs": 1879.2999999523163,
+      "madMs": 351.0499999523163,
+      "noiseMs": 702.0999999046326,
+      "AAvsAAmedianDifferenceMs": -131.0
+    }
+  },
+  "primary": "native cluster click to first frame containing individual markers",
+  "budgets": {
+    "absoluteMs": 50,
+    "relativeFraction": 0.1,
+    "noiseMultiplier": 2,
+    "admission": "paired bootstrap median reduction 95% CI lower bound > 0, reduction > max(50ms,10% baseline median,2*maxMAD,A/A absolute median difference)",
+    "regressionMs": 50,
+    "regressionRelativeFraction": 0.1,
+    "memoryRegressionFraction": 0.2
+  },
+  "pairsPerPrimaryCell": 31,
+  "warmupPairs": 2,
+  "cells": [
+    {
+      "mobile": false,
+      "count": 735,
+      "cpu": 4
+    },
+    {
+      "mobile": true,
+      "count": 735,
+      "cpu": 4
+    }
+  ],
+  "secondaryCells": [
+    {
+      "mobile": false,
+      "count": 3,
+      "cpu": 1
+    },
+    {
+      "mobile": false,
+      "count": 2000,
+      "cpu": 4
+    },
+    {
+      "mobile": true,
+      "count": 735,
+      "cpu": 1,
+      "throttle": true
+    }
+  ],
+  "scope": "laboratory production route, simulated SDK and synthetic fixtures. No field metric or live SDK timing claim."
+}

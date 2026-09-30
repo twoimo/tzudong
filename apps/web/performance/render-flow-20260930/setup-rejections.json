@@ -1,0 +1,12 @@
+{
+  "rejected": [
+    "explore-v1",
+    "zoom-baseline-v1",
+    "cluster-candidate-v1",
+    "paired-v1",
+    "baseline-aa-v2"
+  ],
+  "reason": "Initial synthetic longitudes were west of the clicked regional center at zoom14; individual DOM presence was not visible-pixel readiness. Synthetic initial zoom could briefly leave no regional/district marker. No performance or flicker-removal claim admitted.",
+  "unchangedThresholds": true,
+  "candidateSourceUnchanged": true
+}

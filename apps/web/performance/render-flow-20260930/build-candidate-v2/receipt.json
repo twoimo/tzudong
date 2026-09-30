@@ -1,0 +1,61 @@
+{
+  "planSha256": "291693d941b1c1ed6c4e83e0310feb33f56f5bb7c171a434dfc9215617c6ea15",
+  "patchSha256": "51761798e64630a88652a8cbd9cea94e9175dc921555d8d011685c6a41a029b6",
+  "scope": "Isolated copied production source with intercepted public fixtures. No DB or hosted correctness claim.",
+  "kind": "candidate",
+  "sourceCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+  "sourceTree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+  "distDir": ".next-flow-candidate-v2-20260930",
+  "buildId": "K6duEoeBE1dtoYqFSPFQU",
+  "retainedBuildId": "build-candidate-v2/BUILD_ID",
+  "inputs": [
+    {
+      "original": "app/home-runtime-shell.tsx",
+      "retained": "build-candidate-v2/input-0.txt",
+      "sha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede"
+    },
+    {
+      "original": "app/home-client.tsx",
+      "retained": "build-candidate-v2/input-1.txt",
+      "sha256": "eda61b97da7173d53f71a76dfcdf0b219c826c1e3069afd787ad116a3be963a5"
+    },
+    {
+      "original": "components/home/home-map-container.tsx",
+      "retained": "build-candidate-v2/input-2.txt",
+      "sha256": "dcf8c744fb6c0adb9b16c764c2b32ade9c77c6225e10b55296385560d0df42ae"
+    },
+    {
+      "original": "hooks/useHomeViewportMode.ts",
+      "retained": "build-candidate-v2/input-3.txt",
+      "sha256": "6ab8fe57ac16cabc5c7eb90ded9279c12603ae36e31946f00ccf695ecb6328cb"
+    },
+    {
+      "original": "package-lock.json",
+      "retained": "build-candidate-v2/input-4.txt",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "components/home/home-control-panel.tsx",
+      "retained": "build-candidate-v2/input-5.txt",
+      "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+    },
+    {
+      "original": "components/search/RestaurantSearch.tsx",
+      "retained": "build-candidate-v2/input-6.txt",
+      "sha256": "aa988ea121fc475e8ad9495039b628f3bbea33ddcce9b2a5bde48b74e9c21695"
+    },
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "retained": "build-candidate-v2/input-7.txt",
+      "sha256": "b76562b930135efc2179345e19cbb6b7ff293e5a3ab0a0836c679accaeba0a76"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "retained": "build-candidate-v2/input-8.txt",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    }
+  ],
+  "node": "v24.21.0",
+  "sourceSha256": "003d02087ac2981f25367491653f0b5ef80c54bbd4972be40fb1ea1d3de79ede",
+  "logSha256": "f18d2a19d2bc31f7f44ae4e2ea3dd9868bfe8d146652e8dba7b15fa560b1198e"
+}

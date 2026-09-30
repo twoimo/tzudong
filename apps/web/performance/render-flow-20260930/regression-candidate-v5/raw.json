@@ -1,0 +1,653 @@
+{
+  "contract": {
+    "origin": "http://localhost:3310",
+    "build": "candidate-v5",
+    "fixtureOnly": true,
+    "persistedRequestData": "bounded method-free fixture classification only; no cookies, headers, or bodies",
+    "inputKinds": {
+      "native": "Playwright pointer/keyboard input; cluster trust is asserted with Event.isTrusted",
+      "provider": "panMockMap/zoomMockMap and fixed-center calls against the mocked Naver provider API",
+      "syntheticTouch": "existing swipeDetailPanelLeft helper only"
+    }
+  },
+  "receipt": {
+    "buildId": "5JgbN16naASnTwy693jlR",
+    "sourceTree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+    "patchSha256": "e4af4dc0f6d81e539661810a79c7ac8a370a00281aa9b71e3ab47f17577f616f"
+  },
+  "browser": "151.0.7922.34",
+  "cases": [
+    {
+      "name": "desktop-1440x900-synthetic-735",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "profile": "synthetic-735",
+      "checks": 13,
+      "failures": [
+        {
+          "at": "uncaught-step",
+          "expected": "step completes without an exception",
+          "observed": "click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('이전 화면으로 돌아가기').first()\u001b[22m\n"
+        }
+      ],
+      "inputs": [
+        {
+          "at": "cluster-click",
+          "kind": "trusted-native-pointer"
+        },
+        {
+          "at": "zoom-pan",
+          "kind": "mocked-provider-api"
+        }
+      ],
+      "observations": {
+        "expandedSdkMarkerCount": 143,
+        "failureSnapshot": {
+          "mainCount": 1,
+          "horizontalOverflow": 0,
+          "mapContainerCount": 1,
+          "mapIdentityStable": true,
+          "mapCreates": 1,
+          "markerCount": 143,
+          "clusterCount": 0,
+          "detailCount": 1,
+          "pathname": "/"
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 1,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 21,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 2,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 3,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 20,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 4,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 60
+        },
+        {
+          "sequence": 5,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 12
+        },
+        {
+          "sequence": 6,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 7,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 8,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 22,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 9,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 22,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 10,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 22,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 11,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 28,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 12,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 33,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 13,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 36,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 14,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 38,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 15,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 40,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 16,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 42,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 17,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 44,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 18,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 31,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 19,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 20,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 21,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 22,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 9,
+        "blockedTransport": 9,
+        "unexpectedConsole": 0
+      },
+      "passed": false
+    },
+    {
+      "name": "mobile-390x844-synthetic-735",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "profile": "synthetic-735",
+      "checks": 7,
+      "failures": [
+        {
+          "at": "uncaught-step",
+          "expected": "step completes without an exception",
+          "observed": "click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.cluster-marker-container').first()\u001b[22m\n\u001b[2m    - locator resolved to <div class=\"cluster-marker-container\">…</div>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2"
+        }
+      ],
+      "inputs": [
+        {
+          "at": "cluster-click",
+          "kind": "trusted-native-pointer"
+        },
+        {
+          "at": "zoom-pan",
+          "kind": "mocked-provider-api"
+        }
+      ],
+      "observations": {
+        "failureSnapshot": {
+          "mainCount": 1,
+          "horizontalOverflow": 0,
+          "mapContainerCount": 1,
+          "mapIdentityStable": true,
+          "mapCreates": 1,
+          "markerCount": 0,
+          "clusterCount": 1,
+          "detailCount": 0,
+          "pathname": "/"
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 1,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 2,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 0,
+        "blockedTransport": 0,
+        "unexpectedConsole": 0
+      },
+      "passed": false
+    },
+    {
+      "name": "desktop-1440x900-mock-3",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "profile": "mock-3",
+      "checks": 9,
+      "failures": [
+        {
+          "at": "uncaught-step",
+          "expected": "step completes without an exception",
+          "observed": "waitFor: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('맛집 검색어 입력').first().locator('../../..').getByRole('button', { name: /실험맛집0001/ }).first() to be visible\u001b[22m\n"
+        }
+      ],
+      "inputs": [
+        {
+          "at": "search-and-selection",
+          "kind": "trusted-native-keyboard-pointer"
+        },
+        {
+          "at": "search-responses",
+          "kind": "mocked-provider-api"
+        },
+        {
+          "at": "coordinate-refresh",
+          "kind": "local-query-invalidation"
+        }
+      ],
+      "observations": {
+        "failureSnapshot": {
+          "mainCount": 1,
+          "horizontalOverflow": 0,
+          "mapContainerCount": 1,
+          "mapIdentityStable": true,
+          "mapCreates": 1,
+          "markerCount": 0,
+          "clusterCount": 1,
+          "detailCount": 0,
+          "pathname": "/"
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 1,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 2,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 3,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 4,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 5,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 6,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 7,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 8,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 0,
+          "durationMs": 282,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 9,
+          "kind": "search",
+          "term": "실험맛집0001",
+          "revision": 0,
+          "durationMs": 26,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 2,
+        "blockedTransport": 2,
+        "unexpectedConsole": 0
+      },
+      "passed": false
+    },
+    {
+      "name": "mobile-390x844-mock-3",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "profile": "mock-3",
+      "checks": 9,
+      "failures": [
+        {
+          "at": "uncaught-step",
+          "expected": "step completes without an exception",
+          "observed": "waitFor: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('맛집 검색어 입력').first().locator('../../..').getByRole('button', { name: /실험맛집0001/ }).first() to be visible\u001b[22m\n"
+        }
+      ],
+      "inputs": [
+        {
+          "at": "search-and-selection",
+          "kind": "trusted-native-keyboard-pointer"
+        },
+        {
+          "at": "search-responses",
+          "kind": "mocked-provider-api"
+        },
+        {
+          "at": "coordinate-refresh",
+          "kind": "local-query-invalidation"
+        }
+      ],
+      "observations": {
+        "failureSnapshot": {
+          "mainCount": 1,
+          "horizontalOverflow": 0,
+          "mapContainerCount": 1,
+          "mapIdentityStable": true,
+          "mapCreates": 1,
+          "markerCount": 0,
+          "clusterCount": 1,
+          "detailCount": 0,
+          "pathname": "/"
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 1,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 2,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 3,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 4,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 5,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 6,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 0,
+          "durationMs": 282,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 7,
+          "kind": "search",
+          "term": "실험맛집0001",
+          "revision": 0,
+          "durationMs": 26,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 1,
+        "blockedTransport": 1,
+        "unexpectedConsole": 0
+      },
+      "passed": false
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "checks": 38,
+    "failures": 4,
+    "cases": [
+      {
+        "name": "desktop-1440x900-synthetic-735",
+        "passed": false,
+        "checks": 13,
+        "failures": 1
+      },
+      {
+        "name": "mobile-390x844-synthetic-735",
+        "passed": false,
+        "checks": 7,
+        "failures": 1
+      },
+      {
+        "name": "desktop-1440x900-mock-3",
+        "passed": false,
+        "checks": 9,
+        "failures": 1
+      },
+      {
+        "name": "mobile-390x844-mock-3",
+        "passed": false,
+        "checks": 9,
+        "failures": 1
+      }
+    ]
+  }
+}

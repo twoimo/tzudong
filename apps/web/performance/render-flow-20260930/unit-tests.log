@@ -1,0 +1,132 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-render-plan.test.ts:
+(pass) naver map render plan helpers > derives regional cluster mode for low zoom without selected region [0.05ms]
+(pass) naver map render plan helpers > derives seoul district filtered mode for mid zoom [0.03ms]
+(pass) naver map render plan helpers > filters visible restaurants while preserving selected restaurant [0.30ms]
+(pass) naver map render plan helpers > examines only the viewport cells for a small window in a large list [1.30ms]
+(pass) naver map render plan helpers > reuses the visible list when a small pan keeps the same restaurants [0.22ms]
+(pass) naver map render plan helpers > keeps only restaurants that can produce Naver marker coordinates [0.10ms]
+(pass) naver map render plan helpers > reuses the input list when every restaurant already has numeric coordinates [0.01ms]
+(pass) naver map render plan helpers > treats numeric coordinate strings as renderable marker coordinates [0.04ms]
+(pass) naver map render plan helpers > filters Seoul individual marker candidates by id and coordinates [0.10ms]
+(pass) naver map render plan helpers > builds stable render target ids for restaurants and regional clusters [0.34ms]
+(pass) naver map render plan helpers > reuses render target ids when the source lists are the same [0.04ms]
+(pass) naver map render plan helpers > includes visit count in marker render signature [0.06ms]
+(pass) naver map render plan helpers > includes selected restaurant outside display data in marker render signature [0.08ms]
+(pass) naver map render plan helpers > reports marker render performance only for large development marker sets [0.02ms]
+(pass) naver map render plan helpers > clears empty cluster state when clustering is off or display is empty [0.02ms]
+(pass) naver map render plan helpers > reuses the previous empty array identity when clearing cluster collections [0.01ms]
+(pass) naver map render plan helpers > continues skipped marker updates only when an empty theme still has leftover DOM [0.01ms]
+(pass) naver map render plan helpers > releases leftover cluster markers when the empty theme display is empty [0.02ms]
+
+tests-unit/home-map-contextual-restaurants-source.test.ts:
+(pass) home map contextual visible-marker restaurants > keeps raw visible swipe callback separate from contextual presentation payload [1.32ms]
+(pass) home map contextual visible-marker restaurants > selects a bounded deterministic subset for marker review bubbles [0.51ms]
+(pass) home map contextual visible-marker restaurants > renders compact review bubble markup with photo and escaped content [0.22ms]
+(pass) home map contextual visible-marker restaurants > wires contextual state through container and home controls without overseas presentation [0.99ms]
+(pass) home map contextual visible-marker restaurants > renders desktop and mobile contextual discovery only as presentation UI [2.88ms]
+
+tests-unit/expanded-cluster-viewport.test.ts:
+(pass) expanded cluster provider visibility without changing candidates > inclusive viewport boundaries and offscreen culling [0.10ms]
+(pass) expanded cluster provider visibility without changing candidates > selected and searched IDs remain renderable outside the viewport [0.01ms]
+(pass) expanded cluster provider visibility without changing candidates > unavailable projection or disabled culling keeps previous behavior
+(pass) expanded cluster provider visibility without changing candidates > pan back and changed coordinates reevaluate without a stale cache [0.02ms]
+(pass) expanded cluster provider visibility without changing candidates > large candidate input is unchanged, coordinates normalize before the predicate [0.79ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.38ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.10ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.10ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.04ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.24ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.04ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.02ms]
+(pass) marker pool > keeps the category image when only the review bubble changes [0.32ms]
+
+tests-unit/naver-map-cluster-helpers.test.ts:
+(pass) naver map cluster helpers > computes the first zoom where rendered and quantized cluster modes are disabled [0.10ms]
+(pass) naver map cluster helpers > computes regional cluster target zoom [0.01ms]
+(pass) naver map cluster helpers > computes seoul district target zoom [0.01ms]
+(pass) naver map cluster helpers > computes supercluster target zoom beyond the cluster render ceiling [0.04ms]
+(pass) naver map cluster helpers > resolves island cluster viewport by region name or restaurant candidates [0.15ms]
+(pass) naver map cluster helpers > builds fitBounds margins that leave room for mobile sheets and desktop panels [0.03ms]
+(pass) naver map cluster helpers > quantizes supercluster zoom buckets in two-level steps
+(pass) naver map cluster helpers > resolves bounds bbox or Korea fallback bbox for initial cluster load [0.03ms]
+(pass) naver map cluster helpers > resolves update bbox from bounds before center fallback [0.04ms]
+(pass) naver map cluster helpers > resolves update bbox from center when map bounds are unavailable [0.09ms]
+(pass) naver map cluster helpers > skips cluster update when both bounds and center are unavailable [0.04ms]
+(pass) naver map cluster helpers > hides only seoul features in seoul district mode [0.03ms]
+
+tests-unit/expanded-cluster-flow-invariants.test.ts:
+(pass) expanded cluster flow invariants > provider marker culling does not remove list or swipe candidates [0.64ms]
+(pass) expanded cluster flow invariants > selected and searched offscreen restaurants remain provider exceptions [0.05ms]
+(pass) expanded cluster flow invariants > pan to an empty viewport releases stale candidates and pan back restores the same ordered rows [0.66ms]
+(pass) expanded cluster flow invariants > a refreshed array identity reindexes changed coordinates and changes the render signature [0.14ms]
+(pass) expanded cluster flow invariants > empty viewport cleanup keeps an expanded selection renderable until expansion clears
+
+tests-unit/home-map-swipe-restaurants.test.ts:
+(pass) home map swipe restaurant dedupe > matches the pairwise reference over randomized fixtures [9.48ms]
+(pass) home map swipe restaurant dedupe > matches the reference when merged ids point backwards and forwards [0.32ms]
+(pass) home map swipe restaurant dedupe > treats the same id as a duplicate and keeps the first occurrence [0.03ms]
+(pass) home map swipe restaurant dedupe > drops a later restaurant that shares name and coordinates [0.03ms]
+(pass) home map swipe restaurant dedupe > keeps restaurants with the same name but coordinates past the tolerance [0.02ms]
+(pass) home map swipe restaurant dedupe > treats null, zero, and non-numeric coordinates as not comparable [0.03ms]
+(pass) home map swipe restaurant dedupe > maps an empty list, a single row, and falsy rows without throwing [0.03ms]
+(pass) home map swipe restaurant dedupe > isSameRestaurantForSwipe keeps the pairwise contract [0.05ms]
+(pass) home map swipe restaurant dedupe > hasSameSwipeCoordinates is false when either coordinate is missing [0.01ms]
+
+tests-unit/swipe-render-cache.test.ts:
+(pass) swipe render cache correctness and capacity > invalidates search ordering when the same search id gets different merged ids [0.41ms]
+(pass) swipe render cache correctness and capacity > invalidates ordering when the same search id gets a new name or coordinates [0.03ms]
+(pass) swipe render cache correctness and capacity > detects an in-place edit of the active search merged ids [0.02ms]
+(pass) swipe render cache correctness and capacity > recomputes the nearest fallback when search coordinates change with the same id [0.05ms]
+(pass) swipe render cache correctness and capacity > recomputes fallback exclusion when the visible selection changes with the same id [0.04ms]
+(pass) swipe render cache correctness and capacity > bounds ordering history to 64 searches per visible list [0.18ms]
+(pass) swipe render cache correctness and capacity > bounds fallback history to 64 searches per catalog [0.22ms]
+(pass) swipe render cache correctness and capacity > preserves the order within both matched and unmatched groups [0.07ms]
+(pass) swipe render cache correctness and capacity > preserves empty, unavailable, invalid-coordinate and tie behavior [0.05ms]
+(pass) swipe render cache correctness and capacity > matches an uncached reference across 2,000 deterministic selection changes [116.78ms]
+
+tests-unit/mobile-home-search-selection.test.ts:
+(pass) mobile home search selection helpers > treats merged or coordinate-matched restaurants as the same selection [0.11ms]
+(pass) mobile home search selection helpers > keeps searched restaurant active only while it still matches the selected restaurant [0.05ms]
+(pass) mobile home search selection helpers > handles a searched restaurant only once until search state is cleared [0.03ms]
+(pass) mobile home search selection helpers > releases search ownership while keeping the current panel selection open [0.02ms]
+(pass) mobile home search selection helpers > plans search selection release only once for an active searched restaurant [0.02ms]
+(pass) mobile home search selection helpers > resets released search selection id when active search changes or clears [0.09ms]
+(pass) mobile home search selection helpers > adds active searched restaurant to swipe candidates when it is outside display ids [0.10ms]
+(pass) mobile home search selection helpers > does not duplicate active searched restaurant already present in display ids [0.02ms]
+(pass) mobile home search selection helpers > keeps selected search result in swipe candidates after search ownership is released [0.02ms]
+(pass) mobile home search selection helpers > does not duplicate selected restaurant that matches an existing display restaurant [0.02ms]
+(pass) mobile home search selection helpers > adds the nearest fallback restaurant when only one visible restaurant remains after search [0.09ms]
+(pass) mobile home search selection helpers > reuses the nearest fallback when the list and visible restaurant are unchanged [0.03ms]
+(pass) mobile home search selection helpers > reuses the searched swipe order for the same visible list [0.03ms]
+
+tests-unit/expanded-cluster-restaurant-snapshot.test.ts:
+(pass) expanded cluster restaurant snapshot > resolves the current row before the snapshot and the merged parent [0.12ms]
+(pass) expanded cluster restaurant snapshot > keeps an expanded row that has left the current list [0.02ms]
+(pass) expanded cluster restaurant snapshot > does not revive a snapshot row while no cluster is expanded [0.01ms]
+(pass) expanded cluster restaurant snapshot > uses the snapshot before the merged parent while a cluster is expanded
+(pass) expanded cluster restaurant snapshot > returns undefined for an empty, missing, or non-string id [0.02ms]
+(pass) expanded cluster restaurant snapshot > returns undefined when the lookup maps are missing
+(pass) expanded cluster restaurant snapshot > returns undefined when a lookup map throws [0.09ms]
+(pass) expanded cluster restaurant snapshot > drops rows that are no longer current, expanded, or selected [0.31ms]
+(pass) expanded cluster restaurant snapshot > keeps an expanded id that is absent from the current maps [0.56ms]
+(pass) expanded cluster restaurant snapshot > does not let a merged parent overwrite a current row with the same id [0.14ms]
+(pass) expanded cluster restaurant snapshot > accepts an empty snapshot update and a non-array retain list [0.10ms]
+(pass) expanded cluster restaurant snapshot > map view resolves markers through the snapshot instead of copying both lookup maps [0.52ms]
+
+tests-unit/naver-map-render-guard.test.ts:
+(pass) naver map marker render guard > skips marker render when effective signature is unchanged [0.21ms]
+(pass) naver map marker render guard > does not skip marker render when selected marker changes [0.03ms]
+(pass) naver map marker render guard > does not skip marker render when viewport or mode changes [0.03ms]
+(pass) naver map marker render guard > does not skip marker render when marker kind, asset version, or user toggle changes [0.08ms]
+(pass) naver map marker render guard > reuses the display id signature for the same id list [0.02ms]
+(pass) naver map marker render guard > keeps an empty desktop marker render from poisoning the render signature [0.45ms]
+
+ 104 pass
+ 0 fail
+ 2469 expect() calls
+Ran 104 tests across 11 files. [198.00ms]

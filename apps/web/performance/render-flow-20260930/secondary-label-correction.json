@@ -1,0 +1,9 @@
+{
+  "scope": "measurement harness only, unchanged production and thresholds",
+  "source": "apps/web/lib/cluster-marker.ts:252",
+  "cause": "count >= 1000 intentionally renders 999+, not the literal membership count",
+  "rejected": "secondary-v3/rejected.json",
+  "newRun": "secondary-v4",
+  "unchangedPrimary": "paired-v5/raw.json",
+  "preconditions": "expected capped display, same regional marker coordinate; final expected IDs use all 2000 rows, not 999"
+}
