@@ -13,6 +13,7 @@ import {
   type PrivacyPolicyPublicationReadback,
 } from '@/lib/privacy/policy';
 import { PROCESSING_INVENTORY } from '@/lib/privacy/processing-inventory';
+import { HydratedContactEmail } from './HydratedContactEmail';
 
 const PublicationReadback = () => {
   const [publication, setPublication] = useState<PrivacyPolicyPublicationReadback | null>(null);
@@ -131,7 +132,7 @@ const PrivacyPolicyContentComponent = () => (
 
         {section.id === 'rights-contact' ? (
           <div className="mt-3 rounded-md bg-muted p-3 text-muted-foreground">
-            <p>문의처: {siteConfig.contact.email}</p>
+            <p>문의처: <HydratedContactEmail email={siteConfig.contact.email} /></p>
           </div>
         ) : null}
 
