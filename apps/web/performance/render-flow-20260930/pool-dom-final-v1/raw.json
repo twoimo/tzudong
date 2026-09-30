@@ -1,0 +1,117 @@
+{
+  "scope": "Supplemental real-DOM pool API accuracy test with simulated provider; user pan/detail integration is separately in regression-candidate-v6-v1. No performance claim.",
+  "sources": {
+    "baseline": "257c92fb86c074eec78c91e8086dfec82aa74499abdb055f55147fcc8ac52185",
+    "candidate": "0816449fe7d1d94f59f555198a77a266b9d346ffbf797275695e0eecd67edade"
+  },
+  "variants": [
+    {
+      "kind": "baseline",
+      "result": {
+        "steps": [
+          {
+            "phase": "reuse-a-to-b",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-a",
+            "expectedCount": 0,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          },
+          {
+            "phase": "visit-2",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-a",
+            "expectedCount": 2,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          },
+          {
+            "phase": "visit-3",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-a",
+            "expectedCount": 3,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          },
+          {
+            "phase": "visit-0",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-a",
+            "expectedCount": 0,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          },
+          {
+            "phase": "same-id-bubble-only",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-a",
+            "expectedCount": 0,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          }
+        ],
+        "sameImageOnBubbleOnly": true,
+        "accuracyFailures": 5
+      }
+    },
+    {
+      "kind": "candidate",
+      "result": {
+        "steps": [
+          {
+            "phase": "reuse-a-to-b",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-b",
+            "expectedCount": 0,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          },
+          {
+            "phase": "visit-2",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-b",
+            "expectedCount": 2,
+            "actualCount": 2,
+            "badgeLabel": "쯔양 2회 방문",
+            "coordinateMatches": true
+          },
+          {
+            "phase": "visit-3",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-b",
+            "expectedCount": 3,
+            "actualCount": 3,
+            "badgeLabel": "쯔양 3회 방문",
+            "coordinateMatches": true
+          },
+          {
+            "phase": "visit-0",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-b",
+            "expectedCount": 0,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          },
+          {
+            "phase": "same-id-bubble-only",
+            "expectedId": "fixture-b",
+            "actualId": "fixture-b",
+            "expectedCount": 0,
+            "actualCount": 0,
+            "badgeLabel": null,
+            "coordinateMatches": true
+          }
+        ],
+        "sameImageOnBubbleOnly": true,
+        "accuracyFailures": 0
+      }
+    }
+  ]
+}

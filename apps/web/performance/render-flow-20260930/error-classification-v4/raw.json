@@ -1,0 +1,61 @@
+{
+  "classification": [
+    {
+      "sha256": "4f3f86abe0fb8f62fa5dee5df4ae816f2d01355e86559e49646553b4cf06a3bc",
+      "tags": [
+        "resource"
+      ]
+    }
+  ],
+  "failed": [
+    {
+      "loopbackAuthPath": null,
+      "fixtureAuthPath": null,
+      "method": "GET",
+      "ownOrigin": true,
+      "pathClass": "other",
+      "code": "ERR_ABORTED"
+    },
+    {
+      "loopbackAuthPath": null,
+      "fixtureAuthPath": null,
+      "method": "GET",
+      "ownOrigin": true,
+      "pathClass": "other",
+      "code": "ERR_ABORTED"
+    },
+    {
+      "loopbackAuthPath": null,
+      "fixtureAuthPath": null,
+      "method": "GET",
+      "ownOrigin": true,
+      "pathClass": "other",
+      "code": "ERR_ABORTED"
+    },
+    {
+      "loopbackAuthPath": {
+        "path": "/auth/required",
+        "protocol": "https:"
+      },
+      "fixtureAuthPath": null,
+      "method": "GET",
+      "ownOrigin": false,
+      "pathClass": "auth",
+      "code": "ERR_SSL_PROTOCOL_ERROR"
+    },
+    {
+      "loopbackAuthPath": null,
+      "fixtureAuthPath": null,
+      "method": "GET",
+      "ownOrigin": true,
+      "pathClass": "other",
+      "code": "ERR_ABORTED"
+    }
+  ],
+  "errors": {
+    "page": 0,
+    "console": 1,
+    "blockedTransport": 0,
+    "unexpectedConsole": 1
+  }
+}

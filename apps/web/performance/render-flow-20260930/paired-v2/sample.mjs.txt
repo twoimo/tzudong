@@ -1,0 +1,28 @@
+import {panMockMap} from '../../tests/mobile-home-map-helpers.ts';
+import {setup,ready,metrics} from './runtime.mjs';
+export async function clusterSample(browser,{mobile=false,count=735,cpu=4,delay=120,throttle=false}={},capture) {
+ const t=await setup(browser,{mobile,count,cpu,delay,throttle});
+ try{
+  await ready(t.page);
+  if(mobile){await panMockMap(t.page,0,-180);await t.page.waitForTimeout(350);}
+  const load=await metrics(t.page);
+  await t.page.evaluate(()=>{
+   window.__click=0;window.__firstExpansion=0;
+   document.addEventListener('click',e=>{if(e.target.closest('.cluster-marker-container'))window.__click=performance.now();},true);
+   function observe(){if(window.__click&&!window.__firstExpansion&&Array.from(document.querySelectorAll('[data-testid="marker"]')).some(e=>{const b=e.getBoundingClientRect();return b.width>0&&b.height>0&&b.right>(innerWidth<1280?0:400)&&b.left<innerWidth&&b.bottom>100&&b.top<innerHeight-100;}))window.__firstExpansion=performance.now();requestAnimationFrame(observe);}requestAnimationFrame(observe);
+  });
+  // Native input to the implemented cluster click handler, not direct state injection.
+  await t.page.locator('.cluster-marker-container').first().click();
+  await t.page.waitForFunction(()=>window.__firstExpansion>0);
+  await t.page.waitForTimeout(600);
+  const summary=await t.page.evaluate(()=>{
+   const start=window.__click,end=performance.now(),frames=window.__perf.frames.filter(f=>f.t>=start);
+   const gaps=frames.map(f=>f.gap),tasks=window.__perf.longTasks.filter(f=>f.start+f.duration>=start&&f.start<=end);
+   const all=window.__perf.frames.filter(f=>f.t<start&&f.gap>0),sorted=all.map(f=>f.gap).sort((a,b)=>a-b);const frameBudget=sorted[Math.floor(sorted.length/2)];
+   const intervals=gaps.reduce((s,g)=>s+Math.max(1,Math.round(g/frameBudget)),0);
+   return {clickToExpandedMs:window.__firstExpansion-start,maxFrameGapMs:Math.max(...gaps),longTaskMs:tasks.reduce((s,x)=>s+Math.max(0,Math.min(end,x.start+x.duration)-Math.max(start,x.start)),0),longTaskCount:tasks.length,markerlessFrames:frames.filter(f=>f.markers===0).length,frames:frames.length,frameBudgetMs:frameBudget,missedFrameFraction:(intervals-gaps.length)/intervals,markerCount:document.querySelectorAll('[data-testid="marker"]').length,domCount:document.querySelectorAll('*').length,heapBytes:performance.memory.usedJSHeapSize,mapCount:window.__viewportMapCreates,detailCount:document.querySelectorAll('[data-testid="restaurant-detail-panel"]').length,viewportOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),zoom:window.__TZUDONG_DEBUG_MAP__.getZoom(),start,end};
+  });
+  if(capture)await t.page.screenshot({path:capture});
+  return {summary,load,requests:t.requests,errors:t.errors};
+ }finally{await t.context.close();}
+}

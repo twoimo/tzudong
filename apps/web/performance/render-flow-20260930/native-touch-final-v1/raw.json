@@ -1,0 +1,1118 @@
+{
+  "schema": "native-touch-final-v1",
+  "status": "failed",
+  "scope": {
+    "build": "candidate-v7",
+    "route": "production standalone route at localhost:3310",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "mobile": true,
+      "hasTouch": true
+    },
+    "fixture": {
+      "kind": "synthetic-local",
+      "count": 735
+    },
+    "provider": "mocked Naver provider API",
+    "inputKinds": {
+      "clusterAndCard": "trusted Playwright native pointer input",
+      "swipes": "trusted CDP Input.dispatchTouchEvent touchStart/move/touchEnd",
+      "setupPan": "panMockMap mocked-provider API input"
+    },
+    "persistedData": "fixture names and bounded counters/geometry only; no cookies, headers, request bodies, credentials, or provider payloads"
+  },
+  "frozenSources": {
+    "native-touch.mjs.txt": "3b2bbf1879db0d157b1b5bdb1e8b16df442863efd3c1a660008f23adcb2db1b8",
+    "runtime.mjs.txt": "4a1d0537e695faa570ff6ec946d647136583bfa15fa22da85dfb4b5c639a75ce",
+    "plan-v6.json.txt": "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af"
+  },
+  "receipt": {
+    "buildId": "IudS4C9U60JOVFefHNMHz",
+    "candidateBuild": "v7",
+    "planSha256": "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af",
+    "patchSha256": "7157ecbccd22d9315f0d3cd344b003741ac30fbcafb36b5dc1ba59b77fc68819"
+  },
+  "browser": "151.0.7922.34",
+  "checks": 63,
+  "failures": [
+    {
+      "at": "list.first-card-native-click-is-trusted",
+      "expected": true,
+      "observed": null
+    }
+  ],
+  "observations": {
+    "ready": {
+      "mapCreates": 1,
+      "mapContainerCount": 1,
+      "clusterCount": 1,
+      "horizontalOverflow": 0
+    },
+    "cluster": {
+      "label": "735",
+      "click": {
+        "kind": "cluster",
+        "isTrusted": true,
+        "t": 2129.8,
+        "candidateName": null
+      },
+      "expanded": {
+        "mainCount": 1,
+        "horizontalOverflow": 0,
+        "mapContainerCount": 1,
+        "mapCreates": 1,
+        "mapIdentityStable": true,
+        "zoom": 14,
+        "sdkMarkerCount": 55,
+        "clusterCount": 0,
+        "detailCount": 0
+      }
+    },
+    "boundedList": {
+      "badgeCount": 735,
+      "cardCount": 20,
+      "firstCardName": "실험맛집0292",
+      "click": null
+    },
+    "initialCandidateName": "실험맛집0292",
+    "swipes": [
+      {
+        "index": 1,
+        "beforeName": "실험맛집0292",
+        "afterName": "실험맛집0293",
+        "changed": true,
+        "gesture": {
+          "startX": 350,
+          "endX": 40,
+          "y": 598.35,
+          "distanceX": -310,
+          "moveSteps": 7,
+          "requestedStepDelayMs": 16,
+          "targetRect": {
+            "x": 0,
+            "y": 514,
+            "width": 390,
+            "height": 241,
+            "right": 390,
+            "bottom": 755
+          }
+        },
+        "touchEvents": [
+          {
+            "type": "touchstart",
+            "isTrusted": true,
+            "t": 2880.1,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 350,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 2911.6,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 305.71,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 2946.3,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 261.43,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 2971.5,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 217.14,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3005.2,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 172.86,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3028.5,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 128.57,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3053.5,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 84.29,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3079.3,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          },
+          {
+            "type": "touchend",
+            "isTrusted": true,
+            "t": 3096.5,
+            "touches": 0,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0292"
+          }
+        ],
+        "touchCadenceMs": {
+          "eventCount": 9,
+          "min": 17.2,
+          "median": 25.2,
+          "max": 34.7
+        },
+        "rAF": {
+          "count": 47,
+          "detailPresentFrames": 47,
+          "detailCounts": [
+            1
+          ],
+          "cadenceMs": {
+            "min": 7.4,
+            "median": 8.3,
+            "p95": 9.3,
+            "max": 50.1
+          },
+          "panelPosition": {
+            "first": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "last": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 434,
+            "maxY": 434,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 410,
+            "maxHeight": 410
+          },
+          "swipeAreaPosition": {
+            "first": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "last": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 514,
+            "maxY": 514,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 241,
+            "maxHeight": 241
+          }
+        },
+        "longTasks": {
+          "count": 1,
+          "totalOverlapMs": 55
+        },
+        "elapsedObservationMs": 450.8,
+        "map": {
+          "identityStable": true,
+          "count": 1,
+          "containerCount": 1,
+          "sdkMarkerCount": 55,
+          "zoom": 14
+        },
+        "detailCount": 1,
+        "horizontalOverflow": 0
+      },
+      {
+        "index": 2,
+        "beforeName": "실험맛집0293",
+        "afterName": "실험맛집0294",
+        "changed": true,
+        "gesture": {
+          "startX": 350,
+          "endX": 40,
+          "y": 598.35,
+          "distanceX": -310,
+          "moveSteps": 7,
+          "requestedStepDelayMs": 16,
+          "targetRect": {
+            "x": 0,
+            "y": 514,
+            "width": 390,
+            "height": 241,
+            "right": 390,
+            "bottom": 755
+          }
+        },
+        "touchEvents": [
+          {
+            "type": "touchstart",
+            "isTrusted": true,
+            "t": 3330.9,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 350,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3362.2,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 305.71,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3395.5,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 261.43,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3430.4,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 217.14,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3477,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 172.86,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3495.3,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 128.57,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3503.6,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 84.29,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3528.7,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          },
+          {
+            "type": "touchend",
+            "isTrusted": true,
+            "t": 3546.5,
+            "touches": 0,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0293"
+          }
+        ],
+        "touchCadenceMs": {
+          "eventCount": 9,
+          "min": 8.3,
+          "median": 25.1,
+          "max": 46.6
+        },
+        "rAF": {
+          "count": 45,
+          "detailPresentFrames": 45,
+          "detailCounts": [
+            1
+          ],
+          "cadenceMs": {
+            "min": 7.4,
+            "median": 8.4,
+            "p95": 9.3,
+            "max": 50
+          },
+          "panelPosition": {
+            "first": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "last": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 434,
+            "maxY": 434,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 410,
+            "maxHeight": 410
+          },
+          "swipeAreaPosition": {
+            "first": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "last": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 514,
+            "maxY": 514,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 241,
+            "maxHeight": 241
+          }
+        },
+        "longTasks": {
+          "count": 1,
+          "totalOverlapMs": 54
+        },
+        "elapsedObservationMs": 437.1,
+        "map": {
+          "identityStable": true,
+          "count": 1,
+          "containerCount": 1,
+          "sdkMarkerCount": 55,
+          "zoom": 14
+        },
+        "detailCount": 1,
+        "horizontalOverflow": 0
+      },
+      {
+        "index": 3,
+        "beforeName": "실험맛집0294",
+        "afterName": "실험맛집0295",
+        "changed": true,
+        "gesture": {
+          "startX": 350,
+          "endX": 40,
+          "y": 598.35,
+          "distanceX": -310,
+          "moveSteps": 7,
+          "requestedStepDelayMs": 16,
+          "targetRect": {
+            "x": 0,
+            "y": 514,
+            "width": 390,
+            "height": 241,
+            "right": 390,
+            "bottom": 755
+          }
+        },
+        "touchEvents": [
+          {
+            "type": "touchstart",
+            "isTrusted": true,
+            "t": 3781.2,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 350,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3812.4,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 305.71,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3846,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 261.43,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3869.9,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 217.14,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3895.7,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 172.86,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3945.8,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 128.57,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3953.7,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 84.29,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 3977.9,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          },
+          {
+            "type": "touchend",
+            "isTrusted": true,
+            "t": 3996.9,
+            "touches": 0,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0294"
+          }
+        ],
+        "touchCadenceMs": {
+          "eventCount": 9,
+          "min": 7.9,
+          "median": 24.2,
+          "max": 50.1
+        },
+        "rAF": {
+          "count": 47,
+          "detailPresentFrames": 47,
+          "detailCounts": [
+            1
+          ],
+          "cadenceMs": {
+            "min": 7.5,
+            "median": 8.3,
+            "p95": 9.2,
+            "max": 50.5
+          },
+          "panelPosition": {
+            "first": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "last": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 434,
+            "maxY": 434,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 410,
+            "maxHeight": 410
+          },
+          "swipeAreaPosition": {
+            "first": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "last": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 514,
+            "maxY": 514,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 241,
+            "maxHeight": 241
+          }
+        },
+        "longTasks": {
+          "count": 1,
+          "totalOverlapMs": 58
+        },
+        "elapsedObservationMs": 446.3,
+        "map": {
+          "identityStable": true,
+          "count": 1,
+          "containerCount": 1,
+          "sdkMarkerCount": 55,
+          "zoom": 14
+        },
+        "detailCount": 1,
+        "horizontalOverflow": 0
+      },
+      {
+        "index": 4,
+        "beforeName": "실험맛집0295",
+        "afterName": "실험맛집0296",
+        "changed": true,
+        "gesture": {
+          "startX": 350,
+          "endX": 40,
+          "y": 598.35,
+          "distanceX": -310,
+          "moveSteps": 7,
+          "requestedStepDelayMs": 16,
+          "targetRect": {
+            "x": 0,
+            "y": 514,
+            "width": 390,
+            "height": 241,
+            "right": 390,
+            "bottom": 755
+          }
+        },
+        "touchEvents": [
+          {
+            "type": "touchstart",
+            "isTrusted": true,
+            "t": 4238.8,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 350,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4269.9,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 305.71,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4303,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 261.43,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4337.1,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 217.14,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4369.8,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 172.86,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4395.8,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 128.57,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4419.5,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 84.29,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4445.7,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          },
+          {
+            "type": "touchend",
+            "isTrusted": true,
+            "t": 4462.8,
+            "touches": 0,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0295"
+          }
+        ],
+        "touchCadenceMs": {
+          "eventCount": 9,
+          "min": 17.1,
+          "median": 26.2,
+          "max": 34.1
+        },
+        "rAF": {
+          "count": 47,
+          "detailPresentFrames": 47,
+          "detailCounts": [
+            1
+          ],
+          "cadenceMs": {
+            "min": 7.4,
+            "median": 8.3,
+            "p95": 9,
+            "max": 50.1
+          },
+          "panelPosition": {
+            "first": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "last": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 434,
+            "maxY": 434,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 410,
+            "maxHeight": 410
+          },
+          "swipeAreaPosition": {
+            "first": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "last": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 514,
+            "maxY": 514,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 241,
+            "maxHeight": 241
+          }
+        },
+        "longTasks": {
+          "count": 1,
+          "totalOverlapMs": 57
+        },
+        "elapsedObservationMs": 437.7,
+        "map": {
+          "identityStable": true,
+          "count": 1,
+          "containerCount": 1,
+          "sdkMarkerCount": 55,
+          "zoom": 14
+        },
+        "detailCount": 1,
+        "horizontalOverflow": 0
+      },
+      {
+        "index": 5,
+        "beforeName": "실험맛집0296",
+        "afterName": "실험맛집0297",
+        "changed": true,
+        "gesture": {
+          "startX": 350,
+          "endX": 40,
+          "y": 598.35,
+          "distanceX": -310,
+          "moveSteps": 7,
+          "requestedStepDelayMs": 16,
+          "targetRect": {
+            "x": 0,
+            "y": 514,
+            "width": 390,
+            "height": 241,
+            "right": 390,
+            "bottom": 755
+          }
+        },
+        "touchEvents": [
+          {
+            "type": "touchstart",
+            "isTrusted": true,
+            "t": 4687.8,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 350,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4720,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 305.71,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4752.6,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 261.43,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4779,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 217.14,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4812,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 172.86,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4857.4,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 128.57,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4871.3,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 84.29,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchmove",
+            "isTrusted": true,
+            "t": 4886.2,
+            "touches": 1,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          },
+          {
+            "type": "touchend",
+            "isTrusted": true,
+            "t": 4904.9,
+            "touches": 0,
+            "changedTouches": 1,
+            "x": 40,
+            "y": 598.35,
+            "candidateName": "실험맛집0296"
+          }
+        ],
+        "touchCadenceMs": {
+          "eventCount": 9,
+          "min": 13.9,
+          "median": 26.4,
+          "max": 45.4
+        },
+        "rAF": {
+          "count": 47,
+          "detailPresentFrames": 47,
+          "detailCounts": [
+            1
+          ],
+          "cadenceMs": {
+            "min": 7.3,
+            "median": 8.3,
+            "p95": 9.4,
+            "max": 41.7
+          },
+          "panelPosition": {
+            "first": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "last": {
+              "x": 0,
+              "y": 434,
+              "width": 390,
+              "height": 410,
+              "right": 390,
+              "bottom": 844
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 434,
+            "maxY": 434,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 410,
+            "maxHeight": 410
+          },
+          "swipeAreaPosition": {
+            "first": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "last": {
+              "x": 0,
+              "y": 514,
+              "width": 390,
+              "height": 241,
+              "right": 390,
+              "bottom": 755
+            },
+            "minX": 0,
+            "maxX": 0,
+            "minY": 514,
+            "maxY": 514,
+            "minWidth": 390,
+            "maxWidth": 390,
+            "minHeight": 241,
+            "maxHeight": 241
+          }
+        },
+        "longTasks": {
+          "count": 1,
+          "totalOverlapMs": 51
+        },
+        "elapsedObservationMs": 438.7,
+        "map": {
+          "identityStable": true,
+          "count": 1,
+          "containerCount": 1,
+          "sdkMarkerCount": 55,
+          "zoom": 14
+        },
+        "detailCount": 1,
+        "horizontalOverflow": 0
+      }
+    ],
+    "final": {
+      "candidateName": "실험맛집0297",
+      "ui": {
+        "mainCount": 1,
+        "horizontalOverflow": 0,
+        "mapContainerCount": 1,
+        "mapCreates": 1,
+        "mapIdentityStable": true,
+        "zoom": 14,
+        "sdkMarkerCount": 55,
+        "clusterCount": 0,
+        "detailCount": 1
+      },
+      "candidateSequence": [
+        "실험맛집0292",
+        "실험맛집0293",
+        "실험맛집0294",
+        "실험맛집0295",
+        "실험맛집0296",
+        "실험맛집0297"
+      ]
+    },
+    "requestSummary": {
+      "count": 90,
+      "completed": 79,
+      "aborted": 0,
+      "search": 0,
+      "maximumFixtureRows": 735
+    },
+    "errors": {
+      "page": 0,
+      "console": 8,
+      "blockedTransport": 8,
+      "unexpectedConsole": 0
+    }
+  },
+  "limitations": [
+    "requestAnimationFrame cannot sample while a main-thread long task is blocking; cadence gaps are bounded observations, not complete frame capture.",
+    "DOM existence and getBoundingClientRect positions do not prove physical pixels or compositor paint.",
+    "The provider and 735 restaurant rows are local deterministic mocks; this is not a live SDK, hosted-data, or field-timing claim.",
+    "A single final screenshot is retained; no tracing filmstrip is collected, avoiding trace overhead in this supplemental correctness flow."
+  ]
+}

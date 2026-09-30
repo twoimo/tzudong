@@ -1,0 +1,1807 @@
+{
+  "contract": {
+    "origin": "http://localhost:3310",
+    "build": "candidate-v5",
+    "fixtureOnly": true,
+    "persistedRequestData": "bounded method-free fixture classification only; no cookies, headers, or bodies",
+    "inputKinds": {
+      "native": "Playwright pointer/keyboard input; cluster trust is asserted with Event.isTrusted",
+      "provider": "panMockMap/zoomMockMap and fixed-center calls against the mocked Naver provider API",
+      "syntheticTouch": "existing swipeDetailPanelLeft helper only"
+    }
+  },
+  "receipt": {
+    "buildId": "5JgbN16naASnTwy693jlR",
+    "sourceTree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+    "patchSha256": "e4af4dc0f6d81e539661810a79c7ac8a370a00281aa9b71e3ab47f17577f616f"
+  },
+  "browser": "151.0.7922.34",
+  "cases": [
+    {
+      "name": "desktop-1440x900-synthetic-735",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "profile": "synthetic-735",
+      "checks": 19,
+      "failures": [
+        {
+          "at": "pan-return.exact-marker-snapshot",
+          "expected": [
+            "00000000-0000-4000-8000-000000000010",
+            "00000000-0000-4000-8000-000000000011",
+            "00000000-0000-4000-8000-000000000012",
+            "00000000-0000-4000-8000-000000000013",
+            "00000000-0000-4000-8000-000000000014",
+            "00000000-0000-4000-8000-000000000015",
+            "00000000-0000-4000-8000-000000000016",
+            "00000000-0000-4000-8000-000000000017",
+            "00000000-0000-4000-8000-000000000018",
+            "00000000-0000-4000-8000-000000000019",
+            "00000000-0000-4000-8000-000000000020",
+            "00000000-0000-4000-8000-000000000050"
+          ],
+          "observed": [
+            "00000000-0000-4000-8000-000000000010",
+            "00000000-0000-4000-8000-000000000010",
+            "00000000-0000-4000-8000-000000000011",
+            "00000000-0000-4000-8000-000000000011",
+            "00000000-0000-4000-8000-000000000012",
+            "00000000-0000-4000-8000-000000000012",
+            "00000000-0000-4000-8000-000000000013",
+            "00000000-0000-4000-8000-000000000013",
+            "00000000-0000-4000-8000-000000000014",
+            "00000000-0000-4000-8000-000000000014",
+            "00000000-0000-4000-8000-000000000015",
+            "00000000-0000-4000-8000-000000000015"
+          ]
+        },
+        {
+          "at": "uncaught-step",
+          "expected": "step completes without an exception",
+          "observed": "waitForFunction: Timeout 12000ms exceeded."
+        }
+      ],
+      "inputs": [
+        {
+          "at": "cluster-click",
+          "kind": "trusted-native-pointer"
+        },
+        {
+          "at": "zoom-pan",
+          "kind": "mocked-provider-api"
+        }
+      ],
+      "observations": {
+        "expandedSdkMarkerCount": 143,
+        "panAwayListBadgeVisible": 1,
+        "panReturnListBadgeVisible": 1,
+        "repeatedUnchangedIdle": {
+          "setMap": 0,
+          "setIcon": 0,
+          "setPosition": 0
+        },
+        "failureSnapshot": {
+          "mainCount": 1,
+          "horizontalOverflow": 0,
+          "mapContainerCount": 1,
+          "mapIdentityStable": true,
+          "mapCreates": 1,
+          "markerCount": 143,
+          "clusterCount": 0,
+          "detailCount": 0,
+          "pathname": "/"
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 1,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 21,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 2,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 21,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 3,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 21,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 4,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 20,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 60
+        },
+        {
+          "sequence": 5,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 20,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 12
+        },
+        {
+          "sequence": 6,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 7,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 8,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 9,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 10,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 20,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 11,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 22,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 12,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 26,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 13,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 30,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 14,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 32,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 15,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 32,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 16,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 33,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 17,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 35,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 18,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 24,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 19,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 20,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 5,
+        "blockedTransport": 5,
+        "unexpectedConsole": 0
+      },
+      "passed": false
+    },
+    {
+      "name": "mobile-390x844-synthetic-735",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "profile": "synthetic-735",
+      "checks": 19,
+      "failures": [
+        {
+          "at": "expanded.mobile-list-order",
+          "expected": [
+            "실험맛집0000",
+            "실험맛집0001",
+            "실험맛집0002",
+            "실험맛집0003",
+            "실험맛집0004",
+            "실험맛집0005",
+            "실험맛집0006",
+            "실험맛집0007",
+            "실험맛집0008",
+            "실험맛집0009",
+            "실험맛집0010",
+            "실험맛집0011"
+          ],
+          "observed": [
+            "실험맛집0292",
+            "실험맛집0293",
+            "실험맛집0294",
+            "실험맛집0295",
+            "실험맛집0296",
+            "실험맛집0297",
+            "실험맛집0298",
+            "실험맛집0299",
+            "실험맛집0300",
+            "실험맛집0301",
+            "실험맛집0302",
+            "실험맛집0332"
+          ]
+        },
+        {
+          "at": "uncaught-step",
+          "expected": "step completes without an exception",
+          "observed": "waitForFunction: Timeout 12000ms exceeded."
+        }
+      ],
+      "inputs": [
+        {
+          "at": "cluster-click",
+          "kind": "trusted-native-pointer"
+        },
+        {
+          "at": "zoom-pan",
+          "kind": "mocked-provider-api"
+        },
+        {
+          "at": "detail-swipe-after-pan-return",
+          "kind": "synthetic-touch-helper"
+        }
+      ],
+      "observations": {
+        "expandedSdkMarkerCount": 55,
+        "mobileListCardCount": 20,
+        "mobileListScroll": {
+          "before": 0,
+          "after": 1379,
+          "max": 1379
+        },
+        "panAwayListBadgeVisible": 0,
+        "panReturnListBadgeVisible": 0,
+        "repeatedUnchangedIdle": {
+          "setMap": 0,
+          "setIcon": 0,
+          "setPosition": 0
+        },
+        "failureSnapshot": {
+          "mainCount": 1,
+          "horizontalOverflow": 0,
+          "mapContainerCount": 1,
+          "mapIdentityStable": true,
+          "mapCreates": 1,
+          "markerCount": 1,
+          "clusterCount": 0,
+          "detailCount": 0,
+          "pathname": "/"
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 1,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 2,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 3,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 4,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 5,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 6,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 7,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 20,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 8,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 20,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 9,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 24,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 10,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 27,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 11,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 29,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 12,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 31,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 13,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 34,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 14,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 35,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 15,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 37,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 16,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 17,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 18,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 19,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 20,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 20,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 21,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 26,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 22,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 26,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 23,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 34,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 24,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 36,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 25,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 41,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 26,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 46,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 27,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 48,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 28,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 49,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 29,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 51,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 735
+        },
+        {
+          "sequence": 30,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 51,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 31,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 32,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 8,
+        "blockedTransport": 8,
+        "unexpectedConsole": 0
+      },
+      "passed": false
+    },
+    {
+      "name": "desktop-1440x900-mock-3",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "profile": "mock-3",
+      "checks": 13,
+      "failures": [
+        {
+          "at": "uncaught-step",
+          "expected": "step completes without an exception",
+          "observed": "waitFor: Error: strict mode violation: locator('[data-testid=\"marker\"][data-restaurant-id=\"00000000-0000-4000-8000-000000000000\"]') resolved to 2 elements:\n    1) <div role=\"button\" data-testid=\"marker\" data-restaurant-id=\"00000000-0000-400"
+        }
+      ],
+      "inputs": [
+        {
+          "at": "search-and-selection",
+          "kind": "trusted-native-keyboard-pointer"
+        },
+        {
+          "at": "search-responses",
+          "kind": "mocked-provider-api"
+        },
+        {
+          "at": "coordinate-refresh",
+          "kind": "local-query-invalidation"
+        }
+      ],
+      "observations": {
+        "reversedSearch": {
+          "oldDurationMs": 282,
+          "newDurationMs": 27
+        },
+        "failureSnapshot": {
+          "mainCount": 1,
+          "horizontalOverflow": 0,
+          "mapContainerCount": 1,
+          "mapIdentityStable": true,
+          "mapCreates": 1,
+          "markerCount": 3,
+          "clusterCount": 0,
+          "detailCount": 1,
+          "pathname": "/"
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 1,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 2,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 3,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 4,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 5,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 6,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 7,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 8,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 0,
+          "durationMs": 282,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 9,
+          "kind": "search",
+          "term": "실험맛집0001",
+          "revision": 0,
+          "durationMs": 27,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 10,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 11,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 12,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 13,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 14,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 15,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 16,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 17,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 18,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 19,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 20,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 21,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 22,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 23,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 22,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 24,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 25,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 26,
+          "kind": "search",
+          "term": "완전빈결과",
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 27,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 28,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 29,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 30,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 31,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 32,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 33,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 34,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 35,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 36,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 37,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 38,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 19,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 39,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 40,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 18,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 41,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 42,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 43,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 6,
+        "blockedTransport": 6,
+        "unexpectedConsole": 0
+      },
+      "passed": false
+    },
+    {
+      "name": "mobile-390x844-mock-3",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "profile": "mock-3",
+      "checks": 24,
+      "failures": [],
+      "inputs": [
+        {
+          "at": "search-and-selection",
+          "kind": "trusted-native-keyboard-pointer"
+        },
+        {
+          "at": "search-responses",
+          "kind": "mocked-provider-api"
+        },
+        {
+          "at": "coordinate-refresh",
+          "kind": "local-query-invalidation"
+        }
+      ],
+      "observations": {
+        "reversedSearch": {
+          "oldDurationMs": 282,
+          "newDurationMs": 26
+        },
+        "coordinateRefresh": {
+          "beforePosition": {
+            "left": 173.85000610351562,
+            "top": 395.1000061035156
+          },
+          "afterPosition": {
+            "left": -66.1500015258789,
+            "top": 400.1000061035156
+          },
+          "deltaPx": 240.05208531089545
+        },
+        "repeatVisitCacheLoadCycles": {
+          "cycles": [
+            {
+              "cycle": 1,
+              "selected": true,
+              "mapCreates": 1,
+              "memory": {
+                "heapBytes": 15655987,
+                "domCount": 262,
+                "mapCreates": 1,
+                "markerCount": 0,
+                "mutationCount": 56
+              }
+            },
+            {
+              "cycle": 2,
+              "selected": true,
+              "mapCreates": 1,
+              "memory": {
+                "heapBytes": 15081486,
+                "domCount": 262,
+                "mapCreates": 1,
+                "markerCount": 0,
+                "mutationCount": 62
+              }
+            }
+          ],
+          "searchRequests": 2,
+          "completedSearchRequests": 2
+        },
+        "consoleClassification": {
+          "strictConsoleZero": false,
+          "blockedTransport": 8,
+          "unexpectedConsole": 0
+        }
+      },
+      "fixtureTrace": [
+        {
+          "sequence": 9,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 10,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 11,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 12,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 13,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 14,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 15,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 16,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 17,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 18,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 19,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 20,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 21,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 22,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 23,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 24,
+          "kind": "search",
+          "term": "실험맛집0001",
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 25,
+          "kind": "search",
+          "term": "완전빈결과",
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 26,
+          "kind": "search",
+          "term": "완전빈결과",
+          "revision": 0,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 27,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 28,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 29,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 0
+        },
+        {
+          "sequence": 30,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 31,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 32,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 33,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 34,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 35,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 36,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 37,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 38,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 39,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 40,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 41,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 17,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 42,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 43,
+          "kind": "catalog",
+          "term": null,
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 44,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 0,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 45,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 46,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 47,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 48,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 49,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 50,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 51,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 52,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 53,
+          "kind": "search",
+          "term": "실험맛집0000",
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 54,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 15,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 3
+        },
+        {
+          "sequence": 55,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        },
+        {
+          "sequence": 56,
+          "kind": "catalog",
+          "term": null,
+          "revision": 1,
+          "durationMs": 16,
+          "completed": true,
+          "aborted": false,
+          "rowCount": 1
+        }
+      ],
+      "runtimeErrors": {
+        "page": 0,
+        "console": 8,
+        "blockedTransport": 8,
+        "unexpectedConsole": 0
+      },
+      "passed": true
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "checks": 75,
+    "failures": 5,
+    "cases": [
+      {
+        "name": "desktop-1440x900-synthetic-735",
+        "passed": false,
+        "checks": 19,
+        "failures": 2
+      },
+      {
+        "name": "mobile-390x844-synthetic-735",
+        "passed": false,
+        "checks": 19,
+        "failures": 2
+      },
+      {
+        "name": "desktop-1440x900-mock-3",
+        "passed": false,
+        "checks": 13,
+        "failures": 1
+      },
+      {
+        "name": "mobile-390x844-mock-3",
+        "passed": true,
+        "checks": 24,
+        "failures": 0
+      }
+    ]
+  }
+}

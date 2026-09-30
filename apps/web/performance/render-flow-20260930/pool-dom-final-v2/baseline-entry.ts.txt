@@ -1,0 +1,3 @@
+import { createIndividualMarkerHTML } from "/Users/twoimo/.codex/worktrees/179f/tzudong/apps/web/lib/cluster-marker.ts";
+import { MarkerPool } from './baseline-pool';
+globalThis.__poolDOMProbe={MarkerPool,createIndividualMarkerHTML};

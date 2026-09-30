@@ -1,0 +1,56 @@
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { chromium } from '@playwright/test';
+import { installMobileHomeMapTestMocks } from '../../tests/mobile-home-map-helpers.ts';
+const here = new URL('./', import.meta.url), app = new URL('../../', here);
+export const origin = 'http://localhost:3310';
+export async function launch(kind='baseline') {
+ const receipt = JSON.parse(await readFile(new URL(`build-${kind}-${kind==='candidate'?(process.env.RENDER_CANDIDATE_BUILD||'v5'):'v1'}/receipt.json`,here)));
+ const server=spawn('/opt/homebrew/opt/node@24/bin/node',[fileURLToPath(new URL(`${receipt.distDir}/standalone/apps/web/server.js`,app))],{cwd:fileURLToPath(app),env:{PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'production',HOSTNAME:'127.0.0.1',PORT:'3310'},stdio:'ignore'});
+ for(let i=0;i<150;i++){if(server.exitCode!==null)throw Error('server stopped');try{if((await fetch(origin)).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+ const browser=await chromium.launch({headless:true});
+ return {server,browser,receipt,close:async()=>{await browser.close();server.kill('SIGTERM');await new Promise(r=>server.once('exit',r));}};
+}
+export function catalog(count) {
+ return Array.from({length:count},(_,i)=>({id:`00000000-0000-4000-8000-${String(i).padStart(12,'0')}`,name:`실험맛집${String(i).padStart(4,'0')}`,approved_name:`실험맛집${String(i).padStart(4,'0')}`,lat:count<=3?37.55+i*0.001:37.5+(i%40)*0.003,lng:count<=3?126.98:126.96+Math.floor(i/40)*0.003,road_address:`서울특별시 중구 실험로 ${i+1}`,jibun_address:`서울특별시 중구 실험동 ${i+1}`,categories:[i%2?'한식':'분식'],status:'approved',created_at:'2026-09-01T00:00:00Z',review_count:0,weekly_search_count:count-i,youtube_link:null,youtube_meta:null}));
+}
+export async function setup(browser,{mobile=false,count=735,cpu=4,delay=120,throttle=false}={}) {
+ const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},hasTouch:true,isMobile:mobile,locale:'ko-KR',deviceScaleFactor:1});
+ await context.routeWebSocket('**/*',s=>s.close());
+ await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort('blockedbyclient'));
+ const page=await context.newPage();
+ await installMobileHomeMapTestMocks(page,{countMapCreations:true});
+ const rows=catalog(count),requests=[];
+ await page.route('**/rest/v1/restaurants**',async r=>{
+  const u=new URL(r.request().url()); let data=rows;
+  if(r.request().method()==='OPTIONS'){await r.fulfill({status:204,headers:{'access-control-allow-origin':origin,'access-control-allow-headers':'*'}});return;}
+  const name=u.searchParams.get('approved_name');
+  if(name){const term=name.replace(/^ilike\.%|%$/g,'').replace(/^eq\./,'');data=data.filter(x=>x.name.includes(term));}
+  const id=u.searchParams.get('id'); if(id)data=data.filter(x=>id.includes(x.id));
+  const category=u.searchParams.get('categories');if(category)data=data.filter(x=>category.includes(x.categories[0]));
+  for(const dim of ['lat','lng'])for(const f of u.searchParams.getAll(dim)){const [op,v]=f.split('.');const val=Number(f.slice(op.length+1));data=data.filter(x=>op==='gte'?x[dim]>=val:op==='lte'?x[dim]<=val:true);}
+  const limit=Number(u.searchParams.get('limit')||data.length),offset=Number(u.searchParams.get('offset')||0);data=data.slice(offset,offset+limit);
+  const event={search:Boolean(name?.startsWith('ilike')),started:Date.now(),rows:data.length,bytes:Buffer.byteLength(JSON.stringify(data)),completed:false};requests.push(event);
+  await new Promise(res=>setTimeout(res,delay));
+  try{await r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data),headers:{'access-control-allow-origin':origin,'access-control-allow-headers':'*'}});event.completed=true;}catch{event.aborted=true;}
+ });
+ await page.route('**/rest/v1/reviews**',r=>r.fulfill({status:200,contentType:'application/json',body:'[]',headers:{'access-control-allow-origin':origin,'access-control-allow-headers':'*'}}));
+ await page.route('**/rest/v1/rpc/read_public_profile_summaries',r=>r.fulfill({status:200,contentType:'application/json',body:'[]',headers:{'access-control-allow-origin':origin,'access-control-allow-headers':'*'}}));
+ const cdp=await context.newCDPSession(page);await cdp.send('Emulation.setCPUThrottlingRate',{rate:cpu});
+ if(throttle){await cdp.send('Network.enable');await cdp.send('Network.emulateNetworkConditions',{offline:false,latency:150,downloadThroughput:200000,uploadThroughput:100000});}
+ await page.addInitScript(()=>{
+  window.__perf={longTasks:[],shifts:[],frames:[],mutations:0};
+  new PerformanceObserver(l=>{for(const e of l.getEntries())window.__perf.longTasks.push({start:e.startTime,duration:e.duration});}).observe({type:'longtask',buffered:true});
+  new PerformanceObserver(l=>{for(const e of l.getEntries())window.__perf.shifts.push({start:e.startTime,value:e.value,recentInput:e.hadRecentInput});}).observe({type:'layout-shift',buffered:true});
+  new PerformanceObserver(l=>{for(const e of l.getEntries())window.__perf.lcp=e.startTime;}).observe({type:'largest-contentful-paint',buffered:true});
+  let previous=0;
+  function frame(t){window.__perf.frames.push({t,gap:previous?t-previous:0,markers:document.querySelectorAll('[data-testid="marker"],.cluster-marker-container').length,detail:document.querySelectorAll('[data-testid="restaurant-detail-panel"]').length});previous=t;requestAnimationFrame(frame);}requestAnimationFrame(frame);
+  document.addEventListener('DOMContentLoaded',()=>new MutationObserver(()=>window.__perf.mutations++).observe(document.body,{childList:true,subtree:true}));
+ });
+ const errors={page:0,console:0};page.on('pageerror',()=>errors.page++);page.on('console',m=>{if(m.type()==='error')errors.console++;});
+ return {page,context,cdp,requests,errors};
+}
+export async function ready(page){await page.goto(origin,{waitUntil:'domcontentloaded'});await page.getByTestId('map-container').waitFor({state:'visible'});await page.waitForFunction(()=>window.__TZUDONG_DEBUG_MAP__&&document.querySelector('[data-testid="marker"],.cluster-marker-container'));await page.waitForTimeout(500);}
+export async function metrics(page){return await page.evaluate(()=>({...window.__perf,fcp:performance.getEntriesByName('first-contentful-paint')[0]?.startTime,now:performance.now(),heap:performance.memory?.usedJSHeapSize,dom:document.querySelectorAll('*').length,maps:window.__viewportMapCreates}));}
+export async function save(label,value){await mkdir(new URL(label+'/',here),{recursive:true});await writeFile(new URL(label+'/raw.json',here),JSON.stringify(value,null,2)+'\n',{flag:'wx'});}

@@ -1,0 +1,25 @@
+{
+  "cause": "Artifact TypeScript entry globalThis injection accidentally entered the application tsconfig glob. Generated snippets are evidence text; no app tsconfig changes. Byte contents preserved, two TS7017 diagnostics confirmed.",
+  "moves": [
+    {
+      "from": "pool-dom-final-v1/candidate-pool.ts",
+      "to": "pool-dom-final-v1/candidate-pool.ts.txt"
+    },
+    {
+      "from": "pool-dom-final-v1/baseline-pool.ts",
+      "to": "pool-dom-final-v1/baseline-pool.ts.txt"
+    },
+    {
+      "from": "pool-dom-final-v1/baseline-entry.ts",
+      "to": "pool-dom-final-v1/baseline-entry.ts.txt"
+    },
+    {
+      "from": "pool-dom-final-v1/candidate-entry.ts",
+      "to": "pool-dom-final-v1/candidate-entry.ts.txt"
+    },
+    {
+      "from": "pool-browser-dom.entry.ts",
+      "to": "pool-browser-dom.entry.ts.txt"
+    }
+  ]
+}

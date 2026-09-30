@@ -1,0 +1,37 @@
+{
+  "candidateBuild": "v7",
+  "inputs": [
+    {
+      "source": "apps/web/tests-unit/marker-pool.test.ts",
+      "retained": "final-verification-inputs/marker-pool.test.ts.txt",
+      "sha256": "2f473935c70ad3e9a991e687d6462f6315fb7e07e80f4badc39ba07d560e572c"
+    },
+    {
+      "source": "apps/web/tests-unit/expanded-cluster-viewport.test.ts",
+      "retained": "final-verification-inputs/expanded-cluster-viewport.test.ts.txt",
+      "sha256": "4f00936eb01ee626cc68bb25f0fd9e911fa7d693f0f3be88dc23da278f6ef20b"
+    },
+    {
+      "source": "apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts",
+      "retained": "final-verification-inputs/expanded-cluster-flow-invariants.test.ts.txt",
+      "sha256": "38b96db2925e75ebc5a92504ce3dec6b5188b7db0c6622aecd22e674140fd552"
+    },
+    {
+      "source": "apps/web/tests/mobile-home-map-helpers.ts",
+      "retained": "final-verification-inputs/mobile-home-map-helpers.ts.txt",
+      "sha256": "e8398491f4d45b860165646a785f01694b6f6262f4f4f25554b555bff38fd0de"
+    }
+  ],
+  "checks": {
+    "unit": "unit-tests-v7.log",
+    "parity": "typecheck-parity-v7-v2.log",
+    "eslint": "eslint-v7.log",
+    "productionBuild": "build-candidate-v7/receipt.json",
+    "routeCss": "css-boundaries-v7-v2.log"
+  },
+  "priorFailuresRetained": {
+    "parity": "typecheck-parity-v7.log (generated evidence TS entry included accidentally; fixed to text, no app config edit)",
+    "css": "css-boundaries-v7.log (incorrect guessed module name; corrected to existing verify-route-css-boundaries.mjs)"
+  },
+  "scope": "Final tests plus unchanged repository-owned mock SDK/helper. The helper fixture endpoints and public synthetic tests are source, not captured service responses."
+}

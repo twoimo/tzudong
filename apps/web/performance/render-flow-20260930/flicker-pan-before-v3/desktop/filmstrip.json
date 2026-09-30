@@ -1,0 +1,36 @@
+{
+  "scope": "CDP diagnostic filmstrip. Adaptive screenshots, no continuous video; trace instrumentation and mock SDK. Black gaps between captured frames are unobserved.",
+  "frames": [
+    {
+      "index": 0,
+      "relativeMs": 3.205,
+      "path": "frames/000.jpg"
+    },
+    {
+      "index": 1,
+      "relativeMs": 45.934,
+      "path": "frames/001.jpg"
+    },
+    {
+      "index": 2,
+      "relativeMs": 216.344,
+      "path": "frames/002.jpg"
+    },
+    {
+      "index": 3,
+      "relativeMs": 545.257,
+      "path": "frames/003.jpg"
+    },
+    {
+      "index": 4,
+      "relativeMs": 564.826,
+      "path": "frames/004.jpg"
+    }
+  ],
+  "gapsMs": [
+    42.729,
+    170.41,
+    328.91299999999995,
+    19.569000000000074
+  ]
+}

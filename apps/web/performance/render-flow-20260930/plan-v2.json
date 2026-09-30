@@ -1,0 +1,66 @@
+{
+  "frozenBeforeCandidateBuild": true,
+  "baselineCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+  "baselineAA": {
+    "desktop": {
+      "n": 6,
+      "medianMs": 2593.5499999523163,
+      "madMs": 546.0000001192093,
+      "noiseMs": 1092.0000002384186,
+      "AAvsAAmedianDifferenceMs": 242.2999997138977
+    },
+    "mobile": {
+      "n": 6,
+      "medianMs": 2109.399999856949,
+      "madMs": 442.2999999523163,
+      "noiseMs": 884.5999999046326,
+      "AAvsAAmedianDifferenceMs": 308.40000009536743
+    }
+  },
+  "primary": "native cluster click to first rAF observing an individual marker rectangle in the map viewport",
+  "budgets": {
+    "absoluteMs": 50,
+    "relativeFraction": 0.1,
+    "noiseMultiplier": 2,
+    "admission": "paired bootstrap median reduction 95% CI lower bound > 0, reduction > max(50ms,10% baseline median,2*maxMAD,A/A absolute median difference)",
+    "regressionMs": 50,
+    "regressionRelativeFraction": 0.1,
+    "memoryRegressionFraction": 0.2
+  },
+  "pairsPerPrimaryCell": 31,
+  "warmupPairs": 2,
+  "cells": [
+    {
+      "mobile": false,
+      "count": 735,
+      "cpu": 4
+    },
+    {
+      "mobile": true,
+      "count": 735,
+      "cpu": 4
+    }
+  ],
+  "secondaryCells": [
+    {
+      "mobile": false,
+      "count": 3,
+      "cpu": 1
+    },
+    {
+      "mobile": false,
+      "count": 2000,
+      "cpu": 4
+    },
+    {
+      "mobile": true,
+      "count": 735,
+      "cpu": 1,
+      "throttle": true
+    }
+  ],
+  "scope": "laboratory production route, simulated SDK and synthetic fixtures. No field metric or live SDK timing claim.",
+  "initialPlan": "plan.json",
+  "dataset": "Synthetic catalog centered on the clicked Seoul regional center. id/name/address unique; latitude grid37.5+0.003(i%40), longitude126.96+0.003floor(i/40).",
+  "rejectedTrial": "paired-v1 no first visible marker; original fixture outside target viewport. Thresholds unchanged."
+}
