@@ -19,6 +19,7 @@ import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } fr
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
 import { isPublicRestrictedMode } from '@/lib/site-config';
+import { WebVitals } from '@/lib/web-vitals';
 import {
     APP_HEADER_HEIGHT_VAR,
     MOBILE_SHEET_HEADER_OFFSET_VAR,
@@ -358,6 +359,7 @@ function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
 export function HomeRuntimeShell({ children }: { children: ReactNode }) {
     return (
         <QueryProvider>
+            <WebVitals />
             <HomeSessionProviders>
                 <LayoutProvider>
                     <HomeLayoutContent>{children}</HomeLayoutContent>

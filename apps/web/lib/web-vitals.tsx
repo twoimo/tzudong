@@ -21,8 +21,10 @@ export function WebVitals() {
             search: location.search,
             webdriver: navigator.webdriver,
         });
-        if (process.env.NODE_ENV === 'production' && (!collect || productionCollectorRegistered)) return;
-        if (collect) productionCollectorRegistered = true;
+        if (process.env.NODE_ENV === 'production' && productionCollectorRegistered) return;
+        if (process.env.NODE_ENV === 'production') productionCollectorRegistered = true;
+        // QA suppresses delivery, not observer overhead, so lab measurements
+        // retain the same Web Vitals observer work as eligible production visits.
         const device = matchMedia('(max-width: 767px)').matches ? 'mobile' : 'desktop';
         // At most three identifiers in memory; no identifier is sent or stored.
         const lastSentId = new Map<string, string>();
