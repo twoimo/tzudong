@@ -146,6 +146,8 @@ const nextConfig = {
         remotePatterns: buildImageRemotePatterns(),
     },
     env: {
+        NEXT_PUBLIC_TZUDONG_FIELD_RELEASE: /^[a-f0-9]{40}$/.test(process.env.VERCEL_GIT_COMMIT_SHA ?? '')
+            ? process.env.VERCEL_GIT_COMMIT_SHA : '',
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
