@@ -9,7 +9,7 @@ import {
     getDevAdminBypassCookieFromHeader,
     validateDevAdminBypassCookie,
 } from '@/lib/auth/dev-admin-bypass-cookie'
-import { classifyPublicEligibilitySessionRoute } from '@/lib/auth/public-eligibility-session'
+import { classifyPublicEligibilitySessionRoute, isCredentiallessFieldVitalsPost } from '@/lib/auth/public-eligibility-session'
 import { isHomePrivacyOnboardingRequest } from '@/lib/auth/auth-redirect'
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation'
 import { resolveConfiguredSupabaseOrigin } from '@/lib/profile-avatar-url'
@@ -180,6 +180,10 @@ function isTrustedProxyMutation(request: NextRequest) {
 async function shouldSkipSession(request: NextRequest) {
     const { pathname } = request.nextUrl
     const method = request.method
+    if (isCredentiallessFieldVitalsPost({ pathname, method,
+        hasCookie: Boolean(request.headers.get('cookie')?.trim()),
+        hasAuthorization: Boolean(request.headers.get('authorization')?.trim()),
+    })) return true
     const routeClass = classifyPublicEligibilitySessionRoute({ pathname, method })
     const hasSessionHint = hasSupabaseAuthCookieSessionHint(request.headers.get('cookie') ?? undefined)
     if (
