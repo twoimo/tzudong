@@ -3,6 +3,9 @@
 import { useEffect } from 'react';
 import { onCLS, onFCP, onLCP, onINP, type Metric } from 'web-vitals';
 import { debugLog } from '@/lib/debug-log';
+import { fieldVitalBucket, shouldCollectFieldVitals, FIELD_VITAL_NAMES, FIELD_NAVIGATIONS, type FieldVitalName, type FieldNavigation } from '@/lib/performance/field-vitals';
+
+let productionCollectorRegistered = false;
 
 /**
  * Web Vitals 측정 및 로깅
@@ -10,6 +13,19 @@ import { debugLog } from '@/lib/debug-log';
  */
 export function WebVitals() {
     useEffect(() => {
+        const release = process.env.NEXT_PUBLIC_TZUDONG_FIELD_RELEASE ?? '';
+        const collect = /^[a-f0-9]{40}$/.test(release) && shouldCollectFieldVitals({
+            production: process.env.NODE_ENV === 'production',
+            hostname: location.hostname,
+            pathname: location.pathname,
+            search: location.search,
+            webdriver: navigator.webdriver,
+        });
+        if (process.env.NODE_ENV === 'production' && (!collect || productionCollectorRegistered)) return;
+        if (collect) productionCollectorRegistered = true;
+        const device = matchMedia('(max-width: 767px)').matches ? 'mobile' : 'desktop';
+        // At most three identifiers in memory; no identifier is sent or stored.
+        const lastSentId = new Map<string, string>();
         const handleMetric = (metric: Metric) => {
             // 개발 환경에서 콘솔 출력
             if (process.env.NODE_ENV === 'development') {
@@ -20,11 +36,30 @@ export function WebVitals() {
                 });
             }
 
-            // 프로덕션 환경에서는 분석 서비스로 전송
-            // 예: Google Analytics, Vercel Analytics 등
-            if (process.env.NODE_ENV === 'production') {
-                // 여기에 분석 서비스 전송 코드 추가
-                // sendToAnalytics(metric);
+            if (collect && FIELD_VITAL_NAMES.includes(metric.name as FieldVitalName)) {
+                if (lastSentId.get(metric.name) === metric.id) return;
+                const name = metric.name as FieldVitalName;
+                const bucket = fieldVitalBucket(name, metric.value);
+                const navigation = metric.navigationType as FieldNavigation;
+                if (bucket === null || !FIELD_NAVIGATIONS.includes(navigation)) return;
+                lastSentId.set(metric.name, metric.id);
+                // Anonymous daily histogram only. Never include Metric entries,
+                // URL, identity, cookies, location or the raw metric object.
+                void fetch('/api/performance/web-vitals', {
+                    method: 'POST',
+                    credentials: 'omit',
+                    referrerPolicy: 'no-referrer',
+                    keepalive: true,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        version: 1,
+                        device,
+                        metric: name,
+                        navigation,
+                        bucket,
+                        release,
+                    }),
+                }).catch(() => undefined);
             }
         };
 
