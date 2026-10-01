@@ -26,6 +26,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from utils.jsonl_utils import load_last_jsonl_record
+from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -183,37 +184,41 @@ def main():
         selection_file = selection_dir / f"{video_id}.jsonl"
         not_selection_file = not_selection_dir / f"{video_id}.jsonl"
 
-        # 중복 검사: 이미 처리됨. --video-id 지정 시 재작성.
-        if not requested and (selection_file.exists() or not_selection_file.exists()):
-            stats["skipped"] += 1
-            if stats["skipped"] % 50 == 1:
-                print(f"이미 처리됨 (스킵 {stats['skipped']}개)")
-            continue
-
-        # 처리
-        result = create_evaluation_targets(video_id, crawling_path, channel)
-
-        if result is None:
-            continue
-
-        data = result["data"]
-
-        if result["is_not_selected"]:
-            # notSelection에 저장
-            with open(not_selection_file, "w", encoding="utf-8") as f:
-                f.write(json.dumps(data, ensure_ascii=False) + "\n")
-            stats["not_selection"] += 1
-        else:
-            # selection에 저장
-            with open(selection_file, "w", encoding="utf-8") as f:
-                f.write(json.dumps(data, ensure_ascii=False) + "\n")
-            stats["selection"] += 1
-
-            # address가 null인 것도 notSelection에 복사 (기존 로직)
-            if result["has_null_address"]:
-                with open(not_selection_file, "w", encoding="utf-8") as f:
-                    f.write(json.dumps(data, ensure_ascii=False) + "\n")
-                stats["address_null"] += 1
+        inputs = [p for p in [crawling_dir / f"{video_id}.jsonl",
+                               visual_dir / f"{video_id}.jsonl"] if p.is_file()]
+        receipt = selection_dir / ".receipts" / f"{video_id}.json"
+        input_hash = fingerprint(inputs, assets=[Path(__file__)], settings=channel)
+        with stage_lock(receipt):
+            existing_outputs = [p for p in [selection_file, not_selection_file] if p.is_file()]
+            if not requested and reusable(receipt, input_hash, existing_outputs):
+                stats["skipped"] += 1
+                continue
+            result = create_evaluation_targets(video_id, crawling_path, channel)
+            if result is None:
+                continue
+            data = result["data"]
+            encoded = (json.dumps(data, ensure_ascii=False) + "\n").encode()
+            outputs = []
+            if result["is_not_selected"]:
+                outputs.append(not_selection_file)
+                stats["not_selection"] += 1
+            else:
+                outputs.append(selection_file)
+                stats["selection"] += 1
+                if result["has_null_address"]:
+                    outputs.append(not_selection_file)
+                    stats["address_null"] += 1
+            for output in outputs:
+                atomic_write(output, encoded)
+            # Preserve superseded stage artifacts outside the active input glob.
+            for old in existing_outputs:
+                if old not in outputs:
+                    archive = old.parent / ".superseded" / (old.name + "." + input_hash)
+                    archive.parent.mkdir(parents=True, exist_ok=True)
+                    old.replace(archive)
+            if input_hash != fingerprint(inputs, assets=[Path(__file__)], settings=channel):
+                raise RuntimeError("stage_input_changed")
+            complete(receipt, input_hash, outputs)
 
         stats["processed"] += 1
         if stats["processed"] % 10 == 0:

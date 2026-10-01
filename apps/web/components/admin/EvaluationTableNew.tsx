@@ -70,6 +70,7 @@ interface EvaluationTableProps {
   onFilterChange: (key: string, value: string) => void;
   onResetFilters: () => void;
   onLoadMore?: () => void;
+  onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
   hasMore?: boolean;
   isLoadingMore?: boolean;
 }
@@ -582,6 +583,7 @@ export function EvaluationTable({
   onFilterChange,
   onResetFilters,
   onLoadMore,
+  onRequestDetails,
   hasMore = false,
   isLoadingMore = false,
 }: EvaluationTableProps) {
@@ -611,9 +613,14 @@ export function EvaluationTable({
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+  const expansionEpoch = useRef(0);
+  const toggleExpand = useCallback(async (id: string) => {
+    const epoch = ++expansionEpoch.current;
+    if (expandedId === id) { setExpandedId(null); return; }
+    const record = records.find(row => row.id === id);
+    if (record && onRequestDetails && !(await onRequestDetails(record))) return;
+    if (epoch === expansionEpoch.current) setExpandedId(id);
+  }, [expandedId, records, onRequestDetails]);
 
   // 키보드 네비게이션 핸들러
   useEffect(() => {
@@ -639,7 +646,7 @@ export function EvaluationTable({
 
         if (nextIndex !== -1) {
           const nextRecord = records[nextIndex];
-          setExpandedId(nextRecord.id);
+          void toggleExpand(nextRecord.id);
 
           // 스크롤 이동
           const rowElement = rowRefs.current[nextRecord.id];
@@ -681,7 +688,7 @@ export function EvaluationTable({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [records, expandedId]);
+  }, [records, expandedId, toggleExpand]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)');

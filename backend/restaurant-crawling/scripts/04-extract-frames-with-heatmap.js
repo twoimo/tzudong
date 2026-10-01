@@ -1,3 +1,4 @@
+import { mediaPool, boundedLimit } from '../../utils/resource-budget.mjs';
 /**
  * 유튜브 히트맵 기반 고화질 프레임 추출 및 자동 수집기
  *
@@ -1717,6 +1718,17 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
         return cachedVideoPath;
     }
 
+    const sharedRoot = process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;
+    if (sharedRoot && fs.existsSync(sharedRoot) && path.resolve(sharedRoot) !== path.resolve(cacheDirectory)) {
+        const sharedDirectory = requireExistingDirectory(sharedRoot);
+        const candidates = fs.readdirSync(sharedDirectory).filter(name => name.startsWith(videoId));
+        const shared = await pickUsableLocalVideoCandidate(videoId, candidates, sharedDirectory, 'SharedCache', validateMediaPath);
+        if (shared) {
+            copyDownloadedVideoToCache(shared, sharedDirectory, cacheDirectory);
+            return resolveContainedPath(cacheDirectory, path.basename(shared));
+        }
+    }
+
     // [추가] GDrive 우선 검색 및 다운로드 로직
     if (safeGDriveRemotePath) {
         // RClone Config 설정 시도 (없으면 로컬 설정 사용)
@@ -1824,7 +1836,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
     const encodingArgs = getFrameEncodingArgs(safeExt);
 
     // [최적화] Promise.all을 사용하여 모든 구간을 병렬로 처리 (CPU 활용 극대화)
-    const results = await Promise.all(safeSegments.map(async (seg, i) => {
+    const results = await Promise.all(safeSegments.map((seg, i) => mediaPool.run(async () => {
         // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
         const startTime = Math.max(0, seg.startSec - safeBufferSec);
         const endTime = Math.min(duration || 99999, seg.endSec + safeBufferSec);
@@ -1897,7 +1909,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
             logOperationError('error', 'FRAME_SEGMENT_EXTRACTION_FAILED', e);
             return { failed: true, frameCount: 0 };
         }
-    }));
+    })));
 
     return {
         totalSegments: results.length,
@@ -2322,7 +2334,7 @@ async function processBatch(params, dependencies = {}) {
     
     // 명시적 환경변수가 있으면 최우선 적용
     if (process.env.MAX_JOBS) {
-        CONCURRENCY = parseInt(process.env.MAX_JOBS, 10) || CONCURRENCY;
+        CONCURRENCY = boundedLimit(process.env.PIPELINE_NETWORK_JOBS || process.env.MAX_JOBS, CONCURRENCY, CONCURRENCY);
     }
     
     log('info', 'FRAME_CONCURRENCY_CONFIGURED');

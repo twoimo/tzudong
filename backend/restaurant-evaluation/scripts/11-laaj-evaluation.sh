@@ -432,6 +432,9 @@ PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
 # ================================
 # Gemini Health Check (Pre-flight)
 # ================================
+HEALTH_CHECK_DONE=false
+ensure_health_check() {
+    if [ "$HEALTH_CHECK_DONE" = true ] || [ "${LAAJ_SKIP_HEALTH_CHECK:-0}" = "1" ]; then return 0; fi
 log_info "Gemini Health Check (1+1=?) 수행 중..."
 HEALTH_CHECK_PROMPT="$TEMP_DIR/health_check_prompt.txt"
 HEALTH_CHECK_RESPONSE="$TEMP_DIR/health_check_response.json"
@@ -533,17 +536,24 @@ fi
 
 rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
 
+    HEALTH_CHECK_DONE=true
+}
+
 # ================================
 # 처리할 video_id 수집
 # ================================
-mapfile -t VIDEO_IDS < <(
-    find "$RULE_RESULTS_DIR" -maxdepth 1 -type f -name "*.jsonl" -exec basename {} \; \
-        | sed 's/\.jsonl$//' \
-        | sort
-)
 if [ -n "$VIDEO_ID_FILTER" ]; then
     VIDEO_IDS=("$VIDEO_ID_FILTER")
-    log_info "video-id filter: $VIDEO_ID_FILTER"
+else
+SCAN_CACHE_ARGS=(--receipt "$LAAJ_RESULTS_DIR/.receipts/{id}.json"
+    --input "$RULE_RESULTS_DIR/{id}.jsonl" --input "$TRANSCRIPT_DIR/{id}.jsonl"
+    --metadata "$META_DIR/{id}.jsonl" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
+    --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
+    --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
+    --setting "$AGY_MODEL_LABEL" --output "$LAAJ_RESULTS_DIR/{id}.jsonl")
+PENDING_IDS=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" scan --scan-dir "$RULE_RESULTS_DIR" "${SCAN_CACHE_ARGS[@]}") || exit 1
+VIDEO_IDS=()
+if [ -n "$PENDING_IDS" ]; then mapfile -t VIDEO_IDS <<< "$PENDING_IDS"; fi
 fi
 
 TOTAL=${#VIDEO_IDS[@]}
@@ -561,6 +571,23 @@ TOTAL_GEMINI_TIME=0
 
 
 
+if [ "${LAAJ_CHILD:-0}" != "1" ] && [ "$FORCE_CLI_FALLBACK" = false ]; then
+    LAAJ_JOBS="${GEMINI_MAX_INFLIGHT:-1}"
+    if ! [[ "$LAAJ_JOBS" =~ ^[1-8]$ ]]; then log_error "LAAJ_JOBS_INVALID"; exit 1; fi
+    if [ "$LAAJ_JOBS" -gt 1 ] && [ "$TOTAL" -gt 0 ]; then
+        PARALLEL_ARGS=(--jobs "$LAAJ_JOBS" --channel "$CHANNEL" --crawling-path "$FULL_CRAWLING_PATH"
+            --evaluation-path "$FULL_EVALUATION_PATH" --script "$SCRIPT_DIR/11-laaj-evaluation.sh")
+        if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then PARALLEL_ARGS+=(--max-items "${LIVE_MAX_NEW_ITEMS:-1}"); fi
+        ELIGIBLE_COUNT=$(printf '%s\n' "${VIDEO_IDS[@]}" | "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" eligible-count "${PARALLEL_ARGS[@]}") || exit 1
+        if [ "$ELIGIBLE_COUNT" -gt 0 ]; then ensure_health_check; fi
+        # OAuth/browser fallbacks stay sequential unless the Node API preflight succeeds.
+        if [ "$FORCE_CLI_FALLBACK" = false ]; then
+            printf '%s\n' "${VIDEO_IDS[@]}" | "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" run "${PARALLEL_ARGS[@]}"
+            exit $?
+        fi
+    fi
+fi
+
 # ================================
 # 메인 루프 (Main Loop)
 # ================================
@@ -573,8 +600,15 @@ for i in "${!VIDEO_IDS[@]}"; do
     ERROR_FILE="$ERRORS_DIR/${VIDEO_ID}.jsonl"
     TRANSCRIPT_FILE="$TRANSCRIPT_DIR/${VIDEO_ID}.jsonl"
     
-    # 이미 처리된 파일 스킵
-    if [ -f "$OUTPUT_FILE" ]; then
+    META_FILE="$META_DIR/${VIDEO_ID}.jsonl"
+    RECEIPT_FILE="$LAAJ_RESULTS_DIR/.receipts/${VIDEO_ID}.json"
+    CACHE_ARGS=(--receipt "$RECEIPT_FILE" --input "$RULE_FILE" --input "$TRANSCRIPT_FILE"
+        --metadata "$META_FILE" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
+        --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
+        --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
+        --setting "$AGY_MODEL_LABEL" --output "$OUTPUT_FILE")
+    # Existing output alone cannot certify the current inputs/model/prompt.
+    if "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" check "${CACHE_ARGS[@]}"; then
         SKIPPED_EXISTS=$((SKIPPED_EXISTS + 1))
         if [ $((SKIPPED_EXISTS % 50)) -eq 1 ]; then
             log_warning "[$INDEX/$TOTAL] 이미 처리됨 (누적 스킵 ${SKIPPED_EXISTS}개)"
@@ -591,6 +625,8 @@ for i in "${!VIDEO_IDS[@]}"; do
         fi
     fi
     
+    INPUT_HASH=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" fingerprint "${CACHE_ARGS[@]}") || INPUT_HASH=""
+
     # 재시도 로직
     if [ -f "$ERROR_FILE" ]; then
         rm "$ERROR_FILE"
@@ -676,6 +712,8 @@ for i in "${!VIDEO_IDS[@]}"; do
         continue
     fi
     
+    ensure_health_check
+
     log_info "[$INDEX/$TOTAL] 평가 진행: $VIDEO_ID (${RESTAURANT_COUNT}개 음식점)"
     
     # ---------------------------
@@ -809,6 +847,7 @@ $TRANSCRIPT
                 --rule-file "$win_rule_file"; then
                 
                 SUCCESS=$((SUCCESS + 1))
+                "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" complete "${CACHE_ARGS[@]}" --expected "$INPUT_HASH" || { log_error "STAGE_RECEIPT_FAILED"; exit 1; }
                 PARSE_SUCCESS=true
                 log_success "완료 [$INDEX/$TOTAL] - ${GEMINI_DURATION}s"
                 break
@@ -881,7 +920,8 @@ $TRANSCRIPT
     
     PROCESSED=$((PROCESSED + 1))
     rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
-    sleep 2 # Rate Limit
+    # Node calls have project admission; keep the historical CLI fallback pace.
+    if [ "$LAST_SUCCESS_PROVIDER" != "node" ]; then sleep 2; fi
 done
 
 log_info "============================================================"
@@ -889,3 +929,5 @@ log_info "LAAJ 평가 완료: $CHANNEL"
 log_info "성공: $SUCCESS / 실패: $FAILED / 스킵: $SKIPPED_EXISTS / rule 미대상: $SKIPPED_NO_RULE / 자막 없음: $SKIPPED_NO_TRANSCRIPT"
 log_info "Gemini 호출: $GEMINI_CALLS회 ($(format_duration $TOTAL_GEMINI_TIME))"
 log_info "============================================================"
+
+if [ "$FAILED" -gt 0 ]; then exit 1; fi

@@ -41,7 +41,7 @@ describe("mobile and desktop parity source contracts", () => {
   });
 
   test("admin evaluation metric parsers accept LAAJ objects without name", () => {
-    const pageSource = source("app/admin/evaluations/page.tsx");
+    const pageSource = source("app/admin/evaluations/page.tsx") + source("lib/admin/normalize-evaluation-record.ts");
     const numeric = pageSource.split("function parseNumericEvaluationMetric")[1] ?? "";
     expect(numeric).toContain("typeof value.eval_value !== 'number'");
     expect(numeric.slice(0, 350)).not.toContain("typeof value.name !== 'string'");

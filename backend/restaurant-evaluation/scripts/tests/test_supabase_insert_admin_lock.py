@@ -322,6 +322,18 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual(["고기", "찜·탕"], record["categories"])
 
+    def test_identical_rows_do_not_write_but_still_validate_review_snapshot(self):
+        existing = self.make_cas_existing()
+        stats = {"inserted":0}
+        with mock.patch.object(supabase_insert, "_run_restaurant_batch") as write:
+            supabase_insert.execute_upsert_rows(object(),[deepcopy(existing)],False,stats,{existing["trace_id"]:existing})
+        write.assert_not_called()
+        self.assertEqual(0,stats["inserted"])
+        self.assertEqual(1,stats["unchanged"])
+        incomplete = deepcopy(existing);incomplete.pop("updated_by_admin_id")
+        with self.assertRaisesRegex(RuntimeError,"conditional_write_failed"):
+            supabase_insert.execute_upsert_rows(object(),[deepcopy(existing)],False,{"inserted":0},{existing["trace_id"]:incomplete})
+
     def test_build_record_flattens_nested_categories_field(self):
         incoming = self.make_incoming(categories=[["고기", "한식"], "한식"])
 

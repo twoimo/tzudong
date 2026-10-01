@@ -133,6 +133,16 @@ export type EvaluationRecordStatus =
 
 // restaurants 테이블 구조에 맞춘 EvaluationRecord
 export interface EvaluationRecord {
+  // Transient API projection; never a database column or approval authority.
+  read_summary?: {
+    address_consistency: 'true' | 'false' | 'failed' | 'review' | 'candidate' | 'not_applicable' | 'unknown';
+    evaluation_issues: Array<{
+      key: 'visit_authenticity' | 'rb_inference_score' | 'rb_grounding_TF' | 'review_faithfulness_score' | 'category_validity_TF' | 'category_TF';
+      label: string;
+      missingValue: boolean;
+      missingBasis: boolean;
+    }>;
+  };
   id: string;
   name: string; // restaurant_name 대신 name
   phone: string | null;

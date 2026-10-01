@@ -1,3 +1,4 @@
+import { withProjectBudget, retryAfterSeconds } from '../../utils/provider-budget.mjs';
 /**
  * Gemini File API를 사용한 청크 비디오 멀티모달 분석
  * (@google/genai — 헬스체크/런타임과 동일한 SDK)
@@ -157,7 +158,7 @@ async function generateChunkContent(ai, modelName, promptText, processedFile, mi
             thinkingConfig: { thinkingLevel },
         };
     }
-    return fetchWithTimeout(() => ai.models.generateContent(request), GENERATE_TIMEOUT_MS);
+    return withProjectBudget(() => fetchWithTimeout(() => ai.models.generateContent(request), GENERATE_TIMEOUT_MS));
 }
 
 
@@ -349,7 +350,7 @@ async function main() {
             console.warn('GEMINI_CHUNK_TRANSIENT_RETRY');
         }
 
-        const waitSec = 30 * (retry + 1);
+        const waitSec = retryAfterSeconds(lastError) ?? 30 * (retry + 1);
         console.log(`GEMINI_CHUNK_RETRY_DELAY seconds=${waitSec}`);
         await new Promise(r => setTimeout(r, waitSec * 1000));
     }

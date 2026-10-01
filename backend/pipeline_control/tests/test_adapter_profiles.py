@@ -58,7 +58,7 @@ class GraphContractTests(unittest.TestCase):
         self.assertNotIn("--channel", argv)
         self.assertIn("--max-videos", argv)
         frames = build_argv(STEP_BY_ID["04-frames"], target="tzuyang")
-        self.assertIn("--delete-cache", frames)
+        self.assertNotIn("--delete-cache", frames)
         self.assertTrue(any(part.endswith("04-extract-frames-with-heatmap.js") for part in frames))
         self.assertEqual(
             STEP_BY_ID["03-2-visual"].script,

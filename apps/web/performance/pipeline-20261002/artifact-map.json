@@ -1,0 +1,17 @@
+{
+  "kind": "local_experimental_artifact_map",
+  "liveEvidenceEligible": false,
+  "artifacts": {
+    "apps/web/performance/pipeline-20261002/admin-api-raw.json": "fa67d7d6ae26d657129a3191bff0177b248d8f2ef34482a8572f84e6b8532803",
+    "apps/web/performance/pipeline-20261002/admin-browser-raw.json": "469bde975f6abcb57b96afa3ceeed59d51e19a7fe2da88555be27f2e59dafe85",
+    "apps/web/performance/pipeline-20261002/admin-desktop-fixture.png": "e856246e99b915debfed8ddf5b17fd45a3c50d1caf7dd16dcadc42728ca94213",
+    "apps/web/performance/pipeline-20261002/admin-mobile-fixture.png": "4039df00679cce1ce700098e2cff0d3371bc9d4cabf5b3c4211f2abf6a17fe3d",
+    "apps/web/performance/pipeline-20261002/provider-read-raw.json": "61c69cdc8272afdabbef334884245c47e618e228607e897677cff14405844710",
+    "apps/web/performance/pipeline-20261002/sql-verification.json": "504328027dc71d584862f9eff5e013bb1aa5e38738510f83bf43c5709994ae54",
+    "apps/web/performance/pipeline-20261002/summary.json": "668664a7657c07110909d041e8da8a6a5465ee4222c4998fb8eb76d61333adfa",
+    "apps/web/performance/pipeline-20261002/transform-final-raw.json": "177d5b8b5ea03e8f6fb5e8ee6b0c26d19a7f4bdf289b08eb6bb591fdf1a0fcdc",
+    "apps/web/performance/pipeline-20261002/transform-intermediate-v2.json": "48dcdc70b028cc4708be57981e77efd47d69069d2b618b244a7617dcbd98cfd7",
+    "apps/web/performance/pipeline-20261002/transform-raw.json": "3153e24e4a682599126b0e0c89ce1183f5e20b07af092b7fe883153e20cda190",
+    "apps/web/performance/pipeline-20261002/transform-rejected-v1.json": "48b3f8a0a5a1edae8aa7b71c3d78e77c4cb2b5d5cf0d10ee21a7c9f21192075c"
+  }
+}

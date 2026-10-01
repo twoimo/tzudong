@@ -1,4 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 
 export interface SameVideoDuplicateWarningRow {
@@ -164,6 +163,7 @@ export async function fetchSameVideoDuplicateWarningCandidates(
   const targetVideoId = extractVideoIdFromYoutubeLink(target.youtube_link || '');
   if (!targetVideoId) return [];
 
+  const { supabase } = await import('@/integrations/supabase/client');
   const { data, error } = await supabase
     .from('restaurants')
     .select('id, approved_name, origin_name, naver_name, google_name, phone, status, road_address, jibun_address, youtube_link, updated_by_admin_id, lat, lng')

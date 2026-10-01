@@ -29,6 +29,7 @@ SPLIT_VIDEO="$SCRIPT_DIR/split_video_chunks.mjs"
 GEMINI_CHUNK_API="$SCRIPT_DIR/gemini_chunk_video_request.mjs"
 MERGE_RESULTS="$SCRIPT_DIR/merge_chunk_results.py"
 RUNTIME_DATA_DIR="$PROJECT_ROOT/restaurant-crawling/data"
+export VIDEO_CACHE_DIR="${VIDEO_CACHE_DIR:-$RUNTIME_DATA_DIR/video_cache}"
 
 echo "[$(date '+%H:%M:%S')] [INFO] SCRIPT_DIR: $SCRIPT_DIR"
 echo "[$(date '+%H:%M:%S')] [INFO] PROJECT_ROOT: $PROJECT_ROOT"
@@ -427,6 +428,10 @@ download_video() {
     local cache_dirs=("$output_dir")
     if [ -n "$VIDEO_CACHE_DIR" ] && [ -d "$VIDEO_CACHE_DIR" ]; then
         cache_dirs=("$VIDEO_CACHE_DIR" "${cache_dirs[@]}")
+    fi
+
+    if [ -n "${PIPELINE_SHARED_VIDEO_CACHE_DIR:-}" ] && [ -d "$PIPELINE_SHARED_VIDEO_CACHE_DIR" ]; then
+        cache_dirs+=("$PIPELINE_SHARED_VIDEO_CACHE_DIR")
     fi
 
     for cache_dir in "${cache_dirs[@]}"; do
@@ -943,8 +948,19 @@ process_channel() {
             return 0
         fi
         local win_parser=$(maybe_normalize "$local_python" "$PARSER_SCRIPT")
-        mapfile -t urls < <("$local_python" "$win_parser" scan --channel "$channel" | tr -d '\r')
+        mapfile -t urls < <("$local_python" "$win_parser" scan --channel "$channel" --ignore-completed | tr -d '\r')
     fi
+
+    local scan_args=(--receipt "$crawling_dir/.receipts/{id}.json"
+        --input "$transcript_dir/{id}.jsonl" --metadata "$meta_dir/{id}.jsonl"
+        --asset "$PROMPT_FILE" --asset "$CHUNK_PLANNER" --asset "$MERGE_RESULTS"
+        --asset "$PARSER_SCRIPT" --asset "$GEMINI_CHUNK_API"
+        --asset "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh"
+        --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"
+        --setting "$GEMINI_CHUNK_THINKING_LEVEL" --setting "$GEMINI_FINAL_MERGE_THINKING_LEVEL"
+        --output "$crawling_dir/{id}.jsonl")
+    local pending_ids
+    pending_ids=$("$local_python" "$PROJECT_ROOT/bin/stage_cache.py" scan --scan-dir "$meta_dir" "${scan_args[@]}") || return 1
 
     local total=${#urls[@]}
     if [ $total -eq 0 ]; then
@@ -977,6 +993,13 @@ process_channel() {
             continue
         fi
 
+        if [ "$FORCE_MODE" = false ]; then
+            case $'\n'"$pending_ids"$'\n' in
+                *$'\n'"$video_id"$'\n'*) ;;
+                *) skipped_count=$((skipped_count + 1)); skip_already_processed=$((skip_already_processed + 1)); continue ;;
+            esac
+        fi
+
         local crawling_file="$crawling_dir/${video_id}.jsonl"
         local map_file="$full_data_path/map_url_crawling/${video_id}.jsonl"
 
@@ -990,20 +1013,7 @@ process_channel() {
                 continue
             fi
 
-            if [ -f "$crawling_file" ]; then
-                local restaurants_len
-                restaurants_len=$(get_restaurants_len_from_jsonl "$crawling_file")
 
-                if [[ "$restaurants_len" =~ ^[0-9]+$ ]] && [ "$restaurants_len" -ge 0 ]; then
-                    skipped_count=$((skipped_count + 1))
-                    skip_already_processed=$((skip_already_processed + 1))
-                    log_info "[$index/$total] SKIP: already_processed(crawling) ($video_id, restaurants=$restaurants_len)"
-                    continue
-                fi
-
-                log_warning "[$index/$total] RETRY: empty_or_invalid_crawling_result ($video_id)"
-                rm -f "$crawling_file" 2>/dev/null || true
-            fi
         fi
 
         local meta_file="$meta_dir/${video_id}.jsonl"
@@ -1022,6 +1032,17 @@ process_channel() {
             log_warning "[$index/$total] SKIP: missing_transcript ($video_id)"
             continue
         fi
+
+        local receipt_file="$crawling_dir/.receipts/${video_id}.json"
+        local cache_args=(--receipt "$receipt_file" --input "$transcript_file"
+            --metadata "$meta_file" --asset "$PROMPT_FILE" --asset "$CHUNK_PLANNER"
+            --asset "$MERGE_RESULTS" --asset "$PARSER_SCRIPT" --asset "$GEMINI_CHUNK_API"
+            --asset "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh"
+            --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"
+            --setting "$GEMINI_CHUNK_THINKING_LEVEL" --setting "$GEMINI_FINAL_MERGE_THINKING_LEVEL"
+            --output "$crawling_file")
+        local input_hash
+        input_hash=$("$local_python" "$PROJECT_ROOT/bin/stage_cache.py" fingerprint "${cache_args[@]}") || return 1
 
         if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then
             max_new="${LIVE_MAX_NEW_ITEMS:-1}"
@@ -1043,6 +1064,7 @@ process_channel() {
         set -e
         
         if [ $proc_exit -eq 0 ]; then
+            "$local_python" "$PROJECT_ROOT/bin/stage_cache.py" complete "${cache_args[@]}" --expected "$input_hash" || return 1
             success_count=$((success_count + 1))
             local video_end
             video_end=$(date +%s)
@@ -1076,7 +1098,8 @@ process_channel() {
         return 1
     fi
     if [ $failed_count -gt 0 ]; then
-        log_warning "일부 영상 실패($failed_count). 이미 처리된/성공한 결과는 유지하고 배치를 완료합니다."
+        log_warning "일부 영상 실패($failed_count). 완료 결과를 보존하고 실패 상태를 반환합니다."
+        return 1
     fi
     return 0
 }
