@@ -6,7 +6,7 @@ let providerError: unknown = null;
 mock.module('@/lib/supabase/service-role', () => ({
   createSupabaseServiceRoleClient: () => ({ rpc: (name: string, args: unknown) => {
     calls.push({ name, args });
-    return { abortSignal: async () => ({ error: providerError }) };
+    return { abortSignal: async () => ({ error: providerError, data: true }) };
   } }),
 }));
 const { POST } = await import('../app/api/performance/web-vitals/route');
@@ -23,7 +23,7 @@ function request(body: unknown, extra: Record<string, string> = {}) {
 }
 test('uses server release binding and sends only allowlisted aggregate coordinates', async () => {
   expect((await POST(request(sample))).status).toBe(204);
-  expect(calls).toEqual([{ name: 'record_app_web_vitals', args: { p_release: 'a'.repeat(40), p_device: 'desktop', p_metric: 'LCP', p_navigation: 'navigate', p_bucket: 25 } }]);
+  expect(calls).toEqual([{ name: 'record_app_web_vitals_bounded', args: { p_release: 'a'.repeat(40), p_device: 'desktop', p_metric: 'LCP', p_navigation: 'navigate', p_bucket: 25 } }]);
 });
 test('rejects cross-origin, auth bypass, invalid bodies and oversize without RPC', async () => {
   expect((await POST(request(sample, { Origin: 'https://outside.invalid', Authorization: 'Bearer test-only' }))).status).toBe(403);

@@ -5,6 +5,16 @@ export type PublicEligibilitySessionRouteClass =
 
 const isGetOrHead = (method: string) => method === 'GET' || method === 'HEAD';
 
+export function isCredentiallessFieldVitalsPost({ pathname, method, hasCookie, hasAuthorization }: {
+  pathname: string;
+  method: string;
+  hasCookie: boolean;
+  hasAuthorization: boolean;
+}) {
+  return pathname === '/api/performance/web-vitals' && method === 'POST'
+    && !hasCookie && !hasAuthorization;
+}
+
 const isLiteralRoutePath = (pathname: string) => {
   if (
     !pathname.startsWith('/')
