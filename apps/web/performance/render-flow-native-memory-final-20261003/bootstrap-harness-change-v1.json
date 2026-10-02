@@ -1,0 +1,10 @@
+{
+  "previousFailure": "owned native localhost target not observed, samples0",
+  "newBootstrap": "owned HTTPS QA www seed, then same target navigates to controlled loopback fixture",
+  "transport": "only owned localhost GET responses fulfilled from same local production server; remote SDK/tiles unmodified",
+  "securityHeadersPreserved": true,
+  "browserOrDeviceSettingsChanged": false,
+  "sourceBuildsMetricsEndpointsAnd20PercentGuardUnchanged": true,
+  "oldFailurePreserved": true,
+  "productionHttpsClaimsKeptSeparate": true
+}
