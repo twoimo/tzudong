@@ -1,0 +1,10 @@
+{
+  "change": "explicit synthetic camera URL and transient4s WAKEUP key during unmeasured preparation only",
+  "navigationPurpose": "stable synthetic fixture origin, no device location",
+  "heartbeatClearedBefore600msQuietWindowAndInitialHeap": "yes",
+  "warmMetricAndReturnSettle1000msUnchanged": true,
+  "browserAndDeviceSettingsChanged": false,
+  "neverUnlocksOrBypassesCredentialLock": true,
+  "20PercentGuardUnchanged": true,
+  "setupVersionDifferenceDisclosedForRetry": true
+}

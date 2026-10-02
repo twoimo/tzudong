@@ -1,0 +1,64 @@
+{
+  "captures": [
+    {
+      "file": "direct-samsung-memory-focus-confirm-v2-after-b2/native-inspected/cycle-000.png",
+      "sha256": "720b9c948c9483d1ff43ce5181a93c09e47f81fcf19cf3812c2364b274d47531",
+      "cycle": 0,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v2-after-b2/native-inspected/cycle-010.png",
+      "sha256": "c755f3211ebe683649b5c3acbc89b160da88d07e77da207fca63285f682c12db",
+      "cycle": 10,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v2-after-b2/native-inspected/cycle-020.png",
+      "sha256": "a66a2ae687afca8b6cf46d13d45b4c46e0e256c4e5db30ccd328dc5a1234cc98",
+      "cycle": 20,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v2-after-b2/native-inspected/cycle-030.png",
+      "sha256": "fb94f415952ae38ca846ff19422e61939600cd062cce3a028312974d1fbcb855",
+      "cycle": 30,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v2-after-b2/native-inspected/cycle-040.png",
+      "sha256": "3c0a8e14e27da478cb23e6cd6f60d83ff7170280b53f85a25a16be017b6c2512",
+      "cycle": 40,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v2-after-b2/native-inspected/cycle-050.png",
+      "sha256": "6648a947fd23a71fd3fa10c0613b830eb75ca3851153e350b386049097ed2344",
+      "cycle": 50,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v2-after-b2/native-inspected/cycle-060.png",
+      "sha256": "b04d2f2034a38ee82f08917672ec22dc1f18540f9b6e8c690db2b46ead12b761",
+      "cycle": 60,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    }
+  ],
+  "nativeCurrentFocusCheckedEachCycle": true,
+  "noOSShadeSeenInObservedFrames": true,
+  "limits": "start and each10cycles; transient overlays between captures not excluded",
+  "notIndependentUsers": true
+}

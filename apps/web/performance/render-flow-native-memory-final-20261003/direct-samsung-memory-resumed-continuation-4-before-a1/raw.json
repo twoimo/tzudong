@@ -1,0 +1,2383 @@
+{
+  "mode": "samsung",
+  "label": "resumed-continuation-4-before-a1",
+  "startedAt": "2026-10-02T21:47:49.937Z",
+  "planSha256": "ae542dcf572038e038df2296285455dd71169162f98f2ee2e221d113a714c66d",
+  "cycles": [
+    {
+      "cycle": 0,
+      "heap": {
+        "usedSize": 24782088,
+        "totalSize": 45580288,
+        "embedderHeapUsedSize": 24740752,
+        "backingStorageSize": 3082884
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 5560
+        },
+        {
+          "name": "Nodes",
+          "value": 24951
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 1,
+      "heap": {
+        "usedSize": 26457376,
+        "totalSize": 55947264,
+        "embedderHeapUsedSize": 45271760,
+        "backingStorageSize": 3065440
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 12894
+        },
+        {
+          "name": "Nodes",
+          "value": 42783
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 2,
+      "heap": {
+        "usedSize": 17433952,
+        "totalSize": 55939072,
+        "embedderHeapUsedSize": 13675272,
+        "backingStorageSize": 3064225
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2533
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 3,
+      "heap": {
+        "usedSize": 43462312,
+        "totalSize": 84729856,
+        "embedderHeapUsedSize": 34804680,
+        "backingStorageSize": 3065440
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9867
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 4,
+      "heap": {
+        "usedSize": 16138032,
+        "totalSize": 82415616,
+        "embedderHeapUsedSize": 12451168,
+        "backingStorageSize": 3064427
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2413
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 5,
+      "heap": {
+        "usedSize": 43699096,
+        "totalSize": 83681280,
+        "embedderHeapUsedSize": 33576296,
+        "backingStorageSize": 3065829
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9747
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 6,
+      "heap": {
+        "usedSize": 45481580,
+        "totalSize": 84946944,
+        "embedderHeapUsedSize": 54797080,
+        "backingStorageSize": 3065829
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17081
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 7,
+      "heap": {
+        "usedSize": 48157256,
+        "totalSize": 90406912,
+        "embedderHeapUsedSize": 76767840,
+        "backingStorageSize": 3065829
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24415
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 8,
+      "heap": {
+        "usedSize": 15403156,
+        "totalSize": 92975104,
+        "embedderHeapUsedSize": 13896776,
+        "backingStorageSize": 3043014
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2411
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 9,
+      "heap": {
+        "usedSize": 40714532,
+        "totalSize": 94240768,
+        "embedderHeapUsedSize": 35100456,
+        "backingStorageSize": 3044461
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9745
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 10,
+      "heap": {
+        "usedSize": 36346444,
+        "totalSize": 95768576,
+        "embedderHeapUsedSize": 56334256,
+        "backingStorageSize": 3044461
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17079
+        },
+        {
+          "name": "Nodes",
+          "value": 43031
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 11,
+      "heap": {
+        "usedSize": 32187096,
+        "totalSize": 97034240,
+        "embedderHeapUsedSize": 77756024,
+        "backingStorageSize": 3044461
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24413
+        },
+        {
+          "name": "Nodes",
+          "value": 60863
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 12,
+      "heap": {
+        "usedSize": 15653648,
+        "totalSize": 93499392,
+        "embedderHeapUsedSize": 15887496,
+        "backingStorageSize": 3017104
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2557
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 13,
+      "heap": {
+        "usedSize": 38185084,
+        "totalSize": 94388224,
+        "embedderHeapUsedSize": 36964216,
+        "backingStorageSize": 3018486
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9891
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 14,
+      "heap": {
+        "usedSize": 34109940,
+        "totalSize": 95653888,
+        "embedderHeapUsedSize": 58308256,
+        "backingStorageSize": 3018486
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17225
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 15,
+      "heap": {
+        "usedSize": 27275080,
+        "totalSize": 96542720,
+        "embedderHeapUsedSize": 79562832,
+        "backingStorageSize": 3018486
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24559
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 16,
+      "heap": {
+        "usedSize": 15737104,
+        "totalSize": 92975104,
+        "embedderHeapUsedSize": 16772152,
+        "backingStorageSize": 3017088
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2557
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 17,
+      "heap": {
+        "usedSize": 42018672,
+        "totalSize": 94240768,
+        "embedderHeapUsedSize": 38174744,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9891
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 18,
+      "heap": {
+        "usedSize": 34876224,
+        "totalSize": 95129600,
+        "embedderHeapUsedSize": 59146776,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17225
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 19,
+      "heap": {
+        "usedSize": 30773472,
+        "totalSize": 96395264,
+        "embedderHeapUsedSize": 80342224,
+        "backingStorageSize": 3018532
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24559
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 20,
+      "heap": {
+        "usedSize": 15568584,
+        "totalSize": 92712960,
+        "embedderHeapUsedSize": 14520848,
+        "backingStorageSize": 3017083
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2411
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 21,
+      "heap": {
+        "usedSize": 37737096,
+        "totalSize": 93863936,
+        "embedderHeapUsedSize": 35316712,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9745
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 22,
+      "heap": {
+        "usedSize": 30840588,
+        "totalSize": 94752768,
+        "embedderHeapUsedSize": 56449736,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17079
+        },
+        {
+          "name": "Nodes",
+          "value": 43031
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 23,
+      "heap": {
+        "usedSize": 25173888,
+        "totalSize": 95903744,
+        "embedderHeapUsedSize": 77586776,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24413
+        },
+        {
+          "name": "Nodes",
+          "value": 60863
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 24,
+      "heap": {
+        "usedSize": 15897928,
+        "totalSize": 93499392,
+        "embedderHeapUsedSize": 15859096,
+        "backingStorageSize": 3017085
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2555
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 25,
+      "heap": {
+        "usedSize": 38231908,
+        "totalSize": 94388224,
+        "embedderHeapUsedSize": 37088504,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9889
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 26,
+      "heap": {
+        "usedSize": 34216288,
+        "totalSize": 95653888,
+        "embedderHeapUsedSize": 58327312,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17223
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 27,
+      "heap": {
+        "usedSize": 30876956,
+        "totalSize": 96919552,
+        "embedderHeapUsedSize": 79671928,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24557
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 28,
+      "heap": {
+        "usedSize": 15704528,
+        "totalSize": 93761536,
+        "embedderHeapUsedSize": 15052112,
+        "backingStorageSize": 3017145
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2411
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 29,
+      "heap": {
+        "usedSize": 41056688,
+        "totalSize": 95027200,
+        "embedderHeapUsedSize": 36055600,
+        "backingStorageSize": 3018533
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9745
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 30,
+      "heap": {
+        "usedSize": 34138268,
+        "totalSize": 95916032,
+        "embedderHeapUsedSize": 57193952,
+        "backingStorageSize": 3018533
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17079
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 31,
+      "heap": {
+        "usedSize": 30450756,
+        "totalSize": 97181696,
+        "embedderHeapUsedSize": 78361840,
+        "backingStorageSize": 3018533
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24413
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 32,
+      "heap": {
+        "usedSize": 15733036,
+        "totalSize": 94285824,
+        "embedderHeapUsedSize": 15228016,
+        "backingStorageSize": 3017085
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2411
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 33,
+      "heap": {
+        "usedSize": 37853204,
+        "totalSize": 95436800,
+        "embedderHeapUsedSize": 36037584,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9745
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 34,
+      "heap": {
+        "usedSize": 34325060,
+        "totalSize": 96702464,
+        "embedderHeapUsedSize": 57374992,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17079
+        },
+        {
+          "name": "Nodes",
+          "value": 43031
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 35,
+      "heap": {
+        "usedSize": 31046244,
+        "totalSize": 97968128,
+        "embedderHeapUsedSize": 78690400,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24413
+        },
+        {
+          "name": "Nodes",
+          "value": 60863
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 36,
+      "heap": {
+        "usedSize": 15871364,
+        "totalSize": 94285824,
+        "embedderHeapUsedSize": 15442672,
+        "backingStorageSize": 3017085
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2411
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 37,
+      "heap": {
+        "usedSize": 41598752,
+        "totalSize": 95551488,
+        "embedderHeapUsedSize": 36545904,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9745
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 38,
+      "heap": {
+        "usedSize": 37801868,
+        "totalSize": 99438592,
+        "embedderHeapUsedSize": 57939624,
+        "backingStorageSize": 3018533
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17079
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 39,
+      "heap": {
+        "usedSize": 31253864,
+        "totalSize": 100327424,
+        "embedderHeapUsedSize": 79083032,
+        "backingStorageSize": 3018533
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24413
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 40,
+      "heap": {
+        "usedSize": 15886836,
+        "totalSize": 94547968,
+        "embedderHeapUsedSize": 15617640,
+        "backingStorageSize": 3017085
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2411
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 41,
+      "heap": {
+        "usedSize": 42350016,
+        "totalSize": 95813632,
+        "embedderHeapUsedSize": 36705616,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9745
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 42,
+      "heap": {
+        "usedSize": 35075180,
+        "totalSize": 99061760,
+        "embedderHeapUsedSize": 57650936,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17079
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 43,
+      "heap": {
+        "usedSize": 31486696,
+        "totalSize": 100327424,
+        "embedderHeapUsedSize": 79050224,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24413
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 44,
+      "heap": {
+        "usedSize": 16270280,
+        "totalSize": 93761536,
+        "embedderHeapUsedSize": 16804616,
+        "backingStorageSize": 3017088
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2555
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 45,
+      "heap": {
+        "usedSize": 38620224,
+        "totalSize": 94650368,
+        "embedderHeapUsedSize": 37811536,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9889
+        },
+        {
+          "name": "Nodes",
+          "value": 25199
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 46,
+      "heap": {
+        "usedSize": 35301508,
+        "totalSize": 98537472,
+        "embedderHeapUsedSize": 59282312,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17223
+        },
+        {
+          "name": "Nodes",
+          "value": 43031
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 47,
+      "heap": {
+        "usedSize": 29079804,
+        "totalSize": 99426304,
+        "embedderHeapUsedSize": 80283448,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24557
+        },
+        {
+          "name": "Nodes",
+          "value": 60863
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 48,
+      "heap": {
+        "usedSize": 16343136,
+        "totalSize": 94023680,
+        "embedderHeapUsedSize": 16996760,
+        "backingStorageSize": 3017088
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2555
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 49,
+      "heap": {
+        "usedSize": 38603476,
+        "totalSize": 94912512,
+        "embedderHeapUsedSize": 38022840,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9889
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 50,
+      "heap": {
+        "usedSize": 31326116,
+        "totalSize": 95801344,
+        "embedderHeapUsedSize": 59135136,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17223
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 51,
+      "heap": {
+        "usedSize": 27618584,
+        "totalSize": 97067008,
+        "embedderHeapUsedSize": 80418928,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24557
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 52,
+      "heap": {
+        "usedSize": 16375580,
+        "totalSize": 94023680,
+        "embedderHeapUsedSize": 17347952,
+        "backingStorageSize": 3017088
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2555
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 53,
+      "heap": {
+        "usedSize": 38683744,
+        "totalSize": 94912512,
+        "embedderHeapUsedSize": 38347272,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9889
+        },
+        {
+          "name": "Nodes",
+          "value": 25190
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 54,
+      "heap": {
+        "usedSize": 31598768,
+        "totalSize": 95801344,
+        "embedderHeapUsedSize": 59508632,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17223
+        },
+        {
+          "name": "Nodes",
+          "value": 43022
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 55,
+      "heap": {
+        "usedSize": 25741980,
+        "totalSize": 96690176,
+        "embedderHeapUsedSize": 80448640,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24557
+        },
+        {
+          "name": "Nodes",
+          "value": 60854
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 56,
+      "heap": {
+        "usedSize": 16148672,
+        "totalSize": 94285824,
+        "embedderHeapUsedSize": 16569280,
+        "backingStorageSize": 3017082
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 2411
+        },
+        {
+          "name": "Nodes",
+          "value": 7358
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 57,
+      "heap": {
+        "usedSize": 41900676,
+        "totalSize": 95551488,
+        "embedderHeapUsedSize": 37728104,
+        "backingStorageSize": 3018470
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 9745
+        },
+        {
+          "name": "Nodes",
+          "value": 25199
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 58,
+      "heap": {
+        "usedSize": 35005544,
+        "totalSize": 96440320,
+        "embedderHeapUsedSize": 58866976,
+        "backingStorageSize": 3018533
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 17079
+        },
+        {
+          "name": "Nodes",
+          "value": 43031
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    },
+    {
+      "cycle": 59,
+      "heap": {
+        "usedSize": 28077488,
+        "totalSize": 97329152,
+        "embedderHeapUsedSize": 80018616,
+        "backingStorageSize": 3018533
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 24413
+        },
+        {
+          "name": "Nodes",
+          "value": 60863
+        }
+      ],
+      "state": {
+        "expected": 497,
+        "markers": 497,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0,
+        "visibility": "visible"
+      },
+      "nativeBefore": {
+        "visible": true,
+        "ownFocus": true,
+        "awake": true
+      },
+      "nativeGesture": true
+    }
+  ],
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "originalColdBudgetWaived": false,
+  "passed": true,
+  "buildId": "5KrYGzDpIa4dByYmEGkIu",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "9236d84284cc28b1e569db22e979bd1f8a6800a577a234c549126548e5503287"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "0816449fe7d1d94f59f555198a77a266b9d346ffbf797275695e0eecd67edade"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "23566f91aa5a22d063e6f77f833a15cdfd32cbaccb3414bc390bbab3f113cd4c"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "dc4f15d0e830957dcc6479c7971431e4f73043b815a5286566aab0cbe37a3647"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    }
+  ],
+  "sdk": {
+    "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+    "viewport": {
+      "width": 467,
+      "height": 810,
+      "dpr": 3.0824999809265137
+    },
+    "visibility": "visible",
+    "remoteSdk": true,
+    "sdkLoaded": true,
+    "stub": false,
+    "mapCreates": 1
+  },
+  "setupCenter": {
+    "insideSyntheticFootprint": false,
+    "zoom": 7
+  },
+  "nativeForeground": true,
+  "initialHeap": {
+    "usedSize": 16758956,
+    "totalSize": 32882688,
+    "embedderHeapUsedSize": 20039984,
+    "backingStorageSize": 2615098
+  },
+  "initialMetrics": [
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 2563
+    },
+    {
+      "name": "Nodes",
+      "value": 7355
+    }
+  ],
+  "nativeScreenshotTemporary": "/tmp/tzudong-owned-samsung-memory-resumed-continuation-4-before-a1.png",
+  "errors": {
+    "page": 0,
+    "console": 0
+  },
+  "requests": {
+    "restaurant": 4,
+    "otherFixture": 242
+  },
+  "endedAt": "2026-10-02T21:50:30.362Z"
+}

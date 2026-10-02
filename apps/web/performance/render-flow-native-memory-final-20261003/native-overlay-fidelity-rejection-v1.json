@@ -1,0 +1,11 @@
+{
+  "rejectedForPrimaryNativeUserFlow": "resumed-continuation-4",
+  "firstNativeFrameWasNotificationShade": true,
+  "rejectedImageSha256": "4a36811ae06f9472e01a580e5c1db845871e41987b62ed6dcd312b5745d5ca6c",
+  "wallpaperOrNotificationPixelsStored": false,
+  "heapSamplesRetainedAsRendererDiagnosticsOnly": true,
+  "domVisibilityAndFocusedAppInsufficient": true,
+  "fix": "require mCurrentFocus app window only and inspect start plus each10cycle native screenshots",
+  "oldResultFlagsNotOverwritten": true,
+  "rawOriginalPlanGuardPercentStill20": true
+}

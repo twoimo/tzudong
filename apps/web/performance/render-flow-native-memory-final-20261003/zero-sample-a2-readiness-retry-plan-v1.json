@@ -1,0 +1,9 @@
+{
+  "failedRaw": "direct-samsung-memory-focus-confirm-v2-before-a2/raw.json",
+  "failedSamples": 0,
+  "diagnosis": "Synthetic viewport preparation lacked explicit target center/zoom readiness before tapping735. Failed at cluster selection, not steady-state warm cycle.",
+  "retry": "same baseline source,60cycles,350ms away,1000mssettle,focus checks,capture cadence,noGC,20percent guard",
+  "setupOnlyChange": "wait until native SDK zoom9 and synthetic center/735 cluster are ready;40ms trusted touch press",
+  "unmeasuredFailedTrialNotSubstitutedOrOverwritten": true,
+  "timingsNotComparedAcrossPrepVersions": true
+}

@@ -1,0 +1,43 @@
+{
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "trials": [
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "resumed-continuation-4-before-a1",
+      "exit": 0
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "resumed-continuation-4-after-b1",
+      "exit": 0
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "resumed-continuation-4-after-b2",
+      "exit": 0
+    },
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "resumed-continuation-4-before-a2",
+      "exit": 0
+    },
+    {
+      "mode": "physical",
+      "role": "before",
+      "label": "resumed-continuation-4-before-a1",
+      "exit": 0
+    },
+    {
+      "mode": "physical",
+      "role": "after",
+      "label": "resumed-continuation-4-after-b1",
+      "exit": 1
+    }
+  ],
+  "allSixCompleted": false,
+  "forcedGc": false
+}

@@ -1,0 +1,48 @@
+{
+  "observedAt": "2026-10-02T22:50:28.833706+00:00",
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "rows": [
+    {
+      "role": "before-a1",
+      "raw": "direct-samsung-memory-focus-confirm-v2-before-a1/raw.json",
+      "medianMB": 38.107355999999996,
+      "peakMB": 49.269788,
+      "endpointMB": 33.41836,
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    },
+    {
+      "role": "after-b1",
+      "raw": "direct-samsung-memory-focus-confirm-v2-after-b1/raw.json",
+      "medianMB": 34.020114,
+      "peakMB": 42.622196,
+      "endpointMB": 30.346364,
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    },
+    {
+      "role": "after-b2",
+      "raw": "direct-samsung-memory-focus-confirm-v2-after-b2/raw.json",
+      "medianMB": 33.20298,
+      "peakMB": 42.428652,
+      "endpointMB": 40.98694,
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    }
+  ],
+  "firstPairReductionMB": 4.087241999999996,
+  "firstPairReductionPercent": 10.725598490748077,
+  "firstPairMedian20PercentGuardPassed": true,
+  "completeComparison": false,
+  "missing": [
+    "Samsung second Before60",
+    "Chrome Before60",
+    "Chrome After60"
+  ],
+  "noForcedGC": true,
+  "fieldAdmitted": 0,
+  "confidenceInterval": null,
+  "p95": null,
+  "improvementProven": false,
+  "priorRejectedSequenceExcluded": true
+}
