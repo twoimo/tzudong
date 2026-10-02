@@ -182,7 +182,7 @@ import {
 import { NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS } from "@/lib/naver-map-overlay-timings";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
-import { resolveNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
+import { resolveNaverMobileVerticalOffset, resolveNaverOccludingNavHeight } from "@/lib/naver-map-mobile-offset-helpers";
 import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
 import { buildResetUserMapMovementHandler } from "@/lib/naver-map-user-movement-helpers";
 import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
@@ -1456,16 +1456,18 @@ const NaverMapView = memo(({
             });
         }
 
-        const navHeight = parseFloat(
+        const measuredNavHeight = parseFloat(
             getComputedStyle(document.documentElement)
                 .getPropertyValue('--mobile-bottom-nav-effective-height')
-        ) || 60;
+        );
+        const navHeight = Number.isFinite(measuredNavHeight) ? Math.max(0, measuredNavHeight) : 60;
         const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+        const mapHeight = mapInstanceRef.current?.getSize?.()?.height ?? viewportHeight;
 
         return resolveNaverMobileVerticalOffset({
             fineTunePx: MOBILE_MARKER_CENTER_FINE_TUNE_PX,
             isMobileOrTablet,
-            navHeight,
+            navHeight: resolveNaverOccludingNavHeight({ navHeight, viewportHeight, mapHeight }),
             sheetHeightPercent: mobileSheetHeightPercent,
             viewportHeight,
         });
