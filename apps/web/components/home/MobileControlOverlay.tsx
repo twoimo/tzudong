@@ -266,7 +266,6 @@ function MobileControlOverlayComponent({
         return () => {
             if (typeof window !== 'undefined') {
                 window.__tzudong_mobile_overlay_ready = false;
-                delete document.documentElement.dataset.homeMobileChromeReady;
             }
         };
     }, []);
