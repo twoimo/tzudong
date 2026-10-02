@@ -1,0 +1,36 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/offscreen-marker-update-policy.test.ts:
+(pass) new offscreen keeps current visible data immediate and slices the offscreen tail [0.28ms]
+(pass) existing offscreen keeps current visible data immediate and slices the offscreen tail [0.02ms]
+(pass) new visible keeps current visible data immediate and slices the offscreen tail
+(pass) selected offscreen keeps current visible data immediate and slices the offscreen tail
+(pass) data moves a previously visible marker offscreen keeps current visible data immediate and slices the offscreen tail
+
+tests-unit/expanded-cluster-flow-invariants.test.ts:
+(pass) expanded cluster flow invariants > provider marker culling does not remove list or swipe candidates [0.87ms]
+(pass) expanded cluster flow invariants > selected and searched offscreen restaurants remain provider exceptions [0.05ms]
+(pass) expanded cluster flow invariants > pan to an empty viewport releases stale candidates and pan back restores the same ordered rows [1.13ms]
+(pass) expanded cluster flow invariants > a refreshed array identity reindexes changed coordinates and changes the render signature [0.51ms]
+(pass) expanded cluster flow invariants > empty viewport cleanup keeps an expanded selection renderable until expansion clears [0.02ms]
+(pass) expanded cluster flow invariants > idle and resize invalidate expanded markers before scheduling the unchanged cluster debounce [0.24ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [1.51ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [0.70ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.20ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.08ms]
+(pass) expanded cluster flow invariants > unchanged repeated idle keeps the marker signature while viewport revision invalidates it [0.14ms]
+
+tests-unit/deferred-marker-renders.test.ts:
+(pass) tail starts after paint opportunity and completes in bounded ordered tasks [0.16ms]
+(pass) new data/unmount cancellation drops stale work and completion [0.03ms]
+(pass) provider failure releases task references and requests bounded recovery [0.05ms]
+
+tests-unit/deferred-marker-retry-limit.test.ts:
+(pass) deferred provider failures preserve the real retry limit in branch 0 [0.47ms]
+(pass) deferred provider failures preserve the real retry limit in branch 1 [0.29ms]
+(pass) both production rendering branches participate in the bounded failure checks [0.01ms]
+
+ 22 pass
+ 0 fail
+ 98 expect() calls
+Ran 22 tests across 4 files. [64.00ms]

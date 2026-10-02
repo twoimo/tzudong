@@ -1,0 +1,1 @@
+▲ Next.js 16.3.5 (webpack) ⨯ Failed to load next.config.mjs, see more info here https://nextjs.org/docs/messages/next-config-error  > Build error occurred Error: TZUDONG_NEXT_DIST_DIR must be a bounded repository-local Next.js directory name.     at <unknown> (next.config.mjs:20:11) 

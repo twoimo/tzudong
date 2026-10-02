@@ -1,0 +1,122 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-cluster-visuals.test.ts:
+(pass) naver map cluster visuals > hashes string keys deterministically [0.38ms]
+(pass) naver map cluster visuals > builds cluster feature with lng/lat coordinates [0.07ms]
+(pass) naver map cluster visuals > builds cluster marker html content [0.15ms]
+(pass) naver map cluster visuals > returns naver cluster marker visual payload [0.06ms]
+(pass) naver map cluster visuals > builds cluster marker render plan from position and current animation index [0.05ms]
+(pass) naver map cluster visuals > builds animation icon plan from key and injected index resolver [0.06ms]
+(pass) naver map cluster visuals > skips a marker icon write when the content and anchor are unchanged [0.02ms]
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.28ms]
+(pass) naver map marker visuals > returns selected marker payload [0.03ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.02ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.06ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.01ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.11ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.17ms]
+
+tests-unit/home-map-keyboard-navigation.test.ts:
+(pass) home map keyboard navigation guards > returns step for ArrowRight when guard passes [0.05ms]
+(pass) home map keyboard navigation guards > returns step for ArrowLeft when guard passes
+(pass) home map keyboard navigation guards > returns null for editable target [0.01ms]
+(pass) home map keyboard navigation guards > returns null for interactive target [0.01ms]
+(pass) home map keyboard navigation guards > returns null when modifiers or composition are active [0.04ms]
+(pass) home map keyboard navigation guards > recognizes contenteditable target [0.01ms]
+(pass) home map keyboard adjacent restaurant selection > selects next and previous restaurant by step [0.09ms]
+(pass) home map keyboard adjacent restaurant selection > returns null on boundary and never selects outside current list (mode boundary safety) [0.05ms]
+(pass) desktop arrow event handler > moves to next and previous restaurants according to arrow key when enabled [0.13ms]
+(pass) desktop arrow event handler > does not process when desktop=false [0.03ms]
+(pass) desktop arrow event handler > does not process when panel is closed [0.01ms]
+(pass) desktop arrow event handler > does not process when no current restaurant exists
+(pass) desktop arrow event handler > does not process when swipeable count is 1 [0.08ms]
+(pass) desktop arrow event handler > calls preventDefault only when movement happened [0.07ms]
+
+tests-unit/expanded-cluster-viewport.test.ts:
+(pass) expanded cluster provider visibility without changing candidates > inclusive viewport boundaries and offscreen culling [0.07ms]
+(pass) expanded cluster provider visibility without changing candidates > selected and searched IDs remain renderable outside the viewport [0.02ms]
+(pass) expanded cluster provider visibility without changing candidates > unavailable projection or disabled culling keeps previous behavior
+(pass) expanded cluster provider visibility without changing candidates > pan back and changed coordinates reevaluate without a stale cache [0.02ms]
+(pass) expanded cluster provider visibility without changing candidates > large candidate input is unchanged, coordinates normalize before the predicate [1.28ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.21ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.09ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.10ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.11ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.08ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.03ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.01ms]
+(pass) marker pool > keeps the category image when only the review bubble changes [0.19ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.12ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.04ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.47ms]
+
+tests-unit/expanded-cluster-flow-invariants.test.ts:
+(pass) expanded cluster flow invariants > provider marker culling does not remove list or swipe candidates [0.79ms]
+(pass) expanded cluster flow invariants > selected and searched offscreen restaurants remain provider exceptions [0.07ms]
+(pass) expanded cluster flow invariants > pan to an empty viewport releases stale candidates and pan back restores the same ordered rows [0.73ms]
+(pass) expanded cluster flow invariants > a refreshed array identity reindexes changed coordinates and changes the render signature [0.26ms]
+(pass) expanded cluster flow invariants > empty viewport cleanup keeps an expanded selection renderable until expansion clears [0.01ms]
+(pass) expanded cluster flow invariants > idle and resize invalidate expanded markers before scheduling the unchanged cluster debounce [0.23ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [2.38ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [0.77ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.15ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.05ms]
+(pass) expanded cluster flow invariants > unchanged repeated idle keeps the marker signature while viewport revision invalidates it [0.15ms]
+
+tests-unit/deferred-marker-renders.test.ts:
+(pass) tail starts after paint opportunity and completes in bounded ordered tasks [0.35ms]
+(pass) new data/unmount cancellation drops stale work and completion [0.08ms]
+(pass) provider failure releases task references and requests bounded recovery [0.13ms]
+
+tests-unit/visible-marker-review-bubbles.test.ts:
+(pass) visible marker review bubble signatures > reuses the id signature for the same restaurant list [0.05ms]
+(pass) visible marker review bubble signatures > changes when rendered bubble content changes under the same review id [0.63ms]
+(pass) visible marker review bubble signatures > is stable regardless of record insertion order [0.09ms]
+(pass) visible marker review bubble signatures > reuses one bubble render token until its fields change [0.05ms]
+
+tests-unit/mobile-home-map-regressions.test.ts:
+(pass) mobile home map regression guards > search-selected restaurant can still swipe to a different visible restaurant [0.04ms]
+(pass) mobile home map regression guards > marker render is not skipped when another marker takes over after a search selection [0.04ms]
+(pass) mobile home map regression guards > marker render is not skipped when the sheet closes and a new marker opens with cleared search state [0.01ms]
+(pass) mobile home map regression guards > single-visible post-search swipe falls back to the nearest restaurant [0.54ms]
+(pass) mobile home map regression guards > search ownership release keeps the current detail selection active [0.06ms]
+(pass) mobile home map regression guards > peek-state downward sheet gesture dismisses only after intentional distance or speed [0.02ms]
+(pass) mobile home map regression guards > blank map taps collapse the sheet, enter fullscreen map, then restore the peek sheet [0.02ms]
+(pass) mobile home map regression guards > blank map fullscreen toggle is inactive outside a mobile restaurant panel
+(pass) mobile home map regression guards > cluster marker zoom jumps immediately without Naver morph animation [0.34ms]
+(pass) mobile home map regression guards > mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence [0.76ms]
+(pass) mobile home map regression guards > mobile visible marker sheet receives map interaction epoch before requesting peek height [0.26ms]
+(pass) mobile home map regression guards > G002 mobile category sheet commits immediately without delayed apply affordance [0.26ms]
+(pass) mobile home map regression guards > G012 mobile sheets and details own fixed map-control safe area [0.15ms]
+(pass) mobile home map regression guards > home detail route history uses app-owned list/detail states and browser back restoration contracts [0.14ms]
+
+tests-unit/expanded-cluster-restaurant-snapshot.test.ts:
+(pass) expanded cluster restaurant snapshot > resolves the current row before the snapshot and the merged parent [0.07ms]
+(pass) expanded cluster restaurant snapshot > keeps an expanded row that has left the current list
+(pass) expanded cluster restaurant snapshot > does not revive a snapshot row while no cluster is expanded [0.01ms]
+(pass) expanded cluster restaurant snapshot > uses the snapshot before the merged parent while a cluster is expanded
+(pass) expanded cluster restaurant snapshot > returns undefined for an empty, missing, or non-string id [0.02ms]
+(pass) expanded cluster restaurant snapshot > returns undefined when the lookup maps are missing
+(pass) expanded cluster restaurant snapshot > returns undefined when a lookup map throws [0.06ms]
+(pass) expanded cluster restaurant snapshot > drops rows that are no longer current, expanded, or selected [0.18ms]
+(pass) expanded cluster restaurant snapshot > keeps an expanded id that is absent from the current maps [0.02ms]
+(pass) expanded cluster restaurant snapshot > does not let a merged parent overwrite a current row with the same id [0.02ms]
+(pass) expanded cluster restaurant snapshot > accepts an empty snapshot update and a non-array retain list [0.01ms]
+(pass) expanded cluster restaurant snapshot > map view resolves markers through the snapshot instead of copying both lookup maps [0.34ms]
+
+tests-unit/visible-marker-review-bubble-selection.test.ts:
+(pass) visible marker review bubble selection > matches a full stable sort for reviewed restaurants and keeps merged ids [0.41ms]
+(pass) visible marker review bubble selection > uses every identified restaurant when none has a review count [0.03ms]
+(pass) visible marker review bubble selection > returns an empty list for an empty candidate list, a non-positive limit, or rows without ids [0.02ms]
+(pass) visible marker review bubble selection > rejects a missing list or options without throwing [0.03ms]
+(pass) visible marker review bubble selection > truncates a fractional limit the same way a stable slice does [0.02ms]
+
+ 94 pass
+ 0 fail
+ 1417 expect() calls
+Ran 94 tests across 11 files. [90.00ms]

@@ -1,0 +1,49 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/expanded-cluster-flow-invariants.test.ts:
+(pass) expanded cluster flow invariants > provider marker culling does not remove list or swipe candidates [7.87ms]
+(pass) expanded cluster flow invariants > selected and searched offscreen restaurants remain provider exceptions [0.34ms]
+(pass) expanded cluster flow invariants > pan to an empty viewport releases stale candidates and pan back restores the same ordered rows [1.10ms]
+(pass) expanded cluster flow invariants > a refreshed array identity reindexes changed coordinates and changes the render signature [0.39ms]
+(pass) expanded cluster flow invariants > empty viewport cleanup keeps an expanded selection renderable until expansion clears [0.02ms]
+(pass) expanded cluster flow invariants > idle and resize invalidate expanded markers before scheduling the unchanged cluster debounce [0.26ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [16.87ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [1.53ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.24ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.10ms]
+(pass) expanded cluster flow invariants > unchanged repeated idle keeps the marker signature while viewport revision invalidates it [0.20ms]
+
+tests-unit/deferred-marker-renders.test.ts:
+(pass) tail starts after paint opportunity and completes in bounded ordered tasks [0.78ms]
+(pass) new data/unmount cancellation drops stale work and completion [0.36ms]
+(pass) provider failure releases task references and requests bounded recovery [0.10ms]
+
+tests-unit/deferred-marker-retry-limit.test.ts:
+12 |     if (markerRenderEmptyRetryCountRef.current >= MARKER_RENDER_EMPTY_RETRY_LIMIT)
+13 |       return;
+14 |     markerRenderEmptyRetryCountRef.current += 1;
+15 |     clearMarkerRenderRetryTimer();
+16 |     markerRenderRetryTimerRef.current = window.setTimeout(() => {
+17 |       markerRenderSignatureRef.current = null;
+                                   ^
+ReferenceError: markerRenderSignatureRef is not defined
+      at <anonymous> (file:///Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/tests-unit/deferred-marker-retry-limit.test.ts:17:31)
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/tests-unit/deferred-marker-retry-limit.test.ts:54:57)
+(fail) deferred provider failures preserve the real retry limit in branch 0 [0.90ms]
+12 |     if (markerRenderEmptyRetryCountRef.current >= MARKER_RENDER_EMPTY_RETRY_LIMIT)
+13 |       return;
+14 |     markerRenderEmptyRetryCountRef.current += 1;
+15 |     clearMarkerRenderRetryTimer();
+16 |     markerRenderRetryTimerRef.current = window.setTimeout(() => {
+17 |       markerRenderSignatureRef.current = null;
+                                   ^
+ReferenceError: markerRenderSignatureRef is not defined
+      at <anonymous> (file:///Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/tests-unit/deferred-marker-retry-limit.test.ts:17:31)
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/tests-unit/deferred-marker-retry-limit.test.ts:54:57)
+(fail) deferred provider failures preserve the real retry limit in branch 1 [0.15ms]
+(pass) both production rendering branches participate in the bounded failure checks [0.02ms]
+
+ 15 pass
+ 2 fail
+ 74 expect() calls
+Ran 17 tests across 3 files. [206.00ms]
