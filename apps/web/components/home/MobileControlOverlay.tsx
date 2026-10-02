@@ -260,11 +260,13 @@ function MobileControlOverlayComponent({
     useEffect(() => {
         if (typeof window !== 'undefined') {
             window.__tzudong_mobile_overlay_ready = true;
+            document.documentElement.dataset.homeMobileChromeReady = 'true';
             window.dispatchEvent(new CustomEvent('tzudong_mobile_overlay_ready'));
         }
         return () => {
             if (typeof window !== 'undefined') {
                 window.__tzudong_mobile_overlay_ready = false;
+                delete document.documentElement.dataset.homeMobileChromeReady;
             }
         };
     }, []);
