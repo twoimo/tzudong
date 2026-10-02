@@ -332,7 +332,10 @@ test('fast nonzero exit drains descendants before reporting failure', async () =
 });
 
 test('Windows Job Object contains a detached descendant after its root exits', async (t) => {
-  if (process.platform !== 'win32') t.skip('Windows Job Object coverage');
+  if (process.platform !== 'win32') {
+    t.skip('Windows Job Object coverage');
+    return;
+  }
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'transcript-tree-'));
   const recordPath = path.join(root, 'pids.json');
   let pids = null;

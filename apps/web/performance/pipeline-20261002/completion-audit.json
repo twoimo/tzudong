@@ -8,18 +8,21 @@
       "status": "partial",
       "evidence": [
         "source e77887c",
-        "current candidate diff"
+        "current candidate diff",
+        "transcript-cache-raw.json",
+        "transcript-summary.json"
       ],
-      "remaining": "A combined before/after pipeline experiment and collection/subtitle-stage coverage audit are not yet retained."
+      "remaining": "Step 03 validation/single-writer coverage retained. Metadata collection and a combined before/after pipeline experiment still remain."
     },
     {
       "requirement": "Hashed restart/incremental results, single JSONL writer",
       "status": "verified_for_changed_stages",
       "evidence": [
         "backend/utils/tests/test_pipeline_restart_integration.py",
-        "transform-restart-v3-raw.json"
+        "transform-restart-v3-raw.json",
+        "backend/restaurant-crawling/scripts/tests/transcript-cache.test.mjs"
       ],
-      "scope": "08/09/10/11/12 receipts; transform source races and priority; frame receipts and cross-process writer. Not a claim for every collection stage."
+      "scope": "08/09/10/11/12 receipts; transform source races and priority; frame receipts and cross-process writer. Not a claim for every collection stage. Step 03 now validates legacy content and serializes channel/ledger writers; no whole-collection version-receipt claim."
     },
     {
       "requirement": "Media resources and shared cache",
@@ -38,7 +41,7 @@
         "backend/bin/run_parallel_laaj.py",
         "backend/utils/tests/test_pipeline_restart_integration.py"
       ],
-      "remaining": "Actual provider limits, TPM/RPD admission and cross-host total enforcement are not established."
+      "remaining": "One real configured-model response validated. Actual TPM/RPD admission, cross-host totals and accounting for SDK automatic retries across pipeline helpers remain unestablished."
     },
     {
       "requirement": "Evaluation/storage deduplication and 1-200 batch comparison",
@@ -103,9 +106,11 @@
       "requirement": "All metrics, environment, hashes, 95% intervals, regressions",
       "status": "partial",
       "evidence": [
-        "summary-current.json"
+        "summary-current.json",
+        "transcript-summary.json",
+        "gemini-real-probe-raw.json"
       ],
-      "remaining": "Component metrics retained; overall pipeline throughput, download, paid token/cost metrics missing."
+      "remaining": "Component metrics and one real 125-token connectivity probe retained; overall throughput/downloads and comparative inference/cost metrics remain."
     },
     {
       "requirement": "Formal observation/scorer/validator/artifact-map proof",
@@ -125,14 +130,18 @@
     {
       "requirement": "Existing model/paid/operating bounds and shared settings preservation",
       "status": "partial",
-      "scope": "No model change, paid call, deployment or operational DB write.",
+      "scope": "Same configured model; one explicitly funded real request with one SDK attempt. No deployment or operational DB writes. Auto-reload off.",
       "remaining": "Initial isolated test rewrote Gemini CLI settings via inherited function. Prior configuration snapshot missing; future isolated writes are now blocked and hash-checked."
     },
     {
       "requirement": "Google credit use",
-      "status": "awaiting_authorization",
-      "scope": "Six benefits redeemed in earlier confirmed readback; no top-up or project billing link.",
-      "remaining": "Existing 10000-KRW top-up/link approval question is unanswered; no repetition or charge."
+      "status": "confirmed_for_one_bounded_real_probe",
+      "scope": "Authorized one-time 10000-KRW top-up and project link verified; auto-reload off; one real Gemini response accepted.",
+      "remaining": "Provider charge and promotional deduction amount are not read back. Card removal requires a valid replacement; both official UI paths checked.",
+      "evidence": [
+        "billing-readback.json",
+        "gemini-real-probe-raw.json"
+      ]
     },
     {
       "requirement": "Operational application plan",

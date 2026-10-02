@@ -140,8 +140,43 @@ def main():
     (BASE/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({'status':'complete','formalPerformanceClaim':'not_established','transform':result['transform'],'apiReplay':result['apiReplay']}))
 
+def transcript_report():
+    raw=json.loads((BASE/'transcript-cache-raw.json').read_text())
+    result={'kind':'controlled_transcript_replay_comparison','formalPerformanceClaim':'not_established',
+            'confidenceMethod':'10000 paired percentile bootstrap draws; seed 20261002',
+            'sourcePreserved':raw['sourcePreserved'],'corpusAudit':raw['corpusAudit'],
+            'settings':raw['settings'],'environment':raw['environment'],'limitations':raw['limitations'],
+            'scenarios':{}}
+    for case in sorted({row['scenario'] for row in raw['observations']}):
+        rows=[row for row in raw['observations'] if row['scenario']==case]
+        report={'wall':{f'p{int(p*100)}':compare(rows,p) for p in [.5,.75,.95]},
+                'cpu':compare([dict(row,wallMs=row['nodeCpuMs']) for row in rows]),
+                'quality':{kind:{'validLatest':sum(row['validLatest'] for row in rows if row['implementation']==kind),
+                                 'expectedLatest':sum(row['expectedLatest'] for row in rows if row['implementation']==kind)}
+                           for kind in ['baseline','candidate']}}
+        for name in ['providerCalls','outputRows','outputBytes']:
+            values={kind:[row[name] for row in rows if row['implementation']==kind] for kind in ['baseline','candidate']}
+            before,after=statistics.median(values['baseline']),statistics.median(values['candidate'])
+            report[name]={'before':before,'after':after,'absoluteChange':after-before,
+                          'changePercent':100*(after/before-1) if before else None,'samples':7,
+                          'fixedCounts':len(set(values['baseline']))==1 and len(set(values['candidate']))==1,
+                          'confidenceScope':'Fixed controlled fixture counts; not provider cost or population savings.'}
+            if report[name]['fixedCounts']:
+                report[name]['absoluteChange95CI']=[after-before,after-before]
+                report[name]['change95CI']=[report[name]['changePercent']]*2 if before else None
+        report['validBeforeAfterSpeedComparison']=all(v['validLatest']==v['expectedLatest'] for v in report['quality'].values())
+        report['deterministicOutputsMatch']=report['validBeforeAfterSpeedComparison'] and len({row['semanticOutputSha256'] for row in rows})==1
+        result['scenarios'][case]=report
+    (BASE/'transcript-summary.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps({'corpusAudit':result['corpusAudit'],
+                      'scenarios':{case:{'p75':value['wall']['p75'],'providerCalls':value['providerCalls'],
+                                         'validBeforeAfterSpeedComparison':value['validBeforeAfterSpeedComparison']}
+                                   for case,value in result['scenarios'].items()}}))
+
+
 if __name__=='__main__':
     import sys
-    if '--storage' in sys.argv:storage_report()
+    if '--transcripts' in sys.argv:transcript_report()
+    elif '--storage' in sys.argv:storage_report()
     elif '--current' in sys.argv:current_report()
     else:main()

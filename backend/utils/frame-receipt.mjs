@@ -123,6 +123,9 @@ export async function withFrameWriter(directory, work) {
     }
 }
 
+// The broker uses stage_cache OS locks; non-media JSONL producers share it too.
+export { withFrameWriter as withStageWriter };
+
 export async function publishFrames(directory, staged, extension, inputHash) {
     const outputs = await frameOutputs(staged, extension);
     if (!outputs.length) throw new Error('FRAME_SEGMENT_OUTPUT_MISSING');
