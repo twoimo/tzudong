@@ -86,6 +86,7 @@ maybe_normalize() {
 }
 
 ensure_gemini_cli_oauth_settings() {
+    [ "${TZUDONG_PIPELINE_ISOLATED:-0}" = "1" ] && return 0
     [ -f "$HOME/.gemini/oauth_creds.json" ] || return 0
     mkdir -p "$HOME/.gemini"
     "$PYTHON_EXE" - <<'PY'
@@ -581,7 +582,7 @@ if [ "${LAAJ_CHILD:-0}" != "1" ] && [ "$FORCE_CLI_FALLBACK" = false ]; then
         ELIGIBLE_COUNT=$(printf '%s\n' "${VIDEO_IDS[@]}" | "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" eligible-count "${PARALLEL_ARGS[@]}") || exit 1
         if [ "$ELIGIBLE_COUNT" -gt 0 ]; then ensure_health_check; fi
         # OAuth/browser fallbacks stay sequential unless the Node API preflight succeeds.
-        if [ "$FORCE_CLI_FALLBACK" = false ]; then
+        if [ "$FORCE_CLI_FALLBACK" = false ] && [ "$ELIGIBLE_COUNT" -gt 0 ]; then
             printf '%s\n' "${VIDEO_IDS[@]}" | "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" run "${PARALLEL_ARGS[@]}"
             exit $?
         fi
@@ -775,6 +776,13 @@ $TRANSCRIPT
         fi
     fi
 
+    # Parallel children use only the project-budgeted API. The parent drains
+    # active API jobs before serializing any OAuth fallback under a shared lock.
+    if [ "${LAAJ_CHILD:-0}" = "1" ] && [ "$GEMINI_SUCCESS" = false ]; then
+        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
+        exit 75
+    fi
+
     # 2. Antigravity CLI 시도 (Node 실패 또는 Sticky 모드일 때)
     if [ "$GEMINI_SUCCESS" = false ] && [ "$HAS_AGY_CLI" = true ]; then
         log_debug "Antigravity CLI 호출 (모델: ${AGY_MODEL_LABEL})"
@@ -855,6 +863,10 @@ $TRANSCRIPT
                 # 파싱 실패 시 JSON 전용 프롬프트로 같은 provider를 먼저 재요청하고,
                 # agy 응답이 계속 파싱 불가하면 Gemini CLI OAuth로 명시적으로 전환한다.
                 if [ $PARSE_ATTEMPT -lt 3 ]; then
+                    if [ "${LAAJ_CHILD:-0}" = "1" ]; then
+                        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
+                        exit 75
+                    fi
                     log_warning "파싱 실패 (${PARSE_ATTEMPT}/3, provider=${LAST_SUCCESS_PROVIDER:-unknown}) - JSON 전용 재요청..."
                     sleep_before_parse_retry
                     RETRY_PROMPT="$TEMP_DIR/eval_prompt_${VIDEO_ID}_json_retry_${PARSE_ATTEMPT}.txt"

@@ -757,48 +757,77 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
     with stage_lock(receipt_path):
         try:
             ledger = json.loads(receipt_path.read_bytes())
-            if ledger.get("schemaVersion") != 2 or not isinstance(ledger.get("groups"), dict): raise ValueError()
+            if (not isinstance(ledger, dict) or ledger.get("schemaVersion") != 2
+                or not isinstance(ledger.get("groups"), dict)
+                or any(not isinstance(group, dict) for group in ledger["groups"].values())
+                or not isinstance(ledger.get("recordCount"), int)
+                or ledger["recordCount"] < 0): raise ValueError()
         except (OSError, ValueError):
             ledger = {"schemaVersion": 2, "groups": {}, "files": {}}
         file_cache = ledger.get("files", {})
         if not isinstance(file_cache,dict): file_cache = {}
+        observed = {}
+
+        def file_signature(path):
+            try:
+                stat = path.stat()
+            except FileNotFoundError:
+                return None
+            return [stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns]
+
         def file_hash(path):
-            if not path.is_file(): return None
-            stat = path.stat()
-            signature = [stat.st_dev,stat.st_ino,stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns]
+            signature = file_signature(path)
+            observed[path] = signature
+            if signature is None: return None
             previous = file_cache.get(str(path), {})
             if isinstance(previous,dict) and previous.get("signature") == signature and isinstance(previous.get("hash"),str) and re.fullmatch(r"[a-f0-9]{64}",previous["hash"]): return previous["hash"]
             value = input_digest(path, latest=False)
             # A file modified during the read cannot become a validated input.
-            current = path.stat()
-            if signature != [current.st_dev,current.st_ino,current.st_size,current.st_mtime_ns,current.st_ctime_ns]:
+            if signature != file_signature(path):
                 raise ValueError("transform_input_changed")
             file_cache[str(path)] = {"signature": signature, "hash": value}
             return value
         script_hash = file_hash(Path(__file__))
         meta_dir = crawling_path / "meta"
         base = evaluation_path / "evaluation"
-        groups = []
-        for path in sorted((base / "rule_results").glob("*.jsonl")):
-            laaj = base / "laaj_results" / path.name
-            groups.append(("results", path.stem, [path,laaj] if laaj.is_file() else [path]))
-        for kind,directory in [("notSelection",base/"notSelection"),("map_url_crawling",crawling_path/"map_url_crawling")]:
-            groups.extend((kind,path.stem,[path]) for path in sorted(directory.glob("*.jsonl")))
+        def input_groups():
+            result = []
+            for path in sorted((base / "rule_results").glob("*.jsonl")):
+                laaj = base / "laaj_results" / path.name
+                result.append(("results", path.stem, [path,laaj] if laaj.is_file() else [path]))
+            for kind,directory in [("notSelection",base/"notSelection"),("map_url_crawling",crawling_path/"map_url_crawling")]:
+                result.extend((kind,path.stem,[path]) for path in sorted(directory.glob("*.jsonl")))
+            return result
+
+        groups = input_groups()
+
+        def verify_snapshot():
+            # Hashing and parsing are separate reads. Check every observed input
+            # again before publishing; additions and removals also invalidate it.
+            if groups != input_groups() or any(signature != file_signature(path) for path,signature in observed.items()):
+                raise ValueError("transform_input_changed")
+
         keys = {}
         for kind,video,inputs in groups:
             keys[kind+":"+video] = canonical_digest([channel,kind,script_hash,file_hash(meta_dir/(video+".jsonl")),*[file_hash(path) for path in inputs]])
         verified = output.is_file() and file_hash(output) == ledger.get("outputHash")
-        if verified and all(ledger["groups"].get(identity,{}).get("inputHash") == key for identity,key in keys.items()):
+        if verified and set(ledger["groups"]) == set(keys) and all(ledger["groups"].get(identity,{}).get("inputHash") == key for identity,key in keys.items()):
+            verify_snapshot()
             stats = {"groups":len(groups),"reused":len(groups),"new":0,"updated":0,"records":ledger["recordCount"]}
             print(json.dumps({"operation":"transform_complete",**stats},sort_keys=True))
             return stats
         records = {}
+        damaged_lines = 0
         if output.is_file():
-            for line in output.read_text(encoding="utf-8").splitlines():
-                if not line.strip(): continue
-                row = json.loads(line)
-                if not isinstance(row,dict) or not isinstance(row.get("trace_id"),str): raise ValueError("transform_output_invalid")
-                records[row["trace_id"]] = row
+            with output.open("rb") as source:
+                for line in source:
+                    if not line.strip(): continue
+                    try:
+                        row = json.loads(line)
+                        if not isinstance(row,dict) or not isinstance(row.get("trace_id"),str): raise ValueError()
+                        records[row["trace_id"]] = row
+                    except (ValueError, UnicodeError):
+                        damaged_lines += 1
         meta = LazyMetaCache(meta_dir)
         stats = {"groups":len(groups),"reused":0,"new":0,"updated":0}
         claimed, superseded = set(), {}
@@ -831,7 +860,12 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
                     else: superseded[trace] = old; stats["updated"] += 1
                     records[trace] = record
             ledger["groups"][identity] = {"inputHash":key,"records":contributed,"candidates":candidates,"blocked":blocked}
+        ledger["groups"] = {identity: ledger["groups"][identity] for identity in keys}
+        verify_snapshot()
         if not verified or stats["new"] or stats["updated"]:
+            if damaged_lines:
+                damaged = output.read_bytes()
+                atomic_write(output.parent / ".history" / ("damaged-" + hashlib.sha256(damaged).hexdigest() + ".jsonl"), damaged)
             if superseded:
                 history = output.parent/".history"/(canonical_digest(superseded)+".jsonl")
                 atomic_write(history,"".join(json.dumps(record,ensure_ascii=False)+"\n" for record in superseded.values()).encode())

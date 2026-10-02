@@ -36,10 +36,14 @@ REVOKE ALL ON FUNCTION public.admin_evaluation_revision() FROM PUBLIC, anon, aut
 GRANT EXECUTE ON FUNCTION public.admin_evaluation_revision() TO service_role;
 
 CREATE FUNCTION public.admin_evaluation_catalog_snapshot()
-RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path = '' AS $$
-  SELECT jsonb_build_object(
-    'revision', (SELECT revision::text FROM pipeline_control.admin_evaluation_catalog_revision WHERE singleton),
-    'records', COALESCE((SELECT jsonb_agg(projected.record) FROM (
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = '' AS $$
+DECLARE
+  payload jsonb;
+BEGIN
+  IF (SELECT count(*) FROM (SELECT 1 FROM public.restaurants LIMIT 50001) counted) > 50000 THEN
+    RAISE EXCEPTION 'EVALUATION_CATALOG_CAPACITY_EXCEEDED' USING ERRCODE = '54000';
+  END IF;
+  WITH projected AS MATERIALIZED (
       SELECT jsonb_set((SELECT jsonb_object_agg(field.key, field.value)
         FROM jsonb_each(to_jsonb(r)) AS field
         WHERE field.key = ANY(ARRAY[
@@ -50,12 +54,22 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path = '' AS $$
           'db_error_details','db_error_message','reasoning_basis','description_map_url',
           'trace_id_name_source','evaluation_results','categories'
         ])), '{name}', COALESCE(to_jsonb(r.approved_name), 'null'::jsonb)) AS record
-      FROM public.restaurants r ORDER BY r.id LIMIT 50001
-    ) projected), '[]'::jsonb)
-  );
+      FROM public.restaurants r ORDER BY r.id
+  ), capacity AS (
+    SELECT COALESCE(sum(octet_length(record::text) + 2), 0) + 128 AS bytes FROM projected
+  )
+  SELECT CASE WHEN bytes <= 33554432 THEN jsonb_build_object(
+    'revision', (SELECT revision::text FROM pipeline_control.admin_evaluation_catalog_revision WHERE singleton),
+    'records', COALESCE((SELECT jsonb_agg(record) FROM projected), '[]'::jsonb)
+  ) ELSE NULL END INTO payload FROM capacity;
+  IF payload IS NULL THEN
+    RAISE EXCEPTION 'EVALUATION_CATALOG_CAPACITY_EXCEEDED' USING ERRCODE = '54000';
+  END IF;
+  RETURN payload;
+END;
 $$;
 REVOKE ALL ON FUNCTION public.admin_evaluation_catalog_snapshot() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_evaluation_catalog_snapshot() TO service_role;
 
 COMMENT ON FUNCTION public.admin_evaluation_catalog_snapshot() IS
-  'Service-only revision-bound index input. API rejects overflow; no silent truncation.';
+  'Service-only revision-bound index input. Rejects over 50000 rows or 32MiB before aggregate; no silent truncation.';

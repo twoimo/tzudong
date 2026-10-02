@@ -13,6 +13,7 @@ export function isEvaluationCursorStale(error: unknown): boolean {
 }
 
 export interface AdminEvaluationPage {
+  revision: string;
   records: Record<string, unknown>[];
   stats: CategoryStats;
   filteredTotal: number;
@@ -25,11 +26,19 @@ export async function fetchAdminEvaluationPage(query: string, cursor: string | n
   params.set('view', 'page');
   params.set('limit', '50');
   if (cursor) params.set('cursor', cursor);
-  const response = await fetch(`/api/admin/evaluations?${params}`, { cache: 'no-store', signal, headers: { Accept: 'application/json' } });
+  const request = () => fetch(`/api/admin/evaluations?${params}`, { cache: 'no-store', signal, headers: { Accept: 'application/json' } });
+  let response = await request();
+  // A write during the first read is recoverable without retaining any old page.
+  // Later cursors must instead restart the list so page boundaries stay coherent.
+  if (response.status === 409 && cursor === null) response = await request();
   if (response.status === 409) { const failure = new Error('EVALUATION_CURSOR_STALE'); failure.name = 'EVALUATION_CURSOR_STALE'; throw failure; }
   if (!response.ok) throw new Error('EVALUATION_PAGE_UNAVAILABLE');
-  const value: unknown = await response.json();
+  return parseAdminEvaluationPage(await response.json());
+}
+
+export function parseAdminEvaluationPage(value: unknown): AdminEvaluationPage {
   if (!isRecord(value) || !Array.isArray(value.records) || !value.records.every(isRecord)
+      || typeof value.revision !== 'string' || !/^\d{1,20}$/.test(value.revision)
       || !isRecord(value.stats) || !Object.values(value.stats).every(count => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0)
       || typeof value.filteredTotal !== 'number' || !Number.isSafeInteger(value.filteredTotal) || value.filteredTotal < 0
       || !(value.nextCursor === null || typeof value.nextCursor === 'string') || !isRecord(value.warnings)) throw new Error('EVALUATION_PAGE_INVALID');

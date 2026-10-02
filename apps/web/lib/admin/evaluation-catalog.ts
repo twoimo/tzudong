@@ -15,6 +15,7 @@ export interface EvaluationCatalog {
 export function buildEvaluationCatalog(value: unknown): EvaluationCatalog {
   if (!isRecord(value) || typeof value.revision !== 'string' || !/^\d+$/.test(value.revision)
       || !Array.isArray(value.records) || value.records.length > 50000) throw new Error('EVALUATION_CATALOG_INVALID');
+  if (Buffer.byteLength(JSON.stringify(value)) > 32 * 1024 * 1024) throw new Error('EVALUATION_CATALOG_INVALID');
   const records = value.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName).sort(compareAdminEvaluationsByLatestDesc);
   if (records.length !== value.records.length) throw new Error('EVALUATION_CATALOG_INVALID');
   const byVideo = new Map<string, EvaluationRecord[]>();

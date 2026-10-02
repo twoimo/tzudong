@@ -1088,6 +1088,7 @@ function AdminEvaluationPage({
   const pageEpochRef = useRef(0);
   const pageAbortRef = useRef<AbortController | null>(null);
   const reloadPagesRef = useRef<() => Promise<void>>(async () => {});
+  const pageRevisionRef = useRef<string | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
   const [evalFilters, setEvalFilters] = useState<EvalFiltersState>({});
@@ -1098,15 +1099,19 @@ function AdminEvaluationPage({
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
 
-  const detailRequestsRef = useRef(new Map<string, Promise<EvaluationRecord | null>>());
+  const detailRequestsRef = useRef(new Map<string, { promise: Promise<EvaluationRecord | null>; token: symbol; epoch: number }>());
   const ensureEvaluationDetails = useCallback(async (record: EvaluationRecord): Promise<EvaluationRecord | null> => {
     if (!record.read_summary) return record;
     const existing = detailRequestsRef.current.get(record.id);
-    if (existing) return existing;
+    if (existing?.epoch === pageEpochRef.current) return existing.promise;
     const epoch = pageEpochRef.current;
+    const token = Symbol();
     const pending = (async () => {
       try {
-        const response = await fetch(`/api/admin/evaluations/${encodeURIComponent(record.id)}`, { cache: 'no-store', signal: pageAbortRef.current?.signal });
+        const revision = pageRevisionRef.current;
+        const suffix = revision ? `?revision=${encodeURIComponent(revision)}` : '';
+        const response = await fetch(`/api/admin/evaluations/${encodeURIComponent(record.id)}${suffix}`, { cache: 'no-store', signal: pageAbortRef.current?.signal });
+        if (response.status === 409) { await reloadPagesRef.current(); return null; }
         if (!response.ok) throw new Error('EVALUATION_DETAIL_UNAVAILABLE');
         const value: unknown = await response.json();
         const parsed = isRecord(value) ? normalizeEvaluationRecord(value.record) : null;
@@ -1117,9 +1122,11 @@ function AdminEvaluationPage({
       } catch (error) {
         if (epoch === pageEpochRef.current && !(error instanceof Error && error.name === 'AbortError')) toast({ variant: 'destructive', title: '상세 정보 로드 실패', description: '검수 상세 정보를 다시 불러와 주세요.' });
         return null;
-      } finally { detailRequestsRef.current.delete(record.id); }
+      } finally {
+        if (detailRequestsRef.current.get(record.id)?.token === token) detailRequestsRef.current.delete(record.id);
+      }
     })();
-    detailRequestsRef.current.set(record.id, pending);
+    detailRequestsRef.current.set(record.id, { promise: pending, token, epoch });
     return pending;
   }, [toast]);
 
@@ -1528,6 +1535,7 @@ function AdminEvaluationPage({
         if (epoch !== pageEpochRef.current) return;
         setAllRecords(page.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName));
         setPageWarnings(page.warnings);
+        pageRevisionRef.current = page.revision;
         setStats(page.stats);
         setServerFilteredTotal(page.filteredTotal);
         nextCursorRef.current = page.nextCursor;

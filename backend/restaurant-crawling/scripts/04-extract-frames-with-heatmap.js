@@ -1,4 +1,5 @@
-import { mediaPool, boundedLimit } from '../../utils/resource-budget.mjs';
+import { mediaPool, boundedLimit, mapBounded } from '../../utils/resource-budget.mjs';
+import { mediaInputHash, frameInputFingerprint, reusableFrames, withFrameWriter, publishFrames } from '../../utils/frame-receipt.mjs';
 /**
  * 유튜브 히트맵 기반 고화질 프레임 추출 및 자동 수집기
  *
@@ -1834,9 +1835,17 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
 
     log('info', 'FRAME_IMAGE_FORMAT_CONFIGURED');
     const encodingArgs = getFrameEncodingArgs(safeExt);
+    const sourceHash = await mediaInputHash(videoPath);
+    const toolHash = await mediaInputHash(getMediaTools().ffmpegPath);
+    const implementationHash = frameInputFingerprint(await Promise.all([
+        mediaInputHash(__filename),
+        mediaInputHash(fileURLToPath(new URL('../../utils/frame-receipt.mjs', import.meta.url))),
+        mediaInputHash(fileURLToPath(new URL('../../utils/resource-budget.mjs', import.meta.url))),
+        mediaInputHash(fileURLToPath(new URL('../../utils/frame_lock_server.py', import.meta.url))),
+    ]));
 
-    // [최적화] Promise.all을 사용하여 모든 구간을 병렬로 처리 (CPU 활용 극대화)
-    const results = await Promise.all(safeSegments.map((seg, i) => mediaPool.run(async () => {
+    // Every video's segments share one pool; only a bounded number wait for it.
+    const results = await mapBounded(safeSegments, mediaPool.limit, (seg, i) => mediaPool.run(async () => {
         // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
         const startTime = Math.max(0, seg.startSec - safeBufferSec);
         const endTime = Math.min(duration || 99999, seg.endSec + safeBufferSec);
@@ -1847,12 +1856,15 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
 
         // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/EXT_DIR/QUALITY_FPS/frame_x.ext
         const segDirPath = ensureContainedDirectory(outputDirectory, segDirName, safeExt, configDirName);
+        const inputHash = frameInputFingerprint({ sourceHash, toolHash, implementationHash, startTime, endTime, fps: safeFps, quality: safeQuality, extension: safeExt, encodingArgs, schemaVersion: 1 });
 
-        // [최적화] 이미 프레임이 추출되어 있다면 스킵
-        const existingFiles = fs.readdirSync(segDirPath).filter(fileName => fileName.endsWith(`.${safeExt}`));
-        if (existingFiles.length > 0) {
+        const alreadyCompleted = await reusableFrames(segDirPath, safeExt, inputHash);
+        if (alreadyCompleted) return { failed: false, frameCount: alreadyCompleted };
+        return withFrameWriter(segDirPath, async assertWriter => {
+        const reusedCount = await reusableFrames(segDirPath, safeExt, inputHash);
+        if (reusedCount) {
             log('info', 'FRAME_SEGMENT_SKIPPED');
-            return { failed: false, frameCount: existingFiles.length };
+            return { failed: false, frameCount: reusedCount };
         }
 
         log('info', 'FRAME_SEGMENT_EXTRACTION_STARTED');
@@ -1862,8 +1874,9 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
             segDuration = 1.0 / safeFps; // 최소 1프레임 보장
         }
 
-        const outputPattern = resolveContainedPath(segDirPath, `frame_%d.${safeExt}`);
-        assertPathContainmentBeforeMutation(segDirPath, outputPattern);
+        const staged = fs.mkdtempSync(path.join(segDirPath, '.frames-'));
+        const outputPattern = resolveContainedPath(staged, `frame_%d.${safeExt}`);
+        assertPathContainmentBeforeMutation(staged, outputPattern);
         try {
             await runProcess(
                 getMediaTools().ffmpegPath,
@@ -1881,7 +1894,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
             );
 
             // 파일명 정리: frame_1.ext -> 정확한 시간(초).ext 로 변경
-            const files = fs.readdirSync(segDirPath).filter(fileName => fileName.startsWith('frame_'));
+            const files = fs.readdirSync(staged).filter(fileName => fileName.startsWith('frame_'));
             let count = 0;
             for (const fileName of files) {
                 const match = fileName.match(new RegExp(`^frame_(\\d+)\\.${safeExt}$`));
@@ -1890,12 +1903,12 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                     const timeOffset = (idx - 1) / safeFps;
                     const actualTime = startTime + timeOffset;
                     const newName = `${actualTime.toFixed(2)}.${safeExt}`;
-                    const oldPath = resolveContainedPath(segDirPath, fileName);
-                    const newPath = resolveContainedPath(segDirPath, newName);
-                    assertExistingPathContained(segDirPath, oldPath);
-                    assertPathContainmentBeforeMutation(segDirPath, newPath);
+                    const oldPath = resolveContainedPath(staged, fileName);
+                    const newPath = resolveContainedPath(staged, newName);
+                    assertExistingPathContained(staged, oldPath);
+                    assertPathContainmentBeforeMutation(staged, newPath);
                     fs.renameSync(oldPath, newPath);
-                    assertExistingPathContained(segDirPath, newPath);
+                    assertExistingPathContained(staged, newPath);
                     count++;
                 }
             }
@@ -1903,13 +1916,19 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                 log('error', 'FRAME_SEGMENT_OUTPUT_MISSING');
                 return { failed: true, frameCount: 0 };
             }
+            if (sourceHash !== await mediaInputHash(videoPath)) throw new Error('FRAME_INPUT_CHANGED');
+            assertWriter();
+            count = await publishFrames(segDirPath, staged, safeExt, inputHash);
             log('info', 'FRAME_SEGMENT_EXTRACTION_COMPLETED');
             return { failed: false, frameCount: count };
         } catch (e) {
             logOperationError('error', 'FRAME_SEGMENT_EXTRACTION_FAILED', e);
             return { failed: true, frameCount: 0 };
+        } finally {
+            fs.rmSync(staged, { recursive: true, force: true });
         }
-    })));
+        });
+    }));
 
     return {
         totalSegments: results.length,
@@ -2033,30 +2052,8 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
             }
 
 
-            let allSegmentsExist = true;
-            for (const currentExt of extensions) {
-                const segDirs = fs.readdirSync(outputDir).filter(directoryName => /^\d+_\d+_\d+$/.test(directoryName));
-                let completedSegs = 0;
-                for (const segDirName of segDirs) {
-                    const targetPath = resolveContainedPath(outputDir, segDirName, currentExt, configDirName);
-                    if (fs.existsSync(targetPath)) {
-                        assertExistingPathContained(outputDir, targetPath);
-                        if (fs.readdirSync(targetPath).length > 0) {
-                            completedSegs++;
-                        }
-                    }
-                }
-
-                if (completedSegs < safeSegments.length) {
-                    allSegmentsExist = false;
-                    break;
-                }
-            }
-
-            if (allSegmentsExist) {
-                log('info', 'FRAME_QUALITY_SKIPPED');
-                continue;
-            }
+            // A directory or partial image alone is not a completion receipt.
+            // The segment extractor validates source/configuration and outputs.
 
             videoPath = await acquireVideo(videoId, tempDir, currentQuality);
             if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR)) {
@@ -2421,6 +2418,7 @@ if (isDirectExecution) {
 }
 
 export {
+    extractFrames,
     downloadVideo,
     buildYtDlpExecOptions,
     fetchUsableGDriveVideo,

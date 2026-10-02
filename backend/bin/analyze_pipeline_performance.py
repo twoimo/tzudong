@@ -29,6 +29,55 @@ def compare(rows,p=.75):
             'reductionPercent':100*(1-bv/av),'reduction95CI':[quantile(samples,.025),quantile(samples,.975)],
             'experimentalNoiseBudgetMs':max(.1,2*mad),'mediansMs':[statistics.median(a),statistics.median(b)]}
 
+def current_report():
+    """Keep prior experiments immutable; compare the currently audited paths."""
+    transform=json.loads((BASE/'transform-restart-v3-raw.json').read_text())
+    api=json.loads((BASE/'admin-api-current-raw.json').read_text())
+    media=json.loads((BASE/'media-replay-raw.json').read_text())
+    browser=json.loads((BASE/'browser-revision-raw.json').read_text())
+    def metric(rows,key,unit,p):
+        comparison=compare([dict(row,wallMs=row[key]) for row in rows],p)
+        return {'samples':comparison['samples'],'statistic':comparison['statistic'],'unit':unit,
+                'before':comparison['beforeMs'],'after':comparison['afterMs'],
+                'absoluteChange':-comparison['absoluteReductionMs'],'changePercent':-comparison['reductionPercent'],
+                'change95CI':[-comparison['reduction95CI'][1],-comparison['reduction95CI'][0]],
+                'experimentalNoiseBudget':comparison['experimentalNoiseBudgetMs']}
+    def distribution(rows,key,unit):
+        return {f'p{int(p*100)}':metric(rows,key,unit,p) for p in [.5,.75,.95]}
+    result={'kind':'current_local_experimental_comparison','liveEvidenceEligible':False,
+            'formalPerformanceClaim':'not_established','sourcePreserved':transform['sourcePreserved'],
+            'dataset':transform['dataset'],'confidenceMethod':'10000 paired percentile bootstrap draws; seed 20261002',
+            'limitations':['No measured whole-pipeline end-to-end speedup','No production DB/network timing',
+                           'No provider inference/cost comparison','No before-browser timing baseline',
+                           'No 24-hour observation or complete repository G003 scorer/validator',
+                           'Process-tree RSS sums shared resident pages; it is not physical host RAM saved'],
+            'transform':{},'media':{},'apiReplay':distribution(api['observations'],'wallMs','ms')}
+    for case in ['cold','unchanged','delta-five']:
+        rows=[row for row in transform['observations'] if row['scenario']==case]
+        result['transform'][case]={key:distribution(rows,key,unit) for key,unit in [('wallMs','ms'),('cpuMs','ms'),('peakRssMiB','MiB')]}
+        result['transform'][case]['allOutputsEquivalent']=len({row['outputSha256'] for row in rows})==1
+    for case in ['cold','unchanged','damaged-frame']:
+        rows=[row for row in media['observations'] if row['scenario']==case]
+        result['media'][case]={key:distribution(rows,key,unit) for key,unit in [('wallMs','ms'),('totalWorkerCpuMs','ms'),('peakProcessTreeRssMiB','MiB'),('maximumSingleProcessRssMiB','MiB')]}
+        result['media'][case]['quality']={implementation:{'samples':7,'equivalentOutputs':sum(row['frameBytesEquivalent'] for row in rows if row['implementation']==implementation),'sampledPeakFfmpegProcesses':max(row['sampledPeakFfmpegProcesses'] for row in rows if row['implementation']==implementation)} for implementation in ['baseline','candidate']}
+        result['media'][case]['resourceScope']=rows[0]['resourceScope']
+        result['media'][case]['validBeforeAfterSpeedComparison']=case!='damaged-frame'
+    result['payload']={key:{'before':next(row[key] for row in api['observations'] if row['implementation']=='baseline'),
+                           'after':next(row[key] for row in api['observations'] if row['implementation']=='candidate')} for key in ['payloadBytes','gzipBytes']}
+    for value in result['payload'].values():
+        value['absoluteChange']=value['after']-value['before'];value['changePercent']=100*(value['after']/value['before']-1)
+        value['change95CI']=[value['changePercent'],value['changePercent']];value['samples']=100
+        value['confidenceScope']='fixed identical replay payload; not a population or cost estimate'
+    result['browser']={key:browser[key] for key in ['samples','errorCount','expectedHttpSignals','detailConflicts','refreshedPageRequests','writes','outsideFirstPageSearchVerified','firstPageRaceRecovered']}
+    result['browser']['afterOnlyMs']={f'p{int(p*100)}':quantile([row['wallMs'] for row in browser['observations']],p) for p in [.5,.75,.95]}
+    result['environment']={'media':media['environment'],'actualPaidProviderCalls':0,'deploymentPerformed':False,'operationalDbWrites':0}
+    cold=result['transform']['cold']['wallMs']['p75']['absoluteChange']
+    saved=-result['transform']['unchanged']['wallMs']['p75']['absoluteChange']
+    result['amortization']={'formula':'N * unchanged saving > cold overhead','unchangedReruns':math.floor(max(0,cold)/saved)+1}
+    (BASE/'summary-current.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps({'status':'passed','formalPerformanceClaim':'not_established','report':'summary-current.json'}))
+
+
 def main():
     transform=json.loads((BASE/'transform-final-raw.json').read_text())
     api=json.loads((BASE/'admin-api-raw.json').read_text())
@@ -49,4 +98,6 @@ def main():
     (BASE/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({'status':'complete','formalPerformanceClaim':'not_established','transform':result['transform'],'apiReplay':result['apiReplay']}))
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    import sys
+    current_report() if '--current' in sys.argv else main()

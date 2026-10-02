@@ -1,0 +1,41 @@
+{
+  "kind": "local_verification_current",
+  "pythonRestartAndBudget": {
+    "run": 23,
+    "passed": 23
+  },
+  "nodeAffected": {
+    "run": 15,
+    "passed": 15
+  },
+  "webRelatedDistinct": {
+    "run": 22,
+    "passed": 22
+  },
+  "typescriptParity": "passed",
+  "targetedLint": "passed",
+  "cssBoundaries": "passed",
+  "orchestration": {
+    "run": 213,
+    "passed": 212,
+    "deadlineFlaky": 1,
+    "failedModuleRerun": {
+      "run": 4,
+      "passed": 4
+    }
+  },
+  "sqlFixture": "sql-snapshot-bounds.json",
+  "browser": "browser-revision-raw.json",
+  "wholeObjectiveComplete": false,
+  "sharedGeminiSettings": {
+    "priorConfigurationSnapshotAvailable": false,
+    "initialTestRewroteSettings": true,
+    "isolatedGuardAdded": true,
+    "afterGuardHashPreserved": true
+  },
+  "productionBundle": {
+    "next": "16.3.5",
+    "status": "passed",
+    "staticRoutesGenerated": 48
+  }
+}

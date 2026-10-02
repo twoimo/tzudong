@@ -19,6 +19,15 @@ def positive_int(value: str | None, default: int, ceiling: int) -> int:
     return parsed
 
 
+def budget_path() -> Path:
+    """A host-wide default prevents separate checkouts multiplying one quota."""
+    explicit = os.getenv('GEMINI_BUDGET_PATH')
+    if explicit:
+        return Path(explicit)
+    directory = Path(os.getenv('TZUDONG_PROVIDER_STATE_DIR', str(Path.home()/'.cache'/'tzudong')))
+    return directory/'provider-budget.sqlite'
+
+
 class ProjectBudget:
     def __init__(self, path: Path, scope: str, *, rpm: int = 30, concurrency: int = 1):
         import re
@@ -103,8 +112,7 @@ def main() -> int:
     parser.add_argument("--lease", default="")
     parser.add_argument("--delay", type=float, default=0)
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[1]
-    budget = ProjectBudget(Path(os.getenv("GEMINI_BUDGET_PATH", str(root / "log" / "provider-budget.sqlite"))),
+    budget = ProjectBudget(budget_path(),
                            os.getenv("GEMINI_BUDGET_PROJECT", "configured-project"),
                            rpm=positive_int(os.getenv("GEMINI_REQUESTS_PER_MINUTE"), 30, 100000),
                            concurrency=positive_int(os.getenv("GEMINI_MAX_INFLIGHT"), 1, 8))

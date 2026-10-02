@@ -1,0 +1,142 @@
+{
+  "kind": "requirement_completion_audit",
+  "status": "incomplete",
+  "goalMayBeCompleted": false,
+  "requirements": [
+    {
+      "requirement": "Full collection/subtitle/media/extraction/evaluation/save/admin scope",
+      "status": "partial",
+      "evidence": [
+        "source e77887c",
+        "current candidate diff"
+      ],
+      "remaining": "A combined before/after pipeline experiment and collection/subtitle-stage coverage audit are not yet retained."
+    },
+    {
+      "requirement": "Hashed restart/incremental results, single JSONL writer",
+      "status": "verified_for_changed_stages",
+      "evidence": [
+        "backend/utils/tests/test_pipeline_restart_integration.py",
+        "transform-restart-v3-raw.json"
+      ],
+      "scope": "08/09/10/11/12 receipts; transform source races and priority; frame receipts and cross-process writer. Not a claim for every collection stage."
+    },
+    {
+      "requirement": "Media resources and shared cache",
+      "status": "partial",
+      "evidence": [
+        "media-replay-raw.json",
+        "backend/utils/tests/frame-receipt.test.mjs"
+      ],
+      "remaining": "Full consumer-chain download-volume comparison is not measured; resource bound is per Node process."
+    },
+    {
+      "requirement": "Provider project budget, Retry-After, fallback",
+      "status": "partial",
+      "evidence": [
+        "backend/utils/provider_budget.py",
+        "backend/bin/run_parallel_laaj.py",
+        "backend/utils/tests/test_pipeline_restart_integration.py"
+      ],
+      "remaining": "Actual provider limits, TPM/RPD admission and cross-host total enforcement are not established."
+    },
+    {
+      "requirement": "Evaluation/storage deduplication and 1-200 batch comparison",
+      "status": "partial",
+      "evidence": [
+        "backend/restaurant-evaluation/scripts/13-supabase-insert.py",
+        "provider-read-raw.json"
+      ],
+      "remaining": "Batch-size and uncertain-save integration measurements remain; replay reads do not measure paid inference."
+    },
+    {
+      "requirement": "Admin cursor/search/filter/order/statistics/warnings/detail compatibility",
+      "status": "verified_in_local_fixtures",
+      "evidence": [
+        "admin-api-current-raw.json",
+        "browser-revision-raw.json",
+        "apps/web/tests-unit/admin-evaluation-pagination.test.ts",
+        "apps/web/tests-unit/admin-evaluation-revision-read.test.ts"
+      ],
+      "scope": "50/200 limits; 10011-row enumeration; global warnings and counts; 409 races; outside-page search. No production DB proof."
+    },
+    {
+      "requirement": "Unapplied migration/permissions/query plans",
+      "status": "partial",
+      "evidence": [
+        "sql-snapshot-bounds.json"
+      ],
+      "remaining": "Exact-version isolated fixture passed; full canonical replay and projection workload plan remain."
+    },
+    {
+      "requirement": "At least 7 paired runs of unchanged/new/partial/bulk/restart conditions",
+      "status": "partial",
+      "evidence": [
+        "transform-restart-v3-raw.json",
+        "media-replay-raw.json"
+      ],
+      "remaining": "Unchanged/partial/full/corrupt-frame covered; new-input and failed-transform restart timing not yet paired."
+    },
+    {
+      "requirement": "100 paired API and browser observations",
+      "status": "partial",
+      "evidence": [
+        "admin-api-current-raw.json",
+        "browser-revision-raw.json"
+      ],
+      "remaining": "100 API component pairs and 100 after-browser observations; before-browser timing missing."
+    },
+    {
+      "requirement": "Preserved deterministic data and administrator protection",
+      "status": "partial",
+      "evidence": [
+        "transform-restart-v3-raw.json",
+        "existing CAS/readback tests"
+      ],
+      "remaining": "1257 transform records match; consolidated full-chain protection/failure evidence remains."
+    },
+    {
+      "requirement": "All metrics, environment, hashes, 95% intervals, regressions",
+      "status": "partial",
+      "evidence": [
+        "summary-current.json"
+      ],
+      "remaining": "Component metrics retained; overall pipeline throughput, download, paid token/cost metrics missing."
+    },
+    {
+      "requirement": "Formal observation/scorer/validator/artifact-map proof",
+      "status": "incomplete",
+      "remaining": "24-hour observation and complete G003 evidence not satisfied; no formal performance claim."
+    },
+    {
+      "requirement": "Current documentation and installed runtimes",
+      "status": "verified_for_used_skills_and_candidate",
+      "evidence": [
+        "skill backup/readback from preceding work",
+        "web release lock",
+        "backend installed SDK 2.26.0"
+      ],
+      "scope": "Five used cached skills updated; web SDK 2.18.0, candidate backend SDK 2.26.0. Not a blanket freshness claim for every installed skill."
+    },
+    {
+      "requirement": "Existing model/paid/operating bounds and shared settings preservation",
+      "status": "partial",
+      "scope": "No model change, paid call, deployment or operational DB write.",
+      "remaining": "Initial isolated test rewrote Gemini CLI settings via inherited function. Prior configuration snapshot missing; future isolated writes are now blocked and hash-checked."
+    },
+    {
+      "requirement": "Google credit use",
+      "status": "awaiting_authorization",
+      "scope": "Six benefits redeemed in earlier confirmed readback; no top-up or project billing link.",
+      "remaining": "Existing 10000-KRW top-up/link approval question is unanswered; no repetition or charge."
+    },
+    {
+      "requirement": "Operational application plan",
+      "status": "prepared_for_review",
+      "evidence": [
+        "docs/operations/pipeline-performance-20261002.md"
+      ],
+      "scope": "Source only. Promotion, operational migration and deployment excluded."
+    }
+  ]
+}

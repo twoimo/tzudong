@@ -21,14 +21,19 @@ export class Semaphore {
 }
 
 export async function mapBounded(items, limit, work) {
+    if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('RESOURCE_LIMIT_INVALID');
     const results = new Array(items.length);
     let index = 0;
-    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
-        while (index < items.length) {
+    let failure;
+    const workers = await Promise.allSettled(Array.from({ length: Math.min(limit, items.length) }, async () => {
+        while (index < items.length && !failure) {
             const current = index++;
-            results[current] = await work(items[current], current);
+            try { results[current] = await work(items[current], current); }
+            catch (error) { failure = error || new Error('RESOURCE_JOB_FAILED'); throw failure; }
         }
     }));
+    const rejected = workers.find(result => result.status === 'rejected');
+    if (rejected) throw rejected.reason;
     return results;
 }
 

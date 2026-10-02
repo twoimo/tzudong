@@ -22,3 +22,16 @@ test('failure releases a permit and overrides cannot exceed ceilings', async () 
     assert.equal(boundedLimit('999', 2, 4), 4);
     assert.equal(boundedLimit('-1', 2, 4), 2);
 });
+test('a failure drains active jobs before returning and stops new admissions', async () => {
+    let completed = false;
+    const visited = [];
+    await assert.rejects(mapBounded([0, 1, 2, 3], 2, async item => {
+        visited.push(item);
+        if (item === 0) { await new Promise(resolve => setTimeout(resolve, 2)); throw new Error('fixture'); }
+        await new Promise(resolve => setTimeout(resolve, 20));
+        completed = true;
+    }));
+    assert.equal(completed, true);
+    assert.deepEqual(visited, [0, 1]);
+    await assert.rejects(mapBounded([0], 0, async () => 1));
+});

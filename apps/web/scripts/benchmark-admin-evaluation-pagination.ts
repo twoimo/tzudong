@@ -6,6 +6,11 @@ import { buildEvaluationCatalog, evaluationCatalogPage } from '@/lib/admin/evalu
 import { normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { summarizeEvaluationRecord } from '@/lib/admin/evaluation-summary';
 import { filterEvaluationRecords, evaluationStats } from '@/lib/admin/evaluation-query';
+import { parseAdminEvaluationPage } from '@/lib/admin/evaluation-page-client';
+import { findSameVideoDuplicateWarningCandidates, formatSameVideoDuplicateWarning } from '@/lib/admin-same-video-duplicate-warning';
+import { findRestaurantIdentityWarnings } from '@/lib/admin-restaurant-identity-warning';
+import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import type { EvaluationRecord } from '@/types/evaluation';
 
 // Business-source replay is read-only; no raw row or payload is retained.
 const inputPath = '/Users/twoimo/Documents/projects/tzudong/backend/restaurant-evaluation/data/tzuyang/evaluation/transforms.jsonl';
@@ -21,6 +26,7 @@ const query = { searchQuery:'',evalFilters:{},deepLinkFilter:null };
 const start = performance.now();
 const catalog = buildEvaluationCatalog({revision:'1',records:rows});
 const indexBuildMs = performance.now()-start;
+const byId=new Map(rows.map(row=>[row.id,row]));
 const observations=[];
 for(let repeat=0;repeat<100;repeat++) {
   for(const implementation of repeat%2===0?['baseline','candidate']:['candidate','baseline']) {
@@ -33,9 +39,13 @@ for(let repeat=0;repeat<100;repeat++) {
       evaluationStats(records);
     } else {
       const page=evaluationCatalogPage(catalog,query,50);
-      const byId=new Map(rows.map(row=>[row.id,row]));
-      payload=JSON.stringify({...page,records:page.records.map(record=>summarizeEvaluationRecord(byId.get(record.id)!,record))});
-      visible=JSON.parse(payload).records.map(normalizeEvaluationRecord).filter(Boolean).map(withAdminEvaluationDisplayName);
+      const warnings=Object.fromEntries(page.records.map(record=>{
+        const related=catalog.byVideo.get(extractVideoIdFromYoutubeLink(record.youtube_link)??'')??[];
+        const candidates=findSameVideoDuplicateWarningCandidates(record,related);
+        return [record.id,{sameVideo:{count:candidates.length,candidates:candidates.slice(0,3),message:formatSameVideoDuplicateWarning(candidates)},identity:findRestaurantIdentityWarnings(record,related)}];
+      }));
+      payload=JSON.stringify({...page,records:page.records.map(record=>summarizeEvaluationRecord(byId.get(record.id)!,record)),warnings});
+      visible=parseAdminEvaluationPage(JSON.parse(payload)).records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName);
     }
     const elapsed=performance.now()-started;
     const ids=visible.map((record:{id:string})=>record.id);
@@ -49,5 +59,5 @@ for(let i=0;i<observations.length;i+=2) {
 const directory='performance/pipeline-20261002';mkdirSync(directory,{recursive:true});
 const output={kind:'local_api_serialization_and_client_processing_replay',liveEvidenceEligible:false,sourceSha256:createHash('sha256').update(bytes).digest('hex'),
   sourceRows:rows.length,indexBuildMs,samplesPerImplementation:100,omittedRows:0,duplicateRows:0,observations};
-writeFileSync(`${directory}/admin-api-raw.json`,JSON.stringify(output,null,2)+'\n');
+writeFileSync(`${directory}/admin-api-current-raw.json`,JSON.stringify(output,null,2)+'\n');
 console.log(JSON.stringify({status:'passed',sourceRows:rows.length,samplesPerImplementation:100,firstPageIdsEquivalent:true,indexBuildMs}));

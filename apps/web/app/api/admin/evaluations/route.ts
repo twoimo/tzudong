@@ -80,7 +80,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { error: 'Failed to load admin evaluation records.' },
-      { status: 500 },
+      { status: 500, headers: { 'Cache-Control': 'private, no-store' } },
     );
   }
 }

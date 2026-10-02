@@ -9,7 +9,7 @@ import unittest
 
 from backend.utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock
 from backend.utils.request_budget import ReadCoalescer, RequestPacer, retry_after_seconds
-from backend.utils.provider_budget import ProjectBudget
+from backend.utils.provider_budget import ProjectBudget, budget_path
 from backend.pipeline_control.media_cache import owned_media_cache
 from unittest.mock import patch
 
@@ -65,6 +65,11 @@ class StageCacheTests(unittest.TestCase):
 
 
 class ReadBudgetTests(unittest.TestCase):
+    def test_default_quota_store_is_independent_of_working_directory(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(Path.home()/'.cache/tzudong/provider-budget.sqlite', budget_path())
+        with patch.dict(os.environ, {'GEMINI_BUDGET_PATH':'fixture.sqlite'}):
+            self.assertEqual(Path('fixture.sqlite'), budget_path())
     def test_concurrent_identical_reads_are_one_request_and_independent_results(self):
         cache = ReadCoalescer()
         calls = 0
