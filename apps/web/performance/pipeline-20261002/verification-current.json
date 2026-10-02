@@ -22,6 +22,11 @@
     "failedModuleRerun": {
       "run": 4,
       "passed": 4
+    },
+    "frozenRerun": {
+      "run": 213,
+      "passed": 213,
+      "sourceSha": "0297eb9210144e7035f474281b88329acc87b456"
     }
   },
   "sqlFixture": "sql-snapshot-bounds.json",

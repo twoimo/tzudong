@@ -29,6 +29,7 @@
     "apps/web/performance/pipeline-20261002/transform-raw.json": "3153e24e4a682599126b0e0c89ce1183f5e20b07af092b7fe883153e20cda190",
     "apps/web/performance/pipeline-20261002/transform-rejected-v1.json": "48b3f8a0a5a1edae8aa7b71c3d78e77c4cb2b5d5cf0d10ee21a7c9f21192075c",
     "apps/web/performance/pipeline-20261002/transform-restart-v3-raw.json": "044bdbec37d53ed3ceb0f4564e427f3d53a5c69f1a3afa114211824d0a2845d6",
-    "apps/web/performance/pipeline-20261002/verification-current.json": "4250b8766ebc4ef6c22a5b6e89b724ef6d382a00ad3c6605febf947ccc5cb07c"
+    "apps/web/performance/pipeline-20261002/verification-current.json": "d2bbd5ebf0c581d94413e8e5cca32419bf263b09f3f6e455fc4e53823e94e47c",
+    "apps/web/performance/pipeline-20261002/orchestration-readiness-frozen.json": "428d0b666dc9b65b0da2fde6ec8525d969d0236f869cb5e634dd9d67f05ad8b1"
   }
 }
