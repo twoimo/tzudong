@@ -260,6 +260,7 @@ describe('expanded cluster flow invariants', () => {
                 map, contextualRestaurants: candidates, displayRestaurants: candidates, expandedClusterRestaurantIds,
                 activeIds: new Set<string>(), extendedBounds,
                 renderedExpandedSources: new Map<string, Restaurant>(),
+                deferredMarkerRenders: [],
                 markerViewportKey: getViewportKey(map, mapElement), lastMarkerViewportRef,
                 shouldRenderExpandedMarker: (restaurant: Restaurant) => shouldRenderExpandedClusterMarker(
                     restaurant, null, null, extendedBounds, true,
