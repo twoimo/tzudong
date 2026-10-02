@@ -1,0 +1,44 @@
+{
+  "createdAt": "2026-10-02T15:40:09.706199+00:00",
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "parentFrozenMapSha256": "dfbe5ef1f7b946cdc21292fa9b225e555f42cc158f090a0ec0a7110683b34b1e",
+  "sequence": [
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "a1"
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "b1"
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "b2"
+    },
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "a2"
+    },
+    {
+      "mode": "physical",
+      "role": "before",
+      "label": "a1"
+    },
+    {
+      "mode": "physical",
+      "role": "after",
+      "label": "b1"
+    }
+  ],
+  "cyclesPerOwnedTab": 60,
+  "heapRegressionTolerancePercent": 20,
+  "forcedGcAllowed": false,
+  "samplesAlreadyCollected": 0,
+  "sampleUnits": "one phone/existing browser processes; 60 repetitions are not 60 independent users",
+  "bothPairAndAggregateFailuresMustBeReported": true,
+  "authUnlockRequired": true
+}
