@@ -1,0 +1,7 @@
+{
+  "source": "memory-repeat-compact-reuse-pilot-v1/raw.json",
+  "adopted": false,
+  "reason": "same-icon reattach pilot naturalheap>50MB vscontrol~26-36MB; combinesknownpreviousSDKreuseGC/lifecycle risk, noexception orGCwaiver",
+  "nextBoundChosenBeforeResults": 128,
+  "nextPolicy": "originalforward batch release, clearinactiveappcallback anddisposeonlyownedlistener, cap128vs1000 unused SDKobjects; tradeoff newconstructors testedagainstsame15%latency/20%memory conditions"
+}

@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-10-01T15:51:34.351300+00:00",
+  "measuredSource": "marker-dom-diagnostic-v1/raw.json",
+  "blankTextNodes": 2855,
+  "markers": 571,
+  "blankCharacters": 37686,
+  "styleWhitespaceCharacters": 72517,
+  "hypothesis": "remove generated intertag whitespace nodes and collapse whitespace in known generated CSS attributes, keeping all tokens/attributes/CSS declaration semantics; reduce cached HTML and transient parsing objects without delay/GC forcing",
+  "scope": "individual flex/absolute markers only; not arbitrary HTML or user text",
+  "model": "remove5blank subtree textnodes permarker plus outer whitespace; cached/parser character count decreases, retained/transientheap effect must be browsermeasured",
+  "validation": [
+    "actualSDKbefore/afterCSSOM +img/badge/a11y attributes equivalence",
+    "selected,visited,mixedcategory,changeddata,reviewbubble functional paths",
+    "same old original735 natural20percent budget + currentmatchedcontrol latency15percent/noise"
+  ],
+  "budgetsUnchanged": true,
+  "adopted": false,
+  "fieldAdmitted": 0
+}

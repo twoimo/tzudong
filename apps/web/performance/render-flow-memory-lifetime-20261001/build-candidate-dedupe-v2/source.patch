@@ -1,0 +1,182 @@
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index bcb0f38e..d1c4e90f 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -2722,14 +2722,15 @@ const NaverMapView = memo(({
+                 extendedBounds,
+                 VIEWPORT_FILTER_ENABLED,
+             );
++        const renderedExpandedSources = new Map<string, Restaurant>();
+         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
+             if (expandedClusterRestaurantIds.length === 0) return;
+             expandedClusterRestaurantIds.forEach((restaurantId) => {
+-                const restaurant = normalizeNaverMarkerCoordinates(
+-                    resolveMarkerRestaurant(restaurantId),
+-                );
++                const sourceRestaurant = resolveMarkerRestaurant(restaurantId);
++                const restaurant = normalizeNaverMarkerCoordinates(sourceRestaurant);
+                 if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
+                 if (!shouldRenderExpandedMarker(restaurant)) return;
++                if (sourceRestaurant) renderedExpandedSources.set(restaurant.id, sourceRestaurant);
+ 
+                 activeIds.add(restaurant.id);
+                 const isSelected = selectedRestaurant?.id === restaurant.id;
+@@ -3018,6 +3019,10 @@ const NaverMapView = memo(({
+                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
+ 
+                 contextualRestaurants.forEach(restaurant => {
++                    // Expanded markers already rendered from this same source need
++                    // no second SDK icon read/options/click-handler replacement.
++                    // A different source object still reaches the later renderer.
++                    if (renderedExpandedSources.get(restaurant.id) === restaurant) return;
+                     if (restaurant.lat == null || restaurant.lng == null) return;
+                     if (expandedClusterRestaurantIds.length > 0 && !shouldRenderExpandedMarker(restaurant)) return;
+                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
+diff --git a/apps/web/lib/performance/field-vitals.ts b/apps/web/lib/performance/field-vitals.ts
+new file mode 100644
+index 00000000..ad4a92e9
+--- /dev/null
++++ b/apps/web/lib/performance/field-vitals.ts
+@@ -0,0 +1,76 @@
++export const FIELD_VITAL_NAMES = ['CLS', 'INP', 'LCP'] as const;
++export type FieldVitalName = typeof FIELD_VITAL_NAMES[number];
++export type FieldDevice = 'mobile' | 'desktop';
++export const FIELD_NAVIGATIONS = ['navigate', 'reload', 'back-forward', 'back-forward-cache', 'prerender', 'restore'] as const;
++export type FieldNavigation = typeof FIELD_NAVIGATIONS[number];
++export type FieldVitalSample = {
++  version: 1;
++  device: FieldDevice;
++  metric: FieldVitalName;
++  navigation: FieldNavigation;
++  bucket: number;
++};
++
++// Fixed histograms keep distributions without retaining individual measurements.
++// Overflow buckets are open ended; quantile reports must return interval bounds.
++export const FIELD_BUCKETS = {
++  CLS: { width: 0.01, overflow: 100 },
++  INP: { width: 16, overflow: 200 },
++  LCP: { width: 100, overflow: 120 },
++} as const;
++
++export function fieldVitalBucket(name: FieldVitalName, value: number): number | null {
++  if (!Number.isFinite(value) || value < 0) return null;
++  const spec = FIELD_BUCKETS[name];
++  return Math.min(spec.overflow, Math.floor(value / spec.width));
++}
++
++export function parseFieldVitalSample(value: unknown): FieldVitalSample | null {
++  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
++  const data = value as Record<string, unknown>;
++  if (Object.keys(data).sort().join(',') !== 'bucket,device,metric,navigation,version') return null;
++  if (data.version !== 1 || !['mobile', 'desktop'].includes(String(data.device))) return null;
++  if (!FIELD_VITAL_NAMES.includes(data.metric as FieldVitalName)) return null;
++  if (!FIELD_NAVIGATIONS.includes(data.navigation as FieldNavigation)) return null;
++  const metric = data.metric as FieldVitalName;
++  if (!Number.isSafeInteger(data.bucket) || (data.bucket as number) < 0
++    || (data.bucket as number) > FIELD_BUCKETS[metric].overflow) return null;
++  return data as FieldVitalSample;
++}
++
++export function shouldCollectFieldVitals(input: {
++  production: boolean;
++  hostname: string;
++  pathname: string;
++  search: string;
++  webdriver: boolean;
++}): boolean {
++  if (!input.production || input.webdriver || input.pathname !== '/') return false;
++  if (!['tzudong.app', 'www.tzudong.app'].includes(input.hostname)) return false;
++  // Explicit QA query values remain in the browser and are never transmitted.
++  return ![...new URLSearchParams(input.search).keys()].some(key => key.startsWith('__perf') || key === '__qa');
++}
++
++export function fieldQuantileInterval(
++  name: FieldVitalName,
++  histogram: ReadonlyArray<{ bucket: number; count: number }>,
++  quantile: number,
++): { n: number; lower: number; upper: number | null } | null {
++  if (!(quantile > 0 && quantile <= 1) || histogram.length === 0) return null;
++  const spec = FIELD_BUCKETS[name];
++  if (histogram.some(x => !Number.isSafeInteger(x.count) || x.count <= 0
++    || !Number.isSafeInteger(x.bucket) || x.bucket < 0 || x.bucket > spec.overflow)) return null;
++  const n = histogram.reduce((sum, x) => sum + x.count, 0);
++  if (!Number.isSafeInteger(n)) return null;
++  const target = Math.ceil(n * quantile);
++  let cumulative = 0;
++  for (const row of [...histogram].sort((a, b) => a.bucket - b.bucket)) {
++    cumulative += row.count;
++    if (cumulative >= target) return {
++      n,
++      lower: row.bucket * spec.width,
++      upper: row.bucket === spec.overflow ? null : (row.bucket + 1) * spec.width,
++    };
++  }
++  return null;
++}
+diff --git a/apps/web/lib/web-vitals.tsx b/apps/web/lib/web-vitals.tsx
+index 7f2422bd..b522cd03 100644
+--- a/apps/web/lib/web-vitals.tsx
++++ b/apps/web/lib/web-vitals.tsx
+@@ -3,6 +3,9 @@
+ import { useEffect } from 'react';
+ import { onCLS, onFCP, onLCP, onINP, type Metric } from 'web-vitals';
+ import { debugLog } from '@/lib/debug-log';
++import { fieldVitalBucket, shouldCollectFieldVitals, FIELD_VITAL_NAMES, FIELD_NAVIGATIONS, type FieldVitalName, type FieldNavigation } from '@/lib/performance/field-vitals';
++
++let productionCollectorRegistered = false;
+ 
+ /**
+  * Web Vitals 측정 및 로깅
+@@ -10,6 +13,17 @@ import { debugLog } from '@/lib/debug-log';
+  */
+ export function WebVitals() {
+     useEffect(() => {
++        const collect = shouldCollectFieldVitals({
++            production: process.env.NODE_ENV === 'production',
++            hostname: location.hostname,
++            pathname: location.pathname,
++            search: location.search,
++            webdriver: navigator.webdriver,
++        });
++        if (process.env.NODE_ENV === 'production' && (!collect || productionCollectorRegistered)) return;
++        if (collect) productionCollectorRegistered = true;
++        // At most three identifiers in memory; no identifier is sent or stored.
++        const lastSentId = new Map<string, string>();
+         const handleMetric = (metric: Metric) => {
+             // 개발 환경에서 콘솔 출력
+             if (process.env.NODE_ENV === 'development') {
+@@ -20,11 +34,28 @@ export function WebVitals() {
+                 });
+             }
+ 
+-            // 프로덕션 환경에서는 분석 서비스로 전송
+-            // 예: Google Analytics, Vercel Analytics 등
+-            if (process.env.NODE_ENV === 'production') {
+-                // 여기에 분석 서비스 전송 코드 추가
+-                // sendToAnalytics(metric);
++            if (collect && FIELD_VITAL_NAMES.includes(metric.name as FieldVitalName)) {
++                if (lastSentId.get(metric.name) === metric.id) return;
++                const name = metric.name as FieldVitalName;
++                const bucket = fieldVitalBucket(name, metric.value);
++                const navigation = metric.navigationType as FieldNavigation;
++                if (bucket === null || !FIELD_NAVIGATIONS.includes(navigation)) return;
++                lastSentId.set(metric.name, metric.id);
++                // Anonymous daily histogram only. Never include Metric entries,
++                // URL, identity, cookies, location or the raw metric object.
++                void fetch('/api/performance/web-vitals', {
++                    method: 'POST',
++                    credentials: 'omit',
++                    keepalive: true,
++                    headers: { 'Content-Type': 'application/json' },
++                    body: JSON.stringify({
++                        version: 1,
++                        device: matchMedia('(max-width: 767px)').matches ? 'mobile' : 'desktop',
++                        metric: name,
++                        navigation,
++                        bucket,
++                    }),
++                }).catch(() => undefined);
+             }
+         };
+ 

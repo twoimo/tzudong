@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-01T17:52:32.907971+00:00",
+  "matchingMainDeployments": [
+    {
+      "id": "dpl_HY2TaRRES8H4mJZjv1NxF6zs7T8u",
+      "state": "CANCELED",
+      "url": "tzudong-6er5azb6t-twoimos-projects.vercel.app",
+      "gitSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "target": "production"
+    }
+  ],
+  "afterCLIExit1": true,
+  "rawProviderDiagnosticsSaved": false
+}

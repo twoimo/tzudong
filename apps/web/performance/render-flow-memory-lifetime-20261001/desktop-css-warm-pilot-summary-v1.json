@@ -1,0 +1,40 @@
+{
+  "source": "memory-repeat-desktop-css-pilot-v1/raw.json",
+  "runs": [
+    {
+      "kind": "baseline",
+      "median": 28465324.0,
+      "peak": 38972560,
+      "end": 26444096,
+      "n": 20,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 30094396.0,
+      "peak": 31023368,
+      "end": 30311904,
+      "n": 20,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 30135898.0,
+      "peak": 31094400,
+      "end": 30379848,
+      "n": 20,
+      "passed": true
+    },
+    {
+      "kind": "baseline",
+      "median": 27826414.0,
+      "peak": 37121696,
+      "end": 26341756,
+      "n": 20,
+      "passed": true
+    }
+  ],
+  "nProcessesPerVariant": 2,
+  "pilotOnly": true,
+  "noForcedGCNoLeakProof": true
+}

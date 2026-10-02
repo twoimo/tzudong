@@ -1,0 +1,1 @@
+{"rejected":"geometry sampled after detail intentionally hid navigation; a passing hidden-nav comparison was not a valid visible-nav proof","rawPreserved":"map-nav-occlusion-fullscreen-browser-v1.json","correction":"v2 samples initial visible bar before selection and visible bar after closing detail/list"}

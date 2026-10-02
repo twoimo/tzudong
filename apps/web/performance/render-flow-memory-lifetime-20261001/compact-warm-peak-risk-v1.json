@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-01T16:56:25.838632+00:00",
+  "source": "compact-warm-descriptive-v1.json",
+  "candidatePeakRanges": [
+    52518620,
+    52991452
+  ],
+  "controlPeakRanges": [
+    38814396,
+    39207528
+  ],
+  "coldOriginalBudgetPass": true,
+  "warmPeakRisk": "candidate naturalpeak~35percent abovecontrol in2independentprocesses; do not hideusingmedian/GC",
+  "sourceNotAdoptedYet": true,
+  "nextTargetedChanges": "restore same-order pooling via reverse batch(previousstandalonefailure retained), clear detachedappclick callbacks and disposeonlyowned listener on eviction/clear; testwith compactHTML, noIDMap/cache/delay/privateSDKoverride"
+}

@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-02T12:05:55.643742+00:00",
+  "rows": [
+    {
+      "entry": "www",
+      "status": 200,
+      "resolvesToWww": true,
+      "oldBottomPlaceholderToken": false,
+      "homeRootPresent": true
+    },
+    {
+      "entry": "apex",
+      "status": 200,
+      "resolvesToWww": true,
+      "oldBottomPlaceholderToken": false,
+      "homeRootPresent": true
+    }
+  ],
+  "rawHtmlHeadersCookiesAndResponsesRetained": false
+}

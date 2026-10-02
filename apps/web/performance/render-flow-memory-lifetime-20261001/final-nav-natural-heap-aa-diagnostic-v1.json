@@ -1,0 +1,21 @@
+{
+  "observedAt": "2026-10-02T10:08:06.135335+00:00",
+  "aaPairs": 9,
+  "absolutePairDifferencesMB": [
+    0.039183999999998775,
+    0.03943999999999903,
+    0.06301999999999808,
+    0.18980000000000175,
+    0.43896799999999914,
+    7.666640000000001,
+    7.748348,
+    7.830220000000001,
+    7.892751999999998
+  ],
+  "medianAbsoluteDifferenceMB": 0.43896799999999914,
+  "p95AbsoluteDifferenceMB": 7.867739199999999,
+  "maxDifferenceMB": 7.892751999999998,
+  "interpretation": "same-build natural heap differs by GC phase; this is not a field or retained-memory result. The new 39.99% median contrast is not evidence that the bottom-skeleton patch adds an extra performance gain over the earlier 20.25% marker result. Fixed regression guards are unchanged.",
+  "acceptanceUnchanged": true,
+  "newImprovementThresholdChosenFromResults": false
+}

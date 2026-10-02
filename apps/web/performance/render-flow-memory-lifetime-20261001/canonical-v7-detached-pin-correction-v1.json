@@ -1,0 +1,8 @@
+{
+  "initialGeneratorExit": 1,
+  "reason": "New v7 generator retained v6 detached pin filename; exclusive creation rejected overwrite.",
+  "oldPinOverwritten": false,
+  "generatedV7BytesBoundToFinalSource": true,
+  "correctV7ExternalPinCreatedFromGeneratedMap": true,
+  "rejectedGeneratorPreserved": "canonical-memory-production-v7-pin-path-rejected.mjs"
+}

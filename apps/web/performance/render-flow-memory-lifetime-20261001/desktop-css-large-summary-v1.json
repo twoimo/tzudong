@@ -1,0 +1,106 @@
+{
+  "schema": "memory-ui-regression.v1",
+  "source": "desktop-ab-desktop-css-large-confirm-v1/raw.json",
+  "sourceSha256": "d5e7dd2da518ddec267d29dda03cb9dee62fe9c64b5f0ee61269701ada26c6fd",
+  "count": 2000,
+  "measuredPairs": 9,
+  "warmupPairs": 2,
+  "independentProcessesPerVariant": 9,
+  "matchingAaAvailable": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "interpretation": "regression guard only; no proven speed improvement or 2000-row A/A noise estimate",
+  "metrics": [
+    {
+      "metric": "clickMs",
+      "before": {
+        "n": 9,
+        "median": 858.3999998569489,
+        "min": 820.5999999046326,
+        "max": 920.5,
+        "mad": 13.999999761581421
+      },
+      "after": {
+        "n": 9,
+        "median": 860.5,
+        "min": 740.9000000953674,
+        "max": 954,
+        "mad": 48.90000009536743
+      },
+      "absoluteReduction": -2.1000001430511475,
+      "relativeReductionPercent": -0.24464120962268285,
+      "pairedCi95": [
+        -24.90000009536743,
+        89.3075000047639
+      ],
+      "abbaBlockCi95": [
+        -19.200000047683716,
+        108.60000014305115
+      ],
+      "fixedRegressionTolerancePercent": 15,
+      "medianTolerancePass": true,
+      "ciAbsoluteTolerancePass": true
+    },
+    {
+      "metric": "naturalHeapBytes",
+      "before": {
+        "n": 9,
+        "median": 24854284,
+        "min": 24845588,
+        "max": 24860956,
+        "mad": 3572
+      },
+      "after": {
+        "n": 9,
+        "median": 24516028,
+        "min": 24511828,
+        "max": 24593208,
+        "mad": 3568
+      },
+      "absoluteReduction": 338256,
+      "relativeReductionPercent": 1.3609565256436276,
+      "pairedCi95": [
+        299164.0,
+        343312.0
+      ],
+      "abbaBlockCi95": [
+        323868.0,
+        343312.0
+      ],
+      "fixedRegressionTolerancePercent": 20,
+      "medianTolerancePass": true,
+      "ciAbsoluteTolerancePass": true
+    },
+    {
+      "metric": "gcDiagnosticHeapBytes",
+      "before": {
+        "n": 9,
+        "median": 24346640,
+        "min": 24328640,
+        "max": 24461916,
+        "mad": 4092
+      },
+      "after": {
+        "n": 9,
+        "median": 24008768,
+        "min": 23999920,
+        "max": 24137592,
+        "mad": 6304
+      },
+      "absoluteReduction": 337872,
+      "relativeReductionPercent": 1.3877561749793812,
+      "pairedCi95": [
+        263980.0,
+        345064.0
+      ],
+      "abbaBlockCi95": [
+        294472.0,
+        345064.0
+      ],
+      "fixedRegressionTolerancePercent": null,
+      "medianTolerancePass": null,
+      "ciAbsoluteTolerancePass": null
+    }
+  ],
+  "semanticsPass": true
+}

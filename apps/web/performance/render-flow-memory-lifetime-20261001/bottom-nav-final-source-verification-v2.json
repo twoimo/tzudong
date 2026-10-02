@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-02T09:46:56.171938+00:00",
+  "candidateSha": "d41110e66dea83d4e306cb1c2846817539b79eeb",
+  "base": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "unitAfterReadinessCorrection": {
+    "passed": 19,
+    "failed": 0,
+    "assertions": 203
+  },
+  "eslint": "passed",
+  "typecheckParity": {
+    "passed": true,
+    "diagnostics": 0
+  },
+  "reactReview": {
+    "skill": "vercel:react-best-practices",
+    "effects": "reuse existing child mount readiness and cleanup; no state/dependency changes",
+    "rendering": "remove decorative node; preserve aria-hidden marker and actual map status feedback",
+    "accessibility": "navigation labels/buttons and map-status contracts unchanged",
+    "bundle": "two attribute mutations; no new import, dependency or eager lazy overlay load"
+  },
+  "build": "production webpack nav-v2 successful"
+}

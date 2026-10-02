@@ -1,0 +1,134 @@
+{
+  "observedAt": "2026-10-02T08:38:40.485525+00:00",
+  "before": [
+    {
+      "installed": true,
+      "totalGetterCalls": 1471,
+      "taskCounts": [
+        1471
+      ],
+      "maxCallsOneTaggedTask": 1471,
+      "markers": 735,
+      "mapCreates": 1,
+      "overflow": 0
+    },
+    {
+      "installed": true,
+      "totalGetterCalls": 1472,
+      "taskCounts": [
+        1472
+      ],
+      "maxCallsOneTaggedTask": 1472,
+      "markers": 735,
+      "mapCreates": 1,
+      "overflow": 0
+    },
+    {
+      "installed": true,
+      "totalGetterCalls": 1472,
+      "taskCounts": [
+        1472
+      ],
+      "maxCallsOneTaggedTask": 1472,
+      "markers": 735,
+      "mapCreates": 1,
+      "overflow": 0
+    }
+  ],
+  "after": [
+    {
+      "installed": true,
+      "totalGetterCalls": 5009,
+      "taskCounts": [
+        967,
+        64,
+        1030,
+        64,
+        966,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        966,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        56
+      ],
+      "maxCallsOneTaggedTask": 1030,
+      "markers": 735,
+      "mapCreates": 1,
+      "overflow": 0
+    },
+    {
+      "installed": true,
+      "totalGetterCalls": 3220,
+      "taskCounts": [
+        716,
+        64,
+        714,
+        64,
+        64,
+        64,
+        778,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        52
+      ],
+      "maxCallsOneTaggedTask": 778,
+      "markers": 735,
+      "mapCreates": 1,
+      "overflow": 0
+    },
+    {
+      "installed": true,
+      "totalGetterCalls": 3148,
+      "taskCounts": [
+        680,
+        64,
+        678,
+        64,
+        64,
+        64,
+        742,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        24
+      ],
+      "maxCallsOneTaggedTask": 742,
+      "markers": 735,
+      "mapCreates": 1,
+      "overflow": 0
+    }
+  ],
+  "nIndependentProcessesPerVariant": 1,
+  "internalSelectionTrials": 3,
+  "latencyImprovementClaimed": false,
+  "scope": "task-tagged SDK getter workload distribution, not event latency or frame-time proof"
+}

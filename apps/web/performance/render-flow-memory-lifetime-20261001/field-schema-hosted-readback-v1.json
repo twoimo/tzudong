@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-01T13:06:50.037282+00:00",
+  "migration": "20261001123253_app_web_vitals_aggregate.sql",
+  "applied": true,
+  "providerReportedSuccess": true,
+  "readback": {
+    "rlsEnabled": true,
+    "anonRead": false,
+    "authenticatedWrite": false,
+    "anonRpc": false,
+    "authenticatedRpc": false,
+    "serverRpc": true,
+    "securityDefiner": false,
+    "aggregateRows": 0
+  },
+  "collectorSourceDeployed": false,
+  "realUserSamples": 0,
+  "personalFields": 0,
+  "rawProviderDiagnosticsSaved": false
+}

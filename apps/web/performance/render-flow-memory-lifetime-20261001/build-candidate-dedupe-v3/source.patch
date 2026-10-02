@@ -1,0 +1,34 @@
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index bcb0f38e..d1c4e90f 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -2722,14 +2722,15 @@ const NaverMapView = memo(({
+                 extendedBounds,
+                 VIEWPORT_FILTER_ENABLED,
+             );
++        const renderedExpandedSources = new Map<string, Restaurant>();
+         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
+             if (expandedClusterRestaurantIds.length === 0) return;
+             expandedClusterRestaurantIds.forEach((restaurantId) => {
+-                const restaurant = normalizeNaverMarkerCoordinates(
+-                    resolveMarkerRestaurant(restaurantId),
+-                );
++                const sourceRestaurant = resolveMarkerRestaurant(restaurantId);
++                const restaurant = normalizeNaverMarkerCoordinates(sourceRestaurant);
+                 if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
+                 if (!shouldRenderExpandedMarker(restaurant)) return;
++                if (sourceRestaurant) renderedExpandedSources.set(restaurant.id, sourceRestaurant);
+ 
+                 activeIds.add(restaurant.id);
+                 const isSelected = selectedRestaurant?.id === restaurant.id;
+@@ -3018,6 +3019,10 @@ const NaverMapView = memo(({
+                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
+ 
+                 contextualRestaurants.forEach(restaurant => {
++                    // Expanded markers already rendered from this same source need
++                    // no second SDK icon read/options/click-handler replacement.
++                    // A different source object still reaches the later renderer.
++                    if (renderedExpandedSources.get(restaurant.id) === restaurant) return;
+                     if (restaurant.lat == null || restaurant.lng == null) return;
+                     if (expandedClusterRestaurantIds.length > 0 && !shouldRenderExpandedMarker(restaurant)) return;
+                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)

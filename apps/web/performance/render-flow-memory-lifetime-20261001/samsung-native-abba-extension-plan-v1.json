@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-02T05:46:24.576649+00:00",
+  "firstPair": {
+    "beforeMedian": 34977134.0,
+    "afterMedian": 42727596.0,
+    "increasePercent": 22.158653707876695,
+    "fixed20PercentTolerancePass": false
+  },
+  "nextOrder": [
+    "candidate-b2",
+    "baseline-a2"
+  ],
+  "reason": "first native Samsung pair exceeds same fixed memory tolerance; complete ABBA to distinguish order/GC phase; no forcedGC waiver",
+  "sameCyclesPerOwnedTab": 60,
+  "sameRegressionTolerancePercent": 20,
+  "independentUnit": "fresh owned tabs within existing Samsung process on same device, not independent processes or users",
+  "allFirstPairEvidenceRetained": true,
+  "noDeviceSettingsChanges": true,
+  "currentProductionNotUpdated": true
+}

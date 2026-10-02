@@ -1,0 +1,82 @@
+{
+  "source": "filter-flow-final-ab-v1/raw.json",
+  "aaSource": "filter-flow-final-aa-v1/raw.json",
+  "independentDriverExecutions": 1,
+  "freshProcessesPerVariant": 9,
+  "measuredCyclesPerProcess": 3,
+  "warmupCyclesPerProcess": 1,
+  "aaPairs": 5,
+  "maxAbsoluteAAPairedDeltaMs": 223.20000004768372,
+  "aaMedianDriftMs": 21.299999952316284,
+  "resamples": 10000,
+  "seed": 20260930,
+  "noUserP95": true,
+  "exactMarkerMembershipAcrossRuns": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "limitations": [
+    "CIs do not remove external host/SDK/time bias",
+    "metric endpoint is DOM visibility, not complete pixel/composite",
+    "natural transient heap is separate from long term RSS/leak"
+  ],
+  "metrics": [
+    {
+      "metric": "latencyMs",
+      "before": {
+        "n": 9,
+        "median": 588.5,
+        "min": 481.2999999523163,
+        "max": 704.2000000476837,
+        "mad": 72.70000004768372
+      },
+      "after": {
+        "n": 9,
+        "median": 538.4000000953674,
+        "min": 455.5,
+        "max": 631.9000000953674,
+        "mad": 70.10000014305115
+      },
+      "absoluteReduction": 50.09999990463257,
+      "relativeReductionPercent": 8.513169057711567,
+      "pairedCi95": [
+        -22.600000143051147,
+        179.5
+      ],
+      "abbaBlockCi95": [
+        -22.600000143051147,
+        103.90000009536743
+      ],
+      "noiseFloor": 223.20000004768372,
+      "latency15PercentBudgetPass": true,
+      "descriptiveImprovementAboveNoise": false
+    },
+    {
+      "metric": "naturalHeapBytes",
+      "before": {
+        "n": 9,
+        "median": 27456708,
+        "min": 24026036,
+        "max": 39105516,
+        "mad": 27220
+      },
+      "after": {
+        "n": 9,
+        "median": 28420720,
+        "min": 28164276,
+        "max": 32377296,
+        "mad": 136368
+      },
+      "absoluteReduction": -964012,
+      "relativeReductionPercent": -3.5110254295598726,
+      "pairedCi95": [
+        -1096632.0,
+        -761628.0
+      ],
+      "abbaBlockCi95": [
+        -977008.0,
+        -761628.0
+      ],
+      "naturalHeap20PercentBudgetPass": true
+    }
+  ]
+}

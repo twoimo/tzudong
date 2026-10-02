@@ -1,0 +1,7 @@
+{
+  "source": "marker-html-browser-shared-css-equivalence-v1.json",
+  "valid": false,
+  "reason": "sharedbadge fontweight900 differs fromoriginal800, diagnosedbrowsercomputedCSS/box; correctedto800 beforeadoption",
+  "fixedSourceBuild": "desktop-css-v2",
+  "replacementProof": "marker-html-browser-shared-css-equivalence-v2.json"
+}

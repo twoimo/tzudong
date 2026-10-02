@@ -1,0 +1,8 @@
+{
+  "source": "field-production-live-qa-v1/readback.json",
+  "initialSnapshotOnly": true,
+  "actualMapSDKReady": false,
+  "functionalRenderingPassed": false,
+  "reason": "snapshotbeforehomehydration/mapinitialization; priorpassedfieldcoversonlyURL/snapshotnotSDK,excludedfromcompletedUIverification",
+  "sourceDeploymentReadyProofStillIndependent": true
+}

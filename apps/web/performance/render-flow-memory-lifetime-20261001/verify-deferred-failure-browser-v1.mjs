@@ -1,0 +1,18 @@
+import {chromium} from '@playwright/test';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {serve,pageSetup,ready} from './real-sdk-runtime.mjs';
+const label=process.argv[2],build=process.argv[3];if(!/^[a-z0-9-]+$/.test(label)||!/^[a-z0-9-]+$/.test(build))throw Error('new label/build required');
+const out=new URL(`deferred-failure-${label}/`,import.meta.url);await mkdir(out);process.env.SDK_CANDIDATE_BUILD_LABEL=build;
+const result={label,build,startedAt:new Date().toISOString(),fieldAdmitted:0,performanceAdmitted:0,scope:'actual remote Naver SDK with one explicitly injected offscreen Marker constructor failure; diagnostic, not performance SDK proof',injectedSyntheticId:'00000000-0000-4000-8000-000000000000'};
+let server,browser,t;
+try{
+ server=await serve('candidate');result.buildId=server.receipt.buildId;result.inputs=server.receipt.inputs;browser=await chromium.launch({headless:true});t=await pageSetup(browser,{count:735,cpu:4});
+ await t.page.addInitScript(id=>{window.__ownedFault={count:0,timestamps:[]};document.addEventListener('load',e=>{if(e.target?.tagName!=='SCRIPT'||!e.target.src.includes('oapi.map.naver.com/openapi/v3/maps.js'))return;const maps=window.naver.maps;maps.Marker=new Proxy(maps.Marker,{construct(target,args,newTarget){const content=args[0]?.icon?.content;if(typeof content==='string'&&content.includes('data-restaurant-id="'+id+'"')){window.__ownedFault.count++;window.__ownedFault.timestamps.push(performance.now());throw Error('synthetic_owned_offscreen_failure');}return Reflect.construct(target,args,newTarget);}});},true);},result.injectedSyntheticId);
+ result.sdk=await ready(t);await t.page.locator('.cluster-marker-container').filter({hasText:'735'}).click();await t.page.waitForFunction(()=>window.__actualSdkProbe.first>0);await t.page.waitForTimeout(3000);
+ result.first=await t.page.evaluate(()=>({faults:window.__ownedFault.count,time:performance.now(),visible:document.visibilityState,markers:document.querySelectorAll('[data-testid=marker]').length,mapCreates:window.__actualSdkProbe.sdkMapCreates}));
+ await t.page.waitForTimeout(1500);result.second=await t.page.evaluate(()=>({faults:window.__ownedFault.count,time:performance.now(),timestamps:window.__ownedFault.timestamps,visible:document.visibilityState,markers:document.querySelectorAll('[data-testid=marker]').length,mapCreates:window.__actualSdkProbe.sdkMapCreates}));
+ result.sixRetryLimitPlusInitial=7;result.bounded=result.first.faults<=7&&result.first.faults===result.second.faults&&result.second.faults>0;result.visibleContentRetained=result.second.markers>0&&result.second.mapCreates===1&&result.second.visible==='visible';
+ await t.page.screenshot({path:new URL('visible-map.png',out).pathname});
+}catch{result.failureCode='owned_failure_diagnostic_unavailable';}
+finally{if(t)await t.close();if(browser)await browser.close();if(server)await server.close();}
+result.endedAt=new Date().toISOString();await writeFile(new URL('raw.json',out),JSON.stringify(result,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({build,bounded:result.bounded,visibleContentRetained:result.visibleContentRetained,firstFaults:result.first?.faults,secondFaults:result.second?.faults,failureCode:result.failureCode}));

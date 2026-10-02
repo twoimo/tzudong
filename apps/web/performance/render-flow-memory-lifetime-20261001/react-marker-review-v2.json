@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-02T07:36:30.414998+00:00",
+  "appliedSkill": "Vercel React Best Practices",
+  "checks": [
+    "job cancellation releases captured state before a changed data/selection effect",
+    "retry counters reset only after successful deferred completion",
+    "same-source marker pass avoids duplicate SDK reads; changed source still reaches renderer",
+    "CSS now follows both known consumers without a new global root style",
+    "private/auth/data flows unchanged"
+  ],
+  "compiledAdmin24CasesPass": true,
+  "newAdminLazyCssRawBytes": 624,
+  "publicRendererSourceUnchanged": true
+}

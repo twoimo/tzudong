@@ -1,0 +1,7 @@
+{
+  "observedAt": "2026-10-02T07:03:35.123919+00:00",
+  "beforeAndAfterV1InjectedFaultCount": 0,
+  "admittedAsFailureProof": false,
+  "reason": "one specific Marker constructor could be bypassed by pooled SDK reuse; no fault actually occurred",
+  "v2": "install LatLng fault after actual SDK readiness at synthetic offscreen latitude37.5; retain v1 no-fault diagnostics"
+}

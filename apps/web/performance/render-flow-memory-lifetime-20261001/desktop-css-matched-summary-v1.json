@@ -1,0 +1,198 @@
+{
+  "schema": "memory-ui-trial.v1",
+  "source": "desktop-ab-desktop-css-matched-confirm-v1/raw.json",
+  "aaSource": "desktop-aa-dedupe-confirm-aa-v1/raw.json",
+  "resamples": 10000,
+  "seed": 20260930,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "independentDriverExecutions": 1,
+  "limitations": [
+    "n9pairs per cell; no user-latency p95",
+    "consoleCSP errors remain",
+    "natural heap and forcedGC diagnostic differ",
+    "sampleCIs do not eliminate host/provider/time bias"
+  ],
+  "cells": {
+    "735": {
+      "count": 735,
+      "measuredPairs": 9,
+      "warmupPairs": 2,
+      "aa95AbsoluteDeltaMs": 82.25999999046323,
+      "aaMedianDriftMs": 14.900000095367432,
+      "metrics": [
+        {
+          "metric": "clickMs",
+          "before": {
+            "n": 9,
+            "median": 629.5,
+            "min": 542.2999999523163,
+            "max": 703.1999998092651,
+            "mad": 14.799999952316284
+          },
+          "after": {
+            "n": 9,
+            "median": 597.8000001907349,
+            "min": 562.0999999046326,
+            "max": 686.2999999523163,
+            "mad": 33.80000019073486
+          },
+          "absoluteReduction": 31.699999809265137,
+          "relativeReductionPercent": 5.035742622599704,
+          "pairedCi95": [
+            -25.700000047683716,
+            63.89999985694885
+          ],
+          "abbaBlockCi95": [
+            -22.00000023841858,
+            63.89999985694885
+          ],
+          "noiseFloor": 94.425,
+          "latencyRegressionBudgetPass": true,
+          "descriptiveImprovementAboveNoise": false
+        },
+        {
+          "metric": "naturalHeapBytes",
+          "before": {
+            "n": 9,
+            "median": 23929276,
+            "min": 17702228,
+            "max": 31617348,
+            "mad": 3743756
+          },
+          "after": {
+            "n": 9,
+            "median": 18874652,
+            "min": 18819772,
+            "max": 18886732,
+            "mad": 9784
+          },
+          "absoluteReduction": 5054624,
+          "relativeReductionPercent": 21.123179823743936,
+          "pairedCi95": [
+            1301464.0,
+            12702744.0
+          ],
+          "abbaBlockCi95": [
+            4869040.0,
+            5054624.0
+          ],
+          "noiseFloor": null,
+          "naturalHeap20PercentBudgetPass": true
+        },
+        {
+          "metric": "gcDiagnosticHeapBytes",
+          "before": {
+            "n": 9,
+            "median": 17215200,
+            "min": 17167944,
+            "max": 17231348,
+            "mad": 12136
+          },
+          "after": {
+            "n": 9,
+            "median": 18392208,
+            "min": 18340692,
+            "max": 18482620,
+            "mad": 14848
+          },
+          "absoluteReduction": -1177008,
+          "relativeReductionPercent": -6.837027742924858,
+          "pairedCi95": [
+            -1198252.0,
+            -1149484.0
+          ],
+          "abbaBlockCi95": [
+            -1190052.0,
+            -1164872.0
+          ],
+          "noiseFloor": null
+        },
+        {
+          "metric": "markerCount",
+          "before": {
+            "n": 9,
+            "median": 571,
+            "min": 571,
+            "max": 571,
+            "mad": 0
+          },
+          "after": {
+            "n": 9,
+            "median": 735,
+            "min": 735,
+            "max": 735,
+            "mad": 0
+          },
+          "absoluteReduction": -164,
+          "relativeReductionPercent": -28.7215411558669,
+          "pairedCi95": [
+            -164.0,
+            -164.0
+          ],
+          "abbaBlockCi95": [
+            -164.0,
+            -164.0
+          ],
+          "noiseFloor": null
+        },
+        {
+          "metric": "longTaskMs",
+          "before": {
+            "n": 9,
+            "median": 648,
+            "min": 570,
+            "max": 741,
+            "mad": 28
+          },
+          "after": {
+            "n": 9,
+            "median": 600,
+            "min": 554,
+            "max": 721,
+            "mad": 28
+          },
+          "absoluteReduction": 48,
+          "relativeReductionPercent": 7.4074074074074066,
+          "pairedCi95": [
+            -47.0,
+            99.0
+          ],
+          "abbaBlockCi95": [
+            20.0,
+            57.0
+          ],
+          "noiseFloor": null
+        },
+        {
+          "metric": "maxFrameGapMs",
+          "before": {
+            "n": 9,
+            "median": 658.5999999999999,
+            "min": 565.8999999999996,
+            "max": 740.1999999999998,
+            "mad": 15.699999999999818
+          },
+          "after": {
+            "n": 9,
+            "median": 625.7000000000003,
+            "min": 590.2000000000003,
+            "max": 715.2999999999997,
+            "mad": 32.69999999999982
+          },
+          "absoluteReduction": 32.899999999999636,
+          "relativeReductionPercent": 4.995444883085278,
+          "pairedCi95": [
+            -13.599999999999909,
+            60.0
+          ],
+          "abbaBlockCi95": [
+            -13.599999999999909,
+            60.0
+          ],
+          "noiseFloor": null
+        }
+      ]
+    }
+  }
+}

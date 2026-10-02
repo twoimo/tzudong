@@ -1,0 +1,53 @@
+{
+  "observedAt": "2026-10-02T09:27:37.879320+00:00",
+  "source": "owned agent-browser production HTTPS tab, actual REST and Naver SDK; no interception",
+  "releaseSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "checks": [
+    {
+      "name": "SDK and content ready",
+      "passed": true
+    },
+    {
+      "name": "popular marker detail opens and closes",
+      "passed": true
+    },
+    {
+      "name": "empty search feedback",
+      "passed": true
+    },
+    {
+      "name": "positive search result selects matching detail",
+      "passed": true
+    },
+    {
+      "name": "back closes detail",
+      "passed": true
+    },
+    {
+      "name": "live SDK final state without overflow",
+      "passed": true
+    }
+  ],
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "viewport": {
+      "width": 1280,
+      "height": 633,
+      "dpr": 1
+    },
+    "visible": "visible",
+    "markers": 66,
+    "clusters": 0,
+    "overflow": 0
+  },
+  "errorBufferCount": 0,
+  "consoleMessageBufferCount": 0,
+  "errorScope": "agent-browser errors/console only; not all CSP/CDP/platform channels",
+  "fieldAdmitted": 0,
+  "privateBodiesHeadersStorageLocationRetained": false,
+  "screenshotInspected": true,
+  "screenshotSource": "owned public restaurant list/map, no personal device location permission or authenticated content",
+  "passed": true
+}

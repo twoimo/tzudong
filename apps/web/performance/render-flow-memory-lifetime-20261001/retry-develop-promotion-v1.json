@@ -1,0 +1,124 @@
+{
+  "observedAt": "2026-10-02T06:42:47.522024+00:00",
+  "pr": 3085,
+  "readback": {
+    "baseRefName": "develop",
+    "headRefOid": "ab970bdd8b8eda6848484b7e327f331091ed6d5f",
+    "mergeCommit": {
+      "oid": "248000e1b455c30802f3299de7c6e97a44bc210b"
+    },
+    "mergedAt": "2026-10-02T06:42:48Z",
+    "state": "MERGED"
+  },
+  "headChecks": [
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/runs/110730400888",
+      "name": "CodeQL",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829451/job/110730243269",
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://vercel.com/github",
+      "name": "Vercel Preview Comments",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://dashboard.gitguardian.com",
+      "name": "GitGuardian Security Checks",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "skipping",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829595/job/110730280497",
+      "name": "Freshness",
+      "state": "SKIPPED"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829487/job/110730243053",
+      "name": "Windows npm",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829487/job/110730243259",
+      "name": "Windows Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829433/job/110730243564",
+      "name": "Promotion Path",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972827240/job/110730239065",
+      "name": "Analyze (rust)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829487/job/110730243310",
+      "name": "Ubuntu npm",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829487/job/110730243214",
+      "name": "Ubuntu Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972827240/job/110730239034",
+      "name": "Analyze (go)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829487/job/110730243252",
+      "name": "Admin",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972829487/job/110730243215",
+      "name": "Install",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972827240/job/110730238810",
+      "name": "Analyze (python)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972827240/job/110730239089",
+      "name": "Analyze (javascript-typescript)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36972827240/job/110730239154",
+      "name": "Analyze (actions)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://vercel.com/twoimos-projects/tzudong/3tgRgnmjwYksA4uNuyuj3Cxh24Qh",
+      "name": "Vercel",
+      "state": "SUCCESS"
+    }
+  ],
+  "adminOrForceUsed": false
+}

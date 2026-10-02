@@ -1,0 +1,2757 @@
+{
+  "scope": "one diagnostic production-build browser flow; profiling overhead excluded from performance comparisons",
+  "fieldAdmitted": 0,
+  "performanceAdmitted": 0,
+  "privateRequestsOrHeadersOrBodiesRetained": false,
+  "buildId": "NhcdbKx9AsgkP1CyWkiNq",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "bc31976f6cfb175278b151663e557d1a17e33ba1093c16c7653dcd7c71085c3f"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "b088f3e3bf88db112aec8aaf02943c9f66f7391ef7f52e33586b5c5bd649ef7d"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "23566f91aa5a22d063e6f77f833a15cdfd32cbaccb3414bc390bbab3f113cd4c"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "63ed7540499f5d282ec8a7c6301210e6b07d711c7b77f648ca5051d7ce58fc59"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    },
+    {
+      "original": "components/admin/AdminOverviewDashboard.tsx",
+      "sha256": "8e44714ee3e6a46bd11dce35d745bcaffc7f93fbe5b374b952606629015efc6a"
+    },
+    {
+      "original": "components/map/marker-icons.css",
+      "sha256": "d77c2f5ee74e3035f17e6f08ba5df557a0d2844633178481c26215c04969c258"
+    },
+    {
+      "original": "lib/deferred-marker-renders.ts",
+      "sha256": "5b16f00f4960f24b9a811177704378d5775bc0ba968f4ac348aac93f7ca39a7b"
+    }
+  ],
+  "sdk": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+    "loaded": true,
+    "stub": false,
+    "remoteScript": true,
+    "mapCaptured": true,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1
+    },
+    "tiles": 105
+  },
+  "observation": {
+    "flowStart": 3495.4000000953674,
+    "click": 3580.7000000476837,
+    "firstVisible": 4935.400000095367,
+    "flowEnd": 6335.5,
+    "reactCommitTimes": [
+      3546.5999999046326,
+      3560.9000000953674,
+      3689.2000000476837,
+      5049.700000047684,
+      5083.900000095367,
+      5183.700000047684,
+      5301.200000047684,
+      5640.099999904633
+    ],
+    "productionReactDurationsAvailable": false,
+    "markers": 735,
+    "mapCreates": 1,
+    "longTasks": [
+      {
+        "start": 3530.4000000953674,
+        "duration": 1346
+      },
+      {
+        "start": 4880.799999952316,
+        "duration": 79
+      },
+      {
+        "start": 5015.400000095367,
+        "duration": 68
+      }
+    ],
+    "frames": [
+      {
+        "t": 3531.9,
+        "gap": 9,
+        "count": 571,
+        "visible": 1
+      },
+      {
+        "t": 4956.8,
+        "gap": 1424.9,
+        "count": 571,
+        "visible": 1
+      },
+      {
+        "t": 5115.3,
+        "gap": 158.5,
+        "count": 603,
+        "visible": 1
+      },
+      {
+        "t": 5247.7,
+        "gap": 132.39999999999964,
+        "count": 603,
+        "visible": 1
+      },
+      {
+        "t": 5273.5,
+        "gap": 25.800000000000182,
+        "count": 635,
+        "visible": 1
+      },
+      {
+        "t": 5348.5,
+        "gap": 75,
+        "count": 667,
+        "visible": 1
+      },
+      {
+        "t": 5398.5,
+        "gap": 50,
+        "count": 699,
+        "visible": 1
+      },
+      {
+        "t": 5465.1,
+        "gap": 66.60000000000036,
+        "count": 731,
+        "visible": 1
+      },
+      {
+        "t": 5514.3,
+        "gap": 49.19999999999982,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5540.2,
+        "gap": 25.899999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5548.2,
+        "gap": 8,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5556.8,
+        "gap": 8.600000000000364,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5565,
+        "gap": 8.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5581.9,
+        "gap": 16.899999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5590.1,
+        "gap": 8.200000000000728,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5598.3,
+        "gap": 8.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5606,
+        "gap": 7.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5615.2,
+        "gap": 9.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5623.4,
+        "gap": 8.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5631.8,
+        "gap": 8.400000000000546,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5639.4,
+        "gap": 7.599999999999454,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5647.8,
+        "gap": 8.400000000000546,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5656.2,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5665.2,
+        "gap": 9,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5673.5,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5681.4,
+        "gap": 7.899999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5690.2,
+        "gap": 8.800000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5698.1,
+        "gap": 7.900000000000546,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5706.8,
+        "gap": 8.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5715.2,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5723.2,
+        "gap": 8,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5731.9,
+        "gap": 8.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5740.1,
+        "gap": 8.200000000000728,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5748.5,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5756.9,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5764.3,
+        "gap": 7.400000000000546,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5772.8,
+        "gap": 8.5,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5781.9,
+        "gap": 9.099999999999454,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5790.1,
+        "gap": 8.200000000000728,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5797.7,
+        "gap": 7.599999999999454,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5806.9,
+        "gap": 9.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5814.4,
+        "gap": 7.5,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5823.5,
+        "gap": 9.100000000000364,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5831.8,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5840.1,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5848.5,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5856.8,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5864.5,
+        "gap": 7.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5873.6,
+        "gap": 9.100000000000364,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5881.8,
+        "gap": 8.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5890.2,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5898,
+        "gap": 7.800000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5906.8,
+        "gap": 8.800000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5914.6,
+        "gap": 7.800000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5923.6,
+        "gap": 9,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5931.5,
+        "gap": 7.899999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5940.2,
+        "gap": 8.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5948.5,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5956.8,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5965.1,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5973.5,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5981.5,
+        "gap": 8,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5990.2,
+        "gap": 8.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 5997.7,
+        "gap": 7.5,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6006.9,
+        "gap": 9.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6014.7,
+        "gap": 7.800000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6023.5,
+        "gap": 8.800000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6031.7,
+        "gap": 8.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6040.1,
+        "gap": 8.400000000000546,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6047.7,
+        "gap": 7.599999999999454,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6056.6,
+        "gap": 8.900000000000546,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6065.2,
+        "gap": 8.599999999999454,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6073.5,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6081.2,
+        "gap": 7.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6090.3,
+        "gap": 9.100000000000364,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6098.5,
+        "gap": 8.199999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6106.9,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6115.2,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6123.5,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6131.8,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6140.2,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6148.2,
+        "gap": 8,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6155.9,
+        "gap": 7.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6164.4,
+        "gap": 8.5,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6173.1,
+        "gap": 8.700000000000728,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6181.9,
+        "gap": 8.799999999999272,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6190.1,
+        "gap": 8.200000000000728,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6197.6,
+        "gap": 7.5,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6206.1,
+        "gap": 8.5,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6215.2,
+        "gap": 9.099999999999454,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6223.5,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6231,
+        "gap": 7.5,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6240.3,
+        "gap": 9.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6248.4,
+        "gap": 8.099999999999454,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6256,
+        "gap": 7.600000000000364,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6264.4,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6273.1,
+        "gap": 8.700000000000728,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6281.8,
+        "gap": 8.699999999999818,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6290.1,
+        "gap": 8.300000000000182,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6298.5,
+        "gap": 8.399999999999636,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6323.5,
+        "gap": 25,
+        "count": 735,
+        "visible": 1
+      },
+      {
+        "t": 6331.7,
+        "gap": 8.199999999999818,
+        "count": 735,
+        "visible": 1
+      }
+    ],
+    "resources": [
+      {
+        "kind": "app-asset",
+        "initiator": "link",
+        "start": 94.59999990463257,
+        "duration": 30.40000009536743,
+        "transferBytes": 35036,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "link",
+        "start": 98.59999990463257,
+        "duration": 32.10000014305115,
+        "transferBytes": 24817,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "link",
+        "start": 98.70000004768372,
+        "duration": 28.5,
+        "transferBytes": 2398,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "link",
+        "start": 98.79999995231628,
+        "duration": 31.40000009536743,
+        "transferBytes": 19324,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "link",
+        "start": 98.79999995231628,
+        "duration": 46,
+        "transferBytes": 5194,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 53.89999985694885,
+        "transferBytes": 63675,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 61.89999985694885,
+        "transferBytes": 829,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 64.70000004768372,
+        "transferBytes": 5981,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 72.79999995231628,
+        "transferBytes": 10917,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 73.20000004768372,
+        "transferBytes": 4565,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 75.29999995231628,
+        "transferBytes": 2943,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 77.09999990463257,
+        "transferBytes": 4315,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 80.29999995231628,
+        "transferBytes": 5754,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.70000004768372,
+        "duration": 84.89999985694885,
+        "transferBytes": 65993,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.79999995231628,
+        "duration": 80,
+        "transferBytes": 468,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.79999995231628,
+        "duration": 81.10000014305115,
+        "transferBytes": 5250,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 99.79999995231628,
+        "duration": 84.10000014305115,
+        "transferBytes": 21955,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 100.70000004768372,
+        "duration": 81.20000004768372,
+        "transferBytes": 2187,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "css",
+        "start": 185.20000004768372,
+        "duration": 61.200000047683716,
+        "transferBytes": 297792,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 665.4000000953674,
+        "duration": 35.59999990463257,
+        "transferBytes": 2761,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 670.7000000476837,
+        "duration": 31.09999990463257,
+        "transferBytes": 9439,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 672.5999999046326,
+        "duration": 28.5,
+        "transferBytes": 1309,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 674.9000000953674,
+        "duration": 27.59999990463257,
+        "transferBytes": 14151,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 675.7000000476837,
+        "duration": 32.09999990463257,
+        "transferBytes": 53512,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 675.7999999523163,
+        "duration": 26.90000009536743,
+        "transferBytes": 6507,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 676.5,
+        "duration": 28.299999952316284,
+        "transferBytes": 3556,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 676.5999999046326,
+        "duration": 28.300000190734863,
+        "transferBytes": 6079,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 677.4000000953674,
+        "duration": 28.299999952316284,
+        "transferBytes": 10580,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 677.9000000953674,
+        "duration": 28.399999856948853,
+        "transferBytes": 7029,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 678.4000000953674,
+        "duration": 27.699999809265137,
+        "transferBytes": 1592,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 679.0999999046326,
+        "duration": 28.5,
+        "transferBytes": 7409,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 687.2999999523163,
+        "duration": 20.90000009536743,
+        "transferBytes": 2614,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 689.2999999523163,
+        "duration": 18.600000143051147,
+        "transferBytes": 2500,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 796.5999999046326,
+        "duration": 7.200000047683716,
+        "transferBytes": 4242,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 797.5,
+        "duration": 6.200000047683716,
+        "transferBytes": 2139,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 798.5,
+        "duration": 5.700000047683716,
+        "transferBytes": 6801,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 798.5999999046326,
+        "duration": 5.800000190734863,
+        "transferBytes": 10161,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 799.5999999046326,
+        "duration": 7.400000095367432,
+        "transferBytes": 34962,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "link",
+        "start": 856.2000000476837,
+        "duration": 4.8999998569488525,
+        "transferBytes": 924,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1018.7999999523163,
+        "duration": 42.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1029.7000000476837,
+        "duration": 28.899999856948853,
+        "transferBytes": 7215,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1032.7999999523163,
+        "duration": 25.200000047683716,
+        "transferBytes": 6416,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1034.9000000953674,
+        "duration": 23.199999809265137,
+        "transferBytes": 1926,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1036.5999999046326,
+        "duration": 21.800000190734863,
+        "transferBytes": 3186,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1038.4000000953674,
+        "duration": 25.899999856948853,
+        "transferBytes": 6359,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1041,
+        "duration": 23.40000009536743,
+        "transferBytes": 3618,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1042.0999999046326,
+        "duration": 22.40000009536743,
+        "transferBytes": 5884,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1044.5,
+        "duration": 20.799999952316284,
+        "transferBytes": 15324,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1069.2000000476837,
+        "duration": 13.200000047683716,
+        "transferBytes": 20684,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1070.2999999523163,
+        "duration": 9.400000095367432,
+        "transferBytes": 1895,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1072.2999999523163,
+        "duration": 8.100000143051147,
+        "transferBytes": 7372,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1073.2000000476837,
+        "duration": 6.799999952316284,
+        "transferBytes": 4241,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1074,
+        "duration": 6.700000047683716,
+        "transferBytes": 3826,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1075,
+        "duration": 5.900000095367432,
+        "transferBytes": 6575,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "remote-sdk",
+        "initiator": "script",
+        "start": 1088.9000000953674,
+        "duration": 73.79999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1092.7000000476837,
+        "duration": 8.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1186.4000000953674,
+        "duration": 77.59999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1192.5999999046326,
+        "duration": 71.80000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1198.9000000953674,
+        "duration": 65.59999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "img",
+        "start": 1296.0999999046326,
+        "duration": 22.600000143051147,
+        "transferBytes": 1171,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1419.4000000953674,
+        "duration": 2.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1497.2999999523163,
+        "duration": 3.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1530.4000000953674,
+        "duration": 3.5999999046325684,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1643.5999999046326,
+        "duration": 6.1000001430511475,
+        "transferBytes": 1320,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "remote-sdk",
+        "initiator": "script",
+        "start": 1654.4000000953674,
+        "duration": 63.19999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "script",
+        "start": 1660.7000000476837,
+        "duration": 38,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "script",
+        "start": 1662.2999999523163,
+        "duration": 36.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "script",
+        "start": 1663.2000000476837,
+        "duration": 35.59999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "css",
+        "start": 1673.7000000476837,
+        "duration": 20.399999856948853,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "xmlhttprequest",
+        "start": 1682.5999999046326,
+        "duration": 0,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "script",
+        "start": 1737.0999999046326,
+        "duration": 16.5,
+        "transferBytes": 2018,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.0999999046326,
+        "duration": 62.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.0999999046326,
+        "duration": 62.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.7999999523163,
+        "duration": 61.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.7999999523163,
+        "duration": 61.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.7999999523163,
+        "duration": 61.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.7999999523163,
+        "duration": 63,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.9000000953674,
+        "duration": 50.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1811.9000000953674,
+        "duration": 58.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1812,
+        "duration": 58.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1812.5999999046326,
+        "duration": 47.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1812.7000000476837,
+        "duration": 48.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1812.7000000476837,
+        "duration": 60.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.2999999523163,
+        "duration": 50.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.2999999523163,
+        "duration": 48.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.4000000953674,
+        "duration": 60,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.4000000953674,
+        "duration": 61.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.5,
+        "duration": 60.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.5,
+        "duration": 60.59999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.5,
+        "duration": 61,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.5,
+        "duration": 62.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1813.5999999046326,
+        "duration": 61.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1814.5999999046326,
+        "duration": 60.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1814.5999999046326,
+        "duration": 61.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815,
+        "duration": 61.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.0999999046326,
+        "duration": 60.80000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.5,
+        "duration": 47.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.5,
+        "duration": 50.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.5,
+        "duration": 52,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.5,
+        "duration": 52.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.5,
+        "duration": 60.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.5999999046326,
+        "duration": 49.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.5999999046326,
+        "duration": 49.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.7000000476837,
+        "duration": 48.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.7000000476837,
+        "duration": 50.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1815.7000000476837,
+        "duration": 61.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1816.4000000953674,
+        "duration": 60,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1816.4000000953674,
+        "duration": 60.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1816.7000000476837,
+        "duration": 60.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1816.7000000476837,
+        "duration": 60.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1816.7000000476837,
+        "duration": 62,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1816.7000000476837,
+        "duration": 87.29999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1817.2000000476837,
+        "duration": 60.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1817.2000000476837,
+        "duration": 60.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1817.2999999523163,
+        "duration": 62.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1817.2999999523163,
+        "duration": 61.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1817.2999999523163,
+        "duration": 68.70000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1818,
+        "duration": 51.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1818,
+        "duration": 49,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1818.0999999046326,
+        "duration": 49.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1818.0999999046326,
+        "duration": 49.80000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1818.0999999046326,
+        "duration": 50.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1818.7999999523163,
+        "duration": 49.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1818.9000000953674,
+        "duration": 51.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.0999999046326,
+        "duration": 49.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.0999999046326,
+        "duration": 60.30000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.4000000953674,
+        "duration": 59.89999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.5,
+        "duration": 59.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.5,
+        "duration": 60.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.5999999046326,
+        "duration": 60.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.5999999046326,
+        "duration": 60.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.5999999046326,
+        "duration": 60.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1819.5999999046326,
+        "duration": 61.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1820.5,
+        "duration": 59.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821,
+        "duration": 59.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.0999999046326,
+        "duration": 59.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.0999999046326,
+        "duration": 60.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.5999999046326,
+        "duration": 49.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.5999999046326,
+        "duration": 60.30000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.7000000476837,
+        "duration": 60,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.7999999523163,
+        "duration": 49.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.7999999523163,
+        "duration": 50,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1821.7999999523163,
+        "duration": 60.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1822.7000000476837,
+        "duration": 60.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1822.9000000953674,
+        "duration": 49.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1822.9000000953674,
+        "duration": 60.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1822.9000000953674,
+        "duration": 141.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823,
+        "duration": 60,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823,
+        "duration": 60.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.5999999046326,
+        "duration": 59.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.5999999046326,
+        "duration": 59.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.5999999046326,
+        "duration": 59.80000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.5999999046326,
+        "duration": 59.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.5999999046326,
+        "duration": 60.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.7000000476837,
+        "duration": 59.89999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.7000000476837,
+        "duration": 60.89999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.7999999523163,
+        "duration": 51.700000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1823.7999999523163,
+        "duration": 60.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1824.5999999046326,
+        "duration": 59.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1824.7000000476837,
+        "duration": 60.299999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1824.7000000476837,
+        "duration": 60.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1824.7999999523163,
+        "duration": 59.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1824.7999999523163,
+        "duration": 60.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1824.9000000953674,
+        "duration": 60.69999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.2999999523163,
+        "duration": 60.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.4000000953674,
+        "duration": 59.89999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.7000000476837,
+        "duration": 59.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.7999999523163,
+        "duration": 59.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.7999999523163,
+        "duration": 60,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.7999999523163,
+        "duration": 60.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.7999999523163,
+        "duration": 60.200000047683716,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 1825.9000000953674,
+        "duration": 17.399999856948853,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "fixture-data",
+        "initiator": "fetch",
+        "start": 1935.4000000953674,
+        "duration": 36.799999952316284,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "img",
+        "start": 1969,
+        "duration": 5.400000095367432,
+        "transferBytes": 5518,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "css",
+        "start": 3566.2999999523163,
+        "duration": 1318.6000001430511,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4784.400000095367,
+        "duration": 105.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4784.400000095367,
+        "duration": 105.19999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4784.900000095367,
+        "duration": 104.79999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4784.900000095367,
+        "duration": 104.79999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.099999904633,
+        "duration": 104.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.700000047684,
+        "duration": 104.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.700000047684,
+        "duration": 104.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.700000047684,
+        "duration": 104.59999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.799999952316,
+        "duration": 104.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.799999952316,
+        "duration": 108.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.799999952316,
+        "duration": 109.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.799999952316,
+        "duration": 109.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4785.900000095367,
+        "duration": 111.69999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4786.799999952316,
+        "duration": 109.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4786.799999952316,
+        "duration": 109.20000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4786.799999952316,
+        "duration": 110.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4786.900000095367,
+        "duration": 112.69999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4786.900000095367,
+        "duration": 112.69999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4787,
+        "duration": 112.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4787,
+        "duration": 113,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4787,
+        "duration": 114.20000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4788,
+        "duration": 111.09999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4788.599999904633,
+        "duration": 110.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789,
+        "duration": 109.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789,
+        "duration": 109.59999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789.099999904633,
+        "duration": 112.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789.099999904633,
+        "duration": 112.80000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789.200000047684,
+        "duration": 112.70000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789.799999952316,
+        "duration": 112.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789.799999952316,
+        "duration": 112.70000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789.799999952316,
+        "duration": 113.70000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4789.900000095367,
+        "duration": 112.69999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790,
+        "duration": 113.29999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790,
+        "duration": 113.79999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.599999904633,
+        "duration": 121.70000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.599999904633,
+        "duration": 122,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.599999904633,
+        "duration": 122.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.700000047684,
+        "duration": 112.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.700000047684,
+        "duration": 112.89999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.700000047684,
+        "duration": 122,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.799999952316,
+        "duration": 113.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.799999952316,
+        "duration": 114,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.799999952316,
+        "duration": 113.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4790.799999952316,
+        "duration": 122.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4791.5,
+        "duration": 122.20000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4791.5,
+        "duration": 122.29999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4791.599999904633,
+        "duration": 121.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4791.799999952316,
+        "duration": 112.29999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4792.099999904633,
+        "duration": 112.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4792.5,
+        "duration": 112.59999990463257,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4792.5,
+        "duration": 113.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4792.599999904633,
+        "duration": 112.80000019073486,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4792.599999904633,
+        "duration": 121.70000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4792.599999904633,
+        "duration": 122,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4793.799999952316,
+        "duration": 121.10000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4793.799999952316,
+        "duration": 121.20000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4793.900000095367,
+        "duration": 112,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4793.900000095367,
+        "duration": 111.89999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4793.900000095367,
+        "duration": 113.19999980926514,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.599999904633,
+        "duration": 115.60000014305115,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.599999904633,
+        "duration": 119.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.700000047684,
+        "duration": 111.20000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.700000047684,
+        "duration": 111.79999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.700000047684,
+        "duration": 112.39999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.700000047684,
+        "duration": 120.89999985694885,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.700000047684,
+        "duration": 121.20000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.700000047684,
+        "duration": 121.29999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4794.700000047684,
+        "duration": 121.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4795.599999904633,
+        "duration": 115.90000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4795.799999952316,
+        "duration": 111.40000009536743,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4795.799999952316,
+        "duration": 120.5,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4795.799999952316,
+        "duration": 120.70000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4796.400000095367,
+        "duration": 120.29999995231628,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "other-public-resource",
+        "initiator": "img",
+        "start": 4796.599999904633,
+        "duration": 120.20000004768372,
+        "transferBytes": null,
+        "crossOriginTransferMayBeUnavailable": true
+      },
+      {
+        "kind": "app-asset",
+        "initiator": "img",
+        "start": 4799.900000095367,
+        "duration": 98.5,
+        "transferBytes": 5962,
+        "crossOriginTransferMayBeUnavailable": true
+      }
+    ]
+  },
+  "timelineCategories": {
+    "FunctionCall": {
+      "count": 2749,
+      "durationUs": 1713223
+    },
+    "UpdateLayoutTree": {
+      "count": 14,
+      "durationUs": 107336
+    },
+    "ResourceSendRequest": {
+      "count": 94,
+      "durationUs": 0
+    },
+    "Layout": {
+      "count": 12,
+      "durationUs": 52394
+    },
+    "ResourceFinish": {
+      "count": 94,
+      "durationUs": 0
+    },
+    "Paint": {
+      "count": 1035,
+      "durationUs": 76046
+    }
+  },
+  "passed": true,
+  "traceEventCount": 19885,
+  "limits": [
+    "event args/URLs/frame objects/headers/bodies removed; inspect timestamps and category names only",
+    "nested durations overlap; never sum them as total elapsed time",
+    "CPU source classified without URLs; production React commit durations unavailable",
+    "one diagnostic execution, not a primary latency or field comparison"
+  ]
+}

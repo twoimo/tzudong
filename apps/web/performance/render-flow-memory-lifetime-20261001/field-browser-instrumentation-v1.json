@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-01T14:48:10.331648+00:00",
+  "source": "field-browser-v5/raw.json",
+  "passed": true,
+  "metrics": [
+    "CLS",
+    "INP",
+    "LCP"
+  ],
+  "qaReceipts": 0,
+  "syntheticInputAndVisibility": true,
+  "productionCollectorRequests": 0,
+  "actualUserSamples": 0,
+  "earlierFailuresRetained": [
+    "field-browser-v1",
+    "field-browser-v2",
+    "field-browser-v3",
+    "field-browser-v4"
+  ],
+  "causeResolved": "home bypasses AppProviders; metrics mounted in actual HomeRuntimeShell; Chrome151 library requires visibilitychange rather than navigating aboutblank; synthetic lifecycle fixture exercises dispatch without fieldclaim",
+  "firstRealNativeLifecycleStillToVerify": true,
+  "fieldAdmitted": 0
+}

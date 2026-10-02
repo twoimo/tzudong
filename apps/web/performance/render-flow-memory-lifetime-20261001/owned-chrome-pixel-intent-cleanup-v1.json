@@ -1,0 +1,8 @@
+{
+  "observedAt": "2026-10-02T14:40:41.363Z",
+  "scope": "Only current-run pixel-review intent boot tabs with generated nonce; no profile, other tabs, settings or stored auth changed",
+  "ownedTargetsObserved": 0,
+  "ownedTargetsClosed": 0,
+  "privateTargetUrlsRetained": false,
+  "fixedFailure": "owned_cleanup_readback_unavailable"
+}

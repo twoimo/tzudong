@@ -1,0 +1,870 @@
+{
+  "run": 3,
+  "kind": "baseline",
+  "buildRole": "baseline",
+  "buildId": "ZHQ4WUAVMUPNgOPyZW60G",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "9236d84284cc28b1e569db22e979bd1f8a6800a577a234c549126548e5503287"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "0816449fe7d1d94f59f555198a77a266b9d346ffbf797275695e0eecd67edade"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "23566f91aa5a22d063e6f77f833a15cdfd32cbaccb3414bc390bbab3f113cd4c"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    }
+  ],
+  "cycles": [
+    {
+      "cycle": 0,
+      "heap": {
+        "usedSize": 29151428,
+        "totalSize": 60162048,
+        "embedderHeapUsedSize": 19772912,
+        "backingStorageSize": 2574849
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 6775
+        },
+        {
+          "name": "Nodes",
+          "value": 13931
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 29151428
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 60162048
+        }
+      ],
+      "state": {
+        "t": 6276.700000047684,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 1,
+      "heap": {
+        "usedSize": 36972300,
+        "totalSize": 79413248,
+        "embedderHeapUsedSize": 42231552,
+        "backingStorageSize": 2525496
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 22059
+        },
+        {
+          "name": "Nodes",
+          "value": 34342
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 36972300
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 79413248
+        }
+      ],
+      "state": {
+        "t": 8511.100000143051,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 2,
+      "heap": {
+        "usedSize": 20319632,
+        "totalSize": 95207424,
+        "embedderHeapUsedSize": 12068488,
+        "backingStorageSize": 2503832
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4894
+        },
+        {
+          "name": "Nodes",
+          "value": 8395
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 20319632
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 95207424
+        }
+      ],
+      "state": {
+        "t": 10728.299999952316,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 3,
+      "heap": {
+        "usedSize": 25680876,
+        "totalSize": 95911936,
+        "embedderHeapUsedSize": 35911088,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 20178
+        },
+        {
+          "name": "Nodes",
+          "value": 28797
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 25680876
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 95911936
+        }
+      ],
+      "state": {
+        "t": 13001.900000095367,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 4,
+      "heap": {
+        "usedSize": 30744256,
+        "totalSize": 97353728,
+        "embedderHeapUsedSize": 60311544,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 35462
+        },
+        {
+          "name": "Nodes",
+          "value": 49199
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 30744256
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 97353728
+        }
+      ],
+      "state": {
+        "t": 15202.900000095367,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 5,
+      "heap": {
+        "usedSize": 36318012,
+        "totalSize": 100679680,
+        "embedderHeapUsedSize": 84220168,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 50746
+        },
+        {
+          "name": "Nodes",
+          "value": 69601
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 36318012
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 100679680
+        }
+      ],
+      "state": {
+        "t": 17339,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 6,
+      "heap": {
+        "usedSize": 20511280,
+        "totalSize": 100712448,
+        "embedderHeapUsedSize": 14219704,
+        "backingStorageSize": 2503832
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4894
+        },
+        {
+          "name": "Nodes",
+          "value": 8386
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 20511280
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 100712448
+        }
+      ],
+      "state": {
+        "t": 19499.400000095367,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 7,
+      "heap": {
+        "usedSize": 25766364,
+        "totalSize": 102203392,
+        "embedderHeapUsedSize": 37974968,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 20178
+        },
+        {
+          "name": "Nodes",
+          "value": 28788
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 25766364
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 102203392
+        }
+      ],
+      "state": {
+        "t": 21706.60000014305,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 8,
+      "heap": {
+        "usedSize": 31037448,
+        "totalSize": 104218624,
+        "embedderHeapUsedSize": 62141808,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 35462
+        },
+        {
+          "name": "Nodes",
+          "value": 49190
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 31037448
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 104218624
+        }
+      ],
+      "state": {
+        "t": 23933.400000095367,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 9,
+      "heap": {
+        "usedSize": 36507876,
+        "totalSize": 105185280,
+        "embedderHeapUsedSize": 86247056,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 50746
+        },
+        {
+          "name": "Nodes",
+          "value": 69592
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 36507876
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 105185280
+        }
+      ],
+      "state": {
+        "t": 26091.60000014305,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 10,
+      "heap": {
+        "usedSize": 20711992,
+        "totalSize": 101498880,
+        "embedderHeapUsedSize": 14353240,
+        "backingStorageSize": 2503832
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4894
+        },
+        {
+          "name": "Nodes",
+          "value": 8386
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 20711992
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 101498880
+        }
+      ],
+      "state": {
+        "t": 28274.60000014305,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 11,
+      "heap": {
+        "usedSize": 26103920,
+        "totalSize": 103251968,
+        "embedderHeapUsedSize": 38168000,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 20178
+        },
+        {
+          "name": "Nodes",
+          "value": 28788
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 26103920
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 103251968
+        }
+      ],
+      "state": {
+        "t": 30392.799999952316,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 12,
+      "heap": {
+        "usedSize": 30907560,
+        "totalSize": 105529344,
+        "embedderHeapUsedSize": 62229352,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 35462
+        },
+        {
+          "name": "Nodes",
+          "value": 49199
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 30907560
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 105529344
+        }
+      ],
+      "state": {
+        "t": 32551.299999952316,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 13,
+      "heap": {
+        "usedSize": 36141348,
+        "totalSize": 106233856,
+        "embedderHeapUsedSize": 86354224,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 50746
+        },
+        {
+          "name": "Nodes",
+          "value": 69601
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 36141348
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 106233856
+        }
+      ],
+      "state": {
+        "t": 34694,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 14,
+      "heap": {
+        "usedSize": 20858608,
+        "totalSize": 102285312,
+        "embedderHeapUsedSize": 14369776,
+        "backingStorageSize": 2503832
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4894
+        },
+        {
+          "name": "Nodes",
+          "value": 8386
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 20858608
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 102285312
+        }
+      ],
+      "state": {
+        "t": 36792,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 15,
+      "heap": {
+        "usedSize": 26233136,
+        "totalSize": 103776256,
+        "embedderHeapUsedSize": 38268464,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 20178
+        },
+        {
+          "name": "Nodes",
+          "value": 28788
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 26233136
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 103776256
+        }
+      ],
+      "state": {
+        "t": 39027.5,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 16,
+      "heap": {
+        "usedSize": 31037316,
+        "totalSize": 105742336,
+        "embedderHeapUsedSize": 62097976,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 35462
+        },
+        {
+          "name": "Nodes",
+          "value": 49190
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 31037316
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 105742336
+        }
+      ],
+      "state": {
+        "t": 41094.5,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 17,
+      "heap": {
+        "usedSize": 36177088,
+        "totalSize": 106446848,
+        "embedderHeapUsedSize": 86372200,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 50746
+        },
+        {
+          "name": "Nodes",
+          "value": 69592
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 36177088
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 106446848
+        }
+      ],
+      "state": {
+        "t": 43273.90000009537,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 18,
+      "heap": {
+        "usedSize": 20952172,
+        "totalSize": 102023168,
+        "embedderHeapUsedSize": 14429728,
+        "backingStorageSize": 2503832
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4894
+        },
+        {
+          "name": "Nodes",
+          "value": 8386
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 20952172
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 102023168
+        }
+      ],
+      "state": {
+        "t": 45471.10000014305,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "cycle": 19,
+      "heap": {
+        "usedSize": 26337664,
+        "totalSize": 103514112,
+        "embedderHeapUsedSize": 38468104,
+        "backingStorageSize": 2525482
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 20178
+        },
+        {
+          "name": "Nodes",
+          "value": 28788
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 26337664
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 103514112
+        }
+      ],
+      "state": {
+        "t": 47711.40000009537,
+        "missing": 0,
+        "expected": 571,
+        "markers": 571,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    }
+  ],
+  "passed": true,
+  "sdk": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+    "loaded": true,
+    "stub": false,
+    "remoteScript": true,
+    "mapCaptured": true,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1
+    },
+    "tiles": 105
+  },
+  "initialHeap": {
+    "usedSize": 23810580,
+    "totalSize": 45350912,
+    "embedderHeapUsedSize": 24150888,
+    "backingStorageSize": 2049955
+  },
+  "errors": {
+    "page": 0,
+    "console": 1
+  }
+}

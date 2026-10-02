@@ -1,0 +1,45 @@
+{
+  "source": "memory-repeat-desktop-tail-confirm-v1/raw.json",
+  "runs": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "n": 60,
+      "median": 28306488.0,
+      "peak": 53306912,
+      "end": 31799500,
+      "passed": true
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "n": 60,
+      "median": 30825404.0,
+      "peak": 44957304,
+      "end": 29354448,
+      "passed": true
+    },
+    {
+      "run": 2,
+      "kind": "candidate",
+      "n": 60,
+      "median": 30856170.0,
+      "peak": 31419040,
+      "end": 31347508,
+      "passed": true
+    },
+    {
+      "run": 3,
+      "kind": "baseline",
+      "n": 60,
+      "median": 28161474.0,
+      "peak": 37074720,
+      "end": 31814780,
+      "passed": true
+    }
+  ],
+  "nIndependentProcessesPerVariant": 2,
+  "passedAccuracy": true,
+  "noGeneralLeakProof": true,
+  "instrumentationLimit": "perrAF probe does735 getBoundingClientRect onawaycandidate(fullDOM) vs0oncullcontrol; O(n)probe workandallocation unequal, useindependentminimalprobe withidenticalbeforeafter andretainlegacyraw"
+}

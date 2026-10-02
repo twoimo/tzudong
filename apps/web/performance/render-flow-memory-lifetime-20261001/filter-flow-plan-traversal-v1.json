@@ -1,0 +1,33 @@
+{
+  "createdAt": "2026-10-01T10:46:27.586807+00:00",
+  "scope": "trusted actual SDK category empty/reset flow: order-only control vs reverse batch+prepare-before-attach; laboratory notfield",
+  "abPairs": 9,
+  "aaPairs": 5,
+  "cyclesPerProcess": 4,
+  "warmupCyclesPerProcess": 1,
+  "driverExecutionsPerCell": 1,
+  "independentUnit": "fresh browser process; median of 3 measured cycles per process; no cycle pseudoreplication",
+  "order": "alternating AB/BA, AA two same control processes",
+  "builds": {
+    "baseline": "control-v4",
+    "candidate": "traversal-v1"
+  },
+  "viewport": [
+    1440,
+    900
+  ],
+  "cpu": 4,
+  "cache": "fresh context cacheDisabled/bypassSW; warm app state within process",
+  "data": 735,
+  "network": "native actual SDK/tiles, local fixture; same loopback transport/CSP",
+  "endpoint": "trusted reset click to all expected571 DOM markers present and some visible in two rAF; no full pixel settle assertion",
+  "heap": "natural Runtime.getHeapUsage 1000ms after return before IDserialization; no explicitGC",
+  "latencyRegressionPercent": 15,
+  "memoryRegressionPercent": 20,
+  "noiseBudget": "max(25ms,15% before median,max absolute AA paired process median delta,AA median drift)",
+  "proof": "both paired and ABBA block bootstrap95 lower bounds exceed noise; practical 25ms minimum; n9 no p95; report process median MAD",
+  "cold20percentBudgetWaived": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "harnessSha256": "fbd76108a41177ab61ea990e7849cb9260f36b2af2742252ba281d79e126e08d"
+}

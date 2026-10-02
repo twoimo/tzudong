@@ -1,0 +1,399 @@
+{
+  "cases": [
+    {
+      "differences": [],
+      "category": "한식",
+      "selected": false,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 899,
+      "afterCharacters": 448
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "한식",
+      "selected": false,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1696,
+      "afterCharacters": 636
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "한식",
+      "selected": false,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1698,
+      "afterCharacters": 638
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "한식",
+      "selected": false,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1700,
+      "afterCharacters": 640
+    },
+    {
+      "differences": [],
+      "category": "한식",
+      "selected": true,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 921,
+      "afterCharacters": 470
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "한식",
+      "selected": true,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1718,
+      "afterCharacters": 658
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "한식",
+      "selected": true,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1720,
+      "afterCharacters": 660
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "한식",
+      "selected": true,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1722,
+      "afterCharacters": 662
+    },
+    {
+      "differences": [],
+      "category": "분식",
+      "selected": false,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 905,
+      "afterCharacters": 454
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "분식",
+      "selected": false,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1702,
+      "afterCharacters": 642
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "분식",
+      "selected": false,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1704,
+      "afterCharacters": 644
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "분식",
+      "selected": false,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1706,
+      "afterCharacters": 646
+    },
+    {
+      "differences": [],
+      "category": "분식",
+      "selected": true,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 927,
+      "afterCharacters": 476
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "분식",
+      "selected": true,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1724,
+      "afterCharacters": 664
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "분식",
+      "selected": true,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1726,
+      "afterCharacters": 666
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "분식",
+      "selected": true,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1728,
+      "afterCharacters": 668
+    },
+    {
+      "differences": [],
+      "category": "중식",
+      "selected": false,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 901,
+      "afterCharacters": 450
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "중식",
+      "selected": false,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1698,
+      "afterCharacters": 638
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "중식",
+      "selected": false,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1700,
+      "afterCharacters": 640
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "중식",
+      "selected": false,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1702,
+      "afterCharacters": 642
+    },
+    {
+      "differences": [],
+      "category": "중식",
+      "selected": true,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 923,
+      "afterCharacters": 472
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "중식",
+      "selected": true,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1720,
+      "afterCharacters": 660
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "중식",
+      "selected": true,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1722,
+      "afterCharacters": 662
+    },
+    {
+      "differences": [
+        {
+          "element": 5,
+          "property": "font-weight",
+          "before": "800",
+          "after": "900"
+        }
+      ],
+      "category": "중식",
+      "selected": true,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": false,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1724,
+      "afterCharacters": 664
+    }
+  ],
+  "passed": false,
+  "actualUserSamples": 0,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "scope": "codegenerated marker fixtures, browser CSSOM/box/a11y/text equivalence, not wholeUI performance/flicker"
+}

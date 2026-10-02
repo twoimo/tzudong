@@ -1,0 +1,21 @@
+{
+  "observedAt": "2026-10-02T08:00:54.084981+00:00",
+  "publicRuntimeInputHashesIdentical": [
+    "components/map/NaverMapView.tsx",
+    "lib/naver-map-render-plan.ts",
+    "lib/marker-pool.ts",
+    "package-lock.json",
+    "lib/web-vitals.tsx",
+    "lib/performance/field-vitals.ts",
+    "next.config.mjs",
+    "lib/cluster-marker.ts",
+    "components/legal/PrivacyPolicyContent.tsx",
+    "components/legal/HydratedContactEmail.tsx",
+    "components/map/marker-icons.css",
+    "lib/deferred-marker-renders.ts"
+  ],
+  "changedPublicRuntimeInputHashes": [],
+  "publicMarkerCssIdenticalSha256": "dbc6ed667271bdbc57c3a535df15ec84a39ba525e83d3d990161f75ff99801fb",
+  "additionalFinalInput": "components/admin/AdminOverviewDashboard.tsx",
+  "interpretation": "final cold/natural-heap source measurements bind to the same public renderer code; final integration filter flow measured on final-v1 build; no speed gain inferred from admin import"
+}

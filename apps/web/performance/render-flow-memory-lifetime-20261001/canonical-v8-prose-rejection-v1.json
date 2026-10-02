@@ -1,0 +1,6 @@
+{
+  "v7AndV8Rejected": true,
+  "reason": "Canonical manifest uses an exact safe-prose enum, not arbitrary descriptive hypotheses. Shortening in v8 did not meet that rule.",
+  "correction": "v9 uses the allowed bounded-candidate-metric hypothesis. Detailed measured interpretation remains in report; no budget or validator change.",
+  "priorInputsOverwritten": false
+}

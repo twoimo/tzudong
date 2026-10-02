@@ -1,0 +1,74 @@
+{
+  "observedAt": "2026-10-02T05:34:31.557273+00:00",
+  "scope": "independent replay of prior frozen canonical packet, not admission of new memory source or field gain",
+  "sourceStorageCommit": "59ad8be44f5c4aa668b3c6860724904ae400803f",
+  "retainedSourcePrefix": "apps/web/performance/render-flow-memory-20261001/canonical-zero-admitted-recheck-v1/",
+  "sourceCandidate": {
+    "sha": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+    "tree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b"
+  },
+  "canonicalAdmittedFieldSlices": 0,
+  "newMemoryLabAdmissionClaimed": false,
+  "commands": [
+    {
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/scripts/score-performance-backlog.mjs",
+        "--artifact-root",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/render-flow-memory-lifetime-20261001/canonical-zero-admitted-prior-replay-v1",
+        "--release-id",
+        "render-flow-sdk-lab-20260930",
+        "--candidate-sha",
+        "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+        "--candidate-tree",
+        "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+        "--config-sha256",
+        "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af",
+        "--data-profile-sha256",
+        "365c1181882b91bba130c33309dab39654bee2be4b4578c74d45663caa0c7843",
+        "--frozen-as-of",
+        "2026-09-30T10:00:33.715000Z",
+        "--input",
+        "backlog.raw.json",
+        "--artifact-map",
+        "score-artifact-map.json",
+        "--artifact-map-sha256",
+        "857c5dbd9e9b8cf96f2e0060635545d5100a520bc3226e1ba70c29d2417b06d3",
+        "--output",
+        "backlog.scored.json"
+      ],
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/scripts/validate-performance-backlog.mjs",
+        "--artifact-root",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/render-flow-memory-lifetime-20261001/canonical-zero-admitted-prior-replay-v1",
+        "--release-id",
+        "render-flow-sdk-lab-20260930",
+        "--candidate-sha",
+        "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+        "--candidate-tree",
+        "6fbbe72ad209b3c9fb6ebdfb323e03672539711b",
+        "--config-sha256",
+        "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af",
+        "--data-profile-sha256",
+        "365c1181882b91bba130c33309dab39654bee2be4b4578c74d45663caa0c7843",
+        "--frozen-as-of",
+        "2026-09-30T10:00:33.715000Z",
+        "--input",
+        "backlog.raw.json",
+        "--artifact-map",
+        "validate-artifact-map.json",
+        "--artifact-map-sha256",
+        "123bb6bde06d0fbaf24f9a2d6e7bde0d59ff86e922d8a82a9719b27ed8b6474f",
+        "--scored",
+        "backlog.scored.json"
+      ],
+      "exitCode": 0,
+      "output": ""
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+diff --git a/apps/web/app/home-app-globals.css b/apps/web/app/home-app-globals.css
+index 5feda9ee..2d12b81e 100644
+--- a/apps/web/app/home-app-globals.css
++++ b/apps/web/app/home-app-globals.css
+@@ -25,6 +25,12 @@ html[data-home-chrome-ready="true"][data-home-panel-ready="true"] [data-home-sta
+ }
+ 
+ @media (max-width: 1279px) {
++  /* Mobile has no desktop panel readiness signal. Retire its decorative shell
++     when the home controls mount, while map loading feedback stays separate. */
++  html[data-home-chrome-ready="true"] [data-home-static-skeleton] {
++    display: none;
++  }
++
+   html[data-mobile-search-open] .mobile-map-status-badge {
+     display: none;
+   }
+diff --git a/apps/web/app/home-runtime-shell.tsx b/apps/web/app/home-runtime-shell.tsx
+index a7091c72..51aa92f7 100644
+--- a/apps/web/app/home-runtime-shell.tsx
++++ b/apps/web/app/home-runtime-shell.tsx
+@@ -325,7 +325,6 @@ function HomeStaticSkeleton() {
+             </div>
+             <div className="xl:hidden">
+                 <div className="mx-3 mt-[calc(env(safe-area-inset-top)+10px)] h-12 animate-pulse rounded-full border border-border bg-muted" />
+-                <div className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] h-14 animate-pulse rounded-2xl bg-muted" />
+             </div>
+         </div>
+     );

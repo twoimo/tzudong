@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-01T16:03:04.527811+00:00",
+  "commit": "0cfe1b97a06dba366d6c15aa7eb86af14ca2430a",
+  "rateLimits": {
+    "perSourcePerWorkerMinute": 36,
+    "allWorkerMinute": 80,
+    "globalWritesPerMinute": 180
+  },
+  "persistentSourceIdentifiers": false,
+  "ipProcessing": "platform IP only, process-random RAM-only HMAC counters; proxy sources may be shared",
+  "sessionAuthBypass": "exactPOST/noCookie/noAuthorization; mutation check retained; tested0vs2authcalls",
+  "schemaMigrationApplied": true,
+  "nativeMemorySourcesInCommit": false
+}

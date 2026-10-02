@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "render-flow-canonical-basis.v1",
+  "releaseId": "render-flow-sdk-lab-20260930",
+  "candidate": {
+    "sha": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+    "tree": "6fbbe72ad209b3c9fb6ebdfb323e03672539711b"
+  },
+  "configSha256": "effbc7f636f5a4cfa0efba1725006e751869d9084db59ba5062527b0f481c9af",
+  "dataProfileSha256": "365c1181882b91bba130c33309dab39654bee2be4b4578c74d45663caa0c7843",
+  "frozenAsOf": "2026-09-30T10:00:33.715000Z",
+  "bindingMeaning": "canonical packet is bound to the frozen baseline Git object; the uncommitted candidate patch is retained only by SHA-256 and is not represented as a Git commit",
+  "uncommittedCandidatePatchSha256": "7157ecbccd22d9315f0d3cd344b003741ac30fbcafb36b5dc1ba59b77fc68819",
+  "localScoreSha256": "ef5ed42273b1aa26a1994087a41ed6d88d76716aef38afea58f7f3cc2f5d69fe",
+  "correctnessGate": "Pooled marker reuse must replace static icon content when restaurant ID, marker semantics or visit badge differ. Existing same-identity review-bubble patch keeps image DOM. Browser pan round trip compares provider marker DOM IDs. Warm-cache offscreen pan-return must restore exact DOM-ID/SDK-position pairs; lightweight viewport invalidation must not wait for expensive cluster debounce. Unchanged idle performs zero provider setters.",
+  "fieldAdmissionAllowed": false
+}

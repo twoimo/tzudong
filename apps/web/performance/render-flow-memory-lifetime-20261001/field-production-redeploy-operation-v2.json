@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-01T17:53:30.039282+00:00",
+  "operation": "redeploy exactcanceled mainsource using supportedCLI56 target/no-wait flags",
+  "sourceDeploymentId": "dpl_HY2TaRRES8H4mJZjv1NxF6zs7T8u",
+  "gitSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "target": "production",
+  "exitCode": 0,
+  "returnedUrls": [
+    "https://tzudong-ib4jq4sah-twoimos-projects.vercel.app"
+  ],
+  "previousRejectedLegacyFlagsReplaced": true,
+  "rawProviderDiagnosticsSaved": false,
+  "readyAndAliasReadbackRequired": true
+}

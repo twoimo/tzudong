@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-10-02T09:36:14.311355+00:00",
+  "branch": "codex/mobile-bottom-nav-flicker-20261002",
+  "base": "2294c76b4de660f4dfd0e8a98d5aeebf50adbeea",
+  "changed": [
+    "app/home-runtime-shell.tsx",
+    "app/home-app-globals.css"
+  ],
+  "unit": {
+    "passed": 24,
+    "failed": 0,
+    "assertions": 230,
+    "files": [
+      "home-root-lazy-boundary.test.ts",
+      "home-map-runtime-activation.test.ts",
+      "mobile-home-map-regressions.test.ts"
+    ]
+  },
+  "targetedEslint": "passed",
+  "typescriptParity": {
+    "status": "passed",
+    "diagnostics": 0
+  },
+  "productSourceChanges": "remove decorative bottom pulse rectangle, retire mobile skeleton when chrome ready; desktop waits for panel readiness"
+}

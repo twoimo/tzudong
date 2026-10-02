@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-02T07:23:18.841015+00:00",
+  "skillReview": "Vercel React Best Practices condensed checklist",
+  "scope": [
+    "NaverMapView effect/job cancellation, dependency invalidation, six-retry recovery",
+    "AdminOverviewDashboard same namespaced CSS import as the other factory consumer"
+  ],
+  "findings": "no new hooks/subscriptions/data fetches/auth changes; all consumers now load the class styles; no route/layout broadening",
+  "compiledAdminCases": 24,
+  "realAdminDataAccessed": false,
+  "publicRendererSourceMatchesRetryBuild": true
+}

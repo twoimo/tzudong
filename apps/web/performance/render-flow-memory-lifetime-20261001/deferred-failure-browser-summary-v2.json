@@ -1,0 +1,72 @@
+{
+  "observedAt": "2026-10-02T07:16:42.080931+00:00",
+  "before": {
+    "first": {
+      "faults": 13,
+      "time": 6905.299999952316,
+      "visible": "visible",
+      "markers": 571,
+      "mapCreates": 1
+    },
+    "second": {
+      "faults": 19,
+      "time": 8408.799999952316,
+      "timestamps": [
+        3860.2000000476837,
+        3899.2999999523163,
+        4161.400000095367,
+        4422.799999952316,
+        4682.5,
+        4945.400000095367,
+        5207.400000095367,
+        5469,
+        5731.400000095367,
+        5992.900000095367,
+        6254.400000095367,
+        6517.099999904633,
+        6780.099999904633,
+        7043.099999904633,
+        7306.299999952316,
+        7566.900000095367,
+        7829.400000095367,
+        8091.700000047684,
+        8354.599999904633
+      ],
+      "visible": "visible",
+      "markers": 571,
+      "mapCreates": 1
+    },
+    "bounded": false,
+    "visibleContentRetained": true
+  },
+  "after": {
+    "first": {
+      "faults": 7,
+      "time": 6789.899999856949,
+      "visible": "visible",
+      "markers": 571,
+      "mapCreates": 1
+    },
+    "second": {
+      "faults": 7,
+      "time": 8293.5,
+      "timestamps": [
+        3762.7999999523163,
+        3806,
+        4068.5,
+        4330.5,
+        4593.699999809265,
+        4856,
+        5117
+      ],
+      "visible": "visible",
+      "markers": 571,
+      "mapCreates": 1
+    },
+    "bounded": true,
+    "visibleContentRetained": true
+  },
+  "scope": "one diagnostic page per version; real remote SDK with explicit synthetic offscreen position exception; not latency/field proof",
+  "interpretation": "fixed six retries plus initial attempt, visible viewport retained; zero-fault v1 runs rejected",
+  "originalCspPreserved": true
+}

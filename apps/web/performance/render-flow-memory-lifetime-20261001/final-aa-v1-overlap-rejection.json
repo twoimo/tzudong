@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-02T06:26:07.487433+00:00",
+  "run": "desktop-aa-final-retry-matched-aa-v1",
+  "reason": "owned original production build overlapped A/A launch, invalidating controlled timing/noise estimate",
+  "performanceAdmitted": false,
+  "stoppedOnlyExactOwnedProfilerAndItsDescendants": true,
+  "stoppedProcesses": 6,
+  "next": "new immutable A/A label after original build finishes; original source budgets unchanged"
+}

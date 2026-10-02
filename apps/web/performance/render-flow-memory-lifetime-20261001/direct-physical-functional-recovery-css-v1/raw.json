@@ -1,0 +1,2479 @@
+{
+  "mode": "physical",
+  "label": "recovery-css-v1",
+  "startedAt": "2026-10-02T05:45:24.153Z",
+  "planSha256": "344b0a28938700dd47e38c450ab8df904225553973b53f67d1b6b85e2cd22080",
+  "checks": [
+    {
+      "name": "marker selection and browser back",
+      "passed": true,
+      "observed": true
+    },
+    {
+      "name": "list and detail open",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    },
+    {
+      "name": "detail trusted swipe 0",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    },
+    {
+      "name": "detail trusted swipe 1",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    },
+    {
+      "name": "detail trusted swipe 2",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    },
+    {
+      "name": "detail close",
+      "passed": true,
+      "observed": true
+    },
+    {
+      "name": "trusted map pan",
+      "passed": true,
+      "observed": true
+    },
+    {
+      "name": "trusted map pinch",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    },
+    {
+      "name": "category empty and reset",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    },
+    {
+      "name": "empty search",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    },
+    {
+      "name": "search select and close",
+      "passed": false,
+      "failureCode": "owned_functional_invariant_unavailable"
+    }
+  ],
+  "returns": [
+    {
+      "returnedAt": 2691.5,
+      "timeOrigin": 1790919926329.8,
+      "expected": 470,
+      "markers": 470,
+      "missing": 0,
+      "duplicates": 0,
+      "mapCreates": 1,
+      "frames": [
+        {
+          "t": 2699.7,
+          "gap": 16.799999999999727,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2832.8,
+          "gap": 133.10000000000036,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2849.4,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2866.1,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2882.8,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2899.4,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2916,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2932.6,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2949.3,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2966,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2982.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 2999.3,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3016,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3032.5,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3049.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3065.9,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3082.5,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3099.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3115.9,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3132.4,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3149.1,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3165.8,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3182.4,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3199.1,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3215.7,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3232.4,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3249,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3265.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3282.4,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3299,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3315.6,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3332.3,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3348.9,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3365.6,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3382.2,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3398.9,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3415.5,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3432.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3448.8,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3465.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3482.1,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3498.8,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3515.4,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3532,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3548.8,
+          "gap": 16.800000000000182,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3565.3,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3582.1,
+          "gap": 16.799999999999727,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3598.7,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3615.3,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3632,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3648.6,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3665.3,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3681.9,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3698.5,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3715.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3731.8,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3748.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3765.1,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3781.8,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3798.4,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3815.1,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3831.7,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3848.4,
+          "gap": 16.700000000000273,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 3865,
+          "gap": 16.59999999999991,
+          "visible": true,
+          "markerCount": 470
+        }
+      ],
+      "overflow": 0,
+      "visibility": "visible",
+      "passed": true
+    },
+    {
+      "returnedAt": 4361.20000000298,
+      "timeOrigin": 1790919926329.8,
+      "expected": 470,
+      "markers": 470,
+      "missing": 0,
+      "duplicates": 0,
+      "mapCreates": 1,
+      "frames": [
+        {
+          "t": 4364.5,
+          "gap": 33.30000000000018,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4481,
+          "gap": 116.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4497.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4514.3,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4530.9,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4547.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4564.3,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4580.9,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4597.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4614.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4630.8,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4647.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4664.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4680.8,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4697.4,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4714,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4730.8,
+          "gap": 16.800000000000182,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4747.4,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4764.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4780.6,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4797.3,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4814,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4830.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4847.3,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4863.9,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4880.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4897.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4913.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4930.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4947.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4963.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4980.4,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 4997,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5013.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5030.3,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5047,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5063.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5080.2,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5096.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5113.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5130.2,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5146.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5163.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5180.1,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5196.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5213.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5230.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5246.7,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5263.4,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5280,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5296.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5313.3,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5329.9,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5346.7,
+          "gap": 16.800000000000182,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5363.2,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5379.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5396.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5413.2,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5429.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5446.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5463.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5479.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5496.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 5513,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        }
+      ],
+      "overflow": 0,
+      "visibility": "visible",
+      "passed": true
+    },
+    {
+      "returnedAt": 5990,
+      "timeOrigin": 1790919926329.8,
+      "expected": 470,
+      "markers": 470,
+      "missing": 0,
+      "duplicates": 0,
+      "mapCreates": 1,
+      "frames": [
+        {
+          "t": 5995.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6112.3,
+          "gap": 116.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6129,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6145.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6162.2,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6179,
+          "gap": 16.800000000000182,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6195.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6212.2,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6228.8,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6245.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6262.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6278.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6295.4,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6312,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6328.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6345.3,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6362,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6378.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6395.3,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6412,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6428.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6445.2,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6461.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6478.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6495.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6511.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6528.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6545.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6561.7,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6578.4,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6595.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6611.7,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6628.4,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6645,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6661.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6678.4,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6694.9,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6711.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6728.2,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6744.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6761.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6778.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6794.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6811.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6828.2,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6844.8,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6861.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6878.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6894.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6911.4,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6928,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6944.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6961.4,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6978,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 6994.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7011.3,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7028,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7044.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7061.2,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7077.9,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7094.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7111.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7127.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7144.4,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7161.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7177.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        }
+      ],
+      "overflow": 0,
+      "visibility": "visible",
+      "passed": true
+    },
+    {
+      "returnedAt": 7687,
+      "timeOrigin": 1790919926329.8,
+      "expected": 470,
+      "markers": 470,
+      "missing": 0,
+      "duplicates": 0,
+      "mapCreates": 1,
+      "frames": [
+        {
+          "t": 7694,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7793.8,
+          "gap": 99.80000000000018,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7827.1,
+          "gap": 33.30000000000018,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7843.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7860.3,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7877,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7893.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7910.3,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7926.9,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7943.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7960.3,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7976.9,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 7993.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8010.1,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8026.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8043.5,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8060.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8076.8,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8093.4,
+          "gap": 16.599999999999454,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8110,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8126.7,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8143.4,
+          "gap": 16.699999999999818,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8160,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8176.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8193.2,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8209.9,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8226.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8243.2,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8259.9,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8276.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8293.2,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8309.7,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8326.4,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8343.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8359.8,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8376.3,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8393,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8409.7,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8426.3,
+          "gap": 16.599999999998545,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8442.9,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8459.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8476.2,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8492.9,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8509.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8526.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8542.7,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8559.4,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8576.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8592.7,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8609.4,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8626,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8642.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8659.4,
+          "gap": 16.799999999999272,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8675.9,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8692.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8709.2,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8725.9,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8742.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8759.1,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8775.8,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8792.5,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8809.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8825.8,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 8842.4,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        }
+      ],
+      "overflow": 0,
+      "visibility": "visible",
+      "passed": true
+    },
+    {
+      "returnedAt": 9327.10000000894,
+      "timeOrigin": 1790919926329.8,
+      "expected": 470,
+      "markers": 470,
+      "missing": 0,
+      "duplicates": 0,
+      "mapCreates": 1,
+      "frames": [
+        {
+          "t": 9341.7,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9441.6,
+          "gap": 99.89999999999964,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9458.3,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9474.9,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9491.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9508.3,
+          "gap": 16.799999999999272,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9524.8,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9541.5,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9558.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9574.8,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9591.4,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9608.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9624.7,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9641.4,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9658,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9674.7,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9691.3,
+          "gap": 16.599999999998545,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9708,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9724.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9741.2,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9758,
+          "gap": 16.799999999999272,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9774.5,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9791.3,
+          "gap": 16.799999999999272,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9807.8,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9824.5,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9841.2,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9857.9,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9874.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9891.1,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9907.7,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9924.4,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9941.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9957.7,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9974.4,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 9991,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10007.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10024.3,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10040.9,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10057.5,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10074.2,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10090.8,
+          "gap": 16.599999999998545,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10107.5,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10124.2,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10140.8,
+          "gap": 16.599999999998545,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10157.5,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10174,
+          "gap": 16.5,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10190.7,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10207.3,
+          "gap": 16.599999999998545,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10224,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10240.6,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10257.3,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10273.9,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10290.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10307.3,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10323.9,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10340.6,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10357.2,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10373.8,
+          "gap": 16.599999999998545,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10390.4,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10407.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10423.8,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10440.4,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10457.1,
+          "gap": 16.700000000000728,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10473.7,
+          "gap": 16.600000000000364,
+          "visible": true,
+          "markerCount": 470
+        },
+        {
+          "t": 10490.4,
+          "gap": 16.69999999999891,
+          "visible": true,
+          "markerCount": 470
+        }
+      ],
+      "overflow": 0,
+      "visibility": "visible",
+      "passed": true
+    }
+  ],
+  "touch": [],
+  "filmstrip": [
+    {
+      "path": "frame-000.jpg",
+      "timestamp": 1790919927.400594
+    },
+    {
+      "path": "frame-001.jpg",
+      "timestamp": 1790919927.588348
+    },
+    {
+      "path": "frame-002.jpg",
+      "timestamp": 1790919927.784798
+    },
+    {
+      "path": "frame-003.jpg",
+      "timestamp": 1790919927.97918
+    },
+    {
+      "path": "frame-004.jpg",
+      "timestamp": 1790919928.172346
+    },
+    {
+      "path": "frame-005.jpg",
+      "timestamp": 1790919928.362993
+    },
+    {
+      "path": "frame-006.jpg",
+      "timestamp": 1790919928.580809
+    },
+    {
+      "path": "frame-007.jpg",
+      "timestamp": 1790919928.767207
+    },
+    {
+      "path": "frame-008.jpg",
+      "timestamp": 1790919928.955062
+    },
+    {
+      "path": "frame-009.jpg",
+      "timestamp": 1790919929.137295
+    },
+    {
+      "path": "frame-010.jpg",
+      "timestamp": 1790919929.321178
+    },
+    {
+      "path": "frame-011.jpg",
+      "timestamp": 1790919929.505005
+    },
+    {
+      "path": "frame-012.jpg",
+      "timestamp": 1790919929.70601
+    },
+    {
+      "path": "frame-013.jpg",
+      "timestamp": 1790919929.891403
+    },
+    {
+      "path": "frame-014.jpg",
+      "timestamp": 1790919930.072701
+    },
+    {
+      "path": "frame-015.jpg",
+      "timestamp": 1790919930.255952
+    },
+    {
+      "path": "frame-016.jpg",
+      "timestamp": 1790919930.484604
+    },
+    {
+      "path": "frame-017.jpg",
+      "timestamp": 1790919930.673572
+    },
+    {
+      "path": "frame-018.jpg",
+      "timestamp": 1790919930.875007
+    },
+    {
+      "path": "frame-019.jpg",
+      "timestamp": 1790919931.056983
+    },
+    {
+      "path": "frame-020.jpg",
+      "timestamp": 1790919931.238026
+    },
+    {
+      "path": "frame-021.jpg",
+      "timestamp": 1790919931.422413
+    },
+    {
+      "path": "frame-022.jpg",
+      "timestamp": 1790919931.604276
+    },
+    {
+      "path": "frame-023.jpg",
+      "timestamp": 1790919931.78679
+    },
+    {
+      "path": "frame-024.jpg",
+      "timestamp": 1790919931.968447
+    },
+    {
+      "path": "frame-025.jpg",
+      "timestamp": 1790919932.154015
+    },
+    {
+      "path": "frame-026.jpg",
+      "timestamp": 1790919932.369826
+    },
+    {
+      "path": "frame-027.jpg",
+      "timestamp": 1790919932.550739
+    },
+    {
+      "path": "frame-028.jpg",
+      "timestamp": 1790919932.735422
+    },
+    {
+      "path": "frame-029.jpg",
+      "timestamp": 1790919932.95534
+    },
+    {
+      "path": "frame-030.jpg",
+      "timestamp": 1790919933.137018
+    },
+    {
+      "path": "frame-031.jpg",
+      "timestamp": 1790919933.320538
+    },
+    {
+      "path": "frame-032.jpg",
+      "timestamp": 1790919933.516903
+    },
+    {
+      "path": "frame-033.jpg",
+      "timestamp": 1790919933.696989
+    },
+    {
+      "path": "frame-034.jpg",
+      "timestamp": 1790919933.885343
+    },
+    {
+      "path": "frame-035.jpg",
+      "timestamp": 1790919934.06707
+    },
+    {
+      "path": "frame-036.jpg",
+      "timestamp": 1790919934.249449
+    },
+    {
+      "path": "frame-037.jpg",
+      "timestamp": 1790919934.434418
+    },
+    {
+      "path": "frame-038.jpg",
+      "timestamp": 1790919934.617898
+    },
+    {
+      "path": "frame-039.jpg",
+      "timestamp": 1790919934.79964
+    },
+    {
+      "path": "frame-040.jpg",
+      "timestamp": 1790919934.982464
+    },
+    {
+      "path": "frame-041.jpg",
+      "timestamp": 1790919935.166935
+    },
+    {
+      "path": "frame-042.jpg",
+      "timestamp": 1790919935.348118
+    },
+    {
+      "path": "frame-043.jpg",
+      "timestamp": 1790919935.532115
+    },
+    {
+      "path": "frame-044.jpg",
+      "timestamp": 1790919935.729839
+    },
+    {
+      "path": "frame-045.jpg",
+      "timestamp": 1790919935.912267
+    },
+    {
+      "path": "frame-046.jpg",
+      "timestamp": 1790919936.095272
+    },
+    {
+      "path": "frame-047.jpg",
+      "timestamp": 1790919936.281028
+    },
+    {
+      "path": "frame-048.jpg",
+      "timestamp": 1790919936.463308
+    },
+    {
+      "path": "frame-049.jpg",
+      "timestamp": 1790919936.649139
+    },
+    {
+      "path": "frame-050.jpg",
+      "timestamp": 1790919936.844627
+    },
+    {
+      "path": "frame-051.jpg",
+      "timestamp": 1790919937.028449
+    },
+    {
+      "path": "frame-052.jpg",
+      "timestamp": 1790919937.221352
+    },
+    {
+      "path": "frame-053.jpg",
+      "timestamp": 1790919937.476419
+    },
+    {
+      "path": "frame-054.jpg",
+      "timestamp": 1790919937.661524
+    },
+    {
+      "path": "frame-055.jpg",
+      "timestamp": 1790919937.845195
+    },
+    {
+      "path": "frame-056.jpg",
+      "timestamp": 1790919938.029194
+    },
+    {
+      "path": "frame-057.jpg",
+      "timestamp": 1790919938.210911
+    },
+    {
+      "path": "frame-058.jpg",
+      "timestamp": 1790919938.393086
+    },
+    {
+      "path": "frame-059.jpg",
+      "timestamp": 1790919938.578079
+    },
+    {
+      "path": "frame-060.jpg",
+      "timestamp": 1790919938.758433
+    },
+    {
+      "path": "frame-061.jpg",
+      "timestamp": 1790919938.96309
+    },
+    {
+      "path": "frame-062.jpg",
+      "timestamp": 1790919939.144295
+    },
+    {
+      "path": "frame-063.jpg",
+      "timestamp": 1790919939.344179
+    },
+    {
+      "path": "frame-064.jpg",
+      "timestamp": 1790919939.527358
+    },
+    {
+      "path": "frame-065.jpg",
+      "timestamp": 1790919939.708641
+    },
+    {
+      "path": "frame-066.jpg",
+      "timestamp": 1790919939.891662
+    },
+    {
+      "path": "frame-067.jpg",
+      "timestamp": 1790919940.076606
+    },
+    {
+      "path": "frame-068.jpg",
+      "timestamp": 1790919940.261166
+    },
+    {
+      "path": "frame-069.jpg",
+      "timestamp": 1790919940.44427
+    },
+    {
+      "path": "frame-070.jpg",
+      "timestamp": 1790919940.947665
+    },
+    {
+      "path": "frame-071.jpg",
+      "timestamp": 1790919941.139354
+    },
+    {
+      "path": "frame-072.jpg",
+      "timestamp": 1790919941.323437
+    },
+    {
+      "path": "frame-073.jpg",
+      "timestamp": 1790919941.50577
+    },
+    {
+      "path": "frame-074.jpg",
+      "timestamp": 1790919941.705236
+    },
+    {
+      "path": "frame-075.jpg",
+      "timestamp": 1790919941.892435
+    },
+    {
+      "path": "frame-076.jpg",
+      "timestamp": 1790919942.090808
+    },
+    {
+      "path": "frame-077.jpg",
+      "timestamp": 1790919942.2747
+    },
+    {
+      "path": "frame-078.jpg",
+      "timestamp": 1790919942.487604
+    },
+    {
+      "path": "frame-079.jpg",
+      "timestamp": 1790919942.882947
+    },
+    {
+      "path": "frame-080.jpg",
+      "timestamp": 1790919943.276499
+    }
+  ],
+  "fieldAdmitted": 0,
+  "timingAdmitted": 0,
+  "scope": "one physical device/one owned tab, trusted engine touches plus provider API return; not independent users or field performance",
+  "captureMinimumIntervalMs": 180,
+  "buildId": "cxpyAvLmehAWkLYrCpv5o",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "488aa4fd9c864f9d6e96cafe2d90e55163cc90ea6b7b64d4f9c6d2b213e77f92"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "b088f3e3bf88db112aec8aaf02943c9f66f7391ef7f52e33586b5c5bd649ef7d"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "23566f91aa5a22d063e6f77f833a15cdfd32cbaccb3414bc390bbab3f113cd4c"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "63ed7540499f5d282ec8a7c6301210e6b07d711c7b77f648ca5051d7ce58fc59"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    },
+    {
+      "original": "components/map/marker-icons.css",
+      "sha256": "d77c2f5ee74e3035f17e6f08ba5df557a0d2844633178481c26215c04969c258"
+    },
+    {
+      "original": "lib/deferred-marker-renders.ts",
+      "sha256": "5b16f00f4960f24b9a811177704378d5775bc0ba968f4ac348aac93f7ca39a7b"
+    }
+  ],
+  "sdk": {
+    "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36",
+    "viewport": {
+      "width": 420,
+      "height": 769,
+      "dpr": 3.424999952316284
+    },
+    "visibility": "visible",
+    "remoteSdk": true,
+    "sdkLoaded": true,
+    "stub": false,
+    "mapCreates": 1
+  },
+  "errors": {
+    "page": 0,
+    "console": 0
+  },
+  "finalState": {
+    "visible": "visible",
+    "mapCreates": 1,
+    "overflow": 0
+  },
+  "passed": false,
+  "endedAt": "2026-10-02T05:45:43.380Z"
+}

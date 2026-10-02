@@ -1,0 +1,40 @@
+{
+  "createdAt": "2026-10-01T16:47:55.123488+00:00",
+  "buildRole": "baseline",
+  "build": "field-control-v3",
+  "expectedBuildId": "ZHQ4WUAVMUPNgOPyZW60G",
+  "sourceInputs": {
+    "components/map/NaverMapView.tsx": "9236d84284cc28b1e569db22e979bd1f8a6800a577a234c549126548e5503287",
+    "lib/naver-map-render-plan.ts": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab",
+    "lib/marker-pool.ts": "0816449fe7d1d94f59f555198a77a266b9d346ffbf797275695e0eecd67edade",
+    "package-lock.json": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0",
+    "lib/web-vitals.tsx": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac",
+    "lib/performance/field-vitals.ts": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854",
+    "next.config.mjs": "23566f91aa5a22d063e6f77f833a15cdfd32cbaccb3414bc390bbab3f113cd4c",
+    "components/legal/PrivacyPolicyContent.tsx": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6",
+    "components/legal/HydratedContactEmail.tsx": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+  },
+  "cycles": 60,
+  "awayMs": 350,
+  "returnSettleMs": 1000,
+  "nativeGesture": {
+    "start": [
+      660,
+      900
+    ],
+    "end": [
+      600,
+      900
+    ],
+    "durationMs": 160
+  },
+  "sameFlowBeforeAfter": true,
+  "actualSdk": true,
+  "nativeCpuUnthrottled": true,
+  "noForcedGC": true,
+  "independentDevices": 1,
+  "oneOwnedTabExistingBrowserProcess": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "measurementScope": "same browser native swipe+providerAPIawayreturn finiteheap window; no n60independentusers/pixelelimination"
+}

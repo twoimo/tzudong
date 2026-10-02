@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-02T05:26:52.519350+00:00",
+  "sharedRuntimeInputCount": 10,
+  "sharedRuntimeInputHashesMatch": true,
+  "newInputsBindSharedCssAndScheduler": true,
+  "unusedCompactorOmitted": true,
+  "newSourceCommit": "835d702452ab0039b830b97a674aff03a905821c",
+  "priorSourceCommit": "0cfe1b97a06dba366d6c15aa7eb86af14ca2430a",
+  "gitTreesIdenticalBeforeCandidatePatch": true,
+  "actualNaverSdk": true,
+  "newBuildId": "cxpyAvLmehAWkLYrCpv5o",
+  "oldBuildId": "V9yO1RuxFb9P49XK3kxwq"
+}

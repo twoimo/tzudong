@@ -1,0 +1,29 @@
+{
+  "createdAt": "2026-10-01T17:46:56.652527+00:00",
+  "baselineCullsExpanded": true,
+  "candidateRetainsSmallDesktop": true,
+  "baselineBuild": "field-control-v3",
+  "candidateBuild": "desktop-tail-v1",
+  "independentProcessesPerVariant": 2,
+  "warmupPairs": 0,
+  "cpuRate": 4,
+  "viewport": [
+    1440,
+    900
+  ],
+  "naturalHeapEndpoint": "originalclick firstvisible+600ms beforeIDs/diagnosticGC",
+  "budgetsUnchanged": {
+    "latencyRegressionPercent": 15,
+    "naturalHeapRegressionPercent": 20
+  },
+  "pilotNotInferential": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "harnessSha256": "944a9afc1969b253a1f62fdcfd5fab2d4e162820c0774c4667710ef950f8940a",
+  "hypothesis": "smallfullDOMretention avoids SDKpan churn; firstpaddedview immediately/tail32afterpaint no user-feedbackdelay",
+  "limits": [
+    "n2pairs pilot; no inferential performance claim",
+    "confirm same-original-da fixed20% naturalendpoint and15% latency budgets before adoption"
+  ],
+  "scope": "old15latency/original20heap fixedpilot, finalsameinputsfullvalidationafterasyncerrorhandlingchange"
+}

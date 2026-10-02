@@ -1,0 +1,18 @@
+{
+  "createdAt": "2026-10-01T12:45:23.660736+00:00",
+  "observedBottleneck": "renderExpandedClusterIndividuals(activeIds) then contextualRestaurants.forEach re-acquires same571objects; anchorForMarker and acquire each call SDK getIcon, giving1142cold getters vs zero new-marker application setters",
+  "sourceEvidence": [
+    "components/map/NaverMapView.tsx:2725",
+    "components/map/NaverMapView.tsx:2837",
+    "components/map/NaverMapView.tsx:3020"
+  ],
+  "sourceChange": "skip duplicate contextual pass only if identical canonical restaurant source object was already rendered during THIS synchronous pass; changed object/data still follows later renderer, no cache beyond pass",
+  "model": "skip2k publicSDKgetIcon and k wrapper/options/click closures; O(k) pass-local references, no persistent cache; reduces transient work without delays",
+  "budgetsUnchanged": {
+    "naturalHeapRegressionPercent": 20,
+    "latencyRegressionPercent": 15
+  },
+  "adopted": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0
+}

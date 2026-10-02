@@ -1,0 +1,6 @@
+{
+  "scorerExit": 1,
+  "fixedCode": "invalid manifest.hypothesis",
+  "failedV7InputsPreserved": true,
+  "correction": "v8 uses a bounded shorter hypothesis; measurement values, budgets, data and source SHA unchanged"
+}

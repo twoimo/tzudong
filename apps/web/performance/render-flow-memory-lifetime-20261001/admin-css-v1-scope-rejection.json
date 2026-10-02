@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-02T07:27:26.465052+00:00",
+  "v1TestScopeError": "only root admin route CSS was read; async AdminOverview CSS intentionally loads with the widget",
+  "compiledManifestEvidence": {
+    "beforeFiles": [
+      "three admin widget JS chunks; no CSS"
+    ],
+    "afterFiles": [
+      "static/css/a6fc645b5cccf57e.css",
+      "three admin widget JS chunks"
+    ]
+  },
+  "v2": "verify compiled admin root plus its real loadable widget CSS and24 geometry/style cases",
+  "productSource": "one route-consumer import; public renderer and its identical shared CSS asset unchanged",
+  "canonicalRouteCssBudgetsPass": true,
+  "privateAdminDataAccessed": false
+}

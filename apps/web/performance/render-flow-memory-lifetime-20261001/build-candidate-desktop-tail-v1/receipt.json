@@ -1,0 +1,61 @@
+{
+  "kind": "candidate",
+  "sourceCommit": "0cfe1b97a06dba366d6c15aa7eb86af14ca2430a",
+  "distDir": ".next-real-sdk-candidate-desktop-tail-v1-20260930",
+  "buildId": "13fPIFVvPwdqfGlRUPDWf",
+  "patchSha256": "9c4aab4abb146a8c25610ed1de34caafdb9713c923cd0a24e4cc15b43c6c8578",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "c774656d21da76f08126784fa458c68bdb8d4c2b2587ebdc7e1a2513cc259995"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "b088f3e3bf88db112aec8aaf02943c9f66f7391ef7f52e33586b5c5bd649ef7d"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "23566f91aa5a22d063e6f77f833a15cdfd32cbaccb3414bc390bbab3f113cd4c"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "154a04f2ccf328465675462bf21db25db607cb98342587fa8c63c3095d2e9fe2"
+    },
+    {
+      "original": "lib/compact-generated-marker-html.ts",
+      "sha256": "ebd7cdc169c26486467be3c740335ef88aba895f6530168dcffbcb498a44bcce"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    }
+  ],
+  "node": "v24.21.0",
+  "configurationNames": [
+    "NEXT_PUBLIC_NAVER_CLIENT_ID",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL"
+  ],
+  "sdk": "actual remote Naver SDK, not local stub",
+  "privateConfigurationInArtifacts": false
+}

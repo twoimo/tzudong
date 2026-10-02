@@ -1,0 +1,63 @@
+{
+  "createdAt": "2026-10-01T12:56:15.980475+00:00",
+  "requestedOutcome": "start collecting prospective real-user baseline while memory work proceeds",
+  "scope": "production root-document first-visible-window classic Web Vitals, once per metric instance; not full resumed-tab lifetime/soft navigation",
+  "collector": "web-vitals existing pinned dependency; no new service or paid capacity",
+  "storedDimensions": [
+    "UTC day",
+    "server release SHA",
+    "initial mobile/desktop viewport class",
+    "metric",
+    "navigation class",
+    "fixed bucket",
+    "count"
+  ],
+  "neverStored": [
+    "identity",
+    "metric id",
+    "URL/path/search",
+    "IP",
+    "UA",
+    "cookies",
+    "location",
+    "raw metric/entries",
+    "individual timestamps"
+  ],
+  "qaExcluded": [
+    "navigator.webdriver",
+    "__qa query",
+    "__perf* query",
+    "localhost/preview/private initial path"
+  ],
+  "bucketWidths": {
+    "INP_ms": 16,
+    "LCP_ms": 100,
+    "CLS": 0.01
+  },
+  "overflowThresholds": {
+    "INP_ms": 3200,
+    "LCP_ms": 12000,
+    "CLS": 1
+  },
+  "independence": "counts are metric instances not distinct users; no per-user identifiers; no fictitious user CI",
+  "comparison": "same metric/device/navigation before-after releases; freeze eligibility first; report sample counts/interval bounds/date-block uncertainty only when sufficient independent days; deployment/time/network/SDK drift remains",
+  "noObservedFieldImprovementYet": true,
+  "baselineCollectionNotDeployedYet": true,
+  "rawPersonalDataRetentionIntroduced": false,
+  "statisticsRetention": "non-identifying daily aggregate counts; no existing personal-data retention class activated/changed",
+  "networkTradeoff": "up to3credential-omitted POSTs with <=512B allowlisted bodies per full document/metric lifetime, no React state updates",
+  "supabase": "existing tzudong project, server-role RPC only, public/auth role denied, security invoker/RLS",
+  "authority": "user requested prospective collection in this task; previous deployment/operations authorization persists",
+  "clientReleaseBinding": "public GitSHA compile-time value matches serving server SHA; stale straddling documents excluded409, never relabeled",
+  "bfcache": "excluded until pinned6.1.1 restoration accuracy verified",
+  "httpHeaders": "credentials omit/referrerPolicy no-referrer; ordinary provider networking headers not persisted by application",
+  "ingestQuotas": {
+    "perSourceWorkerMinute": 36,
+    "workerMinute": 80,
+    "globalAcceptedMinute": 180,
+    "sourceState": "bounded RAM-only process-random HMAC, platform/proxy source notuser; no rawIP/identifier stored",
+    "sharedProxyBiasAndWorkerColdReset": "explicit limitation; futurecohorts must match eligibility/limits",
+    "quotaData": "global singleton technicalstate, not person/eventhistory"
+  },
+  "sessionRefreshBypass": "literalcredentiallessPOSTonly; Cookie/Bearer preserve existingAuth; mutation-origin guard remains"
+}

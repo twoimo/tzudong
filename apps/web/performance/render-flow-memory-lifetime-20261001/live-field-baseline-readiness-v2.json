@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-02T05:25:04.845053+00:00",
+  "productionSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "scope": "actual HTTPS www home readiness, anonymous QA browser; no field admission",
+  "proof": {
+    "success": true,
+    "data": {
+      "lifecycle": {
+        "effectiveLaunch": {
+          "browserLaunched": true,
+          "engine": "chrome",
+          "launchHash": 11677035664275010974
+        },
+        "launched": false,
+        "relaunchedBrowser": false,
+        "restartedBackground": false,
+        "restoreStatus": "not_configured",
+        "reused": true,
+        "saveStatus": "not_attempted"
+      },
+      "origin": "https://www.tzudong.app/?__qa=memory-baseline-20261002",
+      "result": "{\"sdkLoaded\":true,\"stub\":false,\"mapContainer\":true,\"markers\":0,\"clusters\":16,\"viewport\":{\"width\":1280,\"height\":633,\"dpr\":1},\"overflow\":0,\"visibility\":\"visible\"}"
+    },
+    "error": null
+  },
+  "errors": {
+    "errorsBufferEntries": 0,
+    "consoleBufferEntries": 0,
+    "consoleErrorEntries": 0
+  },
+  "rawConsoleStored": false,
+  "rawRequestsStored": false
+}

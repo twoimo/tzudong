@@ -1,0 +1,52 @@
+{
+  "startedAt": "2026-10-02T13:11:26.693Z",
+  "scope": "owned Chrome public HTTPS QA tab; native pixels, no location or private response retained",
+  "captures": [
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-chrome-footer-v10-0.png",
+      "t": "2026-10-02T13:11:32.730Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-chrome-footer-v10-1.png",
+      "t": "2026-10-02T13:11:34.632Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-chrome-footer-v10-2.png",
+      "t": "2026-10-02T13:11:36.488Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-chrome-footer-v10-3.png",
+      "t": "2026-10-02T13:11:39.224Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-chrome-footer-v10-4.png",
+      "t": "2026-10-02T13:11:41.005Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-chrome-footer-v10-5.png",
+      "t": "2026-10-02T13:11:42.769Z",
+      "inspected": false
+    }
+  ],
+  "fieldAdmitted": 0,
+  "stage": "native captures",
+  "dom": {
+    "visible": "visible",
+    "mapBottom": 769.3430786132812,
+    "navTop": 708.4671630859375,
+    "overlap": 60.87591552734375,
+    "viewport": {
+      "width": 420,
+      "height": 769,
+      "dpr": 3.424999952316284
+    },
+    "legacyBottomRectangle": false
+  },
+  "passed": true,
+  "endedAt": "2026-10-02T13:11:42.861Z"
+}

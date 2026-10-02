@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-02T07:43:44.302771+00:00",
+  "thread": "PRRT_kwDOQGRyNc6oP_iC",
+  "fixPr": 3086,
+  "mergedDevelop": "2294c76b4de660f4dfd0e8a98d5aeebf50adbeea",
+  "resolvedAfterActualImportReadback": true,
+  "compiledAdminGeometryCasesPass": 24,
+  "privateAdminDataRead": false,
+  "messagesSentToOthers": false
+}

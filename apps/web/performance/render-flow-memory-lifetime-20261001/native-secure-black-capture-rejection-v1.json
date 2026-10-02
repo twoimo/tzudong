@@ -1,0 +1,48 @@
+{
+  "frames": [
+    {
+      "file": "rejected-native-secure-black-captures-v1/frame-000.png",
+      "sha256": "084161c306e876a5d03cde0a06914d840cc89f62b88858de86842589541736e9",
+      "uniformRGBBlack": true,
+      "dimensions": [
+        1440,
+        3120
+      ],
+      "rejectedAsProductFlickerEvidence": true
+    },
+    {
+      "file": "rejected-native-secure-black-captures-v1/frame-001.png",
+      "sha256": "084161c306e876a5d03cde0a06914d840cc89f62b88858de86842589541736e9",
+      "uniformRGBBlack": true,
+      "dimensions": [
+        1440,
+        3120
+      ],
+      "rejectedAsProductFlickerEvidence": true
+    },
+    {
+      "file": "rejected-native-secure-black-captures-v1/frame-002.png",
+      "sha256": "084161c306e876a5d03cde0a06914d840cc89f62b88858de86842589541736e9",
+      "uniformRGBBlack": true,
+      "dimensions": [
+        1440,
+        3120
+      ],
+      "rejectedAsProductFlickerEvidence": true
+    },
+    {
+      "file": "rejected-native-secure-black-captures-v1/frame-003.png",
+      "sha256": "084161c306e876a5d03cde0a06914d840cc89f62b88858de86842589541736e9",
+      "uniformRGBBlack": true,
+      "dimensions": [
+        1440,
+        3120
+      ],
+      "rejectedAsProductFlickerEvidence": true
+    }
+  ],
+  "source": "native-footer-samsung-pixel-review-v3.json",
+  "classification": "hidden/secure native screen, not the reported rectangle",
+  "noPrivatePixelsPresentByUniformityAndPriorVisualInspection": true,
+  "ownedTemporaryFilesRemovedAfterCopy": true
+}

@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-01T15:51:35.542214+00:00",
+  "version": "postgres (PostgreSQL) 17.6",
+  "unixSocketOnly": true,
+  "productionDatabaseTouched": false,
+  "passed": true,
+  "rlsNoPublicGrantsSecurityInvoker": true,
+  "atomicIncrement": true,
+  "global180PerMinuteBoundVerified": true,
+  "globalStateSingleRow": true,
+  "budgetRotationVerified": true,
+  "forbiddenRolesAndInvalidSamplesFailClosed": true,
+  "failedWritesLeaveCountsUnchanged": true,
+  "rawProviderDiagnosticsSaved": false,
+  "temporaryDatabaseRemoved": true
+}

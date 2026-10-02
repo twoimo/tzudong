@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-02T13:31:01.357224+00:00",
+  "baseFreshDevelop": "579aa66f02206baaa7a2528243b545e1630874a1",
+  "testedFiles": {
+    "components/map/NaverMapView.tsx": "53c421ac4580aee00c5d43b1ffcd25333554b20f2ab5e9ac419e90fdf707060f",
+    "lib/naver-map-mobile-offset-helpers.ts": "cc72d2ce8fb94a574cb605cc7962ecb036855aba7df8a94d94d012e3f24c21ea",
+    "tests-unit/naver-map-mobile-offset-helpers.test.ts": "60b8b7c18c1193cf43c18083b52106437edfa8caff401d9709207fac5ea98b52"
+  },
+  "unitTests": 11,
+  "assertions": 25,
+  "eslintExit": 0,
+  "typecheckParity": "passed 0 diagnostics after optional SDK size API correction",
+  "failedTypedBuildPreserved": "build-candidate-nav-v5",
+  "firstOptionalCallFailure": {
+    "TS2722": 1,
+    "TS2531": 1
+  },
+  "model": "Only navigation overlap not already removed from SDK height contributes half-height to center offset. SDK getSize is O(1), avoids a new synchronous DOM rectangle read. Effective height0 remains0.",
+  "build": "build-candidate-map-nav-final-v1/receipt.json"
+}

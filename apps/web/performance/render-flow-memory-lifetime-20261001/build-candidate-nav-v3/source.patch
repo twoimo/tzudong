@@ -1,0 +1,54 @@
+diff --git a/apps/web/app/home-app-globals.css b/apps/web/app/home-app-globals.css
+index 5feda9ee..a9d0132a 100644
+--- a/apps/web/app/home-app-globals.css
++++ b/apps/web/app/home-app-globals.css
+@@ -25,6 +25,12 @@ html[data-home-chrome-ready="true"][data-home-panel-ready="true"] [data-home-sta
+ }
+ 
+ @media (max-width: 1279px) {
++  /* The mobile controls load lazily. Keep their placeholder until the overlay
++     itself mounts; mobile has no desktop panel readiness signal. */
++  html[data-home-mobile-chrome-ready="true"] [data-home-static-skeleton] {
++    display: none;
++  }
++
+   html[data-mobile-search-open] .mobile-map-status-badge {
+     display: none;
+   }
+diff --git a/apps/web/app/home-runtime-shell.tsx b/apps/web/app/home-runtime-shell.tsx
+index a7091c72..e816c816 100644
+--- a/apps/web/app/home-runtime-shell.tsx
++++ b/apps/web/app/home-runtime-shell.tsx
+@@ -325,7 +325,6 @@ function HomeStaticSkeleton() {
+             </div>
+             <div className="xl:hidden">
+                 <div className="mx-3 mt-[calc(env(safe-area-inset-top)+10px)] h-12 animate-pulse rounded-full border border-border bg-muted" />
+-                <div className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] h-14 animate-pulse rounded-2xl bg-muted" />
+             </div>
+         </div>
+     );
+@@ -357,6 +356,12 @@ function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
+     );
+ }
+ export function HomeRuntimeShell({ children }: { children: ReactNode }) {
++    // Fullscreen temporarily unmounts the controls. Once ready, their initial
++    // placeholder stays retired until the home runtime itself leaves.
++    useEffect(() => () => {
++        delete document.documentElement.dataset.homeMobileChromeReady;
++    }, []);
++
+     return (
+         <QueryProvider>
+             <WebVitals />
+diff --git a/apps/web/components/home/MobileControlOverlay.tsx b/apps/web/components/home/MobileControlOverlay.tsx
+index 9ac2098c..a29b7574 100644
+--- a/apps/web/components/home/MobileControlOverlay.tsx
++++ b/apps/web/components/home/MobileControlOverlay.tsx
+@@ -260,6 +260,7 @@ function MobileControlOverlayComponent({
+     useEffect(() => {
+         if (typeof window !== 'undefined') {
+             window.__tzudong_mobile_overlay_ready = true;
++            document.documentElement.dataset.homeMobileChromeReady = 'true';
+             window.dispatchEvent(new CustomEvent('tzudong_mobile_overlay_ready'));
+         }
+         return () => {

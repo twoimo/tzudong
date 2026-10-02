@@ -1,0 +1,9 @@
+{
+  "nIndependentProcessesPerVariant": 9,
+  "beforeMedian": 18804288,
+  "afterMedian": 20531600,
+  "increasePercent": 9.18573465796737,
+  "fixed20PercentBudgetPass": true,
+  "forcedGCWaivesBudget": false,
+  "matchedControlEffectStillRequired": true
+}

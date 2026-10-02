@@ -1,0 +1,18 @@
+{
+  "merge": "4d04db6ee016d36025bfae54888174e2b624fde4",
+  "sourceInputsMatchTestedCandidate": true,
+  "files": [
+    {
+      "path": "apps/web/app/home-runtime-shell.tsx",
+      "sha256": "1162ff8730c7e12d0245ca25aa4bbcac9b15aa8289e23e36fa01df019f4eed58"
+    },
+    {
+      "path": "apps/web/components/home/MobileControlOverlay.tsx",
+      "sha256": "8e7b033aaef1a242f9255c8cb352251aebb70ffc94cad7483285490a46418b53"
+    },
+    {
+      "path": "apps/web/app/home-app-globals.css",
+      "sha256": "6755130f075ce73901c105491544fed256d7dea9315b3f8b9fcbfb9959c03368"
+    }
+  ]
+}

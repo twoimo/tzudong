@@ -1,0 +1,499 @@
+diff --git a/apps/web/components/admin/AdminOverviewDashboard.tsx b/apps/web/components/admin/AdminOverviewDashboard.tsx
+index f66cbc31..167e5a9a 100644
+--- a/apps/web/components/admin/AdminOverviewDashboard.tsx
++++ b/apps/web/components/admin/AdminOverviewDashboard.tsx
+@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
+ import { useNaverMaps } from "@/hooks/use-naver-maps";
+ import { REGION_MAP_CONFIG } from "@/config/maps";
+ import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
++import "@/components/map/marker-icons.css";
+ import {
+   buildNaverClusterMarkerRenderPlan,
+   getClusterVisualKey,
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index bcb0f38e..c9b02a18 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -68,6 +68,8 @@ import {
+     removeClusterCSS
+ } from "@/lib/cluster-marker";
+ import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
++import { deferMarkerRenders } from "@/lib/deferred-marker-renders";
++import './marker-icons.css';
+ import {
+     buildRestaurantMarkerKindSignature,
+     isUserSubmittedRestaurant,
+@@ -756,6 +758,7 @@ const NaverMapView = memo(({
+     const mapRef = useRef<HTMLDivElement>(null);
+     const mapInstanceRef = useRef<NaverMapLike | null>(null);
+     const markerRenderSignatureRef = useRef<MarkerRenderSignature | null>(null);
++    const pendingOffscreenMarkerRendersRef = useRef<(() => void) | null>(null);
+     const extendedBoundsRef = useRef({ south: 0, west: 0, north: 0, east: 0 });
+     const lastMarkerViewportRef = useRef<string | null>(null);
+     const [markerViewportRevision, setMarkerViewportRevision] = useState(0);
+@@ -2369,12 +2372,21 @@ const NaverMapView = memo(({
+ 
+     // [Render] 줌 레벨에 따라 클러스터 또는 개별 마커 렌더링
+     useEffect(() => {
++        if (pendingOffscreenMarkerRendersRef.current) {
++            pendingOffscreenMarkerRendersRef.current();
++            pendingOffscreenMarkerRendersRef.current = null;
++            earlyMarkerRenderKeyRef.current = null;
++            markerRenderSignatureRef.current = null;
++        }
+         // [Init] 지도가 초기화되지 않았으면 대기
+         if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
+         const { naver } = window;
+         if (!naver.maps.LatLng || !naver.maps.Point) return;
+         const map = mapInstanceRef.current;
+         const currentZoom = Math.floor(map.getZoom());
++        const retainSmallExpandedDesktop = !isMobileOrTablet
++            && expandedClusterRestaurantIds.length > 0 && expandedClusterRestaurantIds.length <= 1000;
++        const deferredMarkerRenders: Array<(() => void) | undefined> = [];
+         const markerViewportKey = getNaverMarkerViewportKey(map, mapRef.current);
+ 
+         // [OPTIMIZATION] 가시영역 확장 계산 (한 번만 수행)
+@@ -2621,7 +2633,7 @@ const NaverMapView = memo(({
+ 
+         const nextMarkerRenderSignature = buildMarkerRenderSignature({
+             zoom: currentZoom,
+-            bounds: extendedBounds,
++            bounds: retainSmallExpandedDesktop ? null : extendedBounds,
+             displayRestaurantIds: signatureIds,
+             selectedRestaurantId: selectedRestaurant?.id || null,
+             searchedRestaurantId: markerVisibleActiveSearchedRestaurant?.id || null,
+@@ -2629,7 +2641,7 @@ const NaverMapView = memo(({
+             isRegionalClusterMode: nextIsRegionalClusterMode,
+             isSeoulDistrictMode: nextIsSeoulDistrictMode,
+             markerLayerVersion: composeMarkerLayerVersion(markerKindSignature)
+-                + (expandedClusterRestaurantIds.length > 0 ? `:viewport-${markerViewportRevision}` : ''),
++                + (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedDesktop ? `:viewport-${markerViewportRevision}` : ''),
+             showUserSubmittedMarkers,
+         });
+ 
+@@ -2720,18 +2732,20 @@ const NaverMapView = memo(({
+                 markerVisibleSelectedRestaurant?.id ?? null,
+                 markerVisibleActiveSearchedRestaurant?.id ?? null,
+                 extendedBounds,
+-                VIEWPORT_FILTER_ENABLED,
++                VIEWPORT_FILTER_ENABLED && !retainSmallExpandedDesktop,
+             );
++        const renderedExpandedSources = new Map<string, Restaurant>();
+         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
+             if (expandedClusterRestaurantIds.length === 0) return;
+             expandedClusterRestaurantIds.forEach((restaurantId) => {
+-                const restaurant = normalizeNaverMarkerCoordinates(
+-                    resolveMarkerRestaurant(restaurantId),
+-                );
++                const sourceRestaurant = resolveMarkerRestaurant(restaurantId);
++                const restaurant = normalizeNaverMarkerCoordinates(sourceRestaurant);
+                 if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
+                 if (!shouldRenderExpandedMarker(restaurant)) return;
++                if (sourceRestaurant) renderedExpandedSources.set(restaurant.id, sourceRestaurant);
+ 
+                 activeIds.add(restaurant.id);
++                const render = () => {
+                 const isSelected = selectedRestaurant?.id === restaurant.id;
+                 const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
+                 const bubble = activeVisibleMarkerReviewBubbles[restaurant.id];
+@@ -2748,6 +2762,17 @@ const NaverMapView = memo(({
+                     map,
+                     () => handleMarkerRestaurantSelection(restaurant)
+                 );
++                };
++                const inInitialViewport = shouldRenderExpandedClusterMarker(
++                    restaurant, markerVisibleSelectedRestaurant?.id ?? null,
++                    markerVisibleActiveSearchedRestaurant?.id ?? null,
++                    extendedBounds, VIEWPORT_FILTER_ENABLED,
++                );
++                if (retainSmallExpandedDesktop && !inInitialViewport && !markerPool.has(restaurant.id)) {
++                    deferredMarkerRenders.push(render);
++                } else {
++                    render();
++                }
+             });
+         };
+ 
+@@ -2821,7 +2846,7 @@ const NaverMapView = memo(({
+                 scheduleMarkerRenderRetry();
+             } else {
+                 markerRenderSignatureRef.current = nextMarkerRenderSignature;
+-                resetMarkerRenderRetry();
++                if (deferredMarkerRenders.length === 0) resetMarkerRenderRetry();
+             }
+             perfMonitor.endMeasure('RenderMarkers');
+             if (shouldReportNaverMarkerRenderPerformance({
+@@ -3018,6 +3043,10 @@ const NaverMapView = memo(({
+                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
+ 
+                 contextualRestaurants.forEach(restaurant => {
++                    // Expanded markers already rendered from this same source need
++                    // no second SDK icon read/options/click-handler replacement.
++                    // A different source object still reaches the later renderer.
++                    if (renderedExpandedSources.get(restaurant.id) === restaurant) return;
+                     if (restaurant.lat == null || restaurant.lng == null) return;
+                     if (expandedClusterRestaurantIds.length > 0 && !shouldRenderExpandedMarker(restaurant)) return;
+                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
+@@ -3064,7 +3093,7 @@ const NaverMapView = memo(({
+                 scheduleMarkerRenderRetry();
+             } else {
+                 markerRenderSignatureRef.current = nextMarkerRenderSignature;
+-                resetMarkerRenderRetry();
++                if (deferredMarkerRenders.length === 0) resetMarkerRenderRetry();
+             }
+             if (hasVisibleMarkerReviewBubbles(activeVisibleMarkerReviewBubbles)) {
+                 scheduleVisibleMarkerReviewBubbleClamp();
+@@ -3080,6 +3109,24 @@ const NaverMapView = memo(({
+             }
+         }
+ 
++        if (deferredMarkerRenders.length > 0) {
++            markerRenderSignatureRef.current = null;
++            const cancel = deferMarkerRenders(deferredMarkerRenders, (finished) => {
++                pendingOffscreenMarkerRendersRef.current = null;
++                markerRenderSignatureRef.current = finished ? nextMarkerRenderSignature : null;
++                if (finished) resetMarkerRenderRetry();
++                else scheduleMarkerRenderRetry();
++            });
++            pendingOffscreenMarkerRendersRef.current = cancel;
++            return () => {
++                cancel();
++                if (pendingOffscreenMarkerRendersRef.current === cancel) {
++                    pendingOffscreenMarkerRendersRef.current = null;
++                    earlyMarkerRenderKeyRef.current = null;
++                    markerRenderSignatureRef.current = null;
++                }
++            };
++        }
+     }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, overlappingMarkerOffsets, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection, resetMarkerRenderRetry, scheduleMarkerRenderRetry, resolveMarkerRestaurant, mapOptimization.clusterAnimationEnabled]);
+ 
+     // [Animation] 카테고리 이모지 순환 업데이트
+diff --git a/apps/web/components/map/marker-icons.css b/apps/web/components/map/marker-icons.css
+new file mode 100644
+index 00000000..9d5b1aa8
+--- /dev/null
++++ b/apps/web/components/map/marker-icons.css
+@@ -0,0 +1,27 @@
++.tzudong-individual-marker {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  cursor: pointer;
++  position: relative;
++  user-select: none;
++  -webkit-tap-highlight-color: transparent;
++}
++.tzudong-marker-picture { display: block; width: 100%; height: 100%; }
++.tzudong-marker-image { width: 100%; height: 100%; object-fit: contain; }
++.tzudong-individual-marker > .tzuyang-visit-count-badge {
++  position: absolute;
++  padding: 0 4px;
++  border-radius: 9999px;
++  background-color: #dc2626;
++  color: #ffffff;
++  border: 2px solid #ffffff;
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  font-weight: 800;
++  line-height: 1;
++  letter-spacing: -0.02em;
++  pointer-events: none;
++  box-sizing: border-box;
++}
+diff --git a/apps/web/lib/cluster-marker.ts b/apps/web/lib/cluster-marker.ts
+index 2a64a411..acdcfc14 100644
+--- a/apps/web/lib/cluster-marker.ts
++++ b/apps/web/lib/cluster-marker.ts
+@@ -282,56 +282,11 @@ export const createIndividualMarkerHTML = (
+   const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
+   const zIndex = isSelected ? '100' : '1';
+ 
+-  return `
+-    <div
+-      style="
+-        width: ${size}px;
+-        height: ${size}px;
+-        display: flex;
+-        align-items: center;
+-        justify-content: center;
+-        cursor: pointer;
+-        transform: ${transform};
+-        position: relative;
+-        z-index: ${zIndex};
+-        user-select: none;
+-        -webkit-tap-highlight-color: transparent;
+-      "
+-      role="button"
+-      data-testid="marker"
+-      ${safeRestaurantId ? `data-restaurant-id="${safeRestaurantId}"` : ''}
+-    >
+-        ${createCategoryImageHTML({ image, alt: 'marker' })}
+-        ${shouldShowVisitBadge ? `
+-        <span
+-          class="tzuyang-visit-count-badge"
+-          data-tzuyang-visit-count-badge="true"
+-          aria-label="쯔양 ${normalizedVisitCount}회 방문"
+-          style="
+-            position: absolute;
+-            top: ${visitBadgeOffset}px;
+-            right: ${visitBadgeOffset}px;
+-            min-width: ${visitBadgeSize}px;
+-            height: ${visitBadgeSize}px;
+-            padding: 0 4px;
+-            border-radius: 9999px;
+-            background-color: #dc2626;
+-            color: #ffffff;
+-            border: 2px solid #ffffff;
+-            display: inline-flex;
+-            align-items: center;
+-            justify-content: center;
+-            font-size: ${visitBadgeFontSize}px;
+-            font-weight: 800;
+-            line-height: 1;
+-            letter-spacing: -0.02em;
+-            pointer-events: none;
+-            box-sizing: border-box;
+-          "
+-        >${displayVisitCount}</span>
+-        ` : ''}
+-    </div>
+-  `;
++  const badge = shouldShowVisitBadge
++    ? `<span class="tzuyang-visit-count-badge" data-tzuyang-visit-count-badge="true" aria-label="쯔양 ${normalizedVisitCount}회 방문" style="background-color: #dc2626; top: ${visitBadgeOffset}px; right: ${visitBadgeOffset}px; min-width: ${visitBadgeSize}px; height: ${visitBadgeSize}px; font-size: ${visitBadgeFontSize}px;">${displayVisitCount}</span>`
++    : '';
++  const picture = `<picture class="tzudong-marker-picture"><source srcset="${image.webp}" type="image/webp" /><img class="tzudong-marker-image" src="${image.png}" alt="marker" draggable="false" decoding="sync" /></picture>`;
++  return `<div class="tzudong-individual-marker" style="width: ${size}px; height: ${size}px; transform: ${transform}; z-index: ${zIndex};" role="button" data-testid="marker"${safeRestaurantId ? ` data-restaurant-id="${safeRestaurantId}"` : ''}>${picture}${badge}</div>`;
+ };
+ 
+ /**
+diff --git a/apps/web/lib/deferred-marker-renders.ts b/apps/web/lib/deferred-marker-renders.ts
+new file mode 100644
+index 00000000..3f46a1d3
+--- /dev/null
++++ b/apps/web/lib/deferred-marker-renders.ts
+@@ -0,0 +1,30 @@
++/** Render offscreen tail work after the first paint, with bounded task slices. */
++export function deferMarkerRenders(jobs: Array<(() => void) | undefined>, complete: (finished: boolean) => void) {
++    const channel = new MessageChannel();
++    let cursor = 0;
++    let stopped = false;
++    const stop = () => {
++        if (stopped) return;
++        stopped = true;
++        cancelAnimationFrame(frame);
++        jobs.length = 0;
++        channel.port1.onmessage = null;
++        channel.port1.close();
++        channel.port2.close();
++    };
++    channel.port1.onmessage = () => {
++        if (stopped) return;
++        const end = Math.min(cursor + 32, jobs.length);
++        while (cursor < end && !stopped) {
++            const render = jobs[cursor];
++            jobs[cursor++] = undefined;
++            try { render?.(); }
++            catch { stop(); complete(false); return; }
++        }
++        if (stopped) return;
++        if (cursor === jobs.length) { stop(); complete(true); }
++        else channel.port2.postMessage(null);
++    };
++    const frame = requestAnimationFrame(() => channel.port2.postMessage(null));
++    return stop;
++}
+diff --git a/apps/web/lib/marker-pool.ts b/apps/web/lib/marker-pool.ts
+index 06fd2796..be94cd27 100644
+--- a/apps/web/lib/marker-pool.ts
++++ b/apps/web/lib/marker-pool.ts
+@@ -73,6 +73,7 @@ function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknow
+ 
+ interface PooledMarker {
+     __onClick?: (event: MarkerClickEvent) => void;
++    __disposeClickListener?: () => void;
+     getMap: () => unknown;
+     setMap: (map: unknown | null) => void;
+     getPosition: () => MarkerPositionLike | null;
+@@ -158,11 +159,13 @@ export class MarkerPool {
+ 
+             // [PERFORMANCE] 이벤트 위임: 마커 생성 시 단 1회만 리스너 등록
+             // 이후 핸들러 교체는 __onClick 프로퍼티만 변경하여 zero-overhead 달성
+-            window.naver.maps.Event.addListener(marker, 'click', (e: MarkerClickEvent) => {
++            const events = window.naver.maps.Event;
++            const listener = events.addListener(marker, 'click', (e: MarkerClickEvent) => {
+                 if (marker.__onClick) {
+                     marker.__onClick(e);
+                 }
+             });
++            if (listener) marker.__disposeClickListener = () => events.removeListener(listener);
+         }
+ 
+         // [PERFORMANCE] 불필요한 DOM 조작/렌더링 방지
+@@ -223,9 +226,15 @@ export class MarkerPool {
+         if (!marker) return;
+ 
+         this.active.delete(id);
++        // Detached/evicted markers must not retain a render's restaurant/state
++        // closure or dispatch a queued click for a no-longer-active place.
++        marker.__onClick = undefined;
+         marker.setMap(null);
+         if (this.pool.length < this.MAX_POOL_SIZE) {
+             this.pool.push(marker);
++        } else {
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         }
+         this.stats.released++;
+     }
+@@ -312,12 +321,18 @@ export class MarkerPool {
+      */
+     public clear(): void {
+         this.active.forEach((marker) => {
++            marker.__onClick = undefined;
+             marker.setMap(null);
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         });
+ 
+         // 풀의 모든 마커도 정리
+         this.pool.forEach((marker) => {
++            marker.__onClick = undefined;
+             marker.setMap(null);
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         });
+ 
+         this.active.clear();
+diff --git a/apps/web/tests-unit/deferred-marker-renders.test.ts b/apps/web/tests-unit/deferred-marker-renders.test.ts
+new file mode 100644
+index 00000000..ccb12177
+--- /dev/null
++++ b/apps/web/tests-unit/deferred-marker-renders.test.ts
+@@ -0,0 +1,37 @@
++import { afterAll, beforeEach, expect, test } from 'bun:test';
++import { deferMarkerRenders } from '../lib/deferred-marker-renders';
++const saved = { frame: globalThis.requestAnimationFrame, cancel: globalThis.cancelAnimationFrame, channel: globalThis.MessageChannel };
++let frames: FrameRequestCallback[] = [];
++let tasks: Array<() => void> = [];
++let closed = 0;
++class FakeChannel {
++  port1 = { onmessage: null as (() => void) | null, close: () => closed++ };
++  port2 = { postMessage: () => tasks.push(() => this.port1.onmessage?.()), close: () => closed++ };
++}
++beforeEach(() => {
++  frames=[];tasks=[];closed=0;
++  globalThis.requestAnimationFrame = (fn: FrameRequestCallback) => { frames.push(fn); return frames.length; };
++  globalThis.cancelAnimationFrame = () => undefined;
++  globalThis.MessageChannel = FakeChannel as unknown as typeof MessageChannel;
++});
++afterAll(() => { globalThis.requestAnimationFrame=saved.frame;globalThis.cancelAnimationFrame=saved.cancel;globalThis.MessageChannel=saved.channel; });
++test('tail starts after paint opportunity and completes in bounded ordered tasks', () => {
++  const seen:number[]=[];const finished:boolean[]=[];
++  deferMarkerRenders(Array.from({length:70},(_,i)=>()=>seen.push(i)),v=>finished.push(v));
++  expect(seen).toHaveLength(0);frames.shift()!(0);
++  tasks.shift()!();expect(seen).toHaveLength(32);expect(finished).toHaveLength(0);
++  while(tasks.length)tasks.shift()!();
++  expect(seen).toEqual(Array.from({length:70},(_,i)=>i));expect(finished).toEqual([true]);expect(closed).toBe(2);
++});
++test('new data/unmount cancellation drops stale work and completion', () => {
++  let rendered=0;let finished=0;
++  const jobs=Array.from({length:70},()=>()=>rendered++);const cancel=deferMarkerRenders(jobs,()=>finished++);
++  frames.shift()!(0);tasks.shift()!();cancel();
++  while(tasks.length)tasks.shift()!();
++  expect(rendered).toBe(32);expect(finished).toBe(0);expect(jobs).toHaveLength(0);expect(closed).toBe(2);
++});
++test('provider failure releases task references and requests bounded recovery', () => {
++  const finished:boolean[]=[];let staleRan=false;
++  const jobs=[()=>{throw Error('synthetic-provider');},()=>{staleRan=true;}];deferMarkerRenders(jobs,v=>finished.push(v));
++  frames.shift()!(0);tasks.shift()!();expect(finished).toEqual([false]);expect(staleRan).toBe(false);expect(jobs).toHaveLength(0);expect(closed).toBe(2);
++});
+diff --git a/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts b/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts
+index 4c6c011d..abafa990 100644
+--- a/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts
++++ b/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts
+@@ -189,7 +189,7 @@ describe('expanded cluster flow invariants', () => {
+             'previousEarlyMarkerRenderKey.markerViewportRevision === markerViewportRevision',
+         );
+         expect(rendererSource).toContain(
+-            "+ (expandedClusterRestaurantIds.length > 0 ? `:viewport-${markerViewportRevision}` : ''),",
++            "+ (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedDesktop ? `:viewport-${markerViewportRevision}` : ''),",
+         );
+         expect(rendererSource).toContain(
+             'markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant',
+@@ -259,6 +259,8 @@ describe('expanded cluster flow invariants', () => {
+             runRendererSource(renderCode, {
+                 map, contextualRestaurants: candidates, displayRestaurants: candidates, expandedClusterRestaurantIds,
+                 activeIds: new Set<string>(), extendedBounds,
++                renderedExpandedSources: new Map<string, Restaurant>(),
++                deferredMarkerRenders: [],
+                 markerViewportKey: getViewportKey(map, mapElement), lastMarkerViewportRef,
+                 shouldRenderExpandedMarker: (restaurant: Restaurant) => shouldRenderExpandedClusterMarker(
+                     restaurant, null, null, extendedBounds, true,
+diff --git a/apps/web/tests-unit/marker-pool.test.ts b/apps/web/tests-unit/marker-pool.test.ts
+index eb4eb03e..48c5ad44 100644
+--- a/apps/web/tests-unit/marker-pool.test.ts
++++ b/apps/web/tests-unit/marker-pool.test.ts
+@@ -82,6 +82,7 @@ class FakeMarker {
+ 
+ const createdMarkers: FakeMarker[] = [];
+ let listenerRegistrations = 0;
++let listenerRemovals = 0;
+ const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+ 
+ function installFakeNaverMaps() {
+@@ -97,6 +98,11 @@ function installFakeNaverMaps() {
+               expect(event).toBe('click');
+               marker.clickListener = listener;
+               listenerRegistrations += 1;
++              return { marker, listener };
++            },
++            removeListener: (handle: { marker: FakeMarker; listener: (event: unknown) => void }) => {
++              if (handle.marker.clickListener === handle.listener) handle.marker.clickListener = undefined;
++              listenerRemovals += 1;
+             },
+           },
+         },
+@@ -142,6 +148,7 @@ beforeEach(() => {
+   markerPool.resetStats();
+   createdMarkers.length = 0;
+   listenerRegistrations = 0;
++  listenerRemovals = 0;
+ });
+ 
+ afterAll(() => {
+@@ -489,3 +496,34 @@ test('pool reuse and changed visit badges update static marker content even with
+     else delete (globalThis as { document?: unknown }).document;
+   }
+ });
++
++
++test('detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener', () => {
++  let oldClicks = 0;
++  let currentClicks = 0;
++  const first = markerPool.acquire('old-place', makePosition('p1'), { content: 'old' }, 'map', () => oldClicks++) as unknown as FakeMarker;
++  markerPool.release('old-place');
++  first.clickListener?.({});
++  expect(oldClicks).toBe(0);
++  const next = markerPool.acquire('new-place', makePosition('p2'), { content: 'new' }, 'map', () => currentClicks++) as unknown as FakeMarker;
++  expect(next).toBe(first);
++  next.clickListener?.({});
++  expect(currentClicks).toBe(1);
++  expect(listenerRegistrations).toBe(1);
++  markerPool.clear();
++  expect(next.clickListener).toBeUndefined();
++  expect(listenerRemovals).toBe(1);
++  markerPool.clear();
++  expect(listenerRemovals).toBe(1);
++});
++
++test('disposal stays bounded across cache capacity and repeated clear', () => {
++  for (let i = 0; i < 1002; i++) markerPool.acquire(`capacity-${i}`, makePosition(`p-${i}`), { content: `icon-${i}` }, 'map');
++  markerPool.releaseAll();
++  expect(markerPool.getStats().poolSize).toBe(1000);
++  expect(listenerRemovals).toBe(2);
++  markerPool.clear();
++  expect(listenerRemovals).toBe(1002);
++  markerPool.clear();
++  expect(listenerRemovals).toBe(1002);
++});

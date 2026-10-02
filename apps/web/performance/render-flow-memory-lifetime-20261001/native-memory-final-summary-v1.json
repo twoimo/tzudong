@@ -1,0 +1,126 @@
+{
+  "observedAt": "2026-10-02T06:16:13.779078+00:00",
+  "scope": "finite native heap observations, not causal improvement or proof of no leak",
+  "heapUnit": "bytes; JavaScript isolate heap, not browser RSS/GPU",
+  "fieldAdmitted": 0,
+  "noForcedGC": true,
+  "tolerancePercent": 20,
+  "browsers": {
+    "physical": {
+      "tabsPerVariant": 1,
+      "independentDevices": 1,
+      "independentBrowserProcesses": 0,
+      "freshOwnedTabsExistingBrowserProcess": true,
+      "allCycles": 120,
+      "rows": [
+        {
+          "role": "baseline",
+          "source": "direct-physical-memory-recovery-before-a2/raw.json",
+          "median": 25696384.0,
+          "peak": 30775976,
+          "end": 25697452,
+          "initial": 18394260,
+          "cycles": 60,
+          "passed": true,
+          "pageErrors": 0,
+          "consoleErrors": 0
+        },
+        {
+          "role": "candidate",
+          "source": "direct-physical-memory-recovery-after-b1/raw.json",
+          "median": 25606712.0,
+          "peak": 34996840,
+          "end": 28761748,
+          "initial": 15827140,
+          "cycles": 60,
+          "passed": true,
+          "pageErrors": 0,
+          "consoleErrors": 0
+        }
+      ],
+      "beforeTabMedian": 25696384.0,
+      "afterTabMedian": 25606712.0,
+      "absoluteReduction": 89672.0,
+      "relativeReductionPercent": 0.34896738778498954,
+      "aggregateMedianTolerancePass": true,
+      "confidenceInterval": null,
+      "p95": null,
+      "improvementProven": false,
+      "limits": [
+        "one device and existing browser process; tabs/cycles are not independent users",
+        "natural GC phase and browser cache/process state not reset; all samples retained",
+        "Chrome endpoint +11.92%, peak +13.71%; median difference is not proven improvement"
+      ]
+    },
+    "samsung": {
+      "tabsPerVariant": 2,
+      "independentDevices": 1,
+      "independentBrowserProcesses": 0,
+      "freshOwnedTabsExistingBrowserProcess": true,
+      "allCycles": 240,
+      "rows": [
+        {
+          "role": "baseline",
+          "source": "direct-samsung-memory-recovery-before-a1/raw.json",
+          "median": 34977134.0,
+          "peak": 53834420,
+          "end": 53834420,
+          "initial": 18881412,
+          "cycles": 60,
+          "passed": true,
+          "pageErrors": 0,
+          "consoleErrors": 0
+        },
+        {
+          "role": "candidate",
+          "source": "direct-samsung-memory-recovery-after-b1/raw.json",
+          "median": 42727596.0,
+          "peak": 50820628,
+          "end": 44265852,
+          "initial": 17759600,
+          "cycles": 60,
+          "passed": true,
+          "pageErrors": 0,
+          "consoleErrors": 0
+        },
+        {
+          "role": "candidate",
+          "source": "direct-samsung-memory-recovery-after-b2/raw.json",
+          "median": 33404822.0,
+          "peak": 51970264,
+          "end": 39703660,
+          "initial": 18669392,
+          "cycles": 60,
+          "passed": true,
+          "pageErrors": 0,
+          "consoleErrors": 0
+        },
+        {
+          "role": "baseline",
+          "source": "direct-samsung-memory-recovery-before-a2/raw.json",
+          "median": 38347986.0,
+          "peak": 51307792,
+          "end": 16872148,
+          "initial": 16007952,
+          "cycles": 60,
+          "passed": true,
+          "pageErrors": 0,
+          "consoleErrors": 0
+        }
+      ],
+      "beforeTabMedian": 36662560.0,
+      "afterTabMedian": 38066209.0,
+      "absoluteReduction": -1403649.0,
+      "relativeReductionPercent": -3.828562435356396,
+      "aggregateMedianTolerancePass": true,
+      "confidenceInterval": null,
+      "p95": null,
+      "improvementProven": false,
+      "limits": [
+        "one device and existing browser process; tabs/cycles are not independent users",
+        "natural GC phase and browser cache/process state not reset; all samples retained",
+        "Samsung first pair +22.16% exceeded tolerance; full ABBA aggregate +3.83% passes; no individual failure omitted"
+      ]
+    }
+  }
+}

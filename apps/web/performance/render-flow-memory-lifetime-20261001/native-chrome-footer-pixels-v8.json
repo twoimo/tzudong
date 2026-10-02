@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-02T13:08:31.451Z",
+  "scope": "owned Chrome public HTTPS QA tab; native pixels, no location or private response retained",
+  "captures": [],
+  "fieldAdmitted": 0,
+  "stage": "connect browser protocol",
+  "passed": false,
+  "failureCode": "native_chrome_pixel_review_unavailable",
+  "endedAt": "2026-10-02T13:08:42.520Z"
+}

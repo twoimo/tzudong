@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-02T09:03:27.282334+00:00",
+  "project": "tzudong",
+  "deploymentId": "dpl_6KxTFSFu79mVynCU4tubaYsiuvgL",
+  "url": "tzudong-l967utqik-twoimos-projects.vercel.app",
+  "readyState": "BUILDING",
+  "gitSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "target": "production",
+  "sameRequestedMainSha": true,
+  "independentAliasVerified": false
+}

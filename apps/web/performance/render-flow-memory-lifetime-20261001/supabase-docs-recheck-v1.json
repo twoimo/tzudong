@@ -1,0 +1,8 @@
+{
+  "observedAt": "2026-10-01T12:48:23.633792+00:00",
+  "source": "https://supabase.com/changelog.md",
+  "httpStatus": 200,
+  "breakingTagLinesFound": 12,
+  "relevantImplementation": "standard Postgres17 SECURITY INVOKER/RLS/server-only rpc; current docs checked",
+  "rawProviderBodySaved": false
+}

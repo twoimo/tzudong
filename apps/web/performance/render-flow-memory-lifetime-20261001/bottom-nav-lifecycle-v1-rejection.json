@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-02T09:46:16.399978+00:00",
+  "rejectedSource": "4d9348a36aec9ce550a4f4aaf8323f0cb7a14599",
+  "rejectedBuild": "nav-v1",
+  "rejectedCssFixture": "bottom-nav-compiled-lifecycle-v1.json",
+  "reason": "parent homeChromeReady is emitted before lazy MobileControlOverlay mounts. v1 fixture omitted this lazy pending/failed interval and therefore did not prove loading-feedback preservation. v2 uses child-owned readiness, existing mounted event effect and cleanup; pending parent-only flag keeps header placeholder. Bottom rectangle is removed in both versions.",
+  "originalArtifactsRetained": true,
+  "correctionSource": "d41110e6 prefix; exact full SHA in source receipt",
+  "performanceClaimsFromV1": false
+}

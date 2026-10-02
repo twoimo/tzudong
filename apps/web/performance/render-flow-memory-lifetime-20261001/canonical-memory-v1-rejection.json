@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-02T05:58:10.896584+00:00",
+  "v1ScorerExit": 1,
+  "failureCode": "invalid_manifest_hypothesis",
+  "cause": "canonical schema/validator accepts only a fixed safe-prose vocabulary",
+  "v2Action": "use existing approved generic hypothesis/rollback strings; no scorer schema or whitelist change",
+  "oldV1PacketAndExternalPinPreserved": true,
+  "noFieldAdmissionInvented": true
+}

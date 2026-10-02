@@ -1,0 +1,31 @@
+{
+  "createdAt": "2026-10-02T10:48:05.484087+00:00",
+  "baselineCullsExpanded": true,
+  "candidateRetainsSmallDesktop": true,
+  "baselineBuild": "recovery-control-v1",
+  "candidateBuild": "nav-v3",
+  "independentProcessesPerVariant": 9,
+  "warmupPairs": 2,
+  "aaPairs": 9,
+  "cpuRate": 4,
+  "viewport": [
+    1440,
+    900
+  ],
+  "count": 735,
+  "endpoint": "trustedcluster click to2visible rAF; naturalheap+600ms before IDs/diagnosticGC",
+  "budget": {
+    "latencyRegressionPercent": 15,
+    "originalDaNaturalHeapIncreasePercent": 20
+  },
+  "acceptance": "same-environment original da735 also required; matched fieldcode control isolates duplicate pass effect; noGC/noise waiver",
+  "originalBaseline": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "sourceScope": "delivered marker lifetime plus bottom skeleton removal and child-ready CSS cleanup",
+  "originalBudget": "originalconfirmedseparately,neverrebased",
+  "hypothesis": "newcurrentmatchedcontrol comparedtonewdesktopfullsmallretention, original15latency/20heap guardunchanged",
+  "sourceCandidateCommit": "86940f7bca3472958d9df4a5dd7bd250660aed79",
+  "correction": "actual child ready attribute retained during control-only fullscreen unmount; cleanup owned by HomeRuntimeShell lifetime. Final exact-source confirmation; fixed budgets unchanged.",
+  "aa": "fresh paired control A/A9 before final integration A/B9; no overlapping builds, device captures or local browser work"
+}

@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-02T15:15:53.037209+00:00",
+  "command": [
+    "python3",
+    "apps/web/performance/render-flow-memory-lifetime-20261001/verify-artifact-map-v1.py",
+    "apps/web/performance/render-flow-memory-lifetime-20261001",
+    "apps/web/performance/render-flow-memory-lifetime-20261001-artifact-map.sha256"
+  ],
+  "result": {
+    "verifiedFiles": 2183,
+    "artifactMapExternalPinMatches": true
+  },
+  "noFrozenPacketFilesModified": true
+}

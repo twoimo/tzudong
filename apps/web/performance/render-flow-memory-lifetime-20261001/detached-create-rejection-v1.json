@@ -1,0 +1,8 @@
+{
+  "observedAt": "2026-10-01T12:41:44.057771+00:00",
+  "source": "desktop-ab-constructor-pilot-v1/raw.json",
+  "adopted": false,
+  "independentProcessesPerVariant": 2,
+  "reason": "naturalheap before [31.3903,23.5420]MB after [31.4091,23.4473]MB shows no useful decrease; latency high host variation, no inference from n2",
+  "forcedGCWaivesBudget": false
+}

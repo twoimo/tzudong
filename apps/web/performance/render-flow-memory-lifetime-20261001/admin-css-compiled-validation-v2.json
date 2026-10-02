@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-02T07:31:48.948893+00:00",
+  "sourceFixCommit": "bb08621c",
+  "compiledAdmin24CasesPass": true,
+  "directAdminWidgetHadStyleDependencyBefore": false,
+  "directAdminWidgetHasStyleDependencyAfter": true,
+  "newAdminLazyCssBytes": 624,
+  "gzipBytesDiagnostic": 341,
+  "publicCssAssetIdentical": "a6fc645b5cccf57e.css exists with identical marker styles in retry and final builds",
+  "noNewRootGlobalCssOrPublicRendererCode": true,
+  "privateAdminDataRead": false
+}

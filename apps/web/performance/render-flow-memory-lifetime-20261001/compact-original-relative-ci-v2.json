@@ -1,0 +1,12 @@
+{
+  "source": "desktop-ab-compact-original-confirm-v1/raw.json",
+  "nPairs": 9,
+  "resamples": 10000,
+  "seed": 20260930,
+  "increasePercent95CI": [
+    8.903266364007623,
+    9.527717571822624
+  ],
+  "fixedOriginalNatural20PercentBudgetUpperCIWithin": true,
+  "forcedGCWaived": false
+}

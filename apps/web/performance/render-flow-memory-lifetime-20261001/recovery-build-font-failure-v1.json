@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-02T05:24:05.712171+00:00",
+  "failedBuild": "candidate recovery-css-v1",
+  "failureCode": "external_font_fetch_unavailable",
+  "oldDiagnosticLogSha256": "5107ea2c5c16ea37c7fc316da47de30bf569aa401eead328adde225b7b9a198c",
+  "rawProviderDiagnosticsMinimized": true,
+  "oldMeasurementsNotChanged": true,
+  "nextAttempt": "same source/pinned runtime, fresh output label; explicit base diff after source commit"
+}

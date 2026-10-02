@@ -1,0 +1,138 @@
+diff --git a/apps/web/lib/marker-pool.ts b/apps/web/lib/marker-pool.ts
+index 06fd2796..09d2baf6 100644
+--- a/apps/web/lib/marker-pool.ts
++++ b/apps/web/lib/marker-pool.ts
+@@ -73,6 +73,7 @@ function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknow
+ 
+ interface PooledMarker {
+     __onClick?: (event: MarkerClickEvent) => void;
++    __disposeClickListener?: () => void;
+     getMap: () => unknown;
+     setMap: (map: unknown | null) => void;
+     getPosition: () => MarkerPositionLike | null;
+@@ -96,7 +97,7 @@ export class MarkerPool {
+     private active: Map<string, PooledMarker> = new Map();
+ 
+     /** 풀 최대 크기 (메모리 제한) */
+-    private readonly MAX_POOL_SIZE = 1000;
++    private readonly MAX_POOL_SIZE = 128;
+ 
+     /** 통계 (디버깅용) */
+     private stats = {
+@@ -158,11 +159,13 @@ export class MarkerPool {
+ 
+             // [PERFORMANCE] 이벤트 위임: 마커 생성 시 단 1회만 리스너 등록
+             // 이후 핸들러 교체는 __onClick 프로퍼티만 변경하여 zero-overhead 달성
+-            window.naver.maps.Event.addListener(marker, 'click', (e: MarkerClickEvent) => {
++            const events = window.naver.maps.Event;
++            const listener = events.addListener(marker, 'click', (e: MarkerClickEvent) => {
+                 if (marker.__onClick) {
+                     marker.__onClick(e);
+                 }
+             });
++            if (listener) marker.__disposeClickListener = () => events.removeListener(listener);
+         }
+ 
+         // [PERFORMANCE] 불필요한 DOM 조작/렌더링 방지
+@@ -223,9 +226,15 @@ export class MarkerPool {
+         if (!marker) return;
+ 
+         this.active.delete(id);
++        // Detached/evicted markers must not retain a render's restaurant/state
++        // closure or dispatch a queued click for a no-longer-active place.
++        marker.__onClick = undefined;
+         marker.setMap(null);
+         if (this.pool.length < this.MAX_POOL_SIZE) {
+             this.pool.push(marker);
++        } else {
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         }
+         this.stats.released++;
+     }
+@@ -312,12 +321,18 @@ export class MarkerPool {
+      */
+     public clear(): void {
+         this.active.forEach((marker) => {
++            marker.__onClick = undefined;
+             marker.setMap(null);
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         });
+ 
+         // 풀의 모든 마커도 정리
+         this.pool.forEach((marker) => {
++            marker.__onClick = undefined;
+             marker.setMap(null);
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         });
+ 
+         this.active.clear();
+diff --git a/apps/web/tests-unit/marker-pool.test.ts b/apps/web/tests-unit/marker-pool.test.ts
+index eb4eb03e..4eda6981 100644
+--- a/apps/web/tests-unit/marker-pool.test.ts
++++ b/apps/web/tests-unit/marker-pool.test.ts
+@@ -82,6 +82,7 @@ class FakeMarker {
+ 
+ const createdMarkers: FakeMarker[] = [];
+ let listenerRegistrations = 0;
++let listenerRemovals = 0;
+ const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+ 
+ function installFakeNaverMaps() {
+@@ -97,6 +98,11 @@ function installFakeNaverMaps() {
+               expect(event).toBe('click');
+               marker.clickListener = listener;
+               listenerRegistrations += 1;
++              return { marker, listener };
++            },
++            removeListener: (handle: { marker: FakeMarker; listener: (event: unknown) => void }) => {
++              if (handle.marker.clickListener === handle.listener) handle.marker.clickListener = undefined;
++              listenerRemovals += 1;
+             },
+           },
+         },
+@@ -142,6 +148,7 @@ beforeEach(() => {
+   markerPool.resetStats();
+   createdMarkers.length = 0;
+   listenerRegistrations = 0;
++  listenerRemovals = 0;
+ });
+ 
+ afterAll(() => {
+@@ -489,3 +496,34 @@ test('pool reuse and changed visit badges update static marker content even with
+     else delete (globalThis as { document?: unknown }).document;
+   }
+ });
++
++
++test('detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener', () => {
++  let oldClicks = 0;
++  let currentClicks = 0;
++  const first = markerPool.acquire('old-place', makePosition('p1'), { content: 'old' }, 'map', () => oldClicks++) as unknown as FakeMarker;
++  markerPool.release('old-place');
++  first.clickListener?.({});
++  expect(oldClicks).toBe(0);
++  const next = markerPool.acquire('new-place', makePosition('p2'), { content: 'new' }, 'map', () => currentClicks++) as unknown as FakeMarker;
++  expect(next).toBe(first);
++  next.clickListener?.({});
++  expect(currentClicks).toBe(1);
++  expect(listenerRegistrations).toBe(1);
++  markerPool.clear();
++  expect(next.clickListener).toBeUndefined();
++  expect(listenerRemovals).toBe(1);
++  markerPool.clear();
++  expect(listenerRemovals).toBe(1);
++});
++
++test('disposal stays bounded across cache capacity and repeated clear', () => {
++  for (let i = 0; i < 1002; i++) markerPool.acquire(`capacity-${i}`, makePosition(`p-${i}`), { content: `icon-${i}` }, 'map');
++  markerPool.releaseAll();
++  expect(markerPool.getStats().poolSize).toBe(128);
++  expect(listenerRemovals).toBe(874);
++  markerPool.clear();
++  expect(listenerRemovals).toBe(1002);
++  markerPool.clear();
++  expect(listenerRemovals).toBe(1002);
++});

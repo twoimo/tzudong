@@ -1,0 +1,46 @@
+{
+  "source": "memory-repeat-compact-cap128-pilot-v1/raw.json",
+  "processesPerVariant": 2,
+  "withinProcessCycles": 20,
+  "rows": [
+    {
+      "kind": "baseline",
+      "run": 0,
+      "n": 20,
+      "median": 27852520.0,
+      "peak": 37135000,
+      "end": 26362540,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "run": 1,
+      "n": 20,
+      "median": 39270964.0,
+      "peak": 59111964,
+      "end": 20307388,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "run": 2,
+      "n": 20,
+      "median": 39258290.0,
+      "peak": 59005808,
+      "end": 20299396,
+      "passed": true
+    },
+    {
+      "kind": "baseline",
+      "run": 3,
+      "n": 20,
+      "median": 28032700.0,
+      "peak": 38257080,
+      "end": 26330852,
+      "passed": true
+    }
+  ],
+  "pilotNoInference": true,
+  "coldBudgetRecheckPending": true,
+  "trustedInputLatencyRecheckPending": true
+}

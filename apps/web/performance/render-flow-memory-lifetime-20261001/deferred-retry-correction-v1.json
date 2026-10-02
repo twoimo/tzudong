@@ -1,0 +1,18 @@
+{
+  "observedAt": "2026-10-02T06:19:21.238476+00:00",
+  "reviewThread": "PRRT_kwDOQGRyNc6oPWhY",
+  "reviewedSource": "468dc364290c5770acf177a3fdb37810a11866fa",
+  "correctiveCommit": "ab970bdd8b8eda6848484b7e327f331091ed6d5f",
+  "correctivePr": 3085,
+  "fix": "reset existing six-retry count only when immediate work or all deferred jobs succeed; failures retain accumulated count",
+  "runtimeHotPathChanged": "three guarded reset/success lines; shared marker CSS, pool size, culling policy, batch size and generated icon HTML unchanged",
+  "verification": "17 affected tests/86 assertions, targeted ESLint, TypeScript parity0diagnostics",
+  "failedTestSetups": [
+    "first extraction incorrectly assumed frame callback instead of existing timeout dependency",
+    "missing renderer signature binding in test callback; repaired before delivery"
+  ],
+  "mobileRegressionEvidence": "CSS/culling/source hot path proof retained; final native live checks required after deployment",
+  "buildRejected": "recovery-css-retry-v1 exceeded configured bounded distDir name; new retry-v1 preserves the guard",
+  "sourcePromotionPath": "fresh develop correction PR \u2192 updated develop/data PR3084 \u2192 main PR after all checks",
+  "productionStillFieldBaseline": true
+}

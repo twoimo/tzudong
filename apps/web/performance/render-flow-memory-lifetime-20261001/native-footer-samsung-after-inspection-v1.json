@@ -1,0 +1,116 @@
+{
+  "sourceRaw": "native-footer-samsung-pixels-after-v1.json",
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "nativeFrames": [
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-000.png",
+      "sha256": "774a6f91760663c3ccdcaad1f85923714ff2c4568e391443e68269b848832295",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:06:50.022Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-001.png",
+      "sha256": "8d0baaebefb9b4210e0d5a727a8798feadbfa9ec7aecee1b63ef0a3de8957c73",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:06:51.650Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-002.png",
+      "sha256": "774a6f91760663c3ccdcaad1f85923714ff2c4568e391443e68269b848832295",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:06:53.248Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-003.png",
+      "sha256": "15547e2c75015bafc2f4c8da73b2a68c4d8c1cee63cec6c351be4a17c1733c0e",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:06:54.915Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-004.png",
+      "sha256": "28e9691d9f19fcd8fc8c13ce685ba9b83376592afe39ece0966d77173885684b",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:06:57.477Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-005.png",
+      "sha256": "2e74e0d4b529aa782b96296d91c81e1843ba0940f87c662184015c8e4159de44",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:06:59.140Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-006.png",
+      "sha256": "2e74e0d4b529aa782b96296d91c81e1843ba0940f87c662184015c8e4159de44",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:07:00.793Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-007.png",
+      "sha256": "c3e24c3c58025a86148d0a3b006e7081d695766a698234f1ae90223dbb3722d7",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:07:02.527Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-008.png",
+      "sha256": "fe0d960446b116917188523db0537e8d75df519fcc33464508e946d030f2015c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:07:04.610Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-009.png",
+      "sha256": "fe0d960446b116917188523db0537e8d75df519fcc33464508e946d030f2015c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:07:06.111Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-010.png",
+      "sha256": "fe0d960446b116917188523db0537e8d75df519fcc33464508e946d030f2015c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:07:07.557Z"
+    },
+    {
+      "file": "native-footer-samsung-after-inspected-v1/frame-011.png",
+      "sha256": "fe0d960446b116917188523db0537e8d75df519fcc33464508e946d030f2015c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:07:09.100Z"
+    }
+  ],
+  "geometry": {
+    "mapBottom": 749.7060546875,
+    "navTop": 749.7364501953125,
+    "overlap": 0,
+    "copyrightBottom": 749.7060203552246,
+    "viewport": {
+      "width": 467,
+      "height": 810,
+      "dpr": 3.0824999809265137
+    }
+  },
+  "independentDevices": 1,
+  "ownedVisits": 1,
+  "blackRectangleObservedInSamples": 0,
+  "legacyBottomPulseObservedInSamples": 0,
+  "intervalMs": {
+    "min": 1445.9998607635498,
+    "median": 1652.9998779296875,
+    "max": 2562.000036239624
+  },
+  "limits": [
+    "sparse native snapshots; shorter or between-frame flicker not excluded",
+    "Chrome before6 and after12 frames use different pan cadence, so no matched pixel-flicker rate claimed",
+    "same existing browser process, frames not independent users"
+  ],
+  "ownedTemporaryPNGsRemovedAfterInspection": true
+}

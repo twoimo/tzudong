@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-02 13:20:16 UTC",
+  "source": "read-only hosted aggregate query, field baseline collection remains active",
+  "releaseObserved": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+  "rows": [
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 120,
+      "sample_count": 1
+    }
+  ],
+  "actualUserIndependenceProven": false,
+  "qaSamplesManufactured": 0,
+  "fieldImprovementProven": false,
+  "limits": [
+    "Only CLS and LCP one admitted metric instance each for old release; INP zero",
+    "LCP bucket120 is overflow >=12000ms, not exact value; CLS bucket0 interval [0,.01)",
+    "No raw requests, private records or device identifiers retained"
+  ]
+}

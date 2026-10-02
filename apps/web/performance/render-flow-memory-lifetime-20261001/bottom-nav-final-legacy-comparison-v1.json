@@ -1,0 +1,137 @@
+{
+  "rows": [
+    {
+      "mode": "physical",
+      "before": [
+        {
+          "source": "bottom-nav-physical-before-confirm1/raw.json",
+          "frames": 30,
+          "rectangleFrames": 30,
+          "rectangleVisit": true,
+          "opacityRange": [
+            0.500671,
+            0.999546
+          ],
+          "intervalMs": {
+            "min": 694.0000057220459,
+            "median": 871.0000514984131,
+            "max": 1483.9999675750732
+          }
+        },
+        {
+          "source": "bottom-nav-physical-before-confirm2/raw.json",
+          "frames": 30,
+          "rectangleFrames": 30,
+          "rectangleVisit": true,
+          "opacityRange": [
+            0.50066,
+            0.999263
+          ],
+          "intervalMs": {
+            "min": 694.0000057220459,
+            "median": 876.9998550415039,
+            "max": 1477.9999256134033
+          }
+        }
+      ],
+      "after": [
+        {
+          "source": "bottom-nav-physical-after-confirm1/raw.json",
+          "frames": 30,
+          "rectangleFrames": 0,
+          "rectangleVisit": false,
+          "opacityRange": null,
+          "intervalMs": {
+            "min": 826.9999027252197,
+            "median": 1000.0,
+            "max": 1881.9999694824219
+          }
+        },
+        {
+          "source": "bottom-nav-physical-after-confirm2/raw.json",
+          "frames": 30,
+          "rectangleFrames": 0,
+          "rectangleVisit": false,
+          "opacityRange": null,
+          "intervalMs": {
+            "min": 837.9998207092285,
+            "median": 1046.0000038146973,
+            "max": 2100.9998321533203
+          }
+        }
+      ],
+      "beforeVisitsWithObsoleteRectangle": 2,
+      "afterVisitsWithObsoleteRectangle": 0,
+      "sampleUnit": "2 owned visits per variant, one phone/existing browser; 60 correlated frames",
+      "scope": "legacy 56px animated skeleton only; does not certify subsequent all-pixel intermittent rectangle absence"
+    },
+    {
+      "mode": "samsung",
+      "before": [
+        {
+          "source": "bottom-nav-samsung-before-confirm1/raw.json",
+          "frames": 30,
+          "rectangleFrames": 30,
+          "rectangleVisit": true,
+          "opacityRange": [
+            0.504375,
+            0.997311
+          ],
+          "intervalMs": {
+            "min": 731.9998741149902,
+            "median": 828.0000686645508,
+            "max": 1321.000099182129
+          }
+        },
+        {
+          "source": "bottom-nav-samsung-before-confirm2/raw.json",
+          "frames": 30,
+          "rectangleFrames": 30,
+          "rectangleVisit": true,
+          "opacityRange": [
+            0.501395,
+            0.999753
+          ],
+          "intervalMs": {
+            "min": 750.0,
+            "median": 810.0001811981201,
+            "max": 1396.0001468658447
+          }
+        }
+      ],
+      "after": [
+        {
+          "source": "bottom-nav-samsung-after-confirm1/raw.json",
+          "frames": 30,
+          "rectangleFrames": 0,
+          "rectangleVisit": false,
+          "opacityRange": null,
+          "intervalMs": {
+            "min": 800.9998798370361,
+            "median": 1025.0000953674316,
+            "max": 2051.0001182556152
+          }
+        },
+        {
+          "source": "bottom-nav-samsung-after-confirm2/raw.json",
+          "frames": 30,
+          "rectangleFrames": 0,
+          "rectangleVisit": false,
+          "opacityRange": null,
+          "intervalMs": {
+            "min": 851.0000705718994,
+            "median": 978.0001640319824,
+            "max": 1819.9999332427979
+          }
+        }
+      ],
+      "beforeVisitsWithObsoleteRectangle": 2,
+      "afterVisitsWithObsoleteRectangle": 0,
+      "sampleUnit": "2 owned visits per variant, one phone/existing browser; 60 correlated frames",
+      "scope": "legacy 56px animated skeleton only; does not certify subsequent all-pixel intermittent rectangle absence"
+    }
+  ],
+  "priorObservedSourceAfter": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+  "newNativeSource": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "oldFrozenEvidenceOverwritten": false
+}

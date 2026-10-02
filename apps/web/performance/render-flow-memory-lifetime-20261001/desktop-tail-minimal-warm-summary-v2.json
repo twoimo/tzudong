@@ -1,0 +1,42 @@
+{
+  "source": "memory-repeat-desktop-tail-minimal-v2/raw.json",
+  "runs": [
+    {
+      "kind": "baseline",
+      "median": 30067736.0,
+      "peak": 44694472,
+      "end": 21195952,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 36162718.0,
+      "peak": 53503708,
+      "end": 40278724,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 37948748.0,
+      "peak": 53498212,
+      "end": 36587864,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "baseline",
+      "median": 27886598.0,
+      "peak": 44031884,
+      "end": 26554420,
+      "n": 60,
+      "passed": true
+    }
+  ],
+  "nProcessesPerVariant": 2,
+  "minimalProbeSameBeforeAfter": true,
+  "nUsersNotCycles": true,
+  "adopted": false,
+  "legacyProbeRawPreserved": true
+}

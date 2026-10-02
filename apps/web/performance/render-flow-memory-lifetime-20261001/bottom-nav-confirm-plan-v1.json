@@ -1,0 +1,21 @@
+{
+  "createdAt": "2026-10-02T09:36:14.310905+00:00",
+  "beforeRelease": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "fixtureResponses": false,
+  "environments": [
+    "physical Chrome",
+    "physical Samsung Internet"
+  ],
+  "visitsPerVariantPerBrowser": 2,
+  "withinVisitObservations": 30,
+  "fixedCaptureDelayMinimumMs": 150,
+  "sampleUnit": "one owned tab visit, existing browser process, single Galaxy; not independent users/processes",
+  "defectDefinition": "decorative bottom h-14 pulse rectangle persists after chrome is ready, desktop-only panel flag absent, portion visible above translucent bottom nav",
+  "metrics": [
+    "visits with stale bottom rectangle / visits",
+    "DOM presence/display, opacity range and exposed height",
+    "native screenshot sequence with wall-clock timestamps"
+  ],
+  "acceptance": "bottom rectangle absent; mobile decorative shell hidden after chrome readiness; 5 navigation targets retained; real map loading/status feedback remains separately available",
+  "pixelLimits": "Samsung dark inversion/letterbox and screenshot intervals; cannot assert all compositor flicker absent"
+}

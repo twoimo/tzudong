@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-02T10:48:05.484490+00:00",
+  "sourceCommit": "86940f7bca3472958d9df4a5dd7bd250660aed79",
+  "unit": {
+    "passed": 19,
+    "failed": 0,
+    "assertions": 203
+  },
+  "lint": "passed",
+  "typecheckParity": {
+    "passed": true,
+    "diagnostics": 0
+  },
+  "productionBuild": "nav-v3 passed",
+  "compiledLifecycleCases": 40,
+  "delayedAndFailedActualLazyChunkCases": 2,
+  "actualSdkFullscreenAndRouteCleanupBeforeAfter": "bottom-nav-fullscreen-browser-v1.json passed both expected Before defect and After correction",
+  "extraReactStateOrRenderCommitAdded": false,
+  "effectOwnership": "child emits actual mount readiness; HomeRuntimeShell clears only on its own unmount"
+}

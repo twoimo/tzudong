@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-02T05:16:00.516550+00:00",
+  "source": "owned native screencap named in raw.json",
+  "destination": "direct-physical-memory-desktop-css-after-v2/native-screen.png",
+  "sha256": "fab31ebfb59c6598ac5eba81876f51e6b909f2fc11702c60c633caf24698afc5",
+  "visuallyInspected": true,
+  "syntheticPublicRestaurantFixture": true,
+  "unrelatedNativeOverlayBlack": true,
+  "limits": [
+    "Native capture has an opaque black overlay over part of the list; does not prove full unoccluded visual correctness"
+  ],
+  "privateDataObserved": false
+}

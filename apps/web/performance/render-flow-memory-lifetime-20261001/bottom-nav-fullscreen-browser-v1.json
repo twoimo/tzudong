@@ -1,0 +1,49 @@
+{
+  "cases": [
+    {
+      "label": "nav-v2",
+      "entered": true,
+      "fullscreen": {
+        "childMounted": false,
+        "readyAttribute": false,
+        "skeletonDisplay": "block",
+        "bottomRectangles": 0,
+        "mapCreates": 1
+      },
+      "restored": {
+        "childMounted": true,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1
+      },
+      "routeCleanup": true,
+      "expectedNewBehavior": false,
+      "passed": true
+    },
+    {
+      "label": "nav-v3",
+      "entered": true,
+      "fullscreen": {
+        "childMounted": false,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1
+      },
+      "restored": {
+        "childMounted": true,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1
+      },
+      "routeCleanup": true,
+      "expectedNewBehavior": true,
+      "passed": true
+    }
+  ],
+  "scope": "actual SDK mobile emulation, synthetic public REST, trusted pointer fullscreen and client navigation; not primary timings",
+  "fieldAdmitted": 0,
+  "passed": true
+}

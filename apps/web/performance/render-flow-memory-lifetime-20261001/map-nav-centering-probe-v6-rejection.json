@@ -1,0 +1,1 @@
+{"rejected":true,"raw":"map-nav-selected-centering-v6.json","reason":"Fullscreen intentionally preserves the selected-map position when dimensions do not change; fixture incorrectly required a new center there. v7 validates the actual partial-sheet visible-map center before fullscreen and keeps fullscreen lifecycle checks."}

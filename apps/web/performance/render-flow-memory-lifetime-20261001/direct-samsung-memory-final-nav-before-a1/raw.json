@@ -1,0 +1,15 @@
+{
+  "mode": "samsung",
+  "label": "final-nav-before-a1",
+  "startedAt": "2026-10-02T14:19:13.655Z",
+  "planSha256": "29142e7ecacab56c5a86bfbcb9260c22a388c42ea776dd42ffbe7f00241a23a7",
+  "cycles": [],
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "originalColdBudgetWaived": false,
+  "passed": false,
+  "failurePhase": "server",
+  "failure": "owned native repeat readiness or invariant unavailable",
+  "failureCode": "bounded setup unavailable",
+  "endedAt": "2026-10-02T14:19:15.553Z"
+}

@@ -1,0 +1,300 @@
+{
+  "headRefOid": "579aa66f02206baaa7a2528243b545e1630874a1",
+  "mergeCommit": {
+    "oid": "f88e046b0bf3fae10a85db4b2549a3928dadf8cc"
+  },
+  "mergedAt": "2026-10-02T13:22:04Z",
+  "state": "MERGED",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252053/job/110854536253",
+      "name": "Install",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167771/job/110854258433",
+      "name": "Install",
+      "startedAt": "2026-10-02T13:18:58Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:19:49Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167120/job/110854261060",
+      "name": "Analyze (actions)",
+      "startedAt": "2026-10-02T13:18:59Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:20:39Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012250375/job/110854534519",
+      "name": "Analyze (actions)",
+      "startedAt": "2026-10-02T13:19:45Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:19:54Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252454/job/110854538459",
+      "name": "Promotion Path",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "COMPLETED",
+      "workflowName": "Promotion"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:21:22Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252098/job/110854535380",
+      "name": "Release",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "COMPLETED",
+      "workflowName": "Release"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:20:38Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167691/job/110854257805",
+      "name": "Release",
+      "startedAt": "2026-10-02T13:18:58Z",
+      "status": "COMPLETED",
+      "workflowName": "Release"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:20:20Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167120/job/110854261071",
+      "name": "Analyze (go)",
+      "startedAt": "2026-10-02T13:18:59Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:20:52Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012250375/job/110854534674",
+      "name": "Analyze (go)",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:22:30Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167120/job/110854261034",
+      "name": "Analyze (javascript-typescript)",
+      "startedAt": "2026-10-02T13:18:59Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:21:22Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012250375/job/110854534589",
+      "name": "Analyze (javascript-typescript)",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:21:19Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167120/job/110854260823",
+      "name": "Analyze (python)",
+      "startedAt": "2026-10-02T13:18:59Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:20:57Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012250375/job/110854534763",
+      "name": "Analyze (python)",
+      "startedAt": "2026-10-02T13:19:45Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012250375/job/110854534265",
+      "name": "Analyze (rust)",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:22:28Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167120/job/110854261056",
+      "name": "Analyze (rust)",
+      "startedAt": "2026-10-02T13:19:07Z",
+      "status": "COMPLETED",
+      "workflowName": "CodeQL"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252053/job/110854536415",
+      "name": "Ubuntu npm",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167771/job/110854258341",
+      "name": "Ubuntu npm",
+      "startedAt": "2026-10-02T13:18:58Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252053/job/110854536346",
+      "name": "Ubuntu Bun",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167771/job/110854258336",
+      "name": "Ubuntu Bun",
+      "startedAt": "2026-10-02T13:18:58Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252053/job/110854536166",
+      "name": "Windows npm",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167771/job/110854258466",
+      "name": "Windows npm",
+      "startedAt": "2026-10-02T13:19:01Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252053/job/110854536309",
+      "name": "Windows Bun",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167771/job/110854258281",
+      "name": "Windows Bun",
+      "startedAt": "2026-10-02T13:18:58Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:21:08Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012252053/job/110854536367",
+      "name": "Admin",
+      "startedAt": "2026-10-02T13:19:44Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:20:36Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/37012167771/job/110854258038",
+      "name": "Admin",
+      "startedAt": "2026-10-02T13:19:03Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:19:42Z",
+      "conclusion": "NEUTRAL",
+      "detailsUrl": "https://github.com/twoimo/tzudong/runs/110854526672",
+      "name": "CodeQL",
+      "startedAt": "2026-10-02T13:19:39Z",
+      "status": "COMPLETED",
+      "workflowName": ""
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:19:41Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://dashboard.gitguardian.com",
+      "name": "GitGuardian Security Checks",
+      "startedAt": "2026-10-02T13:19:40Z",
+      "status": "COMPLETED",
+      "workflowName": ""
+    },
+    {
+      "__typename": "StatusContext",
+      "context": "Vercel",
+      "startedAt": "2026-10-02T13:22:16Z",
+      "state": "SUCCESS",
+      "targetUrl": "https://vercel.com/twoimos-projects/tzudong/FZoDpcGSQmyTnB5YxpjcMTkxUb4p"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-02T13:22:16Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://vercel.com/github",
+      "name": "Vercel Preview Comments",
+      "startedAt": "2026-10-02T13:22:16Z",
+      "status": "COMPLETED",
+      "workflowName": ""
+    }
+  ],
+  "url": "https://github.com/twoimo/tzudong/pull/3095",
+  "observedAt": "2026-10-02T13:22:43.497729+00:00",
+  "branchProtectionBypassed": false
+}

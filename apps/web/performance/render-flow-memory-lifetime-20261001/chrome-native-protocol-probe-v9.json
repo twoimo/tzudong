@@ -1,0 +1,13 @@
+{
+  "scope": "bounded read-only owned debug-forward probe",
+  "observedAt": "2026-10-02T13:10:35.425Z",
+  "deviceIdentifiersRetained": false,
+  "forwardAssigned": true,
+  "versionStatus": 200,
+  "versionParse": true,
+  "browserReported": true,
+  "rootWebSocketReported": true,
+  "listStatus": 200,
+  "listParse": true,
+  "pageTargetCount": 6
+}

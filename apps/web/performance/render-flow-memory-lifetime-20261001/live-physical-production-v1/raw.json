@@ -1,0 +1,18 @@
+{
+  "mode": "physical",
+  "label": "production-v1",
+  "startedAt": "2026-10-02T09:17:25.617Z",
+  "url": "https://www.tzudong.app/ with anonymous QA exclusion",
+  "fieldAdmitted": 0,
+  "fixtureResponsesUsed": false,
+  "sdkStubUsed": false,
+  "privateRequestsHeadersBodiesOrLocationRetained": false,
+  "checks": [],
+  "errors": {
+    "page": 0,
+    "console": 0
+  },
+  "passed": false,
+  "failureCode": "owned_live_sdk_or_flow_unavailable",
+  "endedAt": "2026-10-02T09:17:26.107Z"
+}

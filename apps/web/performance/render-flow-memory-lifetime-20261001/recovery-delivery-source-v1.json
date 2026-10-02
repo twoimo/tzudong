@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-10-02T05:15:34.435276+00:00",
+  "restoredSnapshot": "d83b23337e332a5de7224557fc232ebf7fd8655f",
+  "freshDeliveryBase": "835d702452ab0039b830b97a674aff03a905821c",
+  "files": [
+    {
+      "path": "components/map/NaverMapView.tsx",
+      "sha256": "488aa4fd9c864f9d6e96cafe2d90e55163cc90ea6b7b64d4f9c6d2b213e77f92"
+    },
+    {
+      "path": "components/map/marker-icons.css",
+      "sha256": "d77c2f5ee74e3035f17e6f08ba5df557a0d2844633178481c26215c04969c258"
+    },
+    {
+      "path": "lib/cluster-marker.ts",
+      "sha256": "63ed7540499f5d282ec8a7c6301210e6b07d711c7b77f648ca5051d7ce58fc59"
+    },
+    {
+      "path": "lib/marker-pool.ts",
+      "sha256": "b088f3e3bf88db112aec8aaf02943c9f66f7391ef7f52e33586b5c5bd649ef7d"
+    },
+    {
+      "path": "lib/deferred-marker-renders.ts",
+      "sha256": "5b16f00f4960f24b9a811177704378d5775bc0ba968f4ac348aac93f7ca39a7b"
+    },
+    {
+      "path": "tests-unit/marker-pool.test.ts",
+      "sha256": "09bee2a240877a426ff51f1319eb5aba3ed21063d1d2e90bd18ab843599dd32f"
+    },
+    {
+      "path": "tests-unit/deferred-marker-renders.test.ts",
+      "sha256": "446a18217a7306565992b938e5bdae61ba67b13946360c6975a1259ee92134f5"
+    }
+  ],
+  "privateBuildOutputsMissingAfterArchive": true,
+  "savedRawEvidencePreserved": true,
+  "privateEnvValuesSavedInEvidence": false,
+  "deliveryExcludesUnusedExperiment": true
+}

@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-02T05:25:36.655112+00:00",
+  "productionSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "scope": "actual HTTPS www home readiness, anonymous QA browser; no field admission",
+  "proof": {
+    "sdkLoaded": true,
+    "stub": false,
+    "mapContainer": true,
+    "markers": 0,
+    "clusters": 16,
+    "viewport": {
+      "width": 1280,
+      "height": 633,
+      "dpr": 1
+    },
+    "overflow": 0,
+    "visibility": "visible"
+  },
+  "pageErrors": 0,
+  "console": {
+    "consoleBufferEntries": 0,
+    "consoleErrorEntries": 0,
+    "messageObjectFieldNames": []
+  },
+  "corrects": "v2 console parser used errors-style key; console v0.38.1 uses data.messages",
+  "fieldAdmitted": 0,
+  "rawConsoleStored": false
+}

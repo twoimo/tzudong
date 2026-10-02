@@ -1,0 +1,86 @@
+{
+  "observedAt": "2026-10-01T16:24:53.409092+00:00",
+  "pr": "https://github.com/twoimo/tzudong/pull/3080",
+  "state": "MERGED",
+  "head": "0cfe1b97a06dba366d6c15aa7eb86af14ca2430a",
+  "mergeCommit": "835d702452ab0039b830b97a674aff03a905821c",
+  "mergedAt": "2026-10-01T16:24:51Z",
+  "checks": [
+    {
+      "name": "Freshness",
+      "state": "SKIPPED"
+    },
+    {
+      "name": "Install",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (actions)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Promotion Path",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Promotion Path",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (go)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (python)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (rust)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Ubuntu npm",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows npm",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Admin",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "CodeQL",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "GitGuardian Security Checks",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Vercel",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Vercel Preview Comments",
+      "state": "SUCCESS"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-02T14:25:17.986803+00:00",
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "origin": "https://www.tzudong.app/ QA excluded",
+  "sdkReady": true,
+  "fixtureResponsesUsed": false,
+  "flows": {
+    "homeContent": true,
+    "publicDetailOpen": true,
+    "detailBack": true,
+    "emptySearch": true,
+    "searchClose": true
+  },
+  "image": "map-nav-live-desktop-home-v1.png",
+  "imageInspected": true,
+  "privateReviewBodiesNotRetained": true,
+  "emptySearchSkeletonDisplayObserved": "block; no visible replacement established, not treated as a new flicker fix",
+  "sourceTestsNotUsedAsDeploymentProof": true,
+  "ownedBrowserSessionClosed": true
+}

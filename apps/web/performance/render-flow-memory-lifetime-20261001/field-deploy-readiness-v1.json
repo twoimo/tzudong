@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-10-01T17:45:35.753790+00:00",
+  "projectVerified": true,
+  "guard": {
+    "id": "i4fHH6tbzAA1jtCM",
+    "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+    "type": "sensitive",
+    "target": [
+      "production"
+    ]
+  },
+  "expectedMainSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "matchingDeployments": [
+    {
+      "id": "dpl_HY2TaRRES8H4mJZjv1NxF6zs7T8u",
+      "state": "CANCELED",
+      "url": "tzudong-6er5azb6t-twoimos-projects.vercel.app",
+      "target": "production",
+      "gitSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98"
+    }
+  ],
+  "serviceRoleConfigured": true,
+  "rawEnvValuesSaved": false
+}

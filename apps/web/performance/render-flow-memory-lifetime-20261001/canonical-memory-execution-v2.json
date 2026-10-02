@@ -1,0 +1,71 @@
+{
+  "observedAt": "2026-10-02T06:01:17.797Z",
+  "candidate": {
+    "sha": "8c8e5532dbc459d76ad14764bf0995189bfe9130",
+    "tree": "7403f5a19b52d1006d6a1add55525664dccaaa8d"
+  },
+  "commands": [
+    {
+      "command": [
+        "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/scripts/score-performance-backlog.mjs",
+        "--artifact-root",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/render-flow-memory-lifetime-20261001/canonical-memory-zero-v2/",
+        "--release-id",
+        "marker-memory-lifetime-20261001",
+        "--candidate-sha",
+        "8c8e5532dbc459d76ad14764bf0995189bfe9130",
+        "--candidate-tree",
+        "7403f5a19b52d1006d6a1add55525664dccaaa8d",
+        "--config-sha256",
+        "e341378bddb5727cd50b9da35341a481f76790cac4c34ae9d862dae0c3416e38",
+        "--data-profile-sha256",
+        "230a084b2e50a46603e5400af6225baccfdd75d810d933236b7de8801cbddf1d",
+        "--frozen-as-of",
+        "2026-10-02T05:58:10.975000Z",
+        "--input",
+        "backlog.raw.json",
+        "--artifact-map",
+        "score-artifact-map.json",
+        "--artifact-map-sha256",
+        "74bed7dcb8a3ddfeb6f057770035b224785e99a06f088d9b8a56c1673198258a",
+        "--output",
+        "backlog.scored.json"
+      ],
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "command": [
+        "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/scripts/validate-performance-backlog.mjs",
+        "--artifact-root",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/render-flow-memory-lifetime-20261001/canonical-memory-zero-v2/",
+        "--release-id",
+        "marker-memory-lifetime-20261001",
+        "--candidate-sha",
+        "8c8e5532dbc459d76ad14764bf0995189bfe9130",
+        "--candidate-tree",
+        "7403f5a19b52d1006d6a1add55525664dccaaa8d",
+        "--config-sha256",
+        "e341378bddb5727cd50b9da35341a481f76790cac4c34ae9d862dae0c3416e38",
+        "--data-profile-sha256",
+        "230a084b2e50a46603e5400af6225baccfdd75d810d933236b7de8801cbddf1d",
+        "--frozen-as-of",
+        "2026-10-02T05:58:10.975000Z",
+        "--input",
+        "backlog.raw.json",
+        "--artifact-map",
+        "validate-artifact-map.json",
+        "--artifact-map-sha256",
+        "52b882801e7188ec757f1d0ff546bf2817d4b46b9f4a84300a0cbf709bce64d7",
+        "--scored",
+        "backlog.scored.json"
+      ],
+      "exitCode": 0,
+      "output": ""
+    }
+  ],
+  "matchedAppOwnedP75SourceProduced": false,
+  "newFieldImprovementClaimed": false
+}

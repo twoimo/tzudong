@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-02T06:03:49.365352+00:00",
+  "v2": "no completed flows; screencast-before-expansion setup excluded",
+  "v3": "marker selection/back, list, three trusted swipes, pan, pinch, empty search and five returns passed; close-dependent cases failed",
+  "harnessCause": "helper combines textContent plus aria-label with a separating space; anchored close regex rejected the valid accessible label",
+  "repair": "use the actual unanchored accessible-label phrase; product source unchanged",
+  "v3PinchMapZoomPass": true,
+  "v3PageScaleStayedOne": true,
+  "failedRunsRetained": true
+}

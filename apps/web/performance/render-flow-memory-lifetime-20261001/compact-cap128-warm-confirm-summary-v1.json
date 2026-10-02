@@ -1,0 +1,45 @@
+{
+  "source": "memory-repeat-compact-cap128-confirm-v1/raw.json",
+  "rows": [
+    {
+      "kind": "baseline",
+      "run": 0,
+      "median": 28422328.0,
+      "peak": 38191712,
+      "end": 27057264,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "run": 1,
+      "median": 41476584.0,
+      "peak": 58949852,
+      "end": 58522332,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "run": 2,
+      "median": 41372814.0,
+      "peak": 59225112,
+      "end": 21058688,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "baseline",
+      "run": 3,
+      "median": 28476626.0,
+      "peak": 38361240,
+      "end": 27087732,
+      "n": 60,
+      "passed": true
+    }
+  ],
+  "passedAccuracy": true,
+  "adopted": false,
+  "reasonForNoAdoptionYet": "naturalwarmheap large between-process variance; do notselectjust20MB lowGCphase/endpoints; diagnosticretainer analysis needed",
+  "noGCWaiver": true
+}

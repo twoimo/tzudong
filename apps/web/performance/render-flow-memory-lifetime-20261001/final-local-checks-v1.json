@@ -1,0 +1,21 @@
+{
+  "observedAt": "2026-10-02T05:20:06.970974+00:00",
+  "command": [
+    "/opt/homebrew/opt/node@24/bin/node",
+    "scripts/run-web-tool.mjs",
+    "eslint",
+    "components/map/NaverMapView.tsx",
+    "lib/cluster-marker.ts",
+    "lib/marker-pool.ts",
+    "lib/deferred-marker-renders.ts",
+    "tests-unit/marker-pool.test.ts",
+    "tests-unit/deferred-marker-renders.test.ts",
+    "tests-unit/expanded-cluster-flow-invariants.test.ts",
+    "--max-warnings=0"
+  ],
+  "exitCode": 0,
+  "scope": "final eight source/test files",
+  "unitTests": "94 pass / 0 fail / 1417 assertions",
+  "typecheckParity": "passed / 0 diagnostics / 2373 logical inputs; prior test-only injection repaired subsequently",
+  "finalRuntimeSourceMatchesMeasuredCandidate": true
+}

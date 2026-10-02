@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-02T05:18:21.671188+00:00",
+  "initialCheck": "94 tests: 91 pass / 3 fail",
+  "failures": [
+    "literal signature contract assumed all expanded desktop results are culled",
+    "two extracted renderer tests omitted the new pass-local source map"
+  ],
+  "repair": "update policy assertion and supply actual loop dependency; preserve fast-pan behavior assertions",
+  "runtimeSourceChanged": false,
+  "previousRepairAttempt": "wrong working-directory prefix prevented writes; no runtime source change"
+}

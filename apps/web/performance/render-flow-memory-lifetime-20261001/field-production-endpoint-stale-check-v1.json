@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-01T18:11:35.127280+00:00",
+  "scope": "live sameorigin credentialless stale-source rejection; no validmetricwrite/requestbody retained",
+  "httpStatus": 403,
+  "fixedResponseCode": "non_json_fixed_failure",
+  "expected409": false,
+  "realUserSamples": 0,
+  "requestBodySaved": false,
+  "headersSaved": false
+}

@@ -1,0 +1,1 @@
+{"rejected":true,"reason":"Fixture chose a DOM marker center without confirming the marker at that pixel; overlapping markers can select another ID.","rawPreserved":"map-nav-selected-centering-v1.json","correction":"v2 takes the ID from elementFromPoint at the trusted click position; does not assume DOM iteration order is the hit target."}

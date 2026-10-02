@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-01T18:14:51.164833+00:00",
+  "method": "GET/read-only",
+  "httpStatus": 405,
+  "cloudflareServer": true,
+  "cfChallenge": false,
+  "vercelMitigated": false,
+  "htmlBody": false,
+  "challengeSignature": false,
+  "networkProxySignature": false,
+  "rawHeadersAndBodySaved": false
+}

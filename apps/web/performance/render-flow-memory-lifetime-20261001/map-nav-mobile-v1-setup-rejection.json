@@ -1,0 +1,1 @@
+{"failedSetupOnly":true,"samples":0,"reason":"Both fixture builds have candidate receipts; original driver expected baseline receipt directory.","correction":"v2 selects candidate-built receipt by role while preserving baseline/candidate sample identity","providerDiagnosticsStored":false}

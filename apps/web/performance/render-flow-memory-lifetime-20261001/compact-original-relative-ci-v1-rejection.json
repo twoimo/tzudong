@@ -1,0 +1,6 @@
+{
+  "source": "compact-original-relative-ci-v1.json",
+  "valid": false,
+  "reason": "arithmetic implementation reused Before values in both medians; zeroCI invalid, never admitted",
+  "replacement": "compact-original-relative-ci-v2.json"
+}

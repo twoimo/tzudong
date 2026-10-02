@@ -1,0 +1,350 @@
+{
+  "cases": [
+    {
+      "variant": "before",
+      "width": 390,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 390,
+      "stage": "chrome",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 390,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 844,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 844,
+      "stage": "chrome",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 844,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1279,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1279,
+      "stage": "chrome",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1279,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1280,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1280,
+      "stage": "chrome",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1280,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1440,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1440,
+      "stage": "chrome",
+      "display": "block",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "before",
+      "width": 1440,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 1,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 390,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 390,
+      "stage": "chrome",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 390,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 844,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 844,
+      "stage": "chrome",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 844,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1279,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1279,
+      "stage": "chrome",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1279,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1280,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1280,
+      "stage": "chrome",
+      "display": "block",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1280,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1440,
+      "stage": "pending",
+      "display": "block",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1440,
+      "stage": "chrome",
+      "display": "block",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    },
+    {
+      "variant": "after",
+      "width": 1440,
+      "stage": "panel",
+      "display": "none",
+      "bottomRectangles": 0,
+      "ariaHidden": "true",
+      "mobileHeaderPresent": true,
+      "passed": true
+    }
+  ],
+  "privateResponseSaved": false,
+  "beforeCssBudget": {
+    "homeBytes": 192639,
+    "generalAppBytes": 370228,
+    "adminBytes": 370228,
+    "deferredBytes": 192639,
+    "homeTransferBytes": 45639,
+    "generalAppTransferBytes": 67677,
+    "adminTransferBytes": 67677,
+    "deferredTransferBytes": 45639,
+    "sharedAssetPaths": [
+      "static/css/42e0c5e80e0454f6.css",
+      "static/css/6c52207691aba623.css",
+      "static/css/a11e8d25adec0c48.css",
+      "static/css/c745bef459839cfb.css"
+    ],
+    "exclusiveAssetPaths": {
+      "home": [],
+      "generalApp": [],
+      "admin": [],
+      "deferred": []
+    }
+  },
+  "afterCssBudget": {
+    "homeBytes": 192542,
+    "generalAppBytes": 370118,
+    "adminBytes": 370118,
+    "deferredBytes": 192542,
+    "homeTransferBytes": 45637,
+    "generalAppTransferBytes": 67674,
+    "adminTransferBytes": 67674,
+    "deferredTransferBytes": 45637,
+    "sharedAssetPaths": [
+      "static/css/313850fb4bac72d1.css",
+      "static/css/798d68dfdc08c503.css",
+      "static/css/a11e8d25adec0c48.css",
+      "static/css/c745bef459839cfb.css"
+    ],
+    "exclusiveAssetPaths": {
+      "home": [],
+      "generalApp": [],
+      "admin": [],
+      "deferred": []
+    }
+  },
+  "passed": true
+}

@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-02T09:01:38.660681+00:00",
+  "project": "tzudong",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "sourceDeployment": "dpl_EEdU7nEerKvs67JyWzRNXpCq1s6e",
+  "sourceMainSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "sourceStateBefore": "CANCELED",
+  "target": "production",
+  "exitCode": 0,
+  "newDeploymentUrl": "https://tzudong-l967utqik-twoimos-projects.vercel.app",
+  "guardKeptEnabled": true,
+  "primaryWrongLinkPreserved": true,
+  "ownedDeliveryLinkedExactProject": true,
+  "rollbackNamedSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "rollbackNamedDeployment": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM",
+  "rawProviderOutputStored": false
+}

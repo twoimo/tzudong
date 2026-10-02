@@ -1,0 +1,7 @@
+{
+  "zeroSampleFailurePreserved": "direct-samsung-memory-final-nav-before-a1/raw.json",
+  "reason": "Archived field-control-v3 ignored runtime no longer present",
+  "replacementRuntime": "build-baseline-recovery-control-v1/receipt.json",
+  "allNineRelevantBeforeSourceInputsIdentical": true,
+  "noThresholdOrMeasurementEndpointChanged": true
+}

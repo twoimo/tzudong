@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-10-01T17:40:56.691602+00:00",
+  "observedCost": "735 cull detach/reattach warm path hightransientheap; compact-only naturalpeak53MB/cap12859MB,GCdiagnosticactive571heldnoorphanleak; oldfull735 beforecase avoided thischurn",
+  "policy": "desktopexpanded<=1000 keepwholeexistinglistSDK objects; paddedviewport/selected/search renderedimmediately, offscreenfirsttail afterpaint32pertask; mobile/>1000 keepculling",
+  "goal": "fix coldheap+warmchurn without delaying visiblemarkers; originalcachecapacity1000unchanged, no forcedGC/delay/privateSDKoverride",
+  "budgetsUnchanged": {
+    "naturalHeapRegressionPercent": 20,
+    "latencyRegressionPercent": 15
+  },
+  "validation": "coldoriginal/current9pairs; fullmembershipafterfixed600ms; canceltailonnewstate/unmount; selectedexceptions; sameknownSDKflows",
+  "adopted": false,
+  "fieldAdmitted": 0
+}

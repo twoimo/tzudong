@@ -1,0 +1,8 @@
+{
+  "observedAt": "2026-10-02T06:24:10.260418+00:00",
+  "failedBuild": "orig-v3",
+  "oldLogSha256": "9bbd236884885ace41d7f9ea1d9fcace6f1b78544316d4bc279f0b3985157a8e",
+  "failureCode": "external_font_fetch_unavailable",
+  "originalFrozenSamplesPreserved": true,
+  "noBudgetWaiver": true
+}

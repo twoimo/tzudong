@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-02T10:46:37.806958+00:00",
+  "source": "direct-physical-memory-desktop-css-after-v2/raw.json",
+  "ownedTemporaryScreenshotPresent": false,
+  "oldTemporaryScreenshotAdmittedAsVisualProof": false,
+  "reason": "owned temporary capture no longer exists after workspace/runtime archival; cannot inspect or recover unknown bytes",
+  "memoryEndpointScope": "raw native SDK/DOM/visibility/heap samples remain available; optional missing temp PNG is not pixel validation",
+  "otherRetainedVisualProof": [
+    "direct-physical-functional-recovery-css-v4",
+    "direct-samsung-functional-recovery-css-v4",
+    "bottom-nav-physical-before-confirm1",
+    "bottom-nav-samsung-before-confirm1"
+  ],
+  "noUserFilesDeleted": true
+}

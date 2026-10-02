@@ -1,0 +1,145 @@
+{
+  "cases": [
+    {
+      "label": "nav-v4",
+      "initial": {
+        "mapBottom": 783,
+        "navTop": 783,
+        "overlap": 0,
+        "copyrightBottom": 783,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "geometryPass": true,
+      "hitAndDetailIdMatch": true,
+      "selectedCenter": {
+        "projectedY": 155.99956522136927,
+        "expectedY": 186.5,
+        "sheetHeight": 422,
+        "errorY": -30.500434778630733,
+        "zoom": 14,
+        "centerInSyntheticFootprint": true
+      },
+      "closed": {
+        "mapBottom": 783,
+        "navTop": 783,
+        "overlap": 0,
+        "copyrightBottom": 783,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "entered": true,
+      "fullscreen": {
+        "childMounted": false,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "restored": {
+        "childMounted": true,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "routeCleanup": true,
+      "centeringCorrection": false,
+      "passed": true
+    },
+    {
+      "label": "map-nav-final-v1",
+      "initial": {
+        "mapBottom": 783,
+        "navTop": 783,
+        "overlap": 0,
+        "copyrightBottom": 783,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "geometryPass": true,
+      "hitAndDetailIdMatch": true,
+      "selectedCenter": {
+        "projectedY": 186.49980949889868,
+        "expectedY": 186.5,
+        "sheetHeight": 422,
+        "errorY": -0.00019050110131502151,
+        "zoom": 14,
+        "centerInSyntheticFootprint": true
+      },
+      "closed": {
+        "mapBottom": 783,
+        "navTop": 783,
+        "overlap": 0,
+        "copyrightBottom": 783,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "entered": true,
+      "fullscreen": {
+        "childMounted": false,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "restored": {
+        "childMounted": true,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "routeCleanup": true,
+      "centeringCorrection": true,
+      "passed": true
+    }
+  ],
+  "scope": "actual SDK mobile emulation, synthetic public REST, trusted pointer fullscreen and client navigation; not primary timings",
+  "fieldAdmitted": 0,
+  "passed": true
+}

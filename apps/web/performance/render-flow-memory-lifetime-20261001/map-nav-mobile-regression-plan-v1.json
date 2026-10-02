@@ -1,0 +1,18 @@
+{
+  "createdAt": "2026-10-02T13:14:53.435381+00:00",
+  "sourceBefore": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+  "sourceAfter": "a226c28d04a6f9b024cd9cd33b2da9946911cccb",
+  "buildBefore": "nav-v3",
+  "buildAfter": "nav-v4",
+  "scope": "mobile emulation 390x844, CPU4, remote SDK, synthetic735; regression guards for navigation underlap correction",
+  "warmupPairs": 2,
+  "freshProcessPairs": 9,
+  "baselineCullsExpanded": true,
+  "candidateRetainsSmallDesktop": false,
+  "latencyRegressionTolerancePercent": 15,
+  "naturalHeapRegressionTolerancePercent": 20,
+  "naturalHeapEndpoint": "first-visible+600ms before ID serialization; forced GC separately diagnostic",
+  "executionOrder": "alternating AB/BA; new browser process per sample; cache disabled; no SDK or tiles stubs",
+  "aANoise": "Not separately measured for this changed mobile geometry; no speed improvement attribution or p95 is permitted",
+  "existingDesktopEvidence": "Desktop branch unchanged; final-nav-owner-matched-summary-v1.json is earlier source measurement, not relabeled"
+}

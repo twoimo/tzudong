@@ -1,0 +1,118 @@
+{
+  "observedAt": "2026-10-02T07:47:24.464933+00:00",
+  "definition": "unintended absence of a visible marker for more than250ms after provider return into a known nonempty padded viewport; DOM observation only",
+  "pixelCapture": ">=180ms screencast sample interval, max120frames per mobile functional run; short or between-sample pixel flicker not ruled out",
+  "scope": "one source8c-equivalent native tab per browser; sourceguard correction separately verified; actual operational recheck still required",
+  "browsers": {
+    "physical": {
+      "trials": [
+        {
+          "trial": 0,
+          "frames": 64,
+          "initialAbsenceMs": 16.399999997019677,
+          "maxRafGapMs": 116.5,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 1,
+          "frames": 64,
+          "initialAbsenceMs": 14.799999997019768,
+          "maxRafGapMs": 100,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 2,
+          "frames": 66,
+          "initialAbsenceMs": 6.600000000000364,
+          "maxRafGapMs": 116.5,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 3,
+          "frames": 65,
+          "initialAbsenceMs": 15.399999997020132,
+          "maxRafGapMs": 99.79999999999927,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 4,
+          "frames": 65,
+          "initialAbsenceMs": 9.000000005960828,
+          "maxRafGapMs": 116.5,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        }
+      ],
+      "observedCases": 0,
+      "attempts": 5,
+      "trialsWithBlindIntervals": 0,
+      "filmstripFrames": 106,
+      "functionalChecksPassed": 12,
+      "allFramePixelAbsenceDetected": false
+    },
+    "samsung": {
+      "trials": [
+        {
+          "trial": 0,
+          "frames": 66,
+          "initialAbsenceMs": 15.399999997019677,
+          "maxRafGapMs": 166.4000000000001,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 1,
+          "frames": 64,
+          "initialAbsenceMs": 14.1999999940399,
+          "maxRafGapMs": 216.39999999999964,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 2,
+          "frames": 63,
+          "initialAbsenceMs": 9.399999991059303,
+          "maxRafGapMs": 216.39999999999964,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 3,
+          "frames": 65,
+          "initialAbsenceMs": 15.299999999999272,
+          "maxRafGapMs": 199.8000000000011,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        },
+        {
+          "trial": 4,
+          "frames": 63,
+          "initialAbsenceMs": 5.600000000000364,
+          "maxRafGapMs": 233.10000000000036,
+          "blindGapOver250": false,
+          "unintendedInitialAbsenceOver250Observed": false,
+          "markersRestored": true
+        }
+      ],
+      "observedCases": 0,
+      "attempts": 5,
+      "trialsWithBlindIntervals": 0,
+      "filmstripFrames": 109,
+      "functionalChecksPassed": 12,
+      "allFramePixelAbsenceDetected": false
+    }
+  }
+}

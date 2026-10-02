@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-02T14:35:08.130523+00:00",
+  "filesScanned": 2172,
+  "knownConfigurationDeviceIdentityAndPublicContactMatches": 0,
+  "paths": [],
+  "needleValuesSaved": false,
+  "knownMaskPlaceholdersExcluded": true,
+  "limits": [
+    "Known-byte scan plus collector design and inspected screenshots, not exhaustive PII detection",
+    "No cookies/headers/private response bodies/localstorage/heap objects retained"
+  ]
+}

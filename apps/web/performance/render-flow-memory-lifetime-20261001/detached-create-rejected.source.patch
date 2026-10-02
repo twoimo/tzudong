@@ -1,0 +1,54 @@
+diff --git a/apps/web/lib/marker-pool.ts b/apps/web/lib/marker-pool.ts
+index 06fd2796..70021ab7 100644
+--- a/apps/web/lib/marker-pool.ts
++++ b/apps/web/lib/marker-pool.ts
+@@ -151,7 +151,7 @@ export class MarkerPool {
+             marker = new window.naver.maps.Marker({
+                 position, // 초기값
+                 icon,     // 초기값
+-                map,      // 초기값
++                map: null, // Finish icon/position setup before attaching to the map.
+             }) as PooledMarker;
+             isNew = true;
+             this.stats.created++;
+@@ -168,8 +168,8 @@ export class MarkerPool {
+         // [PERFORMANCE] 불필요한 DOM 조작/렌더링 방지
+         // 값이 실제로 변경되었을 때만 setter 호출
+ 
+-        // 1. Map 설정 (새로 생성된 경우 이미 설정됨)
+-        if (!isNew && marker.getMap() !== map) {
++        // 1. Attach only after construction has completed.
++        if (marker.getMap() !== map) {
+             marker.setMap(map);
+         }
+ 
+diff --git a/apps/web/tests-unit/marker-pool.test.ts b/apps/web/tests-unit/marker-pool.test.ts
+index eb4eb03e..e7a7d9c0 100644
+--- a/apps/web/tests-unit/marker-pool.test.ts
++++ b/apps/web/tests-unit/marker-pool.test.ts
+@@ -171,6 +171,7 @@ describe('marker pool', () => {
+     expect(markerPool.get('restaurant-1')).toBe(marker as never);
+     expect(markerPool.has('restaurant-1')).toBe(true);
+     expect(marker.getMap()).toBe('map-1');
++    expect(marker.setMapCalls).toBe(1);
+     expect(markerPool.getStats()).toEqual({
+       created: 1,
+       reused: 0,
+@@ -201,7 +202,7 @@ describe('marker pool', () => {
+     ) as unknown as FakeMarker;
+ 
+     expect(unchanged).toBe(first);
+-    expect(first.setMapCalls).toBe(0);
++    expect(first.setMapCalls).toBe(1);
+     expect(first.setPositionCalls).toBe(0);
+     expect(first.setIconCalls).toBe(0);
+     first.clickListener?.({});
+@@ -214,7 +215,7 @@ describe('marker pool', () => {
+       { content: 'icon-2', anchor: { x: 11, y: 20 } },
+       'map-2',
+     );
+-    expect(first.setMapCalls).toBe(1);
++    expect(first.setMapCalls).toBe(2);
+     expect(first.setPositionCalls).toBe(1);
+     expect(first.setIconCalls).toBe(1);
+     expect(markerPool.getStats().created).toBe(1);

@@ -1,0 +1,31 @@
+{
+  "file": "map-nav-native-samsung-footer-comparison-v1.png",
+  "sources": [
+    {
+      "source": "native-footer-samsung-before-inspected-v1/frame-000.png",
+      "sourceSha256": "834fccd09189837e0e511e7988b8be960a706dfdf18a944ef143f92a9db98142",
+      "cropBox": [
+        0,
+        2400,
+        1440,
+        2880
+      ],
+      "presentationScale": 0.5
+    },
+    {
+      "source": "native-footer-samsung-after-inspected-v1/frame-000.png",
+      "sourceSha256": "774a6f91760663c3ccdcaad1f85923714ff2c4568e391443e68269b848832295",
+      "cropBox": [
+        0,
+        2400,
+        1440,
+        2880
+      ],
+      "presentationScale": 0.5
+    }
+  ],
+  "pixelsNotRecoloredOrRetouched": true,
+  "labelsOutsideCapturedPixels": true,
+  "originalsPreserved": true,
+  "purpose": "footer region comparison; not temporal flicker-rate proof"
+}

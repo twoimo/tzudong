@@ -1,0 +1,151 @@
+{
+  "observedAt": "2026-10-02T08:53:39.328077+00:00",
+  "pr": 3087,
+  "readback": {
+    "baseRefName": "main",
+    "headRefOid": "8d6ffefa4e0eb19976efd38aec1a991cb81ac05b",
+    "mergeCommit": {
+      "oid": "e728c8ec5dc7889028054e9d2346d4ef1cafe184"
+    },
+    "mergedAt": "2026-10-02T08:53:37Z",
+    "state": "MERGED"
+  },
+  "checks": [
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36986528146/job/110772721227",
+      "name": "Promotion Path",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/runs/110756271541",
+      "name": "CodeQL",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981253203/job/110756056410",
+      "name": "Windows Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981251305/job/110756052742",
+      "name": "Analyze (python)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981253213/job/110756056287",
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981253203/job/110756056085",
+      "name": "Windows npm",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981253203/job/110756056286",
+      "name": "Admin",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981253203/job/110756056273",
+      "name": "Install",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981253203/job/110756056323",
+      "name": "Ubuntu Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981251305/job/110756052800",
+      "name": "Analyze (go)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981253203/job/110756056374",
+      "name": "Ubuntu npm",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981251305/job/110756052775",
+      "name": "Analyze (rust)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981251305/job/110756052683",
+      "name": "Analyze (javascript-typescript)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981251305/job/110756052733",
+      "name": "Analyze (actions)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981247092/job/110756036901",
+      "name": "Admin",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981247092/job/110756036915",
+      "name": "Windows Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981247218/job/110756036896",
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981247092/job/110756036829",
+      "name": "Windows npm",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981247092/job/110756036801",
+      "name": "Ubuntu Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981247092/job/110756036546",
+      "name": "Ubuntu npm",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/36981247092/job/110756036840",
+      "name": "Install",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://dashboard.gitguardian.com",
+      "name": "GitGuardian Security Checks",
+      "state": "SUCCESS"
+    }
+  ],
+  "adminOrForceUsed": false,
+  "offscreenProposalRejectedOnMeasurements": true,
+  "rollbackNamedSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "rollbackNamedDeployment": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM"
+}

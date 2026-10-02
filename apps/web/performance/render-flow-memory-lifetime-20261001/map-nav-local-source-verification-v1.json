@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-02T13:11:27.474207+00:00",
+  "freshDevelopSha": "854259a553226c8baeb35e5d18d7437bd3c57ad9",
+  "testedFileSha256": "7fdfd2cec739e5fbc14791b247e8c907ec1af6ac530b50323d94db28ecccf602",
+  "patchSha256": "f8bede10fb45ccedc1a65706bef55ffa57b1ed4a9d77c8ac831188e0e941023d",
+  "sourceFilesChanged": [
+    "apps/web/app/home-runtime-shell.tsx"
+  ],
+  "unit": {
+    "passed": 9,
+    "failed": 0,
+    "assertions": 22
+  },
+  "eslintExit": 0,
+  "typecheckParity": {
+    "status": "passed",
+    "diagnostics": 0
+  },
+  "build": "build-candidate-nav-v4/receipt.json",
+  "browserProof": [
+    "map-nav-occlusion-fullscreen-browser-v2.json",
+    "map-nav-viewports-v1.json"
+  ],
+  "priorUserReportedBlinkFullyIdentified": false,
+  "measuredCause": "map container and SDK badges/copyright continue below translucent navigation; native Samsung pixels and geometry confirm overlap",
+  "expectedEffect": "remove occluded SDK pixels, keep fullscreen map and same navigation styling",
+  "performanceClaim": "geometry correction only; no extra latency or heap reduction percentage claimed"
+}

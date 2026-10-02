@@ -1,0 +1,95 @@
+{
+  "scope": "final mobile map/navigation geometry guard, lab actual SDK, synthetic735, fresh Chrome processes; not physical-device or field memory",
+  "raw": "mobile-emulation-ab-map-nav-mobile-regression-v2/raw.json",
+  "freshProcessesPerVariant": 9,
+  "warmupProcessesPerVariant": 2,
+  "insideProcessMeasuredClusterExpansions": 1,
+  "clickMs": {
+    "unit": "ms",
+    "beforeMedian": 454.89999985694885,
+    "afterMedian": 435.90000009536743,
+    "absoluteReduction": 18.99999976158142,
+    "relativeReductionPercent": 4.176742090032161,
+    "pairedBootstrapReductionCI95": [
+      -10.099999904632568,
+      51.90000009536743
+    ],
+    "beforeMAD": 16.699999809265137,
+    "afterMAD": 19.200000047683716,
+    "beforeRange": [
+      425.5,
+      486.2999999523163
+    ],
+    "afterRange": [
+      403.2000000476837,
+      512.2999999523163
+    ],
+    "regressionTolerancePercent": 15,
+    "regressionPercent": -4.176742090032161,
+    "medianRegressionGuardPassed": true,
+    "improvementClaimed": false,
+    "aANoise": "not measured for this mobile geometry; no noise-separated gain asserted"
+  },
+  "naturalHeap": {
+    "unit": "MB",
+    "beforeMedian": 18.814828,
+    "afterMedian": 19.14902,
+    "absoluteReduction": -0.3341920000000016,
+    "relativeReductionPercent": -1.7762160780848042,
+    "pairedBootstrapReductionCI95": [
+      -0.4370800000000017,
+      -0.09966399999999709
+    ],
+    "beforeMAD": 0.06773999999999702,
+    "afterMAD": 0.06067200000000028,
+    "beforeRange": [
+      18.68524,
+      18.990008
+    ],
+    "afterRange": [
+      18.57196,
+      20.18326
+    ],
+    "regressionTolerancePercent": 20,
+    "regressionPercent": 1.7762160780848042,
+    "medianRegressionGuardPassed": true,
+    "improvementClaimed": false,
+    "aANoise": "not measured for this mobile geometry; no noise-separated gain asserted"
+  },
+  "gcDiagnostic": {
+    "unit": "MB",
+    "beforeMedian": 14.618176,
+    "afterMedian": 14.836304,
+    "absoluteReduction": -0.2181280000000001,
+    "relativeReductionPercent": -1.4921697481272636,
+    "pairedBootstrapReductionCI95": [
+      -0.2215600000000002,
+      -0.21060800000000057
+    ],
+    "beforeMAD": 0.0030319999999992575,
+    "afterMAD": 0.0032239999999994495,
+    "beforeRange": [
+      14.600312,
+      14.6915
+    ],
+    "afterRange": [
+      14.815792,
+      14.904608
+    ],
+    "regressionTolerancePercent": 20,
+    "regressionPercent": 1.4921697481272636,
+    "medianRegressionGuardPassed": true,
+    "improvementClaimed": false,
+    "aANoise": "not measured for this mobile geometry; no noise-separated gain asserted"
+  },
+  "allExactPaddedMembership": true,
+  "fixedCountsPreserved": true,
+  "p95": "not reported; n9",
+  "limitations": [
+    "no mobile A/A matched noise floor",
+    "explicit GC after primary endpoint is diagnostic only",
+    "earlier desktop final-source trials remain bound to their own build source; no relabeling",
+    "two bounded CSP console incidents per lab sample remain retained; no security allowlist relaxed"
+  ],
+  "regressionGuardsPassed": true
+}

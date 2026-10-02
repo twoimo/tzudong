@@ -1,0 +1,69 @@
+{
+  "source": "memory-repeat-compact-v1/raw.json",
+  "windows": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "nCycles": 60,
+      "passed": true,
+      "initial": 31668376,
+      "median": 28613002.0,
+      "range": [
+        20265924,
+        38814396
+      ],
+      "end": 31613188,
+      "last20median": 29218220.0
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "nCycles": 60,
+      "passed": true,
+      "initial": 17848716,
+      "median": 28165512.0,
+      "range": [
+        20346516,
+        52518620
+      ],
+      "end": 27096772,
+      "last20median": 29251746.0
+    },
+    {
+      "run": 2,
+      "kind": "candidate",
+      "nCycles": 60,
+      "passed": true,
+      "initial": 20605996,
+      "median": 30620196.0,
+      "range": [
+        20403588,
+        52991452
+      ],
+      "end": 41040756,
+      "last20median": 31400468.0
+    },
+    {
+      "run": 3,
+      "kind": "baseline",
+      "nCycles": 60,
+      "passed": true,
+      "initial": 31744704,
+      "median": 28910932.0,
+      "range": [
+        20318884,
+        39207528
+      ],
+      "end": 27074784,
+      "last20median": 29328140.0
+    }
+  ],
+  "independentProcessesPerVariant": 2,
+  "cyclesNotIndependentUsers": true,
+  "noLeakProof": true,
+  "forcedGCWaivedBudget": false,
+  "limits": [
+    "GCphases vary and onecandidate end41.04MB vs other27.10MB; disclose endpoints and process/timewindow differences",
+    "finite240cycles alone cannot prove absence of leak"
+  ]
+}

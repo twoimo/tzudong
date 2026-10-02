@@ -1,0 +1,118 @@
+{
+  "observedAt": "2026-10-01T17:42:37.895072+00:00",
+  "pr": "https://github.com/twoimo/tzudong/pull/3082",
+  "state": "MERGED",
+  "head": "18abed3de178fde9628c3929d5e788214a9d9338",
+  "mergeCommit": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "mergedAt": "2026-10-01T17:42:38Z",
+  "checks": [
+    {
+      "name": "Install",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Install",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (actions)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (actions)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Promotion Path",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (go)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (go)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (python)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (python)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (rust)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (rust)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Ubuntu npm",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Ubuntu npm",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows npm",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows npm",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Admin",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Admin",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "CodeQL",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "GitGuardian Security Checks",
+      "state": "SUCCESS"
+    }
+  ]
+}

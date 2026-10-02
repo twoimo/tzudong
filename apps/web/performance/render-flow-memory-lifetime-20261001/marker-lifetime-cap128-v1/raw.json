@@ -1,0 +1,180 @@
+{
+  "intrusive": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "forcedGCWaivesBudget": false,
+  "runs": [
+    {
+      "kind": "baseline",
+      "buildId": "ZHQ4WUAVMUPNgOPyZW60G",
+      "samples": [
+        {
+          "i": 0,
+          "naturalHeap": {
+            "usedSize": 29482628,
+            "totalSize": 59113472,
+            "embedderHeapUsedSize": 19711632,
+            "backingStorageSize": 2575514
+          }
+        },
+        {
+          "i": 1,
+          "naturalHeap": {
+            "usedSize": 25993896,
+            "totalSize": 72876032,
+            "embedderHeapUsedSize": 41429896,
+            "backingStorageSize": 2525423
+          }
+        },
+        {
+          "i": 2,
+          "naturalHeap": {
+            "usedSize": 31340548,
+            "totalSize": 95551488,
+            "embedderHeapUsedSize": 62459976,
+            "backingStorageSize": 2525423
+          }
+        },
+        {
+          "i": 3,
+          "naturalHeap": {
+            "usedSize": 24569700,
+            "totalSize": 95354880,
+            "embedderHeapUsedSize": 37961248,
+            "backingStorageSize": 2525409
+          }
+        },
+        {
+          "i": 4,
+          "naturalHeap": {
+            "usedSize": 28602508,
+            "totalSize": 97845248,
+            "embedderHeapUsedSize": 61340112,
+            "backingStorageSize": 2525409
+          }
+        },
+        {
+          "i": 5,
+          "naturalHeap": {
+            "usedSize": 33228344,
+            "totalSize": 99024896,
+            "embedderHeapUsedSize": 85292400,
+            "backingStorageSize": 2525409
+          }
+        }
+      ],
+      "sdk": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "loaded": true,
+        "stub": false,
+        "remoteScript": true,
+        "mapCaptured": true,
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1
+        },
+        "tiles": 105
+      },
+      "gcDiagnosticHeap": {
+        "usedSize": 18829840,
+        "totalSize": 21823488,
+        "embedderHeapUsedSize": 11140072,
+        "backingStorageSize": 2479874
+      },
+      "liveness": {
+        "created": 572,
+        "liveAfterDiagnosticGC": 572,
+        "active": 571,
+        "detached": 1,
+        "detachedWithAppCallbacks": 1
+      }
+    },
+    {
+      "kind": "candidate",
+      "buildId": "ca9H9FrRNnySvYhYthr6V",
+      "samples": [
+        {
+          "i": 0,
+          "naturalHeap": {
+            "usedSize": 20729040,
+            "totalSize": 59506688,
+            "embedderHeapUsedSize": 15393560,
+            "backingStorageSize": 2467278
+          }
+        },
+        {
+          "i": 1,
+          "naturalHeap": {
+            "usedSize": 25586396,
+            "totalSize": 76677120,
+            "embedderHeapUsedSize": 32050192,
+            "backingStorageSize": 2413848
+          }
+        },
+        {
+          "i": 2,
+          "naturalHeap": {
+            "usedSize": 42537476,
+            "totalSize": 95682560,
+            "embedderHeapUsedSize": 48027928,
+            "backingStorageSize": 2413848
+          }
+        },
+        {
+          "i": 3,
+          "naturalHeap": {
+            "usedSize": 36198928,
+            "totalSize": 103153664,
+            "embedderHeapUsedSize": 63369328,
+            "backingStorageSize": 2413848
+          }
+        },
+        {
+          "i": 4,
+          "naturalHeap": {
+            "usedSize": 18678896,
+            "totalSize": 102301696,
+            "embedderHeapUsedSize": 12213384,
+            "backingStorageSize": 2408228
+          }
+        },
+        {
+          "i": 5,
+          "naturalHeap": {
+            "usedSize": 34411104,
+            "totalSize": 105054208,
+            "embedderHeapUsedSize": 30285208,
+            "backingStorageSize": 2413834
+          }
+        }
+      ],
+      "sdk": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "loaded": true,
+        "stub": false,
+        "remoteScript": true,
+        "mapCaptured": true,
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1
+        },
+        "tiles": 105
+      },
+      "gcDiagnosticHeap": {
+        "usedSize": 18280976,
+        "totalSize": 19726336,
+        "embedderHeapUsedSize": 10514976,
+        "backingStorageSize": 2384323
+      },
+      "liveness": {
+        "created": 3230,
+        "liveAfterDiagnosticGC": 571,
+        "active": 571,
+        "detached": 0,
+        "detachedWithAppCallbacks": 0
+      }
+    }
+  ]
+}

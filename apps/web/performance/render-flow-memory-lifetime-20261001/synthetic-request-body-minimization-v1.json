@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-01T14:58:10.464053+00:00",
+  "reason": "project privacy rule prohibits retained request bodies, including synthetic fixture DTOs; keep only derived metric names/schema/release-match/header absence flags",
+  "files": [
+    {
+      "path": "field-browser-v5/raw.json",
+      "priorFileSha256": "71afe954dfbad8cf2854c64d0204c1a41a02b12213a0d6ceec7cdaa210f51a14",
+      "derivedReceiptCount": 3,
+      "allMetricNamesAndValidationConclusionsPreserved": true
+    },
+    {
+      "path": "field-browser-v3/raw.json",
+      "priorFileSha256": "26eac9304b448580649a5dd86caeb6a1ea379a3f9a9d116260e453ffc987f6c0",
+      "derivedReceiptCount": 1,
+      "allMetricNamesAndValidationConclusionsPreserved": true
+    }
+  ],
+  "sourceBodiesWereSynthetic": true,
+  "actualUserSamples": 0,
+  "rawEventBodiesNowRetained": false,
+  "originalFrozenBaselinesTouched": false,
+  "scope": "unfrozen own instrumentation diagnostics only; no performance raw sample removed"
+}

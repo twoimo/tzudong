@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-02T13:54:08.833603+00:00",
+  "thread": {
+    "id": "PRRT_kwDOQGRyNc6oWh9g",
+    "isResolved": true
+  },
+  "resolutionEvidence": [
+    "map-nav-final-data-source-readback-v1.json",
+    "map-nav-selected-centering-v7.json"
+  ],
+  "noCommentSent": true
+}

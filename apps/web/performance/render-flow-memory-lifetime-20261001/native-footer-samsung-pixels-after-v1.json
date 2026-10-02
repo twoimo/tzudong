@@ -1,0 +1,360 @@
+{
+  "mode": "samsung",
+  "startedAt": "2026-10-02T14:06:43.901Z",
+  "scope": "native screen pixel review, own public home, no location permission/headers/bodies/cookies retained",
+  "captures": [
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-0.png",
+      "t": "2026-10-02T14:06:50.022Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-1.png",
+      "t": "2026-10-02T14:06:51.650Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-2.png",
+      "t": "2026-10-02T14:06:53.248Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-3.png",
+      "t": "2026-10-02T14:06:54.915Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-4.png",
+      "t": "2026-10-02T14:06:57.477Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-5.png",
+      "t": "2026-10-02T14:06:59.140Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-6.png",
+      "t": "2026-10-02T14:07:00.793Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-7.png",
+      "t": "2026-10-02T14:07:02.527Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-8.png",
+      "t": "2026-10-02T14:07:04.610Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-9.png",
+      "t": "2026-10-02T14:07:06.111Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-10.png",
+      "t": "2026-10-02T14:07:07.557Z",
+      "inspected": false
+    },
+    {
+      "temporaryPath": "/tmp/tzudong-owned-native-footer-samsung-after-v1-11.png",
+      "t": "2026-10-02T14:07:09.100Z",
+      "inspected": false
+    }
+  ],
+  "stage": "native pixels",
+  "dom": {
+    "visible": "visible",
+    "oldBottomPulse": false,
+    "shellDisplay": "none",
+    "nav": {
+      "x": 0,
+      "y": 749.7364501953125,
+      "width": 467.1533203125,
+      "height": 60.96918487548828
+    },
+    "underlapping": [
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": 0,
+        "y": 0,
+        "width": 467.1533203125,
+        "height": 810.7056274414062,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "auto",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "flex flex-col bg-background text-foreground overflow-hidden",
+        "x": 0,
+        "y": 0,
+        "width": 467.1533203125,
+        "height": 810.7056274414062,
+        "background": "rgb(251, 250, 248)",
+        "opacity": "1",
+        "z": "auto",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": -107.99878692626953,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": -107.99878692626953,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": 147.99777221679688,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": 147.99777221679688,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": -363.995361328125,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": -363.995361328125,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": 403.9994201660156,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": 403.9994201660156,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": -619.9970092773438,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": -619.9970092773438,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": 659.9959716796875,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": 659.9959716796875,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": -875.9985961914062,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": -875.9985961914062,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": 915.9976196289062,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "IMG",
+        "classes": "",
+        "x": 915.9976196289062,
+        "y": 625.9970092773438,
+        "width": 255.99656677246094,
+        "height": 255.99659729003906,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "0",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": 121.99919128417969,
+        "y": 704.9963989257812,
+        "width": 47.997772216796875,
+        "height": 47.997772216796875,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "auto",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "",
+        "x": 121.99919128417969,
+        "y": 704.9963989257812,
+        "width": 47.997772216796875,
+        "height": 47.997772216796875,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "auto",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "cluster-marker-container",
+        "x": 121.99919128417969,
+        "y": 704.9963989257812,
+        "width": 47.997772216796875,
+        "height": 47.997772216796875,
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "z": "103",
+        "animation": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "cluster-count-badge",
+        "x": 147.83050537109375,
+        "y": 734.5534057617188,
+        "width": 26.165857315063477,
+        "height": 22.440187454223633,
+        "background": "rgba(0, 0, 0, 0.75)",
+        "opacity": "1",
+        "z": "104",
+        "animation": "none"
+      }
+    ]
+  },
+  "geometry": {
+    "mapBottom": 749.7060546875,
+    "navTop": 749.7364501953125,
+    "overlap": 0,
+    "copyrightBottom": 749.7060203552246,
+    "viewport": {
+      "width": 467,
+      "height": 810,
+      "dpr": 3.0824999809265137
+    }
+  },
+  "geometryPass": true,
+  "captureComplete": true,
+  "passed": true,
+  "endedAt": "2026-10-02T14:07:09.256Z"
+}

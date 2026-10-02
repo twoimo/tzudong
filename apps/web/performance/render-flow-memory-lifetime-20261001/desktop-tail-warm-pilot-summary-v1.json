@@ -1,0 +1,38 @@
+{
+  "source": "memory-repeat-desktop-tail-pilot-v1/raw.json",
+  "rows": [
+    {
+      "kind": "baseline",
+      "median": 27892664.0,
+      "peak": 38086384,
+      "end": 26256696,
+      "n": 20,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 30420492.0,
+      "peak": 44941908,
+      "end": 30583588,
+      "n": 20,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 30401588.0,
+      "peak": 31360680,
+      "end": 30634428,
+      "n": 20,
+      "passed": true
+    },
+    {
+      "kind": "baseline",
+      "median": 27672198.0,
+      "peak": 36873912,
+      "end": 26344980,
+      "n": 20,
+      "passed": true
+    }
+  ],
+  "pilotNoInference": true
+}

@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-02T11:35:33.839132+00:00",
+  "exactProjectVerified": true,
+  "sourceDeployment": "dpl_ELXBuvG4rQ7MgDvcW6fmdJB8AYQ9",
+  "sourceGitSha": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+  "target": "production",
+  "cliExit": 0,
+  "returnedDeploymentUrls": [
+    "https://tzudong-q01xhhc9x-twoimos-projects.vercel.app"
+  ],
+  "requestSpentOnce": true,
+  "privateProviderDiagnosticsRetained": false,
+  "nextAction": "independent deployment READY/Git SHA/alias readback before any retry"
+}

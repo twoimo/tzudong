@@ -1,0 +1,7 @@
+{
+  "sourceGit": "59ad8be44f5c4aa668b3c6860724904ae400803f",
+  "sourcePath": "apps/web/performance/render-flow-20260930/resources.mjs",
+  "sha256": "7e4a04525ed16446fde58c08fc18c6b36c000de9bb3de9234bd4107966ace091",
+  "alsoPresentInPriorMain": true,
+  "replay": "in an owned replay copy, install this exact helper at sibling render-flow-20260930/resources.mjs before running retained original scripts; never overwrite frozen evidence"
+}

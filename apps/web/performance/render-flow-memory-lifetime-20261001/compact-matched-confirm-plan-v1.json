@@ -1,0 +1,27 @@
+{
+  "createdAt": "2026-10-01T14:54:54.025542+00:00",
+  "baselineCullsExpanded": true,
+  "candidateRetainsSmallDesktop": false,
+  "baselineBuild": "field-control-v3",
+  "candidateBuild": "compact-v1",
+  "independentProcessesPerVariant": 9,
+  "warmupPairs": 2,
+  "aaPairs": 9,
+  "cpuRate": 4,
+  "viewport": [
+    1440,
+    900
+  ],
+  "count": 735,
+  "endpoint": "trustedcluster click to2visible rAF; naturalheap+600ms before IDs/diagnosticGC",
+  "budget": {
+    "latencyRegressionPercent": 15,
+    "originalDaNaturalHeapIncreasePercent": 20
+  },
+  "acceptance": "same-environment original da735 also required; matched fieldcode control isolates duplicate pass effect; noGC/noise waiver",
+  "originalBaseline": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "sourceScope": "isolatecompaction+duplicatedpass vsnewfieldmatchedcontrol",
+  "originalBudget": "originalconfirmedseparately,neverrebased"
+}

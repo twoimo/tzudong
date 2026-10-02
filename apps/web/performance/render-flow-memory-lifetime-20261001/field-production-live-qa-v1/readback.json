@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-01T18:04:51.233065+00:00",
+  "qaDocument": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "productionWritesRequested": false,
+  "interactiveSnapshotNonempty": true,
+  "safeEvaluation": "\"{\\\"sdkLoaded\\\":false,\\\"stub\\\":false,\\\"mapContainerPresent\\\":false,\\\"overflow\\\":0,\\\"qaExclusionQuery\\\":true,\\\"viewport\\\":{\\\"width\\\":1280,\\\"height\\\":633}}\"",
+  "passed": true
+}

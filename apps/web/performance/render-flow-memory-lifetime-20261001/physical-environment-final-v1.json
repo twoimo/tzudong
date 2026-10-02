@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-02T05:42:32.965823+00:00",
+  "model": "SM-S928N",
+  "androidRelease": "16",
+  "browserVersions": {
+    "com.android.chrome": "154.0.8037.92",
+    "com.sec.android.app.sbrowser": "30.0.5.24"
+  },
+  "transport": "current online authorized ADB network transport; same-device identity compared only in memory",
+  "identifiersOrEndpointsSaved": false,
+  "nativeCpuThrottling": 1,
+  "actualSdkAndTiles": "live remote Naver; data synthetic735; loopback exact production assets",
+  "privateDeviceSettingsChanged": false
+}

@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-01T16:00:49.437363+00:00",
+  "migration": "20261001152740_app_web_vitals_ingest_budget.sql",
+  "providerApplySuccess": true,
+  "rlsEnabled": true,
+  "anonRead": false,
+  "authenticatedWrite": false,
+  "anonRpc": false,
+  "serverRpc": true,
+  "securityDefiner": false,
+  "budgetRows": 0,
+  "collectorNotDeployedYet": true,
+  "rawProviderDiagnosticsSaved": false
+}

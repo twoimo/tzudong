@@ -1,0 +1,31 @@
+{
+  "observedAt": "2026-10-02 14:35:05 UTC",
+  "servingSourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "rows": [
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 120,
+      "sample_count": 1
+    }
+  ],
+  "matchedBeforeAfterCohortAvailable": false,
+  "fieldImprovementProven": false,
+  "syntheticQaSamplesAdmitted": 0,
+  "limits": [
+    "Old release CLS1 interval[0,.01); LCP1 overflow>=12000ms; INP0",
+    "New release has no sufficient admitted cohort; metric instances do not establish independent human users"
+  ]
+}

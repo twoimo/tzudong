@@ -1,0 +1,40 @@
+{
+  "source": "memory-repeat-desktop-css-confirm-v1/raw.json",
+  "runs": [
+    {
+      "kind": "baseline",
+      "median": 28257950.0,
+      "peak": 37377884,
+      "end": 27061240,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 30602450.0,
+      "peak": 31158792,
+      "end": 31105824,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "candidate",
+      "median": 30595426.0,
+      "peak": 31137300,
+      "end": 31113632,
+      "n": 60,
+      "passed": true
+    },
+    {
+      "kind": "baseline",
+      "median": 28205820.0,
+      "peak": 37156120,
+      "end": 27050956,
+      "n": 60,
+      "passed": true
+    }
+  ],
+  "nIndependentProcessesPerVariant": 2,
+  "legacyProbeCodeSame": true,
+  "noLeakProofNoGCWaiver": true
+}

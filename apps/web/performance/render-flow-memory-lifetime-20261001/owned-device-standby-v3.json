@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-02T11:35:28.198Z",
+  "purpose": "keep only owned QA page visible during protected release checks, without changing phone settings",
+  "fieldAdmitted": 0,
+  "wake": {
+    "held": true,
+    "visible": true
+  },
+  "endedAt": "2026-10-02T11:46:08.217Z"
+}

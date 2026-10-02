@@ -1,0 +1,7 @@
+/** Only for our generated flex/absolute marker markup, never arbitrary HTML. */
+export function compactGeneratedMarkerHtml(html: string): string {
+    return html.trim()
+        .replace(/>\s+</g, '><')
+        .replace(/\bstyle="([^"]*)"/g, (_attribute, css: string) =>
+            `style="${css.trim().replace(/\s+/g, ' ')}"`);
+}

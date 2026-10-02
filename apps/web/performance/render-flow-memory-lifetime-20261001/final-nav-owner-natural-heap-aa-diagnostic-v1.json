@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-02T11:03:14.644469+00:00",
+  "aaPairs": 9,
+  "absolutePairDifferencesMB": [
+    3.302123999999999,
+    3.390767999999998,
+    3.759619999999998,
+    7.319044000000002,
+    7.556736000000001,
+    7.696816000000002,
+    7.954252,
+    8.020076,
+    13.860243999999998
+  ],
+  "medianAbsoluteDifferenceMB": 7.556736000000001,
+  "p95AbsoluteDifferenceMB": 11.524176799999996,
+  "maxDifferenceMB": 13.860243999999998,
+  "interpretation": "natural heap GC phase remains variable; paired contrast does not establish precise incremental gain from skeleton correction; original regression guards unchanged"
+}

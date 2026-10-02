@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-02T13:18:48.132606+00:00",
+  "sourceSha": "a226c28d04a6f9b024cd9cd33b2da9946911cccb",
+  "testedProductionBuild": "build-candidate-nav-v4/receipt.json",
+  "allBuildInputsMatchGitSource": true,
+  "matchedInputs": 18,
+  "existingFooterRemovalAndFullscreenLifecyclePreserved": true,
+  "mobileRegressionSummary": "map-nav-mobile-regression-summary-v1.json",
+  "guardsPassed": true
+}

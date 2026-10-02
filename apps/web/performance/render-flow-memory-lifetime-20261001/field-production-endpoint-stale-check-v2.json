@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-01T18:16:39.277656+00:00",
+  "httpStatus": 409,
+  "fixedResponseCode": "field_release_stale",
+  "cloudflareServer": true,
+  "cfChallenge": false,
+  "htmlBody": false,
+  "requestBodyAndHeadersSaved": false,
+  "staleRejectProof": true,
+  "validMetricWriteRequested": false
+}

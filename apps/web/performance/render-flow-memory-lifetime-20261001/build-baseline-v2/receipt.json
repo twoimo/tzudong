@@ -1,0 +1,33 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+  "distDir": ".next-real-sdk-baseline-v2-20260930",
+  "buildId": "Lpl8FrdQRmcduY92f8Q15",
+  "patchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "5d2340aaf7ddbbf05053eff80d8a158ea662b6d4664dd70ec1513bcd7307c897"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "bccf1b16dc26c8a07a50752b4d09ee16ad79309375d93f22bca40109e5c996db"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "257c92fb86c074eec78c91e8086dfec82aa74499abdb055f55147fcc8ac52185"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    }
+  ],
+  "node": "v24.21.0",
+  "configurationNames": [
+    "NEXT_PUBLIC_NAVER_CLIENT_ID",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL"
+  ],
+  "sdk": "actual remote Naver SDK, not local stub",
+  "privateConfigurationInArtifacts": false
+}

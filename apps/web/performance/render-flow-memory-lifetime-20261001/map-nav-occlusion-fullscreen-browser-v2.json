@@ -1,0 +1,127 @@
+{
+  "cases": [
+    {
+      "label": "nav-v3",
+      "initial": {
+        "mapBottom": 844,
+        "navTop": 783,
+        "overlap": 61,
+        "copyrightBottom": 844,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "geometryPass": true,
+      "closed": {
+        "mapBottom": 844,
+        "navTop": 783,
+        "overlap": 61,
+        "copyrightBottom": 844,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "entered": true,
+      "fullscreen": {
+        "childMounted": false,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "restored": {
+        "childMounted": true,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "routeCleanup": true,
+      "mapNavOcclusionChanged": false,
+      "passed": true
+    },
+    {
+      "label": "nav-v4",
+      "initial": {
+        "mapBottom": 783,
+        "navTop": 783,
+        "overlap": 0,
+        "copyrightBottom": 783,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "geometryPass": true,
+      "closed": {
+        "mapBottom": 783,
+        "navTop": 783,
+        "overlap": 0,
+        "copyrightBottom": 783,
+        "navBackground": "oklab(0.986334 0.000463039 0.00282168 / 0.95)"
+      },
+      "entered": true,
+      "fullscreen": {
+        "childMounted": false,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "restored": {
+        "childMounted": true,
+        "readyAttribute": true,
+        "skeletonDisplay": "none",
+        "bottomRectangles": 0,
+        "mapCreates": 1,
+        "mapBox": {
+          "top": 0,
+          "bottom": 844,
+          "width": 390,
+          "height": 844
+        },
+        "navBox": {
+          "top": 856.2000122070312,
+          "bottom": 917.2000122070312,
+          "height": 61
+        },
+        "viewportHeight": 844
+      },
+      "routeCleanup": true,
+      "mapNavOcclusionChanged": true,
+      "passed": true
+    }
+  ],
+  "scope": "actual SDK mobile emulation, synthetic public REST, trusted pointer fullscreen and client navigation; not primary timings",
+  "fieldAdmitted": 0,
+  "passed": true
+}

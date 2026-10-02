@@ -1,0 +1,101 @@
+{
+  "sourceRaw": "native-footer-samsung-pixel-review-v6.json",
+  "frames": [
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-000.png",
+      "sha256": "834fccd09189837e0e511e7988b8be960a706dfdf18a944ef143f92a9db98142",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:54:59.315Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-001.png",
+      "sha256": "678447a6af68e8871815513088f4e1b1e5b11eba8fdf1ae89d4a51bac56c9306",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:01.035Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-002.png",
+      "sha256": "c52b123e6d9449fbab8b996145acc515c26be91011711357e44a0f40cf6778ff",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:02.719Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-003.png",
+      "sha256": "c52b123e6d9449fbab8b996145acc515c26be91011711357e44a0f40cf6778ff",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:04.277Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-004.png",
+      "sha256": "dfb4383e73cb621d4ab21d5609aee9dfb239e3dba8d57e0fc0e4965c1897e90c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:06.769Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-005.png",
+      "sha256": "dfb4383e73cb621d4ab21d5609aee9dfb239e3dba8d57e0fc0e4965c1897e90c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:08.478Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-006.png",
+      "sha256": "dfb4383e73cb621d4ab21d5609aee9dfb239e3dba8d57e0fc0e4965c1897e90c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:10.153Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-007.png",
+      "sha256": "dfb4383e73cb621d4ab21d5609aee9dfb239e3dba8d57e0fc0e4965c1897e90c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:11.886Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-008.png",
+      "sha256": "f0144c2de03b9373872c90ddf02e3d7aeb689f6f91df9080e3eccd2b821303d3",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:14.252Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-009.png",
+      "sha256": "f0144c2de03b9373872c90ddf02e3d7aeb689f6f91df9080e3eccd2b821303d3",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:15.715Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-010.png",
+      "sha256": "f0144c2de03b9373872c90ddf02e3d7aeb689f6f91df9080e3eccd2b821303d3",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:17.207Z"
+    },
+    {
+      "file": "native-footer-samsung-before-inspected-v1/frame-011.png",
+      "sha256": "f0144c2de03b9373872c90ddf02e3d7aeb689f6f91df9080e3eccd2b821303d3",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T12:55:18.742Z"
+    }
+  ],
+  "legacyBottomRectangleObserved": 0,
+  "underlapConfirmed": true,
+  "nativePixelInterpretation": "Map/copyright visible behind translucent navigation; no new 56px pulse in these samples. Exact user-reported intermittent rectangle identity not established.",
+  "intervalMs": {
+    "min": 1462.9998207092285,
+    "median": 1684.000015258789,
+    "max": 2492.000102996826
+  },
+  "independentDevices": 1,
+  "ownedVisits": 1,
+  "limits": "1.5-2.8s sparse captures plus pauses/pans; does not establish blink incidence or exclude short compositor artifacts",
+  "temporaryCaptureFilesRemovedAfterInspection": true
+}

@@ -1,0 +1,98 @@
+diff --git a/apps/web/app/home-runtime-shell.tsx b/apps/web/app/home-runtime-shell.tsx
+index e816c816..ace6fb51 100644
+--- a/apps/web/app/home-runtime-shell.tsx
++++ b/apps/web/app/home-runtime-shell.tsx
+@@ -338,7 +338,14 @@ function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
+     return (
+         <div
+             className={`flex flex-col bg-background text-foreground${isMobile ? ' overflow-hidden' : ''}`}
+-            style={{ height: 'var(--full-height, 100vh)' }}
++            style={{
++                height: 'var(--full-height, 100vh)',
++                // The measured nav height already includes its safe area. Keep
++                // SDK tiles/markers outside the visible bar; fullscreen uses 0.
++                paddingBottom: isMobile && !isPublicRestrictedMode
++                    ? 'var(--mobile-bottom-nav-effective-height, var(--mobile-bottom-nav-height, calc(60px + env(safe-area-inset-bottom))))'
++                    : undefined,
++            }}
+         >
+             <a href="#main-content" className="skip-link">
+                 본문 바로가기
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index c9b02a18..64f1f1fa 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -182,7 +182,7 @@ import {
+ import { NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS } from "@/lib/naver-map-overlay-timings";
+ import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
+ import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
+-import { resolveNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
++import { resolveNaverMobileVerticalOffset, resolveNaverOccludingNavHeight } from "@/lib/naver-map-mobile-offset-helpers";
+ import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
+ import { buildResetUserMapMovementHandler } from "@/lib/naver-map-user-movement-helpers";
+ import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
+@@ -1456,16 +1456,18 @@ const NaverMapView = memo(({
+             });
+         }
+ 
+-        const navHeight = parseFloat(
++        const measuredNavHeight = parseFloat(
+             getComputedStyle(document.documentElement)
+                 .getPropertyValue('--mobile-bottom-nav-effective-height')
+-        ) || 60;
++        );
++        const navHeight = Number.isFinite(measuredNavHeight) ? Math.max(0, measuredNavHeight) : 60;
+         const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
++        const mapHeight = mapInstanceRef.current?.getSize().height ?? viewportHeight;
+ 
+         return resolveNaverMobileVerticalOffset({
+             fineTunePx: MOBILE_MARKER_CENTER_FINE_TUNE_PX,
+             isMobileOrTablet,
+-            navHeight,
++            navHeight: resolveNaverOccludingNavHeight({ navHeight, viewportHeight, mapHeight }),
+             sheetHeightPercent: mobileSheetHeightPercent,
+             viewportHeight,
+         });
+diff --git a/apps/web/lib/naver-map-mobile-offset-helpers.ts b/apps/web/lib/naver-map-mobile-offset-helpers.ts
+index e363be7a..3154d60d 100644
+--- a/apps/web/lib/naver-map-mobile-offset-helpers.ts
++++ b/apps/web/lib/naver-map-mobile-offset-helpers.ts
+@@ -1,3 +1,16 @@
++export function resolveNaverOccludingNavHeight({
++    navHeight,
++    viewportHeight,
++    mapHeight,
++}: {
++    navHeight: number;
++    viewportHeight: number;
++    mapHeight: number;
++}) {
++    const reservedHeight = Math.max(0, viewportHeight - mapHeight);
++    return Math.max(0, navHeight - reservedHeight);
++}
++
+ export function calculateNaverMobileVerticalOffset({
+     fineTunePx,
+     navHeight,
+diff --git a/apps/web/tests-unit/naver-map-mobile-offset-helpers.test.ts b/apps/web/tests-unit/naver-map-mobile-offset-helpers.test.ts
+index d48b87f1..ace090a0 100644
+--- a/apps/web/tests-unit/naver-map-mobile-offset-helpers.test.ts
++++ b/apps/web/tests-unit/naver-map-mobile-offset-helpers.test.ts
+@@ -3,9 +3,17 @@ import { describe, expect, test } from 'bun:test';
+ import {
+     calculateNaverMobileVerticalOffset,
+     resolveNaverMobileVerticalOffset,
++    resolveNaverOccludingNavHeight,
+ } from '../lib/naver-map-mobile-offset-helpers';
+ 
+ describe('naver map mobile offset helpers', () => {
++    test('subtracts only the navigation height still occluding the SDK map', () => {
++        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 844 })).toBe(61);
++        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 783 })).toBe(0);
++        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 813 })).toBe(30);
++        expect(resolveNaverOccludingNavHeight({ navHeight: 0, viewportHeight: 844, mapHeight: 844 })).toBe(0);
++        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 700 })).toBe(0);
++    });
+     test('calculates centered vertical offset from sheet and nav heights', () => {
+         expect(calculateNaverMobileVerticalOffset({
+             fineTunePx: -6,

@@ -1,0 +1,23 @@
+{
+  "createdAt": "2026-10-01T12:32:31.345591+00:00",
+  "baselineCullsExpanded": true,
+  "candidateRetainsSmallDesktop": false,
+  "baselineBuild": "control-v4",
+  "candidateBuild": "detached-create-v1",
+  "independentProcessesPerVariant": 2,
+  "warmupPairs": 0,
+  "cpuRate": 4,
+  "viewport": [
+    1440,
+    900
+  ],
+  "naturalHeapEndpoint": "originalclick firstvisible+600ms beforeIDs/diagnosticGC",
+  "budgetsUnchanged": {
+    "latencyRegressionPercent": 15,
+    "naturalHeapRegressionPercent": 20
+  },
+  "pilotNotInferential": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "harnessSha256": "944a9afc1969b253a1f62fdcfd5fab2d4e162820c0774c4667710ef950f8940a"
+}

@@ -1,0 +1,7 @@
+{
+  "source": "memory-repeat-desktop-tail-minimal-v1/raw.json",
+  "valid": false,
+  "reason": "diagnostic initScript missing captureFrames argument binding; fixturefailedbeforefirstvisible measurement, zero admission",
+  "fixedBy": "explicit destructured initarg in v2runtime; all original/source measurements retained",
+  "fieldAdmitted": 0
+}

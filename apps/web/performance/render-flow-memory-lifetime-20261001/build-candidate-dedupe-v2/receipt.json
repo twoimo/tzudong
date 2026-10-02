@@ -1,0 +1,41 @@
+{
+  "kind": "candidate",
+  "sourceCommit": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+  "distDir": ".next-real-sdk-candidate-dedupe-v2-20260930",
+  "buildId": "f60KBhi1z4Ew9B3KF8GH3",
+  "patchSha256": "27ef237361ed0e2d18330546dbf242687f32545455f348fe87052157a01c3e99",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "d85689507d26e054f3741ed0fec9f02adf01685c6f4ba1fe8cfc03b67f8d7d90"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "0816449fe7d1d94f59f555198a77a266b9d346ffbf797275695e0eecd67edade"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    }
+  ],
+  "node": "v24.21.0",
+  "configurationNames": [
+    "NEXT_PUBLIC_NAVER_CLIENT_ID",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL"
+  ],
+  "sdk": "actual remote Naver SDK, not local stub",
+  "privateConfigurationInArtifacts": false
+}

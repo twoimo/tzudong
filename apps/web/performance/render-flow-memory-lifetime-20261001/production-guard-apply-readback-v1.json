@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-10-02T08:56:11.566909+00:00",
+  "project": "tzudong",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "newProtectedMainSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "envId": "i4fHH6tbzAA1jtCM",
+  "guardKey": "TZUDONG_APPROVED_PRODUCTION_SHA",
+  "guardType": "sensitive",
+  "scope": [
+    "production"
+  ],
+  "rollbackSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "rollbackDeployment": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM",
+  "rollbackReadyState": "READY",
+  "otherEnvVarsChanged": false,
+  "guardDisabled": false,
+  "applied": true,
+  "appliedAt": "2026-10-02T08:56:13.740115+00:00",
+  "independentMetadataReadback": {
+    "id": "i4fHH6tbzAA1jtCM",
+    "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+    "type": "sensitive",
+    "target": [
+      "production"
+    ],
+    "updatedAt": 1790931372460
+  },
+  "sensitiveValueReadbackStored": false,
+  "exactValueWillBeVerifiedBySuccessfulGuardedBuild": true
+}

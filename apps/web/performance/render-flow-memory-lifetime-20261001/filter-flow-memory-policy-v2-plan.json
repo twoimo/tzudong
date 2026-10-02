@@ -1,0 +1,38 @@
+{
+  "createdAt": "2026-10-02T05:51:35.191211+00:00",
+  "scope": "trusted actual SDK category empty/reset: current field source vs final shared CSS/deferred marker lifetime candidate; lab, notfield",
+  "abPairs": 9,
+  "aaPairs": 5,
+  "cyclesPerProcess": 4,
+  "warmupCyclesPerProcess": 1,
+  "driverExecutionsPerCell": 1,
+  "independentUnit": "fresh browser process; median of 3 measured cycles per process; no cycle pseudoreplication",
+  "order": "alternating AB/BA, AA two same control processes",
+  "builds": {
+    "baseline": "recovery-control-v1",
+    "candidate": "recovery-css-v2"
+  },
+  "viewport": [
+    1440,
+    900
+  ],
+  "cpu": 4,
+  "cache": "fresh context cacheDisabled/bypassSW; warm app state within process",
+  "data": 735,
+  "network": "native actual SDK/tiles, local fixture; same loopback transport/CSP",
+  "endpoint": "trusted reset click to original expanded membership restored in two rAF; Before571 padded markers / After735 full small desktop markers; exact independent IDs validated per role",
+  "heap": "natural Runtime.getHeapUsage 1000ms after return before IDserialization; no explicitGC",
+  "latencyRegressionPercent": 15,
+  "memoryRegressionPercent": 20,
+  "noiseBudget": "max(25ms,15% before median,max absolute AA paired process median delta,AA median drift)",
+  "proof": "both paired and ABBA block bootstrap95 lower bounds exceed noise; practical 25ms minimum; n9 no p95; report process median MAD",
+  "cold20percentBudgetWaived": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "harnessSha256": "d2ac10931c9ba6fed890a8eb86868b21d5340ec1d0ce691b99487698041cfb57",
+  "expectedCounts": {
+    "baseline": 571,
+    "candidate": 735
+  },
+  "harnessVersion": "filter-flow-memory-policy-v2.mjs"
+}

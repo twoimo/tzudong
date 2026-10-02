@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-01T17:58:59.245426+00:00",
+  "projectVerified": true,
+  "deployment": {
+    "id": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM",
+    "state": "READY",
+    "gitSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+    "url": "tzudong-ib4jq4sah-twoimos-projects.vercel.app"
+  },
+  "aliasDeploymentId": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM",
+  "aliasMatches": true,
+  "expectedMainSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "collectorSourceInProduction": true,
+  "actualFieldImprovementProven": false,
+  "rawProviderDiagnosticsSaved": false
+}

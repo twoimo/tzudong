@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-02T06:48:24.095078+00:00",
+  "thread": "PRRT_kwDOQGRyNc6oPWhY",
+  "fixPr": 3085,
+  "mergedDevelop": "248000e1b455c30802f3299de7c6e97a44bc210b",
+  "readback": "both conditional branch resets and successful completion reset present in actual develop Git blob",
+  "resolvedOnlyAfterFixMerged": true,
+  "messagesSentToOthers": false
+}

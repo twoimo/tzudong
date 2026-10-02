@@ -1,0 +1,7 @@
+{
+  "sourceSha": "48090a1f8bb1c9ec129f959231e34fe5db2f905f",
+  "testedProductionInputs": 19,
+  "allHashMatch": true,
+  "centeringGeometry": "map-nav-selected-centering-v7.json",
+  "viewports": "map-nav-final-viewports-v1.json"
+}

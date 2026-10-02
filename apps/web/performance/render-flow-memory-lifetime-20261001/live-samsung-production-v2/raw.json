@@ -1,0 +1,65 @@
+{
+  "mode": "samsung",
+  "label": "production-v2",
+  "startedAt": "2026-10-02T09:24:23.627Z",
+  "url": "https://www.tzudong.app/ with anonymous QA exclusion",
+  "fieldAdmitted": 0,
+  "fixtureResponsesUsed": false,
+  "sdkStubUsed": false,
+  "privateRequestsHeadersBodiesOrLocationRetained": false,
+  "checks": [
+    {
+      "name": "real HTTPS home SDK and content ready",
+      "passed": true
+    },
+    {
+      "name": "live cluster expansion",
+      "passed": true,
+      "observed": {
+        "markers": 91,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      }
+    },
+    {
+      "name": "live marker detail opens",
+      "passed": true
+    },
+    {
+      "name": "live detail close",
+      "passed": true
+    },
+    {
+      "name": "live empty search",
+      "passed": true
+    }
+  ],
+  "errors": {
+    "page": 0,
+    "console": 0
+  },
+  "passed": true,
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "viewport": {
+      "width": 467,
+      "height": 810,
+      "dpr": 3.0824999809265137
+    },
+    "visible": "visible",
+    "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+    "mapCreates": 1,
+    "clusters": 16,
+    "markers": 0,
+    "overflow": 0
+  },
+  "finalState": {
+    "visible": "visible",
+    "mapCreates": 1,
+    "overflow": 0
+  },
+  "endedAt": "2026-10-02T09:24:29.317Z"
+}

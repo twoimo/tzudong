@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-01T16:40:10.097090+00:00",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "repo": "tzudong",
+    "rootDirectory": "apps/web"
+  },
+  "alias": {
+    "name": "www.tzudong.app",
+    "deploymentId": "dpl_Bqn6DMs8GqrBnGJMLbM8xhFV2Vei"
+  },
+  "deployment": {
+    "id": "dpl_Bqn6DMs8GqrBnGJMLbM8xhFV2Vei",
+    "state": "READY",
+    "gitSha": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+    "url": "tzudong-dc1irj85m-twoimos-projects.vercel.app"
+  },
+  "namedRollbackSha": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+  "namedRollbackDeployment": "dpl_Bqn6DMs8GqrBnGJMLbM8xhFV2Vei",
+  "newDeployPerformed": false,
+  "rawProviderDataSaved": false
+}

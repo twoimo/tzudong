@@ -1,0 +1,30 @@
+{
+  "createdAt": "2026-10-01T17:16:25.802177+00:00",
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "buildRoles": {
+    "baseline": "baseline",
+    "candidate": "candidate"
+  },
+  "buildLabels": {
+    "baseline": "field-control-v3",
+    "candidate": "compact-cap128-v1"
+  },
+  "cyclesPerFreshBrowserProcess": 60,
+  "awayMs": 350,
+  "returnSettleMs": 1000,
+  "count": 735,
+  "cpu": 4,
+  "heap": "naturalbeforeIDserialization/noforcedGC",
+  "budgetsUnchanged": {
+    "originalNaturalEndpointGrowthPercent": 20,
+    "latencyRegressionPercent": 15
+  },
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "scope": "full60ABBA4freshprocesses verifies newcap128peakandcorrectness; no60independentusers/noforcedGC"
+}

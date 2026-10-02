@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-02T12:03:15.776Z",
+  "scope": "read-only existing Tzudong home documents; no navigation/foreground/text/URL/cookie/storage/screenshot retained",
+  "rows": [
+    {
+      "browser": "Chrome",
+      "debugEndpointUnavailable": true
+    },
+    {
+      "browser": "Samsung Internet",
+      "boundedReadUnavailable": true
+    }
+  ]
+}

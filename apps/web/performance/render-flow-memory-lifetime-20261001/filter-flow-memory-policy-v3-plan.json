@@ -1,0 +1,43 @@
+{
+  "createdAt": "2026-10-02T06:54:59.884302+00:00",
+  "scope": "trusted actual SDK category empty/reset: current field source vs final shared CSS/deferred marker lifetime candidate; lab, notfield",
+  "abPairs": 9,
+  "aaPairs": 5,
+  "cyclesPerProcess": 4,
+  "warmupCyclesPerProcess": 1,
+  "driverExecutionsPerCell": 1,
+  "independentUnit": "fresh browser process; median of 3 measured cycles per process; no cycle pseudoreplication",
+  "order": "alternating AB/BA, AA two same control processes",
+  "builds": {
+    "baseline": "recovery-control-v1",
+    "candidate": "retry-v1"
+  },
+  "viewport": [
+    1440,
+    900
+  ],
+  "cpu": 4,
+  "cache": "fresh context cacheDisabled/bypassSW; warm app state within process",
+  "data": 735,
+  "network": "native actual SDK/tiles, local fixture; same loopback transport/CSP",
+  "endpoint": "trusted reset click after category empty clears expansion via existing filterSignature effect; both roles restore the same exact571 padded IDs in two rAF",
+  "heap": "natural Runtime.getHeapUsage 1000ms after return before IDserialization; no explicitGC",
+  "latencyRegressionPercent": 15,
+  "memoryRegressionPercent": 20,
+  "noiseBudget": "max(25ms,15% before median,max absolute AA paired process median delta,AA median drift)",
+  "proof": "both paired and ABBA block bootstrap95 lower bounds exceed noise; practical 25ms minimum; n9 no p95; report process median MAD",
+  "cold20percentBudgetWaived": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "harnessSha256": "9476701a37f46e247c78be331ceb5752ecf1a72bb075783d44de440475c37833",
+  "expectedCounts": {
+    "baseline": 571,
+    "candidate": 571
+  },
+  "harnessVersion": "filter-flow-memory-policy-v3.mjs",
+  "initialExpectedCounts": {
+    "baseline": 571,
+    "candidate": 735
+  },
+  "correctsPriorUnexecutedPlan": "v2 assumed735 after reset, but source filterSignature explicitly clears expanded IDs; criterion corrected from code before executing filter trials or viewing timings"
+}

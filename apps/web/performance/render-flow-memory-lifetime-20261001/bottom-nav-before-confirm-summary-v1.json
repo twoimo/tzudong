@@ -1,0 +1,75 @@
+{
+  "observedAt": "2026-10-02T09:40:20.114969+00:00",
+  "rows": [
+    {
+      "mode": "physical",
+      "label": "before-confirm1",
+      "passed": true,
+      "nFrames": 30,
+      "framesWithRectangle": 30,
+      "visitsWithStaleRectangle": 1,
+      "chromeReadyAll": true,
+      "desktopPanelReadyAny": false,
+      "opacityMin": 0.500671,
+      "opacityMax": 0.999546,
+      "maxExposedCssHeight": 7.121337890625,
+      "navButtons": [
+        5,
+        5
+      ]
+    },
+    {
+      "mode": "physical",
+      "label": "before-confirm2",
+      "passed": true,
+      "nFrames": 30,
+      "framesWithRectangle": 30,
+      "visitsWithStaleRectangle": 1,
+      "chromeReadyAll": true,
+      "desktopPanelReadyAny": false,
+      "opacityMin": 0.50066,
+      "opacityMax": 0.999263,
+      "maxExposedCssHeight": 7.121337890625,
+      "navButtons": [
+        5,
+        5
+      ]
+    },
+    {
+      "mode": "samsung",
+      "label": "before-confirm1",
+      "passed": true,
+      "nFrames": 30,
+      "framesWithRectangle": 30,
+      "visitsWithStaleRectangle": 1,
+      "chromeReadyAll": true,
+      "desktopPanelReadyAny": false,
+      "opacityMin": 0.504375,
+      "opacityMax": 0.997311,
+      "maxExposedCssHeight": 7.02557373046875,
+      "navButtons": [
+        5,
+        5
+      ]
+    },
+    {
+      "mode": "samsung",
+      "label": "before-confirm2",
+      "passed": true,
+      "nFrames": 30,
+      "framesWithRectangle": 30,
+      "visitsWithStaleRectangle": 1,
+      "chromeReadyAll": true,
+      "desktopPanelReadyAny": false,
+      "opacityMin": 0.501395,
+      "opacityMax": 0.999753,
+      "maxExposedCssHeight": 7.02557373046875,
+      "navButtons": [
+        5,
+        5
+      ]
+    }
+  ],
+  "sampleUnit": "owned tab visit, same existing browser process / one Galaxy; frame samples correlated",
+  "notPixelFlickerRate": "DOM rectangle presence, animation opacity and visible band; actual native PNGs retained"
+}

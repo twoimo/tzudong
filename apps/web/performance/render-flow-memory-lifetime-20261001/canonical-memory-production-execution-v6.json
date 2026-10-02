@@ -1,0 +1,44 @@
+{
+  "observedAt": "2026-10-02T11:43:28.850928+00:00",
+  "candidate": {
+    "sha": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+    "tree": "20e87e7bcaf3058baf5745734550d548299c5a1b"
+  },
+  "scoreExitCode": 0,
+  "validatorCommand": [
+    "/opt/homebrew/opt/node@24/bin/node",
+    "apps/web/scripts/validate-performance-backlog.mjs",
+    "--artifact-root",
+    "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/render-flow-memory-lifetime-20261001/canonical-memory-production-v6",
+    "--release-id",
+    "marker-memory-lifetime-20261001",
+    "--candidate-sha",
+    "b977c717a7c3f06d1b5269f74437c6ac57829176",
+    "--candidate-tree",
+    "20e87e7bcaf3058baf5745734550d548299c5a1b",
+    "--config-sha256",
+    "0de561b62cf94208547a8a91f3eb8d2f14c1a6593c887ca6f4a93f037c424200",
+    "--data-profile-sha256",
+    "230a084b2e50a46603e5400af6225baccfdd75d810d933236b7de8801cbddf1d",
+    "--frozen-as-of",
+    "2026-10-02T11:35:30.309000Z",
+    "--input",
+    "backlog.raw.json",
+    "--artifact-map",
+    "validate-artifact-map.final.json",
+    "--artifact-map-sha256",
+    "02ad6242f14ac9dc11704346ba4eef521aec9d23ae5060c8f9b405ff962ac163",
+    "--scored",
+    "backlog.scored.json"
+  ],
+  "validatorExitCode": 0,
+  "admittedFieldSlices": 0,
+  "matchedAppOwnedP75SourceProduced": false,
+  "newFieldImprovementClaimed": false,
+  "correctedMapIssues": [
+    "v5 AA incident IDs duplicated when position missing",
+    "v6 initial validation map not canonical",
+    "v6 corrected map omitted required detached scored hash"
+  ],
+  "failedArtifactsRetained": true
+}

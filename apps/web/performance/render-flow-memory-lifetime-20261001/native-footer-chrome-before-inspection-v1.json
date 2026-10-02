@@ -1,0 +1,59 @@
+{
+  "sourceRaw": "native-chrome-footer-pixels-v10.json",
+  "frames": [
+    {
+      "file": "native-footer-chrome-before-inspected-v1/frame-000.png",
+      "sha256": "4b47100c3f39d1b3554934381afea281d7e930ce5cd677e1a8c2ff929f4939ed",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T13:11:32.730Z"
+    },
+    {
+      "file": "native-footer-chrome-before-inspected-v1/frame-001.png",
+      "sha256": "73a11d4644730fbe4baf6db6000dfdad853883c4697a26020af290d12682069d",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T13:11:34.632Z"
+    },
+    {
+      "file": "native-footer-chrome-before-inspected-v1/frame-002.png",
+      "sha256": "31695a166eb4e1df38e20a3f6f3033f8c13d14e918016f45fbf52a7ce0243fcc",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T13:11:36.488Z"
+    },
+    {
+      "file": "native-footer-chrome-before-inspected-v1/frame-003.png",
+      "sha256": "8ffc1f0f9481d1bdc77dc4b99c922ef3c90cd2b8971fff6ea0184c35328b4697",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T13:11:39.224Z"
+    },
+    {
+      "file": "native-footer-chrome-before-inspected-v1/frame-004.png",
+      "sha256": "da4d65e3f32b9ee69f2f0c5a6b2852504380d5ca95aee5d72ad8e309239a10c6",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T13:11:41.005Z"
+    },
+    {
+      "file": "native-footer-chrome-before-inspected-v1/frame-005.png",
+      "sha256": "da4d65e3f32b9ee69f2f0c5a6b2852504380d5ca95aee5d72ad8e309239a10c6",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T13:11:42.769Z"
+    }
+  ],
+  "legacyBottomRectangleObserved": 0,
+  "underlapConfirmed": true,
+  "nativePixelInterpretation": "Map/copyright visible behind translucent navigation; no new 56px pulse in these samples. Exact user-reported intermittent rectangle identity not established.",
+  "intervalMs": {
+    "min": 1763.9999389648438,
+    "median": 1855.9999465942383,
+    "max": 2736.0000610351562
+  },
+  "independentDevices": 1,
+  "ownedVisits": 1,
+  "limits": "1.5-2.8s sparse captures plus pauses/pans; does not establish blink incidence or exclude short compositor artifacts",
+  "temporaryCaptureFilesRemovedAfterInspection": true
+}

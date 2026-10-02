@@ -1,0 +1,8 @@
+{
+  "operation": "gh pr merge3095 --merge --auto",
+  "spent": true,
+  "automaticMergeNotEnabled": true,
+  "outcome": "repository auto-merge setting rejected; no auto request persisted, no security/repository settings changed",
+  "subsequentStep": "required checks readback and normal --merge after freshness state updates",
+  "providerDiagnosticsRetained": false
+}

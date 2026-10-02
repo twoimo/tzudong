@@ -1,0 +1,35 @@
+{
+  "createdAt": "2026-10-01T17:50:57.036599+00:00",
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "buildRoles": {
+    "baseline": "baseline",
+    "candidate": "candidate"
+  },
+  "buildLabels": {
+    "baseline": "field-control-v3",
+    "candidate": "desktop-tail-v1"
+  },
+  "cyclesPerFreshBrowserProcess": 20,
+  "awayMs": 350,
+  "returnSettleMs": 1000,
+  "count": 735,
+  "cpu": 4,
+  "heap": "naturalbeforeIDserialization/noforcedGC",
+  "budgetsUnchanged": {
+    "originalNaturalEndpointGrowthPercent": 20,
+    "latencyRegressionPercent": 15
+  },
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "scope": "warm20pilotABBA4processes; compare highpeakpath beforecommitting to full60",
+  "newSource": "boundedwhole735SDKpool-retention after viewportfirst immediate work; offscreen32tasks; no repeatedpanSDKdetach/reattach",
+  "poolCapacityBefore": 1000,
+  "poolCapacityAfter": 128,
+  "nextValidation": "sameoriginalcoldbudget/actualUIresetlatency/fieldcollectorcohortsseparate",
+  "candidateRetainsSmallDesktop": true
+}

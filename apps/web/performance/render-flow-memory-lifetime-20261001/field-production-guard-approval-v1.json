@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-01T17:48:45.481902+00:00",
+  "operation": "approve exactmainGitSHA via existing strictproductionguard, no guarddisabled",
+  "projectVerified": true,
+  "envId": "i4fHH6tbzAA1jtCM",
+  "envKey": "TZUDONG_APPROVED_PRODUCTION_SHA",
+  "target": [
+    "production"
+  ],
+  "sensitive": true,
+  "approvedPublicGitSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "metadataReadbackPassed": true,
+  "otherEnvironmentKeysModified": false,
+  "rawProviderValuesSaved": false
+}

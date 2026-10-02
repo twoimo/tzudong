@@ -1,0 +1,10 @@
+{
+  "createdAt": "2026-10-01T18:36:42.474201+00:00",
+  "measuredRepeatedStyles": "marker-dom-diagnostic230113stylechars/571markers,72kwhitespace; inlinepicture/img/containerstaticCSS repeatedperDOM/cachedHTML",
+  "sourcePrinciple": "share fixedCSS declarations once; keepwidth/height/transform/zindex/badge sizes/dynamic offsets inline, directgeneratedtemplates no regex/fullstringcopy",
+  "model": "removestaticCSSbytes andper-element declarationparsing, eliminateblank textnodes andruntimeflattening; sharedstylesheet O(1), permarker stylesO(dynamicproperties)",
+  "validation": "allCSScomputedattrs/text/pixelbox/a11y before-after fixtures andactualNaverSDK flows; noRootvisualdesignchanged",
+  "budgetsUnchanged": true,
+  "adopted": false,
+  "noFixedDelayNoGC": true
+}

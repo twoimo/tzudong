@@ -1,0 +1,38 @@
+{
+  "observedAt": "2026-10-02T05:28:33.616375+00:00",
+  "source": "hosted SQL read-only aggregate/histogram query via Supabase connector; no mutations",
+  "releaseSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "snapshotBeforeMemoryRelease": true,
+  "rows": [
+    {
+      "observed_day": "2026-10-01",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-01",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 120,
+      "sample_count": 1
+    }
+  ],
+  "inpSamples": 0,
+  "lcpBucket120IsOverflowAtLeastMs": 12000,
+  "clsBucket0Interval": [
+    0,
+    0.01
+  ],
+  "performanceImprovementProven": false,
+  "limitations": [
+    "Only one accepted metric instance per metric; not independent users",
+    "Anonymous client self-reports; source identity or lack of automation cannot be proven from anonymous aggregates",
+    "No precollector historical baseline; this snapshot starts the prospective baseline",
+    "No exact metric value retained; LCP is overflow, CLS is interval-censored",
+    "QA/native laboratory runs admit zero field metrics"
+  ]
+}

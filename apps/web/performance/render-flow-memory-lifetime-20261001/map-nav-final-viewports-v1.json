@@ -1,0 +1,120 @@
+{
+  "scope": "production map-nav-final-v1 actual remote SDK; synthetic public REST; viewport changes and pan",
+  "cases": [
+    {
+      "width": 390,
+      "height": 844,
+      "mapBottom": 783,
+      "mapHeight": 783,
+      "navTop": 783,
+      "navHeight": 61,
+      "mapCreates": 1,
+      "overflow": 0,
+      "copyrightBottom": 783,
+      "retired": true,
+      "passed": true
+    },
+    {
+      "width": 467,
+      "height": 810,
+      "mapBottom": 749,
+      "mapHeight": 749,
+      "navTop": 749,
+      "navHeight": 61,
+      "mapCreates": 1,
+      "overflow": 0,
+      "copyrightBottom": 749,
+      "retired": true,
+      "passed": true
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "mapBottom": 329,
+      "mapHeight": 329,
+      "navTop": 329,
+      "navHeight": 61,
+      "mapCreates": 1,
+      "overflow": 0,
+      "copyrightBottom": 329,
+      "retired": true,
+      "passed": true
+    },
+    {
+      "width": 1279,
+      "height": 900,
+      "mapBottom": 839,
+      "mapHeight": 839,
+      "navTop": 839,
+      "navHeight": 61,
+      "mapCreates": 1,
+      "overflow": 0,
+      "copyrightBottom": 839,
+      "retired": true,
+      "passed": true
+    },
+    {
+      "width": 1280,
+      "height": 900,
+      "mapBottom": 900,
+      "mapHeight": 900,
+      "navTop": null,
+      "navHeight": null,
+      "mapCreates": 1,
+      "overflow": 0,
+      "copyrightBottom": 900,
+      "retired": true,
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mapBottom": 900,
+      "mapHeight": 900,
+      "navTop": null,
+      "navHeight": null,
+      "mapCreates": 1,
+      "overflow": 0,
+      "copyrightBottom": 900,
+      "retired": true,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "mapBottom": 783,
+      "mapHeight": 783,
+      "navTop": 783,
+      "navHeight": 61,
+      "mapCreates": 1,
+      "overflow": 0,
+      "copyrightBottom": 783,
+      "retired": true,
+      "passed": true
+    }
+  ],
+  "fieldAdmitted": 0,
+  "cssBudget": {
+    "homeBytes": 192549,
+    "generalAppBytes": 370118,
+    "adminBytes": 370118,
+    "deferredBytes": 192549,
+    "homeTransferBytes": 45640,
+    "generalAppTransferBytes": 67674,
+    "adminTransferBytes": 67674,
+    "deferredTransferBytes": 45640,
+    "sharedAssetPaths": [
+      "static/css/313850fb4bac72d1.css",
+      "static/css/a11e8d25adec0c48.css",
+      "static/css/b138b9c220f9337d.css",
+      "static/css/c745bef459839cfb.css"
+    ],
+    "exclusiveAssetPaths": {
+      "home": [],
+      "generalApp": [],
+      "admin": [],
+      "deferred": []
+    }
+  },
+  "passed": true
+}

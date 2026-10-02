@@ -1,0 +1,15 @@
+{
+  "mode": "samsung",
+  "startedAt": "2026-10-02T12:29:01.896Z",
+  "scope": "native screen pixel review, own public home, no location permission/headers/bodies/cookies retained",
+  "captures": [],
+  "stage": "await SDK/nav",
+  "failureFlags": {
+    "visible": "hidden",
+    "nav": true,
+    "sdk": true
+  },
+  "failureCode": "owned_native_pixel_review_unavailable",
+  "captureComplete": false,
+  "endedAt": "2026-10-02T12:29:49.822Z"
+}

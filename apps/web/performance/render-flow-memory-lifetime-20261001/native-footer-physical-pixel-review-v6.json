@@ -1,0 +1,10 @@
+{
+  "mode": "physical",
+  "startedAt": "2026-10-02T13:01:01.706Z",
+  "scope": "native screen pixel review, own public home, no location permission/headers/bodies/cookies retained",
+  "captures": [],
+  "stage": "await SDK/nav",
+  "failureCode": "owned_native_pixel_review_unavailable",
+  "captureComplete": false,
+  "endedAt": "2026-10-02T13:01:26.154Z"
+}

@@ -1,0 +1,116 @@
+{
+  "sourceRaw": "native-footer-physical-pixels-after-direct-v2.json",
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "nativeFrames": [
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-000.png",
+      "sha256": "1a94cf75114120cf52557d69894db38659f91fe923edc976caf0b099196e0c2c",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:06.007Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-001.png",
+      "sha256": "3a29a9ad67d9ec1bed525153a8fda3e2633c3a3a840ee61a8f5f1ef84238b83a",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:07.913Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-002.png",
+      "sha256": "3a29a9ad67d9ec1bed525153a8fda3e2633c3a3a840ee61a8f5f1ef84238b83a",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:09.777Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-003.png",
+      "sha256": "6d827babb78f76315eec1dfcc13dd302e7d01e79466a0699afe65b0c656b7571",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:11.811Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-004.png",
+      "sha256": "039a3414de45c983ef47a9edf1abbae287359a86ee4600a537778254cc64b21b",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:14.631Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-005.png",
+      "sha256": "0241bf2e9804a511e602ba24c012f33b06534773ebd90b976cd902a52d66b718",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:16.431Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-006.png",
+      "sha256": "1571c13442e6d5db7d49866f7f869daf14e7914e4a51282c7603247c90935acf",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:18.453Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-007.png",
+      "sha256": "1571c13442e6d5db7d49866f7f869daf14e7914e4a51282c7603247c90935acf",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:20.399Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-008.png",
+      "sha256": "e835533f9a8872230aa8f24bc9137fb073025da90ef25b81b8df2486e27e4715",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:22.690Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-009.png",
+      "sha256": "e835533f9a8872230aa8f24bc9137fb073025da90ef25b81b8df2486e27e4715",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:24.626Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-010.png",
+      "sha256": "e835533f9a8872230aa8f24bc9137fb073025da90ef25b81b8df2486e27e4715",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:26.525Z"
+    },
+    {
+      "file": "native-footer-chrome-after-inspected-v1/frame-011.png",
+      "sha256": "e835533f9a8872230aa8f24bc9137fb073025da90ef25b81b8df2486e27e4715",
+      "inspected": true,
+      "privateNotificationOrLocationSeen": false,
+      "capturedAt": "2026-10-02T14:09:28.076Z"
+    }
+  ],
+  "geometry": {
+    "mapBottom": 708.343994140625,
+    "navTop": 708.4671630859375,
+    "overlap": 0,
+    "copyrightBottom": 708.3440074920654,
+    "viewport": {
+      "width": 420,
+      "height": 769,
+      "dpr": 3.424999952316284
+    }
+  },
+  "independentDevices": 1,
+  "ownedVisits": 1,
+  "blackRectangleObservedInSamples": 0,
+  "legacyBottomPulseObservedInSamples": 0,
+  "intervalMs": {
+    "min": 1550.9998798370361,
+    "median": 1935.999870300293,
+    "max": 2819.999933242798
+  },
+  "limits": [
+    "sparse native snapshots; shorter or between-frame flicker not excluded",
+    "Chrome before6 and after12 frames use different pan cadence, so no matched pixel-flicker rate claimed",
+    "same existing browser process, frames not independent users"
+  ],
+  "ownedTemporaryPNGsRemovedAfterInspection": true
+}

@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-02T05:22:46.262782+00:00",
+  "project": "tzudong",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "rootDirectory": "apps/web",
+  "git": {
+    "org": "twoimo",
+    "repo": "tzudong"
+  },
+  "localPrimaryLinkMatchesTarget": false,
+  "wrongLocalLinkNotModified": true,
+  "independentAlias": "www.tzudong.app",
+  "deploymentId": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM",
+  "url": "tzudong-ib4jq4sah-twoimos-projects.vercel.app",
+  "status": "READY",
+  "gitSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "rollbackNamedSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+  "rollbackNamedDeploymentId": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM"
+}

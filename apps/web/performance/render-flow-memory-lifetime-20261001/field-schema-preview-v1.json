@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-01T12:59:43.918505+00:00",
+  "migration": "apps/web/supabase/migrations/20261001123253_app_web_vitals_aggregate.sql",
+  "migrationSha256": "0d5b9c10461fe0fb878593ad353ddea7d386ce70cee2810aae1fd0929df369d3",
+  "operation": "create1newanonymoushistogramtable and1serverroleonlySECURITYINVOKERRPC; no deletes/changes to existing user/business tables",
+  "localIsolatedPG17Checks": "field-schema-local-checks-v1.json",
+  "newTables": 1,
+  "newFunctions": 1,
+  "rlsEnabled": true,
+  "publicAnonAuthenticatedGrants": false,
+  "serviceRoleOnly": true,
+  "personalFields": 0,
+  "applyNotYetPerformed": true
+}

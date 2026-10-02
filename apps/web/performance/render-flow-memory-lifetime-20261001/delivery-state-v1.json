@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-02T09:13:16.385684+00:00",
+  "productionSourceSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "deployment": "dpl_6KxTFSFu79mVynCU4tubaYsiuvgL",
+  "ready": true,
+  "wwwAliasIndependentlyMatched": true,
+  "canonicalScorerValidatorExit": 0,
+  "canonicalAdmission": 0,
+  "localVendorTelemetryCspGatePreserved": true,
+  "prototype3088NotDelivered": true,
+  "latestMobileUnlockPendingAgain": true
+}

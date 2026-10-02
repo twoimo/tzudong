@@ -1,0 +1,28 @@
+{
+  "createdAt": "2026-10-01T16:19:13.313800+00:00",
+  "baselineCullsExpanded": true,
+  "candidateRetainsSmallDesktop": false,
+  "baselineBuild": "field-control-v3",
+  "candidateBuild": "compact-v1",
+  "independentProcessesPerVariant": 2,
+  "warmupPairs": 0,
+  "cpuRate": 4,
+  "viewport": [
+    1440,
+    900
+  ],
+  "naturalHeapEndpoint": "originalclick firstvisible+600ms beforeIDs/diagnosticGC",
+  "budgetsUnchanged": {
+    "latencyRegressionPercent": 15,
+    "naturalHeapRegressionPercent": 20
+  },
+  "pilotNotInferential": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "harnessSha256": "944a9afc1969b253a1f62fdcfd5fab2d4e162820c0774c4667710ef950f8940a",
+  "hypothesis": "generated marker whitespace removal plus alreadymeasuredduplicate-passskip; individual effects retained separately",
+  "limits": [
+    "n2pairs pilot; no inferential performance claim",
+    "confirm same-original-da fixed20% naturalendpoint and15% latency budgets before adoption"
+  ]
+}

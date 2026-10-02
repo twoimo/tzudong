@@ -1,0 +1,145 @@
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index bcb0f38e..d1c4e90f 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -2722,14 +2722,15 @@ const NaverMapView = memo(({
+                 extendedBounds,
+                 VIEWPORT_FILTER_ENABLED,
+             );
++        const renderedExpandedSources = new Map<string, Restaurant>();
+         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
+             if (expandedClusterRestaurantIds.length === 0) return;
+             expandedClusterRestaurantIds.forEach((restaurantId) => {
+-                const restaurant = normalizeNaverMarkerCoordinates(
+-                    resolveMarkerRestaurant(restaurantId),
+-                );
++                const sourceRestaurant = resolveMarkerRestaurant(restaurantId);
++                const restaurant = normalizeNaverMarkerCoordinates(sourceRestaurant);
+                 if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
+                 if (!shouldRenderExpandedMarker(restaurant)) return;
++                if (sourceRestaurant) renderedExpandedSources.set(restaurant.id, sourceRestaurant);
+ 
+                 activeIds.add(restaurant.id);
+                 const isSelected = selectedRestaurant?.id === restaurant.id;
+@@ -3018,6 +3019,10 @@ const NaverMapView = memo(({
+                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
+ 
+                 contextualRestaurants.forEach(restaurant => {
++                    // Expanded markers already rendered from this same source need
++                    // no second SDK icon read/options/click-handler replacement.
++                    // A different source object still reaches the later renderer.
++                    if (renderedExpandedSources.get(restaurant.id) === restaurant) return;
+                     if (restaurant.lat == null || restaurant.lng == null) return;
+                     if (expandedClusterRestaurantIds.length > 0 && !shouldRenderExpandedMarker(restaurant)) return;
+                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
+diff --git a/apps/web/lib/cluster-marker.ts b/apps/web/lib/cluster-marker.ts
+index 2a64a411..fa6cd4e6 100644
+--- a/apps/web/lib/cluster-marker.ts
++++ b/apps/web/lib/cluster-marker.ts
+@@ -1,3 +1,4 @@
++import { compactGeneratedMarkerHtml } from '@/lib/compact-generated-marker-html';
+ /**
+  * 클러스터 마커 HTML 생성 및 애니메이션 관리
+  */
+@@ -282,7 +283,7 @@ export const createIndividualMarkerHTML = (
+   const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
+   const zIndex = isSelected ? '100' : '1';
+ 
+-  return `
++  return compactGeneratedMarkerHtml(`
+     <div
+       style="
+         width: ${size}px;
+@@ -331,7 +332,7 @@ export const createIndividualMarkerHTML = (
+         >${displayVisitCount}</span>
+         ` : ''}
+     </div>
+-  `;
++  `);
+ };
+ 
+ /**
+diff --git a/apps/web/lib/compact-generated-marker-html.ts b/apps/web/lib/compact-generated-marker-html.ts
+new file mode 100644
+index 00000000..de89b5b2
+--- /dev/null
++++ b/apps/web/lib/compact-generated-marker-html.ts
+@@ -0,0 +1,7 @@
++/** Only for our generated flex/absolute marker markup, never arbitrary HTML. */
++export function compactGeneratedMarkerHtml(html: string): string {
++    return html.trim()
++        .replace(/>\s+</g, '><')
++        .replace(/\bstyle="([^"]*)"/g, (_attribute, css: string) =>
++            `style="${css.trim().replace(/\s+/g, ' ')}"`);
++}
+diff --git a/apps/web/lib/marker-pool.ts b/apps/web/lib/marker-pool.ts
+index 06fd2796..09d2baf6 100644
+--- a/apps/web/lib/marker-pool.ts
++++ b/apps/web/lib/marker-pool.ts
+@@ -73,6 +73,7 @@ function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknow
+ 
+ interface PooledMarker {
+     __onClick?: (event: MarkerClickEvent) => void;
++    __disposeClickListener?: () => void;
+     getMap: () => unknown;
+     setMap: (map: unknown | null) => void;
+     getPosition: () => MarkerPositionLike | null;
+@@ -96,7 +97,7 @@ export class MarkerPool {
+     private active: Map<string, PooledMarker> = new Map();
+ 
+     /** 풀 최대 크기 (메모리 제한) */
+-    private readonly MAX_POOL_SIZE = 1000;
++    private readonly MAX_POOL_SIZE = 128;
+ 
+     /** 통계 (디버깅용) */
+     private stats = {
+@@ -158,11 +159,13 @@ export class MarkerPool {
+ 
+             // [PERFORMANCE] 이벤트 위임: 마커 생성 시 단 1회만 리스너 등록
+             // 이후 핸들러 교체는 __onClick 프로퍼티만 변경하여 zero-overhead 달성
+-            window.naver.maps.Event.addListener(marker, 'click', (e: MarkerClickEvent) => {
++            const events = window.naver.maps.Event;
++            const listener = events.addListener(marker, 'click', (e: MarkerClickEvent) => {
+                 if (marker.__onClick) {
+                     marker.__onClick(e);
+                 }
+             });
++            if (listener) marker.__disposeClickListener = () => events.removeListener(listener);
+         }
+ 
+         // [PERFORMANCE] 불필요한 DOM 조작/렌더링 방지
+@@ -223,9 +226,15 @@ export class MarkerPool {
+         if (!marker) return;
+ 
+         this.active.delete(id);
++        // Detached/evicted markers must not retain a render's restaurant/state
++        // closure or dispatch a queued click for a no-longer-active place.
++        marker.__onClick = undefined;
+         marker.setMap(null);
+         if (this.pool.length < this.MAX_POOL_SIZE) {
+             this.pool.push(marker);
++        } else {
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         }
+         this.stats.released++;
+     }
+@@ -312,12 +321,18 @@ export class MarkerPool {
+      */
+     public clear(): void {
+         this.active.forEach((marker) => {
++            marker.__onClick = undefined;
+             marker.setMap(null);
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         });
+ 
+         // 풀의 모든 마커도 정리
+         this.pool.forEach((marker) => {
++            marker.__onClick = undefined;
+             marker.setMap(null);
++            marker.__disposeClickListener?.();
++            marker.__disposeClickListener = undefined;
+         });
+ 
+         this.active.clear();

@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-02T05:50:56.865910+00:00",
+  "firstFunctionalRun": "direct-physical-functional-recovery-css-v1/raw.json",
+  "setupDefects": [
+    "StampCard is a div with role=button, not a button element",
+    "both pinch start points must be on the map; initial upper point hit the control layer and enlarged the whole page",
+    "close the visible-list sheet to reveal intentionally hidden bottom filter controls"
+  ],
+  "correctiveAction": "new harness version/label, role selectors and unoccluded pinch pair, sheet close; record diagnostics",
+  "productSourceChanged": false,
+  "oldFailedUiRunRetained": true,
+  "fiveReturnTrialsPassed": true
+}

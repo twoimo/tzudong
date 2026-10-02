@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-02T11:38:41.705737+00:00",
+  "projectVerified": true,
+  "deployment": {
+    "id": "dpl_7cRLCj7QpUA4SiCDYS9p9iagJv8c",
+    "url": "tzudong-q01xhhc9x-twoimos-projects.vercel.app",
+    "state": "BUILDING",
+    "gitSha": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+    "target": "production"
+  },
+  "providerDiagnosticsStored": false
+}

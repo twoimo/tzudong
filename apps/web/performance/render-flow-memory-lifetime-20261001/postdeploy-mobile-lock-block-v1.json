@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-02T08:15:00.259811+00:00",
+  "physicalAdbOnline": true,
+  "model": "SM-S928N",
+  "awake": false,
+  "locked": true,
+  "pendingQuestion": "wake and authenticate unlock for actual WWW post-deploy native checks",
+  "existingNativeEvidencePreserved": true,
+  "deviceSettingsOrSecurityChanged": false
+}

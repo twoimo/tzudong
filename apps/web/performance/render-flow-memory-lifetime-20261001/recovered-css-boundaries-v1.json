@@ -1,0 +1,26 @@
+{
+  "nextDirectoryLabel": "candidate-recovery-css-v2",
+  "result": {
+    "homeBytes": 192639,
+    "generalAppBytes": 370228,
+    "adminBytes": 370228,
+    "deferredBytes": 192639,
+    "homeTransferBytes": 45639,
+    "generalAppTransferBytes": 67677,
+    "adminTransferBytes": 67677,
+    "deferredTransferBytes": 45639,
+    "sharedAssetPaths": [
+      "static/css/42e0c5e80e0454f6.css",
+      "static/css/6c52207691aba623.css",
+      "static/css/a11e8d25adec0c48.css",
+      "static/css/c745bef459839cfb.css"
+    ],
+    "exclusiveAssetPaths": {
+      "home": [],
+      "generalApp": [],
+      "admin": [],
+      "deferred": []
+    }
+  },
+  "priorAttemptFailedBeforeAnyCssRead": "string argument supplied instead of options object"
+}

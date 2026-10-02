@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-02T13:07:34.505029+00:00",
+  "identifierRetention": false,
+  "chromeForeground": false,
+  "samsungForeground": false,
+  "chromeDebugSocket": true,
+  "samsungDebugSocket": true,
+  "keyguardShowing": false,
+  "dozing": false
+}

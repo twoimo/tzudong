@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-02T08:57:40.839005+00:00",
+  "project": "tzudong",
+  "gitSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+  "deployments": [
+    {
+      "id": "dpl_EEdU7nEerKvs67JyWzRNXpCq1s6e",
+      "url": "tzudong-blt92vmmv-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "created": 1790931222129
+    }
+  ]
+}

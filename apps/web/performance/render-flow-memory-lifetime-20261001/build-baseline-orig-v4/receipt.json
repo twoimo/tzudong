@@ -1,0 +1,52 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "da805ea2602f4ed83e6e77e52e9da0b74ba2f8c5",
+  "distDir": ".next-real-sdk-baseline-orig-v4-20260930",
+  "buildId": "9HkO_WKJDrl0d_KhSvEC3",
+  "patchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "inputs": [
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "5d2340aaf7ddbbf05053eff80d8a158ea662b6d4664dd70ec1513bcd7307c897"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "bccf1b16dc26c8a07a50752b4d09ee16ad79309375d93f22bca40109e5c996db"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "257c92fb86c074eec78c91e8086dfec82aa74499abdb055f55147fcc8ac52185"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "e69dbc2cdc562cb0a6620cd50901df5ff3bd71eb8cf2e21e6557fb0150b58fce"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "257ff4bf48dc580d36d6602c1c68d5cfac967dbdc65ace0b3470de96586ba27d"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "dc4f15d0e830957dcc6479c7971431e4f73043b815a5286566aab0cbe37a3647"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "f0c7b704f08114b33c7950631c786362b8f04272314ff9bbb06ea94e6288ef83"
+    }
+  ],
+  "node": "v24.21.0",
+  "next": "16.3.5",
+  "configurationNames": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_NAVER_CLIENT_ID"
+  ],
+  "sdk": "actual remote Naver SDK, not local stub",
+  "privateConfigurationInArtifacts": false,
+  "rebuildAfterArchivedIgnoredRuntime": true,
+  "oldRawMeasurementsNotOverwritten": true
+}

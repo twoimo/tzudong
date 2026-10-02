@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-10-01T12:29:41.212245+00:00",
+  "hypothesis": "SDK constructor with map attached may perform render/shape bindings while icon/position setup is in progress; initialize using documented map:null then attach once after constructor/listener setup",
+  "priorEvidence": "cold creates571 vs735, no cold template/setIcon/setPosition in application; original9pair natural18.792MB vs candidate31.178MB, forcedGC diagnostic18.313 vs17.158MB compatible with transient allocation/GC phase, not increased retained graph proof",
+  "sourceScope": [
+    "apps/web/lib/marker-pool.ts",
+    "apps/web/tests-unit/marker-pool.test.ts"
+  ],
+  "budgetsUnchanged": {
+    "naturalHeapRegressionPercent": 20,
+    "latencyRegressionPercent": 15
+  },
+  "timingAcceptance": "same old cold endpoint and warm trusted reset; do not waive using forcedGC",
+  "candidateAdopted": false,
+  "fieldAdmitted": 0
+}

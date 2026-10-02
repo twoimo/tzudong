@@ -1,0 +1,13 @@
+{
+  "releaseId": "marker-memory-lifetime-20261001",
+  "candidate": {
+    "sha": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+    "tree": "20e87e7bcaf3058baf5745734550d548299c5a1b"
+  },
+  "configSha256": "0de561b62cf94208547a8a91f3eb8d2f14c1a6593c887ca6f4a93f037c424200",
+  "dataProfileSha256": "230a084b2e50a46603e5400af6225baccfdd75d810d933236b7de8801cbddf1d",
+  "frozenAsOf": "2026-10-02T11:30:36.284000Z",
+  "bindingMeaning": "new memory source Git commit; local SDK trials are separate from unavailable matched field app-owned p75",
+  "fieldAdmissionAllowed": false,
+  "localConsoleGateIncidents": 44
+}

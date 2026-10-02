@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-02T09:16:41.651400+00:00",
+  "deploymentId": "dpl_6KxTFSFu79mVynCU4tubaYsiuvgL",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "scope": "deployment-scoped production runtime error/fatal group counts in last30m",
+  "connectorReadSucceeded": true,
+  "returnedErrorLevelGroups": [],
+  "reportedErrorOrFatalCountsObserved": 0,
+  "limits": [
+    "short post-deploy window",
+    "empty group counts do not prove no errors outside the query/window or client/CSP channels"
+  ],
+  "rawMessagesStored": false
+}

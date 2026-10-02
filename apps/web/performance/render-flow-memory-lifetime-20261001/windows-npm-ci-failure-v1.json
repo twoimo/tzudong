@@ -1,0 +1,11 @@
+{
+  "runId": 36873038819,
+  "jobId": 110405366212,
+  "sourceCommit": "deba4c2b7c43f2cbc88ede03ab596f1103ba9dba",
+  "typecheckParityPassed": true,
+  "samplerFailureCode": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+  "reportVerifierMissingCode": "ENOENT",
+  "strictBudgetsChanged": false,
+  "failedJobRetryRequested": true,
+  "reason": "CI sampler evidence acquisition failure, not type diagnostics; no performance admission/waiver"
+}

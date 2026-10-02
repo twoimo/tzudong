@@ -1,0 +1,9 @@
+{
+  "mode": "samsung",
+  "startedAt": "2026-10-02T12:17:54.340Z",
+  "scope": "native screen pixel review, own public home, no location permission/headers/bodies/cookies retained",
+  "captures": [],
+  "failureCode": "owned_native_pixel_review_unavailable",
+  "captureComplete": false,
+  "endedAt": "2026-10-02T12:17:57.750Z"
+}

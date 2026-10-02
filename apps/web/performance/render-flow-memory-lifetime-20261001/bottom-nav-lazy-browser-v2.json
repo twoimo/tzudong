@@ -1,0 +1,41 @@
+{
+  "scope": "diagnostic lazy chunk pending/failure, synthetic public REST, actual remote SDK; not performance samples",
+  "cases": [
+    {
+      "kind": "pending-release",
+      "intercepted": 1,
+      "pending": {
+        "parentReady": true,
+        "childReady": false,
+        "shellDisplay": "block",
+        "bottomRectangles": 0,
+        "navButtons": 5,
+        "actualSearchControl": false
+      },
+      "settled": {
+        "parentReady": true,
+        "childReady": true,
+        "shellDisplay": "none",
+        "bottomRectangles": 0,
+        "navButtons": 5,
+        "actualSearchControl": true
+      },
+      "passed": true
+    },
+    {
+      "kind": "failure",
+      "intercepted": 1,
+      "pending": {
+        "parentReady": true,
+        "childReady": false,
+        "shellDisplay": "block",
+        "bottomRectangles": 0,
+        "navButtons": 5,
+        "actualSearchControl": false
+      },
+      "passed": true
+    }
+  ],
+  "privateResponseOrProviderDiagnosticsSaved": false,
+  "passed": true
+}

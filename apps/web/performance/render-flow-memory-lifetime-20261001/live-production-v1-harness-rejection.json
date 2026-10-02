@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-02T09:27:37.879320+00:00",
+  "rejected": [
+    "live-physical-production-v1",
+    "live-samsung-production-v1"
+  ],
+  "reason": "ownedLivePage failed before CDP target returned; URL contained unquoted ampersand interpreted by remote adb shell. v2 shell-quotes each remote argument in a single command. Both v2 production flows passed. No v1 check counted.",
+  "rawProviderDiagnosticsRetained": false,
+  "productSourceChanged": false,
+  "deviceSettingsChanged": false
+}

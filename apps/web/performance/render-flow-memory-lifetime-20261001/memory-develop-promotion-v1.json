@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-02T05:45:07.250182+00:00",
+  "pr": 3083,
+  "readback": {
+    "baseRefName": "develop",
+    "headRefOid": "8c8e5532dbc459d76ad14764bf0995189bfe9130",
+    "mergeCommit": {
+      "oid": "468dc364290c5770acf177a3fdb37810a11866fa"
+    },
+    "mergedAt": "2026-10-02T05:45:05Z",
+    "state": "MERGED"
+  },
+  "firstAttemptFailedNoMutation": "ready_for_review refreshed the required Promotion Path check; waited for its observed pass",
+  "adminOrForceUsed": false
+}

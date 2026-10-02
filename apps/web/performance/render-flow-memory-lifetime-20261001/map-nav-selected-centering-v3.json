@@ -1,0 +1,7 @@
+{
+  "cases": [],
+  "scope": "actual SDK mobile emulation, synthetic public REST, trusted pointer fullscreen and client navigation; not primary timings",
+  "fieldAdmitted": 0,
+  "passed": false,
+  "failureCode": "owned_fullscreen_lifecycle_unavailable"
+}

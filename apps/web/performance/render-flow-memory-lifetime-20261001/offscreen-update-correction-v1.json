@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-02T08:29:54.942584+00:00",
+  "reviewThread": "PRRT_kwDOQGRyNc6oRCXa",
+  "reviewedMainPr": 3087,
+  "fix": "existing offscreen updates remain eligible for32-job slices; selected/search/new-visible and previously-visible coordinates update immediately",
+  "sourceCommit": "364f8833",
+  "affectedUnit": "22 pass/98assertions; lint/parity0 diagnostics",
+  "markerHtmlStylesPoolCapacityAndMobilePolicyUnchanged": true,
+  "performanceBenefitNotYetClaimed": true,
+  "productionUnchanged": true
+}

@@ -1,0 +1,249 @@
+{
+  "cases": [
+    {
+      "category": "한식",
+      "selected": false,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 899,
+      "afterCharacters": 729
+    },
+    {
+      "category": "한식",
+      "selected": false,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1696,
+      "afterCharacters": 1268
+    },
+    {
+      "category": "한식",
+      "selected": false,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1698,
+      "afterCharacters": 1270
+    },
+    {
+      "category": "한식",
+      "selected": false,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1700,
+      "afterCharacters": 1272
+    },
+    {
+      "category": "한식",
+      "selected": true,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 921,
+      "afterCharacters": 751
+    },
+    {
+      "category": "한식",
+      "selected": true,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1718,
+      "afterCharacters": 1290
+    },
+    {
+      "category": "한식",
+      "selected": true,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1720,
+      "afterCharacters": 1292
+    },
+    {
+      "category": "한식",
+      "selected": true,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1722,
+      "afterCharacters": 1294
+    },
+    {
+      "category": "분식",
+      "selected": false,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 905,
+      "afterCharacters": 735
+    },
+    {
+      "category": "분식",
+      "selected": false,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1702,
+      "afterCharacters": 1274
+    },
+    {
+      "category": "분식",
+      "selected": false,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1704,
+      "afterCharacters": 1276
+    },
+    {
+      "category": "분식",
+      "selected": false,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1706,
+      "afterCharacters": 1278
+    },
+    {
+      "category": "분식",
+      "selected": true,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 927,
+      "afterCharacters": 757
+    },
+    {
+      "category": "분식",
+      "selected": true,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1724,
+      "afterCharacters": 1296
+    },
+    {
+      "category": "분식",
+      "selected": true,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1726,
+      "afterCharacters": 1298
+    },
+    {
+      "category": "분식",
+      "selected": true,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1728,
+      "afterCharacters": 1300
+    },
+    {
+      "category": "중식",
+      "selected": false,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 901,
+      "afterCharacters": 731
+    },
+    {
+      "category": "중식",
+      "selected": false,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1698,
+      "afterCharacters": 1270
+    },
+    {
+      "category": "중식",
+      "selected": false,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1700,
+      "afterCharacters": 1272
+    },
+    {
+      "category": "중식",
+      "selected": false,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1702,
+      "afterCharacters": 1274
+    },
+    {
+      "category": "중식",
+      "selected": true,
+      "visits": 0,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 7,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 923,
+      "afterCharacters": 753
+    },
+    {
+      "category": "중식",
+      "selected": true,
+      "visits": 2,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1720,
+      "afterCharacters": 1292
+    },
+    {
+      "category": "중식",
+      "selected": true,
+      "visits": 99,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1722,
+      "afterCharacters": 1294
+    },
+    {
+      "category": "중식",
+      "selected": true,
+      "visits": 199,
+      "identicalCssAttributesTextAndBox": true,
+      "beforeBlankTextNodes": 8,
+      "afterBlankTextNodes": 0,
+      "beforeCharacters": 1724,
+      "afterCharacters": 1296
+    }
+  ],
+  "passed": true,
+  "actualUserSamples": 0,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "scope": "codegenerated marker fixtures, browser CSSOM/box/a11y/text equivalence, not wholeUI performance/flicker"
+}

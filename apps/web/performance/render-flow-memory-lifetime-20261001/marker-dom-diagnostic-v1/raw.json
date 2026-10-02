@@ -1,0 +1,29 @@
+{
+  "intrusive": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "sdk": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+    "loaded": true,
+    "stub": false,
+    "remoteScript": true,
+    "mapCaptured": true,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1
+    },
+    "tiles": 105
+  },
+  "buildId": "89a9Mw3vf8-9S_XTXlwaN",
+  "dom": {
+    "markers": 571,
+    "textNodes": 2855,
+    "blankTextNodes": 2855,
+    "blankCharacters": 37686,
+    "styleCharacters": 230113,
+    "styleWhitespaceCharacters": 72517,
+    "liveElements": 4059
+  },
+  "passed": true
+}

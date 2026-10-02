@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-01T12:52:59.032566+00:00",
+  "postgresVersion": "17.11",
+  "unixSocketOnly": true,
+  "productionDatabaseTouched": false,
+  "checks": {
+    "rlsNoPublicGrantsSecurityInvoker": true,
+    "sameBucketAtomicIncrement": true,
+    "forbiddenRolesAndMalformedSamplesFailClosed": true,
+    "failedWritesDoNotAlterCounts": true
+  },
+  "passed": true,
+  "rawProviderDiagnosticsSaved": false,
+  "temporaryDatabaseRemoved": true
+}
