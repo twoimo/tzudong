@@ -2768,7 +2768,16 @@ const NaverMapView = memo(({
                     markerVisibleActiveSearchedRestaurant?.id ?? null,
                     extendedBounds, VIEWPORT_FILTER_ENABLED,
                 );
-                if (retainSmallExpandedDesktop && !inInitialViewport && !markerPool.has(restaurant.id)) {
+                // Existing offscreen markers also need bounded updates. A row
+                // moved from a currently visible position must update immediately.
+                const previousPosition = retainSmallExpandedDesktop && !inInitialViewport
+                    ? markerPool.get(restaurant.id)?.getPosition() : null;
+                const previousLat = previousPosition?.lat?.();
+                const previousLng = previousPosition?.lng?.();
+                const wasVisible = extendedBounds && previousLat != null && previousLng != null
+                    && previousLat >= extendedBounds.south && previousLat <= extendedBounds.north
+                    && previousLng >= extendedBounds.west && previousLng <= extendedBounds.east;
+                if (retainSmallExpandedDesktop && !inInitialViewport && !wasVisible) {
                     deferredMarkerRenders.push(render);
                 } else {
                     render();
