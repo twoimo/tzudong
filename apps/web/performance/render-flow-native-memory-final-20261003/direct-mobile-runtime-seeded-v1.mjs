@@ -5,7 +5,7 @@ import {usbSerial,origin} from './real-sdk-runtime.mjs';
 import {catalog} from './catalog.mjs';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 export async function ownedPage(mode){
- const t=await ownedLivePage(mode);const u=new URL(t.boot);t.boot=origin+'/?__perf_mobile='+u.searchParams.get('__perf_mobile');t.fixtureOrigin=origin;return t;
+ const t=await ownedLivePage(mode);await t.send('Runtime.enable');await t.evaluate(()=>navigator.wakeLock?.request('screen').then(x=>window.__nativeSeedWake=x).catch(()=>null));const u=new URL(t.boot);t.boot=origin+'/?__perf_mobile='+u.searchParams.get('__perf_mobile');t.fixtureOrigin=origin;return t;
 }
 export async function fixturePage(t,count=735){
  await t.send('Page.enable');const frame=await t.send('Page.getFrameTree');let labOrigin=t.fixtureOrigin; if(!labOrigin){try{labOrigin=new URL(frame.frameTree.frame.url).origin;}catch{labOrigin=origin;}}const rows=catalog(count),errors={page:0,console:0},requests={restaurant:0,otherFixture:0};t.on('Runtime.exceptionThrown',()=>errors.page++);t.on('Runtime.consoleAPICalled',e=>{if(e.type==='error')errors.console++;});
