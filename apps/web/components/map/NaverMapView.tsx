@@ -2846,7 +2846,7 @@ const NaverMapView = memo(({
                 scheduleMarkerRenderRetry();
             } else {
                 markerRenderSignatureRef.current = nextMarkerRenderSignature;
-                resetMarkerRenderRetry();
+                if (deferredMarkerRenders.length === 0) resetMarkerRenderRetry();
             }
             perfMonitor.endMeasure('RenderMarkers');
             if (shouldReportNaverMarkerRenderPerformance({
@@ -3093,7 +3093,7 @@ const NaverMapView = memo(({
                 scheduleMarkerRenderRetry();
             } else {
                 markerRenderSignatureRef.current = nextMarkerRenderSignature;
-                resetMarkerRenderRetry();
+                if (deferredMarkerRenders.length === 0) resetMarkerRenderRetry();
             }
             if (hasVisibleMarkerReviewBubbles(activeVisibleMarkerReviewBubbles)) {
                 scheduleVisibleMarkerReviewBubbleClamp();
@@ -3114,7 +3114,8 @@ const NaverMapView = memo(({
             const cancel = deferMarkerRenders(deferredMarkerRenders, (finished) => {
                 pendingOffscreenMarkerRendersRef.current = null;
                 markerRenderSignatureRef.current = finished ? nextMarkerRenderSignature : null;
-                if (!finished) scheduleMarkerRenderRetry();
+                if (finished) resetMarkerRenderRetry();
+                else scheduleMarkerRenderRetry();
             });
             pendingOffscreenMarkerRendersRef.current = cancel;
             return () => {
