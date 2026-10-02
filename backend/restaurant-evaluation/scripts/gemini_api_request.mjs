@@ -1,6 +1,5 @@
-import { withProjectBudget } from '../../utils/provider-budget.mjs';
+import { createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import fs from 'fs';
-import { GoogleGenAI } from '@google/genai';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
@@ -61,8 +60,8 @@ async function main() {
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
             try {
                 console.log(`DEBUG: Initializing GoogleGenerativeAI with key ${keyIndex + 1}/${apiKeys.length}...`);
-                const ai = new GoogleGenAI({ apiKey: apiKeys[keyIndex], httpOptions: { timeout: 300000 } });
-                const response = await withProjectBudget(() => ai.models.generateContent({
+                const ai = createGeminiClient(apiKeys[keyIndex]);
+                const response = await generateWithProjectBudget(ai, {
                     model: modelName,
                     contents: prompt,
                     config: {
@@ -70,15 +69,9 @@ async function main() {
                         maxOutputTokens: 4096,
                         thinkingConfig: { thinkingLevel },
                     },
-                }));
-                const text = response.text ?? '';
-                const usage = response.usageMetadata;
-                if (usage) {
-                    const counts = Object.fromEntries(['promptTokenCount', 'candidatesTokenCount', 'totalTokenCount', 'cachedContentTokenCount']
-                        .filter(key => Number.isSafeInteger(usage[key]) && usage[key] >= 0)
-                        .map(key => [key, usage[key]]));
-                    if (Object.keys(counts).length) console.log('GEMINI_USAGE ' + JSON.stringify(counts));
-                }
+                });
+                logGeminiUsage(response);
+                const text = requireGeminiText(response);
 
                 fs.writeFileSync(outputFile, text);
                 console.log("DEBUG: Done.");

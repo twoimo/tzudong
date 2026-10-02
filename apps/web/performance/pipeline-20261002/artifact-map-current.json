@@ -14,7 +14,7 @@
     "apps/web/performance/pipeline-20261002/browser-revision-intermediate-v1.json": "641a90d9b7be9f6b09e1f971bf3bddcc4aa62b1a9e4480da4fe9288efe2fecb7",
     "apps/web/performance/pipeline-20261002/browser-revision-navigation-raw.json": "e13471f669d7eb3f4e756d2bef07c0a9f53542224e05c682737191096f894b22",
     "apps/web/performance/pipeline-20261002/browser-revision-raw.json": "0b807201591ab3b643406dea51f8e97277fc100a941c6c97b4ed0498a3942eda",
-    "apps/web/performance/pipeline-20261002/completion-audit.json": "16c4c046c1921f27f92d848126470bd5e76ca8e25d9db60ae1c8a25ae281fe4c",
+    "apps/web/performance/pipeline-20261002/completion-audit.json": "151e52d994eae88361535cf77f6dc1a2ad1d8f79da8184ec3d33d10942fa0167",
     "apps/web/performance/pipeline-20261002/configuration-current.json": "83f3fc248c37ba62385b88f0ad709acec9b6abd774d9e355dec39a13b91fe7dc",
     "apps/web/performance/pipeline-20261002/media-replay-intermediate-v1.json": "b051f326856b7014c7f2ed9567fbd4ec03bad53008c46e312495fa48edc9affc",
     "apps/web/performance/pipeline-20261002/media-replay-intermediate-v2.json": "2b1283a76b84117b3e6c2de0ff8399dfd1e3bd5793ee1526cabc7789806f8407",
@@ -45,7 +45,12 @@
     "apps/web/performance/pipeline-20261002/transcript-cache-rejected-v2.json": "53fda3db180f600eee1f6cb2f6474106d85a8802c094fd322de5b5fc55fb3d40",
     "apps/web/performance/pipeline-20261002/billing-readback.json": "09ba0e3a917f7c5fffa50ccff12211ad7bb6d9dae37cfa793a4dbc48fc29eb9e",
     "apps/web/performance/pipeline-20261002/transcript-cache-intermediate-v4.json": "dc22fd04401c873977fe8f996be7d7140356987348d2aeb041f2c0b2859d2b56",
-    "apps/web/performance/pipeline-20261002/verification-transcript-and-billing.json": "0cc7ee5f961d67e127362d087a904045e0579474fee7c650f75f6ad65da953ad"
+    "apps/web/performance/pipeline-20261002/verification-transcript-and-billing.json": "0cc7ee5f961d67e127362d087a904045e0579474fee7c650f75f6ad65da953ad",
+    "apps/web/performance/pipeline-20261002/verification-gemini-admission.json": "7f6e7f077e2767927c7bbfc2d9b1cd024ca470b3ed297d27f26d41dd56afb6e9",
+    "apps/web/performance/pipeline-20261002/gemini-admission-rejected-order-v2.json": "3441c1bac96ad47ea27d6e9def9cbdea51d8af981d1b4c7a862cb2c6d4a48f4a",
+    "apps/web/performance/pipeline-20261002/gemini-admission-intermediate-v1.json": "793528c5b8e59a5c5b649734b994ffa44f60f85e42655802b94c8ce0d02079a6",
+    "apps/web/performance/pipeline-20261002/gemini-admission-raw.json": "4bf7b424473b4d99af3d90805a16a17d7513fefd2861fe18fbcebe1581c8ec4f",
+    "apps/web/performance/pipeline-20261002/gemini-admission-summary.json": "2821e78229fda059384d5508b59d2ace5587d0c0dda97e0a0386def5a3812d87"
   },
   "sourceFiles": {
     "backend/restaurant-crawling/scripts/03-collect-transcript.js": "42dd1baae45a59ead74066104de2c59f78e6c8658105a9d0f7c9716ba3491dce",
@@ -53,7 +58,16 @@
     "backend/restaurant-crawling/scripts/tests/transcript-cache.test.mjs": "5a016ee3e3e2e46e133dd28dca3a8c34e02378779f6375c2c176d6a40080a3d9",
     "backend/bin/benchmark_transcript_cache.mjs": "ccd1450f545b3f1e3a2ac9221a79004f38f4c1271d5c12374c77239c4d67c6ce",
     "backend/bin/probe_gemini_pipeline.mjs": "fa2c53a98f6fb344b3260c4c2fa027f88fbb315c3f8728b3b26111ed570e7f56",
-    "backend/bin/analyze_pipeline_performance.py": "722efeb31e4601319da914c7691a8dad1fdad14b4cca1bf5ae55b3e1329ffbfb",
-    "docs/operations/pipeline-performance-20261002.md": "cdeb172938c2475466cc68ce858ffb93bf1cb6b35b5d700ea879514d0ae0324a"
+    "backend/bin/analyze_pipeline_performance.py": "037b3c03decf9acbc5006beec9dff66f5570de73d65fb847e1b305e30753b7cc",
+    "docs/operations/pipeline-performance-20261002.md": "850ff6f3c2e5a41dee08f3ea05994d7915d1004631a687fcaba41a0da2f1be48",
+    "backend/utils/gemini-client.mjs": "d40616c78160636207e2d1e7e92a3f5daa2305492410300e1ef4a356f47d7498",
+    "backend/utils/provider-budget.mjs": "b1260aaf47f8c8bfe55d996ba45bd1cbd2b48d08afb6453ddc53af62a38e0bc7",
+    "backend/utils/provider_budget.py": "f4bde2eb38e4de766a1b5b7ef8fe930a4123af1e69acd6402d284c0962fd0bf0",
+    "backend/bin/benchmark_gemini_admission.mjs": "c8fb0c209f580eb15f95cbf214e716daf22f02295d2f335f9ebb4e094146894d",
+    "backend/restaurant-crawling/scripts/05-map-url-crawling.js": "e92021e164ed318ae1739769286fb36e9a5b19c236fbbed8d785c83217cb763d",
+    "backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs": "2c77880875451eadc3ee5c0894f21b8f0cf7160ae40321d74247ed648d487358",
+    "backend/restaurant-crawling/scripts/final_merge_chunk.mjs": "2520820e959fd345738ff7fdaf0ea790ae8f284d5e5e4101b1c1e82a4dff8fb3",
+    "backend/restaurant-evaluation/scripts/gemini_api_request.mjs": "81bbe400493f020d095d8dec2318e2b97f79c9b1a1428ac952d5b062f44aa54e",
+    "backend/utils/tests/gemini-client.test.mjs": "7f47aae0e3d206c75988992725bdc9894e084bfc7bbf3f9f0cc551b98fec7995"
   }
 }

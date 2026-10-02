@@ -550,6 +550,8 @@ SCAN_CACHE_ARGS=(--receipt "$LAAJ_RESULTS_DIR/.receipts/{id}.json"
     --input "$RULE_RESULTS_DIR/{id}.jsonl" --input "$TRANSCRIPT_DIR/{id}.jsonl"
     --metadata "$META_DIR/{id}.jsonl" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
     --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
+    --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
+    --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
     --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
     --setting "$AGY_MODEL_LABEL" --output "$LAAJ_RESULTS_DIR/{id}.jsonl")
 PENDING_IDS=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" scan --scan-dir "$RULE_RESULTS_DIR" "${SCAN_CACHE_ARGS[@]}") || exit 1
@@ -606,6 +608,8 @@ for i in "${!VIDEO_IDS[@]}"; do
     CACHE_ARGS=(--receipt "$RECEIPT_FILE" --input "$RULE_FILE" --input "$TRANSCRIPT_FILE"
         --metadata "$META_FILE" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
         --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
+        --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
+        --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
         --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
         --setting "$AGY_MODEL_LABEL" --output "$OUTPUT_FILE")
     # Existing output alone cannot certify the current inputs/model/prompt.

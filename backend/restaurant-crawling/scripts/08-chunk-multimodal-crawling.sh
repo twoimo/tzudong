@@ -956,6 +956,8 @@ process_channel() {
         --asset "$PROMPT_FILE" --asset "$CHUNK_PLANNER" --asset "$MERGE_RESULTS"
         --asset "$PARSER_SCRIPT" --asset "$GEMINI_CHUNK_API"
         --asset "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh"
+        --asset "$SCRIPT_DIR/final_merge_chunk.mjs" --asset "$PROJECT_ROOT/utils/gemini-client.mjs"
+        --asset "$PROJECT_ROOT/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/utils/provider_budget.py"
         --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"
         --setting "$GEMINI_CHUNK_THINKING_LEVEL" --setting "$GEMINI_FINAL_MERGE_THINKING_LEVEL"
         --output "$crawling_dir/{id}.jsonl")
@@ -1038,6 +1040,8 @@ process_channel() {
             --metadata "$meta_file" --asset "$PROMPT_FILE" --asset "$CHUNK_PLANNER"
             --asset "$MERGE_RESULTS" --asset "$PARSER_SCRIPT" --asset "$GEMINI_CHUNK_API"
             --asset "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh"
+            --asset "$SCRIPT_DIR/final_merge_chunk.mjs" --asset "$PROJECT_ROOT/utils/gemini-client.mjs"
+            --asset "$PROJECT_ROOT/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/utils/provider_budget.py"
             --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"
             --setting "$GEMINI_CHUNK_THINKING_LEVEL" --setting "$GEMINI_FINAL_MERGE_THINKING_LEVEL"
             --output "$crawling_file")

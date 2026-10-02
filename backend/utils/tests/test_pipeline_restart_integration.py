@@ -136,6 +136,7 @@ class LaajRestartTests(unittest.TestCase):
                 'backend/restaurant-evaluation/prompts/evaluation_prompt.txt',
                 'backend/bin/stage_cache.py','backend/bin/run_parallel_laaj.py',
                 'backend/utils/stage_cache.py','backend/utils/jsonl_utils.py','backend/utils/provider_budget.py',
+                'backend/utils/provider-budget.mjs','backend/utils/gemini-client.mjs',
             ]:
                 target=root/relative;target.parent.mkdir(parents=True,exist_ok=True)
                 shutil.copy2(ROOT/relative,target)

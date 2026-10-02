@@ -1,0 +1,312 @@
+{
+  "kind": "controlled_gemini_admission_comparison",
+  "formalPerformanceClaim": "not_established",
+  "confidenceMethod": "10000 paired percentile bootstrap draws; seed 20261002",
+  "settings": {
+    "pairsPerCondition": 7,
+    "concurrency": 1,
+    "rpm": 100000,
+    "httpFixtureDelayMs": 30,
+    "uncooperativeWorkMs": 220,
+    "deadlineMs": 20,
+    "actualGoogleRequests": 0,
+    "rateScope": "Isolated replay settings only; not operational quota."
+  },
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "sdk": "2.26.0"
+  },
+  "limitations": [
+    "Local loopback HTTP and simulated uncooperative SDK; not provider latency or cost.",
+    "Concurrency means admitted client operations; aborting a client does not cancel remote computation or billing.",
+    "Baseline violates configured concurrency; elapsed-time differences are not a like-for-like speed claim.",
+    "Node CPU excludes Python budget children."
+  ],
+  "scenarios": {
+    "unguarded-merge": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 34.347999999999956,
+          "afterMs": 688.6379579999998,
+          "absoluteReductionMs": -654.2899579999998,
+          "reductionPercent": -1904.8851694421821,
+          "reduction95CI": [
+            -2086.641993711427,
+            -1793.0944209056393
+          ],
+          "experimentalNoiseBudgetMs": 23.062000000000808,
+          "mediansMs": [
+            34.347999999999956,
+            688.6379579999998
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 36.218208000000004,
+          "afterMs": 751.0677919999999,
+          "absoluteReductionMs": -714.8495839999999,
+          "reductionPercent": -1973.7298543318318,
+          "reduction95CI": [
+            -2301.7874636077822,
+            -1227.4126857350639
+          ],
+          "experimentalNoiseBudgetMs": 23.062000000000808,
+          "mediansMs": [
+            34.347999999999956,
+            688.6379579999998
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 56.581333,
+          "afterMs": 824.965958,
+          "absoluteReductionMs": -768.384625,
+          "reductionPercent": -1358.0178908121518,
+          "reduction95CI": [
+            -2301.097151671945,
+            -1227.4126857350639
+          ],
+          "experimentalNoiseBudgetMs": 23.062000000000808,
+          "mediansMs": [
+            34.347999999999956,
+            688.6379579999998
+          ]
+        }
+      },
+      "nodeCpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 7.795,
+        "afterMs": 34.521,
+        "absoluteReductionMs": -26.726,
+        "reductionPercent": -342.86080821039127,
+        "reduction95CI": [
+          -542.3706736136955,
+          -126.7539267015707
+        ],
+        "experimentalNoiseBudgetMs": 3.5219999999999985,
+        "mediansMs": [
+          5.374,
+          19.724
+        ]
+      },
+      "outputsEquivalent": true,
+      "likeForLikeSpeedClaim": false,
+      "calls": {
+        "before": 6,
+        "after": 6,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ],
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "peakActive": {
+        "before": 6,
+        "after": 1,
+        "absoluteChange": -5,
+        "changePercent": -83.33333333333334,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          -5,
+          -5
+        ],
+        "change95CI": [
+          -83.33333333333334,
+          -83.33333333333334
+        ],
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "concurrencyViolations": {
+        "before": 5,
+        "after": 0,
+        "absoluteChange": -5,
+        "changePercent": -100.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          -5,
+          -5
+        ],
+        "change95CI": [
+          -100.0,
+          -100.0
+        ],
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "returnedWhileWorkActive": {
+        "before": 0,
+        "after": 0,
+        "absoluteChange": 0,
+        "changePercent": null,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": null,
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "requestEnvelopesMatch": true
+    },
+    "timeout-unsettled": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 287.9108329999999,
+          "afterMs": 439.24604100000033,
+          "absoluteReductionMs": -151.33520800000042,
+          "reductionPercent": -52.563221197029584,
+          "reduction95CI": [
+            -57.43056812402478,
+            -45.49661258620708
+          ],
+          "experimentalNoiseBudgetMs": 26.25050000000192,
+          "mediansMs": [
+            287.9108329999999,
+            439.24604100000033
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 293.24362500000007,
+          "afterMs": 449.23383300000023,
+          "absoluteReductionMs": -155.99020800000017,
+          "reductionPercent": -53.19474822342689,
+          "reduction95CI": [
+            -59.447253587710506,
+            -48.372503971132396
+          ],
+          "experimentalNoiseBudgetMs": 26.25050000000192,
+          "mediansMs": [
+            287.9108329999999,
+            439.24604100000033
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 296.0427500000005,
+          "afterMs": 459.06591599999956,
+          "absoluteReductionMs": -163.02316599999904,
+          "reductionPercent": -55.06744076657806,
+          "reduction95CI": [
+            -58.938708604008404,
+            -48.84722426068464
+          ],
+          "experimentalNoiseBudgetMs": 26.25050000000192,
+          "mediansMs": [
+            287.9108329999999,
+            439.24604100000033
+          ]
+        }
+      },
+      "nodeCpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 4.144,
+        "afterMs": 4.372,
+        "absoluteReductionMs": -0.22799999999999976,
+        "reductionPercent": -5.501930501930485,
+        "reduction95CI": [
+          -116.40926640926641,
+          19.23292797006547
+        ],
+        "experimentalNoiseBudgetMs": 0.41799999999999926,
+        "mediansMs": [
+          3.963,
+          4.222
+        ]
+      },
+      "outputsEquivalent": true,
+      "likeForLikeSpeedClaim": false,
+      "calls": {
+        "before": 2,
+        "after": 2,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ],
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "peakActive": {
+        "before": 2,
+        "after": 1,
+        "absoluteChange": -1,
+        "changePercent": -50.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          -1,
+          -1
+        ],
+        "change95CI": [
+          -50.0,
+          -50.0
+        ],
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "concurrencyViolations": {
+        "before": 1,
+        "after": 0,
+        "absoluteChange": -1,
+        "changePercent": -100.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          -1,
+          -1
+        ],
+        "change95CI": [
+          -100.0,
+          -100.0
+        ],
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "returnedWhileWorkActive": {
+        "before": 1,
+        "after": 0,
+        "absoluteChange": -1,
+        "changePercent": -100.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "absoluteChange95CI": [
+          -1,
+          -1
+        ],
+        "change95CI": [
+          -100.0,
+          -100.0
+        ],
+        "confidenceScope": "Fixed replay cohort, not remote supplier population."
+      },
+      "requestEnvelopesMatch": true
+    }
+  }
+}

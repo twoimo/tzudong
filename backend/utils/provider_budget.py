@@ -111,13 +111,16 @@ def main() -> int:
     parser.add_argument("--pid", type=int, default=os.getppid())
     parser.add_argument("--lease", default="")
     parser.add_argument("--delay", type=float, default=0)
+    parser.add_argument("--timeout", type=float, default=600)
     args = parser.parse_args()
     budget = ProjectBudget(budget_path(),
                            os.getenv("GEMINI_BUDGET_PROJECT", "configured-project"),
                            rpm=positive_int(os.getenv("GEMINI_REQUESTS_PER_MINUTE"), 30, 100000),
                            concurrency=positive_int(os.getenv("GEMINI_MAX_INFLIGHT"), 1, 8))
     if args.action == "acquire":
-        print(budget.acquire(args.pid))
+        if not 0 < args.timeout <= 600:
+            raise ValueError('provider_budget_invalid')
+        print(budget.acquire(args.pid, timeout=args.timeout))
     elif args.action == "release":
         budget.release(args.lease)
     else:

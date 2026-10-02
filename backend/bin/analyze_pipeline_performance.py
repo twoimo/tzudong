@@ -174,9 +174,39 @@ def transcript_report():
                                    for case,value in result['scenarios'].items()}}))
 
 
+def admission_report():
+    raw=json.loads((BASE/'gemini-admission-raw.json').read_text())
+    result={'kind':'controlled_gemini_admission_comparison','formalPerformanceClaim':'not_established',
+            'confidenceMethod':'10000 paired percentile bootstrap draws; seed 20261002',
+            'settings':raw['settings'],'environment':raw['environment'],'limitations':raw['limitations'],'scenarios':{}}
+    for case in ['unguarded-merge','timeout-unsettled']:
+        rows=[row for row in raw['observations'] if row['scenario']==case]
+        report={'wall':{f'p{int(p*100)}':compare(rows,p) for p in [.5,.75,.95]},
+                'nodeCpu':compare([dict(row,wallMs=row['nodeCpuMs']) for row in rows]),
+                'outputsEquivalent':len({row['resultSha256'] for row in rows})==1,
+                'likeForLikeSpeedClaim':False}
+        for name in ['calls','peakActive','concurrencyViolations','returnedWhileWorkActive']:
+            values={kind:[row[name] for row in rows if row['implementation']==kind] for kind in ['baseline','candidate']}
+            before,after=statistics.median(values['baseline']),statistics.median(values['candidate'])
+            report[name]={'before':before,'after':after,'absoluteChange':after-before,
+                          'changePercent':100*(after/before-1) if before else None,'samples':7,
+                          'fixedCounts':len(set(values['baseline']))==1 and len(set(values['candidate']))==1}
+            if report[name]['fixedCounts']:
+                report[name]['absoluteChange95CI']=[after-before,after-before]
+                report[name]['change95CI']=[report[name]['changePercent']]*2 if before else None
+                report[name]['confidenceScope']='Fixed replay cohort, not remote supplier population.'
+        report['requestEnvelopesMatch']=case!='unguarded-merge' or len({sha for row in rows for sha in row['requestHashes']})==1
+        result['scenarios'][case]=report
+    (BASE/'gemini-admission-summary.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps({case:{'wallP75':value['wall']['p75'],'peakActive':value['peakActive'],
+                           'releasedWhileActive':value['returnedWhileWorkActive'],'outputsEquivalent':value['outputsEquivalent']}
+                     for case,value in result['scenarios'].items()}))
+
+
 if __name__=='__main__':
     import sys
-    if '--transcripts' in sys.argv:transcript_report()
+    if '--admission' in sys.argv:admission_report()
+    elif '--transcripts' in sys.argv:transcript_report()
     elif '--storage' in sys.argv:storage_report()
     elif '--current' in sys.argv:current_report()
     else:main()

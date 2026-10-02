@@ -24,13 +24,19 @@ export function retryAfterSeconds(error) {
     return Number.isFinite(seconds) ? Math.max(0, seconds) : null;
 }
 
-export async function withProjectBudget(work) {
-    const lease = await budgetCommand(['acquire', '--pid', String(process.pid)]);
+export async function applyProjectCooldown(error) {
+    const delay = retryAfterSeconds(error);
+    if (delay !== null) await budgetCommand(['cooldown', '--delay', String(delay)]);
+}
+
+export async function withProjectBudget(work, { acquireTimeoutMs = 600000 } = {}) {
+    if (!Number.isSafeInteger(acquireTimeoutMs) || acquireTimeoutMs < 1 || acquireTimeoutMs > 600000)
+        throw new Error('PROVIDER_BUDGET_INVALID');
+    const lease = await budgetCommand(['acquire', '--pid', String(process.pid), '--timeout', String(acquireTimeoutMs / 1000)]);
     if (!/^[a-f0-9]{32}$/.test(lease)) throw new Error('PROVIDER_BUDGET_UNAVAILABLE');
     try { return await work(); }
     catch (error) {
-        const delay = retryAfterSeconds(error);
-        if (delay !== null) await budgetCommand(['cooldown', '--delay', String(delay)]);
+        await applyProjectCooldown(error);
         throw error;
     } finally { await budgetCommand(['release', '--lease', lease]); }
 }

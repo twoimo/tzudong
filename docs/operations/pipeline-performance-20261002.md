@@ -109,3 +109,24 @@ URL 중복 조건에서 요청 수는 `N=25 → U=5`, 제거 비율은 `1-U/N=80
 카드 삭제는 AI Studio와 올바른 대한민국 결제 프로필의 Google Payments 직접 관리 경로를 모두 확인했다. Google Cloud가 유효한 대체 수단 지정을 요구해 완료하지 못했다. 유효한 대체 수단 없이 결제 계정을 닫거나 정지시키지 않았으며 충전·프로젝트 연결을 보존했다. [공식 결제 수단 조건](https://docs.cloud.google.com/billing/docs/how-to/payment-methods), [Gemini 선불 정책](https://ai.google.dev/gemini-api/docs/billing).
 
 이번 추가 범위는 자막 캐시 10개, 기존 자막 실행 11개와 프레임 검사 1개, Python 프로필/전환 31개가 통과했다. Windows 전용 8개는 macOS에서 건너뛴 상태로 Windows 검증이라고 표시하지 않는다. 기존 Windows 전용 검사 하나가 skip 후 본문을 실행하던 문제를 고쳤고 테스트에서 만든 프로세스의 종료를 확인했다. 전체 파이프라인·메타데이터 단계의 완료 기록·통합 속도·운영 관측과 scorer/validator는 아직 완료되지 않았다.
+
+### Gemini 호출 제한과 시간초과 처리
+
+현재 SDK 2.26.0은 `retryOptions`가 없으면 HTTP 요청을 1회 시도한다. 옵션 객체에서 attempts를 생략할 때의 기본값 5를 SDK 전체의 무조건적 기본값으로 해석하지 않는다. 실제 로컬 HTTP 503에서 기존 설정과 명시적 attempts=1 각각 1회만 호출했다. SDK 공식 확장점 `HttpOptions.fetch`에서 Retry-After를 먼저 읽어 SDK가 오류를 만들며 헤더를 버리는 경우에도 공유 cooldown에 반영한다. [공식 HTTP 옵션](https://googleapis.github.io/js-genai/release_docs/interfaces/types.HttpOptions.html).
+
+기존 공유 제한 밖에 있던 청크 최종 병합·지도 URL 보조 추출·preflight와 프레임 호출을 같은 로컬 프로젝트 예산에 연결했다. 모델·온도·thinking·출력 상한은 유지하며 thinking 미지원 재요청에서도 온도 0.2·출력 4096을 유지한다. 구 SDK와 현재 SDK의 모델 경로·입력·생성 설정이 로컬 HTTP에서 일치했다. 요청의 object key 순서를 직접 해싱하던 초기 증빙은 기각하고 key를 정규화하되 배열 순서를 보존한 최종 해시로 검증했다. 맛집 평가 정확도 비교라고 주장하지 않는다.
+
+시간초과는 SDK에 AbortSignal을 전달하고 실제 SDK promise가 끝난 뒤 동시성 슬롯을 반환한다. Promise.race로 SDK를 남긴 채 다음 요청을 받지 않는다. 로컬 HTTP 지연에서 전송 중단과 lease 0을 검증했고, 중단에 협조하지 않는 SDK 재생에서도 슬롯을 유지했다. 이미 취소된 요청은 SDK 호출 0회이며 빈 응답은 완료 출력으로 게시하지 않는다. 파일 업로드/상태/삭제에도 신호와 기존 시간 상한을 전달한다. 클라이언트 중단은 Google 서버의 계산 취소나 과금 취소를 증명하지 않는다.
+
+상한 C에서 모든 호출은 `active <= C`를 만족해야 한다. 처리량의 상한은 `min(RPM/60, C/W)`이며, 제한을 거치지 않은 호출을 빠른 유효 기준선으로 채택하지 않는다. 두 조건 각각 7쌍·총 28회, Node 24.21.0·SDK 2.26.0·macOS arm64, loopback 응답 30ms, 미완료 SDK 재생 220ms·기한 20ms, C=1·RPM=100000을 사용했다. RPM은 격리 실험용이며 운영/공급자 한도가 아니다. 실제 Google 요청은 0회다.
+
+| 조건, 각 7쌍 | 최대 동시 작업 전 → 후 | 절대 차이·변화율·고정 fixture 95% 구간 | p75 시간 전 → 후 | 시간 변화율·95% 구간 |
+|---|---|---|---|---|
+| 제한 밖 병합 6개 | 6 → 1 | -5·-83.33%·[-83.33,-83.33] | 36.22 → 751.07ms | 1973.73% 증가 [1227.41,2301.79] |
+| 시간초과 뒤 작업 미완료 | 2 → 1 | -1·-50.00%·[-50.00,-50.00] | 293.24 → 449.23ms | 53.19% 증가 [48.37,59.45] |
+
+C=1 위반은 두 조건 각각 최대 5→0, 1→0이고 미완료 작업 중 반환은 1→0이었다(각 7쌍의 고정 fixture 값). 호출 수와 결과 해시는 같았다. Node CPU·p50/p75/p95·절대 차이·노이즈 기준은 `gemini-admission-summary.json`에 보관한다. Node CPU는 Python 예산 명령의 CPU를 포함하지 않는다. 요청마다 Python 명령을 실행하고 대기열을 polling하는 비용이 남아 있어 자원 상한을 맞추는 필수 보완으로 채택하며 속도·금액 개선으로 주장하지 않는다. 제어 오버헤드 개선과 TPM/RPD·여러 호스트의 총량 검증은 남아 있다.
+
+SDK/시간초과·청크 18개, 지도 URL 경계 8개, Python 성능/재시작/오류 27개, Gemini 설정 3개가 통과했다. Python 재시작 11개 재검사는 27개 안의 부분 집합이므로 중복 합산하지 않는다. macOS 경로 표기 때문에 파일 교체 hook이 실행되지 않던 검사를 고쳤고 실행 여부를 별도로 확인했다. 파일 동일성은 BigInt로 비교하며 같은 크기로 읽는 도중 바뀐 파일도 거부한다. 단계 08/11의 완료 해시에 공유 SDK/예산 helper와 최종 병합을 포함했다. 원본 설정·데이터·운영 DB 변경이나 배포를 수행하지 않았다.
+
+재현: `RUN_DAILY_PYTHON=<project-python> <node24> backend/bin/benchmark_gemini_admission.mjs --output <new-evidence-file>` 후 `python3 backend/bin/analyze_pipeline_performance.py --admission`.

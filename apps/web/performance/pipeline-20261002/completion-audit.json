@@ -39,9 +39,13 @@
       "evidence": [
         "backend/utils/provider_budget.py",
         "backend/bin/run_parallel_laaj.py",
-        "backend/utils/tests/test_pipeline_restart_integration.py"
+        "backend/utils/tests/test_pipeline_restart_integration.py",
+        "gemini-admission-raw.json",
+        "gemini-admission-summary.json",
+        "verification-gemini-admission.json"
       ],
-      "remaining": "One real configured-model response validated. Actual TPM/RPD admission, cross-host totals and accounting for SDK automatic retries across pipeline helpers remain unestablished."
+      "remaining": "Actual TPM/RPD admission and cross-host totals remain. Client cancellation does not cancel remote work. Shared-budget command startup/polling overhead remains to optimize.",
+      "scope": "Active Node generation paths including final merge, map helper and preflight share local project admission; installed SDK sends one HTTP attempt; Retry-After retained before SDK error conversion; permits remain until SDK settlement."
     },
     {
       "requirement": "Evaluation/storage deduplication and 1-200 batch comparison",
@@ -123,14 +127,15 @@
       "evidence": [
         "skill backup/readback from preceding work",
         "web release lock",
-        "backend installed SDK 2.26.0"
+        "backend installed SDK 2.26.0",
+        "Current official SDK HttpOptions docs, installed 2.26.0 code and actual local HTTP observation: absent retryOptions sends one attempt."
       ],
       "scope": "Five used cached skills updated; web SDK 2.18.0, candidate backend SDK 2.26.0. Not a blanket freshness claim for every installed skill."
     },
     {
       "requirement": "Existing model/paid/operating bounds and shared settings preservation",
       "status": "partial",
-      "scope": "Same configured model; one explicitly funded real request with one SDK attempt. No deployment or operational DB writes. Auto-reload off.",
+      "scope": "Same configured model; one explicitly funded real request with one SDK attempt. No deployment or operational DB writes. Auto-reload off. Wire model/config preserved in loopback SDK comparison; thinking fallback retains 4096 output cap and temperature.",
       "remaining": "Initial isolated test rewrote Gemini CLI settings via inherited function. Prior configuration snapshot missing; future isolated writes are now blocked and hash-checked."
     },
     {
