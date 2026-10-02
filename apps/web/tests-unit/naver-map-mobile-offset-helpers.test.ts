@@ -3,9 +3,17 @@ import { describe, expect, test } from 'bun:test';
 import {
     calculateNaverMobileVerticalOffset,
     resolveNaverMobileVerticalOffset,
+    resolveNaverOccludingNavHeight,
 } from '../lib/naver-map-mobile-offset-helpers';
 
 describe('naver map mobile offset helpers', () => {
+    test('subtracts only the navigation height still occluding the SDK map', () => {
+        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 844 })).toBe(61);
+        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 783 })).toBe(0);
+        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 813 })).toBe(30);
+        expect(resolveNaverOccludingNavHeight({ navHeight: 0, viewportHeight: 844, mapHeight: 844 })).toBe(0);
+        expect(resolveNaverOccludingNavHeight({ navHeight: 61, viewportHeight: 844, mapHeight: 700 })).toBe(0);
+    });
     test('calculates centered vertical offset from sheet and nav heights', () => {
         expect(calculateNaverMobileVerticalOffset({
             fineTunePx: -6,
