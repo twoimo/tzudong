@@ -1,0 +1,27 @@
+.tzudong-individual-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tzudong-marker-picture { display: block; width: 100%; height: 100%; }
+.tzudong-marker-image { width: 100%; height: 100%; object-fit: contain; }
+.tzudong-individual-marker > .tzuyang-visit-count-badge {
+  position: absolute;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background-color: #dc2626;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  box-sizing: border-box;
+}
