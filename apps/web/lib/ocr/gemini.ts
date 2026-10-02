@@ -34,7 +34,7 @@ export function getGeminiOcrDefaultModel(env: NodeJS.ProcessEnv = process.env): 
 
 export function getGeminiOcrModels(env: NodeJS.ProcessEnv = process.env): string[] {
   const configured = sanitizeCsv(env.GEMINI_OCR_MODEL);
-  if (configured.length) return configured;
+  if (configured.length) return [...new Set(configured)];
   return [getGeminiOcrDefaultModel(env)];
 }
 
@@ -77,6 +77,7 @@ export function buildGeminiReceiptOcrRequest(input: {
   thinkingLevel: GeminiOcrThinkingLevel;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }) {
   return {
     model: input.model,
@@ -86,6 +87,7 @@ export function buildGeminiReceiptOcrRequest(input: {
       responseMimeType: 'application/json',
       thinkingConfig: { thinkingLevel: toGeminiThinkingLevel(input.thinkingLevel) },
       abortSignal: input.signal,
+      httpOptions: { timeout: input.timeoutMs ?? 12_000, retryOptions: { attempts: 1 } },
     },
   };
 }
@@ -96,8 +98,9 @@ async function generateWithSdk(input: {
   thinkingLevel: GeminiOcrThinkingLevel;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }) {
-  const genAI = new GoogleGenAI({ apiKey: input.apiKey });
+  const genAI = new GoogleGenAI({ apiKey: input.apiKey, httpOptions: { retryOptions: { attempts: 1 } } });
   const response = await genAI.models.generateContent(buildGeminiReceiptOcrRequest(input));
   if (typeof response.text !== 'string') {
     throw new Error('Gemini OCR 응답 텍스트가 없습니다.');
@@ -121,11 +124,14 @@ export async function callGeminiReceiptOcr(input: {
   const timeoutMs = parseTimeoutMs(env);
   const thinkingLevel = getGeminiOcrThinkingLevel(env);
   const attempts: ReceiptOcrAttempt[] = [];
+  const deadline = Date.now() + timeoutMs;
 
   for (const model of getGeminiOcrModels(env)) {
+    if (input.signal?.aborted || Date.now() >= deadline) break;
     const startedAt = Date.now();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const remainingMs = Math.max(1, deadline - Date.now());
+    const timeout = setTimeout(() => controller.abort(), remainingMs);
     const abortFromCaller = () => controller.abort();
     input.signal?.addEventListener('abort', abortFromCaller, { once: true });
 
@@ -138,7 +144,8 @@ export async function callGeminiReceiptOcr(input: {
       });
       const text = await (input.generateContentImpl
         ? input.generateContentImpl({ model, thinkingLevel, parts, signal: controller.signal })
-        : generateWithSdk({ apiKey, model, thinkingLevel, parts, signal: controller.signal }));
+        : generateWithSdk({ apiKey, model, thinkingLevel, parts, signal: controller.signal, timeoutMs: remainingMs }));
+      controller.signal.throwIfAborted();
       const data: ReceiptOcrData = normalizeReceiptOcrData(extractJsonObject(text));
       attempts.push({ model, ok: true, elapsedMs: Date.now() - startedAt });
       return { data, model, attempts };
@@ -147,8 +154,8 @@ export async function callGeminiReceiptOcr(input: {
         model,
         ok: false,
         elapsedMs: Date.now() - startedAt,
-        error: error instanceof Error && error.name === 'AbortError'
-          ? `timeout ${timeoutMs}ms`
+        error: input.signal?.aborted ? 'request_cancelled'
+          : error instanceof Error && error.name === 'AbortError' ? `timeout ${timeoutMs}ms`
           : 'provider_request_failed',
       });
     } finally {

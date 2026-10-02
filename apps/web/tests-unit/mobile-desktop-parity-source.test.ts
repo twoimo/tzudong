@@ -118,7 +118,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
     expect(consoleSource).toContain(
-      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);",
     );
     expect(consoleSource).toContain(
       "const [showSidebarLabels, setShowSidebarLabels] = useState(false);",
@@ -1000,7 +1000,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(stampOverlaySource).toContain("<MapPanelHeader");
     expect(stampOverlaySource).toContain('title="도장"');
     expect(stampOverlaySource).toContain('titleAs="h1"');
-    expect(mapPanelChromeSource).toContain("shrink-0 border-b border-border bg-background px-4 py-3");
+    expect(mapPanelChromeSource).toContain("shrink-0 border-b border-border bg-card px-4 py-3");
     expect(mapPanelChromeSource).toContain("flex items-center gap-2");
     expect(mapPanelChromeSource).toContain('aria-label={closeLabel}');
     expect(stampOverlaySource).toContain('stampSize="mobile"');

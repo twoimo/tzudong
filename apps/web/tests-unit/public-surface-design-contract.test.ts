@@ -174,9 +174,9 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
 ] as const;
 
 const LIGHT_TOKEN_LITERALS = [
-  '--background: 38 30% 98%',
-  '--primary: 0 74% 42%',
-  '--radius: 0.5rem',
+  '--background: 220 27% 98%',
+  '--primary: 352 74% 42%',
+  '--radius: 0.625rem',
   '--app-header-height: 56px',
   '--mobile-bottom-nav-height: 60px',
 ] as const;

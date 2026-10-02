@@ -1,0 +1,179 @@
+{
+  "kind": "source-token-contrast",
+  "baseline": "65bf3a584e55a849bdf5f3e8dcf5cc2e739f1fbb",
+  "environment": {
+    "node": "v24.21.0",
+    "method": "WCAG 2 relative luminance and contrast ratio"
+  },
+  "beforeHashes": [
+    "b2c17340154d29e5b9e989cb53eb7891df074e3023a1e839555ed7ffde678588",
+    "a0cba11195ac75101cdd485f36373b3e17e59c130d141759c14765aef3e3a86f"
+  ],
+  "afterHashes": [
+    "0b4b2c01f56d8f8f091ceff23e5d94a448b88ca65eb64716b104380ecc6450aa",
+    "a1a36542b3f6d93dd6f12ba8826a16d3c2f0bbf1755af95ae282bec3869980a5"
+  ],
+  "observations": [
+    {
+      "mode": "light",
+      "foreground": "--foreground",
+      "background": "--background",
+      "before": 16.813953263498746,
+      "after": 14.708335448882567,
+      "absoluteDifference": -2.1056178146161795,
+      "relativePercent": -12.523038345700922,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "light",
+      "foreground": "--card-foreground",
+      "background": "--card",
+      "before": 16.813953263498746,
+      "after": 15.434642396005858,
+      "absoluteDifference": -1.3793108674928884,
+      "relativePercent": -8.203370414304779,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "light",
+      "foreground": "--muted-foreground",
+      "background": "--card",
+      "before": 4.572619875026943,
+      "after": 5.569524867933336,
+      "absoluteDifference": 0.9969049929063933,
+      "relativePercent": 21.801615269857066,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "light",
+      "foreground": "--primary",
+      "background": "--card",
+      "before": 6.159447985935514,
+      "after": 6.352738163610565,
+      "absoluteDifference": 0.19329017767505086,
+      "relativePercent": 3.1381087739747127,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "light",
+      "foreground": "--primary-foreground",
+      "background": "--primary",
+      "before": 6.1324912289256925,
+      "after": 6.081110805688503,
+      "absoluteDifference": -0.05138042323718928,
+      "relativePercent": -0.8378393269416917,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "light",
+      "foreground": "--popover-foreground",
+      "background": "--popover",
+      "before": 16.813953263498746,
+      "after": 15.434642396005858,
+      "absoluteDifference": -1.3793108674928884,
+      "relativePercent": -8.203370414304779,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "dark",
+      "foreground": "--foreground",
+      "background": "--background",
+      "before": 16.1563933766109,
+      "after": 16.538783312537117,
+      "absoluteDifference": 0.3823899359262164,
+      "relativePercent": 2.366802584045713,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "dark",
+      "foreground": "--card-foreground",
+      "background": "--card",
+      "before": 14.843470869634201,
+      "after": 15.359156461843359,
+      "absoluteDifference": 0.5156855922091577,
+      "relativePercent": 3.4741577407216395,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "dark",
+      "foreground": "--muted-foreground",
+      "background": "--card",
+      "before": 7.194300055355193,
+      "after": 7.707475143108837,
+      "absoluteDifference": 0.5131750877536447,
+      "relativePercent": 7.133078740184806,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "dark",
+      "foreground": "--primary",
+      "background": "--card",
+      "before": 3.3224397197261695,
+      "after": 4.748812578764937,
+      "absoluteDifference": 1.4263728590387679,
+      "relativePercent": 42.93148948858363,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "dark",
+      "foreground": "--primary-foreground",
+      "background": "--primary",
+      "before": 4.629125073206156,
+      "after": 5.113534875900197,
+      "absoluteDifference": 0.4844098026940413,
+      "relativePercent": 10.46439219147166,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    },
+    {
+      "mode": "dark",
+      "foreground": "--popover-foreground",
+      "background": "--popover",
+      "before": 14.843470869634201,
+      "after": 15.359156461843359,
+      "absoluteDifference": 0.5156855922091577,
+      "relativePercent": 3.4741577407216395,
+      "meetsNormalText4_5": true,
+      "sampleSize": 1,
+      "confidenceInterval": null,
+      "reason": "deterministic WCAG luminance calculation, not a sample estimate"
+    }
+  ],
+  "allNormalTextRolesPass": true,
+  "limitations": [
+    "Token pairs only; rendered translucency, imagery, graphs, and focus outlines require separate browser inspection.",
+    "Higher contrast is not a measured improvement in user task time."
+  ]
+}

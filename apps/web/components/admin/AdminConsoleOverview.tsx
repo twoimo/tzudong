@@ -4146,7 +4146,7 @@ function AdminDashboardCardTitle({
         data-admin-dashboard-card-title-row="single-line"
       >
         <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5">
-          <p className="truncate whitespace-nowrap text-2xs font-extrabold leading-none text-foreground">
+          <p className="text-sm font-semibold leading-5 text-foreground" data-admin-dashboard-card-title-text="true">
             {title}
             {metric ? (
               <span
@@ -4302,6 +4302,7 @@ function AdminDashboardKpiCard({
         isFullscreen && adminDashboardFullscreenCardClassName,
       )}
       data-admin-dashboard-kpi-card="recharts-sparkline"
+      data-scroll-reveal="panel"
       data-admin-dashboard-widget-card={widgetId}
       data-admin-dashboard-kpi-emphasis={emphasis}
       data-admin-dashboard-kpi-tone={tone}
@@ -4315,7 +4316,7 @@ function AdminDashboardKpiCard({
           data-admin-dashboard-kpi-title-row="single-line"
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <p className="truncate whitespace-nowrap text-2xs font-extrabold tracking-[0.04em] text-muted-foreground">
+            <p className="text-xs font-medium leading-5 text-muted-foreground">
               {title}
             </p>
             {infoLines.length > 0 ? (
@@ -4368,7 +4369,7 @@ function AdminDashboardKpiCard({
         <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <p
-              className="whitespace-nowrap text-sm font-black leading-none tracking-[-0.035em] tabular-nums text-foreground sm:text-base"
+              className="whitespace-nowrap text-xl font-semibold leading-tight tracking-tight tabular-nums text-foreground sm:text-2xl"
               data-admin-dashboard-kpi-value-size="bounded"
             >
               {value}
@@ -4487,6 +4488,7 @@ function AdminDashboardOpsSummaryCard({
       )}
       data-admin-dashboard-ops-summary-visual="progress-bars"
       data-admin-dashboard-widget-card="ops"
+      data-scroll-reveal="panel"
       style={style}
       {...reorderProps}
     >
@@ -7265,7 +7267,7 @@ function AdminDashboardManagementPanel({
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
+            쯔양 성과 대시보드
           </h1>
         </div>
         <div
@@ -7533,6 +7535,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("impact")}
           data-admin-dashboard-widget-card="impact"
+          data-scroll-reveal="panel"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("impact") ? "true" : undefined
           }
@@ -7655,6 +7658,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("trend")}
           data-admin-dashboard-widget-card="trend"
+          data-scroll-reveal="panel"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("trend") ? "true" : undefined
           }
@@ -7785,6 +7789,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("topContent")}
           data-admin-dashboard-widget-card="topContent"
+          data-scroll-reveal="panel"
           {...getDashboardCardReorderProps("topContent")}
         >
           <AdminDashboardCardTitle
@@ -7887,6 +7892,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("engagementRate")}
           data-admin-dashboard-widget-card="engagementRate"
+          data-scroll-reveal="panel"
           {...getDashboardCardReorderProps("engagementRate")}
         >
           <AdminDashboardCardTitle
@@ -8218,8 +8224,8 @@ function AdminSidebar({
             isCollapsed &&
             "md:mx-auto md:h-8 md:min-h-8 md:w-8 md:justify-center md:gap-0 md:px-0",
           isActive
-            ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
-            : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
+            ? "border-transparent bg-primary/8 text-primary"
+            : "border-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground",
         )}
         onClick={() =>
           isDropdown ? handleMenuNavigation(item.id) : onSelectModule(item.id)
@@ -8230,8 +8236,8 @@ function AdminSidebar({
             "flex shrink-0 items-center justify-center border transition-colors motion-reduce:transition-none",
             isDropdown ? "h-6 w-6 rounded-md" : "h-6 w-6 rounded-md",
             isActive
-              ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
-              : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
+              ? "border-transparent bg-transparent text-primary"
+              : "border-transparent bg-transparent text-muted-foreground group-hover:text-foreground",
           )}
           aria-hidden="true"
         >
@@ -8255,10 +8261,10 @@ function AdminSidebar({
               "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-2xs font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
               itemStatus.urgent
                 ? isActive
-                  ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+                  ? "border-primary/20 bg-primary/10 text-primary"
                   : "border-primary/25 bg-primary/5 text-primary"
                 : isActive
-                  ? "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground/80"
+                  ? "border-primary/15 bg-primary/5 text-primary"
                   : "border-border bg-background/80 text-muted-foreground",
               !isDropdown &&
                 (!showLabels || isCollapsed) &&
@@ -10336,7 +10342,7 @@ export function AdminConsoleOverview({
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(false);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
   const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false);
@@ -10395,9 +10401,10 @@ export function AdminConsoleOverview({
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY, "1");
-    setIsSidebarCollapsed(true);
-    setShowSidebarLabels(false);
+    const saved = readBrowserStorageString("local", ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY);
+    const collapsed = saved === "1" || saved === "true";
+    setIsSidebarCollapsed(collapsed);
+    setShowSidebarLabels(!collapsed);
   }, []);
 
   useEffect(() => {
@@ -10485,9 +10492,10 @@ export function AdminConsoleOverview({
     setIsSidebarCollapsed((currentCollapsed) => {
       const nextCollapsed = !currentCollapsed;
 
-      window.localStorage.setItem(
+      writeBrowserStorageString(
+        "local",
         ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
-        nextCollapsed ? "1" : "session-expanded",
+        nextCollapsed ? "1" : "0",
       );
 
       return nextCollapsed;
@@ -10866,6 +10874,7 @@ export function AdminConsoleOverview({
     <main
       className="h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
+      data-design-surface="admin"
       data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
     >
       <a
@@ -10914,7 +10923,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
-          style={{ paddingBottom: isAdminMobileViewport ? "calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.5rem)" : "1rem" }}
+          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 0.75rem)" : "1rem" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"

@@ -179,7 +179,7 @@ const g003SourceCoverageMatrix = {
   storyboardAdmin: {
     files: [
       {
-        path: 'components/admin/storyboard/AdminStoryboardGenerator.tsx',
+        path: 'components/admin/storyboard/LegacyStoryboardReference.tsx',
         contains: [
           'data-layout-primitives="split-sidebar panel-layout list-detail frame step-nav stack"',
           'data-storyboard-job-status',

@@ -55,7 +55,7 @@ describe('content-security-policy image source boundary', () => {
     expect(policy).toContain('bounded inline admin image previews');
     expect(policy).toContain('local upload previews');
     expect(source('app/admin/banners/page.tsx')).toContain('URL.createObjectURL');
-    expect(source('components/admin/storyboard/AdminStoryboardGenerator.tsx')).toContain('const isInlineImage = /^data:image');
+    expect(source('components/admin/storyboard/LegacyStoryboardReference.tsx')).toContain('const isInlineImage = /^data:image');
     expect(source('app/app-globals.css')).toContain('background-image: url("/images/ui-noise.png")');
   });
 });

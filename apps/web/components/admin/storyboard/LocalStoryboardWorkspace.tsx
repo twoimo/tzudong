@@ -9,19 +9,17 @@ import {
   STORYBOARD_WORKFLOW,
   assertStoryboardProviderPolicy,
   buildStoryboardDraftPrompt,
-  isStoryboardLoopbackProviderId,
-  isStoryboardOfficialApiProviderId,
   parseStoryboardDraft,
   storyboardDraftSceneSchema,
   storyboardDraftSchema,
   storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema,
-  storyboardProviderSchema,
   type StoryboardDraftScene,
   type StoryboardProductionAsset,
   type StoryboardProductionDocument,
   type StoryboardProvider,
 } from "@/lib/admin/storyboard/production-contract";
+import { STORYBOARD_GEMINI_TEXT_MODEL, STORYBOARD_GEMINI_IMAGE_MODELS, STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, isAllowedStoryboardGeminiModel } from "@/lib/admin/storyboard/gemini-models";
 import { ADMIN_STORYBOARD_PROJECT_QUERY } from "@/lib/admin/admin-module-routing";
 
 const API = "/api/admin/storyboard/production";
@@ -72,6 +70,7 @@ type ProviderId = StoryboardProvider["id"];
 type DraftScene = StoryboardProductionDocument["scenes"][number];
 
 const PROVIDERS: Record<ProviderId, string> = {
+  "gemini-api": "Gemini API",
   "local-mlx": "로컬 MLX", manual: "수동 가져오기",
   "chatgpt-manual": "ChatGPT 웹 · 수동 가져오기", "grok-manual": "Grok 웹 · 수동 가져오기",
   "openai-api": "OpenAI 공식 API · 설정 전 사용 불가", "xai-api": "xAI 공식 API · 설정 전 사용 불가",
@@ -144,8 +143,6 @@ function isActive(view: View | null): boolean {
   return !!view && (view.job?.status === "queued" || view.job?.status === "claimed"
     || view.project.status === "waiting_worker" || view.project.status === "generating");
 }
-function isLocal(id: ProviderId) { return isStoryboardLoopbackProviderId(id); }
-function isOfficial(id: ProviderId) { return isStoryboardOfficialApiProviderId(id); }
 function when(value: string | null | undefined): string {
   const date = value ? new Date(value) : null;
   return date && Number.isFinite(date.getTime()) ? date.toLocaleString("ko-KR") : "시각 정보 없음";
@@ -161,32 +158,18 @@ function privateAssetUrl(projectId: string, assetId: string, path: string): stri
   return `${API}/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}?variant=${encodeURIComponent(basename)}`;
 }
 
-function ProviderField({ kind, value, externalAI, models, onChange }: {
+function ProviderField({ kind, value, externalAI, onChange }: {
   kind: "text" | "image"; value: StoryboardProvider; externalAI: boolean; models: Model[];
   onChange: (provider: StoryboardProvider) => void;
 }) {
   const label = kind === "text" ? "텍스트" : "이미지";
-  return <fieldset className="min-w-0 space-y-2 rounded-lg border border-border p-3">
-    <legend className="px-1 text-sm font-semibold">{label} 공급자</legend>
-    <label className="block text-sm" htmlFor={`local-${kind}-provider`}>{label} 생성 방식</label>
-    <select id={`local-${kind}-provider`} className={inputClass} value={value.id}
-      onChange={(event) => onChange({ id: storyboardProviderSchema.shape.id.parse(event.target.value), model: "" })}>
-      {storyboardProviderSchema.shape.id.options.filter((id) => isLocal(id) || isOfficial(id) || externalAI).map((id) =>
-        <option key={id} value={id} disabled={isOfficial(id)}>{PROVIDERS[id]}</option>)}
+  const choices = kind === "text" ? [{ id: STORYBOARD_GEMINI_TEXT_MODEL, label: "Gemini 3.8 Flash" }] : STORYBOARD_GEMINI_IMAGE_MODELS;
+  return <fieldset className="min-w-0 space-y-2" disabled={!externalAI}>
+    <label className="block text-sm font-medium" htmlFor={`local-${kind}-model`}>{label} 모델</label>
+    <select id={`local-${kind}-model`} className={inputClass} value={value.model} required
+      onChange={(event) => onChange({ id: "gemini-api", model: event.target.value })}>
+      {choices.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
     </select>
-    {value.id === "local-mlx" && <div className="text-sm">
-      <label className="block" htmlFor={`local-${kind}-model`}>{label} 모델</label>
-      <select id={`local-${kind}-model`} className={inputClass} value={value.model} required
-        onChange={(event) => onChange({ ...value, model: event.target.value })}>
-        <option value="">설치된 모델 선택</option>
-        {value.model && !models.some((model) => model.id === value.model) &&
-          <option value={value.model} disabled>이전 선택 · 현재 목록에 없음</option>}
-        {models.map((model) => <option key={model.id} value={model.id}>
-          {model.id} · {model.loaded ? "메모리 로드됨" : "디스크 설치됨"}
-        </option>)}
-      </select>
-      {models.length === 0 && <span className="mt-1 block text-xs text-muted-foreground">이 종류의 설치된 모델이 보고되지 않았습니다.</span>}
-    </div>}
   </fieldset>;
 }
 
@@ -200,9 +183,9 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
   const [prompt, setPrompt] = useState("");
   const [sceneCount, setSceneCount] = useState(6);
   const [dimensions, setDimensions] = useState("1024x576");
-  const [externalAI, setExternalAI] = useState(false);
-  const [textProvider, setTextProvider] = useState<StoryboardProvider>({ id: "local-mlx", model: "" });
-  const [imageProvider, setImageProvider] = useState<StoryboardProvider>({ id: "local-mlx", model: "" });
+  const [externalAI, setExternalAI] = useState(true);
+  const [textProvider, setTextProvider] = useState<StoryboardProvider>({ id: "gemini-api", model: STORYBOARD_GEMINI_TEXT_MODEL });
+  const [imageProvider, setImageProvider] = useState<StoryboardProvider>({ id: "gemini-api", model: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const createController = useRef<AbortController | null>(null);
@@ -267,9 +250,8 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
     if (!parsed.success) { setCreateError(message("invalid_request")); return; }
     try {
       assertStoryboardProviderPolicy(parsed.data.providers);
-      for (const [provider, models] of [[textProvider, textModels], [imageProvider, imageModels]] as const) {
-        if (isOfficial(provider.id)) throw new UiError("provider_not_configured");
-        if (provider.id === "local-mlx" && !models.some((model) => model.id === provider.model)) throw new UiError("model_not_installed");
+      for (const provider of [textProvider, imageProvider]) {
+        if (provider.id !== "gemini-api" || !isAllowedStoryboardGeminiModel(provider.model, provider === textProvider ? "text" : "image")) throw new UiError("model_not_selected");
       }
     } catch { setCreateError(message("invalid_request")); return; }
     const controller = new AbortController();
@@ -307,10 +289,10 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
       </div>
     </header>
     <div className={`grid min-w-0 items-start gap-6 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
-      {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "mx-auto w-full max-w-4xl" : ""}`} aria-label="프로젝트 설정과 기록">
+      {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "w-full" : ""}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
           <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
-          <p className="mb-5 mt-1 break-keep text-sm text-muted-foreground">영상의 주제와 분위기를 알려주세요. 생성 후 장면별로 편집할 수 있습니다.</p>
+          <p className="mb-3 mt-1 break-keep text-sm text-muted-foreground">주제를 입력하면 Gemini가 장면 구성과 이미지를 제작합니다.</p>
           <fieldset disabled={creating} className="min-w-0 space-y-4">
             <div className="text-sm">
               <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
@@ -325,25 +307,23 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
                   value={sceneCount} onChange={(event) => setSceneCount(event.target.valueAsNumber)} />
               </div>
               <div className="text-sm">
-                <label className="block" htmlFor="local-image-size">이미지 크기</label>
+                <label className="block" htmlFor="local-image-size">화면 비율</label>
                 <select id="local-image-size" className={inputClass} value={dimensions} onChange={(event) => setDimensions(event.target.value)}>
-                  <option value="1024x576">1024 × 576</option><option value="576x1024">576 × 1024</option><option value="1024x1024">1024 × 1024</option>
+                  <option value="1024x576">가로 · 16:9</option><option value="576x1024">세로 · 9:16</option><option value="1024x1024">정사각 · 1:1</option>
                 </select>
               </div>
             </div>
-            <label className="flex min-h-11 items-start gap-2 text-sm" htmlFor="local-external-ai">
-              <input id="local-external-ai" type="checkbox" className="mt-1 size-4 shrink-0" checked={externalAI}
+            <div className="space-y-1">
+            <label className="flex min-h-9 items-center gap-2 text-sm" htmlFor="local-external-ai">
+              <input id="local-external-ai" type="checkbox" className="size-4 shrink-0" checked={externalAI}
                 aria-describedby="local-external-help" onChange={(event) => {
                   const enabled = event.target.checked;
                   setExternalAI(enabled);
-                  if (!enabled) {
-                    if (!isLocal(textProvider.id)) setTextProvider({ id: "manual", model: "" });
-                    if (!isLocal(imageProvider.id)) setImageProvider({ id: "manual", model: "" });
-                  }
                 }} />
-              외부 AI 사용 허용 · 공식 API
+              Gemini API로 제작
             </label>
-            <p id="local-external-help" className="text-xs text-muted-foreground">ChatGPT·Grok 웹 결과는 외부 AI를 켜지 않고 수동 가져오기로 고를 수 있습니다. 이 옵션은 OpenAI·xAI 공식 API용이며 현재는 설정 전 사용할 수 없습니다.</p>
+            <p id="local-external-help" className="text-xs text-muted-foreground">서버에 연결한 Google 프로젝트로 요청합니다.</p>
+            </div>
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />
@@ -434,8 +414,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
   const retryProvider = view?.project.document
     ? view.project.request.providers.image
     : view?.project.request.providers.text;
-  const retryBlocked = !!retryProvider && retryProvider.id !== "local-mlx";
-  const regenerateBlocked = !!view && view.project.request.providers.image.id !== "local-mlx";
+  const retryBlocked = !!retryProvider && retryProvider.id !== "gemini-api";
+  const regenerateBlocked = !!view && view.project.request.providers.image.id !== "gemini-api";
   // The server refuses a retry once every scene has a stored image (nothing_to_retry).
   const scenesComplete = !!view?.project.document
     && view.project.document.scenes.every((scene) => !!scene.image && !scene.imageError);
@@ -572,7 +552,7 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
               || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
             onClick={() => { void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() }); }}>재시도</button>}
         </div>
-        {(retryBlocked || regenerateBlocked) && <p className="mt-2 text-sm text-muted-foreground">이 프로젝트의 외부 공급자를 사용하려면 외부 AI 사용을 명시적으로 허용해야 합니다. 미설정 공식 API는 사용할 수 없습니다.</p>}
+        {(retryBlocked || regenerateBlocked) && <p className="mt-2 text-sm text-muted-foreground">이전 모델로 만든 프로젝트는 기록과 편집을 보존합니다. 새 생성은 Gemini 프로젝트에서 진행하세요.</p>}
         {active && <p className="mt-2 text-sm text-muted-foreground">작업이 실행되거나 워커를 기다리는 동안 편집과 가져오기를 잠급니다. 이 화면을 닫아도 서버 작업은 취소되지 않습니다.</p>}
       </>}
     </div>

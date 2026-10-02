@@ -580,7 +580,7 @@ export default function FeedContent({
         >
             <div className={cn(
                 "w-full mx-auto bg-background flex flex-col relative",
-                isOverlay ? "h-full" : "min-h-full md:border-x md:border-border md:shadow-sm max-w-2xl"
+                isOverlay ? "h-full" : "min-h-full max-w-2xl bg-card"
             )}>
                 {/* 헤더 */}
                 {showHeader && (
@@ -589,7 +589,7 @@ export default function FeedContent({
                             <div className="min-w-0 flex-1">
                                 <h1 className={cn(
                                     "flex min-w-0 items-center gap-1.5 font-semibold leading-tight",
-                                    isOverlay ? "text-base text-foreground" : "text-[1.0625rem] text-primary xs:text-xl sm:text-2xl"
+                                    isOverlay ? "text-base text-foreground" : "text-lg tracking-tight text-foreground sm:text-2xl"
                                 )}>
                                     {!isOverlay && <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />}
                                     <span className="min-w-0 truncate">{isOverlay ? "리뷰" : "쯔동여지도 리뷰"}</span>

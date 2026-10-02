@@ -1,0 +1,818 @@
+{
+  "kind": "controlled-ocr-provider-replay",
+  "baselineSha": "65bf3a584e55a849bdf5f3e8dcf5cc2e739f1fbb",
+  "baselineSourceSha256": "82a75f540f99af33b7cd710168b9488434024bfaf24391de3e1c1723a4162be9",
+  "environment": {
+    "bun": "1.4.0",
+    "sdk": "2.18.0",
+    "nodeCompatibility": "v26.3.0",
+    "fakeProviderDelayMs": 1
+  },
+  "actualGoogleRequests": 0,
+  "monetarySavingsVerified": false,
+  "summaries": [
+    {
+      "kind": "unchanged",
+      "pairs": 7,
+      "operationsPerBatch": 50,
+      "wallP75Ms": {
+        "before": 69.14822900000001,
+        "after": 66.60406249999997,
+        "absoluteDifference": -2.5441665000000455,
+        "reductionPercent": 3.679293796519423,
+        "reduction95CI": [
+          -1.8208345435921869,
+          6.362426256262932
+        ]
+      },
+      "adapterCallsPerBatch": {
+        "before": 50,
+        "after": 50
+      },
+      "cancelledCompletionsPerBatch": {
+        "before": 0,
+        "after": 0
+      },
+      "nonCancelledResultHashesMatch": true
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "pairs": 7,
+      "operationsPerBatch": 50,
+      "wallP75Ms": {
+        "before": 197.66372899999976,
+        "after": 134.31962499999997,
+        "absoluteDifference": -63.34410399999979,
+        "reductionPercent": 32.04639734384443,
+        "reduction95CI": [
+          30.20373284330715,
+          38.4050952528136
+        ]
+      },
+      "adapterCallsPerBatch": {
+        "before": 150,
+        "after": 100
+      },
+      "cancelledCompletionsPerBatch": {
+        "before": 0,
+        "after": 0
+      },
+      "nonCancelledResultHashesMatch": true
+    },
+    {
+      "kind": "already-cancelled",
+      "pairs": 7,
+      "operationsPerBatch": 50,
+      "wallP75Ms": {
+        "before": 66.38514550000014,
+        "after": 0.48987499999975626,
+        "absoluteDifference": -65.89527050000038,
+        "reductionPercent": 99.2620713620342,
+        "reduction95CI": [
+          97.5150850055901,
+          99.69697804290767
+        ]
+      },
+      "adapterCallsPerBatch": {
+        "before": 50,
+        "after": 0
+      },
+      "cancelledCompletionsPerBatch": {
+        "before": 50,
+        "after": 0
+      },
+      "nonCancelledResultHashesMatch": false
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "pairs": 7,
+      "operationsPerBatch": 50,
+      "wallP75Ms": {
+        "before": 131.40395799999988,
+        "after": 66.19127050000043,
+        "absoluteDifference": -65.21268749999945,
+        "reductionPercent": 49.627643255616015,
+        "reduction95CI": [
+          48.703065614503174,
+          50.77496368494183
+        ]
+      },
+      "adapterCallsPerBatch": {
+        "before": 100,
+        "after": 50
+      },
+      "cancelledCompletionsPerBatch": {
+        "before": 50,
+        "after": 0
+      },
+      "nonCancelledResultHashesMatch": false
+    }
+  ],
+  "runs": [
+    {
+      "kind": "unchanged",
+      "repeat": 0,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 69.15662500000002,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 0,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 67.67587499999999,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 1,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 66.16612499999997,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 1,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 69.13983300000001,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 2,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 65.41300000000001,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 2,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 66.70891699999999,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 3,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 65.99429200000009,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 3,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 70.74804199999994,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 4,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 64.971541,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 4,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 64.386708,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 5,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 65.30666599999995,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 5,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 66.42687500000011,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 6,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 64.77445799999998,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "unchanged",
+      "repeat": 6,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 66.49920799999995,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 0,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 219.45666699999992,
+      "adapterCalls": 150,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 0,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 135.174125,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 1,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 133.46512499999994,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 1,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 198.75795799999992,
+      "adapterCalls": 150,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 2,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 196.33474999999999,
+      "adapterCalls": 150,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 2,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 137.11625000000004,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 3,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 132.621666,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 3,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 195.73237500000005,
+      "adapterCalls": 150,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 4,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 195.95929100000012,
+      "adapterCalls": 150,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 4,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 129.44433400000025,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 5,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 130.04595900000004,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 5,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 196.5694999999996,
+      "adapterCalls": 150,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 6,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 192.90475000000015,
+      "adapterCalls": 150,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "duplicate-model-fallback",
+      "repeat": 6,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 130.52387500000032,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 0,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 0,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 65.84029199999986,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 0,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 1.6382909999997537,
+      "adapterCalls": 0,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 1,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 0.3138749999998254,
+      "adapterCalls": 0,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 1,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 66.01862500000016,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 2,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 66.75166600000011,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 2,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 0.6658749999996871,
+      "adapterCalls": 0,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 3,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 0.23679200000015044,
+      "adapterCalls": 0,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 3,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 65.06287500000008,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 4,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 66.79179199999999,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 4,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 0.20233300000018062,
+      "adapterCalls": 0,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 5,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 0.11266599999999016,
+      "adapterCalls": 0,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 5,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 65.84729199999992,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 6,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 64.82116600000018,
+      "adapterCalls": 50,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "already-cancelled",
+      "repeat": 6,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 0.12249999999994543,
+      "adapterCalls": 0,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 0,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 129.4868749999996,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 0,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 66.45350000000008,
+      "adapterCalls": 50,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 1,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 65.37691599999971,
+      "adapterCalls": 50,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 1,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 128.98795900000005,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 2,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 128.91091700000015,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 2,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 66.29483300000084,
+      "adapterCalls": 50,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 3,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 65.4840409999997,
+      "adapterCalls": 50,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 3,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 129.5657080000001,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 4,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 130.91437499999938,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 4,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 64.68470900000011,
+      "adapterCalls": 50,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 5,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 66.08770800000002,
+      "adapterCalls": 50,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 5,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 134.2562909999997,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 6,
+      "variant": "baseline",
+      "operations": 50,
+      "wallMs": 131.89354100000037,
+      "adapterCalls": 100,
+      "completed": 50,
+      "cancelledCompletions": 50,
+      "resultHashes": [
+        "6646529025835f56eade21af4bc6b9f52afacb2da8d7563e0f472444f20a1d14"
+      ]
+    },
+    {
+      "kind": "cancel-during-fallback",
+      "repeat": 6,
+      "variant": "candidate",
+      "operations": 50,
+      "wallMs": 65.63195799999994,
+      "adapterCalls": 50,
+      "completed": 0,
+      "cancelledCompletions": 0,
+      "resultHashes": []
+    }
+  ],
+  "limitations": [
+    "Injected provider adapter counts are not real Google network calls or billed calls.",
+    "The SDK can reject an already-aborted signal before network transmission even on the baseline.",
+    "Cancelled outputs intentionally change; non-cancelled normalization equality does not establish real OCR accuracy."
+  ]
+}

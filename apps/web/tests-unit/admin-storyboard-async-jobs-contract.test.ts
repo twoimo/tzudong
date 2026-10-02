@@ -23,24 +23,11 @@ function exportedHandlerBody(sourceText: string, method: string) {
 }
 
 describe('admin storyboard async job control plane contract', () => {
-  test('legacy storyboard POST enqueues an async job instead of running heavy generation inline', () => {
+  test('legacy creation is retired and cannot enqueue another provider', () => {
     const route = source('app/api/admin/storyboard/route.ts');
-    const postBody = exportedHandlerBody(route, 'POST');
-    const authIndex = postBody.indexOf('await requireAdmin');
-    const readJsonIndex = postBody.indexOf('readStoryboardRouteJson');
-    const createJobIndex = postBody.indexOf('buildStoryboardJobInsert');
-
-    expect(authIndex).toBeGreaterThanOrEqual(0);
-    expect(readJsonIndex).toBeGreaterThan(authIndex);
-    expect(createJobIndex).toBeGreaterThan(readJsonIndex);
-    expect(postBody.indexOf('createSupabaseServiceRoleClient')).toBeGreaterThan(authIndex);
-    expect(postBody).toContain('sanitizeStoryboardJobRow');
-    expect(postBody).toContain("status: 202");
-    expect(postBody).toContain("mode: 'async_job_control_plane'");
-    expect(postBody).toContain("STORYBOARD_ROUTE_NO_STORE_HEADERS");
-    expect(postBody).not.toContain('generateStoryboardWithBackendAgent');
-    expect(postBody).not.toContain('persistLocalStoryboardHistory');
-    expect(postBody).not.toContain('request_payload');
+    expect(route).toContain('export const POST = retiredStoryboardApi;');
+    expect(route).not.toContain('buildStoryboardJobInsert');
+    expect(source('lib/admin/storyboard/retired-api.ts')).toContain('await requireAdmin');
   });
 
   test('job routes expose create/list/status/cancel control-plane readback behind requireAdmin', () => {
@@ -54,7 +41,8 @@ describe('admin storyboard async job control plane contract', () => {
       expect(route).toContain('STORYBOARD_ROUTE_NO_STORE_HEADERS');
     }
     expect(createRoute).toContain('createSupabaseServiceRoleClient');
-    expect(createRoute).toContain('buildStoryboardJobInsert');
+    expect(createRoute).not.toContain('buildStoryboardJobInsert');
+    expect(createRoute).toContain('POST = retiredStoryboardApi');
     expect(createRoute).toContain('sanitizeStoryboardJobRow');
     expect(statusRoute).toContain('sanitizeStoryboardJobRow');
     expect(cancelRoute).toContain('STORYBOARD_CANCELABLE_JOB_STATUSES');
@@ -87,7 +75,7 @@ describe('admin storyboard async job control plane contract', () => {
   });
 
   test('admin storyboard UI preserves async job readback and stage/provider hooks', () => {
-    const ui = source('components/admin/storyboard/AdminStoryboardGenerator.tsx');
+    const ui = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
 
     expect(ui).toContain('StoryboardJobAcceptedResponse');
     expect(ui).toContain('isStoryboardJobAcceptedResponse');

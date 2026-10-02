@@ -15,8 +15,14 @@ describe('ocr runtime config', () => {
 
     expect(secrets).toEqual([
       { apiKey: 'first-key', source: 'environment', sourceName: 'GEMINI_API_KEY' },
-      { apiKey: 'second-key', source: 'environment', sourceName: 'NEXT_PUBLIC_GOOGLE_API_KEY' },
     ]);
+  });
+
+  test('pins explicitly funded requests to one server credential and ignores public keys', () => {
+    expect(getEnvFallbackSecrets('gemini', {
+      GEMINI_CREDITS_API_KEY: 'funded-key', GEMINI_API_KEY: 'other-project', NEXT_PUBLIC_GOOGLE_API_KEY: 'public-key',
+    })).toEqual([{ apiKey: 'funded-key', source: 'environment', sourceName: 'GEMINI_CREDITS_API_KEY' }]);
+    expect(getEnvFallbackSecrets('gemini', { NEXT_PUBLIC_GOOGLE_API_KEY: 'public-key' })).toEqual([]);
   });
 
   test('returns no credentials for an empty environment', () => {

@@ -2,6 +2,7 @@
 // Keep the home Tailwind entry separate from the full app stylesheet loaded by AppRuntimeShell.
 
 import './home-app-globals.css';
+import '../styles/product-ui.css';
 import { Suspense, lazy, type ComponentType, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers';
@@ -27,6 +28,7 @@ import {
 
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import { AppToaster } from '@/components/ui/app-toaster';
+import { ScrollEffects } from '@/components/layout/ScrollEffects';
 
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
 
@@ -295,6 +297,7 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
             isMobile={viewportMode === 'mobileOrTablet'}
             mobileChrome={viewportMode === 'mobileOrTablet' ? <MobileHomeLayout /> : null}
         >
+            <ScrollEffects />
             {children}
             {viewportMode === 'desktop' && !isPublicRestrictedMode ? (
                 <Suspense fallback={null}>

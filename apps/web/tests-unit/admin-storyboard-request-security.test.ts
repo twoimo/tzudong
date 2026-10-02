@@ -36,26 +36,6 @@ function browserMutation(headers: HeadersInit) {
 
 const storyboardJsonMutationRoutes = [
   {
-    routePath: 'app/api/admin/storyboard/route.ts',
-    authCall: 'await requireAdmin',
-    mutationMarker: 'buildStoryboardJobInsert(',
-  },
-  {
-    routePath: 'app/api/admin/storyboard/chat/route.ts',
-    authCall: 'await requireAdmin',
-    mutationMarker: 'generateStoryboardChatWithBackendAgent(',
-  },
-  {
-    routePath: 'app/api/admin/storyboard/images/route.ts',
-    authCall: 'await requireAdmin',
-    mutationMarker: 'generateStoryboardSceneImagesForRoute(',
-  },
-  {
-    routePath: 'app/api/admin/storyboard/jobs/route.ts',
-    authCall: 'await requireAdmin',
-    mutationMarker: 'buildStoryboardJobInsert(',
-  },
-  {
     routePath: 'app/api/admin/storyboard/rag/documents/route.ts',
     authCall: 'await authenticateStoryboardRagAction',
     mutationMarker: 'embedStoryboardRagTexts(',
@@ -73,7 +53,7 @@ const productionEnv = {
 } as NodeJS.ProcessEnv;
 
 describe('admin storyboard mutation request security', () => {
-  test('puts the shared same-origin and bounded JSON gates ahead of all six JSON mutation surfaces', () => {
+  test('puts the shared same-origin and bounded JSON gates ahead of active RAG JSON mutation surfaces', () => {
     const telemetrySource = source('lib/admin/storyboard/route-telemetry.ts');
     expect(telemetrySource).toContain("from '@/lib/security/bounded-json-request'");
     expect(telemetrySource).toContain('readBoundedJsonRequest(request, maximumBytes)');

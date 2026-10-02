@@ -2205,17 +2205,17 @@ describe("web quality performance source contracts", () => {
 
     expect(rootDarkTokenBlock).toContain(".dark {");
     for (const declaration of [
-      "--background: 24 10% 10%;",
-      "--foreground: 38 30% 96%;",
-      "--card: 24 9% 13%;",
-      "--card-foreground: 38 30% 96%;",
-      "--border: 24 6% 24%;",
-      "--secondary: 24 7% 18%;",
-      "--secondary-foreground: 38 30% 96%;",
-      "--muted: 24 7% 18%;",
-      "--muted-foreground: 24 7% 68%;",
-      "--accent: 24 7% 18%;",
-      "--accent-foreground: 38 30% 96%;",
+      "--background: 220 18% 9%;",
+      "--foreground: 220 20% 96%;",
+      "--card: 220 16% 12%;",
+      "--card-foreground: 220 20% 96%;",
+      "--border: 220 13% 24%;",
+      "--secondary: 220 14% 18%;",
+      "--secondary-foreground: 220 20% 96%;",
+      "--muted: 220 14% 18%;",
+      "--muted-foreground: 220 12% 70%;",
+      "--accent: 220 14% 18%;",
+      "--accent-foreground: 220 20% 96%;",
     ]) {
       expect(rootDarkTokenBlock).toContain(declaration);
     }
@@ -3079,7 +3079,7 @@ describe("web quality performance source contracts", () => {
         /const shouldSuppressMobileBottomNav =([\s\S]*?)const shouldRenderMobileBottomNav/,
       )?.[1] ?? "";
     expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/auth/")');
-    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname?.startsWith("/admin")');
+    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/admin")');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/feed"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/stamp"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/leaderboard"');

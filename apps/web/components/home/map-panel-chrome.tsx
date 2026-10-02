@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const mapPanelIconButtonClass =
-  "h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary";
+  "h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary";
 
 export function MapPanelHeader({
   title,
@@ -24,7 +24,7 @@ export function MapPanelHeader({
   titleAs?: "h1" | "h2";
 }) {
   return (
-    <header className="shrink-0 border-b border-border bg-background px-4 py-3" data-layout-primitives="stack">
+    <header className="shrink-0 border-b border-border bg-card px-4 py-3" data-layout-primitives="stack">
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <TitleTag className="truncate text-base font-semibold leading-6 tracking-tight text-foreground">

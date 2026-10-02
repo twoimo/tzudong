@@ -36,8 +36,8 @@ export const mobileSheetStyles = {
     description: 'mt-1 text-sm leading-relaxed text-muted-foreground',
     content: 'flex-1 space-y-4 px-4 py-4',
     compactContent: 'space-y-4 px-4 py-4',
-    section: 'rounded-xl border border-border/70 bg-card/80 p-4 shadow-sm',
-    mutedSection: 'rounded-xl border border-border/70 bg-muted/70 p-4 shadow-sm',
+    section: 'rounded-xl border border-border bg-card p-4',
+    mutedSection: 'rounded-xl border border-border bg-muted/50 p-4',
     footer: 'sticky bottom-0 z-10 border-t bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3',
     actionRow: 'flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center',
     primaryAction: 'bg-primary text-primary-foreground hover:bg-primary/90',
@@ -83,7 +83,7 @@ export function MobileSheetHeader({
             {children}
             <div className="flex items-start gap-3">
                 {icon ? (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40 text-primary">
                         {icon}
                     </div>
                 ) : null}

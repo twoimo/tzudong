@@ -1,0 +1,39 @@
+{
+  "kind": "local-postgresql-storyboard-migration",
+  "operationalDatabaseChanges": false,
+  "migrations": [
+    {
+      "file": "20260918021531_storyboard_mlx_worker.sql",
+      "sha256": "3584d659ad253971771bc1a1f49e2f19e837e609e375c22c078673095105a5fa"
+    },
+    {
+      "file": "20260920021531_storyboard_historical_restore.sql",
+      "sha256": "6cd66d48f9fde8b86d89f089da3a5f4cc15dd85475fa0769e5724d40f68d2b95"
+    },
+    {
+      "file": "20261003031531_storyboard_gemini_only.sql",
+      "sha256": "b5f60ade47fc4c195b33bcde3ffa9ff026c205bab4fb3af810f9f8c5dd080c62"
+    }
+  ],
+  "assertions": {
+    "idempotent_create": true,
+    "remote_models_claim_without_fake_disk_bytes": true,
+    "draft_checkpoint_readback": true,
+    "non_gemini_create_denied": true,
+    "stale_lease_rejected": true,
+    "duplicate_result_rejected_without_resend": true,
+    "five_images_checkpoint_and_finish_ready": true,
+    "cas_edit_and_restore_replay_preserve_assets": true,
+    "expired_lease_backoff_and_restart": true,
+    "active_cancel_readback": true,
+    "concurrent_workers_never_double_claim": true,
+    "browser_roles_denied": true,
+    "empty_search_path_preserved": true
+  },
+  "postgresVersion": "17.11 (Homebrew)",
+  "passed": true,
+  "limitations": [
+    "Synthetic fixture database only.",
+    "Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only."
+  ]
+}
