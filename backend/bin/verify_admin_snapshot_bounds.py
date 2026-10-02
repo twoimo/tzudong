@@ -10,7 +10,7 @@ import subprocess
 import uuid
 
 ROOT=Path(__file__).resolve().parents[2]
-MIGRATION=ROOT/'backend/supabase/migrations/20261001172315_admin_evaluation_pagination.sql'
+MIGRATION=ROOT/'backend/supabase/migrations/20261002235102_admin_evaluation_pagination.sql'
 RUNTIME=Path(os.environ.get('TZUDONG_SNAPSHOT_PG_RUNTIME','/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6'))
 PORT=os.environ.get('TZUDONG_SNAPSHOT_PG_PORT','18797')
 if not str(RUNTIME).startswith('/Users/twoimo/.codex/runtime-cache/tzudong-'): raise ValueError('OWNED_RUNTIME_REQUIRED')
