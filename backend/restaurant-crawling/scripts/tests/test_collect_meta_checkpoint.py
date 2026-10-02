@@ -61,6 +61,11 @@ class MetadataCheckpointTests(unittest.TestCase):
         # The pre-existing damaged line remains evidence; a newline is needed before repair.
         self.assertEqual(collect_meta.get_latest_meta(self.channel, VID)['recollect_id'], 7)
 
+    def test_invalid_utf8_is_not_ignored_and_prior_sequence_remains_recoverable(self):
+        self.file.write_bytes(self.file.read_bytes()+json.dumps({**ROW,'title':'bad'}).encode().replace(b'bad',b'b\xffad')+b'\n')
+        self.assertIsNone(collect_meta.get_latest_meta(self.channel,VID))
+        self.assertEqual(collect_meta.last_sequence(self.file,VID),6)
+
     def test_output_change_or_recipe_change_invalidates_completion(self):
         meta = collect_meta.get_latest_meta(self.channel, VID)
         entry = collect_meta.checkpoint('2026-10-03', 'recipe-a', meta)

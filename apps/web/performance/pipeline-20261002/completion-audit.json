@@ -22,9 +22,10 @@
         "transform-restart-v3-raw.json",
         "backend/restaurant-crawling/scripts/tests/transcript-cache.test.mjs",
         "metadata-reader-raw.json",
-        "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py"
+        "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py",
+        "metadata-reader-v2-raw.json"
       ],
-      "scope": "08/09/10/11/12 receipts; transform source races and priority; frame receipts and cross-process writer. Not a claim for every collection stage. Step 03 now validates legacy content and serializes channel/ledger writers; no whole-collection version-receipt claim. Step 02 now validates integrity-bound metadata receipts and serializes channel writers; 1,127 readonly records match, 11 failure/repair/concurrency/security cases pass."
+      "scope": "08/09/10/11/12 receipts; transform source races and priority; frame receipts and cross-process writer. Not a claim for every collection stage. Step 03 now validates legacy content and serializes channel/ledger writers; no whole-collection version-receipt claim. Step 02 now validates integrity-bound metadata receipts and serializes channel writers; 1,127 readonly records match, 11 failure/repair/concurrency/security cases pass. Strict UTF-8 completion rejects invisible byte corruption; final paired timing includes uncertainty."
     },
     {
       "requirement": "Media resources and shared cache",

@@ -36,7 +36,7 @@ def input_digest(path: Path, *, metadata: bool = False, latest: bool = True) -> 
     if not path.is_file():
         raise ValueError("stage_input_missing")
     if latest and path.suffix == ".jsonl":
-        value = load_last_jsonl_record(path)
+        value = load_last_jsonl_record(path, strict_utf8=True)
         if not isinstance(value, dict):
             raise ValueError("stage_input_invalid")
         if metadata:

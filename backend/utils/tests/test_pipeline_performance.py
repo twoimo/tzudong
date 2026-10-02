@@ -34,6 +34,14 @@ class StageCacheTests(unittest.TestCase):
             output.write_text('{truncated')
             self.assertFalse(reusable(receipt, key, [output]))
 
+    def test_invalid_utf8_cannot_masquerade_as_the_same_completed_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); output = root / 'output.jsonl'; receipt = root / 'receipt.json'
+            output.write_bytes(b'{"name":"food"}\n')
+            complete(receipt, 'same-input', [output])
+            output.write_bytes(b'{"name":"f\xffood"}\n')
+            self.assertFalse(reusable(receipt, 'same-input', [output]))
+
     def test_only_explicit_metadata_ignores_counters(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'meta.jsonl'

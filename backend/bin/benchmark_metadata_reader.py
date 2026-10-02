@@ -64,7 +64,7 @@ else:
                 changes.append((a-b)/b*100)
             summary[metric][label]={'before':before,'after':after,'absoluteChange':after-before,'changePercent':(after-before)/before*100,
                                    'change95CI':[percentile(changes,.025),percentile(changes,.975)],'samplePairs':7}
-    out=ROOT/'apps/web/performance/pipeline-20261002/metadata-reader-raw.json'
+    out=ROOT/'apps/web/performance/pipeline-20261002/metadata-reader-v2-raw.json'
     out.write_text(json.dumps({'kind':'readonly-metadata-reader-replay','baseline':BASELINE,'dataset':initial,'sourcePreserved':True,
         'actualProviderCalls':0,'pairs':pairs,'summary':summary,'confidenceMethod':'10000 paired percentile bootstrap; seed 20261003',
         'environment':{'python':sys.version,'platform':sys.platform},'limitations':['Reader comparison includes new integrity checks; not a whole collector timing.',

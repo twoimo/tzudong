@@ -8,7 +8,7 @@ from .stage_cache import canonical_digest
 
 def latest_metadata(path: Path, video_id: str):
     try:
-        row = load_last_jsonl_record(path)
+        row = load_last_jsonl_record(path, strict_utf8=True)
         if not isinstance(row, dict) or not re.fullmatch(r'[A-Za-z0-9_-]{11}', video_id):
             return None
         if row.get('youtube_link') != f'https://www.youtube.com/watch?v={video_id}':
@@ -46,7 +46,7 @@ def last_sequence(path: Path, video_id: str):
     sequence = None
     try:
         import json
-        with path.open(encoding='utf-8') as source:
+        with path.open('rb') as source:
             for line in source:
                 try:
                     row = json.loads(line)

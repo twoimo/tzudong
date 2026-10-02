@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-def read_last_non_empty_line(path: Path, chunk_size: int = 4096) -> Optional[str]:
+def read_last_non_empty_line(path: Path, chunk_size: int = 4096, *, strict_utf8: bool = False) -> Optional[str]:
     """Read the last non-empty line from a UTF-8 text file efficiently."""
     if not path.exists() or path.stat().st_size == 0:
         return None
@@ -31,17 +31,17 @@ def read_last_non_empty_line(path: Path, chunk_size: int = 4096) -> Optional[str
                 lines = lines[1:]
 
             for line in reversed(lines):
-                text = line.decode("utf-8", errors="ignore").strip()
+                text = line.decode("utf-8", errors="strict" if strict_utf8 else "ignore").strip()
                 if text:
                     return text
 
-        text = buffer.decode("utf-8", errors="ignore").strip()
+        text = buffer.decode("utf-8", errors="strict" if strict_utf8 else "ignore").strip()
         return text or None
 
 
-def load_last_jsonl_record(path: Path) -> Optional[Dict[str, Any]]:
+def load_last_jsonl_record(path: Path, *, strict_utf8: bool = False) -> Optional[Dict[str, Any]]:
     """Load the latest JSON object from a JSONL file."""
-    last_line = read_last_non_empty_line(path)
+    last_line = read_last_non_empty_line(path, strict_utf8=strict_utf8)
     if not last_line:
         return None
     try:
