@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-02T15:25:45.287831+00:00",
+  "command": [
+    "python3",
+    "apps/web/performance/render-flow-memory-lifetime-20261001/verify-git-storage-v1.py",
+    "/Users/twoimo/.codex/worktrees/render-memory-evidence-20261002/tzudong",
+    "a5b01d2fc900ef6b4816b36959bc1791908747af",
+    "apps/web/performance/render-flow-memory-lifetime-20261001",
+    "apps/web/performance/render-flow-memory-lifetime-20261001-artifact-map.sha256"
+  ],
+  "result": {
+    "storageCommit": "a5b01d2fc900ef6b4816b36959bc1791908747af",
+    "remoteHeadMatches": true,
+    "gitBlobsVerified": 2183,
+    "artifactMapPinMatches": true
+  },
+  "packetFrozen": true,
+  "mappedBytesNotModified": true,
+  "earlierFailureCorrectedByExactFileForceAdd": true
+}

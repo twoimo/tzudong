@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-02T15:29:23.022797+00:00",
+  "projectVerified": true,
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "deploymentId": "dpl_G55TzNuyiMaUJPZ4tMBKiCpJjT3G",
+  "state": "READY",
+  "independentAliasMatches": true,
+  "otherEnvValuesOrProviderDiagnosticsRetained": false,
+  "deviceOnlineTransports": 2,
+  "authKeyguardShowing": true,
+  "awake": false
+}
