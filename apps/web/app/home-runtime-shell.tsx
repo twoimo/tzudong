@@ -325,7 +325,6 @@ function HomeStaticSkeleton() {
             </div>
             <div className="xl:hidden">
                 <div className="mx-3 mt-[calc(env(safe-area-inset-top)+10px)] h-12 animate-pulse rounded-full border border-border bg-muted" />
-                <div className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] h-14 animate-pulse rounded-2xl bg-muted" />
             </div>
         </div>
     );
