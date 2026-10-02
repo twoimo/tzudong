@@ -73,6 +73,7 @@ function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknow
 
 interface PooledMarker {
     __onClick?: (event: MarkerClickEvent) => void;
+    __disposeClickListener?: () => void;
     getMap: () => unknown;
     setMap: (map: unknown | null) => void;
     getPosition: () => MarkerPositionLike | null;
@@ -158,11 +159,13 @@ export class MarkerPool {
 
             // [PERFORMANCE] 이벤트 위임: 마커 생성 시 단 1회만 리스너 등록
             // 이후 핸들러 교체는 __onClick 프로퍼티만 변경하여 zero-overhead 달성
-            window.naver.maps.Event.addListener(marker, 'click', (e: MarkerClickEvent) => {
+            const events = window.naver.maps.Event;
+            const listener = events.addListener(marker, 'click', (e: MarkerClickEvent) => {
                 if (marker.__onClick) {
                     marker.__onClick(e);
                 }
             });
+            if (listener) marker.__disposeClickListener = () => events.removeListener(listener);
         }
 
         // [PERFORMANCE] 불필요한 DOM 조작/렌더링 방지
@@ -223,9 +226,15 @@ export class MarkerPool {
         if (!marker) return;
 
         this.active.delete(id);
+        // Detached/evicted markers must not retain a render's restaurant/state
+        // closure or dispatch a queued click for a no-longer-active place.
+        marker.__onClick = undefined;
         marker.setMap(null);
         if (this.pool.length < this.MAX_POOL_SIZE) {
             this.pool.push(marker);
+        } else {
+            marker.__disposeClickListener?.();
+            marker.__disposeClickListener = undefined;
         }
         this.stats.released++;
     }
@@ -312,12 +321,18 @@ export class MarkerPool {
      */
     public clear(): void {
         this.active.forEach((marker) => {
+            marker.__onClick = undefined;
             marker.setMap(null);
+            marker.__disposeClickListener?.();
+            marker.__disposeClickListener = undefined;
         });
 
         // 풀의 모든 마커도 정리
         this.pool.forEach((marker) => {
+            marker.__onClick = undefined;
             marker.setMap(null);
+            marker.__disposeClickListener?.();
+            marker.__disposeClickListener = undefined;
         });
 
         this.active.clear();

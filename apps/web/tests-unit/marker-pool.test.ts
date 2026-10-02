@@ -82,6 +82,7 @@ class FakeMarker {
 
 const createdMarkers: FakeMarker[] = [];
 let listenerRegistrations = 0;
+let listenerRemovals = 0;
 const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
 
 function installFakeNaverMaps() {
@@ -97,6 +98,11 @@ function installFakeNaverMaps() {
               expect(event).toBe('click');
               marker.clickListener = listener;
               listenerRegistrations += 1;
+              return { marker, listener };
+            },
+            removeListener: (handle: { marker: FakeMarker; listener: (event: unknown) => void }) => {
+              if (handle.marker.clickListener === handle.listener) handle.marker.clickListener = undefined;
+              listenerRemovals += 1;
             },
           },
         },
@@ -142,6 +148,7 @@ beforeEach(() => {
   markerPool.resetStats();
   createdMarkers.length = 0;
   listenerRegistrations = 0;
+  listenerRemovals = 0;
 });
 
 afterAll(() => {
@@ -488,4 +495,35 @@ test('pool reuse and changed visit badges update static marker content even with
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument);
     else delete (globalThis as { document?: unknown }).document;
   }
+});
+
+
+test('detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener', () => {
+  let oldClicks = 0;
+  let currentClicks = 0;
+  const first = markerPool.acquire('old-place', makePosition('p1'), { content: 'old' }, 'map', () => oldClicks++) as unknown as FakeMarker;
+  markerPool.release('old-place');
+  first.clickListener?.({});
+  expect(oldClicks).toBe(0);
+  const next = markerPool.acquire('new-place', makePosition('p2'), { content: 'new' }, 'map', () => currentClicks++) as unknown as FakeMarker;
+  expect(next).toBe(first);
+  next.clickListener?.({});
+  expect(currentClicks).toBe(1);
+  expect(listenerRegistrations).toBe(1);
+  markerPool.clear();
+  expect(next.clickListener).toBeUndefined();
+  expect(listenerRemovals).toBe(1);
+  markerPool.clear();
+  expect(listenerRemovals).toBe(1);
+});
+
+test('disposal stays bounded across cache capacity and repeated clear', () => {
+  for (let i = 0; i < 1002; i++) markerPool.acquire(`capacity-${i}`, makePosition(`p-${i}`), { content: `icon-${i}` }, 'map');
+  markerPool.releaseAll();
+  expect(markerPool.getStats().poolSize).toBe(1000);
+  expect(listenerRemovals).toBe(2);
+  markerPool.clear();
+  expect(listenerRemovals).toBe(1002);
+  markerPool.clear();
+  expect(listenerRemovals).toBe(1002);
 });
