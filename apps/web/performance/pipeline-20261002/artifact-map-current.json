@@ -14,7 +14,7 @@
     "apps/web/performance/pipeline-20261002/browser-revision-intermediate-v1.json": "641a90d9b7be9f6b09e1f971bf3bddcc4aa62b1a9e4480da4fe9288efe2fecb7",
     "apps/web/performance/pipeline-20261002/browser-revision-navigation-raw.json": "e13471f669d7eb3f4e756d2bef07c0a9f53542224e05c682737191096f894b22",
     "apps/web/performance/pipeline-20261002/browser-revision-raw.json": "0b807201591ab3b643406dea51f8e97277fc100a941c6c97b4ed0498a3942eda",
-    "apps/web/performance/pipeline-20261002/completion-audit.json": "00eec25883b31ea395d8f8569184dd1f6c1cd7065169c4a26fd9b4bb49679d34",
+    "apps/web/performance/pipeline-20261002/completion-audit.json": "d4953872ea26196ecd8e10724d196cfc3a467ceadb807c3a0d4ea333ccf0a867",
     "apps/web/performance/pipeline-20261002/configuration-current.json": "83f3fc248c37ba62385b88f0ad709acec9b6abd774d9e355dec39a13b91fe7dc",
     "apps/web/performance/pipeline-20261002/media-replay-intermediate-v1.json": "b051f326856b7014c7f2ed9567fbd4ec03bad53008c46e312495fa48edc9affc",
     "apps/web/performance/pipeline-20261002/media-replay-intermediate-v2.json": "2b1283a76b84117b3e6c2de0ff8399dfd1e3bd5793ee1526cabc7789806f8407",
@@ -30,6 +30,11 @@
     "apps/web/performance/pipeline-20261002/transform-rejected-v1.json": "48b3f8a0a5a1edae8aa7b71c3d78e77c4cb2b5d5cf0d10ee21a7c9f21192075c",
     "apps/web/performance/pipeline-20261002/transform-restart-v3-raw.json": "044bdbec37d53ed3ceb0f4564e427f3d53a5c69f1a3afa114211824d0a2845d6",
     "apps/web/performance/pipeline-20261002/verification-current.json": "d2bbd5ebf0c581d94413e8e5cca32419bf263b09f3f6e455fc4e53823e94e47c",
-    "apps/web/performance/pipeline-20261002/orchestration-readiness-frozen.json": "428d0b666dc9b65b0da2fde6ec8525d969d0236f869cb5e634dd9d67f05ad8b1"
+    "apps/web/performance/pipeline-20261002/orchestration-readiness-frozen.json": "428d0b666dc9b65b0da2fde6ec8525d969d0236f869cb5e634dd9d67f05ad8b1",
+    "apps/web/performance/pipeline-20261002/storage-rpc-before-prefetch.json": "22970bc5e5819d3124ebd090b362dd05377889372e2947db721d60e693c70286",
+    "apps/web/performance/pipeline-20261002/storage-rpc-raw.json": "9426b6316e82640fab571c49530cb0352b89b0f4a0e7664a66dcee31f034d4bb",
+    "apps/web/performance/pipeline-20261002/storage-one-and-resume-raw.json": "b0797072245f4b734765d7171a55941274b57d23fff829d448a1e000db8ee016",
+    "apps/web/performance/pipeline-20261002/storage-summary.json": "3e1cd7bed9551d52b8f37fdb32f108b5421a2bbaaaf46f2824b40903c1faadbc",
+    "apps/web/performance/pipeline-20261002/storage-new-and-failures-raw.json": "fc03b6a7dc197b74ac308e3333f53dcdd954b8feb251a65147e7689f079e8018"
   }
 }

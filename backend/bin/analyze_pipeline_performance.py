@@ -78,6 +78,48 @@ def current_report():
     print(json.dumps({'status':'passed','formalPerformanceClaim':'not_established','report':'summary-current.json'}))
 
 
+def storage_report():
+    files=['storage-rpc-raw.json','storage-new-and-failures-raw.json','storage-one-and-resume-raw.json']
+    datasets=[json.loads((BASE/file).read_text()) for file in files]
+    if len({dataset['sourceSha256'] for dataset in datasets})!=1:
+        raise ValueError('STORAGE_SOURCE_MISMATCH')
+    observations=[]
+    for file,dataset in zip(files,datasets):
+        observations.extend(dict(row,sourceFile=file) for row in dataset['observations'])
+    result={'kind':'local_native_postgresql_storage_comparison','liveEvidenceEligible':False,
+            'formalPerformanceClaim':'not_established','environment':datasets[0]['environment'],
+            'sourceSha256':datasets[0]['sourceSha256'],'corpusSha256':datasets[0]['corpusSha256'],
+            'confidenceMethod':'10000 paired percentile bootstrap draws; seed 20261002; pooled same-source runs',
+            'comparisons':{},'perRun':{},'quality':{key:datasets[-1][key] for key in ['sourcePreserved','protectedFixtures','protectedViolations','omissions','duplicates','failures']},
+            'limitations':['Unix socket fixture, not operational Supabase/API latency',
+                           'Full production catalog/triggers/extensions not loaded',
+                           'Read/write bytes are JSON encoding sizes, not measured wire transfer',
+                           'Client RSS is the process-wide high-water mark, not an independent per-case peak',
+                           'Batch-size groups are ordered within runs; do not infer a causal speed winner across groups']}
+    cases=sorted({row['scenario'] for row in observations})
+    def stats(rows):
+        pairids={}
+        normalized=[]
+        for row in rows:
+            key=(row['sourceFile'],row['repeat']);pairids.setdefault(key,len(pairids))
+            normalized.append(dict(row,repeat=pairids[key]))
+        report={f'p{int(p*100)}':compare(normalized,p) for p in [.5,.75,.95]}
+        report['counts']={implementation:{key:sorted({row.get(key,0) for row in rows if row['implementation']==implementation})
+                           for key in ['readQueries','writeRpcCalls','writeRows','readBytes','writeBytes','rpcReadbackRows','rpcReadbackBytes']}
+                           for implementation in ['baseline','candidate']}
+        report['cpu']={f'p{int(p*100)}':compare([dict(row,wallMs=row['clientCpuMs']) for row in normalized],p) for p in [.5,.75,.95]}
+        report['afterThroughputRowsPerSecond']=1000*rows[0]['rows']/report['p75']['afterMs']
+        return report
+    for case in cases:
+        result['comparisons'][case]={str(size):stats([row for row in observations if row['scenario']==case and row['batchSize']==size])
+              for size in [1,50,100,200] if any(row['scenario']==case and row['batchSize']==size for row in observations)}
+    for file,dataset in zip(files,datasets):
+        result['perRun'][file]={case:stats([dict(row,sourceFile=file) for row in dataset['observations'] if row['scenario']==case and row['batchSize']==200])
+              for case in dataset.get('scenarios',sorted({row['scenario'] for row in dataset['observations']}))}
+    (BASE/'storage-summary.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps({'status':'passed','report':'storage-summary.json','defaultBatchComparisons':{case:result['comparisons'][case]['200']['p75'] for case in cases}}))
+
+
 def main():
     transform=json.loads((BASE/'transform-final-raw.json').read_text())
     api=json.loads((BASE/'admin-api-raw.json').read_text())
@@ -100,4 +142,6 @@ def main():
 
 if __name__=='__main__':
     import sys
-    current_report() if '--current' in sys.argv else main()
+    if '--storage' in sys.argv:storage_report()
+    elif '--current' in sys.argv:current_report()
+    else:main()

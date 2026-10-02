@@ -42,12 +42,15 @@
     },
     {
       "requirement": "Evaluation/storage deduplication and 1-200 batch comparison",
-      "status": "partial",
+      "status": "verified_in_isolated_storage_fixture",
       "evidence": [
-        "backend/restaurant-evaluation/scripts/13-supabase-insert.py",
-        "provider-read-raw.json"
+        "storage-summary.json",
+        "storage-rpc-raw.json",
+        "storage-new-and-failures-raw.json",
+        "storage-one-and-resume-raw.json",
+        "backend/restaurant-evaluation/scripts/tests/test_supabase_insert_admin_lock.py"
       ],
-      "remaining": "Batch-size and uncertain-save integration measurements remain; replay reads do not measure paid inference."
+      "remaining": "Operational transport/full catalog and paid inference are not measured. Local real-RPC batch sweep, conflict rollback and uncertain-save restart are retained."
     },
     {
       "requirement": "Admin cursor/search/filter/order/statistics/warnings/detail compatibility",
@@ -73,9 +76,10 @@
       "status": "partial",
       "evidence": [
         "transform-restart-v3-raw.json",
-        "media-replay-raw.json"
+        "media-replay-raw.json",
+        "storage-summary.json"
       ],
-      "remaining": "Unchanged/partial/full/corrupt-frame covered; new-input and failed-transform restart timing not yet paired."
+      "remaining": "Storage now covers all five conditions with at least seven pairs. Combined full-pipeline and transform new/restart timing remain."
     },
     {
       "requirement": "100 paired API and browser observations",

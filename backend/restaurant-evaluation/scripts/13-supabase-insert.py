@@ -778,7 +778,6 @@ def process_and_upsert(
         return
 
     trace_ids = unique_non_empty(item.get("trace_id") for item in batch_data)
-    youtube_links = unique_non_empty(item.get("youtube_link") for item in batch_data)
 
     existing_map: dict[str, dict[str, Any]] = {}
     if trace_ids:
@@ -789,6 +788,13 @@ def process_and_upsert(
             raise RuntimeError("existing_trace_id_prerequisite_read_failed") from None
 
     review_candidate_map: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    # Exact trace matches never consult the rebind candidate map. Only rows
+    # whose trace is absent need the video/name lookup; retain its full alias
+    # and ambiguity handling for those rows.
+    youtube_links = unique_non_empty(
+        item.get("youtube_link") for item in batch_data
+        if item.get("trace_id") not in existing_map
+    )
     if youtube_links:
         try:
             review_candidate_map = fetch_review_rebind_candidates(supabase, youtube_links)
