@@ -338,7 +338,14 @@ function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
     return (
         <div
             className={`flex flex-col bg-background text-foreground${isMobile ? ' overflow-hidden' : ''}`}
-            style={{ height: 'var(--full-height, 100vh)' }}
+            style={{
+                height: 'var(--full-height, 100vh)',
+                // The measured nav height already includes its safe area. Keep
+                // SDK tiles/markers outside the visible bar; fullscreen uses 0.
+                paddingBottom: isMobile && !isPublicRestrictedMode
+                    ? 'var(--mobile-bottom-nav-effective-height, var(--mobile-bottom-nav-height, calc(60px + env(safe-area-inset-bottom))))'
+                    : undefined,
+            }}
         >
             <a href="#main-content" className="skip-link">
                 본문 바로가기
