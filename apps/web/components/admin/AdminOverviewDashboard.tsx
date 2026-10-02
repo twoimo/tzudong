@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
+import "@/components/map/marker-icons.css";
 import {
   buildNaverClusterMarkerRenderPlan,
   getClusterVisualKey,

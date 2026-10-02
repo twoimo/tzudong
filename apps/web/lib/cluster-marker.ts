@@ -282,56 +282,11 @@ export const createIndividualMarkerHTML = (
   const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
   const zIndex = isSelected ? '100' : '1';
 
-  return `
-    <div
-      style="
-        width: ${size}px;
-        height: ${size}px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transform: ${transform};
-        position: relative;
-        z-index: ${zIndex};
-        user-select: none;
-        -webkit-tap-highlight-color: transparent;
-      "
-      role="button"
-      data-testid="marker"
-      ${safeRestaurantId ? `data-restaurant-id="${safeRestaurantId}"` : ''}
-    >
-        ${createCategoryImageHTML({ image, alt: 'marker' })}
-        ${shouldShowVisitBadge ? `
-        <span
-          class="tzuyang-visit-count-badge"
-          data-tzuyang-visit-count-badge="true"
-          aria-label="쯔양 ${normalizedVisitCount}회 방문"
-          style="
-            position: absolute;
-            top: ${visitBadgeOffset}px;
-            right: ${visitBadgeOffset}px;
-            min-width: ${visitBadgeSize}px;
-            height: ${visitBadgeSize}px;
-            padding: 0 4px;
-            border-radius: 9999px;
-            background-color: #dc2626;
-            color: #ffffff;
-            border: 2px solid #ffffff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: ${visitBadgeFontSize}px;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -0.02em;
-            pointer-events: none;
-            box-sizing: border-box;
-          "
-        >${displayVisitCount}</span>
-        ` : ''}
-    </div>
-  `;
+  const badge = shouldShowVisitBadge
+    ? `<span class="tzuyang-visit-count-badge" data-tzuyang-visit-count-badge="true" aria-label="쯔양 ${normalizedVisitCount}회 방문" style="background-color: #dc2626; top: ${visitBadgeOffset}px; right: ${visitBadgeOffset}px; min-width: ${visitBadgeSize}px; height: ${visitBadgeSize}px; font-size: ${visitBadgeFontSize}px;">${displayVisitCount}</span>`
+    : '';
+  const picture = `<picture class="tzudong-marker-picture"><source srcset="${image.webp}" type="image/webp" /><img class="tzudong-marker-image" src="${image.png}" alt="marker" draggable="false" decoding="sync" /></picture>`;
+  return `<div class="tzudong-individual-marker" style="width: ${size}px; height: ${size}px; transform: ${transform}; z-index: ${zIndex};" role="button" data-testid="marker"${safeRestaurantId ? ` data-restaurant-id="${safeRestaurantId}"` : ''}>${picture}${badge}</div>`;
 };
 
 /**
