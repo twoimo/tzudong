@@ -356,6 +356,12 @@ function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
     );
 }
 export function HomeRuntimeShell({ children }: { children: ReactNode }) {
+    // Fullscreen temporarily unmounts the controls. Once ready, their initial
+    // placeholder stays retired until the home runtime itself leaves.
+    useEffect(() => () => {
+        delete document.documentElement.dataset.homeMobileChromeReady;
+    }, []);
+
     return (
         <QueryProvider>
             <WebVitals />
