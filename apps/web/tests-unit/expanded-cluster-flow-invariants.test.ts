@@ -189,7 +189,7 @@ describe('expanded cluster flow invariants', () => {
             'previousEarlyMarkerRenderKey.markerViewportRevision === markerViewportRevision',
         );
         expect(rendererSource).toContain(
-            "+ (expandedClusterRestaurantIds.length > 0 ? `:viewport-${markerViewportRevision}` : ''),",
+            "+ (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedDesktop ? `:viewport-${markerViewportRevision}` : ''),",
         );
         expect(rendererSource).toContain(
             'markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant',
@@ -259,6 +259,8 @@ describe('expanded cluster flow invariants', () => {
             runRendererSource(renderCode, {
                 map, contextualRestaurants: candidates, displayRestaurants: candidates, expandedClusterRestaurantIds,
                 activeIds: new Set<string>(), extendedBounds,
+                renderedExpandedSources: new Map<string, Restaurant>(),
+                deferredMarkerRenders: [],
                 markerViewportKey: getViewportKey(map, mapElement), lastMarkerViewportRef,
                 shouldRenderExpandedMarker: (restaurant: Restaurant) => shouldRenderExpandedClusterMarker(
                     restaurant, null, null, extendedBounds, true,

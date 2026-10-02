@@ -81,6 +81,30 @@ test('공개 경로는 세션 갱신을 건너뛴다', async () => {
     expect(updateSessionCalls).toBe(0)
 })
 
+test('field POST omits Auth work only when credentialless and keeps mutation checks', async () => {
+    resetAdminBypassEnv()
+    let updateSessionCalls = 0
+    mock.module('@/lib/supabase/middleware', () => ({
+        updateSession: async () => {
+            updateSessionCalls += 1
+            return NextResponse.json({ ok: true }, { headers: { 'x-auth-checked': '1' } })
+        },
+    }))
+    const { proxy } = await loadProxyModule()
+    const url = 'http://localhost:3000/api/performance/web-vitals'
+    const headers = { Origin: 'http://localhost:3000', 'Sec-Fetch-Site': 'same-origin' }
+    const plain = await proxy(new NextRequest(url, { method: 'POST', headers }))
+    expect(plain.headers.get('x-auth-checked')).toBeNull()
+    expect(updateSessionCalls).toBe(0)
+    const cookie = await proxy(new NextRequest(url, { method: 'POST', headers: { ...headers, Cookie: 'test-only=1' } }))
+    const bearer = await proxy(new NextRequest(url, { method: 'POST', headers: { ...headers, Authorization: 'Bearer test-only' } }))
+    expect(cookie.headers.get('x-auth-checked')).toBe('1')
+    expect(bearer.headers.get('x-auth-checked')).toBe('1')
+    const outside = await proxy(new NextRequest(url, { method: 'POST', headers: { ...headers, Origin: 'https://outside.invalid' } }))
+    expect(outside.status).toBe(403)
+    expect(updateSessionCalls).toBe(2)
+})
+
 test('보호 경로는 세션 갱신을 수행한다', async () => {
     resetAdminBypassEnv()
     let updateSessionCalls = 0

@@ -1,3 +1,16 @@
+export function resolveNaverOccludingNavHeight({
+    navHeight,
+    viewportHeight,
+    mapHeight,
+}: {
+    navHeight: number;
+    viewportHeight: number;
+    mapHeight: number;
+}) {
+    const reservedHeight = Math.max(0, viewportHeight - mapHeight);
+    return Math.max(0, navHeight - reservedHeight);
+}
+
 export function calculateNaverMobileVerticalOffset({
     fineTunePx,
     navHeight,

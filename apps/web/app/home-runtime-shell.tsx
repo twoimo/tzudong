@@ -20,6 +20,7 @@ import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } fr
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
 import { isPublicRestrictedMode } from '@/lib/site-config';
+import { WebVitals } from '@/lib/web-vitals';
 import {
     APP_HEADER_HEIGHT_VAR,
     MOBILE_SHEET_HEADER_OFFSET_VAR,
@@ -327,7 +328,6 @@ function HomeStaticSkeleton() {
             </div>
             <div className="xl:hidden">
                 <div className="mx-3 mt-[calc(env(safe-area-inset-top)+10px)] h-12 animate-pulse rounded-full border border-border bg-muted" />
-                <div className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] h-14 animate-pulse rounded-2xl bg-muted" />
             </div>
         </div>
     );
@@ -341,7 +341,14 @@ function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
     return (
         <div
             className={`flex flex-col bg-background text-foreground${isMobile ? ' overflow-hidden' : ''}`}
-            style={{ height: 'var(--full-height, 100vh)' }}
+            style={{
+                height: 'var(--full-height, 100vh)',
+                // The measured nav height already includes its safe area. Keep
+                // SDK tiles/markers outside the visible bar; fullscreen uses 0.
+                paddingBottom: isMobile && !isPublicRestrictedMode
+                    ? 'var(--mobile-bottom-nav-effective-height, var(--mobile-bottom-nav-height, calc(60px + env(safe-area-inset-bottom))))'
+                    : undefined,
+            }}
         >
             <a href="#main-content" className="skip-link">
                 본문 바로가기
@@ -359,8 +366,15 @@ function HomeRuntimePendingShell({ children, isMobile, mobileChrome }: {
     );
 }
 export function HomeRuntimeShell({ children }: { children: ReactNode }) {
+    // Fullscreen temporarily unmounts the controls. Once ready, their initial
+    // placeholder stays retired until the home runtime itself leaves.
+    useEffect(() => () => {
+        delete document.documentElement.dataset.homeMobileChromeReady;
+    }, []);
+
     return (
         <QueryProvider>
+            <WebVitals />
             <HomeSessionProviders>
                 <LayoutProvider>
                     <HomeLayoutContent>{children}</HomeLayoutContent>
