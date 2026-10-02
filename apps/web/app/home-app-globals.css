@@ -25,6 +25,12 @@ html[data-home-chrome-ready="true"][data-home-panel-ready="true"] [data-home-sta
 }
 
 @media (max-width: 1279px) {
+  /* Mobile has no desktop panel readiness signal. Retire its decorative shell
+     when the home controls mount, while map loading feedback stays separate. */
+  html[data-home-chrome-ready="true"] [data-home-static-skeleton] {
+    display: none;
+  }
+
   html[data-mobile-search-open] .mobile-map-status-badge {
     display: none;
   }
