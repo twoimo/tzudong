@@ -30,7 +30,7 @@
     "browser_roles_denied": true,
     "empty_search_path_preserved": true
   },
-  "postgresVersion": "17.11 (Homebrew)",
+  "postgresVersion": "17.6",
   "passed": true,
   "limitations": [
     "Synthetic fixture database only.",

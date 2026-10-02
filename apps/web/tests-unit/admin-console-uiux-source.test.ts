@@ -5418,11 +5418,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     const appGlobalsSource = source("app/app-globals.css");
     const routeSource = source("app/api/admin/storyboard/route.ts");
-    expect(routeSource).toContain("retiredStoryboardApi");
     expect(routeSource).not.toContain("buildStoryboardJobInsert");
-    expect(routeSource).not.toContain("generateStoryboardWithBackendAgent");
     const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
     const imageRouteSource = source("app/api/admin/storyboard/images/route.ts");
+    for (const retired of [routeSource,chatRouteSource,imageRouteSource]) {
+      expect(retired).toContain("retiredStoryboardApi");
+      expect(retired).not.toContain("generateStoryboardWithBackendAgent");
+    }
     const imageProviderSource = source(
       "lib/admin/storyboard/image-provider.ts",
     );
@@ -5785,7 +5787,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("!isStoryboardImageProviderAvailable");
     expect(storyboardSource).not.toContain("이미지 생성 준비 상태");
     expect(storyboardSource).toContain("이미지 생성 설정 필요");
-    expect(imageRouteSource).toContain("retiredStoryboardApi");
     expect(imageRouteSource).not.toContain("generateStoryboardSceneImages(");
     expect(imageProviderSource).toContain(
       "new StoryboardImageGenerationError(",
@@ -7635,7 +7636,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "isLocalPlaywrightHost(requestHeaders.get('host'))",
     );
     expect(requireAdminSource).toContain("return 'e2e-admin-route-bypass'");
-    expect(routeSource).not.toContain("buildStoryboardJobInsert");
     for (const retired of [routeSource,chatRouteSource,imageRouteSource]) {
       expect(retired).toContain("retiredStoryboardApi");
       expect(retired).not.toContain("generateStoryboardWithBackendAgent");
@@ -7686,7 +7686,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(imageProviderSource).toContain(
       "storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.",
     );
-    expect(imageRouteSource).not.toMatch(/\b(?:localStorage|sessionStorage)\b/);
     expect(imageProviderSource).not.toMatch(/\b(?:localStorage|sessionStorage)\b/);
     expect(imageProviderSource).toContain(
       'browser component-memory API key (active operation; transmitted once in guarded request header; never persisted)',
@@ -7929,24 +7928,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "fallbackReason: StoryboardFallbackReason | null;",
     );
     expect(typesSource).toContain("dataModeLabel: string;");
-    const storyboardGetSource = routeSource.slice(
-      routeSource.indexOf("export async function GET"),
-      routeSource.indexOf("export async function POST"),
-    );
-    const storyboardPostSource = routeSource.slice(
-      routeSource.indexOf("export async function POST"),
-    );
-    expect(routeSource).toContain("await requireAdmin({");
-    expect(storyboardPostSource.indexOf("await requireAdmin({")).toBeLessThan(
-      storyboardPostSource.indexOf("const bodyResult = await readStoryboardRouteJson(")
-    );
-    expect(storyboardGetSource.indexOf("await requireAdmin({")).toBeLessThan(
-      storyboardGetSource.indexOf("} = loadStoryboardHeatmapSources"),
-    );
-    expect(routeSource).toContain("isFallbackData");
-    expect(routeSource).toContain("fallbackReason");
-    expect(routeSource).toContain("dataModeLabel");
-    expect(routeSource).not.toContain("mode: 'local_heatmap_fixture'");
+    const retiredGateSource = source("lib/admin/storyboard/retired-api.ts");
+    expect(retiredGateSource.indexOf("await requireAdmin")).toBeLessThan(retiredGateSource.indexOf("Response.json"));
+    expect(retiredGateSource).toContain("status: 410");
+    expect(retiredGateSource).toContain("private, no-store");
     expect(generatorSource).toContain("backend/storyboard-agent");
     expect(generatorSource).toContain("most_replayed_markers");
     expect(generatorSource).toContain("TZUYANG_HEATMAP_DIR");

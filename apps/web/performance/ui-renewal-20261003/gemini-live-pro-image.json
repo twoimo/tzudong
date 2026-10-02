@@ -1,0 +1,35 @@
+{
+  "kind": "live-funded-gemini-generation",
+  "measuredAt": "2026-10-02T22:29:48.901Z",
+  "environment": {
+    "sdk": "2.18.0"
+  },
+  "syntheticInput": true,
+  "operationalDatabaseWrites": 0,
+  "maximumGenerationCalls": 1,
+  "generationCallsStarted": 1,
+  "usage": [
+    {
+      "model": "gemini-3-pro-image",
+      "promptTokens": 32,
+      "outputTokens": 1217,
+      "thoughtTokens": 75,
+      "totalTokens": 1324
+    }
+  ],
+  "limitations": [
+    "Single request per modality; no speed comparison or confidence interval.",
+    "Credit application and billed cost require a billing receipt."
+  ],
+  "pending": null,
+  "image": {
+    "elapsedMs": 14237.427458,
+    "bytes": 813319,
+    "width": 1376,
+    "height": 768,
+    "sha256": "9876f6cbdcdbb3c5f23471acdbb43b50fdb1840323806ce2941c7395806eacc6",
+    "responseModel": "gemini-3-pro-image",
+    "verified": true
+  },
+  "passed": true
+}

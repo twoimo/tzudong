@@ -1,0 +1,319 @@
+{
+  "kind": "experimental-ui-and-gemini-artifacts",
+  "formalG003Evidence": false,
+  "captureAttemptsRequireIndependentAcceptance": true,
+  "artifacts": [
+    {
+      "path": "admin-desktop-matrix.json",
+      "bytes": 5807,
+      "sha256": "b1fdc9cfc94c71bde3fcb4bb485574c5a8ae1a919b009131fcb65cf05c172ef3",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "admin-desktop.jpg",
+      "bytes": 164866,
+      "sha256": "daeddf3831aee2979b0ebea5cf5a1911b7100d691f9abada94a9c4f88ac04838",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "audit-desktop-final.jpg",
+      "bytes": 43130,
+      "sha256": "e1058e1b9fc1cc72eb2f002e17a5f2d1c5de92a3246cf0b5295a43d053b68637",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "audit-desktop-matrix.png",
+      "bytes": 84445,
+      "sha256": "fba105c50d90f452974d525911821265db4d9314d4d22148e55ce75033e71d19",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "auth-mobile.png",
+      "bytes": 56390,
+      "sha256": "306897029f4aee3bc14753054af74e4089eeb6c7e6f7fcd0e45f7f8babc5ff8f",
+      "role": "visually-inspected-capture"
+    },
+    {
+      "path": "banners-desktop-final.jpg",
+      "bytes": 40502,
+      "sha256": "773ddbe9052069723b1c4bac681fba69bbbcdbfec8f042b36eef29916a4d47eb",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "banners-desktop-matrix.png",
+      "bytes": 99484,
+      "sha256": "13c00b67ab47d9225d4b8cc6b77f65d581c781f3c400208fd34059fcba19ff92",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "banners-desktop-ready.jpg",
+      "bytes": 76999,
+      "sha256": "b8137eb006f9e436acccf11751ac1acb3c17a441cf288fb3c8cb6517d68a1715",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "banners-tablet-ready.jpg",
+      "bytes": 30175,
+      "sha256": "d8ce2cf5904dedf31c0fcef50dbf13e6c3d2a16082eb60f9e34a83804f464d50",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "gemini-live-generation.json",
+      "bytes": 1280,
+      "sha256": "628878e1f3de3c30d53da0e81532aeb3aa61208f52c8fafd3bb3de06ee97ea6d",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "gemini-live-image.jpg",
+      "bytes": 845724,
+      "sha256": "299dd7a05ac0366dd0701984865e16c6f54474934be709e28d6d3d03f50ef1b6",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "gemini-live-pro-image.jpg",
+      "bytes": 813319,
+      "sha256": "9876f6cbdcdbb3c5f23471acdbb43b50fdb1840323806ce2941c7395806eacc6",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "gemini-live-pro-image.json",
+      "bytes": 893,
+      "sha256": "8d69fd6f83d819a77e20d0adeb0beccc2e16a6afeefeb1e0968a5da0f7fabc1a",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "gemini-model-readiness.json",
+      "bytes": 596,
+      "sha256": "07c25395f4a40126f361eb083357c2f7ae15eb2847a155e111738a1666be3ca8",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "gemini-routing-readback.json",
+      "bytes": 410,
+      "sha256": "933e442d76dcd410791101d61afc16749f4b47b58d80f7954b5841430d2c5049",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "insights-desktop-matrix.png",
+      "bytes": 82442,
+      "sha256": "63f03614dad6a2bbf550003750b2bb2f67eb6f86caab8925de61204bb4d1f9c5",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "insights-desktop-ready.jpg",
+      "bytes": 57125,
+      "sha256": "7045f71378d0b2dfd846fefcd37a4e3cb2b451aa764a4b8688f84371b2d2b838",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "llm-desktop-matrix.png",
+      "bytes": 157608,
+      "sha256": "855e0b658a74c4f286fe8b0e2f7d2f895559e3e1dd9b4d37a6158953bd8d0d66",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "ocr-runtime-replay.json",
+      "bytes": 21430,
+      "sha256": "bd0128b3c7ee780602d897077c6b0291b629631418e298ded14f2386e9e35f3d",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "operations-desktop-ready.jpg",
+      "bytes": 81968,
+      "sha256": "01c785e3c7f6de6112f68dc205b381188c429637df5faa03196e878eb11d6ce3",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "operations-tablet-emulated.jpg",
+      "bytes": 34918,
+      "sha256": "078aa6e1df40e317de3a1265ae05df1d03c34bc5e19179f1a2e993f6a383f10f",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "operations-tablet-ready.jpg",
+      "bytes": 81968,
+      "sha256": "01c785e3c7f6de6112f68dc205b381188c429637df5faa03196e878eb11d6ce3",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "overview-desktop-matrix.png",
+      "bytes": 6919,
+      "sha256": "447a259d1eba3a3d2a438d20d6552699310cfd2b1389cb6c17e9d2709866ceb1",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "overview-mobile-capture.jpg",
+      "bytes": 38571,
+      "sha256": "d7ec22d0677c44706695b6325de98b5ca254bfe41e1d1527bab08a445a3bf642",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "overview-tablet-ready.jpg",
+      "bytes": 38409,
+      "sha256": "ea4a248f1ae5cc954e337802a7e27ebb6330b6ebb1382523bc5670372380d597",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "pipeline-desktop-matrix.png",
+      "bytes": 74049,
+      "sha256": "555d0b4f5c01458f476f96016fff4055f4693df5aa9c70e980ff42d23e986f6d",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "pipeline-desktop-ready.jpg",
+      "bytes": 62729,
+      "sha256": "11d40ec75e10bc466791e639c30da8f311b2c130fa9d7dfb817e31542ff62d3b",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "refresh-desktop-ready.jpg",
+      "bytes": 88064,
+      "sha256": "d029f869b4405d7a0eae95420380a15989a044ebfd39a6c86e222a79f8946f1c",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "refresh-desktop.jpg",
+      "bytes": 9596,
+      "sha256": "1eae366c12250bde948bf6db79a624663a551efec88839b4163bad332274c6e9",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-refresh-history-desktop-matrix.png",
+      "bytes": 7179,
+      "sha256": "7f99c96493d900502c6bd4ba64904417bd9c9ed38d72636330ee2c5c888b7b6b",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurants-desktop-matrix.png",
+      "bytes": 36406,
+      "sha256": "0956e46a5f91d30f08e6f49462c51b3d1566136c5547dcc3ed3073ee2253038f",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurants-desktop-ready.jpg",
+      "bytes": 122531,
+      "sha256": "1d1df0cace280bbe3fa288b8e4093c9bc51572c3c606a21f0cdbf5373fef895a",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurants-desktop.jpg",
+      "bytes": 37467,
+      "sha256": "95253501e74dadff9a2664aafe57a77bf74dec792fa25616be1d98906442b2d1",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "reviews-desktop-final.jpg",
+      "bytes": 63273,
+      "sha256": "c3d680497d40e5c7c20f48a675c3e4e2ebbae0d353ae9ea532adfdd3977cfdc1",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "reviews-desktop-matrix.png",
+      "bytes": 6917,
+      "sha256": "2ab4fd9c8ca810524f92994b6b66620900ccfc6749d41930366f46b306ade84d",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "reviews-desktop.jpg",
+      "bytes": 37410,
+      "sha256": "fd9fb2e0973db9917d7e3ca440449359819866f6e5838489938b34e0f494626f",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "routes-desktop-matrix.png",
+      "bytes": 195179,
+      "sha256": "69b88a4c6ffdc31bec13e0d565f8872aa565761c08992eb77e59ae4e50a3cfc4",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "routes-desktop-ready.jpg",
+      "bytes": 109196,
+      "sha256": "91f947fe0fdf25841dec6d52eb0c8d68469226abef40cbbff08e5e85d4c50d18",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "storyboard-bundle-before.json",
+      "bytes": 124,
+      "sha256": "792b59ed3a6db2ff819547d210c39a0cb0e90f5ae541d5eb7161bcf470d411fd",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "storyboard-desktop-matrix.png",
+      "bytes": 92900,
+      "sha256": "808125f7a63b28f19381717be753ef6e748871e9071bb5c083b57aabfad90ffb",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "storyboard-desktop-ready.jpg",
+      "bytes": 78842,
+      "sha256": "581d2fd2c13b17195b722ff9481a3baf6dfaff84c5b18e92425e946edba7570f",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "storyboard-gemini-desktop.jpg",
+      "bytes": 63827,
+      "sha256": "7e265762a9abcad393c13542403b7dc50d1488879d5351b4b0975cafa4a92a75",
+      "role": "visually-inspected-capture"
+    },
+    {
+      "path": "storyboard-gemini-mobile.jpg",
+      "bytes": 63872,
+      "sha256": "66e9ec1b561ad7b65510cf59e877126772af78fa3eb805140592b978aa148133",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "storyboard-gemini-mobile.png",
+      "bytes": 51884,
+      "sha256": "83c55a31c588f76e200d6cdfff349734fae8efa9c357bc5dd4bde443d3c102d9",
+      "role": "visually-inspected-capture"
+    },
+    {
+      "path": "storyboard-sql-verification.json",
+      "bytes": 1414,
+      "sha256": "805f37387eeb0d24b6a44da01429a8db58532222dfc81e43eca66a38866b91b3",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "submissions-desktop-matrix.png",
+      "bytes": 81650,
+      "sha256": "90c0a891f5bb34d24695ad94520dcc265aadfa90bf9be593d8e8b7df577cb6df",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "thumbnail-desktop-ready.jpg",
+      "bytes": 180802,
+      "sha256": "6ae27da7de24f84b5892d5b681dfbc384210904233882007aa712c102496867a",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "token-contrast.json",
+      "bytes": 6140,
+      "sha256": "c85890368292c9afc89efd62fc0e6781144850cc60012c294ebdfe7e60764d31",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "users-desktop-final.jpg",
+      "bytes": 9596,
+      "sha256": "1eae366c12250bde948bf6db79a624663a551efec88839b4163bad332274c6e9",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "users-desktop-matrix.png",
+      "bytes": 124024,
+      "sha256": "e823b12ed8ca52525f3bd0772a940564208e6b96cdb0554546b6091676f4da45",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "users-desktop-ready.jpg",
+      "bytes": 78611,
+      "sha256": "abf013217361d5f3a79b52fe0441c5bf4a02b8668aa2090c817925b95bd74c83",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "youtube-thumbnail-generator-desktop-matrix.png",
+      "bytes": 7179,
+      "sha256": "7f99c96493d900502c6bd4ba64904417bd9c9ed38d72636330ee2c5c888b7b6b",
+      "role": "capture-attempt"
+    }
+  ]
+}

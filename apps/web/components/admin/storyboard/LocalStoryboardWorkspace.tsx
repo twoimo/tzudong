@@ -53,7 +53,7 @@ const catalogSchema = z.object({
   workers: z.array(z.object({
     id: z.string(), online: z.boolean(), lastHeartbeat: z.string().nullable(),
     models: z.array(z.object({
-      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(),
+      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(), owned_by: z.enum(["gemini-api", "mlx"]).optional(),
       bytes_on_disk: z.number().nonnegative(), bytes_resident: z.number().nonnegative(),
     })),
   })),
@@ -76,7 +76,7 @@ const PROVIDERS: Record<ProviderId, string> = {
   "openai-api": "OpenAI 공식 API · 설정 전 사용 불가", "xai-api": "xAI 공식 API · 설정 전 사용 불가",
 };
 const STATUSES: Record<Project["status"], string> = {
-  waiting_worker: "로컬 워커 대기", generating: "생성 중", awaiting_import: "가져오기 대기",
+  waiting_worker: "제작 워커 대기", generating: "생성 중", awaiting_import: "가져오기 대기",
   partial: "일부 결과 저장됨", ready: "결과 준비됨", failed: "생성 실패", cancelled: "취소됨",
 };
 const JOB_STATUSES = { queued: "작업 대기", claimed: "작업 실행 중", succeeded: "작업 종료", failed: "작업 실패", cancelled: "작업 취소" };
@@ -340,17 +340,17 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
         </label>}
         {showSetup && <section className={panelClass} aria-labelledby="local-workers-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 id="local-workers-title" className="font-semibold">로컬 워커</h3>
+            <h3 id="local-workers-title" className="font-semibold">제작 연결</h3>
             <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick((value) => value + 1)}>목록 새로고침</button>
           </div>
           {catalogBusy && <p role="status" className="mt-2 text-sm">목록 확인 중…</p>}
           {catalogError && <p role="alert" className="mt-2 text-sm text-destructive">{catalogError}</p>}
-          {!catalogBusy && !catalogError && catalog.workers.length === 0 && <p className="mt-2 text-sm text-muted-foreground">보고된 로컬 워커가 없습니다. 수동 가져오기는 사용할 수 있습니다.</p>}
+          {!catalogBusy && !catalogError && catalog.workers.length === 0 && <p className="mt-2 text-sm text-muted-foreground">연결된 제작 워커가 없습니다. 연결 후 대기 중인 요청이 시작됩니다.</p>}
           {catalog.workers.map((worker) => <div key={worker.id} className="mt-3 break-words text-sm [overflow-wrap:anywhere]">
-            <p className="font-medium">{worker.online ? "Mac 워커 연결됨" : "Mac 워커 연결 끊김"}</p>
+            <p className="font-medium">{worker.online ? "제작 워커 연결됨" : "제작 워커 연결 끊김"}</p>
             <p className="text-xs text-muted-foreground">마지막 연결: {when(worker.lastHeartbeat)}</p>
             {worker.models.map((model) => <p key={model.id} className="mt-1 text-xs text-muted-foreground">
-              {model.id} · 디스크 {size(model.bytes_on_disk)} · 메모리 {size(model.bytes_resident)} · {model.loaded ? "로드됨" : "미로드"}
+              {model.id} · {model.owned_by === "gemini-api" ? "Gemini API 확인됨" : `디스크 ${size(model.bytes_on_disk)} · 메모리 ${size(model.bytes_resident)}`}
             </p>)}
           </div>)}
         </section>}
