@@ -287,7 +287,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {!isMobileBannerOnlyHeader && (
         <Link href="/" className="relative z-10 flex-shrink-0 flex items-center justify-center">
           <NextImage
-            src="/logo.png"
+            src="/logo-png-129-8d374bb80346.png"
             unoptimized
             alt="Tzudong Logo"
             width={32}

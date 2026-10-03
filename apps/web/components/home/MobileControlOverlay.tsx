@@ -1015,7 +1015,7 @@ function MobileControlOverlayComponent({
                         title={searchQuery.trim() ? `${searchQuery.trim()} 검색` : '쯔동여지도 검색하기'}
                     >
                         <Image
-                            src="/logo.png"
+                            src="/logo-png-129-8d374bb80346.png"
                             unoptimized
                             alt=""
                             aria-hidden="true"
@@ -1297,7 +1297,7 @@ function MobileControlOverlayComponent({
                             <div className="flex min-w-0 items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5">
                                 <div className="min-w-0 flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40">
                                     <Image
-                                        src="/logo.png"
+                                        src="/logo-png-129-8d374bb80346.png"
                                         unoptimized
                                         alt="로고"
                                         width={24}
