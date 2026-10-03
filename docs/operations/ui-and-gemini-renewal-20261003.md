@@ -154,3 +154,10 @@ RequestPacer는 sleep 후 최신 shared deadline을 재확인하고 실제 출�
 새 `20261003205335_storyboard_uncertain_lease_recovery.sql`은 expired claimed job을 failed/uncertain으로 남기고 checkpoint를 보존한다. 오래된 자동 backoff는 역사적 기본 경로 검증으로만 남긴다. 현재 안전 경로에서 반복 claim 3회·자동 재claim 0회·기존 job attempts 1을 확인했다. 원래/운영 receipt 경로 각각 **19개** 검증이 통과했다. 명시적인 운영자 retry는 새로운 job 하나를 만든다. UI는 저장된 결과와 revision을 확인하고 추가 크레딧 사용 가능성을 확인한 뒤 재요청하도록 한다.
 
 관련 Python **30 pass**, 웹 affected **64 pass**, TypeScript parity 진단 0·ESLint를 확인했다. 실제 hosted 적용·생성 결과·billing 차감은 이 증빙이 아니다. 검수의 cold request 전체 catalog 조회는 여전히 DB-side bounded query로 교체할 구현 항목이며 완료로 표시하지 않는다.
+
+
+## DB 페이지 조회를 위한 정규화 동등성
+
+기존 TypeScript 평가 파서를 SQL로 구현해 numeric/boolean/category/location의 잘못된 형식, nullable 값, 근거 family, pending reason을 동일하게 해석한다. 상태 분류 역시 pending fallback·missing·미대상·승인 대기·미확정 지도 판정을 보존한다. 실제 공유 TS 함수의 반환값과 실제 PG17.6 함수의 반환값을 **평가 65개 + 상태 80개 = 145개** 사례에서 비교하여 차이 **0개**를 확인했다. missing/미확정처럼 상태가 겹치는 사례도 포함한다. private 함수는 service_role만 실행하며 anon/authenticated 호출은 거부됐다(3개 검사 통과).
+
+이는 DB-side bounded search/keyset 조회에 필요한 사전 동등성 검증이다. 기존 route의 전체 snapshot 경로를 아직 교체하지 않았으므로 페이지 API의 성능 개선·운영 적용 완료로 주장하지 않는다. DB 필터·정렬·통계·중복 경고와 route 연결, 실행 계획·전후 paired 측정은 계속 구현한다. 원시 conformance 결과는 `admin-read-normalization-conformance-20261004.json`과 분리된 SHA에 결속했다.
