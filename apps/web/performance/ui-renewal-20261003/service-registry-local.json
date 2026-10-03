@@ -1,0 +1,15 @@
+{
+  "kind": "local-service-rpc-registry-verification",
+  "postgresVersion": "17.6",
+  "operationalDatabaseChanges": false,
+  "migrationSha256": "9fa8a42fc86b5fb00c25d65c02d1c9410a82ac5948359bec2f6beb1f03e2bf28",
+  "assertions": {
+    "missing_existing_grant_denied": true,
+    "failed_transaction_writes_zero": true,
+    "six_exact_entries": true,
+    "execute_acl_unchanged": true,
+    "idempotent_rows": true,
+    "missing_signature_denied": true
+  },
+  "pass": true
+}

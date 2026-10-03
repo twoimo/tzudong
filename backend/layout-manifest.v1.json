@@ -326,6 +326,34 @@
       "vcsTracked": true
     },
     {
+      "path": "docs/build-ship",
+      "depth": 2,
+      "ownership": "구현·빌드·배포 절차 문서",
+      "allowedContents": [
+        "빌드·배포 절차 및 검증 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/performance",
+      "depth": 2,
+      "ownership": "성능 측정 설계·분석 문서",
+      "allowedContents": [
+        "성능 모델·실험 절차·분석 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "docs/operations",
       "depth": 2,
       "ownership": "운영 문서",

@@ -17,6 +17,7 @@ import { extractVideoIdFromYoutubeLink } from '../../../lib/dashboard/helpers';
 import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '../../../lib/dashboard/classifiers';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
 import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
+import { RestaurantReviewAutomation } from '@/components/admin/RestaurantReviewAutomation';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
@@ -3303,6 +3304,7 @@ function AdminEvaluationPage({
         ) : (
           /* 테이블 영역 (무한 스크롤) */
           <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-2">
+            <RestaurantReviewAutomation onApplied={() => { void loadAllRecords(); void invalidateRestaurantDiscoveryQueries(queryClient); }} />
             <EvaluationTable
               records={visibleDisplayedRecords}
               onApprove={handleApprove}

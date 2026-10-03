@@ -7,6 +7,7 @@ const isolated = new Set([
   'admin-storyboard-generator.test.ts',
   'admin-storyboard-langgraph.test.ts',
   'admin-storyboard-caption-provenance.test.ts',
+  'admin-storyboard-local-bridge.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
   'auth-callback-session.test.ts',
   'account-deletion-reauth-validation.test.ts',

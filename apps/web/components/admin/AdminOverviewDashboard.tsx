@@ -1421,12 +1421,12 @@ function AdminMapInfoPanel({
               variant="outline"
               className={cn(
                 "rounded-full",
-                routeAhpAssessment.score >= 98
+                routeStops.length >= 2 && routeAhpAssessment.score >= 98
                   ? "border-emerald-700/25 text-emerald-800"
                   : "border-amber-700/25 text-amber-800",
               )}
             >
-              {routeAhpAssessment.score.toFixed(1)}점 후보
+              {routeStops.length >= 2 ? `${routeAhpAssessment.score.toFixed(1)}점 후보` : "준비 전"}
             </Badge>
           </div>
           <p className="mt-1 text-2xs leading-4 text-muted-foreground">

@@ -49,12 +49,18 @@
       "path": "auth-mobile.png",
       "bytes": 56390,
       "sha256": "306897029f4aee3bc14753054af74e4089eeb6c7e6f7fcd0e45f7f8babc5ff8f",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "banners-desktop-final.jpg",
       "bytes": 40502,
       "sha256": "773ddbe9052069723b1c4bac681fba69bbbcdbfec8f042b36eef29916a4d47eb",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "banners-desktop-html-fixed.jpg",
+      "bytes": 77692,
+      "sha256": "16b02ab621ea7c60f7e19ccd73b6ed8387befc2c1e09a94986f90706f206df41",
       "role": "capture-attempt"
     },
     {
@@ -67,6 +73,12 @@
       "path": "banners-desktop-ready.jpg",
       "bytes": 76999,
       "sha256": "b8137eb006f9e436acccf11751ac1acb3c17a441cf288fb3c8cb6517d68a1715",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "banners-desktop-v5.jpg",
+      "bytes": 77566,
+      "sha256": "3819a69fe8f74c7dcd5fff5bcbb93cb345edb46fc7556e794254f672e052065a",
       "role": "capture-attempt"
     },
     {
@@ -85,7 +97,7 @@
       "path": "banners-tablet-v3.jpg",
       "bytes": 71500,
       "sha256": "737184b9c17a059070a9efbfaf2b71087386404474846e2d4a6de5421fcb72cf",
-      "role": "layout-inspected-with-known-hydration-error"
+      "role": "capture-attempt"
     },
     {
       "path": "css-security-build.json",
@@ -97,7 +109,7 @@
       "path": "feed-mobile-reviewed.jpg",
       "bytes": 49086,
       "sha256": "8d6515232d23deb3e5e75a83a01c8670909986a1b2d07a30231c9892a7a75942",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "gemini-live-generation.json",
@@ -166,6 +178,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "insights-desktop-v5.jpg",
+      "bytes": 115300,
+      "sha256": "104d5c1e996b127a1e9028a8cac7d33c2cbc75e5058312196c73b81e2d28fee3",
+      "role": "capture-attempt"
+    },
+    {
       "path": "insights-mobile-v3.jpg",
       "bytes": 30591,
       "sha256": "2a022bb79fc91310fc0b7fe2b69afed2739429b6bc37992cacd6f1731bec504b",
@@ -181,7 +199,7 @@
       "path": "leaderboard-mobile-reviewed.jpg",
       "bytes": 19780,
       "sha256": "962c660561c757e841f0bbeb56a17d80216ec94e816fe1926b2c4b93234b0d5a",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "llm-desktop-matrix.png",
@@ -238,6 +256,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "overview-desktop-v4.jpg",
+      "bytes": 102496,
+      "sha256": "c441bfb709091e769228d30492aa85623a9f783cb40cc532d6b1923812850f4f",
+      "role": "capture-attempt"
+    },
+    {
       "path": "overview-mobile-capture.jpg",
       "bytes": 38571,
       "sha256": "d7ec22d0677c44706695b6325de98b5ca254bfe41e1d1527bab08a445a3bf642",
@@ -280,10 +304,16 @@
       "role": "capture-attempt"
     },
     {
+      "path": "pipeline-desktop-v5.jpg",
+      "bytes": 63343,
+      "sha256": "3b914302ce7a5581aceec2d91d62b1a802da17a3ffebe4c0f48e23afca347f86",
+      "role": "capture-attempt"
+    },
+    {
       "path": "pipeline-mobile-revised.jpg",
       "bytes": 30863,
       "sha256": "1b95059b21a47b38accdbf089ce9d810896d5aa23bc015bafc0443309e836c17",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "pipeline-mobile-v3.jpg",
@@ -295,19 +325,19 @@
       "path": "pipeline-tablet-v3.jpg",
       "bytes": 55307,
       "sha256": "bd853270e9035040e38b8131a4270ab143d05d8eeecaa836bbe6db3132730eb2",
-      "role": "layout-inspected-with-known-hydration-error"
+      "role": "capture-attempt"
     },
     {
       "path": "profile-mobile-authenticated.jpg",
       "bytes": 24851,
       "sha256": "d30939588599e090440fb3e64caaa8a4d16381ba22b0df578372d1e09ffc47a4",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "profile-mobile-compact.jpg",
       "bytes": 28106,
       "sha256": "1ebba7c343550e16f8103a7f9a529763b53aaa1e53c5d0dd844d3d605c8753ed",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "public-ui-observations.json",
@@ -328,10 +358,82 @@
       "role": "capture-attempt"
     },
     {
+      "path": "restaurant-automation-batch-raw.json",
+      "bytes": 10551,
+      "sha256": "82e6df607652e56ea50da49e9b48b47392397ea862fc28a80131ab8414155741",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-automation-batch-summary.json",
+      "bytes": 2474,
+      "sha256": "3d5ad5ba820066dff1c5140ee9c234fbe4e78c19bf427fa5954c1f896e305b88",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-automation-desktop.jpg",
+      "bytes": 98434,
+      "sha256": "fb3a3cd00b89a0abcb7f09bb49307b6cb4c17029046ecd607427eb29f235b82b",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-automation-detail-tablet.jpg",
+      "bytes": 37541,
+      "sha256": "2c407327fcf7b89e96d6c4851b107b465bed6fadca316eefa11028d0cc1fbf1f",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-automation-hosted.json",
+      "bytes": 741,
+      "sha256": "137c2b988b8e6f1aa4794a79b18ce1613882a7467989014fb89e234c7dc66a15",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-automation-local.json",
+      "bytes": 2789,
+      "sha256": "c6734d61a7d5d570df2ce67b598680ec685bd0e3a1bf582e95a1e0c3cdc6dc68",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-automation-mobile-v2.jpg",
+      "bytes": 44123,
+      "sha256": "c996b2fc5220b527bc8174991d4ed789aa6607c621a9fd5622c4a3c9b6d80c74",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-automation-mobile.jpg",
+      "bytes": 43887,
+      "sha256": "0f36ebd3d53c7ac1f461f576daf4744929117fa14816bd03051ad2a2cb9db976",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-automation-preview-desktop.jpg",
+      "bytes": 55885,
+      "sha256": "de6c05731c8a84c098a075d43aef3961414910f7d0147ad5f00260e3b233d2fb",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-automation-render.json",
+      "bytes": 822,
+      "sha256": "7c796964d5fc56b2ab73a1805ef359f06d876af7eef48677bfcd37da5d597ddc",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-automation-tablet.jpg",
+      "bytes": 113426,
+      "sha256": "d7db556c920df1a397ef2a3079282a552ff5dd30957b041fd15a5c0d51a35c19",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-automation-tests.json",
+      "bytes": 1009,
+      "sha256": "5b10c6aef81aac519574fa91409f4ada351b3d46dd0bca6ed1c5f804c8bec2a8",
+      "role": "raw-measurement"
+    },
+    {
       "path": "restaurant-mobile-reviewed.jpg",
       "bytes": 36719,
       "sha256": "92e2dcf3d3a498b059e7780239d6d9acb374ba3ccde9df67b8c64e45d7a7d971",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "restaurant-mobile-reviewed.png",
@@ -343,6 +445,12 @@
       "path": "restaurant-refresh-history-desktop-matrix.png",
       "bytes": 7179,
       "sha256": "7f99c96493d900502c6bd4ba64904417bd9c9ed38d72636330ee2c5c888b7b6b",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-refresh-history-desktop-v4.jpg",
+      "bytes": 72645,
+      "sha256": "a092d72749c8cccc589cbc0b8fbc3839c0f47b3f99b7ea0fb5c9e7a64aa26dd2",
       "role": "capture-attempt"
     },
     {
@@ -358,6 +466,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "restaurants-desktop-header-fixed.jpg",
+      "bytes": 122156,
+      "sha256": "fee5eba8d54caedd790a0c9c5073f5926c7b21dfae0af202de65601e537ebdda",
+      "role": "capture-attempt"
+    },
+    {
       "path": "restaurants-desktop-matrix.png",
       "bytes": 36406,
       "sha256": "0956e46a5f91d30f08e6f49462c51b3d1566136c5547dcc3ed3073ee2253038f",
@@ -367,6 +481,18 @@
       "path": "restaurants-desktop-ready.jpg",
       "bytes": 122531,
       "sha256": "1d1df0cace280bbe3fa288b8e4093c9bc51572c3c606a21f0cdbf5373fef895a",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurants-desktop-v4.jpg",
+      "bytes": 45143,
+      "sha256": "a2926a63b09def8ab0801bf235a48e63bb86a35a349d3ff410a70d889535d676",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurants-desktop-v5.jpg",
+      "bytes": 122896,
+      "sha256": "85748e44107797fa15de8e35307a694f3fc9827efaa851d5a68731eb1288ddfa",
       "role": "capture-attempt"
     },
     {
@@ -391,7 +517,7 @@
       "path": "review-detail-tablet.jpg",
       "bytes": 97083,
       "sha256": "85c42e57fb868ba5b512f43957411bd1ff648670b6bdf299921aeb7563a34538",
-      "role": "layout-inspected-with-known-hydration-error"
+      "role": "capture-attempt"
     },
     {
       "path": "reviews-desktop-final.jpg",
@@ -403,6 +529,12 @@
       "path": "reviews-desktop-matrix.png",
       "bytes": 6917,
       "sha256": "2ab4fd9c8ca810524f92994b6b66620900ccfc6749d41930366f46b306ade84d",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "reviews-desktop-v5.jpg",
+      "bytes": 92242,
+      "sha256": "84ec12e685f20fff286af34e2b544434c9e54abfafba71087b7b7fd612a453c1",
       "role": "capture-attempt"
     },
     {
@@ -421,7 +553,7 @@
       "path": "reviews-tablet-populated.jpg",
       "bytes": 80142,
       "sha256": "3f1e9e601f3707995b56adec7263f22ce6accee0d303f7da0ff5892b30cd4a1d",
-      "role": "layout-inspected-with-known-hydration-error"
+      "role": "capture-attempt"
     },
     {
       "path": "reviews-tablet-v3.jpg",
@@ -439,6 +571,12 @@
       "path": "routes-desktop-ready.jpg",
       "bytes": 109196,
       "sha256": "91f947fe0fdf25841dec6d52eb0c8d68469226abef40cbbff08e5e85d4c50d18",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "routes-desktop-v5.jpg",
+      "bytes": 119232,
+      "sha256": "1ef113888a5712b524666ba2696e2f5a3ffea26a8d3ba6291ab5ed4915f9a77b",
       "role": "capture-attempt"
     },
     {
@@ -460,22 +598,34 @@
       "role": "raw-measurement"
     },
     {
+      "path": "service-registry-hosted.json",
+      "bytes": 788,
+      "sha256": "c7c27a67fbfd4dff08b347a333eca7db0ecc7fef304113ec10c13f9aef417f1c",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "service-registry-local.json",
+      "bytes": 471,
+      "sha256": "4de53af70d8a0a4dc79d0a42624699c787700a7ccd4ba03dd47c59cb259d2bc8",
+      "role": "raw-measurement"
+    },
+    {
       "path": "signup-mobile-reviewed.jpg",
       "bytes": 40104,
       "sha256": "9155a36d653033f026f0b9ee44aa764be917ec94a153b77044acafbf177b7794",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "signup-tablet-reviewed.jpg",
       "bytes": 85190,
       "sha256": "7b313b64fa0c4e9aa6b752518026b5ffb3449973cd076606c8def4d78e45b3df",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "stamp-mobile-compact.jpg",
       "bytes": 36333,
       "sha256": "3a08037fa3f223a1bcce4500c28a6416e81eac16c5409695c3a056d5acd26287",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "stamp-mobile-reviewed.jpg",
@@ -502,10 +652,16 @@
       "role": "capture-attempt"
     },
     {
+      "path": "storyboard-desktop-v5.jpg",
+      "bytes": 74355,
+      "sha256": "4319f65925623cc62b4f45bdd0f1b720d5552c3d327f792d4b3b07f98cca0973",
+      "role": "capture-attempt"
+    },
+    {
       "path": "storyboard-gemini-desktop.jpg",
       "bytes": 63827,
       "sha256": "7e265762a9abcad393c13542403b7dc50d1488879d5351b4b0975cafa4a92a75",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "storyboard-gemini-mobile.jpg",
@@ -517,7 +673,7 @@
       "path": "storyboard-gemini-mobile.png",
       "bytes": 51884,
       "sha256": "83c55a31c588f76e200d6cdfff349734fae8efa9c357bc5dd4bde443d3c102d9",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "storyboard-mobile-v3.jpg",
@@ -544,6 +700,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "submissions-desktop-v4.jpg",
+      "bytes": 59736,
+      "sha256": "f676624724dd8b4ddb4a6741b7dde3b8bf4fafc5b7caac03b0f9758996fd1a55",
+      "role": "capture-attempt"
+    },
+    {
       "path": "submissions-mobile-v3.jpg",
       "bytes": 26497,
       "sha256": "4ac4199fffbcccc230dce19d8784e4934bf95053437250336d170fd581e7e886",
@@ -559,7 +721,7 @@
       "path": "thumbnail-desktop-inspected.jpg",
       "bytes": 175760,
       "sha256": "3e982105b6a7ff76c10405caee8d523d8f5f3b4a1f651a878cb2b5be47f06a06",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "thumbnail-desktop-ready.jpg",
@@ -592,6 +754,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "users-desktop-v5.jpg",
+      "bytes": 88646,
+      "sha256": "9ec5ff4336aefd0731ba0a214baeb1e185782f1af614bf84718d86f63307131d",
+      "role": "capture-attempt"
+    },
+    {
       "path": "users-mobile-v3.jpg",
       "bytes": 50901,
       "sha256": "c18c9fb7cff137d711f9be0aa396d5618b81b19498394b6ae9dc273fd1ca13ac",
@@ -601,7 +769,7 @@
       "path": "users-tablet-hydration-fixed-final.jpg",
       "bytes": 86223,
       "sha256": "0c8c2a8b762a1f1c2406645acf94384fb2ae1d8eb084bf3c38531f52a3eda5f3",
-      "role": "visually-inspected-capture"
+      "role": "capture-attempt"
     },
     {
       "path": "users-tablet-hydration-fixed.jpg",
@@ -613,7 +781,7 @@
       "path": "users-tablet-v3.jpg",
       "bytes": 85983,
       "sha256": "b4f4a9bddf00d9e0e41185340991f9909ef08a1a40d3f86f19697dd9ba4c3ced",
-      "role": "layout-inspected-with-known-hydration-error"
+      "role": "capture-attempt"
     },
     {
       "path": "verification-final.json",
@@ -625,6 +793,12 @@
       "path": "youtube-thumbnail-generator-desktop-matrix.png",
       "bytes": 7179,
       "sha256": "7f99c96493d900502c6bd4ba64904417bd9c9ed38d72636330ee2c5c888b7b6b",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "youtube-thumbnail-generator-desktop-v5.jpg",
+      "bytes": 181090,
+      "sha256": "6f9b65d673c16020b552eb490f2336daa406bdfababc5c41d22bc0a73a16d52e",
       "role": "capture-attempt"
     },
     {

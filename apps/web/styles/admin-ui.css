@@ -17,7 +17,7 @@
 [data-admin-embedded-module-shell="true"] { background: hsl(var(--card)); border-radius: 0.75rem; }
 [data-admin-module-header="compact"] { min-height: 3.5rem; }
 [data-admin-module-actions="top-right"] [data-slot="button"] { border-radius: 0.5rem; }
-[data-admin-console-shell="true"] [data-slot="table-head"] { background: hsl(var(--muted) / 0.6); }
+[data-admin-console-shell="true"] [data-slot="table-head"] { background: hsl(var(--muted)); }
 [data-admin-console-shell="true"] [data-slot="table-cell"] { padding-top: 0.625rem; padding-bottom: 0.625rem; }
 
 [data-admin-dashboard-management="true"] { height: auto; min-height: 100%; }

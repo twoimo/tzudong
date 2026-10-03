@@ -33,7 +33,7 @@ const managedUsers = fixtureProfiles.map((profile, i) => ({ id: profile.user_id,
   isDisabled:i===2,bannedUntil:null,createdAt:stamp,lastSignInAt:stamp,emailConfirmedAt:stamp,
   statusLabel:i===2?'비활성':'활성',roleLabel:i===0?'관리자':'사용자' }));
 const fixtureBanners = [{ id:'00000000-0000-4000-b000-000000000001',title:'검증용 맛집 안내',description:'합성 배너입니다.',
-  image_url:null,video_url:null,media_type:'none',link_url:'https://example.test/',is_active:true,priority:1,
+  image_url:null,video_url:null,media_type:'none',link_url:null,is_active:true,priority:1,
   display_target:['sidebar'],created_at:stamp,updated_at:stamp,created_by:fixtureUser.id }];
 const fixtureSubmissions = [ {id:'00000000-0000-4000-a100-000000000001',user_id:fixtureUser.id,submission_type:'new',status:'pending',
   restaurant_name:'검증 제보 맛집',restaurant_address:'서울특별시 중구 검증로 1',restaurant_phone:null,restaurant_categories:['한식'],
@@ -76,7 +76,26 @@ const response = (res, value, status = 200) => {
     'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Credentials': 'true' });
   res.end(JSON.stringify(value));
 };
+// In-memory synthetic automation state only. The gateway never forwards these
+// mutations to a database; production route/SQL are verified independently.
+const fixtureAutomation = { policy:{version:1,enabled:false,batch_size:50,daily_limit:50,last_run_at:null},runs:[],items:[],queue:{queued:0,running:0,failed:0},policyEvents:[] };
+function fixtureAutomationAction(body) {
+  if(body.action==='preview') return {version:String(fixtureAutomation.policy.version),previewHash:'a'.repeat(32),counts:{approve:0,recheck:0,hold:25,protected:0},batchSize:body.batchSize,dailyLimit:body.dailyLimit};
+  if(body.action==='start') { Object.assign(fixtureAutomation.policy,{version:fixtureAutomation.policy.version+1,enabled:true,batch_size:body.batchSize,daily_limit:body.dailyLimit}); }
+  else if(body.action==='stop') { fixtureAutomation.policy.enabled=false;fixtureAutomation.policy.version++; }
+  else if(body.action==='run'&&fixtureAutomation.policy.enabled&&!fixtureAutomation.runs.some(run=>run.request_id===body.requestId)) {
+    const at=new Date().toISOString();
+    fixtureAutomation.runs.unshift({id:body.requestId,request_id:body.requestId,started_at:at,scanned:25,approved:0,held:25,recheck:0,protected:0});
+    fixtureAutomation.policy.last_run_at=at;
+    fixtureAutomation.items=evaluations.slice(0,10).map((row,i)=>({id:`00000000-0000-4000-a600-${String(i+1).padStart(12,'0')}`,restaurant_id:row.id,restaurant_name:row.name,reason:'location_requires_review',state:'applied'}));
+  }
+  return fixtureAutomation;
+}
 function api(pathname) {
+  if (pathname === '/api/admin/evaluations/automation') return fixtureAutomation;
+  if (pathname === '/api/dashboard/restaurants') return {asOf:stamp,total:restaurants.length,limit:500,offset:0,filters:{onlyWithCoordinates:true},items:restaurants.map(row=>({
+    id:row.id,name:row.name,category:'한식',address:row.road_address,lat:row.lat,lng:row.lng,youtubeLink:null,videoId:null,
+    sourceType:'crawl',status:'approved',geocodingSuccess:true,isNotSelected:false,createdAt:stamp,updatedAt:stamp}))};
   if (pathname === '/api/admin/pipeline') return {source:'github_actions',hardware:'합성 환경',dataEnv:'fixture',targets:[],jobs:[
     {id:'fixture-run-1',target:'tzuyang',profile:'lite_gha',status:'Completed',dry_run:true,adapter_index:6}],failures:[],failureFrames:[],gauges:{}};
   if (pathname.startsWith('/api/admin/evaluations/')) return {record:evaluations.find(row=>row.id===pathname.split('/').at(-1))??null,revision:'1'};
@@ -99,8 +118,8 @@ function api(pathname) {
   if (pathname === '/api/admin/restaurant-refresh-history') return { records: [], items: [], pagination: { page: 1, perPage: 50, total: 0 }, summary: {} };
   if (pathname === '/api/admin/audit-events') return { events: [], total: 0, coverage: { universal: false, mode: 'truthful-partial-domain-specific', domains: [] } };
   if (pathname === '/api/admin/storyboard/production') return { ok: true, projects: [], workers: [] };
-  if (pathname === '/api/insights/treemap') return { rows: [], videos: [], totalVideos: 0, period: '1M', dataQuality: { status: 'ready' } };
-  if (pathname.includes('banners')) return { banners: [], items: [] };
+  if (pathname === '/api/insights/treemap') return { asOf:stamp,videos,totalVideos:videos.length,period:'ALL',availablePeriods:['1M','ALL'],meta:{dataSource:'supabase-treemap'} };
+  if (pathname.includes('banners')) return { banners: fixtureBanners, items: fixtureBanners };
   if (pathname.includes('restaurants')) return { restaurants, data: restaurants, totalCount: restaurants.length };
   if (pathname.includes('leaderboard')) return { users: [], leaderboard: [], total: 0 };
   if (pathname.includes('notifications')) return { notifications: [], unreadCount: 0 };
@@ -151,6 +170,10 @@ const preview = http.createServer(async (req, res) => {
     return res.end('<!doctype html><title>합성 데이터 디자인 검증</title><script>localStorage.setItem("tzudong:e2e-admin-shell-bypass","1");location.replace("/admin")</script>');
   }
   if (url.pathname.startsWith('/api/')) {
+    if (url.pathname === '/api/admin/evaluations/automation' && req.method === 'POST') {
+      let body='';for await(const chunk of req){body+=chunk.toString();if(body.length>2048)return response(res,{error:'FIXTURE_INPUT_LIMIT'},413);}
+      try {return response(res,fixtureAutomationAction(JSON.parse(body)));}catch{return response(res,{error:'FIXTURE_INPUT_INVALID'},400);}
+    }
     if (url.pathname === '/api/admin/profile-summaries' && req.method === 'POST') {
       let body=''; for await (const chunk of req) { body+=chunk.toString(); if(body.length>65536)return response(res,{error:'FIXTURE_INPUT_LIMIT'},413); }
       let ids=[]; try { ids=JSON.parse(body).userIds??[]; } catch { return response(res,{error:'FIXTURE_INPUT_INVALID'},400); }

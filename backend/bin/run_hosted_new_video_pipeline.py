@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """One entry for Mac and GitHub Actions: evaluate new videos then pending-apply.
 
-Does not enable PIPELINE_HOSTED_APPLY_ENABLED. Does not auto-approve.
+Does not enable PIPELINE_HOSTED_APPLY_ENABLED. Auto approval is a separate,
+explicit --review-automation feature with its own persisted operator policy.
 G037_WRITE_FREEZE does not hold this path. Hosted inserts stay pending until
 an admin approves them.
 """
@@ -12,6 +13,8 @@ import argparse
 import os
 import subprocess
 import sys
+import json
+import tempfile
 from pathlib import Path
 
 def _repo_root() -> Path:
@@ -32,6 +35,7 @@ from backend.pipeline_control.worker import (  # noqa: E402
 
 EVALUATE = REPO_ROOT / "backend" / "bin" / "evaluate_new_youtube_videos.py"
 APPLY = REPO_ROOT / "backend" / "bin" / "apply_hosted_pending_candidates.py"
+REVIEW = REPO_ROOT / "backend" / "bin" / "run_restaurant_review_automation.py"
 
 
 def _load_backend_env(repo_root: Path) -> None:
@@ -86,32 +90,54 @@ def _run(argv: list[str], *, required: bool = True) -> int:
     return completed.returncode
 
 
+def _review_reserved_slot() -> int:
+    with tempfile.TemporaryDirectory(prefix='tzudong-review-budget-') as folder:
+        receipt=Path(folder)/'receipt.json'
+        status=_run([sys.executable,str(REVIEW),'--recheck-limit','1','--receipt-file',str(receipt)],required=False)
+        if status!=0 or not receipt.is_file() or receipt.stat().st_size>2048:return 1
+        try:
+            result=json.loads(receipt.read_text(encoding='utf-8'))
+            if result.get('recheckAttempted') is False:return 0
+        except (OSError,ValueError,AttributeError):pass
+        # Uncertain work reserves one slot; never spend it again on a new video.
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", default="tzuyang")
     parser.add_argument("--limit", type=int, default=1)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--review-automation", action="store_true")
     parser.add_argument(
         "--preview-out",
         default=str(REPO_ROOT / "backend/log/cron/hosted-apply-preview.json"),
     )
     args = parser.parse_args(argv)
+    if args.limit < 1 or args.limit > 3:
+        print("error=limit_invalid")
+        return 2
     _load_backend_env(REPO_ROOT)
     cadence_source_preflight(REPO_ROOT)
     env_contract_preflight("hosted-pending-apply")
     _apply_local_runtime_environment()
     print(f"source={os.environ.get('TZUDONG_PIPELINE_SOURCE', 'local')}")
-    evaluate_exit = _run(
-        [
+    new_limit = args.limit
+    if args.review_automation and not args.dry_run:
+        # One existing video slot is reserved for a queued recheck. Never add
+        # a fourth evaluated video to the existing three-video daily budget.
+        new_limit -= _review_reserved_slot()
+    evaluate_command = [
             sys.executable,
             str(EVALUATE),
             "--channel",
             args.channel,
             "--limit",
-            str(args.limit),
-        ],
-        required=False,
-    )
+            str(new_limit),
+        ]
+    if args.dry_run:
+        evaluate_command.append("--dry-run")
+    evaluate_exit = _run(evaluate_command, required=False) if new_limit > 0 else 0
     print(f"evaluate_exit={evaluate_exit}")
     if evaluate_exit != 0:
         print("pipeline=evaluation_failed")
@@ -131,6 +157,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     _run(apply_cmd + ["--dry-run"])
     apply_exit = _run(apply_cmd)
+    if args.review_automation:
+        _run([sys.executable, str(REVIEW), "--recheck-limit", "0"])
     print(f"apply_exit={apply_exit}")
     print("pipeline=ok")
     return 0

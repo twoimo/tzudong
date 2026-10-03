@@ -1,0 +1,90 @@
+{
+  "kind": "synthetic-review-batch-summary",
+  "formalG003Evidence": false,
+  "datasetRows": 200,
+  "pairs": 7,
+  "measurements": {
+    "p50": {
+      "samples": 7,
+      "statistic": "p50",
+      "beforeMs": 365.9214158542454,
+      "afterMs": 50.55266688577831,
+      "absoluteReductionMs": 315.3687489684671,
+      "reductionPercent": 86.18482966683902,
+      "reduction95CI": [
+        85.78400712976052,
+        88.4712251152547
+      ],
+      "experimentalNoiseBudgetMs": 43.112749233841896,
+      "mediansMs": [
+        365.9214158542454,
+        50.55266688577831
+      ]
+    },
+    "p75": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 410.3544589597732,
+      "afterMs": 53.35191707126796,
+      "absoluteReductionMs": 357.0025418885052,
+      "reductionPercent": 86.99857747214146,
+      "reduction95CI": [
+        84.77132643122773,
+        87.12007255202904
+      ],
+      "experimentalNoiseBudgetMs": 43.112749233841896,
+      "mediansMs": [
+        365.9214158542454,
+        50.55266688577831
+      ]
+    },
+    "p95": {
+      "samples": 7,
+      "statistic": "p95",
+      "beforeMs": 414.2252919264138,
+      "afterMs": 62.49154102988541,
+      "absoluteReductionMs": 351.73375089652836,
+      "reductionPercent": 84.9136346215704,
+      "reduction95CI": [
+        84.77132643122773,
+        87.12007255202904
+      ],
+      "experimentalNoiseBudgetMs": 43.112749233841896,
+      "mediansMs": [
+        365.9214158542454,
+        50.55266688577831
+      ]
+    }
+  },
+  "limits": [
+    "Batch-size comparison uses the same new guarded approval function, not the previous unguarded production screen.",
+    "Synthetic rows and Unix socket; no provider, browser, hosted DB or network timing.",
+    "No actual token, cost, accuracy or whole-pipeline claim."
+  ],
+  "requests": {
+    "before": 200,
+    "after": 4,
+    "absoluteChange": -196,
+    "changePercent": -98,
+    "samples": 7,
+    "confidenceScope": "Exact fixed synthetic batch size, not a population or cost estimate"
+  },
+  "outputMatch": true,
+  "batch50To100": {
+    "samples": 7,
+    "statistic": "p75",
+    "beforeMs": 53.35191707126796,
+    "afterMs": 52.3011249024421,
+    "absoluteReductionMs": 1.0507921688258648,
+    "reductionPercent": 1.9695490368644264,
+    "reduction95CI": [
+      -5.353327746521708,
+      24.872832204650443
+    ],
+    "experimentalNoiseBudgetMs": 5.554583854973316,
+    "mediansMs": [
+      50.55266688577831,
+      46.94812488742173
+    ]
+  }
+}
