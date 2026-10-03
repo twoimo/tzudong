@@ -14,10 +14,29 @@ const videos = Array.from({ length: 25 }, (_, index) => ({
 }));
 const restaurants = Array.from({ length: 25 }, (_, index) => ({
   id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, name: `검증 맛집 ${index + 1}`,
-  approved_name: `검증 맛집 ${index + 1}`, road_address: '서울특별시 중구 검증로', categories: ['한식'],
+  approved_name: `검증 맛집 ${index + 1}`, road_address: `서울특별시 중구 검증로 ${index + 1}`, categories: ['한식'],
   lat: 37.55 + index * 0.001, lng: 126.98 + index * 0.001, status: 'approved', review_count: 3,
   verified_review_count: 3, youtube_link: '', created_at: stamp, updated_at: stamp,
 }));
+const fixtureProfiles = Array.from({ length: 3 }, (_, i) => ({user_id:`00000000-0000-4000-9000-${String(i+1).padStart(12,'0')}`,nickname:`검증 사용자 ${i+1}`,avatar_url:null}));
+const fixtureReviews = restaurants.flatMap((restaurant, i) => fixtureProfiles.map((profile, j) => ({
+  id:`00000000-0000-4000-a000-${String(i*3+j+1).padStart(12,'0')}`,restaurant_id:restaurant.id,user_id:profile.user_id,
+  content:`검증용 리뷰 ${j+1}. 음식과 공간의 분위기를 확인하는 합성 데이터입니다.`,visited_at:stamp,created_at:stamp,
+  food_photos:[],categories:['한식'],is_verified:true,is_pinned:false,is_edited_by_admin:false,admin_note:null,like_count:j+1,
+})));
+function filteredRows(req,rows) {
+  const query=new URL(req.url,origin).searchParams;
+  let selected=rows;
+  for(const field of ['id','restaurant_id','user_id','is_verified']) {
+    const filter=query.get(field);
+    if(filter?.startsWith('eq.'))selected=selected.filter(row=>String(row[field])===filter.slice(3));
+    if(filter?.startsWith('in.(')) {const ids=filter.slice(4,-1).split(',').map(s=>s.replaceAll('"',''));selected=selected.filter(row=>ids.includes(String(row[field])));}
+  }
+  const limit=Number(query.get('limit'));
+  if(Number.isInteger(limit)&&limit>0)selected=selected.slice(0,Math.min(limit,200));
+  if(String(req.headers.accept).includes('vnd.pgrst.object'))return selected[0]??null;
+  return selected;
+}
 const evaluations = restaurants.map((restaurant, index) => ({
   ...restaurant, id: restaurant.id, trace_id: `fixture-trace-${index + 1}`, source_type: 'crawl', status: 'pending',
   restaurant_name: restaurant.name, video_id: videos[index].id, youtube_link: '', evaluation_results: {},
@@ -62,7 +81,10 @@ const mockSupabase = http.createServer((req, res) => {
   const path = new URL(req.url, 'http://127.0.0.1:18793').pathname;
   if (req.method === 'OPTIONS') return response(res, {});
   if (path.startsWith('/auth/v1/')) return response(res, { user: null, session: null });
-  if (path.includes('/restaurants')) return response(res, restaurants);
+  if (path.includes('/restaurants')) return response(res, filteredRows(req,restaurants));
+  if (path.endsWith('/reviews')) return response(res,filteredRows(req,fixtureReviews));
+  if (path.endsWith('/rpc/read_public_profile_summaries')) return response(res,fixtureProfiles);
+  if (path.endsWith('/rpc/read_public_profile_leaderboard_page') || path.endsWith('/rpc/read_public_profile_leaderboard')) return response(res,fixtureProfiles.map((p,i)=>({user_id:p.user_id,nickname:p.nickname,review_count:3,verified_review_count:3,total_likes:6,avg_likes_per_review:2,quality_score:100-i*5})));
   if (path.includes('/ad_banners') || path.includes('/banners')) return response(res, []);
   if (path.includes('/rpc/')) return response(res, []);
   return response(res, []);

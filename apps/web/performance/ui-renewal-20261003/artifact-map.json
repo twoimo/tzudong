@@ -58,6 +58,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "feed-mobile-reviewed.jpg",
+      "bytes": 49086,
+      "sha256": "8d6515232d23deb3e5e75a83a01c8670909986a1b2d07a30231c9892a7a75942",
+      "role": "visually-inspected-capture"
+    },
+    {
       "path": "gemini-live-generation.json",
       "bytes": 1280,
       "sha256": "628878e1f3de3c30d53da0e81532aeb3aa61208f52c8fafd3bb3de06ee97ea6d",
@@ -94,6 +100,18 @@
       "role": "raw-measurement"
     },
     {
+      "path": "home-mobile-offline-map.png",
+      "bytes": 48053,
+      "sha256": "57b197bb79293475b37dc63c82d14830345797198aba9c9ec550a34de6355587",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "hosted-storyboard-readback.json",
+      "bytes": 786,
+      "sha256": "4517493574a9544f749fab90db7b00662d6f6b099e9b05513281a70f55590853",
+      "role": "raw-measurement"
+    },
+    {
       "path": "insights-desktop-matrix.png",
       "bytes": 82442,
       "sha256": "63f03614dad6a2bbf550003750b2bb2f67eb6f86caab8925de61204bb4d1f9c5",
@@ -104,6 +122,12 @@
       "bytes": 57125,
       "sha256": "7045f71378d0b2dfd846fefcd37a4e3cb2b451aa764a4b8688f84371b2d2b838",
       "role": "capture-attempt"
+    },
+    {
+      "path": "leaderboard-mobile-reviewed.jpg",
+      "bytes": 19780,
+      "sha256": "962c660561c757e841f0bbeb56a17d80216ec94e816fe1926b2c4b93234b0d5a",
+      "role": "visually-inspected-capture"
     },
     {
       "path": "llm-desktop-matrix.png",
@@ -166,6 +190,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "public-ui-observations.json",
+      "bytes": 1160,
+      "sha256": "105f9f32913b4e389b1dc610fc413dd79909be9c84d515ff2302eed502e11029",
+      "role": "raw-measurement"
+    },
+    {
       "path": "refresh-desktop-ready.jpg",
       "bytes": 88064,
       "sha256": "d029f869b4405d7a0eae95420380a15989a044ebfd39a6c86e222a79f8946f1c",
@@ -175,6 +205,18 @@
       "path": "refresh-desktop.jpg",
       "bytes": 9596,
       "sha256": "1eae366c12250bde948bf6db79a624663a551efec88839b4163bad332274c6e9",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-mobile-reviewed.jpg",
+      "bytes": 36719,
+      "sha256": "92e2dcf3d3a498b059e7780239d6d9acb374ba3ccde9df67b8c64e45d7a7d971",
+      "role": "visually-inspected-capture"
+    },
+    {
+      "path": "restaurant-mobile-reviewed.png",
+      "bytes": 46792,
+      "sha256": "4b98097274137bbd263917ad9ec106af89ca4f5af15f4aa79d2e776cf870ba9d",
       "role": "capture-attempt"
     },
     {
@@ -232,6 +274,30 @@
       "role": "capture-attempt"
     },
     {
+      "path": "signup-mobile-reviewed.jpg",
+      "bytes": 40104,
+      "sha256": "9155a36d653033f026f0b9ee44aa764be917ec94a153b77044acafbf177b7794",
+      "role": "visually-inspected-capture"
+    },
+    {
+      "path": "signup-tablet-reviewed.jpg",
+      "bytes": 85190,
+      "sha256": "7b313b64fa0c4e9aa6b752518026b5ffb3449973cd076606c8def4d78e45b3df",
+      "role": "visually-inspected-capture"
+    },
+    {
+      "path": "stamp-mobile-compact.jpg",
+      "bytes": 36333,
+      "sha256": "3a08037fa3f223a1bcce4500c28a6416e81eac16c5409695c3a056d5acd26287",
+      "role": "visually-inspected-capture"
+    },
+    {
+      "path": "stamp-mobile-reviewed.jpg",
+      "bytes": 28635,
+      "sha256": "647fe6ef5d2e7a4de0ecebaff57cbe030f3a5d625e602b2fa4c8b4bdce9abb7c",
+      "role": "capture-attempt"
+    },
+    {
       "path": "storyboard-bundle-before.json",
       "bytes": 124,
       "sha256": "792b59ed3a6db2ff819547d210c39a0cb0e90f5ae541d5eb7161bcf470d411fd",
@@ -269,8 +335,8 @@
     },
     {
       "path": "storyboard-sql-verification.json",
-      "bytes": 1414,
-      "sha256": "805f37387eeb0d24b6a44da01429a8db58532222dfc81e43eca66a38866b91b3",
+      "bytes": 1464,
+      "sha256": "8f8c133a9be6a9a0e075245ab9fcab863d2ecb97fecd0cadeed9508e9e34a421",
       "role": "raw-measurement"
     },
     {

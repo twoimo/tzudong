@@ -110,7 +110,7 @@ const EMPTY_MARKETING_CONSENT: MarketingConsent = {
   night_push: false,
 };
 const UNDER_14_SIGNUP_UNAVAILABLE_CODE = "UNDER_14_SIGNUP_UNAVAILABLE";
-const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "만 14세 미만 이용자의 가입은 운영자 승인 보호자 확인 경로가 배포되고 읽기검증될 때까지 이용할 수 없습니다.";
+const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "현재 만 14세 미만은 가입할 수 없습니다.";
 const POLICY_VERSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POLICY_CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
@@ -147,7 +147,7 @@ function OnboardingConsentFields({
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">연령대 확인 (필수)</legend>
         <p className="text-xs text-muted-foreground">
-          생년월일이나 주민등록번호를 받지 않습니다. 만 14세 미만 가입은 운영자 승인 보호자 확인 경로가 배포되고 읽기검증될 때까지 이용할 수 없습니다.
+          생년월일이나 주민등록번호를 받지 않습니다. 현재 만 14세 이상만 가입할 수 있습니다.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
