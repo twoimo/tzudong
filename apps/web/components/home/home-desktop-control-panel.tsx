@@ -12,6 +12,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { MapPanelHeader } from '@/components/home/map-panel-chrome';
 import { useRouter, useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
 import {
@@ -294,7 +295,7 @@ interface HomeDesktopControlPanelProps {
 }
 
 const DESKTOP_LEFT_PANEL_WIDTH_PX = 392;
-const DESKTOP_MAP_FLOATING_FILTER_WIDTH = "10.9375rem";
+const DESKTOP_MAP_FLOATING_FILTER_WIDTH = "9.5rem";
 const desktopMapMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
 type DesktopMapMenuItem = {
@@ -489,36 +490,19 @@ function DesktopMapSettingsPanel({
       data-desktop-left-panel-view="settings"
       aria-labelledby="desktop-map-settings-title"
     >
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-2xs font-bold tracking-[0.12em] text-primary">
-            <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-            계정별 환경설정
-          </p>
-          <h2
-            id="desktop-map-settings-title"
-            className="mt-1 text-lg font-bold tracking-[-0.04em] text-foreground"
-          >
-            지도와 사이드 패널 맞춤 설정
-          </h2>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고, 다음
-            데스크탑 접속부터 같은 배치로 시작합니다.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0 rounded-full"
-          onClick={onClose}
-          aria-label="환경설정 닫기"
-        >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      </header>
+      <MapPanelHeader
+        title="지도와 사이드 패널 맞춤 설정"
+        titleId="desktop-map-settings-title"
+        titleIcon={<SlidersHorizontal />}
+        onClose={onClose}
+        closeLabel="환경설정 닫기"
+      />
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4">
+        <p className="mb-4 text-xs leading-5 text-muted-foreground">
+          이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고, 다음
+          데스크탑 접속부터 같은 배치로 시작합니다.
+        </p>
         <div className="space-y-4">
           <section className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-start gap-2">
@@ -1563,7 +1547,7 @@ export default function HomeDesktopControlPanel({
           </div>
 
           <div
-            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
+            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5"
             style={desktopMapFloatingControlStyle}
             data-desktop-map-floating-filters="true"
             onMouseDownCapture={handlePanelMouseDownCapture}
@@ -1581,7 +1565,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "domestic"}
                   aria-label="국내 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
+                    "h-8 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
                     mapMode === "domestic"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1596,7 +1580,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "overseas"}
                   aria-label="해외 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
+                    "h-8 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
                     mapMode === "overseas"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1611,7 +1595,8 @@ export default function HomeDesktopControlPanel({
                 selectedRegion={selectedRegion}
                 onRegionChange={onRegionChange}
                 onRegionSelect={onSearchExecute}
-                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80"
+                className="!h-8 !w-full !min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>svg]:h-3.5 [&>svg]:w-3.5"
+                compactTrigger
                 contentSide="top"
                 contentAlign="start"
               />
@@ -1620,7 +1605,7 @@ export default function HomeDesktopControlPanel({
                 value={selectedCountry || undefined}
                 onValueChange={onCountryChange}
               >
-                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80">
+                <SelectTrigger className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>span]:truncate">
                   <SelectValue placeholder="해외 지역" />
                 </SelectTrigger>
                 <SelectContent
@@ -1642,7 +1627,8 @@ export default function HomeDesktopControlPanel({
               onCategoryChange={onCategoryChange}
               selectedRegion={mapMode === "domestic" ? selectedRegion : null}
               selectedCountry={mapMode === "overseas" ? selectedCountry : null}
-              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80"
+              className="h-8 w-full min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&_svg]:size-3.5"
+              compactTrigger
               contentSide="top"
               contentAlign="start"
             />
@@ -1729,11 +1715,12 @@ export default function HomeDesktopControlPanel({
             >
               <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0">
                 <Image
-                  src="/logo.webp"
+                  src="/logo-png-129-8d374bb80346.png"
+                  unoptimized
                   alt="로고"
                   width={24}
                   height={24}
-                  className="shrink-0 rounded-md object-contain"
+                  className="shrink-0 rounded-md bg-transparent object-contain"
                 />
                 <input
                   ref={desktopSearchInputRef}

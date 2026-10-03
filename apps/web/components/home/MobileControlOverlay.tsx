@@ -1015,12 +1015,13 @@ function MobileControlOverlayComponent({
                         title={searchQuery.trim() ? `${searchQuery.trim()} 검색` : '쯔동여지도 검색하기'}
                     >
                         <Image
-                            src="/logo.webp"
+                            src="/logo-png-129-8d374bb80346.png"
+                            unoptimized
                             alt=""
                             aria-hidden="true"
                             width={26}
                             height={26}
-                            className="rounded-md object-contain shrink-0"
+                            className="rounded-md bg-transparent object-contain shrink-0"
                         />
                         <span className={cn(
                             'text-sm truncate',
@@ -1076,7 +1077,7 @@ function MobileControlOverlayComponent({
             {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
             {shouldRenderMobileBottomControls && (
                 <div
-                    className="fixed bottom-[calc(env(safe-area-inset-bottom)+var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex min-w-0 flex-col gap-2"
+                    className="fixed bottom-[calc(env(safe-area-inset-bottom)+var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex min-w-0 flex-col gap-1.5"
                     data-layout-primitives="cluster wrap-row overlay-stack"
                     data-fixed-control-region="mobile-map-bottom-controls"
                     role="group"
@@ -1084,14 +1085,14 @@ function MobileControlOverlayComponent({
                 >
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
-                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 rounded-full shadow-sm border border-border w-[clamp(118px,34vw,148px)]">
+                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 rounded-full shadow-sm border border-border w-[clamp(110px,29vw,128px)]">
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1104,7 +1105,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1122,7 +1123,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     data-mobile-map-sheet-trigger="region"
-                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(110px,29vw,128px)] h-8 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
@@ -1140,7 +1141,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
                     data-mobile-map-sheet-trigger="category"
-                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(110px,29vw,128px)] h-8 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
@@ -1296,7 +1297,8 @@ function MobileControlOverlayComponent({
                             <div className="flex min-w-0 items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5">
                                 <div className="min-w-0 flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40">
                                     <Image
-                                        src="/logo.webp"
+                                        src="/logo-png-129-8d374bb80346.png"
+                                        unoptimized
                                         alt="로고"
                                         width={24}
                                         height={24}
