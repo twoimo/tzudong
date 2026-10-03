@@ -5,6 +5,7 @@ interface RetainedMarkerAccessibility {
 
 const OWNER_ATTRIBUTE = 'data-tzudong-retained-marker-hidden';
 const MARKER_SELECTOR = '[data-testid="marker"]';
+const OVERLAY_SELECTOR = '[data-visible-marker-review-bubble-anchor="true"]';
 
 interface PendingRootRegistry {
     target: HTMLElement;
@@ -63,9 +64,12 @@ export function syncRetainedMarkerAccessibility(
     if (!hidden && !marker.__tzudongRetainedMarkerAriaHidden) return;
 
     const element = marker.getElement();
-    const root = element?.matches?.(MARKER_SELECTOR)
+    const markerRoot = element?.matches?.(MARKER_SELECTOR)
         ? element
         : element?.querySelector<HTMLElement>(MARKER_SELECTOR);
+    // The review bubble is a sibling of the marker inside this app-owned
+    // anchor, so hide the complete overlay rather than only its image node.
+    const root = markerRoot?.closest<HTMLElement>(OVERLAY_SELECTOR) ?? markerRoot;
     if (!root) {
         marker.__tzudongRetainedMarkerAriaHidden = hidden;
         const target = rootTargets.get(marker);
