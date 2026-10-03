@@ -2572,8 +2572,6 @@ export async function startStoryboardLocalBridgeServer(options: StoryboardLocalB
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
-  startStoryboardLocalBridgeServer().catch((error) => {
-    console.error(`storyboard_local_bridge_failed error=${getAdminSafeErrorName(error)} code=local_bridge_start_failed`);
-    process.exitCode = 1;
-  });
+  console.log(JSON.stringify({ code: 'storyboard_gemini_only', command: 'storyboard:gemini-worker' }));
+  process.exitCode = process.argv.includes('--help') ? 0 : 2;
 }

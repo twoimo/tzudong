@@ -1,3 +1,4 @@
+import { refuseRetiredStoryboardProducer } from './storyboard-gemini-only.mjs';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
@@ -111,6 +112,7 @@ function assertManualGuards(env: NodeJS.ProcessEnv) {
 }
 
 async function main() {
+  if (refuseRetiredStoryboardProducer()) return;
   const options = parseArgs(process.argv.slice(2));
   const outputBase = resolveOutputBase(options.outputDir);
   assertManualGuards(process.env);

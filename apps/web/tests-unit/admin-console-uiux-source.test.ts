@@ -5448,7 +5448,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "lib/admin/storyboard/history-client.ts",
     );
     const storyboardImageWrapperSource = source(
-      "scripts/codex-imagegen-storyboard-provider.py",
+      "scripts/codex-imagegen-provider-core.py",
     );
     const backendAgentWrapperSource = source(
       "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
@@ -7750,9 +7750,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(localBridgeServerSource).toContain(
       "providerId: STORYBOARD_IMAGE_PROVIDER_ID",
     );
-    expect(localBridgeScriptSource).toContain(
-      "startStoryboardLocalBridgeServer",
-    );
+    expect(localBridgeScriptSource).toContain("storyboard-gemini-worker");
     expect(imageReadinessSource).toContain("gpt-image-2");
     expect(imageReadinessSource).toContain("browser-openai-api-key");
     expect(imageReadinessSource).toContain("x-storyboard-openai-api-key");

@@ -136,6 +136,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "ocr-live-readback.json",
+      "bytes": 867,
+      "sha256": "66ca506055194792c033feadd2faff941d7d676933a4b4ada8e1d16b085bbd8c",
+      "role": "raw-measurement"
+    },
+    {
       "path": "ocr-runtime-replay.json",
       "bytes": 21430,
       "sha256": "bd0128b3c7ee780602d897077c6b0291b629631418e298ded14f2386e9e35f3d",
@@ -346,6 +352,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "thumbnail-desktop-inspected.jpg",
+      "bytes": 175760,
+      "sha256": "3e982105b6a7ff76c10405caee8d523d8f5f3b4a1f651a878cb2b5be47f06a06",
+      "role": "visually-inspected-capture"
+    },
+    {
       "path": "thumbnail-desktop-ready.jpg",
       "bytes": 180802,
       "sha256": "6ae27da7de24f84b5892d5b681dfbc384210904233882007aa712c102496867a",
@@ -374,6 +386,12 @@
       "bytes": 78611,
       "sha256": "abf013217361d5f3a79b52fe0441c5bf4a02b8668aa2090c817925b95bd74c83",
       "role": "capture-attempt"
+    },
+    {
+      "path": "verification-final.json",
+      "bytes": 694,
+      "sha256": "e7c19bafa4f1754ba5ac678eee8deaf769024a75cde090216ec01e9c3d3219c8",
+      "role": "raw-measurement"
     },
     {
       "path": "youtube-thumbnail-generator-desktop-matrix.png",
