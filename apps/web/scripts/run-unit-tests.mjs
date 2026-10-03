@@ -44,4 +44,8 @@ function run(filesToRun) {
 
 const generalStatus = run(generalFiles);
 if (generalStatus !== 0) process.exit(generalStatus);
-process.exit(run(isolatedFiles));
+for (const file of isolatedFiles) {
+  const status = run([file]);
+  if (status !== 0) process.exit(status);
+}
+process.exit(0);

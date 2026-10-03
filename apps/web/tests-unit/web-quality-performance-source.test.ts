@@ -1516,10 +1516,10 @@ describe("web quality performance source contracts", () => {
       'data-desktop-map-floating-filters="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "grid auto-rows-auto grid-cols-[max-content] items-start gap-2",
+      "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"10.9375rem\"",
+      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"9.5rem\"",
     );
     expect(homeDesktopControlPanelSource).toContain(
       '"--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH',
@@ -1530,7 +1530,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
     expect(homeDesktopControlPanelSource).toContain("<span>{theme.label}</span>");
     expect(homeDesktopControlPanelSource).not.toContain("theme.shortLabel");
-    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-max");
+    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-0");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
@@ -1698,20 +1698,17 @@ describe("web quality performance source contracts", () => {
       "components/restaurant/RestaurantDetailPanel.tsx",
     );
     expect(restaurantDetailPanelSource).toContain(
-      'aria-label="이전 목록으로 돌아가기"',
+      "'이전 목록으로 돌아가기'",
     );
     expect(restaurantDetailPanelSource).toContain(
       "{isAdmin && onEditRestaurant && viewMode === 'detail' && (",
     );
     expect(restaurantDetailPanelSource).toContain(
-      "{showDesktopBackButton && !isMobile && viewMode === 'detail' && (",
+      "showDesktopBackButton && !isMobile",
     );
-    expect(
-      restaurantDetailPanelSource.indexOf(
-        '<Settings className="h-4 w-4" aria-hidden="true" />',
-      ),
-    ).toBeLessThan(
-      restaurantDetailPanelSource.indexOf('aria-label="이전 목록으로 돌아가기"'),
+    const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
+    expect(sharedPanelHeaderSource.indexOf("{actions}")).toBeLessThan(
+      sharedPanelHeaderSource.indexOf("{onClose ?"),
     );
     expect(restaurantDetailPanelSource).not.toContain(
       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
@@ -1723,7 +1720,7 @@ describe("web quality performance source contracts", () => {
     expect(restaurantDetailPanelSource).not.toContain(
       'className="h-9 w-9 shrink-0 rounded-full"',
     );
-    expect(restaurantDetailPanelSource).toContain(
+    expect(sharedPanelHeaderSource).toContain(
       '<ArrowLeft className="h-4 w-4" aria-hidden="true" />',
     );
     expect(homeDesktopControlPanelSource).toContain('resultView="inline"');
@@ -2544,8 +2541,9 @@ describe("web quality performance source contracts", () => {
     expect(userProfilePanelSource).toContain("방문 도장과 리뷰 활동");
     expect(userProfilePanelSource).toContain("visibleStampCount");
     expect(userProfilePanelSource).toContain("stampLoadMoreRef");
-    expect(userProfilePanelSource).toContain(
-      'className="h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary"',
+    expect(userProfilePanelSource).toContain("<MapPanelHeader");
+    expect(source("components/home/map-panel-chrome.tsx")).toContain(
+      '"h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary"',
     );
     expect(userProfilePanelSource).toContain("<StampCard");
     expect(userProfilePanelSource).toContain("<ReviewCard");
@@ -2766,11 +2764,9 @@ describe("web quality performance source contracts", () => {
     expect(feedContentSource).toContain(
       'aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}',
     );
-    expect(feedContentSource).toContain('aria-label="리뷰 패널 닫기"');
+    expect(feedContentSource).toContain('closeLabel="리뷰 패널 닫기"');
     expect(feedContentSource).toContain("mapPanelIconButtonClass");
-    expect(feedContentSource).toContain(
-      '"h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"',
-    );
+    expect(feedContentSource).toContain("<MapPanelHeader");
     expect(feedContentSource).not.toContain(
       'className="h-8 w-8 rounded-full hover:bg-muted"',
     );
@@ -2778,12 +2774,12 @@ describe("web quality performance source contracts", () => {
       'className="h-9 w-9 hover:bg-muted rounded-full"',
     );
     expect(feedContentSource).toContain('aria-label="리뷰 작성"');
-    expect(feedContentSource).toContain(
-      "flex items-center justify-between gap-2",
+    expect(source("components/home/map-panel-chrome.tsx")).toContain(
+      "flex min-h-8 items-center gap-2",
     );
     expect(feedContentSource).not.toContain("basis-[min(11rem,100%)]");
-    expect(feedContentSource).toContain('isOverlay ? "리뷰" : "쯔동여지도 리뷰"');
-    expect(feedContentSource).toContain("text-pretty");
+    expect(feedContentSource).toContain("isOverlay ? '리뷰' : '쯔동여지도 리뷰'");
+    expect(source("components/home/map-panel-chrome.tsx")).toContain("description");
     expect(feedContentSource).toContain(
       'placeholder="맛집명, 작성자, 내용 검색…"',
     );

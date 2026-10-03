@@ -10,6 +10,7 @@ import { Region, Restaurant } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
 import { buildRestaurantRegionAddressOrFilter } from "@/lib/popular-restaurants";
+import { MapFilterTriggerLabel } from './MapFilterTriggerLabel';
 
 interface CategoryFilterProps {
     selectedCategories: string[];
@@ -20,6 +21,7 @@ interface CategoryFilterProps {
     contentSide?: "top" | "right" | "bottom" | "left";
     contentAlign?: "start" | "center" | "end";
     contentClassName?: string;
+    compactTrigger?: boolean;
 }
 
 const CATEGORIES = [
@@ -48,7 +50,8 @@ const CategoryFilter = ({
     className,
     contentSide = "bottom",
     contentAlign = "start",
-    contentClassName
+    contentClassName,
+    compactTrigger = false,
 }: CategoryFilterProps) => {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -131,7 +134,13 @@ const CategoryFilter = ({
                     aria-label="카테고리 필터"
                     className={cn("justify-between", className)}
                 >
-                    <div className="flex min-w-max flex-1 items-center gap-2 whitespace-nowrap">
+                    {compactTrigger ? (
+                        <MapFilterTriggerLabel
+                            icon={ChefHat}
+                            label={selectedCategories.length > 0 ? `${selectedCategories.length}개 선택됨` : '카테고리'}
+                            count={selectedCategories.length === 0 ? totalCount : undefined}
+                        />
+                    ) : <div className="flex min-w-max flex-1 items-center gap-2 whitespace-nowrap">
                         <ChefHat className="h-4 w-4 text-muted-foreground shrink-0" />
                         <div className="flex min-w-max flex-1 items-center justify-between whitespace-nowrap">
                             <span className={selectedCategories.length > 0 ? "truncate" : ""}>
@@ -144,8 +153,8 @@ const CategoryFilter = ({
                                 <span className="ml-2 shrink-0 whitespace-nowrap text-xs text-muted-foreground">({totalCount}개)</span>
                             )}
                         </div>
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </div>}
+                    <ChevronsUpDown className={compactTrigger ? 'h-3.5 w-3.5 shrink-0 opacity-50' : 'ml-2 h-4 w-4 shrink-0 opacity-50'} />
                 </Button>
             </PopoverTrigger>
             <PopoverContent

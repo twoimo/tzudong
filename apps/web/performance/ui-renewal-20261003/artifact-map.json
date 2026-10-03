@@ -100,6 +100,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "catalog-checksum-content-review.json",
+      "bytes": 587,
+      "sha256": "5a89e0c22e04332169a69b86c979e00b537fc44a1a66ce95ba8fe5a8201516e0",
+      "role": "verification-readback"
+    },
+    {
       "path": "catalog-dual-clean-replay-37121857541.json",
       "bytes": 5385,
       "sha256": "fde452d8523ac4c36f907a31e3ad354f21f9c1c7fa145a895c2b65fdaf830ce9",
@@ -980,6 +986,12 @@
       "bytes": 6140,
       "sha256": "c85890368292c9afc89efd62fc0e6781144850cc60012c294ebdfe7e60764d31",
       "role": "raw-measurement"
+    },
+    {
+      "path": "upstream-integration-20261004.json",
+      "bytes": 1214,
+      "sha256": "b6aeb198502cf5ac9f49b1b1304455d01cb9885ed821387761558bd83815f742",
+      "role": "verification-readback"
     },
     {
       "path": "users-desktop-final.jpg",

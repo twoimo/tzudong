@@ -5,6 +5,7 @@ import { useState, memo, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MapPanelHeader, mapPanelIconButtonClass } from '@/components/home/map-panel-chrome';
 import {
     ChevronLeft,
     Stamp,
@@ -12,8 +13,7 @@ import {
     MessageSquare,
     Users,
     Trophy,
-    User,
-    X
+    User
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -353,9 +353,24 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     }, [activeTab, likers.length, visibleLikerCount]);
 
 
+    const profilePanelHeader = (
+        <MapPanelHeader
+            title="프로필"
+            titleAs="h1"
+            onClose={showBackButton && onClose ? handleBack : undefined}
+            closeLabel="프로필 패널 닫기"
+            actions={showBackButton && !onClose ? (
+                <Button type="button" variant="ghost" size="icon" onClick={handleBack} className={mapPanelIconButtonClass} aria-label="프로필 뒤로 가기">
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                </Button>
+            ) : undefined}
+        />
+    );
+
     if (profileLoading) {
         return (
             <UserProfileProgressiveSkeleton
+                header={profilePanelHeader}
                 showCloseButton={showBackButton && Boolean(onClose)}
                 onBack={handleBack}
             />
@@ -365,14 +380,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     if (profileError) {
         return (
             <div className="flex flex-col h-full bg-background">
-                <div className="p-4 border-b">
-                    {showBackButton && (
-                        <Button variant="ghost" size="sm" onClick={handleBack}>
-                            {onClose ? <X className="h-4 w-4 mr-1" /> : <ChevronLeft className="h-4 w-4 mr-1" />}
-                            {onClose ? "닫기" : "뒤로"}
-                        </Button>
-                    )}
-                </div>
+                {profilePanelHeader}
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center text-muted-foreground" aria-live="polite">
                         <p className="text-lg mb-2">프로필을 불러올 수 없습니다</p>
@@ -395,14 +403,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     if (!profile) {
         return (
             <div className="flex flex-col h-full bg-background">
-                <div className="p-4 border-b">
-                    {showBackButton && (
-                        <Button variant="ghost" size="sm" onClick={handleBack}>
-                            {onClose ? <X className="h-4 w-4 mr-1" /> : <ChevronLeft className="h-4 w-4 mr-1" />}
-                            {onClose ? "닫기" : "뒤로"}
-                        </Button>
-                    )}
-                </div>
+                {profilePanelHeader}
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center text-muted-foreground">
                         <p className="text-lg mb-2">사용자를 찾을 수 없습니다</p>
@@ -415,20 +416,11 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
 
     return (
         <div className="flex flex-col h-full bg-background">
-            {/* Header */}
+            {profilePanelHeader}
+            {/* Profile identity and activity summary */}
             <div className="flex flex-col gap-3 border-b border-border bg-background px-4 py-3">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
-                        {showBackButton && !onClose && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleBack}
-                                className="flex-shrink-0 -ml-2"
-                            >
-                                <ChevronLeft className="h-5 w-5" />
-                            </Button>
-                        )}
                         {/* 프로필 아바타 */}
                         <Avatar className="h-12 w-12 ring-2 ring-primary/10 shadow-sm flex-shrink-0">
                             {profileAvatarUrl && (
@@ -440,9 +432,9 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         </Avatar>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                                <h1 className="text-xl font-bold truncate">
+                                <h2 className="text-xl font-bold truncate">
                                     {profile.nickname}
-                                </h1>
+                                </h2>
                                 <Badge
                                     variant="outline"
                                     className={cn(
@@ -460,17 +452,6 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             </p>
                         </div>
                     </div>
-                    {/* ... stats ... */}
-                    {showBackButton && onClose && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleBack}
-                            className="h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary"
-                        >
-                            <X className="h-5 w-5" />
-                        </Button>
-                    )}
                 </div>
 
                 {/* 통계 카드 */}

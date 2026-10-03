@@ -1,5 +1,7 @@
 'use client';
 
+import { MapPanelHeader } from '@/components/home/map-panel-chrome';
+
 import { useState, useRef, useCallback, useEffect, forwardRef } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +23,6 @@ import {
     Trash2,
     MapPin,
     Calendar,
-    X,
     Loader2,
     ChevronRight,
     ChevronLeft,
@@ -531,12 +532,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
     if (!user || !isAdmin) {
         return (
             <div className="h-full flex flex-col bg-background">
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                    <h2 className="text-lg font-bold">리뷰관리</h2>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
-                        <X className="h-5 w-5" />
-                    </Button>
-                </div>
+                <MapPanelHeader title="리뷰관리" onClose={onClose} closeLabel="리뷰관리 패널 닫기" />
                 <div className="flex-1 flex items-center justify-center p-8">
                     <Card className="p-8 text-center">
                         <div className="text-4xl mb-3">🔒</div>
@@ -567,15 +563,12 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             )}
 
             {/* 헤더 */}
-            <div className="flex items-center justify-between p-4 border-b border-border bg-card">
-                <div>
-                    <h2 className="text-lg font-bold">리뷰관리</h2>
-                    <p className="text-sm text-muted-foreground">사용자 리뷰 승인/거부</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
-                    <X className="h-5 w-5" />
-                </Button>
-            </div>
+            <MapPanelHeader
+                title="리뷰관리"
+                description="사용자 리뷰 승인/거부"
+                onClose={onClose}
+                closeLabel="리뷰관리 패널 닫기"
+            />
 
             {/* 통계 */}
             <div className="grid grid-cols-3 gap-2 p-3 border-b border-border">

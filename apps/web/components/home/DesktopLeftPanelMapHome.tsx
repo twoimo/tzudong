@@ -1,4 +1,5 @@
 'use client';
+import { MapPanelHeader } from '@/components/home/map-panel-chrome';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -333,23 +334,17 @@ export default function DesktopLeftPanelMapHome({
       >
         {hasContextualRestaurants ? (
           <div
-            className="border-b border-border/70 px-3 pb-2 pt-3"
+            className="border-b border-border/70"
             data-desktop-left-panel-visible-marker-restaurants="true"
           >
-            <div className="mb-1 flex min-w-0 items-center justify-between gap-2 px-1">
-              <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-bold leading-5 text-foreground">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-                <span className="truncate">맛집 목록</span>
-              </h2>
-              <span
-                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-2xs font-semibold leading-4 text-primary-foreground"
-                aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}
-              >
-                {visibleMarkerRestaurantCount}곳
-              </span>
-            </div>
+            <MapPanelHeader
+              title="맛집 목록"
+              titleIcon={<MapPin />}
+              count={visibleMarkerRestaurantCount}
+              countUnit="곳"
+            />
 
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 px-3 py-3">
               {contextualRestaurants.map((restaurant) => (
                 <StampCard
                   key={restaurant.id}

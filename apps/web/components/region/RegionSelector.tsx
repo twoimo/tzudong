@@ -11,6 +11,7 @@ import { MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { fetchSupabaseRows } from "@/lib/supabase-rest-client";
+import { MapFilterTriggerLabel } from '@/components/filters/MapFilterTriggerLabel';
 
 interface RegionSelectorProps {
   selectedRegion: Region | null;
@@ -20,6 +21,7 @@ interface RegionSelectorProps {
   contentSide?: "top" | "right" | "bottom" | "left";
   contentAlign?: "start" | "center" | "end";
   contentClassName?: string;
+  compactTrigger?: boolean;
 }
 
 const RegionSelector = ({
@@ -29,7 +31,8 @@ const RegionSelector = ({
   className,
   contentSide = "bottom",
   contentAlign = "start",
-  contentClassName
+  contentClassName,
+  compactTrigger = false,
 }: RegionSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -115,10 +118,18 @@ const RegionSelector = ({
         aria-label="지역 필터"
         className={`w-full min-w-0 sm:w-[200px] ${className}`}
       >
-        <div className="flex min-w-max items-center gap-2 whitespace-nowrap">
+        {compactTrigger ? (
+          <div className="flex min-w-0 flex-1">
+            <MapFilterTriggerLabel
+              icon={MapPin}
+              label={selectedRegion ?? '대한민국'}
+              count={selectedRegion ? regionCounts[selectedRegion] ?? 0 : totalCount}
+            />
+          </div>
+        ) : <div className="flex min-w-max items-center gap-2 whitespace-nowrap">
           <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
           <SelectValue placeholder="지역을 선택하세요" />
-        </div>
+        </div>}
       </SelectTrigger>
       <SelectContent
         side={contentSide}

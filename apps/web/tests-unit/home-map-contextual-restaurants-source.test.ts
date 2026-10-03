@@ -162,7 +162,9 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(desktopHomeSource).not.toContain('bg-primary/5 px-3 pb-2 pt-3');
     expect(desktopHomeSource).not.toContain('확대된 지도에서 현재 마커로 보이는 곳이에요');
     expect(desktopHomeSource).toContain('맛집 목록');
-    expect(desktopHomeSource).toContain('aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}');
+    expect(desktopHomeSource).toContain('count={visibleMarkerRestaurantCount}');
+    expect(desktopHomeSource).toContain('countUnit="곳"');
+    expect(source('components/home/map-panel-chrome.tsx')).toContain('aria-label={`${count.toLocaleString()}${countUnit}`}');
     expect(desktopHomeSource).toContain('restaurantThumbnailIndexes[restaurant.id] ?? 0');
     expect(desktopHomeSource).toContain('onThumbnailChange={handleRestaurantThumbnailChange}');
     expect(desktopHomeSource).toContain('layout="list"');

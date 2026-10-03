@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,37 +9,46 @@ export const mapPanelIconButtonClass =
 export function MapPanelHeader({
   title,
   count,
+  countUnit = "개",
   description,
+  titleIcon,
+  titleId,
   actions,
   onClose,
   closeLabel,
+  closeAction = "close",
   titleAs: TitleTag = "h2",
 }: {
   title: string;
   count?: number;
+  countUnit?: string;
   description?: string;
+  titleIcon?: ReactNode;
+  titleId?: string;
   actions?: ReactNode;
   onClose?: () => void;
-  closeLabel: string;
+  closeLabel?: string;
+  closeAction?: "close" | "back";
   titleAs?: "h1" | "h2";
 }) {
   return (
-    <header className="shrink-0 border-b border-border bg-card px-4 py-3" data-layout-primitives="stack">
-      <div className="flex items-center gap-2">
+    <header className="min-h-14 shrink-0 border-b border-border bg-background px-3 py-3" data-layout-primitives="stack" data-map-panel-header="true">
+      <div className="flex min-h-8 items-center gap-2">
         <div className="min-w-0 flex-1">
-          <TitleTag className="truncate text-base font-semibold leading-6 tracking-tight text-foreground">
-            {title}
+          <TitleTag id={titleId} className="flex min-w-0 items-center gap-2 text-sm font-semibold leading-5 text-foreground">
+            {titleIcon ? <span className="shrink-0 text-primary [&_svg]:size-4" aria-hidden="true">{titleIcon}</span> : null}
+            <span className="min-w-0 truncate" title={title}>{title}</span>
             {typeof count === "number" ? (
-              <span className="ml-1.5 text-xs font-normal tabular-nums text-muted-foreground">
-                {count.toLocaleString()}
+              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium leading-4 tabular-nums text-primary" aria-label={`${count.toLocaleString()}${countUnit}`}>
+                {count.toLocaleString()}{countUnit}
               </span>
             ) : null}
           </TitleTag>
           {description ? (
-            <p className="mt-0.5 truncate text-xs leading-5 text-muted-foreground">{description}</p>
+            <p className="mt-1 truncate text-xs leading-4 text-muted-foreground">{description}</p>
           ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           {actions}
           {onClose ? (
             <Button
@@ -48,9 +57,9 @@ export function MapPanelHeader({
               size="icon"
               onClick={onClose}
               className={mapPanelIconButtonClass}
-              aria-label={closeLabel}
+              aria-label={closeLabel ?? `${title} 닫기`}
             >
-              <X className="h-4 w-4" aria-hidden="true" />
+              {closeAction === "back" ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <X className="h-4 w-4" aria-hidden="true" />}
             </Button>
           ) : null}
         </div>
