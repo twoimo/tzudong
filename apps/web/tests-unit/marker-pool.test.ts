@@ -321,6 +321,29 @@ describe('marker pool', () => {
     expect(marker.zIndex).toBe(12);
   });
 
+  test('a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons', () => {
+    const ids = ['restaurant-a', 'restaurant-b', 'restaurant-c'];
+    const clicks: string[] = [];
+    const original = ids.map(id => markerPool.acquire(id, makePosition(id), { content: id }, 'map', () => clicks.push('stale')));
+    markerPool.releaseAll();
+
+    ids.forEach((id, index) => {
+      const marker = markerPool.acquire(id, makePosition(id), { content: id }, 'map', () => clicks.push(id)) as unknown as FakeMarker;
+      expect(marker).toBe(original[index]);
+      expect(marker.setIconCalls).toBe(0);
+      expect(marker.setPositionCalls).toBe(0);
+      marker.clickListener?.({});
+    });
+    expect(clicks).toEqual(ids);
+    expect(markerPool.getStats()).toMatchObject({ created: 3, reused: 3, activeCount: 3, poolSize: 0 });
+
+    markerPool.releaseAll();
+    const changed = markerPool.acquire('new-restaurant', makePosition('new-position'), { content: 'new-icon' }, 'map') as unknown as FakeMarker;
+    expect(changed.getPosition().id).toBe('new-position');
+    expect(changed.getIcon().content).toBe('new-icon');
+    expect(changed.setIconCalls).toBe(1);
+  });
+
   test('releaseExcept and releaseAll keep only the requested active ids before delayed cleanup', () => {
     const timers = captureTimeouts();
     try {

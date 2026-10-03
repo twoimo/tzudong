@@ -189,7 +189,7 @@ describe('expanded cluster flow invariants', () => {
             'previousEarlyMarkerRenderKey.markerViewportRevision === markerViewportRevision',
         );
         expect(rendererSource).toContain(
-            "+ (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedDesktop ? `:viewport-${markerViewportRevision}` : ''),",
+            "+ (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedSet ? `:viewport-${markerViewportRevision}` : ''),",
         );
         expect(rendererSource).toContain(
             'markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant',
