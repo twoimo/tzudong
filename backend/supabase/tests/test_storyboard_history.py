@@ -70,6 +70,7 @@ class StoryboardHistoryTests(unittest.TestCase):
 
     def test_owner_replay_has_one_balanced_window_and_unchanged_sql(self):
         paths=[item['originalMigration'] for item in self.manifest['receipts']]
+        paths.append('backend/supabase/migrations/20261003000812_storyboard_gemini_only.sql')
         paths.append('backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql')
         for path in paths:
             original=(ROOT/path).read_bytes()

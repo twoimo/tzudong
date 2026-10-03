@@ -1360,7 +1360,7 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
-    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003182338_storyboard_service_role_bridge.sql)
+    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
       storyboard_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_storyboard_history_replay.py" \
         --source "$migration" --bundle "$g026_bundle" --output "$storyboard_replay"
