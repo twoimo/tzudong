@@ -36,6 +36,7 @@ try:
               IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role; END IF;
               IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='privacy_workflow_owner') THEN CREATE ROLE privacy_workflow_owner; END IF;
             END $$;
+            ALTER ROLE service_role BYPASSRLS;
             CREATE SCHEMA auth; CREATE SCHEMA storage; CREATE SCHEMA privacy_retention;
             CREATE TABLE privacy_retention.g014_public_rpc_allowlist(function_schema name, function_name name, identity_arguments text, grantee name, source_signature text,
               UNIQUE(function_schema,function_name,identity_arguments,grantee), UNIQUE(source_signature,grantee));
@@ -58,6 +59,8 @@ try:
                 c.execute(content.decode())
                 conn.commit()
                 raw['migrations'].append({'file': name, 'sha256': hashlib.sha256(content).hexdigest()})
+            c.execute('GRANT USAGE ON SCHEMA public TO service_role')
+            c.execute('SET ROLE service_role')
             phase = 'admission_and_restart'
             request = {'workflow': 'storyboard-mlx-v1', 'requestId': str(uuid.uuid4()), 'prompt': 'synthetic verification', 'sceneCount': 5,
                        'providers': {'externalAI': True, 'text': {'id': 'gemini-api', 'model': 'gemini-3.8-flash'}, 'image': {'id': 'gemini-api', 'model': 'gemini-3.1-flash-image'}}}
@@ -158,6 +161,7 @@ try:
             def claim_once(worker_id):
                 with psycopg2.connect(host=SOCKET,port=PORT,user='postgres',dbname=database) as other:
                     with other.cursor() as cursor:
+                        cursor.execute("SET ROLE service_role")
                         cursor.execute("SELECT public.storyboard_production_worker(%s,'claim')", (worker_id,))
                         return cursor.fetchone()[0]['job']
             with ThreadPoolExecutor(max_workers=2) as pool:
@@ -171,6 +175,9 @@ try:
             c.execute("SELECT proconfig FROM pg_proc WHERE oid='public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)'::regprocedure")
             assert 'search_path=""' in c.fetchone()[0]
             raw['assertions']['empty_search_path_preserved'] = True
+            c.execute("SELECT has_table_privilege('service_role','public.user_roles','SELECT'),has_table_privilege('service_role','public.user_account_status','SELECT')")
+            assert c.fetchone()==(False,False)
+            raw['assertions']['existing_auth_table_grants_unchanged'] = True
             raw['passed'] = True
             raw['limitations'] = ['Synthetic fixture database only.', 'Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only.']
     out = ROOT / 'apps/web/performance/ui-renewal-20261003/storyboard-sql-verification.json'

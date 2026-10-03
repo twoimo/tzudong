@@ -71,7 +71,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.storyboard_production_admin(
   p_owner_id uuid, p_action text, p_project_id uuid DEFAULT NULL,
   p_revision integer DEFAULT NULL, p_payload jsonb DEFAULT '{}'
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $$
 DECLARE
   p public.admin_storyboard_production_projects; j public.admin_storyboard_production_jobs;
   old_job public.admin_storyboard_production_jobs; s jsonb; doc jsonb; proof jsonb;
@@ -79,7 +79,7 @@ DECLARE
   target_rev integer; restore_request uuid; hist jsonb; hist_scene jsonb; asset_id uuid;
   applied public.admin_storyboard_production_restores; version_rows jsonb; preview jsonb;
 BEGIN
-  PERFORM public.storyboard_production_assert_owner(p_owner_id);
+  PERFORM storyboard_control.assert_owner(p_owner_id);
   IF p_action = 'list' THEN
     SELECT coalesce(jsonb_agg(jsonb_build_object('id', q.id, 'revision', q.revision, 'status', q.status,
       'title', q.title, 'createdAt', q.created_at, 'updatedAt', q.updated_at) ORDER BY q.updated_at DESC), '[]')
@@ -314,7 +314,7 @@ END $$;
 CREATE OR REPLACE FUNCTION public.storyboard_production_worker(
   p_worker_id uuid, p_action text, p_job_id uuid DEFAULT NULL,
   p_lease_token uuid DEFAULT NULL, p_payload jsonb DEFAULT '{}'
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $$
 DECLARE
   w public.admin_storyboard_production_workers; p public.admin_storyboard_production_projects;
   j public.admin_storyboard_production_jobs; candidate record; doc jsonb; s jsonb; scene integer;
@@ -322,7 +322,7 @@ DECLARE
 BEGIN
   SELECT * INTO w FROM public.admin_storyboard_production_workers WHERE id = p_worker_id FOR UPDATE;
   IF NOT FOUND OR w.disabled OR w.revoked_at IS NOT NULL THEN RAISE EXCEPTION 'worker_unauthorized'; END IF;
-  PERFORM public.storyboard_production_assert_owner(w.owner_id);
+  PERFORM storyboard_control.assert_owner(w.owner_id);
   IF p_action = 'heartbeat' THEN
     UPDATE public.admin_storyboard_production_workers SET last_heartbeat = clock_timestamp(), models = p_payload->'models' WHERE id = w.id;
     IF p_job_id IS NOT NULL THEN
@@ -492,32 +492,20 @@ BEGIN
   END LOOP;
 END $$;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_projects TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_workers TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_jobs TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_assets TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_events TO privacy_workflow_owner;
-GRANT SELECT, INSERT, DELETE ON public.admin_storyboard_production_revisions TO privacy_workflow_owner;
-GRANT SELECT, INSERT, DELETE ON public.admin_storyboard_production_restores TO privacy_workflow_owner;
-GRANT USAGE, SELECT ON SEQUENCE public.admin_storyboard_production_events_id_seq TO privacy_workflow_owner;
 
-CREATE POLICY storyboard_production_owner_access ON public.admin_storyboard_production_revisions
-  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
-CREATE POLICY storyboard_production_owner_access ON public.admin_storyboard_production_restores
-  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
 
-ALTER FUNCTION public.storyboard_production_assert_owner(uuid) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_error_allowed(text) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_job_json(public.admin_storyboard_production_jobs) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_snapshot(uuid, uuid) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_auth_worker(text) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) SECURITY DEFINER;
+ALTER FUNCTION storyboard_control.assert_owner(uuid) SECURITY DEFINER;
+ALTER FUNCTION public.storyboard_production_error_allowed(text) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_job_json(public.admin_storyboard_production_jobs) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_snapshot(uuid, uuid) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_auth_worker(text) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) SECURITY INVOKER;
 
-ALTER FUNCTION public.storyboard_production_assert_owner(uuid) SET search_path = '';
+ALTER FUNCTION storyboard_control.assert_owner(uuid) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_error_allowed(text) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) SET search_path = '';
@@ -528,15 +516,5 @@ ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) S
 ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) SET search_path = '';
 
-ALTER FUNCTION public.storyboard_production_assert_owner(uuid) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_error_allowed(text) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_job_json(public.admin_storyboard_production_jobs) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_snapshot(uuid, uuid) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_auth_worker(text) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) OWNER TO privacy_workflow_owner;
 
 COMMIT;

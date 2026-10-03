@@ -2,7 +2,7 @@
 BEGIN;
 
 CREATE OR REPLACE FUNCTION public.storyboard_production_model_available(p_models jsonb, p_model text, p_capability text)
-RETURNS boolean LANGUAGE sql IMMUTABLE SECURITY DEFINER SET search_path = '' AS $$
+RETURNS boolean LANGUAGE sql IMMUTABLE SECURITY INVOKER SET search_path = '' AS $$
   SELECT EXISTS (SELECT 1 FROM jsonb_array_elements(coalesce(p_models,'[]')) model
     WHERE model->>'id' = p_model AND model->>'owned_by' = 'gemini-api'
       AND model->'capabilities' ? p_capability
@@ -13,7 +13,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.storyboard_production_admin(
   p_owner_id uuid, p_action text, p_project_id uuid DEFAULT NULL,
   p_revision integer DEFAULT NULL, p_payload jsonb DEFAULT '{}'
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$
 DECLARE
   p public.admin_storyboard_production_projects; j public.admin_storyboard_production_jobs;
   old_job public.admin_storyboard_production_jobs; s jsonb; doc jsonb; proof jsonb;
@@ -21,7 +21,7 @@ DECLARE
   target_rev integer; restore_request uuid; hist jsonb; hist_scene jsonb; asset_id uuid;
   applied public.admin_storyboard_production_restores; version_rows jsonb; preview jsonb;
 BEGIN
-  PERFORM public.storyboard_production_assert_owner(p_owner_id);
+  PERFORM storyboard_control.assert_owner(p_owner_id);
   IF p_action = 'list' THEN
     SELECT coalesce(jsonb_agg(jsonb_build_object('id', q.id, 'revision', q.revision, 'status', q.status,
       'title', q.title, 'createdAt', q.created_at, 'updatedAt', q.updated_at) ORDER BY q.updated_at DESC), '[]')
@@ -254,7 +254,7 @@ END $$;
 CREATE OR REPLACE FUNCTION public.storyboard_production_worker(
   p_worker_id uuid, p_action text, p_job_id uuid DEFAULT NULL,
   p_lease_token uuid DEFAULT NULL, p_payload jsonb DEFAULT '{}'
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$
 DECLARE
   w public.admin_storyboard_production_workers; p public.admin_storyboard_production_projects;
   j public.admin_storyboard_production_jobs; candidate record; doc jsonb; s jsonb; scene integer;
@@ -262,7 +262,7 @@ DECLARE
 BEGIN
   SELECT * INTO w FROM public.admin_storyboard_production_workers WHERE id = p_worker_id FOR UPDATE;
   IF NOT FOUND OR w.disabled OR w.revoked_at IS NOT NULL THEN RAISE EXCEPTION 'worker_unauthorized'; END IF;
-  PERFORM public.storyboard_production_assert_owner(w.owner_id);
+  PERFORM storyboard_control.assert_owner(w.owner_id);
   IF p_action = 'heartbeat' THEN
     UPDATE public.admin_storyboard_production_workers SET last_heartbeat = clock_timestamp(), models = p_payload->'models' WHERE id = w.id;
     IF p_job_id IS NOT NULL THEN
@@ -420,9 +420,6 @@ BEGIN
       p.revision,scene,result_code);
   RETURN jsonb_build_object('ok',true);
 END $$;
-ALTER FUNCTION public.storyboard_production_model_available(jsonb,text,text) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_admin(uuid,text,uuid,integer,jsonb) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb) OWNER TO privacy_workflow_owner;
 REVOKE ALL ON FUNCTION public.storyboard_production_model_available(jsonb,text,text) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.storyboard_production_admin(uuid,text,uuid,integer,jsonb) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb) FROM PUBLIC,anon,authenticated;

@@ -6,6 +6,9 @@
 -- Disable with disabled=true or revoke with revoked_at=clock_timestamp().
 -- Storage uses the server's Storage client, never credentials delivered to a worker.
 BEGIN;
+CREATE SCHEMA storyboard_control;
+REVOKE ALL ON SCHEMA storyboard_control FROM PUBLIC,anon,authenticated;
+GRANT USAGE ON SCHEMA storyboard_control TO service_role;
 
 CREATE TABLE public.admin_storyboard_production_projects (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -127,7 +130,7 @@ VALUES ('storyboard-private', 'storyboard-private', false, 12582912, ARRAY['imag
 ON CONFLICT(id) DO UPDATE SET public = false, file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
-CREATE FUNCTION public.storyboard_production_assert_owner(p_owner_id uuid) RETURNS void
+CREATE FUNCTION storyboard_control.assert_owner(p_owner_id uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.user_roles r JOIN public.user_account_status s USING (user_id)
@@ -176,7 +179,7 @@ LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
     'lastHeartbeat', j.last_heartbeat) END;
 $$;
 CREATE FUNCTION public.storyboard_production_snapshot(p_owner_id uuid, p_project_id uuid) RETURNS jsonb
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public, pg_temp AS $$
 DECLARE p public.admin_storyboard_production_projects; j public.admin_storyboard_production_jobs;
 BEGIN
   SELECT * INTO p FROM public.admin_storyboard_production_projects WHERE id = p_project_id AND owner_id = p_owner_id;
@@ -187,13 +190,13 @@ BEGIN
 END $$;
 
 CREATE FUNCTION public.storyboard_production_auth_worker(p_token_sha256 text) RETURNS jsonb
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public, pg_temp AS $$
 DECLARE w public.admin_storyboard_production_workers;
 BEGIN
   SELECT * INTO w FROM public.admin_storyboard_production_workers
     WHERE token_sha256 = p_token_sha256 AND NOT disabled AND revoked_at IS NULL;
   IF NOT FOUND THEN RAISE EXCEPTION 'worker_unauthorized'; END IF;
-  PERFORM public.storyboard_production_assert_owner(w.owner_id);
+  PERFORM storyboard_control.assert_owner(w.owner_id);
   RETURN jsonb_build_object('id', w.id, 'ownerId', w.owner_id, 'models', w.models);
 END $$;
 
@@ -206,13 +209,13 @@ $$;
 CREATE FUNCTION public.storyboard_production_admin(
   p_owner_id uuid, p_action text, p_project_id uuid DEFAULT NULL,
   p_revision integer DEFAULT NULL, p_payload jsonb DEFAULT '{}'
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $$
 DECLARE
   p public.admin_storyboard_production_projects; j public.admin_storyboard_production_jobs;
   old_job public.admin_storyboard_production_jobs; s jsonb; doc jsonb; proof jsonb;
   scene integer; job_request uuid; initial_status text; project_rows jsonb; worker_rows jsonb;
 BEGIN
-  PERFORM public.storyboard_production_assert_owner(p_owner_id);
+  PERFORM storyboard_control.assert_owner(p_owner_id);
   IF p_action = 'list' THEN
     SELECT coalesce(jsonb_agg(jsonb_build_object('id', q.id, 'revision', q.revision, 'status', q.status,
       'title', q.title, 'createdAt', q.created_at, 'updatedAt', q.updated_at) ORDER BY q.updated_at DESC), '[]')
@@ -349,7 +352,7 @@ END $$;
 CREATE FUNCTION public.storyboard_production_worker(
   p_worker_id uuid, p_action text, p_job_id uuid DEFAULT NULL,
   p_lease_token uuid DEFAULT NULL, p_payload jsonb DEFAULT '{}'
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $$
 DECLARE
   w public.admin_storyboard_production_workers; p public.admin_storyboard_production_projects;
   j public.admin_storyboard_production_jobs; candidate record; doc jsonb; s jsonb; scene integer;
@@ -357,7 +360,7 @@ DECLARE
 BEGIN
   SELECT * INTO w FROM public.admin_storyboard_production_workers WHERE id = p_worker_id FOR UPDATE;
   IF NOT FOUND OR w.disabled OR w.revoked_at IS NOT NULL THEN RAISE EXCEPTION 'worker_unauthorized'; END IF;
-  PERFORM public.storyboard_production_assert_owner(w.owner_id);
+  PERFORM storyboard_control.assert_owner(w.owner_id);
   IF p_action = 'heartbeat' THEN
     UPDATE public.admin_storyboard_production_workers SET last_heartbeat = clock_timestamp(), models = p_payload->'models' WHERE id = w.id;
     IF p_job_id IS NOT NULL THEN
@@ -517,43 +520,22 @@ BEGIN
   END LOOP;
 END $$;
 
--- The local executor applies migrations as supabase_admin. The G014 catalog
--- contract admits only postgres, privacy_workflow_owner and privacy_auth_bridge
--- as public function owners, and requires every allowlisted SECURITY DEFINER RPC
--- to be owned by privacy_workflow_owner with an empty lookup path. These RPCs are
--- the only access path to the storyboard tables (anon and authenticated hold no
--- table grants at all), so privacy_workflow_owner needs the table privileges and
--- an owner policy on the RLS-enabled tables it reads and writes on their behalf.
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_projects TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_workers TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_jobs TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_assets TO privacy_workflow_owner;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_storyboard_production_events TO privacy_workflow_owner;
-GRANT USAGE, SELECT ON SEQUENCE public.admin_storyboard_production_events_id_seq TO privacy_workflow_owner;
+-- Public RPCs run as the already-privileged service_role. Existing auth tables
+-- are read only by this private void checker; no role membership or table grant expands.
+ALTER FUNCTION storyboard_control.assert_owner(uuid) SECURITY DEFINER;
+ALTER FUNCTION public.storyboard_production_error_allowed(text) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_job_json(public.admin_storyboard_production_jobs) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_snapshot(uuid, uuid) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_auth_worker(text) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) SECURITY INVOKER;
 
-CREATE POLICY storyboard_production_owner_access ON public.admin_storyboard_production_projects
-  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
-CREATE POLICY storyboard_production_owner_access ON public.admin_storyboard_production_workers
-  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
-CREATE POLICY storyboard_production_owner_access ON public.admin_storyboard_production_jobs
-  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
-CREATE POLICY storyboard_production_owner_access ON public.admin_storyboard_production_assets
-  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
-CREATE POLICY storyboard_production_owner_access ON public.admin_storyboard_production_events
-  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
-
-ALTER FUNCTION public.storyboard_production_assert_owner(uuid) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_error_allowed(text) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_job_json(public.admin_storyboard_production_jobs) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_snapshot(uuid, uuid) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_auth_worker(text) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) SECURITY DEFINER;
-ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) SECURITY DEFINER;
-
-ALTER FUNCTION public.storyboard_production_assert_owner(uuid) SET search_path = '';
+REVOKE ALL ON FUNCTION storyboard_control.assert_owner(uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION storyboard_control.assert_owner(uuid) TO service_role;
+ALTER FUNCTION storyboard_control.assert_owner(uuid) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_error_allowed(text) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) SET search_path = '';
@@ -564,22 +546,11 @@ ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) S
 ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) SET search_path = '';
 ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) SET search_path = '';
 
-ALTER FUNCTION public.storyboard_production_assert_owner(uuid) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_error_allowed(text) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_final_status(jsonb, jsonb) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_project_json(public.admin_storyboard_production_projects) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_job_json(public.admin_storyboard_production_jobs) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_snapshot(uuid, uuid) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_auth_worker(text) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_model_available(jsonb, text, text) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_admin(uuid, text, uuid, integer, jsonb) OWNER TO privacy_workflow_owner;
-ALTER FUNCTION public.storyboard_production_worker(uuid, text, uuid, uuid, jsonb) OWNER TO privacy_workflow_owner;
 
 -- G014 requires the effective EXECUTE grantee matrix of every public function
 -- to be declared in the allowlist, so register the service_role-only entrypoints
 -- and helpers created above.
 WITH expected(source_signature, grantee) AS (VALUES
-  ('public.storyboard_production_assert_owner(uuid)', 'service_role'::name),
   ('public.storyboard_production_error_allowed(text)', 'service_role'::name),
   ('public.storyboard_production_final_status(jsonb,jsonb)', 'service_role'::name),
   ('public.storyboard_production_project_json(public.admin_storyboard_production_projects)', 'service_role'::name),
