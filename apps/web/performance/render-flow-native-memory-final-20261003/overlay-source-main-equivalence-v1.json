@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-03T22:13:22.800904+00:00",
+  "measuredSourceCommit": "d24f8d633a628518f072c24d76166d388d33c398",
+  "protectedMainCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "allTrackedWebSourceMatches": true,
+  "excludedPath": "apps/web/performance/**; evidence history only",
+  "buildSourceBinding": "overlay-source-committed-checks-v1.json",
+  "labNotHostedBuild": true,
+  "productionNotYetUpdated": true
+}

@@ -1,0 +1,64 @@
+{
+  "scope": "actual SDK mobile emulation; synthetic count0/1000/1001; no performance or physical claim",
+  "fieldAdmitted": 0,
+  "checks": [
+    {
+      "count": 0,
+      "buildId": "6_caYtCnPpPCY8JyeH4Zc",
+      "passed": true,
+      "state": {
+        "markers": 0,
+        "paddedExpected": 0,
+        "duplicates": 0,
+        "missingPadded": 0,
+        "unmaskedBeyondPadded": 0,
+        "mapCreates": 1,
+        "clusterNodes": 0,
+        "overflow": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": 2
+      }
+    },
+    {
+      "count": 1000,
+      "buildId": "6_caYtCnPpPCY8JyeH4Zc",
+      "passed": true,
+      "state": {
+        "markers": 1000,
+        "paddedExpected": 464,
+        "duplicates": 0,
+        "missingPadded": 0,
+        "unmaskedBeyondPadded": 0,
+        "mapCreates": 1,
+        "clusterNodes": 0,
+        "overflow": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": 2
+      }
+    },
+    {
+      "count": 1001,
+      "buildId": "6_caYtCnPpPCY8JyeH4Zc",
+      "passed": true,
+      "state": {
+        "markers": 464,
+        "paddedExpected": 464,
+        "duplicates": 0,
+        "missingPadded": 0,
+        "unmaskedBeyondPadded": 0,
+        "mapCreates": 1,
+        "clusterNodes": 0,
+        "overflow": 0
+      },
+      "errors": {
+        "page": 0,
+        "console": 2
+      }
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-03T19:44:27.250963+00:00",
+  "dataPr": 3107,
+  "ciPending": false,
+  "ciFailed": false,
+  "technicalBlocker": {
+    "threadId": "PRRT_kwDOQGRyNc6oqwgU",
+    "path": "apps/web/lib/retained-marker-accessibility.ts",
+    "issue": "SDK getElement may be null when deferred offscreen marker is acquired. Current helper leaves no pending desired hidden state/retry; tail completion only updatesrefs, so later DOM can expose marker until unrelated idle/render."
+  },
+  "reviewResolved": false,
+  "nextAction": "Implement owned pending-mask retry synchronized with SDK root readiness, cancellation/release/icon replacement; reproduce delayed root in unit/browser fixture, rerun affected source/performance acceptance, promote correction feature-develop-data-main under protections before resolving thread. Do not waive or resolve on the synchronous-root tests alone.",
+  "sourceCurrent": "1f29e01c70ca8dea0e3184678eaa2d93361b3075 /361d9f102dcf07a46fe9e0f4cbcbf7a3e337d47e",
+  "developMerged": "e919cdf5fead030073be627e3e5c640f480ecbd4",
+  "oldHandoffNextStepsStillApply": true,
+  "productionUnchanged": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "goalActiveNotComplete": true,
+  "notUserPermissionBlock": true,
+  "sourceCorrectionIsMeaningfulIndependentProgress": true
+}

@@ -1,0 +1,3 @@
+When mobile markers are retained outside the padded viewport, their review bubble is a sibling of the marker node. Hide and restore the entire application-owned overlay anchor so the stale bubble also leaves the accessibility tree. Plain markers retain the existing ownership and pending-root behavior.
+
+Validation: production build, targeted ESLint and TypeScript compiler parity passed. Related unit tests passed. Actual Naver SDK verification with synthetic review HTML passed all 10 states, including offscreen/return, icon replacement and mobile/desktop restoration, with no extra or missing review buttons in the accessibility tree. This is browser laboratory evidence; physical Galaxy and field outcomes are reported separately.

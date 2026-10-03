@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-03T22:11:39.312328+00:00",
+  "projectVerified": true,
+  "exactMainSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "candidates": [
+    {
+      "id": "dpl_HgVcpKfcUh7RG9UeBfRX1ZiN9xsU",
+      "url": "tzudong-pct59hp1m-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "gitSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+    }
+  ],
+  "writes": 0,
+  "noRawProviderConfigStored": true
+}

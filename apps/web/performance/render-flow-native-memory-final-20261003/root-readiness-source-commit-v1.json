@@ -1,0 +1,15 @@
+{
+  "commit": "9b9b590319bc8547d2b24ee92afecf47a391d7af",
+  "base": "e919cdf5fead030073be627e3e5c640f480ecbd4",
+  "buildId": "ltP9IyM_5c1MkpejcIQon",
+  "allCompiledInputsMatch": true,
+  "relatedTests": 35,
+  "assertions": 1209,
+  "diagnostics": 0,
+  "majorInteractionChecks": 10,
+  "responsiveCases": 6,
+  "controlledDelayedSdkMarkers": 272,
+  "unmaskedFrameObservations": 0,
+  "newNaturalHeapComparisonPending": true,
+  "operatorProductionUnchanged": true
+}

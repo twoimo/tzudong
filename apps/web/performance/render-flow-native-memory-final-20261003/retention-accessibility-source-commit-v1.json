@@ -1,0 +1,18 @@
+{
+  "sourceCommit": "1f29e01c70ca8dea0e3184678eaa2d93361b3075",
+  "base": "a1c79e429d856df795dfff2d8cf13b30d1f23007",
+  "compiledBuildId": "6_caYtCnPpPCY8JyeH4Zc",
+  "receipt": "build-candidate-ret-ax-v2/receipt.json",
+  "allReceiptInputsMatchCommittedWorkingSource": true,
+  "paths": [
+    "apps/web/components/map/NaverMapView.tsx",
+    "apps/web/lib/marker-pool.ts",
+    "apps/web/lib/retained-marker-accessibility.ts",
+    "apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts",
+    "apps/web/tests-unit/marker-pool.test.ts",
+    "apps/web/tests-unit/retained-marker-accessibility.test.ts"
+  ],
+  "deployed": false,
+  "newSourcePerformancePending": true,
+  "physicalDevicePending": true
+}

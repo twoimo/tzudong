@@ -1,0 +1,22 @@
+{
+  "observedAt": "2026-10-03T21:51:59.345128+00:00",
+  "source": "installed Vercel CLI authenticated GET, minimized in memory",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "rootDirectory": "apps/web",
+    "repo": "tzudong"
+  },
+  "deployment": {
+    "id": "dpl_7A4fzTdQTHJ4b5qDPEyLihaKtjpG",
+    "url": "tzudong-66b2fa56y-twoimos-projects.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "gitSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0"
+  },
+  "independentAlias": {
+    "name": "www.tzudong.app",
+    "deploymentId": "dpl_7A4fzTdQTHJ4b5qDPEyLihaKtjpG"
+  },
+  "privateConfigOrProviderDiagnosticsStored": false
+}

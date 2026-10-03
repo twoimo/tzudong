@@ -1,0 +1,335 @@
+{
+  "planSha256": "66afc00fd7654c2a07beea01b72c688a422500807fa91a346a53499662a49f42",
+  "aaRaw": "mobile-retain-ui-ret-overlay-v1-aa/raw.json",
+  "abRaw": "mobile-retain-ui-ret-overlay-v1-ab/raw.json",
+  "freshProcessesPerVariantPerCell": 9,
+  "warmupProcessesPerVariantPerCell": 2,
+  "clusterInteractionsPerFreshProcess": 1,
+  "bootstrapResamples": 10000,
+  "bootstrapSeed": 20261004,
+  "forcedGC": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "cells": {
+    "735": {
+      "count": 735,
+      "aaPairs": 9,
+      "aa95AbsoluteDeltaMs": 109.04000000953674,
+      "aaMedianDriftMs": 6.1000001430511475,
+      "metrics": {
+        "clickMs": {
+          "unit": "ms",
+          "before": {
+            "n": 9,
+            "median": 417.2000000476837,
+            "mad": 13.099999904632568,
+            "range": [
+              397.7999999523163,
+              478.7000000476837
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 460.2000000476837,
+            "mad": 18.299999952316284,
+            "range": [
+              418.30000019073486,
+              486.7999999523163
+            ]
+          },
+          "absoluteReduction": -43.0,
+          "relativeReductionPercent": -10.306807285495045,
+          "pairedReductionCI95": [
+            -48.200000047683716,
+            -15.599999904632568
+          ],
+          "abbaBlockReductionCI95": [
+            -48.200000047683716,
+            -21.350000023841858
+          ],
+          "regressionTolerancePercent": 15,
+          "medianRegressionGuardPassed": true,
+          "improvementClaimed": false,
+          "noiseFloorMs": 109.04000000953674,
+          "improvementAboveNoise": false,
+          "judgement": "improvement_not_proven"
+        },
+        "naturalHeapMB": {
+          "unit": "MB",
+          "before": {
+            "n": 9,
+            "median": 20.913292,
+            "mad": 0.03239599999999854,
+            "range": [
+              20.824076,
+              22.800572
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 19.099892,
+            "mad": 0.051180000000002224,
+            "range": [
+              19.029648,
+              22.992428
+            ]
+          },
+          "absoluteReduction": 1.813399999999998,
+          "relativeReductionPercent": 8.671040408176761,
+          "pairedReductionCI95": [
+            1.5976919999999986,
+            3.4688519999999983
+          ],
+          "abbaBlockReductionCI95": [
+            1.7274719999999988,
+            1.8546239999999976
+          ],
+          "regressionTolerancePercent": 20,
+          "medianRegressionGuardPassed": true,
+          "improvementClaimed": false,
+          "judgement": "fixed_regression_budget_passed",
+          "aa95AbsoluteDeltaMB": 3.1513800000000005
+        },
+        "longTaskMs": {
+          "unit": "ms",
+          "before": {
+            "n": 9,
+            "median": 504,
+            "mad": 17,
+            "range": [
+              487,
+              620
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 592,
+            "mad": 28,
+            "range": [
+              533,
+              646
+            ]
+          },
+          "absoluteReduction": -88,
+          "relativeReductionPercent": -17.46031746031746,
+          "pairedReductionCI95": [
+            -94.0,
+            -37.0
+          ],
+          "abbaBlockReductionCI95": [
+            -88.0,
+            -67.0
+          ],
+          "regressionTolerancePercent": null,
+          "medianRegressionGuardPassed": null,
+          "improvementClaimed": false
+        },
+        "domNodes": {
+          "unit": "nodes",
+          "before": {
+            "n": 9,
+            "median": 3493,
+            "mad": 2,
+            "range": [
+              3486,
+              3495
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 5116,
+            "mad": 1,
+            "range": [
+              5113,
+              5120
+            ]
+          },
+          "absoluteReduction": -1623,
+          "relativeReductionPercent": -46.46435728600057,
+          "pairedReductionCI95": [
+            -1628.0,
+            -1622.0
+          ],
+          "abbaBlockReductionCI95": [
+            -1627.0,
+            -1622.0
+          ],
+          "regressionTolerancePercent": null,
+          "medianRegressionGuardPassed": null,
+          "improvementClaimed": false
+        }
+      },
+      "regressionGuardsPassed": true,
+      "beforeMarkerCounts": [
+        464
+      ],
+      "afterMarkerCounts": [
+        735
+      ]
+    },
+    "2000": {
+      "count": 2000,
+      "aaPairs": 0,
+      "aa95AbsoluteDeltaMs": null,
+      "aaMedianDriftMs": null,
+      "metrics": {
+        "clickMs": {
+          "unit": "ms",
+          "before": {
+            "n": 9,
+            "median": 418.2000000476837,
+            "mad": 12.799999952316284,
+            "range": [
+              382.2000000476837,
+              479.5
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 443,
+            "mad": 17.299999952316284,
+            "range": [
+              424.39999985694885,
+              497.59999990463257
+            ]
+          },
+          "absoluteReduction": -24.799999952316284,
+          "relativeReductionPercent": -5.930176936750013,
+          "pairedReductionCI95": [
+            -63.90000009536743,
+            -6.200000047683716
+          ],
+          "abbaBlockReductionCI95": [
+            -59.90000009536743,
+            -4.400000095367432
+          ],
+          "regressionTolerancePercent": 15,
+          "medianRegressionGuardPassed": true,
+          "improvementClaimed": false,
+          "noiseFloorMs": null,
+          "improvementAboveNoise": false,
+          "judgement": "improvement_not_proven"
+        },
+        "naturalHeapMB": {
+          "unit": "MB",
+          "before": {
+            "n": 9,
+            "median": 24.873572,
+            "mad": 0.024259999999998172,
+            "range": [
+              24.840112,
+              25.106632
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 25.092064,
+            "mad": 0.03632400000000047,
+            "range": [
+              18.611472,
+              25.16146
+            ]
+          },
+          "absoluteReduction": -0.21849200000000124,
+          "relativeReductionPercent": -0.8784102259217182,
+          "pairedReductionCI95": [
+            -0.2548439999999985,
+            6.258751999999998
+          ],
+          "abbaBlockReductionCI95": [
+            -0.23641600000000196,
+            6.300047999999997
+          ],
+          "regressionTolerancePercent": 20,
+          "medianRegressionGuardPassed": true,
+          "improvementClaimed": false,
+          "judgement": "fixed_regression_budget_passed",
+          "aa95AbsoluteDeltaMB": null
+        },
+        "longTaskMs": {
+          "unit": "ms",
+          "before": {
+            "n": 9,
+            "median": 559,
+            "mad": 9,
+            "range": [
+              478,
+              568
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 542,
+            "mad": 32,
+            "range": [
+              510,
+              636
+            ]
+          },
+          "absoluteReduction": 17,
+          "relativeReductionPercent": 3.041144901610018,
+          "pairedReductionCI95": [
+            -47.0,
+            49.0
+          ],
+          "abbaBlockReductionCI95": [
+            -47.0,
+            41.5
+          ],
+          "regressionTolerancePercent": null,
+          "medianRegressionGuardPassed": null,
+          "improvementClaimed": false
+        },
+        "domNodes": {
+          "unit": "nodes",
+          "before": {
+            "n": 9,
+            "median": 3494,
+            "mad": 1,
+            "range": [
+              3486,
+              3496
+            ]
+          },
+          "after": {
+            "n": 9,
+            "median": 3493,
+            "mad": 2,
+            "range": [
+              3486,
+              3496
+            ]
+          },
+          "absoluteReduction": 1,
+          "relativeReductionPercent": 0.028620492272467084,
+          "pairedReductionCI95": [
+            -3.0,
+            5.0
+          ],
+          "abbaBlockReductionCI95": [
+            -1.5,
+            5.0
+          ],
+          "regressionTolerancePercent": null,
+          "medianRegressionGuardPassed": null,
+          "improvementClaimed": false
+        }
+      },
+      "regressionGuardsPassed": true,
+      "beforeMarkerCounts": [
+        464
+      ],
+      "afterMarkerCounts": [
+        464
+      ]
+    }
+  },
+  "limitations": [
+    "one driver execution for A/A and one for A/B",
+    "actual SDK with synthetic REST data, mobile emulation is not a physical phone",
+    "CIs do not remove SDK/network/time/GC-phase confounding",
+    "no p95 at n9; no 2000 A/A",
+    "natural heap includes transient allocation; no leak-absence claim"
+  ],
+  "regressionGuardsPassed": true
+}

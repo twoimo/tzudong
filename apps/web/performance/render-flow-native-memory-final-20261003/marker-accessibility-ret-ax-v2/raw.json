@@ -1,0 +1,55 @@
+{
+  "scope": "owned mobile-emulation page, actual SDK, synthetic735; no full AX/DOM/provider strings stored",
+  "checks": [
+    {
+      "kind": "baseline",
+      "buildId": "OPLC07eoTru-sYWmlcoKd",
+      "passed": true,
+      "geometry": {
+        "markers": 464,
+        "paddedExpected": 464,
+        "outsidePadded": 0,
+        "hiddenOutsidePadded": 0,
+        "tabbableOutsidePadded": 0
+      },
+      "accessibility": {
+        "matchedMarkerBackendNodes": 464,
+        "exposedMarkerNodes": 464,
+        "exposedOutsidePadded": 0,
+        "ignoredMarkerNodes": 0,
+        "rawAxOrDomRetained": false
+      },
+      "queryClientFixtureAvailable": true,
+      "errors": {
+        "page": 0,
+        "console": 2
+      }
+    },
+    {
+      "kind": "candidate",
+      "buildId": "6_caYtCnPpPCY8JyeH4Zc",
+      "passed": true,
+      "geometry": {
+        "markers": 735,
+        "paddedExpected": 464,
+        "outsidePadded": 271,
+        "hiddenOutsidePadded": 271,
+        "tabbableOutsidePadded": 0
+      },
+      "accessibility": {
+        "matchedMarkerBackendNodes": 735,
+        "exposedMarkerNodes": 464,
+        "exposedOutsidePadded": 0,
+        "ignoredMarkerNodes": 0,
+        "rawAxOrDomRetained": false
+      },
+      "queryClientFixtureAvailable": true,
+      "errors": {
+        "page": 0,
+        "console": 2
+      }
+    }
+  ],
+  "fieldAdmitted": 0,
+  "performanceAdmitted": 0
+}

@@ -1,0 +1,51 @@
+{
+  "observedAt": "2026-10-03T20:12:39.090561+00:00",
+  "goalActive": true,
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "branch": "codex/retained-marker-root-readiness-20261004",
+  "sourceBase": "e919cdf5fead030073be627e3e5c640f480ecbd4",
+  "ownDirtyFiles": [
+    "apps/web/lib/retained-marker-accessibility.ts",
+    "apps/web/components/map/NaverMapView.tsx",
+    "apps/web/tests-unit/retained-marker-accessibility.test.ts"
+  ],
+  "newBuild": "ret-root-v1",
+  "producer": "build-retention-accessibility-v2.mjs",
+  "relatedTests": {
+    "passed": 35,
+    "assertions": 1209,
+    "failed": 0
+  },
+  "lintPassed": true,
+  "parity": {
+    "diagnostics": 0,
+    "inputs": 2377,
+    "contentSha256": "d94e70d9d2f56130e327bf6b614fbe394d2d3ad6a6aed9666f3255f763fdd14e"
+  },
+  "realSdkDelayedRootFixture": {
+    "path": "delayed-sdk-root-v1/raw.json",
+    "createdAndAttached": 272,
+    "missingRootRequests": 22740,
+    "unmaskedPaintFrames": 0,
+    "observedMaximumUnmaskedOutside": 0,
+    "markers": 735,
+    "mapCreates": 1,
+    "fixtureDelayOnly": true,
+    "fieldAdmitted": 0
+  },
+  "technicalReview": "PRRT_kwDOQGRyNc6oqwgU remains unresolved until correction reaches3107",
+  "implementation": "shared map MutationObserver watches pending SDK roots; hidden intent preserved, no timer/poll; visible/release/clear cancels pending weak registries",
+  "risk": "shared observer scans all pending markers for each mutation batch; delayed fixture observed22740getterchecks, no performance claim for this slowpath yet",
+  "next": [
+    "Verify delayedroot observer cancellation after data/filter/unmount in actualSDK fixture and normal AX/flows onret-root-v1.",
+    "Run same-source cold/warm acceptance or relevant targeted comparison with immutable labels; do not relabel ret-ax-v2 metrics asret-root-v1.",
+    "Commit exact3ownfiles, create/attach protectedfeature-develop correctionPR, checkallCI, promoteintoopen3107 before resolving technicalthread; thennormaldata-main.",
+    "Refresh project/rollback/exactmain guard, deploy/readREADY/www/actualSDKverification.",
+    "Complete physicalChrome/Samsung/forcedark/navflicker oncecurrentunambiguousGalaxy transport/unlockavailable; existingquestionpending.",
+    "Checkpoint this and previousturn nativeevidence onown evidencebranch with equal-byte/Gitblob checks; frozenroots unchanged; finalizecanonical/report/maps onlywhenobjectiveverified."
+  ],
+  "oldHandoffs": "v3/v4/v5/v6 still describe previoussource and pendingpromotion context",
+  "currentProductionUnchanged": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "goalCompletionUnproven": true,
+  "ownedLiveLocalSessions": []
+}

@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-03T19:55:57.375734+00:00",
+  "goalActive": true,
+  "previousTurnClassification": "progress",
+  "currentSourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "branch": "codex/retained-marker-root-readiness-20261004",
+  "baseDevelop": "e919cdf5fead030073be627e3e5c640f480ecbd4",
+  "ownDirtyFiles": [
+    "apps/web/lib/retained-marker-accessibility.ts",
+    "apps/web/components/map/NaverMapView.tsx"
+  ],
+  "implementedButNotVerified": "pending hidden intent is recorded even while SDKgetElementnull; one shared MutationObserver per map retries on child insertion; weak marker/root registries cleaned on visible/release/clear; renderer passes mapRef.current root target",
+  "reviewThread": "PRRT_kwDOQGRyNc6oqwgU onPR3107",
+  "reviewNotResolved": true,
+  "nextRequired": [
+    "Update old null-root unit expectation fromundefined totrue; add delayed-root observer unit tests for sharing,cancellation,release,root-target change andno timers/strongDOMrefs.",
+    "Build new isolated candidate fromcurrentown2paths and actualtest changes; producer currentpaths handles trackedfiles; no writes into frozenroots.",
+    "Reproduce realSDK delayedroot by owned constructor fixture with initialmapnull thenactualdeferredsetMap; verify outsidePADhidden beforeAXexposure withoutunrelatedidle.",
+    "Run relatedunit/lint/parity/build andexact-source acceptance; modified pending-only cold/warm path equivalence stillmustbindnewhashes andnotmislabel olddata.",
+    "Commit/promote correction viafeature-develop intoopen3107; resolve review onlyafteraddressedcode+browserproof; serializedata-main exactguard/deployreadback.",
+    "ContinuephysicalChrome/Samsung oncecurrentGalaxyconnection/unlockvalid; existingcurrentendpoint question remains pending.",
+    "Checkpoint allnewnativeevidence toown evidencebranch and finalizecanonical/sourceboundreport/maps; originalgoalmemory/field/native completion remainsunproven."
+  ],
+  "existingVerificationScope": "ret-ax-v2/source1f29 results cover synchronousroot, notthispending-source yet",
+  "oldSourceDevelopMerged": "e919cdf5fead030073be627e3e5c640f480ecbd4",
+  "dataPr3107BlockedByTechnicalConversation": true,
+  "currentProduction": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "wholeGoalCompleted": false,
+  "liveOwnedLocalProcesses": 0,
+  "frozenNeverWrite": [
+    "render-flow-memory-lifetime-20261001",
+    "render-flow-ui-cloudflare-20261003",
+    "cloudflare-free-tier-20261003"
+  ],
+  "nativeMutableRoot": "render-flow-native-memory-final-20261003",
+  "blockerAudit": "meaningful independent implementation/verification remains; notanimpasse"
+}

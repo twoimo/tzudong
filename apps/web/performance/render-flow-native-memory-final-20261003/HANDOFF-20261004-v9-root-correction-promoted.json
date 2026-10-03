@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-10-03T21:23:04.611827+00:00",
+  "goalActive": true,
+  "thisTurnProgress": "pendingSDKroot correction tests/build/delayedfixture/generalflows/coldAA-AB/warmABBA and protected feature3108merge; previousdata review resolved onlyafteractualsource entereddevelop",
+  "source": "9b9b590319bc8547d2b24ee92afecf47a391d7af",
+  "developMerge": "29099055147dbd8b896a4d8e4c6d92b5b1162230",
+  "pr3108": "MERGED",
+  "pr3107": "OPEN latestCIpending; nofailedchecks; oldroot-readiness threadresolved",
+  "productionUnchanged": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "newBuild": "ret-root-v1/ltP9IyM_5c1MkpejcIQon",
+  "newExactSourcePrimarySummaries": [
+    "mobile-retain-root-summary-v1.json",
+    "mobile-retain-root-warm-summary-v1.json"
+  ],
+  "allFixedGuardsPassed": true,
+  "speedGainProven": false,
+  "slowerFlow": "2000initial395.3\u2192428.6ms, within15%; mustdisclose",
+  "normalSourceChecks": "35tests/1209assert,lint/parity2377/0diag/build;10interactionchecks/fourtrustedemulatedswipes,6responsive transitions, controlleddelayed2720unmaskedpaintframes",
+  "knownLimits": "Warmn2processpervariant/noindependentwarmAA/noCI/populationgain; positive naturalheapgrowth; forcedGCdiagnostics originalprototype,noprimarywaiver; fieldcohortssparse/unmatched; physicaldevice0ready",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "sourceBranch": "codex/retained-marker-root-readiness-20261004",
+  "sourceClean": true,
+  "activeOwnedLocalProcesses": 0,
+  "next": [
+    "Inspect3107currentallchecks/reviewthreads; normalexactheadmergewhenCLEAN,thencreate/attachdata-main PR/checks/merge.",
+    "Refresh exactVercelproject/currentREADYrollback and mainSHA; copy writerhelpersfromfrozenUIintomutableRoot; guardexactmain only; redeployonce/readREADY+independentwww/actualSDKflows.",
+    "PhysicalGalaxyfinalChrome/Samsung/matchedmemory/forcedark/navflicker stillrequired; existingcurrentendpoint/USBquestionpending,no duplicate.",
+    "Current andpreviousnativefollow-upfilesnotyetcheckpointedto evidencebranch6732; equalbytecopy,scopedadd+exactsanitizedignoredlogs,commit/push/Gitblobsverify needed.",
+    "Finalize honestsourceboundscorer/validator/health/private-data audit/maps/externalpins and10columnreport; do notfakescorezerosforunmeasuredhealthorfieldgain; preserveoldfrozen0admission."
+  ],
+  "frozenNeverWrite": [
+    "render-flow-memory-lifetime-20261001",
+    "render-flow-ui-cloudflare-20261003",
+    "cloudflare-free-tier-20261003"
+  ],
+  "mutableNativeRoot": "render-flow-native-memory-final-20261003",
+  "wholeObjectiveUnproven": true,
+  "blockedAudit": "notatimpasse; independentpromotion/evidenceworkremains"
+}

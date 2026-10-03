@@ -1,0 +1,6 @@
+{
+  "priorRun": "retained-overlay-v1/raw.json",
+  "result": "rejected_fixture_coverage",
+  "cause": "Fixture attached setIcon wrapping only to initially individual SDK objects, missing the one cluster object later reused as an individual. Marker content also has a containing branch, so sibling check now tests separate child branches of the actual anchor. No production source change and no weakened AX extra/missing assertions.",
+  "correctedRun": "retained-overlay-v2/raw.json"
+}

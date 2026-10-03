@@ -1,0 +1,8 @@
+{
+  "sourceCommit": "1f29e01c70ca8dea0e3184678eaa2d93361b3075",
+  "historyHead": "361d9f102dcf07a46fe9e0f4cbcbf7a3e337d47e",
+  "releasedMainParent": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "sourceFileDiff": [],
+  "protectedFeaturePromotionNotBypassed": true,
+  "goal": "include current data/main ancestry for strict serialized promotions without a later repeated history sync PR"
+}

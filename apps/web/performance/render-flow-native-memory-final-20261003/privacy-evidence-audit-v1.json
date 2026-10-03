@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-03T22:59:28.043045+00:00",
+  "scannedFiles": 782,
+  "literalCredentialPatternHits": [],
+  "symlinks": [],
+  "privateEnvOrBuildFilesIncluded": false,
+  "manualChecks": [
+    "actual public screenshots limited to anonymous search or navigation crops",
+    "older native24 inspected images contain only synthetic map/list and native browser bars",
+    "unverified failed setup3 frames excluded",
+    "heap snapshots/strings/provider bodies discarded inRAM, CPU URLs converted to fixed source classes",
+    "field exact7-column aggregate whitelist, no user/session IDs or raw request bodies",
+    "production env/deployment readbacks keep only whitelisted public metadata; secret configuration never stored"
+  ],
+  "limitation": "pattern scan is supplementary to scoped capture/source review and is not a universal PII detector"
+}

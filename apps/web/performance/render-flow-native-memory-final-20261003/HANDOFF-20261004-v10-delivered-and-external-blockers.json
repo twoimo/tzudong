@@ -1,0 +1,24 @@
+{
+  "goal": "memory/flicker/real SDK/Galaxy/field/delivery/evidence plus UI/Cloudflare and transparent logo",
+  "sourceCommit": "d24f8d633a628518f072c24d76166d388d33c398",
+  "main": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "production": "dpl_D6wm9mbMeZEbLtHM3PFXMctZ9txm",
+  "aliasMatches": true,
+  "sourceAndDeploymentDone": true,
+  "coldWarmFixedRegressionBudgetsPassed": true,
+  "liveActualSdkChecks": 20,
+  "logoCssThemesCases": 6,
+  "finalDiagnosticCyclesPerVariant": 60,
+  "currentFieldMetricInstances": 15,
+  "actualFieldImprovementProven": false,
+  "canonicalCurrentHealthCoverage": "unavailable; old packet independently validated, no new gate zeros",
+  "physicalCurrentDeviceReady": 0,
+  "phoneConnectionQuestion": "already pending; do not duplicate",
+  "remaining": [
+    "current Galaxy Chrome/Samsung exact-main native UI/memory/force-dark/navigation flicker",
+    "matched prospective field cohorts and remaining canonical health evidence"
+  ],
+  "frozenAfterArtifactMap": true,
+  "futureEvidence": "new sibling packet; do not append here after freeze",
+  "existingUserWorkOrOtherAppsChanged": false
+}

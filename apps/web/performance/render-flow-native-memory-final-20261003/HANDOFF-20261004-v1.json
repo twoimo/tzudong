@@ -1,0 +1,40 @@
+{
+  "observedAt": "2026-10-03T17:04:58.104282+00:00",
+  "goal": "memory/performance/flicker native verification, protected source delivery and prospective field evidence remains active",
+  "latestCompletedScope": "transparent PNG/filter/header/font source plus exact main production and HTTPS pixel/geometry proof",
+  "productionSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "productionId": "dpl_7A4fzTdQTHJ4b5qDPEyLihaKtjpG",
+  "evidenceHead": "6732eedd80829cdaf846f4b845cadc73a3070d3d",
+  "frozenPackets": [
+    "render-flow-memory-lifetime-20261001",
+    "render-flow-ui-cloudflare-20261003",
+    "cloudflare-free-tier-20261003"
+  ],
+  "warning": "Never execute writers inside frozen packets; copy helpers into a fresh mutable packet before another operation",
+  "mutablePacket": "render-flow-native-memory-final-20261003",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "sourceBranch": "codex/png-promotion-sync-20261004",
+  "ownUncommittedFiles": [
+    "apps/web/lib/marker-pool.ts",
+    "apps/web/tests-unit/marker-pool.test.ts"
+  ],
+  "prototypeOnly": "mobile-retain-probe-source-v1.patch; NaverMapView mobile retention not yet adopted in delivery source",
+  "newMeasurements": [
+    "mobile-retain-ui-summary-v1.json",
+    "mobile-retain-warm-summary-v1.json"
+  ],
+  "fixedGuardsPassed": true,
+  "initialSpeedOrHeapGainProven": false,
+  "warmMemoryGrowthUnresolved": true,
+  "nativeConnection": "0ready at latest readback; existing current endpoint/USB question pending, do not ask it again",
+  "nextSteps": [
+    "Inspect physical Chrome pool-order frames still in the named owned temp paths before copying.",
+    "Finish retention candidate actual SDK correctness for changed data, boundaries, selection/search/list/a11y and >1000; inspect retained objects/heap growth outside primary natural-heap endpoint.",
+    "Adopt only verified final memory source from a fresh head, run relevant checks, keep source promotion serialized develop-data-main, and retain a fresh rollback before exact guard/redeploy.",
+    "After confirmed Galaxy device/model and usable unlocked foreground, complete matched physical Chrome and Samsung new-source and live checks without disturbing other apps.",
+    "Read prospective field histogram through whitelisted columns; do not invent comparable cohorts or relabel lab outcomes.",
+    "Finalize native source-bound scorer/validator/maps/report when required work is actually complete; never mark whole goal complete for the finished PNG scope."
+  ],
+  "uncertainOrRepeatedWrites": false,
+  "activeOwnedLocalServers": 0
+}

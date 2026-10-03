@@ -1,0 +1,548 @@
+{
+  "sourceRoot": "render-flow-native-memory-final-20261003",
+  "destinationRoot": "render-flow-native-memory-final-20261003",
+  "newFiles": [
+    {
+      "path": "HANDOFF-20261004-v10-delivered-and-external-blockers.json",
+      "bytes": 1121,
+      "sha256": "11ad2df458591c382607a5990263e75efc3bc27d3e50ae6f5103e6458e954662"
+    },
+    {
+      "path": "REPORT-DELIVERED-20261004-v2.md",
+      "bytes": 14017,
+      "sha256": "f9e511dcbf51b809bce241e12e48780f533ca36dbac6e0b79c5de9a123a42960"
+    },
+    {
+      "path": "REPRODUCE-DELIVERED-20261004-v1.md",
+      "bytes": 8067,
+      "sha256": "9fa23fff0e50442ef71161bdc63e36ae46fe814465d23c5be76a0f42281ca248"
+    },
+    {
+      "path": "aggregate-final-overlay-diagnostics-v1.py",
+      "bytes": 2372,
+      "sha256": "32a9431aeddde0332b965c8237297d375af43904d4165726d12855f5b2ab00c8"
+    },
+    {
+      "path": "approve-memory-exact-main-sanitized-v1.py",
+      "bytes": 2626,
+      "sha256": "ff18bb72f4eefabb93234edc13f2bc0acf31643c986214e9a5b948e2896cdcf1"
+    },
+    {
+      "path": "chrome-v6-native-capture-preservation-v1.json",
+      "bytes": 7733,
+      "sha256": "91915d2079292e43265eeaf0254444eff2bf6e17fa71f9a3f082b0705837c5ab"
+    },
+    {
+      "path": "diagnose-final-overlay-heap-v1.mjs",
+      "bytes": 8622,
+      "sha256": "f50bdd9ae0f4d4a9919e1552b240d3ec98ccad2d4789ac21ce796f3e11bebd09"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-000.png",
+      "bytes": 1594312,
+      "sha256": "40c3a169337c70a3b4a3aa98656e765bec291d73557ec62a42078ad35407b7d0"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-010.png",
+      "bytes": 2128413,
+      "sha256": "c31cd7f971d8f15c1d26a8e63b030d1e51ef29beaf6cb804200d3713d06f8b7e"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-020.png",
+      "bytes": 2128135,
+      "sha256": "c9425f33b1c26473654ced06446ecf34a980fc93b0a425f0f65a34ea7dba9fc9"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-030.png",
+      "bytes": 2124601,
+      "sha256": "9c219cef794b24d4cecb269b54782b12baf596357c8561a7866adec6361da4ef"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-040.png",
+      "bytes": 2124050,
+      "sha256": "502ddd1de57d65c25bd40eba967445d6695d733d0dfc4d00bab26d2525ec8b18"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-050.png",
+      "bytes": 2124050,
+      "sha256": "502ddd1de57d65c25bd40eba967445d6695d733d0dfc4d00bab26d2525ec8b18"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-060.png",
+      "bytes": 2123140,
+      "sha256": "f5c1df207722400d0080b981ae334dda8682f3c2e008db66525fe42f9cd791bf"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-000.png",
+      "bytes": 1565808,
+      "sha256": "4e9dc6d7fc63be05f0680ee1084d8bca7dc0a80c2ecdcf7a2f563303faf386cc"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-010.png",
+      "bytes": 2086852,
+      "sha256": "97ed92c0951ba2f3baf9e4296044ef2dcf08130d1bcac440ab0c1b75602e8cd5"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-020.png",
+      "bytes": 2088241,
+      "sha256": "6f29ab9ca85f6b2deda778402266560b70b06d9e939dd33951392376f83d4121"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-030.png",
+      "bytes": 2072968,
+      "sha256": "3d6b0f6764aa0dcda4cefbd689f6d5950f32a9f23fd43e514b1e9059b8bbee1b"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-040.png",
+      "bytes": 2103369,
+      "sha256": "010f5c65a039a6fac3219690b36de89024d4668dee8e1883035f0d2c7c3781d0"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-050.png",
+      "bytes": 2103732,
+      "sha256": "b69f09c9efb84107b2070232fafd377b623448c99e284bb10f3dff62f2913bdf"
+    },
+    {
+      "path": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-060.png",
+      "bytes": 2081549,
+      "sha256": "bd8728a357e779eb0bfbb1a0be44db1700a4b2ebfebfbb75e793d307cff716b7"
+    },
+    {
+      "path": "direct-physical-memory-resumed-continuation-4-before-a1/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1534025,
+      "sha256": "9b5a8972fca47b9b0f3f817a8273a5f200940ad797fd3bf61ae64572da7a9b3c"
+    },
+    {
+      "path": "direct-samsung-memory-allocation-diagnostic-v1-after/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1391331,
+      "sha256": "25521ff7dde92b76b5700abe90baa6975398516efa41d4cc640f0bd17448da06"
+    },
+    {
+      "path": "direct-samsung-memory-allocation-diagnostic-v1-after/owned-native-inspected-v2/frame-001.png",
+      "bytes": 1865241,
+      "sha256": "40ee272980b0835017954bc49ffe486ef1b6f606e061ffaae5c8d774e7898f76"
+    },
+    {
+      "path": "direct-samsung-memory-allocation-diagnostic-v1-after/owned-native-inspected-v2/frame-002.png",
+      "bytes": 1866436,
+      "sha256": "4607feac2530fc3ac226db670b52e414518262336ff4e5a423562b3fe207273e"
+    },
+    {
+      "path": "direct-samsung-memory-allocation-pool-order-v2-after/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1396271,
+      "sha256": "296a7a61d12346a0ef0c6e8ed3187308aaab320d34520ab82a2081c42be4a6c0"
+    },
+    {
+      "path": "direct-samsung-memory-allocation-pool-order-v2-after/owned-native-inspected-v2/frame-001.png",
+      "bytes": 1862435,
+      "sha256": "311329d66de59070eb5d06478ee7e30ff110fabd607b3ef220e8e325f6377305"
+    },
+    {
+      "path": "direct-samsung-memory-allocation-pool-order-v2-after/owned-native-inspected-v2/frame-002.png",
+      "bytes": 1861123,
+      "sha256": "b83d5073a2fbffb27d0f828a2f97f78b118cb138293a1a119cef432445cd5d38"
+    },
+    {
+      "path": "direct-samsung-memory-resumed-continuation-4-after-b1/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1384166,
+      "sha256": "05baffce673d80b96ff448105457ce2f0851933b91ab1db36a695be2b0679226"
+    },
+    {
+      "path": "direct-samsung-memory-resumed-continuation-4-after-b2/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1381026,
+      "sha256": "f07984f3c49dbc7ae3f0281ccb3017066190a321fb93c6ee960aa1fe37a79839"
+    },
+    {
+      "path": "direct-samsung-memory-resumed-continuation-4-before-a2/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1341315,
+      "sha256": "66e31dd81a2e709522550cec296237aa7c90a3d2f8d2066bb57b429b1aa834d7"
+    },
+    {
+      "path": "field-baseline-readback-20261004-v4.json",
+      "bytes": 3645,
+      "sha256": "e3b4ca8b62ba07bca92415f549a8fa8d350774db2c925a38a787bfe719c85e81"
+    },
+    {
+      "path": "final-overlay-diagnostic-plan-v1.json",
+      "bytes": 972,
+      "sha256": "3168f9bad22f746f138b03e2b6a256b5aca216494c38b8da789bad9c70688d33"
+    },
+    {
+      "path": "final-overlay-heap-diagnostic-summary-v1.json",
+      "bytes": 2070,
+      "sha256": "e4fc92f4706dddb59febbed49dca60f75f263ad8e5677d2f968f22460fbb3413"
+    },
+    {
+      "path": "live-memory-bottom-capture-inspection-v1.json",
+      "bytes": 2457,
+      "sha256": "e7992f85c72fb3898f22eada952ffaecbae73b6aa1f5bb68d2b0635ff77a0778"
+    },
+    {
+      "path": "live-memory-production-v1/mobile-bottom-0.png",
+      "bytes": 44226,
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8"
+    },
+    {
+      "path": "live-memory-production-v1/mobile-bottom-1.png",
+      "bytes": 44226,
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8"
+    },
+    {
+      "path": "live-memory-production-v1/mobile-bottom-2.png",
+      "bytes": 44226,
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8"
+    },
+    {
+      "path": "live-memory-production-v1/mobile-bottom-3.png",
+      "bytes": 44226,
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8"
+    },
+    {
+      "path": "live-memory-production-v1/raw.json",
+      "bytes": 5449,
+      "sha256": "4b306bc29280177dc34e597e8512f578774bcb6146b082adaa0dd0c168b50cea"
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-0.png",
+      "bytes": 68000,
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d"
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-1.png",
+      "bytes": 68000,
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d"
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-2.png",
+      "bytes": 68000,
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d"
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-3.png",
+      "bytes": 68000,
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d"
+    },
+    {
+      "path": "memory-exact-main-approval-v1-apply-readback.json",
+      "bytes": 581,
+      "sha256": "42813d8f7a3abb25edb637564d0b555857869b9a89a19afa6830e326f4f6153f"
+    },
+    {
+      "path": "memory-exact-main-approval-v1-preview.json",
+      "bytes": 365,
+      "sha256": "164a04a199f02983e0ad15e959c55b1f1cfe3926ec30c19a85a63f641f7d547c"
+    },
+    {
+      "path": "memory-production-main-candidates-v1.json",
+      "bytes": 457,
+      "sha256": "66cd38b97a69047bbe39cb157bc4b8888a096a33b749df43d6fbe5aae3f9d61c"
+    },
+    {
+      "path": "memory-production-ready-status-v1.json",
+      "bytes": 496,
+      "sha256": "f3c767e47330d4b89e96e713ac13ae12bc19495a263683956f0729c43b1adbac"
+    },
+    {
+      "path": "memory-production-ready-status-v2.json",
+      "bytes": 492,
+      "sha256": "f22d18155fae892cd4c4f1a0f10f052a13514bf91c4612a675a557dda27349c5"
+    },
+    {
+      "path": "memory-production-redeploy-request-v1.json",
+      "bytes": 419,
+      "sha256": "7c98e4a620a7eb8cc26187fdaced604c07c65732d6ec83a27a46543c3ca2fea6"
+    },
+    {
+      "path": "memory-release-preflight-v1.json",
+      "bytes": 10222,
+      "sha256": "c8481cd1ba6bab4e799539988539854e6c460b2b6099f9b056da1c29420af4fe"
+    },
+    {
+      "path": "memory-release-rollback-live-v2.json",
+      "bytes": 678,
+      "sha256": "6c5486b1d198131ff9e116202951becdcec4f90f51a2d73b32b474acaf376df3"
+    },
+    {
+      "path": "mobile-retain-overlay-summary-v1.json",
+      "bytes": 9046,
+      "sha256": "6c6dd6134cbefe07fa4c5695286faed60321d03fe6e1a7d19a37a7bb98b53805"
+    },
+    {
+      "path": "mobile-retain-overlay-warm-summary-v1.json",
+      "bytes": 5681,
+      "sha256": "8ff03b023fbfd703e3db64aabaa961198025fe05f4145ee9354927691ea6258b"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-baseline-0.png",
+      "bytes": 200354,
+      "sha256": "c771d2563789ef90241a7dbeeef9585debd62dd5cf7cd37afc90510bdfd09782"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-candidate-1.png",
+      "bytes": 200405,
+      "sha256": "a268f9c2b69c02b24ecf0d6ca437bbf67f041f6e3e7d09999c8710c68dbc34ac"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-0-0-baseline.json",
+      "bytes": 4909,
+      "sha256": "6ecc55814b8f8b4f84d098deda4631985a6fe9056bae2b46a99b91eeefa746bf"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-0-1-candidate.json",
+      "bytes": 5354,
+      "sha256": "eea354073d34b377ce8087850c6f3fecc2ee0d197dff557abd02fc436931ec82"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-1-0-candidate.json",
+      "bytes": 5335,
+      "sha256": "c2cb317510f9245dc416e2dc8a741d44cbf4e9bba7832d728446b922cb1166fc"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-1-1-baseline.json",
+      "bytes": 4907,
+      "sha256": "fb5927e8433c98c27c35374b73c1bbd41fddb8b82e9a72d69863ffb50ba16c32"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-10-0-baseline.json",
+      "bytes": 4889,
+      "sha256": "d784f92525a9f70c6cb722c29991702855c40ff8e7a56c30040f85b28e487af8"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-10-1-candidate.json",
+      "bytes": 5321,
+      "sha256": "8f3fe81dda8443fc71ee365897a5447d4bf4118c23edc4a20847a98b6a6ffc78"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-2-0-baseline.json",
+      "bytes": 4903,
+      "sha256": "5f8343c0703e4744cb08d267ce2aa733eff977baa0a09b9e251dad327afc816f"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-2-1-candidate.json",
+      "bytes": 5336,
+      "sha256": "cf26845a11bc1d09b620d34c9cdf6fc9df015d5eb3d6a5f5c35a0ee38a52d130"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-3-0-candidate.json",
+      "bytes": 5352,
+      "sha256": "029509c9664462c77ff30faf1f192d7f4c7d511a0827b21544ad383175f32f91"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-3-1-baseline.json",
+      "bytes": 4894,
+      "sha256": "93131fc1c45428b16147901fd2cb88ead8cfc4c7841623d7405dd017ccdf3d25"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-4-0-baseline.json",
+      "bytes": 4870,
+      "sha256": "96377a1a8e8e40497b16583569cba8b16e26d50633fae2ae6af2197bc6346f44"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-4-1-candidate.json",
+      "bytes": 5353,
+      "sha256": "b1d589b4fcfe321c408a4701c10d11e91dbbb14a30643484baa7c7f1a84d3455"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-5-0-candidate.json",
+      "bytes": 5350,
+      "sha256": "635e150e8a38ffd4ef42cdb8dfb3f8b43f0cfa0f9e8a07b76ff8aa39835c2948"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-5-1-baseline.json",
+      "bytes": 4886,
+      "sha256": "d29ccab5d29576bc3f15ece8933dbd4fb1d958b39039812614e7f52b84c6cb8c"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-6-0-baseline.json",
+      "bytes": 4875,
+      "sha256": "91224d29e2adfe14b9734b94f31e200dd0125ee585cb50e9c531be80a7beae2f"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-6-1-candidate.json",
+      "bytes": 5320,
+      "sha256": "55b2ee2939e2ec61aa5681b0280f81a7ad8bdc8c2051ed079fc9223db2e4b567"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-7-0-candidate.json",
+      "bytes": 5346,
+      "sha256": "cab1fbda13e5e0e1d83643fb6a523f9f3d2ebe84c88c1ae61c67c7a55cd27348"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-7-1-baseline.json",
+      "bytes": 4892,
+      "sha256": "2b558bb1130a35acd27f599a8c13bc6ae3731a621e54c5129f93451ebe3b3867"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-8-0-baseline.json",
+      "bytes": 4919,
+      "sha256": "527066de645142c7a5a5e9e4a46cf4428b74f98c2130b50dc32e2711f3c0035f"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-8-1-candidate.json",
+      "bytes": 5345,
+      "sha256": "f065ccb9115410d6a4cfb526069457258b6013c186a2f8e6f656c5c6e7ede4d7"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-9-0-candidate.json",
+      "bytes": 5329,
+      "sha256": "228c8555205ed54207aca746b69cee7b9242d02f824b3d88e8ef20418f047b46"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/2000-pair-9-1-baseline.json",
+      "bytes": 4889,
+      "sha256": "2c1e306f28ebb50e2345ee679a4063026005bb6189d365ddb90a947c6afd8f93"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-10-0-baseline.json",
+      "bytes": 4876,
+      "sha256": "cd23dbb2528a9a1cf3d55fff570a5ab8da49a60450e1465451a8369f722c080e"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-10-1-candidate.json",
+      "bytes": 5339,
+      "sha256": "67961536cb9e1784b10de83a1ab41d7a2400eb695534149caadaae7eff95436f"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-6-1-candidate.json",
+      "bytes": 5328,
+      "sha256": "3665778b59fb0938eedda5621b86dcec2d444fab0ac745374fb7f900de4ab9e5"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-7-0-candidate.json",
+      "bytes": 5357,
+      "sha256": "7841ae4f8f7c819311810b9ee2d01c9a475cb0db12ab4c54658325a1aa81318c"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-7-1-baseline.json",
+      "bytes": 4892,
+      "sha256": "724235008dcc2b0b421570e38c31da635ac60b9abc0095b0c4ec8018f36a0622"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-8-0-baseline.json",
+      "bytes": 4905,
+      "sha256": "0fd5a18ed28c5748467c5753755d0d6cbb98f62e51433443f6c97615b59ccdce"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-8-1-candidate.json",
+      "bytes": 5334,
+      "sha256": "927e30484ab2174d2fd2be623495f6b8ff24e2236acb6cd8010cdd16e01f27ef"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-9-0-candidate.json",
+      "bytes": 5354,
+      "sha256": "d36c15a8d9e3f3bb6022f0ec4562966f54d36faa50b543c80186b3aa9e838141"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/735-pair-9-1-baseline.json",
+      "bytes": 4917,
+      "sha256": "9e06eddc73ad258798ec261b721dc8d087574aae49e0a413d852c0a70dc87498"
+    },
+    {
+      "path": "mobile-retain-ui-ret-overlay-v1-ab/raw.json",
+      "bytes": 256752,
+      "sha256": "2d94d5ce4b5412da3f9e4d77352f29863e8397609830c341bc2a8ef0d3a3a1de"
+    },
+    {
+      "path": "mobile-retain-warm-ret-overlay-v1/raw.json",
+      "bytes": 2091415,
+      "sha256": "72b74c0ae84e0eae9f0a5b333db83b0bedb59868cde2cf176b20bf44f4489faf"
+    },
+    {
+      "path": "mobile-retain-warm-ret-overlay-v1/run-0.json",
+      "bytes": 365042,
+      "sha256": "78508913cf99b40adcf264fb0126439aed5fb3e3870d12c424767d0ae2a916f9"
+    },
+    {
+      "path": "mobile-retain-warm-ret-overlay-v1/run-1.json",
+      "bytes": 531034,
+      "sha256": "cd3327d382edf4e8f38dff0ac309c7c03f9f72cfac9b77e107b773b6488899d1"
+    },
+    {
+      "path": "mobile-retain-warm-ret-overlay-v1/run-2.json",
+      "bytes": 529902,
+      "sha256": "dbc44018d3a899a55a55e832282e4132a651e4a23e83881f0adf10e537b5789b"
+    },
+    {
+      "path": "mobile-retain-warm-ret-overlay-v1/run-3.json",
+      "bytes": 351990,
+      "sha256": "86d674efe76be2db4d9426dfe7fa27f303a966812dc66e17eb2e79d14148a3ec"
+    },
+    {
+      "path": "native-owned-temporary-capture-inventory-v1.json",
+      "bytes": 27767,
+      "sha256": "076bf4bf62d9805ea34efa56ecf65a8ef3c04e131810adba4a5b7a754d0448e1"
+    },
+    {
+      "path": "other-native-capture-preservation-v1.json",
+      "bytes": 5601,
+      "sha256": "36a302a49d0fc450e72e24050c3028f2667585a7b73226b1e8edb8512357f699"
+    },
+    {
+      "path": "overlay-protected-promotions-live-v2.json",
+      "bytes": 5742,
+      "sha256": "5ef155c46af14d868d8c4182d96938a0d9f2a22839562da0de3fad51cad3bf3d"
+    },
+    {
+      "path": "overlay-protected-promotions-live-v3.json",
+      "bytes": 8968,
+      "sha256": "1e39b5fc45cac3257e6cdb0e21f91993d167fff0188301d400dc0b47395a5b27"
+    },
+    {
+      "path": "overlay-source-main-equivalence-v1.json",
+      "bytes": 431,
+      "sha256": "846040fcd947f905ed473c34763b03d5ce8c7ac0590ceba771c629791a255208"
+    },
+    {
+      "path": "physical-device-readiness-postrelease-v1.json",
+      "bytes": 249,
+      "sha256": "9b83e62fbcec20ee13911165cd32d5085d120ed60f429d6ce959905c968f9770"
+    },
+    {
+      "path": "preserved-canonical-validator-v1.json",
+      "bytes": 1880,
+      "sha256": "e012acf585185a8be10d38386a521127229333c475a23f497c8dcfac29c07a2c"
+    },
+    {
+      "path": "privacy-evidence-audit-v1.json",
+      "bytes": 854,
+      "sha256": "2bdd20f46e1a30bc93be669b7f2747b3d5a706788b4743a7ebf603c8218aa8fe"
+    },
+    {
+      "path": "read-memory-new-deployment-v1.py",
+      "bytes": 1820,
+      "sha256": "a4f863bbb09013f6a9b3ee08fc7d6ab0f1e1ec630d168aba6daa583e9512f0e9"
+    },
+    {
+      "path": "retained-heap-baseline-overlay-v1/raw.json",
+      "bytes": 33648,
+      "sha256": "661498537473a2b4ca4acf62aabcd9a9a75d52f4b9882c3a3c46919e1cced88a"
+    },
+    {
+      "path": "retained-heap-baseline-overlay-v1/sanitized-cpu-profile.json",
+      "bytes": 195130,
+      "sha256": "a548c3185c5c6eb593bb3e32f9653871246fa4f454283d20fc7e10f0c7cf89d5"
+    },
+    {
+      "path": "retained-heap-candidate-overlay-v1/raw.json",
+      "bytes": 34087,
+      "sha256": "089a4c5e709823135ba7ce11b2a31ef3e3579f7c7da2fff06984076deda2d8d3"
+    },
+    {
+      "path": "retained-heap-candidate-overlay-v1/sanitized-cpu-profile.json",
+      "bytes": 177603,
+      "sha256": "a4dc7e36920a3093b7be8edf7f7d2b740c18e15fa678924d41130fbb837d53cf"
+    },
+    {
+      "path": "retained-memory-main-pr-body-v1.md",
+      "bytes": 1197,
+      "sha256": "338d882b507742410c77bc3d5ea348e63f1da140ead8f0ce3914c082163a731b"
+    },
+    {
+      "path": "verify-live-memory-production-v1.mjs",
+      "bytes": 8582,
+      "sha256": "553aeee37e9b1f08442e85c9852c81c66d5cc4d3a2798e0bea8ac8406aa88aa0"
+    }
+  ],
+  "unchangedExistingFiles": 676,
+  "overwrites": 0
+}

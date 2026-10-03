@@ -1,0 +1,150 @@
+{
+  "captures": [
+    {
+      "raw": "direct-physical-memory-pool-order-v6-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-before-a1.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-000.png",
+      "bytes": 1565808,
+      "sha256": "4e9dc6d7fc63be05f0680ee1084d8bca7dc0a80c2ecdcf7a2f563303faf386cc",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-before-a1-cycle-10.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-010.png",
+      "bytes": 2086852,
+      "sha256": "97ed92c0951ba2f3baf9e4296044ef2dcf08130d1bcac440ab0c1b75602e8cd5",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-before-a1-cycle-20.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-020.png",
+      "bytes": 2088241,
+      "sha256": "6f29ab9ca85f6b2deda778402266560b70b06d9e939dd33951392376f83d4121",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-before-a1-cycle-30.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-030.png",
+      "bytes": 2072968,
+      "sha256": "3d6b0f6764aa0dcda4cefbd689f6d5950f32a9f23fd43e514b1e9059b8bbee1b",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-before-a1-cycle-40.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-040.png",
+      "bytes": 2103369,
+      "sha256": "010f5c65a039a6fac3219690b36de89024d4668dee8e1883035f0d2c7c3781d0",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-before-a1-cycle-50.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-050.png",
+      "bytes": 2103732,
+      "sha256": "b69f09c9efb84107b2070232fafd377b623448c99e284bb10f3dff62f2913bdf",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-before-a1-cycle-60.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-before-a1/owned-native-inspected-v1/cycle-060.png",
+      "bytes": 2081549,
+      "sha256": "bd8728a357e779eb0bfbb1a0be44db1700a4b2ebfebfbb75e793d307cff716b7",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-after-b1.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-000.png",
+      "bytes": 1594312,
+      "sha256": "40c3a169337c70a3b4a3aa98656e765bec291d73557ec62a42078ad35407b7d0",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-after-b1-cycle-10.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-010.png",
+      "bytes": 2128413,
+      "sha256": "c31cd7f971d8f15c1d26a8e63b030d1e51ef29beaf6cb804200d3713d06f8b7e",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-after-b1-cycle-20.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-020.png",
+      "bytes": 2128135,
+      "sha256": "c9425f33b1c26473654ced06446ecf34a980fc93b0a425f0f65a34ea7dba9fc9",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-after-b1-cycle-30.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-030.png",
+      "bytes": 2124601,
+      "sha256": "9c219cef794b24d4cecb269b54782b12baf596357c8561a7866adec6361da4ef",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-after-b1-cycle-40.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-040.png",
+      "bytes": 2124050,
+      "sha256": "502ddd1de57d65c25bd40eba967445d6695d733d0dfc4d00bab26d2525ec8b18",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-after-b1-cycle-50.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-050.png",
+      "bytes": 2124050,
+      "sha256": "502ddd1de57d65c25bd40eba967445d6695d733d0dfc4d00bab26d2525ec8b18",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-pool-order-v6-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-pool-order-v6-after-b1-cycle-60.png",
+      "savedPath": "direct-physical-memory-pool-order-v6-after-b1/owned-native-inspected-v1/cycle-060.png",
+      "bytes": 2123140,
+      "sha256": "f5c1df207722400d0080b981ae334dda8682f3c2e008db66525fe42f9cd791bf",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "currentMemorySourceProof": false
+    }
+  ],
+  "inspection": "14-frame contact sheet visually inspected; only anonymous synthetic restaurant map/list, local owned QA URL, native Chrome bars",
+  "sampleUnit": "one before tab and one after tab, existing device/browser; 60dependent cycles each",
+  "cadence": "one native still per10cycles plus initial, 7 pertab; not a temporal flicker detector",
+  "scope": "prior pool-order V6 only; not final retention/overlay production validation",
+  "copiedBeforeDeletingOwnedTempFiles": true,
+  "otherTemporaryFilesTouched": false
+}

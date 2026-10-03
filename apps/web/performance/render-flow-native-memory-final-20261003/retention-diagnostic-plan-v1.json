@@ -1,0 +1,19 @@
+{
+  "baselineBuild": "control-ui-v2",
+  "candidateBuild": "ret-ui-v2",
+  "count": 735,
+  "cpuRate": 4,
+  "cycles": 60,
+  "awayMs": 350,
+  "returnSettleMs": 1000,
+  "gcCheckpoints": [0,30,60],
+  "diagnosticOnly": true,
+  "primaryNaturalHeapBudgetWaived": false,
+  "sourceScope": "UI f85b638c plus candidate pool-order/mobile-retention experimental patch",
+  "hypothesis": "Separate transient allocation from retained growth using equal forced-GC checkpoints outside all primary performance measures; inspect SDK marker ownership and sanitized heap type totals",
+  "profileCycles": [31,35],
+  "rawHeapSnapshotOrStringsSaved": false,
+  "rawProviderDiagnosticsCredentialsOrQueriesSaved": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0
+}

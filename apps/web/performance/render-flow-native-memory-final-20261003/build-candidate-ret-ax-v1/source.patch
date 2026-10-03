@@ -1,0 +1,279 @@
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index 41622fc0..4240a1b0 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -1,4 +1,5 @@
+ 'use client';
++import { syncRetainedMarkerAccessibility } from '@/lib/retained-marker-accessibility';
+ 
+ import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
+ import type { CSSProperties } from "react";
+@@ -2386,8 +2387,8 @@ const NaverMapView = memo(({
+         if (!naver.maps.LatLng || !naver.maps.Point) return;
+         const map = mapInstanceRef.current;
+         const currentZoom = Math.floor(map.getZoom());
+-        const retainSmallExpandedDesktop = !isMobileOrTablet
+-            && expandedClusterRestaurantIds.length > 0 && expandedClusterRestaurantIds.length <= 1000;
++        const retainSmallExpandedSet = expandedClusterRestaurantIds.length > 0
++            && expandedClusterRestaurantIds.length <= 1000;
+         const deferredMarkerRenders: Array<(() => void) | undefined> = [];
+         const markerViewportKey = getNaverMarkerViewportKey(map, mapRef.current);
+ 
+@@ -2401,6 +2402,20 @@ const NaverMapView = memo(({
+         const east = extendedBounds ? Math.round(extendedBounds.east * 10000) : 0;
+         const selectedRestaurantId = selectedRestaurant?.id ?? '';
+         const searchedRestaurantId = markerVisibleActiveSearchedRestaurant?.id ?? '';
++        // Retention avoids measured SDK detach/icon churn. Mobile screen-reader
++        // exposure still follows the existing padded view and selection exceptions.
++        for (const id of expandedClusterRestaurantIds) {
++            const marker = markerPool.get(id);
++            if (!marker) continue;
++            const restaurant = resolveMarkerRestaurant(id);
++            const accessible = !isMobileOrTablet || !retainSmallExpandedSet || Boolean(
++                restaurant && shouldRenderExpandedClusterMarker(
++                    restaurant, selectedRestaurantId, searchedRestaurantId,
++                    extendedBounds, VIEWPORT_FILTER_ENABLED,
++                ),
++            );
++            syncRetainedMarkerAccessibility(marker, accessible);
++        }
+         const previousEarlyMarkerRenderKey = earlyMarkerRenderKeyRef.current;
+         if (
+             previousEarlyMarkerRenderKey !== null &&
+@@ -2635,7 +2650,7 @@ const NaverMapView = memo(({
+ 
+         const nextMarkerRenderSignature = buildMarkerRenderSignature({
+             zoom: currentZoom,
+-            bounds: retainSmallExpandedDesktop ? null : extendedBounds,
++            bounds: retainSmallExpandedSet ? null : extendedBounds,
+             displayRestaurantIds: signatureIds,
+             selectedRestaurantId: selectedRestaurant?.id || null,
+             searchedRestaurantId: markerVisibleActiveSearchedRestaurant?.id || null,
+@@ -2643,7 +2658,7 @@ const NaverMapView = memo(({
+             isRegionalClusterMode: nextIsRegionalClusterMode,
+             isSeoulDistrictMode: nextIsSeoulDistrictMode,
+             markerLayerVersion: composeMarkerLayerVersion(markerKindSignature)
+-                + (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedDesktop ? `:viewport-${markerViewportRevision}` : ''),
++                + (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedSet ? `:viewport-${markerViewportRevision}` : ''),
+             showUserSubmittedMarkers,
+         });
+ 
+@@ -2734,7 +2749,7 @@ const NaverMapView = memo(({
+                 markerVisibleSelectedRestaurant?.id ?? null,
+                 markerVisibleActiveSearchedRestaurant?.id ?? null,
+                 extendedBounds,
+-                VIEWPORT_FILTER_ENABLED && !retainSmallExpandedDesktop,
++                VIEWPORT_FILTER_ENABLED && !retainSmallExpandedSet,
+             );
+         const renderedExpandedSources = new Map<string, Restaurant>();
+         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
+@@ -2757,20 +2772,22 @@ const NaverMapView = memo(({
+                     isMobileOrTablet,
+                 );
+ 
+-                markerPool.acquire(
++                const marker = markerPool.acquire(
+                     restaurant.id,
+                     createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng),
+                     { content: markerContent, anchor: anchorForMarker(restaurant.id, visual.anchor.x, visual.anchor.y) },
+                     map,
+                     () => handleMarkerRestaurantSelection(restaurant)
+                 );
++                syncRetainedMarkerAccessibility(marker,
++                    !isMobileOrTablet || !retainSmallExpandedSet || inInitialViewport);
+                 };
+                 const inInitialViewport = shouldRenderExpandedClusterMarker(
+                     restaurant, markerVisibleSelectedRestaurant?.id ?? null,
+                     markerVisibleActiveSearchedRestaurant?.id ?? null,
+                     extendedBounds, VIEWPORT_FILTER_ENABLED,
+                 );
+-                if (retainSmallExpandedDesktop && !inInitialViewport && !markerPool.has(restaurant.id)) {
++                if (retainSmallExpandedSet && !inInitialViewport && !markerPool.has(restaurant.id)) {
+                     deferredMarkerRenders.push(render);
+                 } else {
+                     render();
+diff --git a/apps/web/lib/marker-pool.ts b/apps/web/lib/marker-pool.ts
+index be94cd27..3167af67 100644
+--- a/apps/web/lib/marker-pool.ts
++++ b/apps/web/lib/marker-pool.ts
+@@ -11,6 +11,8 @@
+  * pool.release('restaurant-123');
+  */
+ 
++import { syncRetainedMarkerAccessibility } from './retained-marker-accessibility';
++
+ type MarkerClickEvent = unknown;
+ 
+ interface MarkerAnchorLike {
+@@ -197,6 +199,9 @@ export class MarkerPool {
+                 (currentAnchor?.y ?? null) !== (nextAnchor?.y ?? null);
+ 
+             if (isContentDifferent || isAnchorDifferent) {
++                // A new SDK icon can replace the app root carrying the mask.
++                // Clear its ownership flag before the renderer masks the new root.
++                syncRetainedMarkerAccessibility(marker, true);
+                 const element = marker.getElement();
+                 const patched = !isAnchorDifferent
+                     && typeof element?.querySelector === 'function'
+@@ -229,6 +234,7 @@ export class MarkerPool {
+         // Detached/evicted markers must not retain a render's restaurant/state
+         // closure or dispatch a queued click for a no-longer-active place.
+         marker.__onClick = undefined;
++        syncRetainedMarkerAccessibility(marker, true);
+         marker.setMap(null);
+         if (this.pool.length < this.MAX_POOL_SIZE) {
+             this.pool.push(marker);
+@@ -245,7 +251,12 @@ export class MarkerPool {
+      * @param ids 마커 ID 배열
+      */
+     public releaseMultiple(ids: string[]): void {
+-        ids.forEach((id) => this.release(id));
++        // The pool is a stack. Reverse a batch's release order so a returning
++        // render in the same ID order reacquires its own icon/position rather
++        // than rebuilding every SDK icon for a different restaurant.
++        for (let index = ids.length - 1; index >= 0; index--) {
++            this.release(ids[index]);
++        }
+     }
+ 
+     /**
+diff --git a/apps/web/lib/retained-marker-accessibility.ts b/apps/web/lib/retained-marker-accessibility.ts
+new file mode 100644
+index 00000000..1013a810
+--- /dev/null
++++ b/apps/web/lib/retained-marker-accessibility.ts
+@@ -0,0 +1,35 @@
++interface RetainedMarkerAccessibility {
++    getElement: () => HTMLElement | null;
++    __tzudongRetainedMarkerAriaHidden?: boolean;
++}
++
++const OWNER_ATTRIBUTE = 'data-tzudong-retained-marker-hidden';
++const MARKER_SELECTOR = '[data-testid="marker"]';
++
++/** Keep retained SDK objects out of the mobile AX tree beyond the padded view. */
++export function syncRetainedMarkerAccessibility(marker: RetainedMarkerAccessibility, visible: boolean): void {
++    const hidden = !visible;
++    if (marker.__tzudongRetainedMarkerAriaHidden === hidden) return;
++    if (!hidden && !marker.__tzudongRetainedMarkerAriaHidden) return;
++
++    const element = marker.getElement();
++    const root = element?.matches?.(MARKER_SELECTOR)
++        ? element
++        : element?.querySelector<HTMLElement>(MARKER_SELECTOR);
++    if (!root) {
++        if (visible) marker.__tzudongRetainedMarkerAriaHidden = false;
++        return;
++    }
++
++    if (hidden) {
++        // Do not claim or later remove an aria-hidden state owned elsewhere.
++        if (root.getAttribute('aria-hidden') !== 'true') {
++            root.setAttribute(OWNER_ATTRIBUTE, 'true');
++            root.setAttribute('aria-hidden', 'true');
++        }
++    } else if (root.getAttribute(OWNER_ATTRIBUTE) === 'true') {
++        root.removeAttribute(OWNER_ATTRIBUTE);
++        root.removeAttribute('aria-hidden');
++    }
++    marker.__tzudongRetainedMarkerAriaHidden = hidden;
++}
+diff --git a/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts b/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts
+index abafa990..ac21a10b 100644
+--- a/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts
++++ b/apps/web/tests-unit/expanded-cluster-flow-invariants.test.ts
+@@ -189,7 +189,7 @@ describe('expanded cluster flow invariants', () => {
+             'previousEarlyMarkerRenderKey.markerViewportRevision === markerViewportRevision',
+         );
+         expect(rendererSource).toContain(
+-            "+ (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedDesktop ? `:viewport-${markerViewportRevision}` : ''),",
++            "+ (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedSet ? `:viewport-${markerViewportRevision}` : ''),",
+         );
+         expect(rendererSource).toContain(
+             'markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant',
+diff --git a/apps/web/tests-unit/marker-pool.test.ts b/apps/web/tests-unit/marker-pool.test.ts
+index 48c5ad44..5760908c 100644
+--- a/apps/web/tests-unit/marker-pool.test.ts
++++ b/apps/web/tests-unit/marker-pool.test.ts
+@@ -321,6 +321,29 @@ describe('marker pool', () => {
+     expect(marker.zIndex).toBe(12);
+   });
+ 
++  test('a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons', () => {
++    const ids = ['restaurant-a', 'restaurant-b', 'restaurant-c'];
++    const clicks: string[] = [];
++    const original = ids.map(id => markerPool.acquire(id, makePosition(id), { content: id }, 'map', () => clicks.push('stale')));
++    markerPool.releaseAll();
++
++    ids.forEach((id, index) => {
++      const marker = markerPool.acquire(id, makePosition(id), { content: id }, 'map', () => clicks.push(id)) as unknown as FakeMarker;
++      expect(marker).toBe(original[index]);
++      expect(marker.setIconCalls).toBe(0);
++      expect(marker.setPositionCalls).toBe(0);
++      marker.clickListener?.({});
++    });
++    expect(clicks).toEqual(ids);
++    expect(markerPool.getStats()).toMatchObject({ created: 3, reused: 3, activeCount: 3, poolSize: 0 });
++
++    markerPool.releaseAll();
++    const changed = markerPool.acquire('new-restaurant', makePosition('new-position'), { content: 'new-icon' }, 'map') as unknown as FakeMarker;
++    expect(changed.getPosition().id).toBe('new-position');
++    expect(changed.getIcon().content).toBe('new-icon');
++    expect(changed.setIconCalls).toBe(1);
++  });
++
+   test('releaseExcept and releaseAll keep only the requested active ids before delayed cleanup', () => {
+     const timers = captureTimeouts();
+     try {
+diff --git a/apps/web/tests-unit/retained-marker-accessibility.test.ts b/apps/web/tests-unit/retained-marker-accessibility.test.ts
+new file mode 100644
+index 00000000..04769a3d
+--- /dev/null
++++ b/apps/web/tests-unit/retained-marker-accessibility.test.ts
+@@ -0,0 +1,46 @@
++import { expect, test } from 'bun:test';
++import { syncRetainedMarkerAccessibility } from '../lib/retained-marker-accessibility';
++
++class AppMarkerElement {
++    attributes = new Map<string, string>();
++    matches(selector: string) { return selector === '[data-testid="marker"]'; }
++    querySelector() { return null; }
++    getAttribute(name: string) { return this.attributes.get(name) ?? null; }
++    setAttribute(name: string, value: string) { this.attributes.set(name, value); }
++    removeAttribute(name: string) { this.attributes.delete(name); }
++}
++function fixture(root: AppMarkerElement | null) {
++    return { getElement: () => root as unknown as HTMLElement | null, __tzudongRetainedMarkerAriaHidden: undefined as boolean | undefined };
++}
++test('outside-padded mask is owned, reversible and has no geometry or focus changes', () => {
++    const root = new AppMarkerElement();root.setAttribute('role','button');root.setAttribute('style','width:28px');
++    const marker = fixture(root);
++    syncRetainedMarkerAccessibility(marker,false);
++    expect(root.getAttribute('aria-hidden')).toBe('true');
++    expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
++    expect(root.getAttribute('role')).toBe('button');expect(root.getAttribute('style')).toBe('width:28px');
++    expect(root.getAttribute('tabindex')).toBeNull();
++    syncRetainedMarkerAccessibility(marker,true);
++    expect(root.getAttribute('aria-hidden')).toBeNull();expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBeNull();
++    expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(false);
++});
++test('does not remove a hidden state owned by another source', () => {
++    const root = new AppMarkerElement();root.setAttribute('aria-hidden','true');const marker=fixture(root);
++    syncRetainedMarkerAccessibility(marker,false);syncRetainedMarkerAccessibility(marker,true);
++    expect(root.getAttribute('aria-hidden')).toBe('true');
++    expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBeNull();
++});
++test('release/replacement cleanup allows the newly generated SDK root to be masked', () => {
++    const before=new AppMarkerElement(),after=new AppMarkerElement();let current=before;
++    const marker={getElement:()=>current as unknown as HTMLElement,__tzudongRetainedMarkerAriaHidden:undefined as boolean|undefined};
++    syncRetainedMarkerAccessibility(marker,false);syncRetainedMarkerAccessibility(marker,true);current=after;
++    syncRetainedMarkerAccessibility(marker,false);
++    expect(before.getAttribute('aria-hidden')).toBeNull();expect(after.getAttribute('aria-hidden')).toBe('true');
++});
++test('SDK root not yet present stays retryable; removed root clears release ownership', () => {
++    const root=new AppMarkerElement();let current:AppMarkerElement|null=null;
++    const marker={getElement:()=>current as unknown as HTMLElement|null,__tzudongRetainedMarkerAriaHidden:undefined as boolean|undefined};
++    syncRetainedMarkerAccessibility(marker,false);expect(marker.__tzudongRetainedMarkerAriaHidden).toBeUndefined();
++    current=root;syncRetainedMarkerAccessibility(marker,false);expect(root.getAttribute('aria-hidden')).toBe('true');
++    current=null;syncRetainedMarkerAccessibility(marker,true);expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(false);
++});

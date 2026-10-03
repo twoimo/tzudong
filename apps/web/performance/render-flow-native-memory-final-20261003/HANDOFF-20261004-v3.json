@@ -1,0 +1,51 @@
+{
+  "observedAt": "2026-10-03T19:35:57.725078+00:00",
+  "goalActive": true,
+  "sourceCommit": "1f29e01c70ca8dea0e3184678eaa2d93361b3075",
+  "ancestryOnlyHead": "361d9f102dcf07a46fe9e0f4cbcbf7a3e337d47e",
+  "developMerged": "e919cdf5fead030073be627e3e5c640f480ecbd4",
+  "sourcePr": "https://github.com/twoimo/tzudong/pull/3106",
+  "sourcePrState": "MERGED",
+  "dataPr": "https://github.com/twoimo/tzudong/pull/3107",
+  "dataPrState": "OPEN, last observed CI in progress",
+  "currentProduction": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0/dpl_7A4fzTdQTHJ4b5qDPEyLihaKtjpG",
+  "memorySourceNotYetDeployed": true,
+  "localVerification": [
+    "32tests/1198assertions,lint,parity2377inputs/0diagnostics,production buildret-ax-v2",
+    "AX464both/outside271\u21920,5returns eachpass",
+    "sameID name/category/badge3 changes pass,stale title0 observed",
+    "empty0/1000full/1001culling pass",
+    "interactions-v4 10checks and4trusted emulated swipespass; v1/v3 failed behind restored list, preserved; v2 syntax failure0samples",
+    "responsive reuse6casespass",
+    "newsourcecold A/A9 and A/B9per735/2000+2warmups, fixedguards pass; latencies slower13.1/27.2ms",
+    "warmABBA4freshprocess\u00d760cycles all fixedguards pass, n2/variant no independentwarmAA/populationCI"
+  ],
+  "authoritativeSummaries": [
+    "mobile-retain-ax-summary-v1.json",
+    "mobile-retain-ax-warm-summary-v1.json",
+    "retained-heap-diagnostic-summary-v1.json"
+  ],
+  "diagnosticScope": "ForcedGC/source CPU profile used unmaskedprototype, not primary masked source; stable capturedSDKobject counts and code/JIT growth help separate transient allocation but not leakabsence",
+  "fieldSource": "field-baseline-readback-20261004-v3.json, old1ab13metricinstances+old2b94two; no current3aeb comparable cohort/gain",
+  "phone": "0ready/0offline at latestreadback; existing currentTLS/USB question pending, no repeated question",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "sourceBranch": "codex/mobile-marker-memory-20261004",
+  "sourceClean": true,
+  "localOwnedServersOrRunningTests": 0,
+  "frozenNeverWrite": [
+    "render-flow-memory-lifetime-20261001",
+    "render-flow-ui-cloudflare-20261003",
+    "cloudflare-free-tier-20261003"
+  ],
+  "mutablePacket": "render-flow-native-memory-final-20261003",
+  "next": [
+    "Read currentPR3107 required/currentCI and review threads, normal exactheadmerge when clean; then create/attach protecteddata-main PR and all required checks.",
+    "Refresh exactVercelproject/productionrollback, copy approval/deploy helpers into mutablepacket (writers in frozenUIroot prohibited), approve exact newmain/deploy once/readREADY+independentwww and actualSDKflows.",
+    "After Galaxy currentunambiguousdevice/model andunlockedallowedforeground, complete matchedChrome/Samsung finalsource andWWW, forceDarkPNG/navflicker; inspect/preserve oldChromeV6temp frames beforedeletion.",
+    "Add pendingcancel/repeatvisit/cachemutation accuracy coverage if unresolved by requiredscope; no broadrepeatofpasses.",
+    "Save all newlygenerated native files and sanitizedprofiles/scripts/raw to separateevidencebranch with existing-byte comparisons, include ignoredsanitizedlogs explicitly; verifyGitblobs.",
+    "Finalize source-boundcanonical scorer/validator,privacy,artifactmaps/externalpins/complete report with10columns andactualfieldlimits when objectivecomplete; keepwholegoalactive until physical/remainingevidence ishandled."
+  ],
+  "blockedAudit": "meaningful independent source/verification/promotion progress remains, not at impasse",
+  "noSourceOrGoalCompletionClaim": true
+}

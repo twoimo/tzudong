@@ -1,0 +1,10 @@
+{
+  "requestedAt": "2026-10-03T22:18:06.760263+00:00",
+  "sourceDeployment": "dpl_HgVcpKfcUh7RG9UeBfRX1ZiN9xsU",
+  "gitSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "command": "Vercel56.5 redeploy exact source deployment --target production --no-wait",
+  "cliExit": 0,
+  "returnedUrl": "https://tzudong-jc5pr8vn4-twoimos-projects.vercel.app",
+  "rawProviderOutputStored": false,
+  "outcomeMustBeReadBack": true
+}

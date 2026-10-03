@@ -1,0 +1,68 @@
+{
+  "sourceSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "frames": [
+    {
+      "path": "live-memory-production-v1/mobile-bottom-0.png",
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    },
+    {
+      "path": "live-memory-production-v1/mobile-bottom-1.png",
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    },
+    {
+      "path": "live-memory-production-v1/mobile-bottom-2.png",
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    },
+    {
+      "path": "live-memory-production-v1/mobile-bottom-3.png",
+      "sha256": "afe7f7cba06fcdd3d6fa4e9ce76c37d567658d3b0e690bf65546c2c35ef2e5d8",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-0.png",
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-1.png",
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-2.png",
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    },
+    {
+      "path": "live-memory-production-v1/tablet-bottom-3.png",
+      "sha256": "361edb1a80f543060d517d6c38425f23b597021a34a073af3bed49e61201242d",
+      "pixelInspected": true,
+      "blackRectangleObserved": false
+    }
+  ],
+  "limit": "8 stable-state anonymous bottom crops after the flow, requested pause150ms plus screenshot latency; actual sampling timestamps unavailable; no transition/video/physical force-dark elimination claim",
+  "mobileGrayMapRectangle": "light gray rectangle observed above the bar at map lower left; origin and temporal behavior not classified by these stills",
+  "physicalDeviceVerified": false,
+  "functionalCases": 3,
+  "functionalChecks": 20,
+  "consoleIncidentCounts": [
+    3,
+    2,
+    2
+  ],
+  "pageErrorCounts": [
+    0,
+    0,
+    0
+  ]
+}

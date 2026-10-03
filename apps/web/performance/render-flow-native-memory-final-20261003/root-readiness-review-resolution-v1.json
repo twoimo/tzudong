@@ -1,0 +1,14 @@
+{
+  "thread": {
+    "id": "PRRT_kwDOQGRyNc6oqwgU",
+    "isResolved": true
+  },
+  "verified3107Head": "29099055147dbd8b896a4d8e4c6d92b5b1162230",
+  "verifiedHelperSha256": "7ce0c4b21dbd3a2052acd7a61377b34d276d70bc2db498867c9c3f6f22710b5c",
+  "actualSdkProof": "delayed-sdk-root-v1/raw.json",
+  "delayedMarkers": 272,
+  "unmaskedObservedFrames": 0,
+  "relatedTests": 35,
+  "sourceInProtectedDevelop": true,
+  "oldSourceSynchronousProofNotUsedAlone": true
+}

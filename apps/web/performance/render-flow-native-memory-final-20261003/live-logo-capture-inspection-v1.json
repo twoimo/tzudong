@@ -1,0 +1,51 @@
+{
+  "screenshots": [
+    {
+      "path": "live-logo-current-v1/desktop-light.png",
+      "sha256": "ba6a705097193130bd1a1cc1626cc7a7622e61ca2a3c8825050ab6d6c8c0df8e",
+      "inspected": true,
+      "blackRectangleObserved": false,
+      "anonymousSearchCropOnly": true
+    },
+    {
+      "path": "live-logo-current-v1/mobile-light.png",
+      "sha256": "54e5e1a1059af3a4aa720aefcf35c1939de7a7647a88e9935196d021a8f423a7",
+      "inspected": true,
+      "blackRectangleObserved": false,
+      "anonymousSearchCropOnly": true
+    },
+    {
+      "path": "live-logo-current-v1/tablet-light.png",
+      "sha256": "97126c24690491d6db204c12da453e35c243bb4289f741e176da3a22514b20ad",
+      "inspected": true,
+      "blackRectangleObserved": false,
+      "anonymousSearchCropOnly": true
+    },
+    {
+      "path": "live-logo-current-v1/desktop-dark.png",
+      "sha256": "b3367d24eea7b65e926edf322f19b16a7b42990ea2a487aee05f38fd1a41190a",
+      "inspected": true,
+      "blackRectangleObserved": false,
+      "anonymousSearchCropOnly": true
+    },
+    {
+      "path": "live-logo-current-v1/mobile-dark.png",
+      "sha256": "eb5efd71e39ab04b3e7f7fdd98bd20c9a14c97fddebcfc19ebe96dfc8e9cc1ca",
+      "inspected": true,
+      "blackRectangleObserved": false,
+      "anonymousSearchCropOnly": true
+    },
+    {
+      "path": "live-logo-current-v1/tablet-dark.png",
+      "sha256": "e713177c6e50da5d9060d43063ccc2bc9616dcfa15227440b5d06648a8d02e7c",
+      "inspected": true,
+      "blackRectangleObserved": false,
+      "anonymousSearchCropOnly": true
+    }
+  ],
+  "cases": 6,
+  "imageEditing": false,
+  "physicalSamsungForceDark": false,
+  "limit": "six still crops; not a temporal flicker observation",
+  "httpPythonDefaultUa": "403; excluded from asset success proof, browser same-origin GET returned200 without security changes"
+}

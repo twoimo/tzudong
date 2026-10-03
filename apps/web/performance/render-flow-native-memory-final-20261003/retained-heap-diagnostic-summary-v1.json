@@ -1,0 +1,64 @@
+{
+  "rawForcedGcDiagnosticOnly": true,
+  "primaryBudgetWaived": false,
+  "fieldAdmitted": 0,
+  "cells": {
+    "baseline": {
+      "raw": "retained-heap-baseline-v1/raw.json",
+      "gcUsedMB": [
+        15.029012,
+        16.873572,
+        17.370652
+      ],
+      "initialToFinalGcGrowthMB": 2.34164,
+      "lastHalfGcGrowthMB": 0.49708,
+      "codeSelfBytesGrowth": 1851956,
+      "objectSelfBytesGrowth": -61424,
+      "capturedSdkMarkersCreated": 464,
+      "capturedSdkMarkersLive": 464,
+      "detachedMarkerAppCallbacks": 0,
+      "sdkSetters": {
+        "setMap": 56146,
+        "setIcon": 28303,
+        "setPosition": 28303
+      },
+      "cpuSampleTimeBySourceMs": {
+        "runtime": 4782.296,
+        "naver_sdk": 3262.701,
+        "compiled_owned_app": 371.804
+      }
+    },
+    "candidate": {
+      "raw": "retained-heap-candidate-v1/raw.json",
+      "gcUsedMB": [
+        16.94562,
+        18.210308,
+        18.920312
+      ],
+      "initialToFinalGcGrowthMB": 1.974692,
+      "lastHalfGcGrowthMB": 0.710004,
+      "codeSelfBytesGrowth": 1860988,
+      "objectSelfBytesGrowth": -68988,
+      "capturedSdkMarkersCreated": 735,
+      "capturedSdkMarkersLive": 735,
+      "detachedMarkerAppCallbacks": 0,
+      "sdkSetters": {
+        "setMap": 737,
+        "setIcon": 736,
+        "setPosition": 736
+      },
+      "cpuSampleTimeBySourceMs": {
+        "runtime": 7410.241,
+        "naver_sdk": 191.146,
+        "compiled_owned_app": 308.781
+      }
+    }
+  },
+  "limitations": [
+    "one fresh process per variant with forcedGC/snapshot/profiler overhead, not a primary performance comparison",
+    "captured public SDK Marker objects stayed bounded; not every SDK object or leak-free proof",
+    "snapshot native self-bytes and Runtime JS usedSize differ; do not sum them as one heap metric",
+    "GC retained growth includes code/JIT and other runtime state; categorical totals do not identify every retainer",
+    "profile URL/body/strings were discarded; sampled source class is diagnostic not complete browser rendering time"
+  ]
+}

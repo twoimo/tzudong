@@ -1,0 +1,98 @@
+{
+  "sourceCommit": "d24f8d633a628518f072c24d76166d388d33c398",
+  "buildReceipt": "build-candidate-ret-overlay-v1/receipt.json",
+  "buildId": "luSeGmDc-A1jCmdBGincB",
+  "checks": [
+    {
+      "path": "lib/naver-map-mobile-offset-helpers.ts",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/home/MobileControlOverlay.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "app/home-runtime-shell.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "app/home-app-globals.css",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/home/home-control-panel.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/layout/MobileBottomNav.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/map/NaverMapView.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "lib/naver-map-render-plan.ts",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "lib/marker-pool.ts",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "package-lock.json",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "lib/web-vitals.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "lib/performance/field-vitals.ts",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "next.config.mjs",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "lib/cluster-marker.ts",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/legal/PrivacyPolicyContent.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/legal/HydratedContactEmail.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/admin/AdminOverviewDashboard.tsx",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "components/map/marker-icons.css",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "lib/deferred-marker-renders.ts",
+      "matchesBuildInput": true
+    },
+    {
+      "path": "lib/retained-marker-accessibility.ts",
+      "matchesBuildInput": true
+    }
+  ],
+  "allInputsMatchCommittedSource": true,
+  "unitTests": {
+    "passes": 36,
+    "assertions": 1214,
+    "runs": "25 tests +11 expanded flow tests; no nonexistent test file counted"
+  },
+  "productionBuild": "passed",
+  "targetedLint": "passed",
+  "compilerParity": "passed, zero diagnostics",
+  "actualSdkOverlayCases": 10,
+  "physicalDeviceVerified": false
+}

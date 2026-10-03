@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-03T22:19:30.804145+00:00",
+  "projectVerified": true,
+  "deployment": {
+    "id": "dpl_D6wm9mbMeZEbLtHM3PFXMctZ9txm",
+    "url": "tzudong-jc5pr8vn4-twoimos-projects.vercel.app",
+    "state": "BUILDING",
+    "target": "production",
+    "gitSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+  },
+  "independentAlias": {
+    "name": "www.tzudong.app",
+    "deploymentId": "dpl_7A4fzTdQTHJ4b5qDPEyLihaKtjpG",
+    "matches": false
+  },
+  "providerDiagnosticsStored": false
+}

@@ -1,0 +1,38 @@
+{
+  "baselineBuild": "control-ui-v2",
+  "candidateBuild": "ret-overlay-v1",
+  "sourceCommit": "d24f8d633a628518f072c24d76166d388d33c398",
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "cyclesPerFreshProcess": 60,
+  "cpuRate": 4,
+  "viewport": [
+    390,
+    844
+  ],
+  "count": 735,
+  "awayMs": 350,
+  "returnSettleMs": 1000,
+  "naturalHeapRegressionTolerancePercent": 20,
+  "primary": "median natural JS heap across the 60 return endpoints per process",
+  "secondary": "peak and final natural JS heap; same 20% guard",
+  "frameMetrics": "passive rAF gap p95/max and gaps above 50ms per finite process window; these are frame observations, not user latency percentiles",
+  "frameRegressionTolerancePercent": 15,
+  "passiveProbe": "no per-rAF DOM or bounds scans; membership serialization after the primary heap read",
+  "sampleUnits": "two fresh desktop Chrome processes per variant, each emulating mobile and containing 60 dependent cycles; zero physical devices",
+  "actualSDK": true,
+  "syntheticREST": true,
+  "cache": "fresh process/context; disabled HTTP cache and service worker; warm in-page cycles",
+  "forcedGC": false,
+  "traceDuringPrimaryMeasure": false,
+  "independentAAWarmRun": false,
+  "causalSpeedOrLeakAbsenceClaimAllowed": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "changeScope": "final whole review-overlay accessibility mask; current source measured independently; fixed prior guards unchanged",
+  "baseSourceCommit": "d24f8d633a628518f072c24d76166d388d33c398"
+}

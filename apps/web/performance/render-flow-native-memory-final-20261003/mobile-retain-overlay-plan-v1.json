@@ -1,0 +1,38 @@
+{
+  "createdAt": "2026-10-03T21:53:58.009241+00:00",
+  "baselineBuild": "control-ui-v2",
+  "candidateBuild": "ret-overlay-v1",
+  "baseSourceCommit": "d24f8d633a628518f072c24d76166d388d33c398",
+  "changeScope": "final whole review-overlay accessibility mask; current source measured independently; fixed prior guards unchanged",
+  "processPairs": 9,
+  "warmupPairs": 2,
+  "aaCounts": [
+    735
+  ],
+  "abCounts": [
+    735,
+    2000
+  ],
+  "cpuRate": 4,
+  "viewport": [
+    390,
+    844
+  ],
+  "network": "unthrottled actual remote Naver SDK and tiles; synthetic REST responses",
+  "cache": "fresh process/context per observation, HTTP cache disabled, service workers blocked/bypassed",
+  "heapEndpointAfterVisibleMs": 600,
+  "retentionMax": 1000,
+  "latencyRegressionTolerancePercent": 15,
+  "naturalHeapRegressionTolerancePercent": 20,
+  "noiseFloorRelativePercent": 15,
+  "aaNoise": "new735 A/A9 pairs before this source A/B; no2000 A/A or gain claim",
+  "sameEndpoint": "trusted cluster click to first of two visible rAFs; natural heap +600ms before membership serialization",
+  "probe": "visible-marker scanning stops at the first display; does not scan retained offscreen markers throughout the endpoint window",
+  "forcedGC": false,
+  "p95": "not reported at n9",
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "warmMemory": "final-source lab warm ABBA separately measured; physical Galaxy remains pending connection",
+  "thresholdsChangedAfterObservation": false,
+  "sourceCommit": "d24f8d633a628518f072c24d76166d388d33c398"
+}

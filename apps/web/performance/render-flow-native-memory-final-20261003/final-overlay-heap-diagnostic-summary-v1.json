@@ -1,0 +1,64 @@
+{
+  "rawForcedGcDiagnosticOnly": true,
+  "primaryBudgetWaived": false,
+  "fieldAdmitted": 0,
+  "cells": {
+    "baseline": {
+      "raw": "retained-heap-baseline-overlay-v1/raw.json",
+      "gcUsedMB": [
+        14.87412,
+        16.831888,
+        17.34304
+      ],
+      "initialToFinalGcGrowthMB": 2.46892,
+      "lastHalfGcGrowthMB": 0.511152,
+      "codeSelfBytesGrowth": 1973656,
+      "objectSelfBytesGrowth": -61592,
+      "capturedSdkMarkersCreated": 464,
+      "capturedSdkMarkersLive": 464,
+      "detachedMarkerAppCallbacks": 0,
+      "sdkSetters": {
+        "setMap": 56146,
+        "setIcon": 28303,
+        "setPosition": 28303
+      },
+      "cpuSampleTimeBySourceMs": {
+        "runtime": 4950.916,
+        "naver_sdk": 2854.95,
+        "compiled_owned_app": 324.426
+      }
+    },
+    "candidate": {
+      "raw": "retained-heap-candidate-overlay-v1/raw.json",
+      "gcUsedMB": [
+        16.955956,
+        18.242064,
+        18.926408
+      ],
+      "initialToFinalGcGrowthMB": 1.970452,
+      "lastHalfGcGrowthMB": 0.684344,
+      "codeSelfBytesGrowth": 1880192,
+      "objectSelfBytesGrowth": -68960,
+      "capturedSdkMarkersCreated": 735,
+      "capturedSdkMarkersLive": 735,
+      "detachedMarkerAppCallbacks": 0,
+      "sdkSetters": {
+        "setMap": 737,
+        "setIcon": 736,
+        "setPosition": 736
+      },
+      "cpuSampleTimeBySourceMs": {
+        "runtime": 7345.319,
+        "naver_sdk": 175.999,
+        "compiled_owned_app": 277.709
+      }
+    }
+  },
+  "limitations": [
+    "one fresh process per variant with forcedGC/snapshot/profiler overhead, not a primary performance comparison",
+    "captured public SDK Marker objects stayed bounded; not every SDK object or leak-free proof",
+    "snapshot native self-bytes and Runtime JS usedSize differ; do not sum them as one heap metric",
+    "GC retained growth includes code/JIT and other runtime state; categorical totals do not identify every retainer",
+    "profile URL/body/strings were discarded; sampled source class is diagnostic not complete browser rendering time"
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "observedAt": "2026-10-03T22:07:17.906Z",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "source": "read-only fixed seven SQL columns; tool framing discarded",
+  "rows": [
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 120,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 2
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "bucket": 4,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 13,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 26,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "bucket": 4,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 19,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 49,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 79,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 12,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "INP",
+      "navigation": "navigate",
+      "bucket": 171,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-03",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 60,
+      "sample_count": 1
+    }
+  ],
+  "sampleUnit": "metric instances, not unique humans",
+  "comparisonCohortsMatched": false,
+  "databaseWrites": 0
+}

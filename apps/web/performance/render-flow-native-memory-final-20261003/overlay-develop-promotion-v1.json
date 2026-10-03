@@ -1,0 +1,16 @@
+{
+  "pullRequest": 3109,
+  "sourceCommit": "d24f8d633a628518f072c24d76166d388d33c398",
+  "mergeCommit": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "protectedCommand": "gh pr merge 3109 --merge --auto; no admin or force",
+  "allCiFinished": false,
+  "downstreamPullRequest": 3107,
+  "downstreamHead": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "resolvedThread": "PRRT_kwDOQGRyNc6orv96",
+  "resolutionBasis": [
+    "committed source inherited by downstream head",
+    "retained-overlay-v2/raw.json: all10states pass",
+    "36unit tests/1214 assertions, production build/lint/parity passed"
+  ],
+  "productionUpdated": false
+}

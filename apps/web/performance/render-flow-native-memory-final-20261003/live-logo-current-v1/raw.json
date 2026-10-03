@@ -1,0 +1,220 @@
+{
+  "sourceSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "browser": "154.0.8037.97",
+  "transport": "real public HTTPS, SDK/data/assets unchanged",
+  "fieldAdmitted": 0,
+  "physicalDevice": false,
+  "cases": [
+    {
+      "name": "desktop",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "cssDarkNotSamsungForced": true,
+      "errors": {
+        "page": 0,
+        "console": 3
+      },
+      "passed": true,
+      "observed": {
+        "status": 200,
+        "contentType": "image/png",
+        "bytes": 24213,
+        "sha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646",
+        "naturalWidth": 129,
+        "alpha": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "background": "rgba(0, 0, 0, 0)",
+        "optimizerBypassed": true,
+        "sdkLoaded": true,
+        "stub": false,
+        "overflow": 0
+      },
+      "screenshot": "desktop-light.png"
+    },
+    {
+      "name": "desktop",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "cssDarkNotSamsungForced": true,
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "passed": true,
+      "observed": {
+        "status": 200,
+        "contentType": "image/png",
+        "bytes": 24213,
+        "sha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646",
+        "naturalWidth": 129,
+        "alpha": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "background": "rgba(0, 0, 0, 0)",
+        "optimizerBypassed": true,
+        "sdkLoaded": true,
+        "stub": false,
+        "overflow": 0
+      },
+      "screenshot": "desktop-dark.png"
+    },
+    {
+      "name": "mobile",
+      "theme": "light",
+      "viewport": {
+        "width": 384,
+        "height": 824
+      },
+      "cssDarkNotSamsungForced": true,
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "passed": true,
+      "observed": {
+        "status": 200,
+        "contentType": "image/png",
+        "bytes": 24213,
+        "sha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646",
+        "naturalWidth": 129,
+        "alpha": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "background": "rgba(0, 0, 0, 0)",
+        "optimizerBypassed": true,
+        "sdkLoaded": true,
+        "stub": false,
+        "overflow": 0
+      },
+      "screenshot": "mobile-light.png"
+    },
+    {
+      "name": "mobile",
+      "theme": "dark",
+      "viewport": {
+        "width": 384,
+        "height": 824
+      },
+      "cssDarkNotSamsungForced": true,
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "passed": true,
+      "observed": {
+        "status": 200,
+        "contentType": "image/png",
+        "bytes": 24213,
+        "sha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646",
+        "naturalWidth": 129,
+        "alpha": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "background": "rgba(0, 0, 0, 0)",
+        "optimizerBypassed": true,
+        "sdkLoaded": true,
+        "stub": false,
+        "overflow": 0
+      },
+      "screenshot": "mobile-dark.png"
+    },
+    {
+      "name": "tablet",
+      "theme": "light",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "cssDarkNotSamsungForced": true,
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "passed": true,
+      "observed": {
+        "status": 200,
+        "contentType": "image/png",
+        "bytes": 24213,
+        "sha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646",
+        "naturalWidth": 129,
+        "alpha": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "background": "rgba(0, 0, 0, 0)",
+        "optimizerBypassed": true,
+        "sdkLoaded": true,
+        "stub": false,
+        "overflow": 0
+      },
+      "screenshot": "tablet-light.png"
+    },
+    {
+      "name": "tablet",
+      "theme": "dark",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "cssDarkNotSamsungForced": true,
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "passed": true,
+      "observed": {
+        "status": 200,
+        "contentType": "image/png",
+        "bytes": 24213,
+        "sha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646",
+        "naturalWidth": 129,
+        "alpha": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "background": "rgba(0, 0, 0, 0)",
+        "optimizerBypassed": true,
+        "sdkLoaded": true,
+        "stub": false,
+        "overflow": 0
+      },
+      "screenshot": "tablet-dark.png"
+    }
+  ],
+  "passed": true
+}

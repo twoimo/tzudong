@@ -1,0 +1,37 @@
+{
+  "createdAt": "2026-10-04 continuation; before new-source measurements",
+  "baselineBuild": "control-ui-v2",
+  "candidateBuild": "ret-root-v1",
+  "baseSourceCommit": "e919cdf5fead030073be627e3e5c640f480ecbd4",
+  "changeScope": "new exact-source pending root MutationObserver lifecycle correction; no previous source metrics relabeled",
+  "processPairs": 9,
+  "warmupPairs": 2,
+  "aaCounts": [
+    735
+  ],
+  "abCounts": [
+    735,
+    2000
+  ],
+  "cpuRate": 4,
+  "viewport": [
+    390,
+    844
+  ],
+  "network": "unthrottled actual remote Naver SDK and tiles; synthetic REST responses",
+  "cache": "fresh process/context per observation, HTTP cache disabled, service workers blocked/bypassed",
+  "heapEndpointAfterVisibleMs": 600,
+  "retentionMax": 1000,
+  "latencyRegressionTolerancePercent": 15,
+  "naturalHeapRegressionTolerancePercent": 20,
+  "noiseFloorRelativePercent": 15,
+  "aaNoise": "new735 A/A9 pairs before this source A/B; no2000 A/A or gain claim",
+  "sameEndpoint": "trusted cluster click to first of two visible rAFs; natural heap +600ms before membership serialization",
+  "probe": "visible-marker scanning stops at the first display; does not scan retained offscreen markers throughout the endpoint window",
+  "forcedGC": false,
+  "p95": "not reported at n9",
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "warmMemory": "physical Samsung V7 finite-window guards remain separate; this lab run does not replace physical Chrome confirmation",
+  "thresholdsChangedAfterObservation": false
+}

@@ -1,0 +1,27 @@
+{
+  "tool": "mcp__codex_apps__supabase_execute_sql",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "query": "select observed_day, release_sha, device, metric, navigation, bucket, sample_count from public.app_web_vitals_histogram where observed_day >= date '2026-10-01' order by observed_day, release_sha, device, metric, bucket limit 160;",
+  "readOnly": true,
+  "columns": [
+    "observed_day",
+    "release_sha",
+    "device",
+    "metric",
+    "navigation",
+    "bucket",
+    "sample_count"
+  ],
+  "discard": [
+    "framing instructions",
+    "all nonwhitelisted data",
+    "headers",
+    "raw errors"
+  ],
+  "sampleUnit": "metric instances, not unique humans",
+  "comparisonCohortsMatched": false,
+  "decoder": "decode content JSON/result wrapper, then balanced JSON array; accept only objects containing all fixed columns and validate day/SHA/device/metric/bucket/count types",
+  "firstDecoderFailuresExcluded": true,
+  "databaseQueriesExecuted": 2,
+  "databaseWrites": 0
+}

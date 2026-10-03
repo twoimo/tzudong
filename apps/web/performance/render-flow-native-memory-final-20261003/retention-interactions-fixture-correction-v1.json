@@ -1,0 +1,9 @@
+{
+  "sourceChanged": false,
+  "v1AndV3ExcludedAsFullPass": true,
+  "diagnostic": "detail closed; restored visible marker list sheet present; its close button visible; filter action was behind that sheet",
+  "evidence": "retention-interactions-v3/raw.json and inspected failed-synthetic-flow.png",
+  "v4Change": "explicit trusted click on the observed list close button before underlying filter, then retain same empty/reset/search assertions",
+  "uiDesignAltered": false,
+  "bodyOrProviderMessagesStored": false
+}

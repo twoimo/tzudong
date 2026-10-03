@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-10-03T20:48:24.260911+00:00",
+  "goalActive": true,
+  "previousGoalTurn": "progress",
+  "thisTurn": "progress: newroot readiness cancellation/normalflows/sourcecommitPR, freshcoldA/A and A/B complete, warm process live",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "sourceBranch": "codex/retained-marker-root-readiness-20261004",
+  "sourceCommit": "9b9b590319bc8547d2b24ee92afecf47a391d7af",
+  "sourcePr": "https://github.com/twoimo/tzudong/pull/3108",
+  "sourcePrDraft": true,
+  "dataPr3107": "BLOCKED until correction sourcepromoted/reviewresolved",
+  "currentProductionUnchanged": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "newBuild": "ret-root-v1 /ltP9IyM_5c1MkpejcIQon",
+  "relatedChecks": "35tests/1209assert,l int/parity2377/0diagnostics,productionbuild,delayed272SDKmarkers0unmaskedpaintframes,10interactions/4trustedswipes,sixresponsive casespass",
+  "coldSummary": "mobile-retain-root-summary-v1.json",
+  "coldGuardsPassed": true,
+  "coldLatencies": "735:427.4\u2192412.9ms, unproven gain;2000:395.3\u2192428.6ms,8.424%slower within15%guard",
+  "liveOwnedExecSession": 7123,
+  "liveCommand": "measure-mobile-retain-root-warm-v1.mjs ret-root-v1",
+  "liveOutput": "mobile-retain-warm-ret-root-v1/run-*.json and terminalraw.json",
+  "verifiedLiveAt": "session returned Script running on start; poll exact7123 and inspectactualraw before anyrestart, do not overlapheavybrowser/build primarymeasures",
+  "next": [
+    "Finishsame-sourcewarmABBA4\u00d760 and identical20%heap/15%frame aggregate; do notreuseoldsource stats.",
+    "Afterbenchmark, runactualSDK cancellation fixture pendingroot thenfilter/unmount ifstillrequired; sharedobserver scanspendingpoolonmutations22740getterchecks incontrolledrarepath, not a productionperformance claim.",
+    "Review3108CI/conversations, readyandnormalexactheadmergewhenverified, freshrefs; correction mustenterdevelopbefore3107 reviewthreadPRRT_kwDOQGRyNc6oqwgUresolved andnormaldata/main promotions.",
+    "Freshproductionrollback/exactproject/exactguard/deploy/readREADY+www+actualSDK; copy writerhelpersfromfrozenUIto mutableRoot beforeexecution.",
+    "PhysicalGalaxy0ready remains; existingcurrentendpoint/USB questionpending, do notduplicate; finishChrome/Samsung/forceDark/navpixel whenunambiguousvalidmodel/unlockedallowedforeground.",
+    "Checkpointnewnativefiles toseparateevidencebranch withbyteequality,forceexactsanitizedlogsasneeded; frozenparent/UI/CF unchanged.",
+    "Finalizecanonical/sourceboundreport/privacy/maps/extern al pins/Gitblobs whenfullobjectiveproven; fieldsamplecohortsremaininadequate, do notclaimfieldgains."
+  ],
+  "frozenNeverWrite": [
+    "render-flow-memory-lifetime-20261001",
+    "render-flow-ui-cloudflare-20261003",
+    "cloudflare-free-tier-20261003"
+  ],
+  "nativeMutableRoot": "render-flow-native-memory-final-20261003",
+  "noGlobalCompletion": true,
+  "blockedAudit": "meaningful independentpromotion/evidenceworkremains,notatimpasse"
+}

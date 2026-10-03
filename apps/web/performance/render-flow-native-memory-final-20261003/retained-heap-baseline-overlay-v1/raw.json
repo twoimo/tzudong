@@ -1,0 +1,1479 @@
+{
+  "kind": "baseline",
+  "planSha256": "3168f9bad22f746f138b03e2b6a256b5aca216494c38b8da789bad9c70688d33",
+  "startedAt": "2026-10-03T22:36:26.827Z",
+  "buildId": "OPLC07eoTru-sYWmlcoKd",
+  "inputs": [
+    {
+      "original": "lib/naver-map-mobile-offset-helpers.ts",
+      "sha256": "cc72d2ce8fb94a574cb605cc7962ecb036855aba7df8a94d94d012e3f24c21ea"
+    },
+    {
+      "original": "components/home/MobileControlOverlay.tsx",
+      "sha256": "a9dcf1291296377cf84be512e87473d9d7b4bb9b1c6da964b9494bd15cebefe4"
+    },
+    {
+      "original": "app/home-runtime-shell.tsx",
+      "sha256": "7fdfd2cec739e5fbc14791b247e8c907ec1af6ac530b50323d94db28ecccf602"
+    },
+    {
+      "original": "app/home-app-globals.css",
+      "sha256": "6755130f075ce73901c105491544fed256d7dea9315b3f8b9fcbfb9959c03368"
+    },
+    {
+      "original": "components/home/home-control-panel.tsx",
+      "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+    },
+    {
+      "original": "components/layout/MobileBottomNav.tsx",
+      "sha256": "8619057c625f84f78eaf3f1f96fc29327313cd90a0c6980aec5d0b3153737977"
+    },
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "53c421ac4580aee00c5d43b1ffcd25333554b20f2ab5e9ac419e90fdf707060f"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "b088f3e3bf88db112aec8aaf02943c9f66f7391ef7f52e33586b5c5bd649ef7d"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "7030bd17e667d75834325fc028897c57479a840917848e0a69ab99ff1c7d43f0"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "63ed7540499f5d282ec8a7c6301210e6b07d711c7b77f648ca5051d7ce58fc59"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    },
+    {
+      "original": "components/admin/AdminOverviewDashboard.tsx",
+      "sha256": "8e44714ee3e6a46bd11dce35d745bcaffc7f93fbe5b374b952606629015efc6a"
+    }
+  ],
+  "checkpoints": [
+    {
+      "cycle": 0,
+      "natural": {
+        "usedSize": 15312364,
+        "totalSize": 35717120,
+        "embedderHeapUsedSize": 12273088,
+        "backingStorageSize": 1867701
+      },
+      "gc": {
+        "usedSize": 14874120,
+        "totalSize": 16056320,
+        "embedderHeapUsedSize": 8546112,
+        "backingStorageSize": 1742730
+      },
+      "ownership": {
+        "created": 464,
+        "live": 464,
+        "attached": 464,
+        "detached": 0,
+        "detachedWithAppClick": 0,
+        "otherMap": 0,
+        "setters": {
+          "setMap": 466,
+          "setIcon": 465,
+          "setPosition": 465
+        },
+        "mapCreates": 1
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 1
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4174
+        },
+        {
+          "name": "Nodes",
+          "value": 3635
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 14917396
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 16318464
+        }
+      ],
+      "heapTypeTotals": {
+        "synthetic": {
+          "count": 32,
+          "selfBytes": 0
+        },
+        "native": {
+          "count": 130848,
+          "selfBytes": 12086625
+        },
+        "string": {
+          "count": 80137,
+          "selfBytes": 2455280
+        },
+        "object shape": {
+          "count": 17423,
+          "selfBytes": 821976
+        },
+        "code": {
+          "count": 71747,
+          "selfBytes": 4974948
+        },
+        "array": {
+          "count": 21341,
+          "selfBytes": 1726532
+        },
+        "number": {
+          "count": 36433,
+          "selfBytes": 207600
+        },
+        "symbol": {
+          "count": 150,
+          "selfBytes": 1520
+        },
+        "object": {
+          "count": 73772,
+          "selfBytes": 2088512
+        },
+        "closure": {
+          "count": 40134,
+          "selfBytes": 1164548
+        },
+        "concatenated string": {
+          "count": 16979,
+          "selfBytes": 339580
+        },
+        "regexp": {
+          "count": 102,
+          "selfBytes": 2448
+        },
+        "sliced string": {
+          "count": 354,
+          "selfBytes": 7080
+        }
+      },
+      "domTypeTotals": {
+        "HTMLDocument": {
+          "count": 1,
+          "selfBytes": 3368
+        },
+        "Text": {
+          "count": 129,
+          "selfBytes": 11024
+        },
+        "SVGSVGElement": {
+          "count": 55,
+          "selfBytes": 10120
+        }
+      },
+      "detachedDomNamedNodes": 0,
+      "snapshotStringsOrGraphNotRetained": true
+    },
+    {
+      "cycle": 30,
+      "natural": {
+        "usedSize": 37575788,
+        "totalSize": 97943552,
+        "embedderHeapUsedSize": 30358176,
+        "backingStorageSize": 2035415
+      },
+      "gc": {
+        "usedSize": 16831888,
+        "totalSize": 17891328,
+        "embedderHeapUsedSize": 9088744,
+        "backingStorageSize": 2017864
+      },
+      "ownership": {
+        "created": 464,
+        "live": 464,
+        "attached": 464,
+        "detached": 0,
+        "detachedWithAppClick": 0,
+        "otherMap": 0,
+        "setters": {
+          "setMap": 28306,
+          "setIcon": 14383,
+          "setPosition": 14383
+        },
+        "mapCreates": 1
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4174
+        },
+        {
+          "name": "Nodes",
+          "value": 3627
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 16878200
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 18153472
+        }
+      ],
+      "heapTypeTotals": {
+        "synthetic": {
+          "count": 32,
+          "selfBytes": 0
+        },
+        "native": {
+          "count": 135687,
+          "selfBytes": 13036274
+        },
+        "string": {
+          "count": 88037,
+          "selfBytes": 2658140
+        },
+        "object shape": {
+          "count": 17570,
+          "selfBytes": 829092
+        },
+        "code": {
+          "count": 76359,
+          "selfBytes": 6348832
+        },
+        "array": {
+          "count": 22681,
+          "selfBytes": 2330120
+        },
+        "number": {
+          "count": 36547,
+          "selfBytes": 208860
+        },
+        "symbol": {
+          "count": 150,
+          "selfBytes": 1520
+        },
+        "object": {
+          "count": 73646,
+          "selfBytes": 2024180
+        },
+        "closure": {
+          "count": 40111,
+          "selfBytes": 1163800
+        },
+        "concatenated string": {
+          "count": 6675,
+          "selfBytes": 133500
+        },
+        "regexp": {
+          "count": 102,
+          "selfBytes": 2448
+        },
+        "sliced string": {
+          "count": 327,
+          "selfBytes": 6540
+        }
+      },
+      "domTypeTotals": {
+        "SVGSVGElement": {
+          "count": 55,
+          "selfBytes": 10120
+        },
+        "Text": {
+          "count": 127,
+          "selfBytes": 10832
+        },
+        "HTMLDocument": {
+          "count": 2,
+          "selfBytes": 6720
+        }
+      },
+      "detachedDomNamedNodes": 0,
+      "snapshotStringsOrGraphNotRetained": true
+    },
+    {
+      "cycle": 60,
+      "natural": {
+        "usedSize": 34546232,
+        "totalSize": 100745216,
+        "embedderHeapUsedSize": 88082064,
+        "backingStorageSize": 2035416
+      },
+      "gc": {
+        "usedSize": 17343040,
+        "totalSize": 19202048,
+        "embedderHeapUsedSize": 9684016,
+        "backingStorageSize": 2017854
+      },
+      "ownership": {
+        "created": 464,
+        "live": 464,
+        "attached": 464,
+        "detached": 0,
+        "detachedWithAppClick": 0,
+        "otherMap": 0,
+        "setters": {
+          "setMap": 56146,
+          "setIcon": 28303,
+          "setPosition": 28303
+        },
+        "mapCreates": 1
+      },
+      "metrics": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4174
+        },
+        {
+          "name": "Nodes",
+          "value": 3627
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 17390652
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 19464192
+        }
+      ],
+      "heapTypeTotals": {
+        "synthetic": {
+          "count": 32,
+          "selfBytes": 0
+        },
+        "native": {
+          "count": 138006,
+          "selfBytes": 13519674
+        },
+        "string": {
+          "count": 81343,
+          "selfBytes": 2549428
+        },
+        "object shape": {
+          "count": 17575,
+          "selfBytes": 825100
+        },
+        "code": {
+          "count": 80791,
+          "selfBytes": 6948604
+        },
+        "array": {
+          "count": 22711,
+          "selfBytes": 2331156
+        },
+        "number": {
+          "count": 36668,
+          "selfBytes": 210312
+        },
+        "symbol": {
+          "count": 150,
+          "selfBytes": 1520
+        },
+        "object": {
+          "count": 73765,
+          "selfBytes": 2026920
+        },
+        "closure": {
+          "count": 40140,
+          "selfBytes": 1164488
+        },
+        "concatenated string": {
+          "count": 6675,
+          "selfBytes": 133500
+        },
+        "regexp": {
+          "count": 102,
+          "selfBytes": 2448
+        },
+        "sliced string": {
+          "count": 327,
+          "selfBytes": 6540
+        }
+      },
+      "domTypeTotals": {
+        "SVGSVGElement": {
+          "count": 55,
+          "selfBytes": 10120
+        },
+        "Text": {
+          "count": 127,
+          "selfBytes": 10832
+        },
+        "HTMLDocument": {
+          "count": 2,
+          "selfBytes": 6720
+        }
+      },
+      "detachedDomNamedNodes": 0,
+      "snapshotStringsOrGraphNotRetained": true
+    }
+  ],
+  "cycles": [
+    {
+      "cycle": 1,
+      "heap": {
+        "usedSize": 22517624,
+        "totalSize": 29884416,
+        "embedderHeapUsedSize": 19315856,
+        "backingStorageSize": 2033621
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 2,
+      "heap": {
+        "usedSize": 17218796,
+        "totalSize": 40157184,
+        "embedderHeapUsedSize": 9085240,
+        "backingStorageSize": 2017921
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 3,
+      "heap": {
+        "usedSize": 23561256,
+        "totalSize": 58949632,
+        "embedderHeapUsedSize": 28449064,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 4,
+      "heap": {
+        "usedSize": 30506336,
+        "totalSize": 60702720,
+        "embedderHeapUsedSize": 47646640,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 5,
+      "heap": {
+        "usedSize": 17531048,
+        "totalSize": 62439424,
+        "embedderHeapUsedSize": 10170112,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 6,
+      "heap": {
+        "usedSize": 36355044,
+        "totalSize": 81444864,
+        "embedderHeapUsedSize": 29186112,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 7,
+      "heap": {
+        "usedSize": 25213360,
+        "totalSize": 98664448,
+        "embedderHeapUsedSize": 48601632,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 8,
+      "heap": {
+        "usedSize": 44284276,
+        "totalSize": 99057664,
+        "embedderHeapUsedSize": 67398464,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 9,
+      "heap": {
+        "usedSize": 17666776,
+        "totalSize": 96256000,
+        "embedderHeapUsedSize": 11264248,
+        "backingStorageSize": 2017913
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 10,
+      "heap": {
+        "usedSize": 36582808,
+        "totalSize": 96649216,
+        "embedderHeapUsedSize": 29945136,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 11,
+      "heap": {
+        "usedSize": 25437316,
+        "totalSize": 98926592,
+        "embedderHeapUsedSize": 48914040,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 12,
+      "heap": {
+        "usedSize": 44514244,
+        "totalSize": 99581952,
+        "embedderHeapUsedSize": 68209616,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 13,
+      "heap": {
+        "usedSize": 17830040,
+        "totalSize": 96256000,
+        "embedderHeapUsedSize": 11012208,
+        "backingStorageSize": 2017958
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 14,
+      "heap": {
+        "usedSize": 36588132,
+        "totalSize": 96649216,
+        "embedderHeapUsedSize": 29915912,
+        "backingStorageSize": 2035415
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 15,
+      "heap": {
+        "usedSize": 25151156,
+        "totalSize": 99188736,
+        "embedderHeapUsedSize": 49220928,
+        "backingStorageSize": 2035415
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 16,
+      "heap": {
+        "usedSize": 44065292,
+        "totalSize": 99581952,
+        "embedderHeapUsedSize": 68442856,
+        "backingStorageSize": 2035415
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 17,
+      "heap": {
+        "usedSize": 17839408,
+        "totalSize": 96256000,
+        "embedderHeapUsedSize": 10891464,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 18,
+      "heap": {
+        "usedSize": 36400344,
+        "totalSize": 96649216,
+        "embedderHeapUsedSize": 30026064,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 19,
+      "heap": {
+        "usedSize": 25192700,
+        "totalSize": 99188736,
+        "embedderHeapUsedSize": 49104272,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 20,
+      "heap": {
+        "usedSize": 44085440,
+        "totalSize": 99844096,
+        "embedderHeapUsedSize": 68170424,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 21,
+      "heap": {
+        "usedSize": 17902076,
+        "totalSize": 96518144,
+        "embedderHeapUsedSize": 10922080,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 22,
+      "heap": {
+        "usedSize": 36423816,
+        "totalSize": 96911360,
+        "embedderHeapUsedSize": 30278664,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 23,
+      "heap": {
+        "usedSize": 25186620,
+        "totalSize": 99450880,
+        "embedderHeapUsedSize": 48837576,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 24,
+      "heap": {
+        "usedSize": 44048952,
+        "totalSize": 99844096,
+        "embedderHeapUsedSize": 68116424,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 25,
+      "heap": {
+        "usedSize": 17944028,
+        "totalSize": 96256000,
+        "embedderHeapUsedSize": 10966440,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 26,
+      "heap": {
+        "usedSize": 36505924,
+        "totalSize": 96649216,
+        "embedderHeapUsedSize": 30203240,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 27,
+      "heap": {
+        "usedSize": 25367208,
+        "totalSize": 99188736,
+        "embedderHeapUsedSize": 49041208,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 28,
+      "heap": {
+        "usedSize": 44189952,
+        "totalSize": 99581952,
+        "embedderHeapUsedSize": 68148984,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 29,
+      "heap": {
+        "usedSize": 18007388,
+        "totalSize": 97042432,
+        "embedderHeapUsedSize": 11185400,
+        "backingStorageSize": 2017973
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 30,
+      "heap": {
+        "usedSize": 36407852,
+        "totalSize": 97435648,
+        "embedderHeapUsedSize": 30358176,
+        "backingStorageSize": 2035415
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 31,
+      "heap": {
+        "usedSize": 21497432,
+        "totalSize": 28835840,
+        "embedderHeapUsedSize": 20170832,
+        "backingStorageSize": 2035167
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 32,
+      "heap": {
+        "usedSize": 18328068,
+        "totalSize": 41467904,
+        "embedderHeapUsedSize": 10087832,
+        "backingStorageSize": 2017921
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 33,
+      "heap": {
+        "usedSize": 23757796,
+        "totalSize": 51347456,
+        "embedderHeapUsedSize": 29336328,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 34,
+      "heap": {
+        "usedSize": 29591372,
+        "totalSize": 62750720,
+        "embedderHeapUsedSize": 48692088,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 35,
+      "heap": {
+        "usedSize": 35448696,
+        "totalSize": 66600960,
+        "embedderHeapUsedSize": 67840440,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 36,
+      "heap": {
+        "usedSize": 18395868,
+        "totalSize": 65585152,
+        "embedderHeapUsedSize": 11284840,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 37,
+      "heap": {
+        "usedSize": 36933760,
+        "totalSize": 84066304,
+        "embedderHeapUsedSize": 30419696,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 38,
+      "heap": {
+        "usedSize": 25949816,
+        "totalSize": 101810176,
+        "embedderHeapUsedSize": 49316920,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 39,
+      "heap": {
+        "usedSize": 44885364,
+        "totalSize": 102203392,
+        "embedderHeapUsedSize": 68467128,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 40,
+      "heap": {
+        "usedSize": 33491512,
+        "totalSize": 102907904,
+        "embedderHeapUsedSize": 87513384,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 41,
+      "heap": {
+        "usedSize": 18483104,
+        "totalSize": 97304576,
+        "embedderHeapUsedSize": 11770280,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 42,
+      "heap": {
+        "usedSize": 37046100,
+        "totalSize": 97697792,
+        "embedderHeapUsedSize": 31147112,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 43,
+      "heap": {
+        "usedSize": 26018404,
+        "totalSize": 98402304,
+        "embedderHeapUsedSize": 49822624,
+        "backingStorageSize": 2035416
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 44,
+      "heap": {
+        "usedSize": 44930168,
+        "totalSize": 99057664,
+        "embedderHeapUsedSize": 69040992,
+        "backingStorageSize": 2035416
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 45,
+      "heap": {
+        "usedSize": 33349236,
+        "totalSize": 99762176,
+        "embedderHeapUsedSize": 87887008,
+        "backingStorageSize": 2035416
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 46,
+      "heap": {
+        "usedSize": 18580936,
+        "totalSize": 98091008,
+        "embedderHeapUsedSize": 11893192,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 47,
+      "heap": {
+        "usedSize": 37055580,
+        "totalSize": 98484224,
+        "embedderHeapUsedSize": 31148728,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 48,
+      "heap": {
+        "usedSize": 25905376,
+        "totalSize": 99188736,
+        "embedderHeapUsedSize": 50015904,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 49,
+      "heap": {
+        "usedSize": 44712480,
+        "totalSize": 99581952,
+        "embedderHeapUsedSize": 69034432,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 50,
+      "heap": {
+        "usedSize": 33017108,
+        "totalSize": 99975168,
+        "embedderHeapUsedSize": 88146768,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 51,
+      "heap": {
+        "usedSize": 18637768,
+        "totalSize": 98353152,
+        "embedderHeapUsedSize": 11905744,
+        "backingStorageSize": 2017911
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 52,
+      "heap": {
+        "usedSize": 37149392,
+        "totalSize": 98746368,
+        "embedderHeapUsedSize": 31325472,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 53,
+      "heap": {
+        "usedSize": 25987048,
+        "totalSize": 99450880,
+        "embedderHeapUsedSize": 49994144,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 54,
+      "heap": {
+        "usedSize": 44854336,
+        "totalSize": 100106240,
+        "embedderHeapUsedSize": 69115496,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 55,
+      "heap": {
+        "usedSize": 33386336,
+        "totalSize": 100810752,
+        "embedderHeapUsedSize": 88089912,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 56,
+      "heap": {
+        "usedSize": 18764536,
+        "totalSize": 98353152,
+        "embedderHeapUsedSize": 12094104,
+        "backingStorageSize": 2017896
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 57,
+      "heap": {
+        "usedSize": 37217476,
+        "totalSize": 98746368,
+        "embedderHeapUsedSize": 31177080,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 58,
+      "heap": {
+        "usedSize": 26133492,
+        "totalSize": 99139584,
+        "embedderHeapUsedSize": 50040232,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 59,
+      "heap": {
+        "usedSize": 44916456,
+        "totalSize": 99532800,
+        "embedderHeapUsedSize": 69020328,
+        "backingStorageSize": 2035353
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    },
+    {
+      "cycle": 60,
+      "heap": {
+        "usedSize": 33379044,
+        "totalSize": 100237312,
+        "embedderHeapUsedSize": 88082064,
+        "backingStorageSize": 2035416
+      },
+      "state": {
+        "expected": 464,
+        "markers": 464,
+        "missing": 0,
+        "duplicates": 0,
+        "mapCreates": 1,
+        "visibility": "visible"
+      }
+    }
+  ],
+  "diagnosticOnly": true,
+  "forcedGC": true,
+  "primaryBudgetWaived": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "passed": true,
+  "browser": "154.0.8037.97",
+  "errors": {
+    "page": 0,
+    "console": 2
+  },
+  "requests": {
+    "restaurant": 2,
+    "otherFixture": 63
+  },
+  "endedAt": "2026-10-03T22:38:13.942Z"
+}

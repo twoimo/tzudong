@@ -1,0 +1,7 @@
+{
+  "validSamples": 0,
+  "script": "verify-retention-interactions-v2.mjs",
+  "reason": "syntax error in diagnostic-only parenthesis; no page/runtime operation executed",
+  "correctedScript": "verify-retention-interactions-v3.mjs",
+  "assertionsUnchanged": true
+}

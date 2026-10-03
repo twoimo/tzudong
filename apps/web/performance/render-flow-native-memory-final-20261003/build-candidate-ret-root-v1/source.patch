@@ -1,0 +1,169 @@
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index 4240a1b0..5f9637ef 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -2414,7 +2414,7 @@ const NaverMapView = memo(({
+                     extendedBounds, VIEWPORT_FILTER_ENABLED,
+                 ),
+             );
+-            syncRetainedMarkerAccessibility(marker, accessible);
++            syncRetainedMarkerAccessibility(marker, accessible, mapRef.current);
+         }
+         const previousEarlyMarkerRenderKey = earlyMarkerRenderKeyRef.current;
+         if (
+@@ -2780,7 +2780,7 @@ const NaverMapView = memo(({
+                     () => handleMarkerRestaurantSelection(restaurant)
+                 );
+                 syncRetainedMarkerAccessibility(marker,
+-                    !isMobileOrTablet || !retainSmallExpandedSet || inInitialViewport);
++                    !isMobileOrTablet || !retainSmallExpandedSet || inInitialViewport, mapRef.current);
+                 };
+                 const inInitialViewport = shouldRenderExpandedClusterMarker(
+                     restaurant, markerVisibleSelectedRestaurant?.id ?? null,
+diff --git a/apps/web/lib/retained-marker-accessibility.ts b/apps/web/lib/retained-marker-accessibility.ts
+index 1a40f4f3..110b1935 100644
+--- a/apps/web/lib/retained-marker-accessibility.ts
++++ b/apps/web/lib/retained-marker-accessibility.ts
+@@ -6,9 +6,60 @@ interface RetainedMarkerAccessibility {
+ const OWNER_ATTRIBUTE = 'data-tzudong-retained-marker-hidden';
+ const MARKER_SELECTOR = '[data-testid="marker"]';
+ 
++interface PendingRootRegistry {
++    target: HTMLElement;
++    markers: Set<RetainedMarkerAccessibility>;
++    observer: MutationObserver;
++}
++
++const rootTargets = new WeakMap<RetainedMarkerAccessibility, HTMLElement>();
++const pendingRoots = new WeakMap<RetainedMarkerAccessibility, PendingRootRegistry>();
++const rootRegistries = new WeakMap<HTMLElement, PendingRootRegistry>();
++
++function cancelPendingRoot(marker: RetainedMarkerAccessibility): void {
++    const registry = pendingRoots.get(marker);
++    if (!registry) return;
++    pendingRoots.delete(marker);
++    registry.markers.delete(marker);
++    if (registry.markers.size === 0) {
++        registry.observer.disconnect();
++        rootRegistries.delete(registry.target);
++    }
++}
++
++function watchPendingRoot(marker: RetainedMarkerAccessibility, target: HTMLElement): void {
++    const previous = pendingRoots.get(marker);
++    if (previous?.target === target) return;
++    cancelPendingRoot(marker);
++    let registry = rootRegistries.get(target);
++    if (!registry) {
++        const markers = new Set<RetainedMarkerAccessibility>();
++        const observer = new MutationObserver(() => {
++            // One observer per map, with no timer/poll loop. SDK insertion runs
++            // this before paint; release/visibility/unmount cancel ownership.
++            for (const pending of markers) syncRetainedMarkerAccessibility(pending, false, target);
++        });
++        registry = { target, markers, observer };
++        rootRegistries.set(target, registry);
++        observer.observe(target, { childList: true, subtree: true });
++    }
++    registry.markers.add(marker);
++    pendingRoots.set(marker, registry);
++}
++
+ /** Keep retained SDK objects out of the mobile AX tree beyond the padded view. */
+-export function syncRetainedMarkerAccessibility(marker: RetainedMarkerAccessibility, visible: boolean): void {
++export function syncRetainedMarkerAccessibility(
++    marker: RetainedMarkerAccessibility,
++    visible: boolean,
++    rootReadyTarget?: HTMLElement | null,
++): void {
+     const hidden = !visible;
++    if (visible) {
++        cancelPendingRoot(marker);
++        rootTargets.delete(marker);
++    } else if (rootReadyTarget) {
++        rootTargets.set(marker, rootReadyTarget);
++    }
+     if (!hidden && !marker.__tzudongRetainedMarkerAriaHidden) return;
+ 
+     const element = marker.getElement();
+@@ -16,10 +67,14 @@ export function syncRetainedMarkerAccessibility(marker: RetainedMarkerAccessibil
+         ? element
+         : element?.querySelector<HTMLElement>(MARKER_SELECTOR);
+     if (!root) {
+-        if (visible) marker.__tzudongRetainedMarkerAriaHidden = false;
++        marker.__tzudongRetainedMarkerAriaHidden = hidden;
++        const target = rootTargets.get(marker);
++        if (hidden && target) watchPendingRoot(marker, target);
+         return;
+     }
+ 
++    cancelPendingRoot(marker);
++
+     if (hidden) {
+         // Do not claim or later remove an aria-hidden state owned elsewhere.
+         if (root.getAttribute('aria-hidden') !== 'true') {
+diff --git a/apps/web/tests-unit/retained-marker-accessibility.test.ts b/apps/web/tests-unit/retained-marker-accessibility.test.ts
+index c19251e3..465d4a25 100644
+--- a/apps/web/tests-unit/retained-marker-accessibility.test.ts
++++ b/apps/web/tests-unit/retained-marker-accessibility.test.ts
+@@ -1,4 +1,4 @@
+-import { expect, test } from 'bun:test';
++import { afterAll, beforeEach, expect, test } from 'bun:test';
+ import { syncRetainedMarkerAccessibility } from '../lib/retained-marker-accessibility';
+ 
+ class AppMarkerElement {
+@@ -12,6 +12,20 @@ class AppMarkerElement {
+ function fixture(root: AppMarkerElement | null) {
+     return { getElement: () => root as unknown as HTMLElement | null, __tzudongRetainedMarkerAriaHidden: undefined as boolean | undefined };
+ }
++const savedObserver = globalThis.MutationObserver;
++class FakeObserver {
++    static instances: FakeObserver[] = [];
++    disconnected = false;
++    constructor(private callback: MutationCallback) { FakeObserver.instances.push(this); }
++    observe() {}
++    disconnect() { this.disconnected = true; }
++    fire() { if (!this.disconnected) this.callback([], this as unknown as MutationObserver); }
++}
++beforeEach(() => {
++    FakeObserver.instances = [];
++    globalThis.MutationObserver = FakeObserver as unknown as typeof MutationObserver;
++});
++afterAll(() => { globalThis.MutationObserver = savedObserver; });
+ test('outside-padded mask is owned, reversible and has no geometry or focus changes', () => {
+     const root = new AppMarkerElement();root.setAttribute('role','button');root.setAttribute('style','width:28px');
+     const marker = fixture(root);
+@@ -40,10 +54,32 @@ test('release/replacement cleanup allows the newly generated SDK root to be mask
+ test('SDK root not yet present stays retryable; removed root clears release ownership', () => {
+     const root=new AppMarkerElement();let current:AppMarkerElement|null=null;
+     const marker={getElement:()=>current as unknown as HTMLElement|null,__tzudongRetainedMarkerAriaHidden:undefined as boolean|undefined};
+-    syncRetainedMarkerAccessibility(marker,false);expect(marker.__tzudongRetainedMarkerAriaHidden).toBeUndefined();
++    syncRetainedMarkerAccessibility(marker,false);expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(true);
+     current=root;syncRetainedMarkerAccessibility(marker,false);expect(root.getAttribute('aria-hidden')).toBe('true');
+     current=null;syncRetainedMarkerAccessibility(marker,true);expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(false);
+ });
++test('delayed SDK roots share one observer and are masked on insertion without another render', () => {
++    const target={} as HTMLElement;let one:AppMarkerElement|null=null,two:AppMarkerElement|null=null;
++    const a={getElement:()=>one as unknown as HTMLElement|null},b={getElement:()=>two as unknown as HTMLElement|null};
++    syncRetainedMarkerAccessibility(a,false,target);syncRetainedMarkerAccessibility(b,false,target);
++    expect(FakeObserver.instances).toHaveLength(1);const observer=FakeObserver.instances[0];
++    one=new AppMarkerElement();observer.fire();expect(one.getAttribute('aria-hidden')).toBe('true');expect(observer.disconnected).toBe(false);
++    two=new AppMarkerElement();observer.fire();expect(two.getAttribute('aria-hidden')).toBe('true');expect(observer.disconnected).toBe(true);
++    syncRetainedMarkerAccessibility(a,true);syncRetainedMarkerAccessibility(b,true);
++});
++test('visible/released marker cancels a pending root and does not later hide a replacement', () => {
++    const target={} as HTMLElement;let root:AppMarkerElement|null=null;const marker={getElement:()=>root as unknown as HTMLElement|null};
++    syncRetainedMarkerAccessibility(marker,false,target);const observer=FakeObserver.instances[0];
++    syncRetainedMarkerAccessibility(marker,true);expect(observer.disconnected).toBe(true);
++    root=new AppMarkerElement();observer.fire();expect(root.getAttribute('aria-hidden')).toBeNull();
++});
++test('changing map target disconnects the old pending observer', () => {
++    const first={} as HTMLElement,second={} as HTMLElement;let root:AppMarkerElement|null=null;const marker={getElement:()=>root as unknown as HTMLElement|null};
++    syncRetainedMarkerAccessibility(marker,false,first);const old=FakeObserver.instances[0];
++    syncRetainedMarkerAccessibility(marker,false,second);expect(old.disconnected).toBe(true);expect(FakeObserver.instances).toHaveLength(2);
++    root=new AppMarkerElement();old.fire();expect(root.getAttribute('aria-hidden')).toBeNull();FakeObserver.instances[1].fire();expect(root.getAttribute('aria-hidden')).toBe('true');
++    syncRetainedMarkerAccessibility(marker,true);
++});
+ test('an SDK root replacement with the same desired state is masked again', () => {
+     const before=new AppMarkerElement(),after=new AppMarkerElement();let current=before;
+     const marker={getElement:()=>current as unknown as HTMLElement,__tzudongRetainedMarkerAriaHidden:undefined as boolean|undefined};

@@ -1,0 +1,109 @@
+{
+  "captures": [
+    {
+      "raw": "direct-samsung-memory-allocation-diagnostic-v1-after/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-allocation-diagnostic-v1-after.png",
+      "savedPath": "direct-samsung-memory-allocation-diagnostic-v1-after/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1391331,
+      "sha256": "25521ff7dde92b76b5700abe90baa6975398516efa41d4cc640f0bd17448da06",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-allocation-diagnostic-v1-after/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-allocation-diagnostic-v1-after-cycle-10.png",
+      "savedPath": "direct-samsung-memory-allocation-diagnostic-v1-after/owned-native-inspected-v2/frame-001.png",
+      "bytes": 1865241,
+      "sha256": "40ee272980b0835017954bc49ffe486ef1b6f606e061ffaae5c8d774e7898f76",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-allocation-diagnostic-v1-after/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-allocation-diagnostic-v1-after-cycle-20.png",
+      "savedPath": "direct-samsung-memory-allocation-diagnostic-v1-after/owned-native-inspected-v2/frame-002.png",
+      "bytes": 1866436,
+      "sha256": "4607feac2530fc3ac226db670b52e414518262336ff4e5a423562b3fe207273e",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-resumed-continuation-4-before-a2/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-resumed-continuation-4-before-a2.png",
+      "savedPath": "direct-samsung-memory-resumed-continuation-4-before-a2/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1341315,
+      "sha256": "66e31dd81a2e709522550cec296237aa7c90a3d2f8d2066bb57b429b1aa834d7",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-resumed-continuation-4-after-b2/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-resumed-continuation-4-after-b2.png",
+      "savedPath": "direct-samsung-memory-resumed-continuation-4-after-b2/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1381026,
+      "sha256": "f07984f3c49dbc7ae3f0281ccb3017066190a321fb93c6ee960aa1fe37a79839",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-physical-memory-resumed-continuation-4-before-a1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-physical-memory-resumed-continuation-4-before-a1.png",
+      "savedPath": "direct-physical-memory-resumed-continuation-4-before-a1/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1534025,
+      "sha256": "9b5a8972fca47b9b0f3f817a8273a5f200940ad797fd3bf61ae64572da7a9b3c",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-resumed-continuation-4-after-b1/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-resumed-continuation-4-after-b1.png",
+      "savedPath": "direct-samsung-memory-resumed-continuation-4-after-b1/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1384166,
+      "sha256": "05baffce673d80b96ff448105457ce2f0851933b91ab1db36a695be2b0679226",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-allocation-pool-order-v2-after/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-allocation-pool-order-v2-after.png",
+      "savedPath": "direct-samsung-memory-allocation-pool-order-v2-after/owned-native-inspected-v2/frame-000.png",
+      "bytes": 1396271,
+      "sha256": "296a7a61d12346a0ef0c6e8ed3187308aaab320d34520ab82a2081c42be4a6c0",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-allocation-pool-order-v2-after/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-allocation-pool-order-v2-after-cycle-10.png",
+      "savedPath": "direct-samsung-memory-allocation-pool-order-v2-after/owned-native-inspected-v2/frame-001.png",
+      "bytes": 1862435,
+      "sha256": "311329d66de59070eb5d06478ee7e30ff110fabd607b3ef220e8e325f6377305",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    },
+    {
+      "raw": "direct-samsung-memory-allocation-pool-order-v2-after/raw.json",
+      "originalOwnedTmpPath": "/tmp/tzudong-owned-samsung-memory-allocation-pool-order-v2-after-cycle-20.png",
+      "savedPath": "direct-samsung-memory-allocation-pool-order-v2-after/owned-native-inspected-v2/frame-002.png",
+      "bytes": 1861123,
+      "sha256": "b83d5073a2fbffb27d0f828a2f97f78b118cb138293a1a119cef432445cd5d38",
+      "pixelInspected": true,
+      "syntheticMapAndListOnly": true,
+      "finalMemorySourceProof": false
+    }
+  ],
+  "inspection": "10-frame contact sheet inspected; anonymous synthetic map/list in prior SDK diagnostic/runtime variants only",
+  "finalSourceOrTemporalFlickerClaim": false,
+  "copiesReadBackBeforeOwnedTmpDeletion": true,
+  "excludedFailedSetupTmpFrames": 3,
+  "otherAppWorkTouched": false
+}

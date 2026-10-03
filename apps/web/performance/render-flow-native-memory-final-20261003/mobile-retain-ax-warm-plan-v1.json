@@ -1,0 +1,37 @@
+{
+  "baselineBuild": "control-ui-v2",
+  "candidateBuild": "ret-ax-v2",
+  "sourceCommit": "a1c79e429d856df795dfff2d8cf13b30d1f23007",
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "cyclesPerFreshProcess": 60,
+  "cpuRate": 4,
+  "viewport": [
+    390,
+    844
+  ],
+  "count": 735,
+  "awayMs": 350,
+  "returnSettleMs": 1000,
+  "naturalHeapRegressionTolerancePercent": 20,
+  "primary": "median natural JS heap across the 60 return endpoints per process",
+  "secondary": "peak and final natural JS heap; same 20% guard",
+  "frameMetrics": "passive rAF gap p95/max and gaps above 50ms per finite process window; these are frame observations, not user latency percentiles",
+  "frameRegressionTolerancePercent": 15,
+  "passiveProbe": "no per-rAF DOM or bounds scans; membership serialization after the primary heap read",
+  "sampleUnits": "two fresh desktop Chrome processes per variant, each emulating mobile and containing 60 dependent cycles; zero physical devices",
+  "actualSDK": true,
+  "syntheticREST": true,
+  "cache": "fresh process/context; disabled HTTP cache and service worker; warm in-page cycles",
+  "forcedGC": false,
+  "traceDuringPrimaryMeasure": false,
+  "independentAAWarmRun": false,
+  "causalSpeedOrLeakAbsenceClaimAllowed": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "changeScope": "owned mobile aria mask and SDK icon/release/clear lifecycle cleanup; same original finite budgets"
+}

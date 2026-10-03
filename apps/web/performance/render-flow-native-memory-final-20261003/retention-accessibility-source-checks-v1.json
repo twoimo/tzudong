@@ -1,0 +1,28 @@
+{
+  "sourceBase": "a1c79e429d856df795dfff2d8cf13b30d1f23007",
+  "candidateBuild": "ret-ax-v2",
+  "unitTests": {
+    "passed": 32,
+    "failed": 0,
+    "assertions": 1198,
+    "files": [
+      "retained-marker-accessibility.test.ts",
+      "marker-pool.test.ts",
+      "deferred-marker-renders.test.ts",
+      "expanded-cluster-flow-invariants.test.ts"
+    ]
+  },
+  "targetedLintExit": 0,
+  "typecheckParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2377,
+    "nonLibraryContentSha256": "a0a1e4b26835a592c3ce34052e19d51bf863c87e36003e30ba979b5bf46d562a"
+  },
+  "buildReceipt": "build-candidate-ret-ax-v2/receipt.json",
+  "sourceStillUncommitted": true,
+  "newPerformanceMeasurementsPending": true,
+  "originalFullRetentionAxExposure": 271,
+  "maskedAxExposure": 0,
+  "sourceOriginalDirectoryPreserved": true
+}
