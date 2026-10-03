@@ -108,3 +108,16 @@ Windows npm 측정 실패 영수증은 샘플 간격 141.397ms를 기록했다. 
 크롤링 삭제·누락 trace의 증분 정리, 공급자 결과 이후 bookkeeping 실패 보호, 재검수의 불확실한 응답 뒤 추가 실행 방지, 선택 모델의 부분 조회 실패 처리도 보완했다. 새로운 속도·금액 절감 수치는 아직 주장하지 않는다. 프로덕션의 이전 storyboard migration ID 두 개는 없고 실제 MCP 적용 ID 세 개만 존재함을 읽기 전용으로 확인했다. 다른 DB와의 역사적 migration 호환성 리뷰는 남아 있다. 보호 승격·최종 배포 SHA·실서비스 검증, 카드 삭제 의존성, 전체 장기 목표의 나머지 항목도 완료로 표시하지 않는다.
 
 추가 증빙 8개는 `review-fixes-artifact-map-20261004.json`과 분리된 `.sha256`에 결속했다.
+
+
+## 마이그레이션 이력 호환성 보완 · 2026-10-04
+
+원래 `20260918021531_storyboard_mlx_worker.sql`과 `20260920021531_storyboard_historical_restore.sql`을 원본 바이트 그대로 복구했다. 이미 운영에 적용한 `20261003000711`·`20261003000811` SQL은 `backend/supabase/applied-receipts/storyboard-20261003/`에 변경 없이 보관한다. 두 파일의 SHA-256은 운영 migration ledger의 단일 statements SHA-256과 각각 일치했다. 이 보관본은 fresh database migration chain에 다시 실행하지 않는다.
+
+새 `20261003182338_storyboard_service_role_bridge.sql`은 기존 테이블·데이터를 재생성하지 않고 서비스 RPC의 private owner 검사·권한·소유자만 수렴시킨다. 설치된 9개 함수의 20개 알려진 body variant만 허용하고, 알려지지 않은 변경은 트랜잭션을 거부한다. 기존 Gemini-only 조건·CAS·복원 로직을 보존한다. 원래 경로와 적용 기록 경로 각각 격리 PG17.6에서 **17개 검증 통과**, 총 34개이며, 7개 데이터 테이블의 적용 전후 SHA-256이 일치한다. 원본과 다른 함수 body를 주입했을 때 실패와 rollback도 확인했다. 이는 실제 provider inference나 hosted 전체 catalog 증빙은 아니다.
+
+`materialize_migration_workspace.py`는 검증된 운영 ledger checksum을 입력으로 받아 별도의 CLI migration workspace를 만든다. 이미 적용한 보관본만 추가하고, 해당 원본 버전이 ledger에 없는 경우 SQL을 실행하지 않는 history alias를 명시적으로 남긴다. 원본 SQL이 실행됐다고 표시하지 않으며 저장소의 원본을 수정하지 않는다. 다른 DB나 fresh DB에는 검증되지 않은 보관본을 추가하지 않는다. 원본·보관본·checksum·중복 이력·balanced replay 경계 관련 검사 8개와 기존 layout 검사 6개가 통과했다.
+
+일반 `db push`는 timestamp를 비교하므로 이 두 운영 이력에는 준비한 호환 workspace를 사용한다. [공식 CLI 문서](https://supabase.com/docs/reference/cli/supabase-migration-repair)는 history repair가 SQL 실행 없이 이력을 바꾸는 작업임을 설명한다. 이번 단계에서는 DB 이력을 변경하거나 테이블을 다시 생성하지 않았다. 격리 재생 전용 owner membership window는 transaction 안에서 원상복구하며 hosted SQL에는 추가하지 않는다.
+
+보호 CI의 전체 fresh replay와 운영 SQL 적용·배포 readback은 후속 단계다. 기존 측정 파일을 새 실행으로 덮어쓴 시도는 `storyboard-history-output-attempt.json`으로 분리했고, 기존 파일의 frozen bytes를 복원했다.

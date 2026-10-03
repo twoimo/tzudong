@@ -1360,6 +1360,14 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003182338_storyboard_service_role_bridge.sql)
+      storyboard_replay="$work_dir/${migration##*/}.owner-replay.sql"
+      python3 "$script_dir/transform_storyboard_history_replay.py" \
+        --source "$migration" --bundle "$g026_bundle" --output "$storyboard_replay"
+      g026_chain_apply 'storyboard-history-replay-transformer' "$script_dir/transform_storyboard_history_replay.py"
+      g026_chain_apply 'storyboard-history-replay-window' "$storyboard_replay"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$storyboard_replay"
+      ;;
     20261003113923_g014_service_invoker_contract.sql|20261003172126_restaurant_review_manual_invoker_contract.sql)
       invoker_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_service_invoker_replay.py" \

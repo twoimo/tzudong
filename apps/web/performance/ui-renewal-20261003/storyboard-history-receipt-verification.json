@@ -1,0 +1,52 @@
+{
+  "kind": "local-postgresql-storyboard-migration",
+  "operationalDatabaseChanges": false,
+  "migrations": [
+    {
+      "file": "20261003000711_storyboard_production_foundation.sql",
+      "sha256": "3364e8c2857b6cb89975f1f91c4b36ffc6007804002152b1db93a597765d5e7e"
+    },
+    {
+      "file": "20261003000811_storyboard_historical_restore.sql",
+      "sha256": "27f610ca03aa1f2513a99c7984f4d07874bbdc9f1069cf2de1775e5cd1da5100"
+    },
+    {
+      "file": "20261003000812_storyboard_gemini_only.sql",
+      "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470"
+    },
+    {
+      "file": "20261003182338_storyboard_service_role_bridge.sql",
+      "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+    }
+  ],
+  "assertions": {
+    "idempotent_create": true,
+    "remote_models_claim_without_fake_disk_bytes": true,
+    "draft_checkpoint_readback": true,
+    "non_gemini_create_denied": true,
+    "stale_lease_rejected": true,
+    "duplicate_result_rejected_without_resend": true,
+    "five_images_checkpoint_and_finish_ready": true,
+    "cas_edit_and_restore_replay_preserve_assets": true,
+    "expired_lease_backoff_and_restart": true,
+    "active_cancel_readback": true,
+    "concurrent_workers_never_double_claim": true,
+    "browser_roles_denied": true,
+    "empty_search_path_preserved": true,
+    "existing_auth_table_grants_unchanged": true,
+    "bridge_reapply_preserves_all_seven_data_tables": true,
+    "legacy_public_definers_removed": true,
+    "unknown_installed_body_fails_and_rolls_back": true
+  },
+  "postgresVersion": "17.6",
+  "bridgeDataSha256": {
+    "before": "2b6d2cb3ee9b369a3c967e0ec1031e7e90af63b17bfede66c5e5cf93b553878d",
+    "after": "2b6d2cb3ee9b369a3c967e0ec1031e7e90af63b17bfede66c5e5cf93b553878d",
+    "tables": 7
+  },
+  "passed": true,
+  "limitations": [
+    "Synthetic fixture database only.",
+    "Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only."
+  ]
+}

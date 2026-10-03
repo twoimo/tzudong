@@ -18,8 +18,9 @@ import uuid
 
 
 ROOT = Path(__file__).resolve().parents[3]
-MIGRATION = ROOT / "backend/supabase/migrations/20261003000711_storyboard_production_foundation.sql"
-RESTORE_MIGRATION = ROOT / "backend/supabase/migrations/20261003000811_storyboard_historical_restore.sql"
+MIGRATION = ROOT / "backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql"
+RESTORE_MIGRATION = ROOT / "backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql"
+BRIDGE_MIGRATION = ROOT / "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql"
 
 
 def sql_value(value):
@@ -124,6 +125,7 @@ class StoryboardSqlIntegration(unittest.TestCase):
         """)
         cls.sql(MIGRATION.read_text())
         cls.sql(RESTORE_MIGRATION.read_text())
+        cls.sql(BRIDGE_MIGRATION.read_text())
         print(f"Isolated database: {image}; network=none; no shared volumes", flush=True)
 
     @classmethod

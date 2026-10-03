@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run only against the task-owned Unix-socket PostgreSQL fixture cluster."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -14,6 +15,9 @@ SOCKET = os.environ.get('TZUDONG_FIXTURE_PG_SOCKET', '/Users/twoimo/.codex/runti
 PORT = int(os.environ.get('TZUDONG_FIXTURE_PG_PORT', '18791'))
 if not SOCKET.startswith('/Users/twoimo/.codex/runtime-cache/') or not Path(SOCKET).is_dir():
     raise SystemExit('owned_fixture_socket_required')
+parser=argparse.ArgumentParser()
+parser.add_argument('--chain',choices=['original','receipt'],default='original')
+args=parser.parse_args()
 database = 'storyboard_gemini_' + uuid.uuid4().hex
 owner = '00000000-0000-4000-8000-111111111111'
 admin = psycopg2.connect(host=SOCKET, port=PORT, user='postgres', dbname='postgres')
@@ -51,10 +55,10 @@ try:
             c.execute("INSERT INTO public.user_roles VALUES (%s,'admin')", (owner,))
             c.execute("INSERT INTO public.user_account_status VALUES (%s,'active')", (owner,))
             conn.commit()
-            names = ['20261003000711_storyboard_production_foundation.sql', '20261003000811_storyboard_historical_restore.sql', '20261003000812_storyboard_gemini_only.sql']
+            names = (['20260918021531_storyboard_mlx_worker.sql', '20260920021531_storyboard_historical_restore.sql'] if args.chain=='original' else ['20261003000711_storyboard_production_foundation.sql', '20261003000811_storyboard_historical_restore.sql']) + ['20261003000812_storyboard_gemini_only.sql','20261003182338_storyboard_service_role_bridge.sql']
             for name in names:
                 phase = name
-                path = ROOT / 'backend/supabase/migrations' / name
+                path = ROOT / ('backend/supabase/applied-receipts/storyboard-20261003' if name.startswith(('20261003000711','20261003000811')) else 'backend/supabase/migrations') / name
                 content = path.read_bytes()
                 c.execute(content.decode())
                 conn.commit()
@@ -178,9 +182,40 @@ try:
             c.execute("SELECT has_table_privilege('service_role','public.user_roles','SELECT'),has_table_privilege('service_role','public.user_account_status','SELECT')")
             assert c.fetchone()==(False,False)
             raw['assertions']['existing_auth_table_grants_unchanged'] = True
+            c.execute('RESET ROLE')
+            data_tables=['projects','workers','jobs','assets','events','revisions','restores']
+            def row_state():
+                values=[]
+                for suffix in data_tables:
+                    c.execute("SELECT coalesce(jsonb_agg(to_jsonb(item) ORDER BY to_jsonb(item)::text),'[]'::jsonb) FROM public.admin_storyboard_production_"+suffix+' item')
+                    values.append(c.fetchone()[0])
+                return hashlib.sha256(json.dumps(values,sort_keys=True).encode()).hexdigest()
+            before_bridge=row_state()
+            c.execute((ROOT/'backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql').read_text())
+            after_bridge=row_state()
+            assert after_bridge==before_bridge
+            raw['bridgeDataSha256']={'before':before_bridge,'after':after_bridge,'tables':len(data_tables)}
+            raw['assertions']['bridge_reapply_preserves_all_seven_data_tables']=True
+            c.execute("SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND prosecdef")
+            assert c.fetchone()[0]==0
+            raw['assertions']['legacy_public_definers_removed']=True
+            c.execute("SELECT pg_get_functiondef('public.storyboard_production_auth_worker(text)'::regprocedure)")
+            definition=c.fetchone()[0]
+            phase='bridge_body_drift'
+            assert 'RETURN jsonb_build_object' in definition
+            c.execute(definition.replace('RETURN jsonb_build_object', '-- deliberate fixture drift\n  RETURN jsonb_build_object',1))
+            catalog_before=raw['bridgeDataSha256']['after']
+            try:
+                c.execute((ROOT/'backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql').read_text())
+                raise AssertionError('unexpected_bridge_drift_admission')
+            except psycopg2.Error as error:
+                assert 'STORYBOARD_BRIDGE_BODY_DRIFT' in str(error)
+                conn.rollback()
+            assert row_state()==catalog_before
+            raw['assertions']['unknown_installed_body_fails_and_rolls_back']=True
             raw['passed'] = True
             raw['limitations'] = ['Synthetic fixture database only.', 'Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only.']
-    out = ROOT / 'apps/web/performance/ui-renewal-20261003/storyboard-sql-verification.json'
+    out = ROOT / 'apps/web/performance/ui-renewal-20261003' / f'storyboard-history-{args.chain}-verification.json'
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(raw, indent=2) + '\n')
     print(json.dumps({'passed': True, 'assertions': list(raw['assertions']), 'operationalDatabaseChanges': False}))
