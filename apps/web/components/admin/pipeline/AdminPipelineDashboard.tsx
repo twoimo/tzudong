@@ -13,6 +13,7 @@ import {
 } from "@/lib/admin/pipeline-control";
 
 type PipelineStatusResponse = {
+  source?: "job_api" | "github_actions";
   targets?: Array<{ id: string; status?: string }>;
   jobs?: PipelineListJob[];
   hardware?: string;
@@ -90,9 +91,10 @@ export function AdminPipelineDashboard() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showGrafana, setShowGrafana] = useState(false);
+  const [grafanaAllowed, setGrafanaAllowed] = useState(false);
 
   useEffect(() => {
-    setShowGrafana(allowLoopbackGrafanaIframe());
+    setGrafanaAllowed(allowLoopbackGrafanaIframe());
   }, []);
 
   const refresh = async () => {
@@ -187,35 +189,37 @@ export function AdminPipelineDashboard() {
   return (
     <section
       data-admin-pipeline-dashboard="true"
-      className="flex min-h-[220px] flex-col gap-3 border border-border bg-card p-4"
+      className="flex min-h-[220px] min-w-0 flex-col gap-4 rounded-xl border border-border bg-card p-4"
     >
       <header>
-        <h2 className="text-sm font-semibold">크롤러 파이프라인</h2>
+        <h2 className="text-lg font-semibold">크롤러 파이프라인</h2>
         <p className="text-xs text-muted-foreground">
-          로컬 control-plane이 없으면 GitHub Actions 크롤러 최근 실행을 보여 줍니다. enqueue는 로컬 API가 있을 때만 동작합니다.
+          수집 실행과 처리 상태를 확인합니다. 서버 연결 전에는 GitHub Actions 크롤러 최근 실행을 보여 줍니다.
         </p>
       </header>
-      <div className="flex flex-wrap gap-2 text-2xs">
+      <details className="rounded-lg border border-border p-3 text-xs">
+      <summary className="cursor-pointer font-medium">실행 환경·자원 지표</summary>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
         <span data-admin-pipeline-hardware={query.data?.hardware ?? "unknown"}>
-          hardware: {query.data?.hardware ?? "unknown"}
+          장비: {query.data?.hardware ?? "확인 전"}
         </span>
         <span data-admin-pipeline-data-env={query.data?.dataEnv ?? "unknown"}>
-          data: {query.data?.dataEnv ?? "unknown"}
+          데이터 환경: {query.data?.dataEnv ?? "확인 전"}
         </span>
         <span data-admin-pipeline-compute-profile="true">
-          compute: {jobs[0]?.profile ?? enqueueProfile}
+          처리 설정: {jobs[0]?.profile ?? enqueueProfile}
         </span>
         <span data-admin-pipeline-data-sink="true">
-          sink: {query.data?.dataEnv ?? "unknown"}
+          저장 환경: {query.data?.dataEnv ?? "확인 전"}
         </span>
         <span data-admin-pipeline-active-step="true">
-          step: {jobs[0]?.adapter_index ?? 0}
+          처리 단계: {jobs[0]?.adapter_index ?? 0}
         </span>
         <span data-admin-pipeline-kafka-lag="true">
-          kafka lag: {gauges.tzudong_pipeline_kafka_lag ?? "—"}
+          Kafka 대기: {gauges.tzudong_pipeline_kafka_lag ?? "—"}
         </span>
         <span data-admin-pipeline-es-rows="true">
-          es rows/sec: {gauges.tzudong_pipeline_es_rows_per_sec ?? "—"}
+          색인 처리/초: {gauges.tzudong_pipeline_es_rows_per_sec ?? "—"}
         </span>
         <span data-admin-pipeline-cpu="true">
           cpu: {gauges.tzudong_pipeline_process_cpu_ratio ?? "—"}
@@ -224,6 +228,7 @@ export function AdminPipelineDashboard() {
           rss: {gauges.tzudong_pipeline_process_rss_bytes ?? "—"}
         </span>
       </div>
+      </details>
       <ul className="space-y-1 text-xs">
         {targets.map((target) => (
           <li key={target.id} data-admin-pipeline-target={target.id}>
@@ -258,7 +263,7 @@ export function AdminPipelineDashboard() {
                   })
                 }
               >
-                pause
+                일시 정지
               </button>
             ) : null}
             {RESUME_FROM.has(job.status) ? (
@@ -276,7 +281,7 @@ export function AdminPipelineDashboard() {
                   })
                 }
               >
-                resume
+                다시 시작
               </button>
             ) : null}
             {CANCEL_FROM.has(job.status) ? (
@@ -294,56 +299,56 @@ export function AdminPipelineDashboard() {
                   })
                 }
               >
-                cancel
+                취소
               </button>
             ) : null}
           </li>
         ))}
       </ul>
-      <div className="space-y-2 text-xs">
+      <div className="grid gap-3 text-sm sm:grid-cols-2">
         <label className="block space-y-1">
-          <span>target</span>
+          <span>수집 대상</span>
           <input
             value={enqueueTarget}
             onChange={(event) => setEnqueueTarget(event.target.value)}
-            className="w-full rounded border p-2"
+            className="min-h-10 w-full rounded-lg border border-input bg-background px-3"
           />
         </label>
         <label className="block space-y-1">
-          <span>profile</span>
+          <span>실행 환경</span>
           <select
             value={enqueueProfile}
             onChange={(event) =>
               setEnqueueProfile(event.target.value as "heavy_local" | "lite_gha")
             }
-            className="w-full rounded border p-2"
+            className="min-h-10 w-full rounded-lg border border-input bg-background px-3"
           >
-            <option value="heavy_local">heavy_local</option>
-            <option value="lite_gha">lite_gha</option>
+            <option value="heavy_local">로컬 · 미디어 처리 포함</option>
+            <option value="lite_gha">GitHub Actions · 경량 처리</option>
           </select>
         </label>
         <label className="block space-y-1">
-          <span>확인 문구</span>
+          <span>확인 문구 ({PIPELINE_CONTROL_CONFIRMATION_TEXT})</span>
           <input
             value={confirmationText}
             onChange={(event) => setConfirmationText(event.target.value)}
-            className="w-full rounded border p-2"
+            className="min-h-10 w-full rounded-lg border border-input bg-background px-3"
           />
         </label>
         <label className="block space-y-1">
-          <span>live enqueue 확인 ({PIPELINE_LIVE_ENQUEUE_CONFIRMATION})</span>
+          <span>실제 수집 확인 ({PIPELINE_LIVE_ENQUEUE_CONFIRMATION})</span>
           <input
             value={liveConfirmationText}
             onChange={(event) => setLiveConfirmationText(event.target.value)}
-            className="w-full rounded border p-2"
+            className="min-h-10 w-full rounded-lg border border-input bg-background px-3"
           />
         </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 sm:col-span-2">
           <button
             type="button"
             data-admin-pipeline-enqueue="true"
             disabled={busy || confirmationText !== PIPELINE_CONTROL_CONFIRMATION_TEXT}
-            className="rounded border px-2 py-1"
+            className="min-h-10 rounded-lg border border-border px-3 font-medium disabled:opacity-50"
             onClick={() =>
               void submit({
                 action: "enqueue",
@@ -352,7 +357,7 @@ export function AdminPipelineDashboard() {
               })
             }
           >
-            enqueue dry-run
+            테스트 실행
           </button>
           <button
             type="button"
@@ -362,7 +367,7 @@ export function AdminPipelineDashboard() {
               confirmationText !== PIPELINE_CONTROL_CONFIRMATION_TEXT ||
               liveConfirmationText !== PIPELINE_LIVE_ENQUEUE_CONFIRMATION
             }
-            className="rounded border px-2 py-1"
+            className="min-h-10 rounded-lg bg-primary px-3 font-medium text-primary-foreground disabled:opacity-50"
             onClick={() =>
               void submit({
                 action: "enqueue",
@@ -372,7 +377,7 @@ export function AdminPipelineDashboard() {
               })
             }
           >
-            enqueue live
+            실제 수집 실행
           </button>
         </div>
       </div>
@@ -389,7 +394,8 @@ export function AdminPipelineDashboard() {
                 .map((row) => `${row.target ?? ""} ${row.error_code ?? "failed"}`.trim())
                 .join(", ")}
       </div>
-      {showGrafana ? (
+      {grafanaAllowed ? <button type="button" aria-expanded={showGrafana} onClick={() => setShowGrafana(value => !value)} className="min-h-10 self-start rounded-lg border border-border px-3 text-sm">{showGrafana ? "자원 차트 닫기" : "로컬 자원 차트 열기"}</button> : null}
+      {grafanaAllowed && showGrafana ? (
         <iframe
           data-admin-pipeline-grafana="true"
           title="pipeline frozen counters"

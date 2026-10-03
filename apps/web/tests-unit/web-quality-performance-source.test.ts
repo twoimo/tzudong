@@ -3628,7 +3628,7 @@ describe("web quality performance source contracts", () => {
       "lg:max-h-[calc(100dvh-6.25rem)]",
     );
     expect(myPageProfileSource).toContain("lg:grid-cols-2");
-    expect(myPageProfileSource).toContain("lg:gap-3");
+    expect(myPageProfileSource).toContain("gap-3");
     expect(myPageProfileSource).toContain("md:order-1");
     expect(myPageProfileSource).toContain("md:order-2");
     expect(myPageProfileSource).toContain(
@@ -3714,7 +3714,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-hero-layout="sidebar-match"',
     );
     expect(myPageProfileSource).toContain(
-      "flex flex-col items-center space-y-4 p-6 text-center md:hidden",
+      "grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-3 p-2 text-left md:hidden",
     );
     expect(myPageProfileSource).not.toContain(
       "flex flex-col items-center space-y-4 border-b border-border p-6 text-center md:hidden",
@@ -3729,7 +3729,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-identity="standard"',
     );
     expect(myPageProfileSource).toContain(
-      "rounded-full border-2 border-border shadow-sm",
+      "rounded-full border border-border",
     );
     expect(myPageProfileSource).not.toContain(
       "transition-[border-color,box-shadow]",
@@ -3738,7 +3738,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       "truncate px-2 text-xs text-muted-foreground",
     );
-    expect(myPageProfileSource).toContain("grid w-full grid-cols-3 gap-2 pt-2");
+    expect(myPageProfileSource).toContain("col-span-2 grid w-full grid-cols-3 gap-2");
     expect(myPageProfileSource).toContain("useUserProfile");
     expect(myPageProfileSource).toContain("userProfile?.tier");
     expect(myPageProfileSource).toContain("도장");
@@ -3789,9 +3789,9 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain('id="mypage-mobile-avatar-upload"');
     expect(myPageProfileSource).toContain(
-      'className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2',
+      'className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border',
     );
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain('sizes="64px"');
     expect(myPageProfileSource).toContain("handleMobileAvatarUpload");
     expect(myPageProfileSource).toContain("handleMobileAvatarDelete");
     expect(myPageProfileSource).toContain('accept="image/*"');
@@ -3856,8 +3856,8 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain(
       'className="mt-3 grid gap-2 sm:grid-cols-2"',
     );
-    expect(myPageProfileSource).toContain("h-24 w-24");
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain("h-16 w-16");
+    expect(myPageProfileSource).toContain('sizes="64px"');
     expect(myPageProfileSource).not.toContain("AvatarImage");
     expect(myPageProfileSource).not.toContain("sm:h-18 sm:w-18");
   });

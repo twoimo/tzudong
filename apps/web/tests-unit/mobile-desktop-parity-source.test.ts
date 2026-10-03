@@ -917,9 +917,9 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(myPageProfileSource).toContain('id="mypage-mobile-avatar-upload"');
     expect(myPageProfileSource).toContain(
-      'className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2',
+      'className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border',
     );
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain('sizes="64px"');
     expect(myPageProfileSource).toContain("handleMobileAvatarUpload");
     expect(myPageProfileSource).toContain("handleMobileAvatarDelete");
     expect(

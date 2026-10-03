@@ -10389,11 +10389,10 @@ export function AdminConsoleOverview({
       ? user.user_metadata.nickname.trim()
       : "";
   const adminAccountDisplayName =
-    profileNickname ||
-    userMetadataNickname ||
-    user?.email?.split("@")[0] ||
-    "관리자";
-  const adminAccountEmail = user?.email ?? "관리자 세션";
+    hasHydrated
+      ? (profileNickname || userMetadataNickname || user?.email?.split("@")[0] || "관리자")
+      : "관리자";
+  const adminAccountEmail = hasHydrated ? (user?.email ?? "관리자 세션") : "관리자 세션";
 
   useEffect(() => {
     setHasHydrated(true);

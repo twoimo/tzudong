@@ -14,16 +14,39 @@ const videos = Array.from({ length: 25 }, (_, index) => ({
 }));
 const restaurants = Array.from({ length: 25 }, (_, index) => ({
   id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, name: `검증 맛집 ${index + 1}`,
-  approved_name: `검증 맛집 ${index + 1}`, road_address: `서울특별시 중구 검증로 ${index + 1}`, categories: ['한식'],
+  approved_name: `검증 맛집 ${index + 1}`, road_address: `서울특별시 중구 검증로 ${index + 1}`, jibun_address:null, categories: ['한식'],
   lat: 37.55 + index * 0.001, lng: 126.98 + index * 0.001, status: 'approved', review_count: 3,
   verified_review_count: 3, youtube_link: '', created_at: stamp, updated_at: stamp,
 }));
 const fixtureProfiles = Array.from({ length: 3 }, (_, i) => ({user_id:`00000000-0000-4000-9000-${String(i+1).padStart(12,'0')}`,nickname:`검증 사용자 ${i+1}`,avatar_url:null}));
+const fixtureUser = { id: fixtureProfiles[0].user_id, aud: 'authenticated', role: 'authenticated',
+  email: 'fixture@example.test', created_at: stamp, app_metadata: { provider: 'email', providers: ['email'] },
+  user_metadata: { nickname: fixtureProfiles[0].nickname }, identities: [] };
+const fixtureSession = () => {
+  const now = Math.floor(Date.now() / 1000);
+  const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+  return { access_token: `${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:fixtureUser.id,aud:'authenticated',role:'authenticated',iat:now,exp:now+86400})}.synthetic-loopback-only`,
+    refresh_token:'synthetic-loopback-only',token_type:'bearer',expires_in:86400,expires_at:now+86400,user:fixtureUser };
+};
+const managedUsers = fixtureProfiles.map((profile, i) => ({ id: profile.user_id, email: `fixture${i+1}@example.test`,
+  username: `fixture${i+1}`, nickname: profile.nickname, avatarUrl:null, profileRole:'user', isAdmin:i===0,
+  isDisabled:i===2,bannedUntil:null,createdAt:stamp,lastSignInAt:stamp,emailConfirmedAt:stamp,
+  statusLabel:i===2?'비활성':'활성',roleLabel:i===0?'관리자':'사용자' }));
+const fixtureBanners = [{ id:'00000000-0000-4000-b000-000000000001',title:'검증용 맛집 안내',description:'합성 배너입니다.',
+  image_url:null,video_url:null,media_type:'none',link_url:'https://example.test/',is_active:true,priority:1,
+  display_target:['sidebar'],created_at:stamp,updated_at:stamp,created_by:fixtureUser.id }];
+const fixtureSubmissions = [ {id:'00000000-0000-4000-a100-000000000001',user_id:fixtureUser.id,submission_type:'new',status:'pending',
+  restaurant_name:'검증 제보 맛집',restaurant_address:'서울특별시 중구 검증로 1',restaurant_phone:null,restaurant_categories:['한식'],
+  admin_notes:null,rejection_reason:null,resolved_by_admin_id:null,reviewed_at:null,created_at:stamp,updated_at:stamp } ];
+const fixtureSubmissionItems = [{id:'00000000-0000-4000-a200-000000000001',submission_id:fixtureSubmissions[0].id,
+  youtube_link:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',tzuyang_review:'검증용 제보 근거',target_restaurant_id:null,
+  item_status:'pending',rejection_reason:null,created_at:stamp }];
 const fixtureReviews = restaurants.flatMap((restaurant, i) => fixtureProfiles.map((profile, j) => ({
   id:`00000000-0000-4000-a000-${String(i*3+j+1).padStart(12,'0')}`,restaurant_id:restaurant.id,user_id:profile.user_id,
-  content:`검증용 리뷰 ${j+1}. 음식과 공간의 분위기를 확인하는 합성 데이터입니다.`,visited_at:stamp,created_at:stamp,
-  food_photos:[],categories:['한식'],is_verified:true,is_pinned:false,is_edited_by_admin:false,admin_note:null,like_count:j+1,
+  title:`검증 리뷰 ${j+1}`,content:`검증용 리뷰 ${j+1}. 음식과 공간의 분위기를 확인하는 합성 데이터입니다.`,visited_at:stamp,created_at:stamp,
+  verification_photo:'',updated_at:stamp,is_duplicate:false,receipt_data:null,ocr_processed_at:null,food_photos:[],categories:['한식'],is_verified:true,is_pinned:false,is_edited_by_admin:false,admin_note:null,like_count:j+1,
 })));
+const pendingReviews = fixtureReviews.slice(0,3).map((row,i)=>({...row,id:`00000000-0000-4000-a400-${String(i+1).padStart(12,'0')}`,is_verified:false}));
 function filteredRows(req,rows) {
   const query=new URL(req.url,origin).searchParams;
   let selected=rows;
@@ -54,6 +77,12 @@ const response = (res, value, status = 200) => {
   res.end(JSON.stringify(value));
 };
 function api(pathname) {
+  if (pathname === '/api/admin/pipeline') return {source:'github_actions',hardware:'합성 환경',dataEnv:'fixture',targets:[],jobs:[
+    {id:'fixture-run-1',target:'tzuyang',profile:'lite_gha',status:'Completed',dry_run:true,adapter_index:6}],failures:[],failureFrames:[],gauges:{}};
+  if (pathname.startsWith('/api/admin/evaluations/')) return {record:evaluations.find(row=>row.id===pathname.split('/').at(-1))??null,revision:'1'};
+  if (pathname === '/api/privacy/consents') return {
+    policy:{policyVersionId:'00000000-0000-4000-8000-000000000001',version:'2026-08-04.1',contentSha256:'6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b'},
+    consents:{ordinary:{email:false,sms:false,push:false},night:{email:false,sms:false,push:false}} };
   if (pathname === '/api/admin/pending-counts') return pending;
   if (pathname === '/api/dashboard/summary') return summary;
   if (pathname === '/api/admin/youtube-kpis') return { asOf: stamp, period: '1M', totalVideos: videos.length, videos };
@@ -65,7 +94,8 @@ function api(pathname) {
     stats: { total: 25, pending: 25, approved: 0, deleted: 0, hold: 0, db_conflict: 0, ready_for_approval: 0, unconfirmed_map: 0, missing: 0, not_selected: 0 },
     revision: '1', nextCursor: null, hasMore: false, filteredTotal: 25, totalCount: 25,
     warnings: Object.fromEntries(evaluations.map((row) => [row.id, { sameVideo: { count: 0, candidates: [], message: '' }, identity: [] }])) };
-  if (pathname === '/api/admin/users') return { users: [], summary: { total: 0, active: 0, admins: 0, disabled: 0 } };
+  if (pathname === '/api/admin/users') return { users: managedUsers,
+    summary: { loadedUsers:3,adminUsers:1,disabledUsers:1,unconfirmedUsers:0 },page:1,perPage:120,total:3 };
   if (pathname === '/api/admin/restaurant-refresh-history') return { records: [], items: [], pagination: { page: 1, perPage: 50, total: 0 }, summary: {} };
   if (pathname === '/api/admin/audit-events') return { events: [], total: 0, coverage: { universal: false, mode: 'truthful-partial-domain-specific', domains: [] } };
   if (pathname === '/api/admin/storyboard/production') return { ok: true, projects: [], workers: [] };
@@ -77,15 +107,29 @@ function api(pathname) {
   return { ok: true, data: [], records: [], items: [], total: 0 };
 }
 
-const mockSupabase = http.createServer((req, res) => {
+const mockSupabase = http.createServer(async (req, res) => {
   const path = new URL(req.url, 'http://127.0.0.1:18793').pathname;
   if (req.method === 'OPTIONS') return response(res, {});
+  if (path === '/auth/v1/user') return response(res, fixtureUser);
   if (path.startsWith('/auth/v1/')) return response(res, { user: null, session: null });
+  if (req.method !== 'GET' && !path.includes('/rpc/')) return response(res,{error:'FIXTURE_WRITES_DISABLED'},405);
+  if (path.endsWith('/rpc/get_current_privacy_eligibility')) return response(res,{
+    schemaVersion:1,eligible:true,reasonCode:'PRIVACY_ELIGIBLE',policyVersionId:'00000000-0000-4000-8000-000000000001',
+    policyVersion:'2026-08-04.1',contentSha256:'6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b' });
+  if (path.endsWith('/user_roles')) return response(res,filteredRows(req,[{user_id:fixtureUser.id,role:'admin'}]));
+  if (path.endsWith('/restaurant_submissions')) return response(res,filteredRows(req,fixtureSubmissions));
+  if (path.endsWith('/restaurant_submission_items')) return response(res,filteredRows(req,fixtureSubmissionItems));
+  if (path.endsWith('/user_bookmarks')) return response(res,filteredRows(req,restaurants.slice(0,3).map((restaurant,i)=>({
+    id:`00000000-0000-4000-a300-${String(i+1).padStart(12,'0')}`,user_id:fixtureUser.id,restaurant_id:restaurant.id,created_at:stamp }))));
   if (path.includes('/restaurants')) return response(res, filteredRows(req,restaurants));
-  if (path.endsWith('/reviews')) return response(res,filteredRows(req,fixtureReviews));
-  if (path.endsWith('/rpc/read_public_profile_summaries')) return response(res,fixtureProfiles);
+  if (path.endsWith('/reviews')) return response(res,filteredRows(req,[...fixtureReviews,...pendingReviews]));
+  if (path.endsWith('/rpc/read_public_profile_summaries')) {
+    let body=''; for await (const chunk of req) { body+=chunk.toString(); if(body.length>65536)return response(res,{error:'FIXTURE_INPUT_LIMIT'},413); }
+    let ids=[]; try { ids=JSON.parse(body).p_user_ids??[]; } catch { return response(res,{error:'FIXTURE_INPUT_INVALID'},400); }
+    return response(res,ids.map(id=>fixtureProfiles.find(profile=>profile.user_id===id)).filter(Boolean));
+  }
   if (path.endsWith('/rpc/read_public_profile_leaderboard_page') || path.endsWith('/rpc/read_public_profile_leaderboard')) return response(res,fixtureProfiles.map((p,i)=>({user_id:p.user_id,nickname:p.nickname,review_count:3,verified_review_count:3,total_likes:6,avg_likes_per_review:2,quality_score:100-i*5})));
-  if (path.includes('/ad_banners') || path.includes('/banners')) return response(res, []);
+  if (path.includes('/ad_banners') || path.includes('/banners')) return response(res, fixtureBanners);
   if (path.includes('/rpc/')) return response(res, []);
   return response(res, []);
 });
@@ -93,11 +137,26 @@ mockSupabase.listen(18793, '127.0.0.1');
 
 const preview = http.createServer(async (req, res) => {
   const url = new URL(req.url, origin);
+  if (url.pathname === '/__fixture/session') {
+    const cookie = `base64-${Buffer.from(JSON.stringify(fixtureSession())).toString('base64url')}`;
+    res.writeHead(303,{'Set-Cookie':`sb-127-auth-token=${cookie}; Path=/; SameSite=Lax; Max-Age=86400`,Location:'/mypage/profile','Cache-Control':'no-store'});
+    return res.end();
+  }
+  if (url.pathname === '/__fixture/anonymous') {
+    res.writeHead(303,{'Set-Cookie':'sb-127-auth-token=; Path=/; SameSite=Lax; Max-Age=0',Location:'/','Cache-Control':'no-store'});
+    return res.end();
+  }
   if (url.pathname === '/__fixture/start') {
     res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
     return res.end('<!doctype html><title>합성 데이터 디자인 검증</title><script>localStorage.setItem("tzudong:e2e-admin-shell-bypass","1");location.replace("/admin")</script>');
   }
   if (url.pathname.startsWith('/api/')) {
+    if (url.pathname === '/api/admin/profile-summaries' && req.method === 'POST') {
+      let body=''; for await (const chunk of req) { body+=chunk.toString(); if(body.length>65536)return response(res,{error:'FIXTURE_INPUT_LIMIT'},413); }
+      let ids=[]; try { ids=JSON.parse(body).userIds??[]; } catch { return response(res,{error:'FIXTURE_INPUT_INVALID'},400); }
+      if(!Array.isArray(ids)||ids.length>100)return response(res,{error:'FIXTURE_INPUT_INVALID'},400);
+      return response(res,{rows:ids.map(id=>({userId:id,nickname:fixtureProfiles.find(profile=>profile.user_id===id)?.nickname??null}))});
+    }
     if (req.method !== 'GET') return response(res, { error: 'FIXTURE_WRITES_DISABLED' }, 405);
     return response(res, api(url.pathname));
   }

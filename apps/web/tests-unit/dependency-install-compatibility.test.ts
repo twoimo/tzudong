@@ -27,8 +27,8 @@ describe('npm and Bun dependency installation compatibility', () => {
     expect(bunLock.patchedDependencies['minimatch@3.1.5']).toBe(
       'patches/minimatch@3.1.5.patch',
     );
-    expect(manifest.overrides['brace-expansion']).toBe('5.0.9');
-    expect(manifest.overrides['minimatch@3.1.5']['brace-expansion']).toBe('2.1.4');
+    expect(manifest.overrides['brace-expansion']).toBe('5.0.12');
+    expect(manifest.overrides['minimatch@3.1.5']['brace-expansion']).toBe('2.1.7');
     expect(patch).toContain("typeof expandModule === 'function'");
     expect(patch).toContain('expandModule.expand');
   });
