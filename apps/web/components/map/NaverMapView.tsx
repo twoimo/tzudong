@@ -2414,7 +2414,7 @@ const NaverMapView = memo(({
                     extendedBounds, VIEWPORT_FILTER_ENABLED,
                 ),
             );
-            syncRetainedMarkerAccessibility(marker, accessible);
+            syncRetainedMarkerAccessibility(marker, accessible, mapRef.current);
         }
         const previousEarlyMarkerRenderKey = earlyMarkerRenderKeyRef.current;
         if (
@@ -2780,7 +2780,7 @@ const NaverMapView = memo(({
                     () => handleMarkerRestaurantSelection(restaurant)
                 );
                 syncRetainedMarkerAccessibility(marker,
-                    !isMobileOrTablet || !retainSmallExpandedSet || inInitialViewport);
+                    !isMobileOrTablet || !retainSmallExpandedSet || inInitialViewport, mapRef.current);
                 };
                 const inInitialViewport = shouldRenderExpandedClusterMarker(
                     restaurant, markerVisibleSelectedRestaurant?.id ?? null,
