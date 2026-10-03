@@ -91,4 +91,54 @@ END;
 $$;
 REVOKE ALL ON FUNCTION pipeline_control.admin_eval_flags(jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION pipeline_control.admin_eval_flags(jsonb) TO service_role;
+
+CREATE FUNCTION pipeline_control.admin_eval_name_key(value text)
+RETURNS text LANGUAGE sql IMMUTABLE SECURITY INVOKER SET search_path='' AS $$
+ SELECT btrim(regexp_replace(regexp_replace(regexp_replace(lower(normalize(coalesce(value,''),NFKC)),
+   '\([^)]*\)|\[[^\]]*\]|（[^）]*）',' ','g'),
+   '(^|\s)(구|현|전)(\s|$)',' ','g'),
+   '[\s·・ㆍ._\-–—,，()（）\[\]{}<>《》"''`´’‘“”:：]','','g'));
+$$;
+CREATE FUNCTION pipeline_control.admin_eval_name_tokens(value text)
+RETURNS text[] LANGUAGE sql IMMUTABLE SECURITY INVOKER SET search_path='' AS $$
+ SELECT coalesce(array_agg(DISTINCT pipeline_control.admin_eval_name_key(regexp_replace(token,'점$',''))),'{}')
+ FROM regexp_split_to_table(regexp_replace(regexp_replace(normalize(coalesce(value,''),NFKC),
+   '\(([^)]*)\)|（([^）]*)）',' \1\2 ','g'),
+   '[·・ㆍ._\-–—,，\[\]{}<>《》"''`´’‘“”:：]',' ','g'),'\s+') token
+ WHERE length(btrim(token))>=2 AND token NOT IN ('구','현','전','내','본점');
+$$;
+CREATE FUNCTION pipeline_control.admin_eval_names_compatible(origin text,candidate text)
+RETURNS boolean LANGUAGE plpgsql IMMUTABLE SECURITY INVOKER SET search_path='' AS $$
+DECLARE a text:=pipeline_control.admin_eval_name_key(origin); b text:=pipeline_control.admin_eval_name_key(candidate);
+BEGIN
+ IF a='' OR b='' OR a=b OR (length(a)>=3 AND strpos(b,a)>0) OR (length(b)>=3 AND strpos(a,b)>0) THEN RETURN true; END IF;
+ RETURN EXISTS(SELECT 1 FROM unnest(pipeline_control.admin_eval_name_tokens(origin)) left_token
+   CROSS JOIN unnest(pipeline_control.admin_eval_name_tokens(candidate)) right_token
+   WHERE left_token<>'' AND right_token<>'' AND (left_token=right_token
+     OR (length(left_token)>=3 AND strpos(right_token,left_token)>0)
+     OR (length(right_token)>=3 AND strpos(left_token,right_token)>0)));
+END;
+$$;
+CREATE FUNCTION pipeline_control.admin_eval_display_name(value jsonb)
+RETURNS text LANGUAGE plpgsql IMMUTABLE SECURITY INVOKER SET search_path='' AS $$
+DECLARE candidate text; location jsonb:=pipeline_control.admin_eval_metrics(value->'evaluation_results')->'location_match_TF';
+BEGIN
+ IF jsonb_typeof(value->'approved_name')='string' AND btrim(value->>'approved_name')<>'' THEN RETURN btrim(value->>'approved_name'); END IF;
+ IF location->'eval_value'='true'::jsonb OR location->>'match_status'='matched' THEN
+   FOREACH candidate IN ARRAY ARRAY[value->>'naver_name',location->>'naver_name',
+     CASE WHEN location->>'matched_provider'='naver' THEN location->>'matched_name' END] LOOP
+     IF candidate IS NOT NULL AND btrim(candidate)<>'' AND pipeline_control.admin_eval_names_compatible(value->>'origin_name',candidate)
+       THEN RETURN btrim(candidate); END IF;
+   END LOOP;
+ END IF;
+ FOREACH candidate IN ARRAY ARRAY[value->>'restaurant_name',value->>'name',value->>'origin_name'] LOOP
+   IF candidate IS NOT NULL AND btrim(candidate)<>'' THEN RETURN btrim(candidate); END IF;
+ END LOOP;
+ RETURN '이름 없음';
+END;
+$$;
+REVOKE ALL ON FUNCTION pipeline_control.admin_eval_name_key(text),pipeline_control.admin_eval_name_tokens(text),
+ pipeline_control.admin_eval_names_compatible(text,text),pipeline_control.admin_eval_display_name(jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION pipeline_control.admin_eval_name_key(text),pipeline_control.admin_eval_name_tokens(text),
+ pipeline_control.admin_eval_names_compatible(text,text),pipeline_control.admin_eval_display_name(jsonb) TO service_role;
 COMMIT;

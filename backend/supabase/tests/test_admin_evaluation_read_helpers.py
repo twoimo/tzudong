@@ -22,9 +22,10 @@ class AdminReadHelperTests(unittest.TestCase):
         cls.args={'host':socket,'port':int(os.environ.get('TZUDONG_TEST_PG_PORT','18797')),'user':'postgres'}
         cls.admin=psycopg2.connect(dbname='postgres',**cls.args);cls.admin.autocommit=True
         cls.db='admin_read_'+uuid.uuid4().hex
-        with cls.admin.cursor() as cursor:cursor.execute('CREATE DATABASE '+cls.db+' TEMPLATE template0')
+        with cls.admin.cursor() as cursor:cursor.execute('CREATE DATABASE '+cls.db+" TEMPLATE template0 ENCODING 'UTF8'")
         cls.addClassCleanup(cls.cleanup)
         cls.conn=psycopg2.connect(dbname=cls.db,**cls.args);cls.conn.autocommit=True
+        cls.conn.set_client_encoding('UTF8')
         with cls.conn.cursor() as cursor:
             cursor.execute('CREATE SCHEMA pipeline_control; GRANT USAGE ON SCHEMA pipeline_control TO service_role;')
             cursor.execute(SOURCE.read_text())
@@ -82,6 +83,22 @@ console.log(JSON.stringify(cases));'''
                     self.assertEqual(cursor.fetchone()[0],value['expected'])
             cursor.execute('RESET ROLE')
         self.assertEqual(len(values),80)
+
+    def test_display_names_match_normalized_typescript_alias_and_branch_rules(self):
+        bun=os.environ.get('TZUDONG_TEST_BUN') or shutil.which('bun')
+        code='''import {normalizeEvaluationRecord,withAdminEvaluationDisplayName} from './lib/admin/normalize-evaluation-record.ts';
+const cases=[];const names=['같은 식당','같은식당 본점','식당(현) 같은식당','ＴＥＳＴ 본점','다른 식당','같은식당 서울역점','같은 식당 · 2호점'];
+for(const origin of names)for(const candidate of names)for(const passed of [false,true]){
+const input={id:'fixture',origin_name:origin,naver_name:candidate,evaluation_results:{location_match_TF:{eval_value:passed,match_status:passed?'matched':'failed',matched_provider:'naver',matched_name:candidate}}};
+cases.push({input,expected:withAdminEvaluationDisplayName(normalizeEvaluationRecord(input)).restaurant_name});}
+console.log(JSON.stringify(cases));'''
+        cases=json.loads(subprocess.run([bun,'-e',code],cwd=ROOT/'apps/web',capture_output=True,text=True,check=True).stdout)
+        with self.conn.cursor() as cursor:
+            for case in cases:
+                with self.subTest(input=case['input']):
+                    cursor.execute('SELECT pipeline_control.admin_eval_display_name(%s::jsonb)',(json.dumps(case['input']),))
+                    self.assertEqual(cursor.fetchone()[0],case['expected'])
+        self.assertEqual(len(cases),98)
 
 
 if __name__=='__main__':unittest.main()

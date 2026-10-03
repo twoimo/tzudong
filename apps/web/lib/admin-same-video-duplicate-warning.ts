@@ -150,11 +150,11 @@ export function findSameVideoDuplicateWarningCandidates(
     .sort((left, right) => right.confidence - left.confidence || left.name.localeCompare(right.name));
 }
 
-export function formatSameVideoDuplicateWarning(candidates: SameVideoDuplicateWarningCandidate[]): string {
-  if (candidates.length === 0) return '';
+export function formatSameVideoDuplicateWarning(candidates: SameVideoDuplicateWarningCandidate[], total = candidates.length): string {
+  if (total === 0 || candidates.length === 0) return '';
   const first = candidates[0];
-  const suffix = candidates.length > 1 ? ` 외 ${candidates.length - 1}건` : '';
-  return `같은 영상에서 중복 후보 ${candidates.length}건이 있습니다: ${first.name}${suffix}. 승인/삭제/수정 전 같은 맛집인지 확인하세요.`;
+  const suffix = total > 1 ? ` 외 ${total - 1}건` : '';
+  return `같은 영상에서 중복 후보 ${total}건이 있습니다: ${first.name}${suffix}. 승인/삭제/수정 전 같은 맛집인지 확인하세요.`;
 }
 
 export async function fetchSameVideoDuplicateWarningCandidates(

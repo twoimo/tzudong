@@ -161,3 +161,12 @@ RequestPacer는 sleep 후 최신 shared deadline을 재확인하고 실제 출�
 기존 TypeScript 평가 파서를 SQL로 구현해 numeric/boolean/category/location의 잘못된 형식, nullable 값, 근거 family, pending reason을 동일하게 해석한다. 상태 분류 역시 pending fallback·missing·미대상·승인 대기·미확정 지도 판정을 보존한다. 실제 공유 TS 함수의 반환값과 실제 PG17.6 함수의 반환값을 **평가 65개 + 상태 80개 = 145개** 사례에서 비교하여 차이 **0개**를 확인했다. missing/미확정처럼 상태가 겹치는 사례도 포함한다. private 함수는 service_role만 실행하며 anon/authenticated 호출은 거부됐다(3개 검사 통과).
 
 이는 DB-side bounded search/keyset 조회에 필요한 사전 동등성 검증이다. 기존 route의 전체 snapshot 경로를 아직 교체하지 않았으므로 페이지 API의 성능 개선·운영 적용 완료로 주장하지 않는다. DB 필터·정렬·통계·중복 경고와 route 연결, 실행 계획·전후 paired 측정은 계속 구현한다. 원시 conformance 결과는 `admin-read-normalization-conformance-20261004.json`과 분리된 SHA에 결속했다.
+
+
+## 검색명·경고의 DB 조회 연결 준비
+
+검색에서 사용하는 표시명을 SQL로 구현해 NFKC·지점 토큰·이전 상호 표기·rule 기반 네이버 이름 선택을 기존 TS와 비교했다. 98개 추가 이름 사례에서 차이 0개였으며 기존 145개와 합쳐 **243개** normalization/classification 사례가 일치했다. SQL 함수 자체는 아직 page route에 연결하지 않았으므로 운영 검색 성능 완료를 주장하지 않는다.
+
+`EvaluationWarningStream`은 총수와 상위 중복 후보 3개·삭제 근거 3개만 유지한다. 전체 10,011행을 batch 1·50·200·777로 넣어도 전체 리스트 helper와 총수·메시지·첫 근거·후보가 동일했다. 기존 경고 테스트를 포함해 10개 검사 통과, DB 테스트 4개 통과, native/compat 진단 0·ESLint를 확인했다. 보관 후보 상태는 관계 행 전체 수 N 대신 상수 6개와 총수·static warning으로 제한된다. 이는 deterministic conformance이고 지연/금액/모집단 신뢰구간 개선 측정이 아니다.
+
+DB full query·정렬·global statistics·bounded related-row retrieval와 page route 교체, 실제 실행 계획·cold 측정은 계속 남아 있다. 현재 기존 snapshot path의 문제를 완료로 바꾸거나 전체 목표를 축소하지 않는다.
