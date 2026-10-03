@@ -1,12 +1,13 @@
 const R2_DEV_ORIGIN_PATTERN =
   /^https:\/\/pub-[a-z0-9]{8,64}\.r2\.dev$/;
+const R2_PRODUCTION_ORIGIN = 'https://assets.tzudong.app';
 
 export function resolveR2PublicBase(
   environment: Record<string, string | undefined> = process.env,
 ): string | null {
   const value = environment.NEXT_PUBLIC_R2_PUBLIC_BASE?.trim() ?? '';
   if (!value) return null;
-  if (!R2_DEV_ORIGIN_PATTERN.test(value)) return null;
+  if (value !== R2_PRODUCTION_ORIGIN && !R2_DEV_ORIGIN_PATTERN.test(value)) return null;
   return value;
 }
 

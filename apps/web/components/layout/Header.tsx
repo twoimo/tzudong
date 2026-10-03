@@ -287,11 +287,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {!isMobileBannerOnlyHeader && (
         <Link href="/" className="relative z-10 flex-shrink-0 flex items-center justify-center">
           <NextImage
-            src="/logo.webp"
+            src="/logo.png"
+            unoptimized
             alt="Tzudong Logo"
             width={32}
             height={32}
-            className="rounded-lg object-contain"
+            className="rounded-lg bg-transparent object-contain"
             priority
           />
         </Link>

@@ -1,12 +1,14 @@
 "use client";
 
 import { X } from "lucide-react";
+import type { ReactNode } from "react";
 import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type UserProfileProgressiveSkeletonProps = {
     label?: string;
+    header?: ReactNode;
     showCloseButton?: boolean;
     onBack?: () => void;
 };
@@ -15,6 +17,7 @@ export function UserProfileProgressiveSkeleton({
     label = "사용자 프로필을 불러오는 중",
     showCloseButton = false,
     onBack,
+    header,
 }: UserProfileProgressiveSkeletonProps) {
     return (
         <div
@@ -26,6 +29,7 @@ export function UserProfileProgressiveSkeleton({
             data-user-profile-panel-skeleton="true"
             data-user-profile-route-skeleton="true"
         >
+            {header}
             <div className="border-b border-border/70 bg-background p-4">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -35,7 +39,7 @@ export function UserProfileProgressiveSkeleton({
                             <Skeleton className="h-3 w-44 max-w-full rounded-full" />
                         </div>
                     </div>
-                    {showCloseButton && onBack && (
+                    {!header && showCloseButton && onBack && (
                         <Button
                             variant="ghost"
                             size="icon"

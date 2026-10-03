@@ -263,7 +263,7 @@ function buildContentSecurityPolicy(nonce: string) {
         "script-src-attr 'none'",
         "style-src 'self' 'unsafe-inline'",
         `img-src ${buildImageSources()}`,
-        "font-src 'self' data:",
+        "font-src 'self' data: https://assets.tzudong.app",
         `connect-src 'self'${developmentConnectSources} https://api.openai.com https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.naver.com https://*.naver.net https://*.pstatic.net`,
         "media-src 'self' blob: https://*.supabase.co",
         "worker-src 'self' blob:",

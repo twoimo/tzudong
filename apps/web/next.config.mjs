@@ -202,6 +202,13 @@ const nextConfig = {
                 ],
             },
             {
+                source: '/fonts/ChosunCentennial_otf.otf',
+                headers: [
+                    ...securityHeaders,
+                    { key: 'Cache-Control', value: 'no-store' },
+                ],
+            },
+            {
                 source: '/favicon.ico',
                 headers: [
                     ...securityHeaders,

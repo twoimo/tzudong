@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MapPanelHeader, mapPanelIconButtonClass } from '@/components/home/map-panel-chrome';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -308,55 +309,29 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                 </button>
             )}
 
-            {/* 헤더 */}
-            <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                        <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
-                            <Megaphone className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
-                            <span className="min-w-0 truncate">쯔동여지도 공지</span>
-                            {viewMode === 'list' && (
-                                <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
-                                    {isAnnouncementsLoading ? <InlineCountSkeleton /> : `(${allDisplayAnnouncements.length}개)`}
-                                </span>
-                            )}
-                        </h1>
-                        <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
-                            {viewMode === 'list' && '쯔동여지도 소식과 운영 안내를 확인하세요.'}
-                            {viewMode === 'detail' && '공지 내용을 자세히 확인하세요.'}
-                            {viewMode === 'create' && '새 공지사항을 작성합니다.'}
-                            {viewMode === 'edit' && '공지사항 내용을 수정합니다.'}
-                        </p>
-                    </div>
-                    <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-                        {canManageInline && viewMode === 'list' && (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleCreate}
-                                disabled={isMutating}
-                                className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
-                                title="새 공지 작성"
-                                aria-label="새 공지 작성"
-                            >
-                                <Plus className="h-5 w-5" aria-hidden="true" />
-                            </Button>
-                        )}
-                        {!hideCloseButton && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={viewMode === 'list' ? onClose : handleCancel}
-                                className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
-                                aria-label={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}
-                            >
-                                <X className="h-5 w-5" aria-hidden="true" />
-                            </Button>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <MapPanelHeader
+                title="쯔동여지도 공지"
+                titleAs="h1"
+                titleIcon={<Megaphone />}
+                count={viewMode === 'list' && !isAnnouncementsLoading ? allDisplayAnnouncements.length : undefined}
+                description={viewMode === 'list' ? '쯔동여지도 소식과 운영 안내를 확인하세요.' : viewMode === 'detail' ? '공지 내용을 자세히 확인하세요.' : viewMode === 'create' ? '새 공지사항을 작성합니다.' : '공지사항 내용을 수정합니다.'}
+                onClose={!hideCloseButton ? (viewMode === 'list' ? onClose : handleCancel) : undefined}
+                closeLabel={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}
+                actions={canManageInline && viewMode === 'list' ? (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCreate}
+                        disabled={isMutating}
+                        className={mapPanelIconButtonClass}
+                        title="새 공지 작성"
+                        aria-label="새 공지 작성"
+                    >
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                ) : undefined}
+            />
 
             {/* 본문 */}
             <div className="flex-1 overflow-hidden">
