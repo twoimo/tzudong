@@ -124,6 +124,12 @@
       "role": "verification-readback"
     },
     {
+      "path": "g014-service-invoker-replay-local.json",
+      "bytes": 825,
+      "sha256": "665d480da0dcb40f72aef0afcaee24b93a0a744424a55ab52024cf9898cce69f",
+      "role": "verification-readback"
+    },
+    {
       "path": "gemini-live-generation.json",
       "bytes": 1280,
       "sha256": "628878e1f3de3c30d53da0e81532aeb3aa61208f52c8fafd3bb3de06ee97ea6d",
@@ -206,6 +212,30 @@
       "bytes": 52369,
       "sha256": "e41263bf61563cae4f7c7e87ccd5fbe7828f482da3a9767bfaed8f5662b1ae3f",
       "role": "capture-attempt"
+    },
+    {
+      "path": "kpi-834-capture-attempt.png",
+      "bytes": 52673,
+      "sha256": "5cceabe658f21d9ff24b647fa994d2020f419bf1c32610c02d6ba5344ac97534",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "kpi-accepted-1440.png",
+      "bytes": 164526,
+      "sha256": "bc5a0a54f325150d4d6fca382e2cb9d44df773cae8a9cdba4782d91a91c99658",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "kpi-accepted-390.png",
+      "bytes": 37255,
+      "sha256": "3d4f333c74c7aff2722c21ca9e38c7925d17c678eb65d5793b2704948fb55507",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "kpi-accepted-834.png",
+      "bytes": 97226,
+      "sha256": "3faed939c427aa66b0ece315ccd4e10654a51e7a4cf78a36d5f98b22864df856",
+      "role": "verified-synthetic-viewport-capture"
     },
     {
       "path": "kpi-dark-reduced-desktop.jpg",

@@ -105,7 +105,7 @@ class PostgreSQLContract(unittest.TestCase):
         self.conn = self.psycopg2.connect(dbname=self.db, **self.params)
         self.conn.autocommit = True
         self.cursor = self.conn.cursor()
-        self.cursor.execute('CREATE SCHEMA privacy_retention; GRANT USAGE ON SCHEMA privacy_retention TO privacy_workflow_owner; CREATE TABLE privacy_retention.g014_public_rpc_allowlist(source_signature text,grantee name); GRANT SELECT ON privacy_retention.g014_public_rpc_allowlist TO privacy_workflow_owner; CREATE TABLE privacy_retention.privacy_retention_runs(id uuid); CREATE TABLE public.admin_storyboard_production_projects(id uuid); CREATE TABLE public.admin_storyboard_production_jobs(id uuid);')
+        self.cursor.execute('CREATE SCHEMA privacy_retention AUTHORIZATION privacy_workflow_owner; CREATE TABLE privacy_retention.g014_public_rpc_allowlist(source_signature text,grantee name); GRANT SELECT ON privacy_retention.g014_public_rpc_allowlist TO privacy_workflow_owner; CREATE TABLE privacy_retention.privacy_retention_runs(id uuid); CREATE TABLE public.admin_storyboard_production_projects(id uuid); CREATE TABLE public.admin_storyboard_production_jobs(id uuid);')
         self.source = MIGRATION.read_text()
         for name, definition in definitions()[0].items():
             self.cursor.execute(definition + ' ALTER FUNCTION privacy_retention.assert_g014_' + name + '_contract() OWNER TO privacy_workflow_owner; REVOKE ALL ON FUNCTION privacy_retention.assert_g014_' + name + '_contract() FROM PUBLIC,anon,authenticated,service_role;')
@@ -164,6 +164,21 @@ class PostgreSQLContract(unittest.TestCase):
             self.apply()
         self.cursor.execute('ROLLBACK')
         self.assertEqual(self.state(), after)
+
+    def test_replay_uses_owner_and_restores_memberships(self):
+        from backend.supabase.scripts.transform_service_invoker_replay import transform
+        bundle = ROOT / 'backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_BUNDLE.v4.json'
+        def memberships():
+            self.cursor.execute('SELECT roleid,member,grantor,admin_option,inherit_option,set_option FROM pg_auth_members ORDER BY roleid,member,grantor')
+            return self.cursor.fetchall()
+        before = memberships()
+        transformed = transform(MIGRATION.read_bytes(), bundle.read_bytes()).decode()
+        self.cursor.execute(transformed.replace('COMMIT;', 'ROLLBACK;'))
+        self.assertEqual(memberships(), before)
+        self.cursor.execute(transformed)
+        self.assertEqual(memberships(), before)
+        self.install_loop()
+        self.check()
 
     def test_security_owner_path_and_grant_drift(self):
         self.apply()
