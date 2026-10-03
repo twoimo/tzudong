@@ -112,6 +112,18 @@
       "role": "capture-attempt"
     },
     {
+      "path": "g014-service-invoker-hosted.json",
+      "bytes": 1115,
+      "sha256": "b5d54ad3274b63088c50e9fe470b408d30bd59509d05e85fe8c64c9d77915469",
+      "role": "verification-readback"
+    },
+    {
+      "path": "g014-service-invoker-local.json",
+      "bytes": 1049,
+      "sha256": "a1d3ec3853cca41db54b49c4f4fba0b55ec2861e5422158df4a64b42bef6bb3d",
+      "role": "verification-readback"
+    },
+    {
       "path": "gemini-live-generation.json",
       "bytes": 1280,
       "sha256": "628878e1f3de3c30d53da0e81532aeb3aa61208f52c8fafd3bb3de06ee97ea6d",
