@@ -484,6 +484,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "production-preflight-20261004.json",
+      "bytes": 1048,
+      "sha256": "c23807d4a8428d94427be73ea8c4ef515758720b6c859b8f9aa1862144ef230e",
+      "role": "verification-readback"
+    },
+    {
       "path": "profile-mobile-authenticated.jpg",
       "bytes": 24851,
       "sha256": "d30939588599e090440fb3e64caaa8a4d16381ba22b0df578372d1e09ffc47a4",
