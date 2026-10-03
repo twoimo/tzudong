@@ -4,6 +4,9 @@ import path from 'node:path';
 
 const root = path.resolve('tests-unit');
 const isolated = new Set([
+  'admin-sentry-route.test.ts',
+  'sentry-admin.test.ts',
+  'sentry-sdk-transport.test.ts',
   'admin-storyboard-generator.test.ts',
   'admin-storyboard-langgraph.test.ts',
   'admin-storyboard-caption-provenance.test.ts',

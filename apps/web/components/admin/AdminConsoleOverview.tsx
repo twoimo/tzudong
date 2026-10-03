@@ -23,6 +23,7 @@ import {
   Activity,
   BarChart2,
   Bot,
+  Bug,
   CheckCircle2,
   ClipboardCheck,
   Clapperboard,
@@ -168,6 +169,15 @@ type SidebarSection = {
 };
 
 const consoleModules: ConsoleModule[] = [
+  {
+    id: "sentry",
+    title: "오류 모니터링",
+    description: "Sentry 오류 현황",
+    href: "/admin?module=sentry",
+    icon: Bug,
+    badge: "Sentry",
+    actionLabel: "오류 확인",
+  },
   {
     id: "restaurants",
     title: "맛집 관리",
@@ -401,7 +411,7 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
-    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline"]),
+    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "sentry"]),
   },
   {
     label: "실험실",
@@ -687,6 +697,10 @@ function loadAdminUsersModule() {
   return import("@/components/admin/AdminUsersPanel");
 }
 
+function loadAdminSentryModule() {
+  return import("@/components/admin/AdminSentryPanel").then((module) => module.AdminSentryPanel);
+}
+
 function loadAdminStoryboardGenerator() {
   return import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
     (module) => module.AdminStoryboardGenerator,
@@ -871,6 +885,8 @@ const AdminUsersModule = dynamic(loadAdminUsersModule, {
   loading: () => null,
 });
 
+const AdminSentryModule = dynamic(loadAdminSentryModule, { ssr: false, loading: () => null });
+
 const AdminStoryboardGenerator = dynamic(loadAdminStoryboardGenerator, {
   ssr: false,
   loading: () => null,
@@ -923,6 +939,8 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
       return loadAdminYoutubeThumbnailGenerator();
     case "users":
       return loadAdminUsersModule();
+    case "sentry":
+      return loadAdminSentryModule();
     case "insights":
       return loadInsightsModule();
     case "pipeline":
@@ -9345,6 +9363,8 @@ function InlineModulePanel({
         return <InsightsModule key="admin-insights" embedded />;
       case "pipeline":
         return <AdminPipelineDashboard key="admin-pipeline" />;
+      case "sentry":
+        return <AdminSentryModule key="admin-sentry" />;
       default: {
         const exhaustiveModuleId: never = module.id;
         return exhaustiveModuleId;
