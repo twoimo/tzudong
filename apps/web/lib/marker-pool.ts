@@ -11,6 +11,8 @@
  * pool.release('restaurant-123');
  */
 
+import { syncRetainedMarkerAccessibility } from './retained-marker-accessibility';
+
 type MarkerClickEvent = unknown;
 
 interface MarkerAnchorLike {
@@ -72,6 +74,7 @@ function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknow
 }
 
 interface PooledMarker {
+    __tzudongRetainedMarkerAriaHidden?: boolean;
     __onClick?: (event: MarkerClickEvent) => void;
     __disposeClickListener?: () => void;
     getMap: () => unknown;
@@ -197,6 +200,9 @@ export class MarkerPool {
                 (currentAnchor?.y ?? null) !== (nextAnchor?.y ?? null);
 
             if (isContentDifferent || isAnchorDifferent) {
+                // A new SDK icon can replace the app root carrying the mask.
+                // Clear its ownership flag before the renderer masks the new root.
+                syncRetainedMarkerAccessibility(marker, true);
                 const element = marker.getElement();
                 const patched = !isAnchorDifferent
                     && typeof element?.querySelector === 'function'
@@ -229,6 +235,7 @@ export class MarkerPool {
         // Detached/evicted markers must not retain a render's restaurant/state
         // closure or dispatch a queued click for a no-longer-active place.
         marker.__onClick = undefined;
+        syncRetainedMarkerAccessibility(marker, true);
         marker.setMap(null);
         if (this.pool.length < this.MAX_POOL_SIZE) {
             this.pool.push(marker);
@@ -245,7 +252,12 @@ export class MarkerPool {
      * @param ids 마커 ID 배열
      */
     public releaseMultiple(ids: string[]): void {
-        ids.forEach((id) => this.release(id));
+        // The pool is a stack. Reverse a batch's release order so a returning
+        // render in the same ID order reacquires its own icon/position rather
+        // than rebuilding every SDK icon for a different restaurant.
+        for (let index = ids.length - 1; index >= 0; index--) {
+            this.release(ids[index]);
+        }
     }
 
     /**
@@ -290,6 +302,7 @@ export class MarkerPool {
         }
         if (updates.icon) {
             marker.setIcon(updates.icon);
+            syncRetainedMarkerAccessibility(marker, !marker.__tzudongRetainedMarkerAriaHidden);
         }
         if (updates.zIndex !== undefined) {
             marker.setZIndex(updates.zIndex);
@@ -322,6 +335,7 @@ export class MarkerPool {
     public clear(): void {
         this.active.forEach((marker) => {
             marker.__onClick = undefined;
+            syncRetainedMarkerAccessibility(marker, true);
             marker.setMap(null);
             marker.__disposeClickListener?.();
             marker.__disposeClickListener = undefined;
