@@ -83,3 +83,11 @@ Next 업그레이드 스킬은 skill-creator 절차로 백업·공식 문서 대
 공식 수정 출처: https://github.com/vercel/next.js/releases/tag/v16.3.8 · https://github.com/juliangruber/brace-expansion/security/advisories/GHSA-q2hr-2g5m-vwhr · https://github.com/micromatch/braces/issues/70 . GitHub 자동 AI 리뷰는 월간 쿼터 소진으로 실행되지 않았고 추가 유료 용량은 설정하지 않았다. 배포·워커·전체 화면/파이프라인 검증은 계속 진행한다.
 
 후속 최종 빌드는 47개 정적 페이지 생성·타입 검사까지 통과했다. 실험용 build type include를 제거한 정본 소스 parity는 2,400개 논리 입력에서 진단 0이다. 구조 이력은 207개 후보 blob을 다시 생성해 7개 검사로 확인했으며 보호 CI 검사를 생략하지 않는다.
+
+## 내부 패키지 설치·CI 인터페이스 보완
+
+폴더 override는 npm이 중첩된 micromatch 아래 잘못된 링크를 만들어 SBOM에서 거부됐다. 같은 내부 소스 11개와 바이트가 일치하는 7,678bytes 압축 패키지로 설치하고 npm/Bun에 같은 SHA-512를 묶었다. 깨진 설치 그래프 1→0, SBOM CycloneDX 생성, audit 0, Pin_Contract drift 0을 확인했다. 공급자·모델이나 컴파일러 고정 값은 바꾸지 않았다. Docker Catalog CI는 공식 action commit과 Docker 29.8.2에 고정하고, 해당 작업의 소유한 임시 Unix 소켓만 제한하여 지원한다. 기존 원격/TCP 거부와 개인 컴퓨터의 Docker context는 유지한다. 관련 20개 검사 통과는 실제 CI 재생 성공과 구분한다.
+
+Windows npm 측정 실패 영수증은 샘플 간격 141.397ms를 기록했다. 60ms 한도를 올리거나 불합격 측정을 통과로 바꾸지 않았다. 전체 검사에서는 기존 프로세스 트리 fixture의 500ms 시작 경계 1건이 실패했고, 같은 파일을 단독으로 재검증한 25개는 통과했다. 이후 상태를 확인하며 배포를 진행한다.
+
+압축 패키지와 @next/bundle-analyzer 16.3.8 반영 후 직렬 정식 웹 재검증은 2,652개 통과·9개 건너뜀·실패 0이었다. 실제 micromatch의 설치 경로에서도 내부 포크 경계가 적용됨을 확인했다. Python 공급망·소켓·구조 이력 27개 검사도 통과했다.

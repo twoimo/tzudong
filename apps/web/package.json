@@ -125,7 +125,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "16.3.5",
+    "@next/bundle-analyzer": "16.3.8",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/postcss": "^4.3.3",
@@ -147,7 +147,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.63.0",
-    "braces": "file:vendor/braces"
+    "braces": "file:vendor/tzudong-braces-3.0.3-tzudong.1.tgz"
   },
   "overrides": {
     "baseline-browser-mapping": "2.11.14",

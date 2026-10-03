@@ -2,10 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const braces = require('../vendor/braces');
+const braces = createRequire(require.resolve('micromatch/package.json'))('braces');
 
 describe('private brace parser resource boundary', () => {
   test('retains ordinary path alternatives, ranges, escapes and AST consumption', () => {
+    expect(createRequire(require.resolve('micromatch/package.json'))('braces/package.json').name).toBe('@tzudong/braces');
     expect(braces.expand('src/{app,components}/**/*.{ts,tsx}')).toEqual([
       'src/app/**/*.ts','src/app/**/*.tsx','src/components/**/*.ts','src/components/**/*.tsx',
     ]);

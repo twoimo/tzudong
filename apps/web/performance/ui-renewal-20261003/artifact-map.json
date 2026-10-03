@@ -262,6 +262,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "packed-fork-readback.json",
+      "bytes": 1485,
+      "sha256": "31640836c34e7aed563bd84cb65112f3bf764918d14b429c255a049c72a130f7",
+      "role": "raw-measurement"
+    },
+    {
       "path": "pipeline-desktop-matrix.png",
       "bytes": 74049,
       "sha256": "555d0b4f5c01458f476f96016fff4055f4693df5aa9c70e980ff42d23e986f6d",

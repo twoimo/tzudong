@@ -144,6 +144,12 @@ export function directLockIdentityMatch({ name, declared, npmLock, bun }) {
   if (typeof declared === 'string' && declared.startsWith('file:')) {
     const directory = declared.slice(5);
     if (!directory || path.posix.isAbsolute(directory) || directory.split('/').includes('..') || directory.includes('\\')) return false;
+    if (directory.endsWith('.tgz')) {
+      return entry.link !== true && entry.resolved === declared && typeof entry.version === 'string'
+        && typeof entry.integrity === 'string' && /^sha512-[A-Za-z0-9+/]+={0,2}$/.test(entry.integrity)
+        && bun.packages[name][2] === entry.integrity
+        && identity === `${entry.name ?? name}@${directory}`;
+    }
     if (entry.link !== true || entry.resolved !== directory) return false;
     const target = npmLock.packages?.[directory];
     return typeof target?.name === 'string' && typeof target?.version === 'string'
