@@ -4,6 +4,8 @@ import psycopg2
 root=Path(__file__).resolve().parents[2]
 file=root/'backend/supabase/migrations/20261003065736_g014_current_service_rpc_registry.sql'
 sql=file.read_text();db='registry_'+uuid.uuid4().hex
+repair_file=root/'backend/supabase/migrations/20261003095444_restore_service_identity_helpers.sql'
+repair=repair_file.read_text()
 params=dict(host='/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6/socket',port=18797,user='postgres')
 admin=psycopg2.connect(dbname='postgres',**params);admin.autocommit=True
 signatures=['confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)','extract_youtube_video_id(text)','normalize_restaurant_identity_name(text)','record_app_web_vitals(text,text,text,text,smallint)','record_app_web_vitals_bounded(text,text,text,text,smallint)','resolve_restaurant_identity_name(text,text,text,text)']
@@ -28,11 +30,20 @@ try:
   c.execute('SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist');checks['six_exact_entries']=c.fetchone()[0]==6
   checks['execute_acl_unchanged']=acl()==before
   c.execute(sql);c.execute('SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist');checks['idempotent_rows']=c.fetchone()[0]==6
+  before_repair=acl();c.execute(repair);checks['host_equivalent_repair_does_not_change_acl']=acl()==before_repair
+  for signature in ['extract_youtube_video_id(text)','normalize_restaurant_identity_name(text)','resolve_restaurant_identity_name(text,text,text,text)']:
+   c.execute('REVOKE EXECUTE ON FUNCTION public.'+signature+' FROM service_role')
+  try:c.execute(sql);raise AssertionError('historical-revoke-admitted')
+  except psycopg2.Error as e:checks['historical_writer_revocation_reproduced']='G014_SERVICE_REGISTRY_PREREQUISITE_UNAVAILABLE' in str(e)
+  c.execute('ROLLBACK');c.execute(repair);c.execute(sql)
+  checks['source_repair_restores_exact_acl']=acl()==before_repair
+  c.execute("SELECT bool_and(NOT has_function_privilege('anon',oid,'EXECUTE') AND NOT has_function_privilege('authenticated',oid,'EXECUTE')) FROM pg_proc WHERE pronamespace='public'::regnamespace")
+  checks['repair_does_not_grant_browser_access']=c.fetchone()[0] is True
   c.execute('DROP FUNCTION public.resolve_restaurant_identity_name(text,text,text,text)')
   try:c.execute(sql);raise AssertionError('missing-function-admitted')
   except psycopg2.Error as e:checks['missing_signature_denied']='G014_SERVICE_REGISTRY_PREREQUISITE_UNAVAILABLE' in str(e)
   c.execute('ROLLBACK')
- report={'kind':'local-service-rpc-registry-verification','postgresVersion':version,'operationalDatabaseChanges':False,'migrationSha256':hashlib.sha256(file.read_bytes()).hexdigest(),'assertions':checks,'pass':all(checks.values())}
+ report={'kind':'local-service-rpc-registry-verification','postgresVersion':version,'operationalDatabaseChanges':False,'migrationSha256':hashlib.sha256(file.read_bytes()).hexdigest(),'repairSha256':hashlib.sha256(repair_file.read_bytes()).hexdigest(),'assertions':checks,'pass':all(checks.values())}
  (root/'apps/web/performance/ui-renewal-20261003/service-registry-local.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report));assert report['pass']
 finally:
  if 'conn' in locals():conn.close()

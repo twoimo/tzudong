@@ -18,7 +18,7 @@ function repoSource(path: string) {
 }
 
 describe("admin restaurant refresh history source contracts", () => {
-  test("adds a dedicated admin sidebar module for approved restaurant refresh history", () => {
+  test("retains legacy refresh routes while mounting refresh inside restaurant management", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
     const routeSource = source("lib/admin/admin-module-routing.ts");
@@ -30,9 +30,9 @@ describe("admin restaurant refresh history source contracts", () => {
     );
     expect(consoleSource).toContain("AdminRestaurantRefreshHistoryModule");
     expect(consoleSource).toContain('case "restaurant-refresh-history"');
-    expect(sidebarOrderSource).toContain('"restaurant-refresh-history"');
+    expect(sidebarOrderSource).not.toContain('"restaurant-refresh-history"');
     expect(sidebarOrderSource).toContain(
-      '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
+      '검수: ["restaurants", "submissions", "reviews"]',
     );
   });
 
@@ -63,8 +63,6 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).not.toMatch(
       /<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/,
     );
-    expect(panelSource).toContain("기록 관리");
-    expect(panelSource).toContain("상호명·전화번호·폐업·이전");
     expect(panelSource).toContain(
       'data-admin-restaurant-refresh-management-structure="header-list-detail"',
     );
@@ -74,23 +72,13 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain(
       'data-admin-restaurant-refresh-detail="management-like"',
     );
-    expect(panelSource).toContain("맛집 관리 동일 구조");
-    expect(panelSource).toContain("후보 생성 → 운영자 판단 →");
-    expect(panelSource).toContain("guarded apply → readback/recrawl");
-    expect(panelSource).toContain(
-      "왼쪽 목록에서 후보를 선택하고 오른쪽 상세 패널에서",
-    );
     expect(panelSource).toContain("왼쪽 목록에서 후보를 선택하세요");
-    expect(panelSource).toContain("승인 맛집 점검 job 또는 수동");
-    expect(panelSource).toContain("후보 기록이 생성되면");
     expect(panelSource).toContain("운영자 결정 기록");
     expect(panelSource).toContain("결정 저장");
-    expect(panelSource).toContain("승인과 동시에 현재 맛집 값 guarded apply");
     expect(panelSource).toContain("function isClosureCandidate");
     expect(panelSource).toContain(
       "폐업 의심 후보는 네이버 미검색 신호일 뿐 폐업 확정이",
     );
-    expect(panelSource).toContain("guarded apply를 막습니다.");
     expect(panelSource).toContain("disabled={!canApplySelectedCandidate}");
     expect(panelSource).toContain("function reviewChecklistForCandidate");
     expect(panelSource).toContain(
@@ -134,7 +122,6 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(html).toContain('data-admin-module-content="bounded"');
     expect(html).not.toContain('data-admin-restaurant-refresh-headerless="true"');
     expect(html).toContain('aria-labelledby="admin-restaurant-refresh-history-title"');
-    expect(html).toContain("기록 관리");
     expect(html).not.toMatch(/<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/);
   });
 

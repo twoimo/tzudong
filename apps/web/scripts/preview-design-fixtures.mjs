@@ -66,6 +66,14 @@ const evaluations = restaurants.map((restaurant, index) => ({
   address: restaurant.road_address, lat: restaurant.lat, lng: restaurant.lng,
   created_at: stamp, updated_at: stamp,
 }));
+const refreshCandidates = restaurants.slice(0,3).map((row,i)=>({
+  id:`00000000-0000-4000-a700-${String(i+1).padStart(12,'0')}`,restaurant_id:row.id,restaurant_name:row.name,
+  restaurant_address:row.road_address,current_phone:null,candidate_status:'needs_review',detected_change_types:[['phone','name','closure'][i]],
+  previous_snapshot:{name:row.name,approved_name:row.name,phone:null,road_address:row.road_address,jibun_address:null},
+  candidate_snapshot:{name:i===1?row.name+' 변경 후보':row.name,approved_name:i===1?row.name+' 변경 후보':row.name,phone:i===0?'02-0000-0000':null,road_address:row.road_address,jibun_address:null},
+  evidence:{source:'synthetic-fixture'},created_at:stamp,decided_at:null,applied_at:null,
+  readback_state:{status:'not_required',checked_at:null,run_id:null,notes:null},
+}));
 const pending = { submissions: 4, recommendationRequests: 2, reviews: 3, total: 9, asOf: stamp,
   recommendationRequestsLifecycleReady: true, domains: {}, readiness: { status: 'ready', recommendationRequestsLifecycleReady: true, reasons: [] }, diagnostics: {} };
 const summary = { asOf: stamp, totals: { restaurants: 25, videos: 25, categories: 3, withCoordinates: 25 },
@@ -115,7 +123,7 @@ function api(pathname) {
     warnings: Object.fromEntries(evaluations.map((row) => [row.id, { sameVideo: { count: 0, candidates: [], message: '' }, identity: [] }])) };
   if (pathname === '/api/admin/users') return { users: managedUsers,
     summary: { loadedUsers:3,adminUsers:1,disabledUsers:1,unconfirmedUsers:0 },page:1,perPage:120,total:3 };
-  if (pathname === '/api/admin/restaurant-refresh-history') return { records: [], items: [], pagination: { page: 1, perPage: 50, total: 0 }, summary: {} };
+  if (pathname === '/api/admin/restaurant-refresh-history') return {candidates:refreshCandidates,summary:{approved_restaurants_total:25,needs_review:3,approved:0,rejected:0,applied:0,last_checked_at:stamp}};
   if (pathname === '/api/admin/audit-events') return { events: [], total: 0, coverage: { universal: false, mode: 'truthful-partial-domain-specific', domains: [] } };
   if (pathname === '/api/admin/storyboard/production') return { ok: true, projects: [], workers: [] };
   if (pathname === '/api/insights/treemap') return { asOf:stamp,videos,totalVideos:videos.length,period:'ALL',availablePeriods:['1M','ALL'],meta:{dataSource:'supabase-treemap'} };

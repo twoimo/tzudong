@@ -8,6 +8,7 @@
 @import "../styles/light-root-tokens.css";
 
 :root {
+  color-scheme: light;
   --vh: 1vh;
   --full-height: 100vh;
   --font-sans: var(--font-pretendard, "Pretendard"), "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -18,6 +19,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --primary: 352 78% 62%;
   --primary-foreground: 220 18% 9%;
   --popover: 220 16% 12%;

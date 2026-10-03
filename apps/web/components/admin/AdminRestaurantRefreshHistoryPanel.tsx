@@ -124,10 +124,10 @@ function evidenceText(evidence: Record<string, unknown>, key: string) {
 }
 
 function readbackLabel(state: ReadbackState) {
-  if (state.status === "completed") return "readback 완료";
-  if (state.status === "failed") return "readback 실패";
-  if (state.status === "pending") return "readback 대기";
-  return "readback 대상 아님";
+  if (state.status === "completed") return "적용 확인 완료";
+  if (state.status === "failed") return "적용 확인 실패";
+  if (state.status === "pending") return "적용 확인 대기";
+  return "적용 전";
 }
 
 function readbackTone(state: ReadbackState) {
@@ -161,11 +161,11 @@ function reviewChecklistForCandidate(candidate: RefreshCandidateRow) {
     );
   if (types.has("readback_mismatch"))
     checklist.add(
-      "readback 불일치: 적용 후보와 현재 restaurants row를 비교하고 재점검 후보로 다시 결정",
+      "적용한 정보와 현재 맛집 정보를 비교하고 다시 점검하세요.",
     );
   if (candidate.candidate_status === "applied")
     checklist.add(
-      "적용 완료: readback/recrawl 상태가 완료인지 확인하고, 대기/실패면 재점검 실행",
+      "적용 결과를 확인하고 대기 또는 실패 상태면 다시 점검하세요.",
     );
   if (checklist.size === 0)
     checklist.add(
@@ -196,26 +196,6 @@ function ManagementStatusSummary({ items }: { items: StatusSummaryItem[] }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function RefreshWorkflowSteps() {
-  return (
-    <div className="grid grid-cols-2 gap-1 text-2xs text-muted-foreground sm:flex sm:flex-wrap">
-      {[
-        "1. 승인 맛집 스냅샷 수집",
-        "2. 외부 후보와 현재값 비교",
-        "3. 운영자 승인/반려 기록",
-        "4. 적용 후 readback/recrawl",
-      ].map((step) => (
-        <span
-          key={step}
-          className="rounded-md border border-border bg-background/70 px-2 py-1"
-        >
-          {step}
-        </span>
-      ))}
     </div>
   );
 }
@@ -273,12 +253,7 @@ function RefreshCandidateList({
             <History className="h-4 w-4 text-primary" />
             변경 후보 및 결정 이력
           </h2>
-          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-            왼쪽 목록에서 후보를 선택하고 오른쪽 상세 패널에서
-            스냅샷·근거·결정을 처리합니다.
-          </p>
         </div>
-        <RefreshWorkflowSteps />
       </div>
 
       <div className="hidden grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] gap-3 border-b border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-muted-foreground xl:grid">
@@ -297,8 +272,7 @@ function RefreshCandidateList({
           <RefreshCandidateListSkeleton />
         ) : candidates.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">
-            아직 기록된 최신화 후보가 없습니다. 승인 맛집 점검 job 또는 수동
-            후보 기록이 생성되면 이곳에서 누적 관리됩니다.
+            최신화 이력이 없습니다.
           </div>
         ) : (
           candidates.map((candidate) => (
@@ -439,10 +413,6 @@ function RefreshCandidateDetailPanel({
               <h3 className="mt-0.5 truncate text-base font-bold text-foreground">
                 {selectedCandidate.restaurant_name}
               </h3>
-              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                후보를 승인/반려/대체로 기록하고, 승인 후보만 선택적으로 guarded
-                apply 합니다.
-              </p>
             </div>
             <Button
               variant="ghost"
@@ -574,7 +544,7 @@ function RefreshCandidateDetailPanel({
                 className="mt-0.5 h-4 w-4"
               />
               <span>
-                승인과 동시에 현재 맛집 값 guarded apply
+                승인과 동시에 맛집 정보 적용
                 <span className="block text-2xs">
                   상호·전화·주소·좌표 변경 후보만 적용됩니다. 폐업 의심 후보는
                   자동 적용할 수 없습니다.
@@ -585,7 +555,7 @@ function RefreshCandidateDetailPanel({
             {selectedCandidateIsClosure ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
                 폐업 의심 후보는 네이버 미검색 신호일 뿐 폐업 확정이 아니므로
-                guarded apply를 막습니다. 결정 메모에 전화 확인·외부
+                자동 적용을 막습니다. 결정 메모에 전화 확인·외부
                 리뷰·현장/지도 근거를 남긴 뒤 별도 운영 절차로 처리하세요.
               </div>
             ) : null}
@@ -616,10 +586,6 @@ function RefreshCandidateDetailPanel({
           <h3 className="text-base font-semibold text-foreground">
             왼쪽 목록에서 후보를 선택하세요
           </h3>
-          <p className="mt-2 max-w-sm leading-6">
-            맛집 관리 상세 패널처럼 현재 스냅샷, 후보 스냅샷, 유형별 체크리스트,
-            운영자 메모와 guarded apply를 한 곳에서 처리합니다.
-          </p>
         </div>
       )}
     </aside>
@@ -713,7 +679,7 @@ export function AdminRestaurantRefreshHistoryPanel({
       }
       setDecisionMessage(
         decision === "approved" && applyApprovedChange
-          ? "결정과 guarded apply를 저장했습니다. 적용 후 readback/recrawl로 재확인하세요."
+          ? "결정과 변경을 저장했습니다. 적용 결과를 확인하세요."
           : "운영자 결정을 이력에 저장했습니다.",
       );
       setSelectedCandidate(null);
@@ -804,48 +770,10 @@ export function AdminRestaurantRefreshHistoryPanel({
                 맛집 최신화 기록관리
               </h2>
             </div>
-            <div className="mt-1 grid w-full min-w-0 grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
-              <Badge
-                variant="outline"
-                className="min-w-0 shrink-0 justify-center gap-1 truncate border-primary/30 text-primary sm:justify-start"
-              >
-                <Store className="h-3.5 w-3.5" />
-                기록 관리
-              </Badge>
-              <Badge
-                variant="outline"
-                className="min-w-0 shrink-0 justify-center truncate border-primary/30 text-primary sm:justify-start"
-              >
-                <span className="sm:hidden">동일 구조</span>
-                <span className="hidden sm:inline">맛집 관리 동일 구조</span>
-              </Badge>
-              <Badge
-                variant="outline"
-                className="min-w-0 shrink-0 justify-center truncate border-emerald-300 text-emerald-700 dark:text-emerald-300 sm:justify-start"
-              >
-                <span className="sm:hidden">승인 맛집</span>
-                <span className="hidden sm:inline">승인 맛집 대상</span>
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="min-w-0 shrink-0 justify-center truncate font-normal sm:justify-start"
-              >
-                <span className="sm:hidden">안전 적용</span>
-                <span className="hidden sm:inline">guarded apply · readback/recrawl</span>
-              </Badge>
-            </div>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm" data-admin-module-summary="true">
               필터링: {filteredCandidates.length}개 | 검토 필요{" "}
               {summary?.needs_review ?? 0}개 | 최근 점검{" "}
               {formatDate(summary?.last_checked_at)}
-            </p>
-            <p className="mt-0.5 text-xs leading-5 text-muted-foreground sm:hidden">
-              후보 생성 → 운영자 판단 → 안전 적용 → 재확인 순서로 추적합니다.
-            </p>
-            <p className="mt-0.5 hidden max-w-4xl text-xs leading-5 text-muted-foreground sm:block">
-              승인된 맛집의 상호명·전화번호·폐업·이전 가능성을 기록하고, 맛집
-              관리와 같은 헤더-목록-상세 구조에서 후보 생성 → 운영자 판단 →
-              guarded apply → readback/recrawl 순서로 추적합니다.
             </p>
           </div>
 
@@ -898,7 +826,7 @@ export function AdminRestaurantRefreshHistoryPanel({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide p-2 [scrollbar-width:none] lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] lg:overflow-hidden [&::-webkit-scrollbar]:hidden" data-admin-module-content="bounded">
+      <div className={cn("flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide p-2 [scrollbar-width:none] lg:grid lg:overflow-hidden [&::-webkit-scrollbar]:hidden", selectedCandidate ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]" : "lg:grid-cols-1")} data-admin-module-content="bounded">
         {error || decisionMessage ? (
           <div className="space-y-2 lg:col-span-2">
             {error ? (
@@ -921,7 +849,7 @@ export function AdminRestaurantRefreshHistoryPanel({
           onOpenReview={openReview}
         />
 
-        <RefreshCandidateDetailPanel
+        {selectedCandidate && <RefreshCandidateDetailPanel
           selectedCandidate={selectedCandidate}
           checklist={selectedCandidateChecklist}
           decision={decision}
@@ -940,7 +868,7 @@ export function AdminRestaurantRefreshHistoryPanel({
           onApplyApprovedChange={setApplyApprovedChange}
           onOperatorNotesChange={setOperatorNotes}
           onSubmitDecision={submitDecision}
-        />
+        />}
       </div>
     </section>
   );

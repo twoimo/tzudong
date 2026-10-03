@@ -133,6 +133,7 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
+import { RestaurantManagementWorkspace } from "@/components/admin/RestaurantManagementWorkspace";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
@@ -386,7 +387,6 @@ const sidebarSections: SidebarSection[] = [
       .filter((module) =>
         [
           "restaurants",
-          "restaurant-refresh-history",
           "submissions",
           "reviews",
         ].includes(module.id),
@@ -630,7 +630,7 @@ function moveAdminSidebarItem(
 ): AdminSidebarOrderPreference {
   const normalized = normalizeAdminSidebarOrder(order);
   const sectionItems = normalized.items[section] ?? [];
-  const index = sectionItems.indexOf(itemId);
+  const index = sectionItems.findIndex(id => id === itemId);
 
   return {
     ...normalized,
@@ -9286,12 +9286,12 @@ function InlineModulePanel({
     switch (module.id) {
       case "restaurants":
         return (
-          <AdminEvaluationModule
+          <RestaurantManagementWorkspace review={<AdminEvaluationModule
             key="restaurants"
             embedded
             initialView="evaluations"
             onInitialContentReady={() => onModuleContentReady?.("restaurants")}
-          />
+          />} refresh={<AdminRestaurantRefreshHistoryModule onInitialContentReady={() => onModuleContentReady?.("restaurants")} />} />
         );
       case "restaurant-refresh-history":
         return (

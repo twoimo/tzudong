@@ -1262,7 +1262,6 @@ function AdminEvaluationPage({
   // URL 파라미터에 따라 Deep-link 필터 초기화
   useEffect(() => {
     if (deepLinkInitializedRef.current) return;
-    if (embedded) return;
 
     const videoId = searchParams.get('video_id')?.trim() || '';
     const issue = searchParams.get('issue')?.trim() || '';
@@ -3051,6 +3050,7 @@ function AdminEvaluationPage({
   const embeddedModuleId: Extract<AdminConsoleRouteModuleId, 'restaurants' | 'submissions' | 'reviews'> = showSubmissionView
     ? (submissionInitialTab === 'reviews' ? 'reviews' : 'submissions')
     : 'restaurants';
+  const ModuleTitle = embedded ? 'h2' : 'h1';
 
   return (
     <div
@@ -3070,13 +3070,13 @@ function AdminEvaluationPage({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <AdminEvaluationTitleIcon embedded={embedded} />
-              <h1 className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
+              <ModuleTitle className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
                 {embeddedModuleId === 'submissions'
                   ? '제보 관리'
                   : embeddedModuleId === 'reviews'
                     ? '리뷰 관리'
                     : '관리자 데이터 검수'}
-              </h1>
+              </ModuleTitle>
             </div>
             {deepLinkFilter && (
               <div className="mt-2 flex flex-wrap items-center gap-2">

@@ -481,9 +481,16 @@ evidence_scope_file="$staging_dir/evidence-scope.txt"
 printf '%s\n' "$reconstruction_purpose" >"$evidence_scope_file"
 migration_order_predecessor='20260417_prevent_active_restaurant_identity_duplicates.sql'
 migration_order_successor='20260417_harden_submission_identity_duplicate_checks.sql'
+# Hosted had restored helper grants before its registry migration. Reconstruct
+# that prerequisite from the immutable corrective source, exactly once, before
+# verifying the registry; do not weaken or rewrite any applied SQL.
+service_identity_predecessor='20261003095444_restore_service_identity_helpers.sql'
+service_identity_successor='20261003065736_g014_current_service_rpc_registry.sql'
 declare -A migration_order_override_counts=(
   ["$migration_order_predecessor"]=0
   ["$migration_order_successor"]=0
+  ["$service_identity_predecessor"]=0
+  ["$service_identity_successor"]=0
 )
 declare -A backend_migrations_by_name=()
 declare -A app_migrations_by_name=()
@@ -569,7 +576,7 @@ while IFS= read -r -d '' name; do
     fi
   fi
 done < <(printf '%s\0' "${!all_migration_names[@]}" | LC_ALL=C sort -z)
-for name in "$migration_order_predecessor" "$migration_order_successor"; do
+for name in "$migration_order_predecessor" "$migration_order_successor" "$service_identity_predecessor" "$service_identity_successor"; do
   ((migration_order_override_counts[$name] == 1)) || {
     printf 'migration-order override source must be present exactly once: %s\n' "$name" >&2; exit 1;
   }
@@ -582,10 +589,14 @@ effective_migrations=()
 for migration in "${applied_migrations[@]}"; do
   name=${migration##*/}
   case "$name" in
-    "$migration_order_predecessor")
+    "$migration_order_predecessor"|"$service_identity_predecessor")
       ;;
     "$migration_order_successor")
       effective_migrations+=("${applied_migrations_by_name[$migration_order_predecessor]}")
+      effective_migrations+=("$migration")
+      ;;
+    "$service_identity_successor")
+      effective_migrations+=("${applied_migrations_by_name[$service_identity_predecessor]}")
       effective_migrations+=("$migration")
       ;;
     *)

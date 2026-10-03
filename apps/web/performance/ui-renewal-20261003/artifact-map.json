@@ -196,6 +196,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "kpi-dark-reduced-desktop.jpg",
+      "bytes": 163099,
+      "sha256": "e7f7520fa456650a561fb25893ae61edf0d7166d176c9899bde50951a3bcb610",
+      "role": "capture-attempt"
+    },
+    {
       "path": "leaderboard-mobile-reviewed.jpg",
       "bytes": 19780,
       "sha256": "962c660561c757e841f0bbeb56a17d80216ec94e816fe1926b2c4b93234b0d5a",
@@ -430,6 +436,96 @@
       "role": "raw-measurement"
     },
     {
+      "path": "restaurant-management-accepted-1440.png",
+      "bytes": 99334,
+      "sha256": "4b14e34cf7dc839b3af75eb319602ab18a9cf0475b0dc28b99c35d7d808ac81d",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "restaurant-management-accepted-390.png",
+      "bytes": 43123,
+      "sha256": "b1d60b34470fea4dd61b9d32589ed5a96b68eac5a5612c791c4d08d1d319daf0",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "restaurant-management-accepted-834.png",
+      "bytes": 92066,
+      "sha256": "042d19304904df8e55d9d67e523f55c27c3d5f20efcb06a1e10ccb983d1e9d68",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "restaurant-management-closure-guard-tablet.jpg",
+      "bytes": 93394,
+      "sha256": "c68cb432f1279d93f5a0fc334607d5a26cb7426c1b9ffed9dbf1c2e2ca6bd661",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-direct-desktop.png",
+      "bytes": 97951,
+      "sha256": "52ecc984d25bed7b2ec8ec4fbd8e9974f1bd47d4b8ca93b9d533db0a0fe4da5d",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-full-width-desktop.png",
+      "bytes": 99334,
+      "sha256": "4b14e34cf7dc839b3af75eb319602ab18a9cf0475b0dc28b99c35d7d808ac81d",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-integrated-final-desktop.jpg",
+      "bytes": 65342,
+      "sha256": "427e52ca1a4321b7ca692c01dcb6eccc4a87429ca3cbec429251fbc5cbb73c35",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-integrated-ready.jpg",
+      "bytes": 78867,
+      "sha256": "fe3f38b527907aa060dfc24317661856bef8f2f508008de200c3ed04f2550b02",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-integration-render.json",
+      "bytes": 1300,
+      "sha256": "fcf58579355d49cb4dfec6c873e90940ee953f4a092e36750f46a70de6a02ac5",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-management-layout-width.json",
+      "bytes": 451,
+      "sha256": "6ccd2af1efa346f78d390b109875fbe063e4b6aabf7bed887d92aec72dd9fd5f",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-management-refresh-1440.jpg",
+      "bytes": 54816,
+      "sha256": "c236422191853737653f2a0536930f92a0e3a971161a549a75155aa574db2e65",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-refresh-390.jpg",
+      "bytes": 24255,
+      "sha256": "994f123709b7707f8cb4444a6c167b312eac4ba954500d8af2ab41281341627e",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-refresh-834.jpg",
+      "bytes": 47476,
+      "sha256": "30926a26c644342347ad760707fb6150efdc048ce37a02333390c90a22c26d8d",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurant-management-tests.json",
+      "bytes": 948,
+      "sha256": "9e5251b1b092fc78d617f2617de44e630c37720e3f069662f85a1e9999f525f4",
+      "role": "raw-measurement"
+    },
+    {
+      "path": "restaurant-management-viewports-final.json",
+      "bytes": 621,
+      "sha256": "6ee3569b774600eb7f02dcef0101701a4b555c23776a5ee3c9b7e416368abdac",
+      "role": "raw-measurement"
+    },
+    {
       "path": "restaurant-mobile-reviewed.jpg",
       "bytes": 36719,
       "sha256": "92e2dcf3d3a498b059e7780239d6d9acb374ba3ccde9df67b8c64e45d7a7d971",
@@ -463,6 +559,12 @@
       "path": "restaurant-refresh-history-tablet-v3.jpg",
       "bytes": 80349,
       "sha256": "041c0885d4cfdcec167e5ae43f86f263b79536af8d958d74fc04305dbbbaac7b",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "restaurants-dark-reduced-desktop.jpg",
+      "bytes": 37934,
+      "sha256": "f24f5f8e476fdfa64ff556543f7b5ac49a50b7774a74e07e547ba46ed5ac907f",
       "role": "capture-attempt"
     },
     {
@@ -598,6 +700,12 @@
       "role": "raw-measurement"
     },
     {
+      "path": "service-helper-permissions-hosted.json",
+      "bytes": 545,
+      "sha256": "a4f8c4be95e98615d35682cf25de36d5eae8210923a20b8e0ec59a18a65cc0b6",
+      "role": "raw-measurement"
+    },
+    {
       "path": "service-registry-hosted.json",
       "bytes": 788,
       "sha256": "c7c27a67fbfd4dff08b347a333eca7db0ecc7fef304113ec10c13f9aef417f1c",
@@ -605,8 +713,8 @@
     },
     {
       "path": "service-registry-local.json",
-      "bytes": 471,
-      "sha256": "4de53af70d8a0a4dc79d0a42624699c787700a7ccd4ba03dd47c59cb259d2bc8",
+      "bytes": 762,
+      "sha256": "947d53d0cafed9ce341ec42be1f0809f65f392d1cf7bd3f483f57afad6463165",
       "role": "raw-measurement"
     },
     {
