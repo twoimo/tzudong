@@ -346,6 +346,12 @@
       "role": "capture-attempt"
     },
     {
+      "path": "layout-followup-20261004.json",
+      "bytes": 554,
+      "sha256": "f45d6a831ff9dea7abd369b02fb2544fc623f7767330e5979fa2472879c1ae12",
+      "role": "verification-readback"
+    },
+    {
       "path": "leaderboard-mobile-reviewed.jpg",
       "bytes": 19780,
       "sha256": "962c660561c757e841f0bbeb56a17d80216ec94e816fe1926b2c4b93234b0d5a",
