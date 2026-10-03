@@ -1,4 +1,5 @@
 'use client';
+import { syncRetainedMarkerAccessibility } from '@/lib/retained-marker-accessibility';
 
 import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import type { CSSProperties } from "react";
@@ -2386,8 +2387,8 @@ const NaverMapView = memo(({
         if (!naver.maps.LatLng || !naver.maps.Point) return;
         const map = mapInstanceRef.current;
         const currentZoom = Math.floor(map.getZoom());
-        const retainSmallExpandedDesktop = !isMobileOrTablet
-            && expandedClusterRestaurantIds.length > 0 && expandedClusterRestaurantIds.length <= 1000;
+        const retainSmallExpandedSet = expandedClusterRestaurantIds.length > 0
+            && expandedClusterRestaurantIds.length <= 1000;
         const deferredMarkerRenders: Array<(() => void) | undefined> = [];
         const markerViewportKey = getNaverMarkerViewportKey(map, mapRef.current);
 
@@ -2401,6 +2402,20 @@ const NaverMapView = memo(({
         const east = extendedBounds ? Math.round(extendedBounds.east * 10000) : 0;
         const selectedRestaurantId = selectedRestaurant?.id ?? '';
         const searchedRestaurantId = markerVisibleActiveSearchedRestaurant?.id ?? '';
+        // Retention avoids measured SDK detach/icon churn. Mobile screen-reader
+        // exposure still follows the existing padded view and selection exceptions.
+        for (const id of expandedClusterRestaurantIds) {
+            const marker = markerPool.get(id);
+            if (!marker) continue;
+            const restaurant = resolveMarkerRestaurant(id);
+            const accessible = !isMobileOrTablet || !retainSmallExpandedSet || Boolean(
+                restaurant && shouldRenderExpandedClusterMarker(
+                    restaurant, selectedRestaurantId, searchedRestaurantId,
+                    extendedBounds, VIEWPORT_FILTER_ENABLED,
+                ),
+            );
+            syncRetainedMarkerAccessibility(marker, accessible, mapRef.current);
+        }
         const previousEarlyMarkerRenderKey = earlyMarkerRenderKeyRef.current;
         if (
             previousEarlyMarkerRenderKey !== null &&
@@ -2635,7 +2650,7 @@ const NaverMapView = memo(({
 
         const nextMarkerRenderSignature = buildMarkerRenderSignature({
             zoom: currentZoom,
-            bounds: retainSmallExpandedDesktop ? null : extendedBounds,
+            bounds: retainSmallExpandedSet ? null : extendedBounds,
             displayRestaurantIds: signatureIds,
             selectedRestaurantId: selectedRestaurant?.id || null,
             searchedRestaurantId: markerVisibleActiveSearchedRestaurant?.id || null,
@@ -2643,7 +2658,7 @@ const NaverMapView = memo(({
             isRegionalClusterMode: nextIsRegionalClusterMode,
             isSeoulDistrictMode: nextIsSeoulDistrictMode,
             markerLayerVersion: composeMarkerLayerVersion(markerKindSignature)
-                + (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedDesktop ? `:viewport-${markerViewportRevision}` : ''),
+                + (expandedClusterRestaurantIds.length > 0 && !retainSmallExpandedSet ? `:viewport-${markerViewportRevision}` : ''),
             showUserSubmittedMarkers,
         });
 
@@ -2734,7 +2749,7 @@ const NaverMapView = memo(({
                 markerVisibleSelectedRestaurant?.id ?? null,
                 markerVisibleActiveSearchedRestaurant?.id ?? null,
                 extendedBounds,
-                VIEWPORT_FILTER_ENABLED && !retainSmallExpandedDesktop,
+                VIEWPORT_FILTER_ENABLED && !retainSmallExpandedSet,
             );
         const renderedExpandedSources = new Map<string, Restaurant>();
         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
@@ -2757,20 +2772,22 @@ const NaverMapView = memo(({
                     isMobileOrTablet,
                 );
 
-                markerPool.acquire(
+                const marker = markerPool.acquire(
                     restaurant.id,
                     createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng),
                     { content: markerContent, anchor: anchorForMarker(restaurant.id, visual.anchor.x, visual.anchor.y) },
                     map,
                     () => handleMarkerRestaurantSelection(restaurant)
                 );
+                syncRetainedMarkerAccessibility(marker,
+                    !isMobileOrTablet || !retainSmallExpandedSet || inInitialViewport, mapRef.current);
                 };
                 const inInitialViewport = shouldRenderExpandedClusterMarker(
                     restaurant, markerVisibleSelectedRestaurant?.id ?? null,
                     markerVisibleActiveSearchedRestaurant?.id ?? null,
                     extendedBounds, VIEWPORT_FILTER_ENABLED,
                 );
-                if (retainSmallExpandedDesktop && !inInitialViewport && !markerPool.has(restaurant.id)) {
+                if (retainSmallExpandedSet && !inInitialViewport && !markerPool.has(restaurant.id)) {
                     deferredMarkerRenders.push(render);
                 } else {
                     render();
