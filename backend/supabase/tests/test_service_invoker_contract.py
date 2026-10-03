@@ -221,6 +221,32 @@ class PostgreSQLContract(unittest.TestCase):
         self.cursor.execute('ROLLBACK')
         self.assertEqual(self.state(), before)
 
+    def test_manual_extension_preserves_metadata_and_checks_its_acl(self):
+        self.apply()
+        signature='public.restaurant_review_automation_manual(uuid,text,text,text,uuid)'
+        self.cursor.execute('CREATE FUNCTION '+signature+" RETURNS boolean LANGUAGE sql SECURITY INVOKER SET search_path='' SET lock_timeout='2s' AS 'SELECT true'; REVOKE ALL ON FUNCTION "+signature+' FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION '+signature+' TO service_role;')
+        self.cursor.execute("INSERT INTO privacy_retention.g014_public_rpc_allowlist VALUES(%s,'service_role')",(signature,))
+        source=(MIGRATIONS/'20261003172126_restaurant_review_manual_invoker_contract.sql').read_text()
+        before=self.state()
+        self.cursor.execute(source.replace('COMMIT;','ROLLBACK;'))
+        self.assertEqual(self.state(),before)
+        self.cursor.execute(source)
+        after=self.state()
+        self.assertEqual([dict(row,prosrc='') for _,row in before],[dict(row,prosrc='') for _,row in after])
+        self.install_loop();self.check()
+        for change in ('SECURITY DEFINER',"SET search_path=public",'OWNER TO privacy_workflow_owner'):
+            self.cursor.execute('BEGIN; ALTER FUNCTION '+signature+' '+change)
+            with self.assertRaisesRegex(self.psycopg2.Error,'SECURITY INVOKER contract mismatch'):
+                self.check()
+            self.cursor.execute('ROLLBACK')
+        self.cursor.execute('BEGIN; GRANT EXECUTE ON FUNCTION '+signature+' TO authenticated')
+        with self.assertRaisesRegex(self.psycopg2.Error,'SECURITY INVOKER contract mismatch'):
+            self.check()
+        self.cursor.execute('ROLLBACK');self.check()
+        with self.assertRaisesRegex(self.psycopg2.Error,'SOURCE_DRIFT'):
+            self.cursor.execute(source)
+        self.cursor.execute('ROLLBACK');self.assertEqual(self.state(),after)
+
 
 if __name__ == '__main__':
     unittest.main()

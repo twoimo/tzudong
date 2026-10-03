@@ -15,7 +15,9 @@ import subprocess
 import sys
 import json
 import tempfile
+import uuid
 from pathlib import Path
+from typing import NamedTuple
 
 def _repo_root() -> Path:
     override = os.environ.get("TZUDONG_REPO_ROOT", "").strip()
@@ -90,17 +92,24 @@ def _run(argv: list[str], *, required: bool = True) -> int:
     return completed.returncode
 
 
-def _review_reserved_slot() -> int:
+class ReviewReservation(NamedTuple):
+    reserved_slots: int
+    confirmed: bool
+
+
+def _review_reserved_slot() -> ReviewReservation:
     with tempfile.TemporaryDirectory(prefix='tzudong-review-budget-') as folder:
         receipt=Path(folder)/'receipt.json'
-        status=_run([sys.executable,str(REVIEW),'--recheck-limit','1','--receipt-file',str(receipt)],required=False)
-        if status!=0 or not receipt.is_file() or receipt.stat().st_size>2048:return 1
+        request_id = str(uuid.uuid4())
+        status=_run([sys.executable,str(REVIEW),'--request-id',request_id,'--recheck-limit','1','--receipt-file',str(receipt)],required=False)
+        if status!=0 or not receipt.is_file() or receipt.stat().st_size>2048:return ReviewReservation(1, False)
         try:
             result=json.loads(receipt.read_text(encoding='utf-8'))
-            if result.get('recheckAttempted') is False:return 0
+            if result.get('recheckAttempted') is False:return ReviewReservation(0, True)
+            if result.get('recheckAttempted') is True:return ReviewReservation(1, True)
         except (OSError,ValueError,AttributeError):pass
         # Uncertain work reserves one slot; never spend it again on a new video.
-        return 1
+        return ReviewReservation(1, False)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -123,10 +132,13 @@ def main(argv: list[str] | None = None) -> int:
     _apply_local_runtime_environment()
     print(f"source={os.environ.get('TZUDONG_PIPELINE_SOURCE', 'local')}")
     new_limit = args.limit
+    review_confirmed = False
     if args.review_automation and not args.dry_run:
         # One existing video slot is reserved for a queued recheck. Never add
         # a fourth evaluated video to the existing three-video daily budget.
-        new_limit -= _review_reserved_slot()
+        reservation = _review_reserved_slot()
+        new_limit -= reservation.reserved_slots
+        review_confirmed = reservation.confirmed
     evaluate_command = [
             sys.executable,
             str(EVALUATE),
@@ -156,8 +168,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     _run(apply_cmd + ["--dry-run"])
     apply_exit = _run(apply_cmd)
-    if args.review_automation:
+    if args.review_automation and review_confirmed:
         _run([sys.executable, str(REVIEW), "--recheck-limit", "0"])
+    elif args.review_automation:
+        print("review_followup=skipped_unconfirmed")
     print(f"apply_exit={apply_exit}")
     print("pipeline=ok")
     return 0

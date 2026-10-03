@@ -79,7 +79,8 @@ class TransformRestartTests(unittest.TestCase):
     def test_invalid_receipt_shapes_rebuild_instead_of_aborting(self):
         self.run_transform()
         expected = self.output.read_bytes()
-        for receipt in [[], None, {'schemaVersion':2,'groups':{'results:video':None},'recordCount':1}]:
+        for receipt in [[], None, {'schemaVersion':2,'groups':{'results:video':None},'recordCount':1},
+                        {'schemaVersion':2,'groups':{'results:video':{'records':None}},'recordCount':1}]:
             self.receipt.write_text(json.dumps(receipt))
             self.run_transform()
             self.assertEqual(expected, self.output.read_bytes())
@@ -121,6 +122,41 @@ class TransformRestartTests(unittest.TestCase):
         added.unlink()
         self.run_transform()
         self.assertTrue(json.loads(self.output.read_text())['evaluation_results']['category_validity_TF']['eval_value'])
+
+    def test_removed_group_is_archived_and_cannot_remain_certified(self):
+        self.run_transform()
+        old=json.loads(self.output.read_text())
+        self.source.unlink()
+        result=self.run_transform()
+        self.assertEqual(result['removed'],1)
+        self.assertEqual(self.output.read_bytes(),b'')
+        ledger=json.loads(self.receipt.read_text())
+        self.assertEqual(ledger['recordCount'],0)
+        self.assertEqual(ledger['groups'],{})
+        history=[json.loads(line) for p in (self.output.parent/'.history').glob('*.jsonl') for line in p.read_text().splitlines()]
+        self.assertIn(old,history)
+        self.assertEqual(self.run_transform()['records'],0)
+
+    def test_changed_group_stops_claiming_old_trace(self):
+        self.run_transform()
+        old_trace=json.loads(self.output.read_text())['trace_id']
+        empty=copy.deepcopy(RULE);empty['restaurants']=[]
+        self.write_rule(empty)
+        result=self.run_transform()
+        self.assertEqual(result['removed'],1)
+        current=[json.loads(line) for line in self.output.read_text().splitlines()]
+        self.assertNotIn(old_trace,[row['trace_id'] for row in current])
+        self.assertEqual(json.loads(self.receipt.read_text())['recordCount'],len(current))
+
+    def test_unclaimed_legacy_record_survives_owned_group_removal(self):
+        self.run_transform()
+        legacy={'trace_id':'legacy-unclaimed','name':'retained'}
+        with self.output.open('a') as output:output.write(json.dumps(legacy)+'\n')
+        self.source.unlink()
+        result=self.run_transform()
+        self.assertEqual(result['removed'],1)
+        self.assertEqual(json.loads(self.output.read_text()),legacy)
+        self.assertEqual(self.run_transform()['records'],1)
 
 
 class LaajRestartTests(unittest.TestCase):

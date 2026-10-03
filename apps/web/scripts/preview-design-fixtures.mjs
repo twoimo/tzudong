@@ -5,6 +5,17 @@ import { readFileSync } from 'node:fs';
 const upstream = 'http://127.0.0.1:18792';
 const origin = 'http://127.0.0.1:18794';
 const stamp = '2026-10-03T00:00:00.000Z';
+const storyboardProjects = ['gemini-api','manual'].map((provider,index) => {
+  const id=`00000000-0000-4000-b100-${String(index+1).padStart(12,'0')}`;
+  const textModel=provider==='gemini-api'?'gemini-3.8-flash':'manual';
+  const imageModel=provider==='gemini-api'?'gemini-3.1-flash-image':'manual';
+  return {id,revision:0,status:'partial',createdAt:stamp,updatedAt:stamp,
+    request:{workflow:'storyboard-mlx-v1',requestId:id,prompt:'합성 검증용 맛집 촬영안',sceneCount:5,
+      providers:{externalAI:provider==='gemini-api',text:{id:provider,model:textModel},image:{id:provider,model:imageModel}},retrieval:'none',sources:[],imageWidth:1024,imageHeight:576},
+    document:{schema:'storyboard-mlx-v1',projectId:id,revision:0,generatedAt:stamp,title:provider==='gemini-api'?'Gemini 합성 프로젝트':'수동 합성 프로젝트',logline:'실제 모델 호출 없이 입력 경로를 검증합니다.',
+      textProvenance:{providerId:provider,model:textModel,verification:'user-import',generatedAt:stamp,requestId:id,responseId:null,responseModel:null,modelEvidence:'unverified'},
+      scenes:Array.from({length:5},(_,scene)=>({sceneNo:scene+1,title:`검증 장면 ${scene+1}`,durationSec:10,description:'합성 식당 장면',visualDirection:'정면 촬영',narration:'',caption:'',productionNotes:['합성 검증용'],imagePrompt:'합성 식당',sourceIds:[],revision:0,image:null,imageError:null}))}};
+});
 const logo = readFileSync('public/logo.webp');
 const videos = Array.from({ length: 25 }, (_, index) => ({
   id: `fixture-video-${index + 1}`, title: `가을 맛집 탐방 ${index + 1}`, category: ['한식', '중식', '일식'][index % 3],
@@ -89,6 +100,7 @@ const response = (res, value, status = 200) => {
 const fixtureAutomation = { policy:{version:1,enabled:false,batch_size:50,daily_limit:50,last_run_at:null},runs:[],items:[],queue:{queued:0,running:0,failed:0},policyEvents:[] };
 function fixtureAutomationAction(body) {
   if(body.action==='preview') return {version:String(fixtureAutomation.policy.version),previewHash:'a'.repeat(32),counts:{approve:0,recheck:0,hold:25,protected:0},batchSize:body.batchSize,dailyLimit:body.dailyLimit};
+  if(body.action==='preview-run'||body.action==='preview-stop') return {action:body.action.slice(8),version:String(fixtureAutomation.policy.version),previewHash:'a'.repeat(32),counts:{approve:0,recheck:0,hold:25,protected:0},batchSize:fixtureAutomation.policy.batch_size,dailyLimit:fixtureAutomation.policy.daily_limit,remainingApprovals:fixtureAutomation.policy.daily_limit,queue:{queued:fixtureAutomation.queue.queued,running:fixtureAutomation.queue.running}};
   if(body.action==='start') { Object.assign(fixtureAutomation.policy,{version:fixtureAutomation.policy.version+1,enabled:true,batch_size:body.batchSize,daily_limit:body.dailyLimit}); }
   else if(body.action==='stop') { fixtureAutomation.policy.enabled=false;fixtureAutomation.policy.version++; }
   else if(body.action==='run'&&fixtureAutomation.policy.enabled&&!fixtureAutomation.runs.some(run=>run.request_id===body.requestId)) {
@@ -125,7 +137,8 @@ function api(pathname) {
     summary: { loadedUsers:3,adminUsers:1,disabledUsers:1,unconfirmedUsers:0 },page:1,perPage:120,total:3 };
   if (pathname === '/api/admin/restaurant-refresh-history') return {candidates:refreshCandidates,summary:{approved_restaurants_total:25,needs_review:3,approved:0,rejected:0,applied:0,last_checked_at:stamp}};
   if (pathname === '/api/admin/audit-events') return { events: [], total: 0, coverage: { universal: false, mode: 'truthful-partial-domain-specific', domains: [] } };
-  if (pathname === '/api/admin/storyboard/production') return { ok: true, projects: [], workers: [] };
+  if (pathname === '/api/admin/storyboard/production') return { ok: true, projects: storyboardProjects.map(project=>({id:project.id,revision:project.revision,status:project.status,title:project.document.title,createdAt:stamp,updatedAt:stamp})), workers: [] };
+  if (pathname.startsWith('/api/admin/storyboard/production/')) {const project=storyboardProjects.find(project=>project.id===pathname.split('/').at(-1));return project?{ok:true,project,job:null,events:[]}:{ok:false,error:'not_found'};}
   if (pathname === '/api/insights/treemap') return { asOf:stamp,videos,totalVideos:videos.length,period:'ALL',availablePeriods:['1M','ALL'],meta:{dataSource:'supabase-treemap'} };
   if (pathname.includes('banners')) return { banners: fixtureBanners, items: fixtureBanners };
   if (pathname.includes('restaurants')) return { restaurants, data: restaurants, totalCount: restaurants.length };
@@ -207,7 +220,14 @@ const preview = http.createServer(async (req, res) => {
 });
 preview.listen(18794, '127.0.0.1', () => console.log('Design preview uses synthetic data on loopback port 18794; hosted APIs and mutations disabled.'));
 preview.on('upgrade', (req, socket, head) => {
-  const bridge = http.request(`${upstream}${req.url}`, { headers: { ...req.headers, host: '127.0.0.1:18792' } });
+  let path;
+  try {
+    const target = new URL(req.url, origin);
+    if (target.origin !== origin) throw new Error('origin mismatch');
+    path = target.pathname + target.search;
+  } catch { socket.destroy(); return; }
+  const bridge = http.request({ hostname: '127.0.0.1', port: 18792, path,
+    headers: { ...req.headers, host: '127.0.0.1:18792' } });
   bridge.on('upgrade', (reply, remote, remoteHead) => {
     socket.write(`HTTP/1.1 ${reply.statusCode} ${reply.statusMessage}\r\n${Object.entries(reply.headers).map(([key, value]) => `${key}: ${value}`).join('\r\n')}\r\n\r\n`);
     if (head.length) remote.write(head);

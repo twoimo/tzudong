@@ -83,14 +83,42 @@ class ReviewWorkerTests(unittest.TestCase):
             self.assertEqual(evaluation[evaluation.index('--limit')+1],'3' if dry else '2')
             self.assertEqual('--dry-run' in evaluation,dry)
             reviews=[command for command in commands if command[1]==str(runner.REVIEW)]
-            self.assertEqual(len(reviews),0 if dry else 2)
-            if not dry:self.assertEqual([command[command.index('--recheck-limit')+1] for command in reviews],['1','0'])
+            self.assertEqual(len(reviews),0 if dry else 1)
+            if not dry:
+                self.assertEqual([command[command.index('--recheck-limit')+1] for command in reviews],['1'])
+                self.assertIn('--request-id', reviews[0])
 
     def test_no_recheck_preserves_all_three_new_video_slots(self):
         def completed(command,**kwargs):
             receipt=Path(command[command.index('--receipt-file')+1]);receipt.write_text('{"recheckAttempted":false}')
             return 0
-        with patch.object(runner,'_run',side_effect=completed):self.assertEqual(runner._review_reserved_slot(),0)
-        with patch.object(runner,'_run',return_value=1):self.assertEqual(runner._review_reserved_slot(),1)
+        with patch.object(runner,'_run',side_effect=completed):self.assertEqual(runner._review_reserved_slot(),runner.ReviewReservation(0,True))
+        with patch.object(runner,'_run',return_value=1):self.assertEqual(runner._review_reserved_slot(),runner.ReviewReservation(1,False))
+
+    def test_confirmed_reservation_allows_one_followup(self):
+        import contextlib,io
+        commands=[]
+        def completed(command,**kwargs):
+            commands.append(command)
+            if '--receipt-file' in command:
+                Path(command[command.index('--receipt-file')+1]).write_text('{"recheckAttempted":true}')
+            return 0
+        with patch.object(runner,'_load_backend_env'),patch.object(runner,'cadence_source_preflight'),patch.object(runner,'env_contract_preflight'),patch.object(runner,'_apply_local_runtime_environment'),patch.object(runner,'_run',side_effect=completed),contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(runner.main(['--review-automation','--limit','3']),0)
+        reviews=[command for command in commands if command[1]==str(runner.REVIEW)]
+        self.assertEqual([command[command.index('--recheck-limit')+1] for command in reviews],['1','0'])
+        evaluation=next(command for command in commands if command[1]==str(runner.EVALUATE))
+        self.assertEqual(evaluation[evaluation.index('--limit')+1],'2')
+
+    def test_lost_tick_response_does_not_apply_a_fresh_followup(self):
+        import contextlib,io
+        commands=[]
+        def lost_response(command,**kwargs):
+            commands.append(command)
+            return 1 if command[1]==str(runner.REVIEW) else 0
+        with patch.object(runner,'_load_backend_env'),patch.object(runner,'cadence_source_preflight'),patch.object(runner,'env_contract_preflight'),patch.object(runner,'_apply_local_runtime_environment'),patch.object(runner,'_run',side_effect=lost_response),contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(runner.main(['--review-automation','--limit','3']),0)
+        self.assertEqual(sum(command[1]==str(runner.REVIEW) for command in commands),1)
+        self.assertIn('review_followup=skipped_unconfirmed',output.getvalue())
 
 if __name__=='__main__':unittest.main()

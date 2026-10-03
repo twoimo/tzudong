@@ -63,7 +63,11 @@ export function RestaurantReviewAutomation({ onApplied }: { onApplied: () => voi
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!response.ok) throw new Error(response.status === 409 ? 'stale' : 'failed');
       const value = await response.json();
-      if (body.action === 'preview') setPreview(parseReviewAutomationPreview(value));
+      if (String(body.action).startsWith('preview')) {
+        const next = parseReviewAutomationPreview(value);
+        if (body.action !== 'preview' && `preview-${next.action}` !== body.action) throw new Error('failed');
+        setPreview(next);
+      }
       else { const next = parseReviewAutomationSnapshot(value); lastRun.current = next.policy.last_run_at; setSnapshot(next); setPreview(null); if (body.action === 'run') requestId.current = null; applied.current(); }
     } catch (cause) {
       setError(cause instanceof Error && cause.message === 'stale' ? '검수 데이터가 바뀌었습니다. 미리보기를 다시 확인하세요.' : '결과를 확인하지 못했습니다. 상태를 새로고침한 뒤 확인하세요.');
@@ -93,15 +97,14 @@ export function RestaurantReviewAutomation({ onApplied }: { onApplied: () => voi
       <div className="ml-auto flex items-center gap-1">
         <Button variant="ghost" size="sm" disabled={busy} onClick={() => { void load(); }} aria-label="자동 운영 상태 새로고침"><RefreshCw className="h-4 w-4" /></Button>
         {policy?.enabled ? <>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => { requestId.current ??= crypto.randomUUID(); void send({ action: 'run', requestId: requestId.current }); }}>지금 실행</Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => { void send({ action: 'stop', version: String(policy.version) }); }}><Pause className="mr-1 h-3.5 w-3.5" />중지</Button>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => { void send({ action: 'preview-run' }); }}>지금 실행</Button>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => { void send({ action: 'preview-stop' }); }}><Pause className="mr-1 h-3.5 w-3.5" />중지</Button>
         </> : <Button size="sm" disabled={busy || !policy} onClick={() => { setExpanded(true); }}><Play className="mr-1 h-3.5 w-3.5" />설정</Button>}
         <Button variant="ghost" size="sm" onClick={() => setExpanded(value => !value)} aria-expanded={expanded}>이력·정책</Button>
       </div>
     </div>
     {error && <p className="mt-2 text-xs text-destructive" role="alert">{error}</p>}
     {expanded && <div className="mt-3 space-y-3 text-xs">
-      <p className="text-muted-foreground">평가와 위치 근거를 모두 통과한 항목만 승인합니다. 관리자 수정·중복·충돌은 보호하거나 보류합니다. 정기 승인과 재검수는 일일 크롤러에서 처리합니다.</p>
       <div className="flex flex-wrap items-end gap-3">
         <label className="space-y-1">회당 처리 (1–200)<Input type="number" min={1} max={200} value={batch} disabled={busy || policy?.enabled} onChange={event => setBatch(Number(event.target.value))} className="h-11 w-28 sm:h-8" /></label>
         <label className="space-y-1">하루 승인 (1–200)<Input type="number" min={1} max={200} value={daily} disabled={busy || policy?.enabled} onChange={event => setDaily(Number(event.target.value))} className="h-11 w-28 sm:h-8" /></label>
@@ -113,7 +116,17 @@ export function RestaurantReviewAutomation({ onApplied }: { onApplied: () => voi
       {snapshot && snapshot.runs.length > 0 && <ol className="space-y-1 text-muted-foreground">{snapshot.runs.slice(0,3).map(run => <li key={run.id}>{new Date(run.started_at).toLocaleString('ko-KR')} · 처리 {run.scanned} · 승인 {run.approved} · 보류 {run.held} · 재검수 {run.recheck} · 보호 {run.protected}</li>)}</ol>}
     </div>}
     <AlertDialog open={Boolean(preview)} onOpenChange={open => { if (!open && !busy) setPreview(null); }}>
-      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>맛집 자동 승인을 시작할까요?</AlertDialogTitle><AlertDialogDescription>현재 후보: 승인 가능 {preview?.counts.approve ?? 0} · 재검수 {preview?.counts.recheck ?? 0} · 보류 {preview?.counts.hold ?? 0} · 보호 {preview?.counts.protected ?? 0}. 회당 {preview?.batchSize}건, 하루 승인 {preview?.dailyLimit}건입니다. 이후 새 입력도 같은 정책으로 처리하며 언제든 중지할 수 있습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={busy}>취소</AlertDialogCancel><AlertDialogAction disabled={busy} onClick={event => { event.preventDefault(); if (preview) void send({ action: 'start', version: preview.version, previewHash: preview.previewHash, batchSize: preview.batchSize, dailyLimit: preview.dailyLimit, confirmation: '자동 승인 시작' }); }}>자동 승인 시작</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{preview?.action === 'stop' ? '자동 운영을 중지할까요?' : preview?.action === 'run' ? '지금 검수할까요?' : '자동 승인을 시작할까요?'}</AlertDialogTitle><AlertDialogDescription>{preview?.action === 'stop'
+        ? `재검수 대기 ${preview.queue?.queued ?? 0}건과 실행 ${preview.queue?.running ?? 0}건을 취소합니다. 이미 승인된 결과는 유지합니다.`
+        : <>승인 {preview?.counts.approve ?? 0} · 재검수 {preview?.counts.recheck ?? 0} · 보류 {preview?.counts.hold ?? 0} · 보호 {preview?.counts.protected ?? 0}. {preview?.action === 'run' ? `하루 남은 승인 ${preview.remainingApprovals ?? 0}건.` : `회당 ${preview?.batchSize}건 · 하루 승인 ${preview?.dailyLimit}건. 새 입력도 자동 처리합니다.`}</>}
+      </AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={busy}>취소</AlertDialogCancel><AlertDialogAction disabled={busy} onClick={event => {
+        event.preventDefault();
+        if (!preview) return;
+        const action = preview.action ?? 'start';
+        if (action === 'run') requestId.current ??= crypto.randomUUID();
+        void send({ action, version: preview.version, previewHash: preview.previewHash, batchSize: preview.batchSize, dailyLimit: preview.dailyLimit,
+          confirmation: action === 'stop' ? '자동 운영 중지' : action === 'run' ? '지금 실행' : '자동 승인 시작', ...(action === 'run' ? { requestId: requestId.current } : {}) });
+      }}>{preview?.action === 'stop' ? '자동 운영 중지' : preview?.action === 'run' ? '지금 실행' : '자동 승인 시작'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
     </AlertDialog>
     <Dialog open={Boolean(detail)} onOpenChange={open => { if (!open) setDetail(null); }}><DialogContent className="max-h-[85dvh] max-w-4xl overflow-y-auto"><DialogHeader><DialogTitle>검수 상세</DialogTitle></DialogHeader>{detail && <EvaluationRowDetails record={detail} />}</DialogContent></Dialog>
   </section>;

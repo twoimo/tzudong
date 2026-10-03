@@ -1,0 +1,9 @@
+{
+  "environment": "loopback synthetic fixture, agent-browser 0.38.1",
+  "hostedMutation": false,
+  "providerGenerations": 0,
+  "geminiProject": { "ready": true, "manualTextImportVisible": false, "manualImageImportVisible": false, "alternativeProviderLinks": 0, "outerOverflowPx": 0 },
+  "historicalManualProject": { "manualTextImportVisible": true, "manualImageImportVisible": true, "outerOverflowPx": 0 },
+  "newProjectWithGeminiUnchecked": { "createDisabled": true, "modelFieldsDisabled": true },
+  "attempts": ["The initial synthetic scene omitted required productionNotes. The contract rejected it; fixture data was corrected before acceptance."]
+}

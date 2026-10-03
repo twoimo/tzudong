@@ -25,9 +25,9 @@ import { ADMIN_STORYBOARD_PROJECT_QUERY } from "@/lib/admin/admin-module-routing
 const API = "/api/admin/storyboard/production";
 const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
-const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
+const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:py-1.5";
 const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
-const panelClass = "min-w-0 rounded-xl bg-card p-4 text-card-foreground sm:p-5";
+const panelClass = "min-w-0 rounded-xl bg-card p-3 text-card-foreground sm:p-4";
 
 const statusSchema = z.enum(["waiting_worker", "generating", "awaiting_import", "partial", "ready", "failed", "cancelled"]);
 // These are frontend HTTP views, deliberately independent of the server-only store.
@@ -241,6 +241,7 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
     event.preventDefault();
     if (createController.current) return;
     setCreateError(null);
+    if (!externalAI) { setCreateError('Gemini API 사용을 선택하세요.'); return; }
     const [imageWidth, imageHeight] = dimensions.split("x").map(Number);
     const fields = { workflow: STORYBOARD_WORKFLOW, prompt, sceneCount, providers: { externalAI, text: textProvider, image: imageProvider },
       retrieval: "none", sources: [], imageWidth, imageHeight };
@@ -271,11 +272,10 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
   }
 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
-    className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-4 pb-24 text-foreground sm:p-6 sm:pb-8">
+    className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-3 pb-24 text-foreground sm:p-4 sm:pb-6">
     <header className="mb-4 flex min-w-0 flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
         <h2 id="local-storyboard-title" className="text-xl font-semibold tracking-tight">스토리보드</h2>
-        <p className="mt-1 hidden text-sm text-muted-foreground sm:block">장면을 만들고, 흐름을 다듬고, 영상으로 준비하세요.</p>
       </div>
       <div className={`grid w-full min-w-0 items-center gap-2 sm:w-auto ${projectId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
@@ -288,12 +288,11 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
         {projectId && <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>}
       </div>
     </header>
-    <div className={`grid min-w-0 items-start gap-6 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
+    <div className={`grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "w-full" : ""}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
           <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
-          <p className="mb-3 mt-1 break-keep text-sm text-muted-foreground">주제를 입력하면 Gemini가 장면 구성과 이미지를 제작합니다.</p>
-          <fieldset disabled={creating} className="min-w-0 space-y-4">
+          <fieldset disabled={creating} className="mt-3 min-w-0 space-y-3">
             <div className="text-sm">
               <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
               <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
@@ -328,16 +327,12 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
               <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />
             </div>
-            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating}>
+            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || !externalAI}>
               {creating ? "저장 요청 중…" : "프로젝트 만들기"}
             </button>
           </fieldset>
           {createError && <p role="alert" className="mt-3 text-sm text-destructive">{createError}</p>}
         </form>}
-        {projectId && <label className="flex min-h-11 items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1" checked={externalAI} onChange={(event) => setExternalAI(event.target.checked)} />
-          외부 AI 사용 허용 (수동 결과 가져오기)
-        </label>}
         {showSetup && <section className={panelClass} aria-labelledby="local-workers-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 id="local-workers-title" className="font-semibold">제작 연결</h3>
@@ -356,13 +351,13 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
         </section>}
         {showSetup && onOpenLegacy && <button type="button" className="min-h-11 text-sm text-muted-foreground underline underline-offset-4" onClick={onOpenLegacy}>이전 작업 공간 열기</button>}
       </aside>}
-      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} externalAI={externalAI} onProject={updateSummary} />}
+      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} onProject={updateSummary} />}
     </div>
   </section>;
 }
 
-function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
-  projectId: string; externalAI: boolean; onProject: (project: Project) => void;
+function SavedProjectWorkspace({ projectId, onProject }: {
+  projectId: string; onProject: (project: Project) => void;
 }) {
   const [view, setView] = useState<View | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"scenes" | "history" | "import">("scenes");
@@ -416,6 +411,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
     : view?.project.request.providers.text;
   const retryBlocked = !!retryProvider && retryProvider.id !== "gemini-api";
   const regenerateBlocked = !!view && view.project.request.providers.image.id !== "gemini-api";
+  const canImportText = view?.project.request.providers.text.id === "manual";
+  const canImportImage = view?.project.request.providers.image.id === "manual";
   // The server refuses a retry once every scene has a stored image (nothing_to_retry).
   const scenesComplete = !!view?.project.document
     && view.project.document.scenes.every((scene) => !!scene.image && !scene.imageError);
@@ -558,14 +555,14 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
     </div>
     {view && <>
       <nav aria-label="스토리보드 작업" className="flex gap-1 border-b border-border/60">
-        {([["scenes", "장면 편집"], ["history", "버전 이력"], ["import", "결과 가져오기"]] as const).map(([id, label]) =>
+        {([["scenes", "장면 편집"], ["history", "버전 이력"], ...(canImportText ? [["import", "결과 가져오기"] as const] : [])] as const).map(([id, label]) =>
           <button key={id} type="button" disabled={!!editing || busy} aria-current={workspaceView === id ? "page" : undefined}
             className={`min-h-11 px-3 py-2 text-sm ${workspaceView === id ? "border-b-2 border-primary font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setWorkspaceView(id)}>{label}</button>)}
       </nav>
       {workspaceView === "history" && <VersionHistory key={`${projectId}:${view.project.revision}`} projectId={projectId}
         revision={view.project.revision} disabled={locked || !!editing || !view.project.document} onRestore={mutate} />}
-      {workspaceView === "import" && <section className={panelClass} aria-labelledby="local-import-title">
+      {workspaceView === "import" && canImportText && <section className={panelClass} aria-labelledby="local-import-title">
         <h3 id="local-import-title" className="font-semibold">수동 결과 가져오기</h3>
         <p className="mt-1 text-sm text-muted-foreground">현재 프로젝트와 버전에 맞는 JSON을 가져옵니다. 웹 구독의 결과는 사용자 가져오기로 표시하며 모델 실행을 검증한 것으로 표시하지 않습니다.</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -575,10 +572,6 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
             JSON.stringify({ schema: STORYBOARD_WORKFLOW, projectId, revision: view.project.revision }),
             "envelope의 JSON Schema:", JSON.stringify(z.toJSONSchema(importSchema)),
           ].join("\n")); }}>현재 텍스트 프롬프트 복사</button>
-          {externalAI && <>
-            <button type="button" className={buttonClass} onClick={() => window.open("https://chatgpt.com", "_blank", "noopener,noreferrer")}>ChatGPT 웹 직접 열기</button>
-            <button type="button" className={buttonClass} onClick={() => window.open("https://grok.com", "_blank", "noopener,noreferrer")}>Grok 웹 직접 열기</button>
-          </>}
         </div>
         <form onSubmit={importDraft} className="mt-3">
           <label className="block text-sm" htmlFor="local-draft-import">버전이 포함된 JSON (schema, projectId, revision, draft)</label>
@@ -648,15 +641,15 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
               </fieldset>
               <button type="button" className={`${buttonClass} mt-2`} disabled={busy} onClick={finishEdit}>편집 닫기</button>
             </form>}
-            <details className="mt-4 border-t border-border/50 pt-3">
+            {canImportImage && <details className="mt-4 border-t border-border/50 pt-3">
               <summary className="cursor-pointer text-sm text-muted-foreground">이미지 파일 가져오기</summary>
               <ImageImport sceneNo={scene.sceneNo} disabled={locked || !!editing} onImport={importImage} />
-            </details>
+            </details>}
             </div>
             </div>
           </article>)}
         </div>
-      </section> : <div className={panelClass}><p className="text-sm text-muted-foreground">저장된 장면이 아직 없습니다. 워커 결과를 기다리거나 현재 버전의 초안을 가져오세요.</p></div>)}
+      </section> : <div className={panelClass}><p className="text-sm text-muted-foreground">{canImportText ? "현재 버전의 초안을 가져오세요." : "장면 생성 결과를 기다리고 있습니다."}</p></div>)}
       {workspaceView === "history" && <section className={panelClass} aria-labelledby="local-events-title">
         <h3 id="local-events-title" className="font-semibold">프로젝트 변경 이력</h3>
         {view.events.length === 0 && <p className="mt-2 text-sm text-muted-foreground">서버에서 제공한 이력이 없습니다.</p>}

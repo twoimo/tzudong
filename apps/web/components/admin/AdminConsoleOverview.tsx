@@ -726,9 +726,9 @@ function AdminEvaluationModuleStaticShell() {
     >
       <span className="sr-only">정적인 관리자 데이터 검수 컨트롤은 바로 표시하고, 동적인 검수 데이터만 불러오는 중입니다.</span>
       <div className="border-b border-border bg-card px-2 py-1.5">
-        <div className="flex min-h-10 items-start justify-between gap-1.5 lg:items-center">
+        <div className="flex min-h-8 items-center justify-between gap-1.5">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="sr-only">
               <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-primary" aria-hidden="true">
                 <ClipboardCheck className="h-5 w-5" strokeWidth={2.25} />
               </span>
@@ -737,7 +737,7 @@ function AdminEvaluationModuleStaticShell() {
               </h1>
             </div>
             <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
+              전체 집계 중
             </div>
           </div>
           <div className="ml-auto flex items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">

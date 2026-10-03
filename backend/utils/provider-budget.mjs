@@ -36,7 +36,13 @@ export async function withProjectBudget(work, { acquireTimeoutMs = 600000 } = {}
     if (!/^[a-f0-9]{32}$/.test(lease)) throw new Error('PROVIDER_BUDGET_UNAVAILABLE');
     try { return await work(); }
     catch (error) {
-        await applyProjectCooldown(error);
+        try { await applyProjectCooldown(error); }
+        catch { process.stderr.write('warning=PROVIDER_BUDGET_COOLDOWN_UNAVAILABLE\n'); }
         throw error;
-    } finally { await budgetCommand(['release', '--lease', lease]); }
+    } finally {
+        // A bookkeeping failure cannot discard a settled paid response or
+        // replace the provider's original error with a retryable local error.
+        try { await budgetCommand(['release', '--lease', lease]); }
+        catch { process.stderr.write('warning=PROVIDER_BUDGET_RELEASE_UNAVAILABLE\n'); }
+    }
 }

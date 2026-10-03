@@ -1360,8 +1360,8 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
-    20261003113923_g014_service_invoker_contract.sql)
-      invoker_replay="$work_dir/g014-service-invoker-owner-replay.sql"
+    20261003113923_g014_service_invoker_contract.sql|20261003172126_restaurant_review_manual_invoker_contract.sql)
+      invoker_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_service_invoker_replay.py" \
         --source "$migration" --bundle "$g026_bundle" --output "$invoker_replay"
       g026_chain_apply 'service-invoker-owner-replay-transformer' "$script_dir/transform_service_invoker_replay.py"

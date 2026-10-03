@@ -52,8 +52,13 @@ export class GeminiStoryboardClient {
         if (model.name?.replace(/^models\//, '') !== id) throw new StoryboardProductionError('model_identity_mismatch');
         results.push({ id, capabilities: [id === STORYBOARD_GEMINI_TEXT_MODEL ? 'chat' : 'image'],
           loaded: false, bytes_on_disk: 0, bytes_resident: 0, owned_by: 'gemini-api' as const });
-      } catch (error) { if (error instanceof StoryboardProductionError) throw error; throw providerError(error); }
+      } catch {
+        signal?.throwIfAborted();
+        // An unavailable optional model must not hide verified alternatives.
+        // Capability matching still excludes jobs requiring this missing model.
+      }
     }
+    if (results.length === 0) throw new StoryboardProductionError('provider_failed');
     return results;
   }
 

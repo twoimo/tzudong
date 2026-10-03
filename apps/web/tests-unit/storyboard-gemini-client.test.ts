@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { GenerateContentResponse } from '@google/genai';
 import { GeminiStoryboardClient, resolveStoryboardGeminiKey } from '../lib/admin/storyboard/gemini-client';
 import { storyboardProductionRequestSchema, StoryboardProductionError } from '../lib/admin/storyboard/production-contract';
+import { STORYBOARD_GEMINI_IMAGE_MODELS } from '../lib/admin/storyboard/gemini-models';
 
 const request = () => storyboardProductionRequestSchema.parse({ workflow: 'storyboard-mlx-v1', requestId: crypto.randomUUID(),
   prompt: '합성 검증용 식당 촬영안', sceneCount: 5, providers: { externalAI: true,
@@ -36,6 +37,22 @@ describe('Gemini storyboard worker client', () => {
     const result = await provider.draft(request());
     expect(result.draft.scenes).toHaveLength(5);
     expect(result.provenance).toMatchObject({ providerId: 'gemini-api', model: 'gemini-3.8-flash', responseModel: 'gemini-3.8-flash', verification: 'official-api' });
+  });
+  test('advertises available models when one optional lookup is unavailable', async () => {
+    const fake=fakeClient();const missing=STORYBOARD_GEMINI_IMAGE_MODELS[1].id;
+    fake.client.models.get=async({model}:{model:string})=>{
+      if(model===missing)throw {status:404,message:'synthetic-unavailable'};
+      return {name:`models/${model}`};
+    };
+    const models=await new GeminiStoryboardClient({client:fake.client}).models();
+    expect(models.map(entry=>entry.id)).toEqual(['gemini-3.8-flash',STORYBOARD_GEMINI_IMAGE_MODELS[0].id]);
+    expect(models.some(entry=>entry.id===missing)).toBe(false);
+  });
+  test('rejects an empty verified catalog and preserves caller cancellation', async () => {
+    const fake=fakeClient();fake.client.models.get=async()=>{throw {status:404,message:'synthetic'};};
+    await expect(new GeminiStoryboardClient({client:fake.client}).models()).rejects.toMatchObject({code:'provider_failed'});
+    const controller=new AbortController();fake.client.models.get=async()=>{controller.abort();throw new Error('synthetic');};
+    await expect(new GeminiStoryboardClient({client:fake.client}).models(controller.signal)).rejects.toBeDefined();
   });
   test('returns a completed result even when optional usage telemetry fails', async () => {
     const fake = fakeClient();

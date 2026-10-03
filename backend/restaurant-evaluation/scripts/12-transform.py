@@ -760,6 +760,9 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
             if (not isinstance(ledger, dict) or ledger.get("schemaVersion") != 2
                 or not isinstance(ledger.get("groups"), dict)
                 or any(not isinstance(group, dict) for group in ledger["groups"].values())
+                or any(not isinstance(group.get("records"), list)
+                    or any(not isinstance(trace, str) for trace in group["records"])
+                    for group in ledger["groups"].values())
                 or not isinstance(ledger.get("recordCount"), int)
                 or ledger["recordCount"] < 0): raise ValueError()
         except (OSError, ValueError):
@@ -813,7 +816,7 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
         verified = output.is_file() and file_hash(output) == ledger.get("outputHash")
         if verified and set(ledger["groups"]) == set(keys) and all(ledger["groups"].get(identity,{}).get("inputHash") == key for identity,key in keys.items()):
             verify_snapshot()
-            stats = {"groups":len(groups),"reused":len(groups),"new":0,"updated":0,"records":ledger["recordCount"]}
+            stats = {"groups":len(groups),"reused":len(groups),"new":0,"updated":0,"removed":0,"records":ledger["recordCount"]}
             print(json.dumps({"operation":"transform_complete",**stats},sort_keys=True))
             return stats
         records = {}
@@ -830,6 +833,11 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
                         damaged_lines += 1
         meta = LazyMetaCache(meta_dir)
         stats = {"groups":len(groups),"reused":0,"new":0,"updated":0}
+        previous_owned = {
+            trace for group in ledger["groups"].values()
+            for trace in group.get("records", [])
+            if isinstance(trace, str)
+        }
         claimed, superseded = set(), {}
         for kind,video,inputs in groups:
             identity = kind+":"+video
@@ -860,9 +868,15 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
                     else: superseded[trace] = old; stats["updated"] += 1
                     records[trace] = record
             ledger["groups"][identity] = {"inputHash":key,"records":contributed,"candidates":candidates,"blocked":blocked}
+        removed = 0
+        for trace in previous_owned - claimed:
+            obsolete = records.pop(trace, None)
+            if obsolete is not None:
+                superseded[trace] = obsolete
+                removed += 1
         ledger["groups"] = {identity: ledger["groups"][identity] for identity in keys}
         verify_snapshot()
-        if not verified or stats["new"] or stats["updated"]:
+        if not verified or stats["new"] or stats["updated"] or removed:
             if damaged_lines:
                 damaged = output.read_bytes()
                 atomic_write(output.parent / ".history" / ("damaged-" + hashlib.sha256(damaged).hexdigest() + ".jsonl"), damaged)
@@ -886,6 +900,7 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
         else:
             ledger["outputHash"] = file_hash(output)
         ledger["recordCount"] = len(records)
+        stats["removed"] = removed
         ledger["files"] = file_cache
         atomic_write(receipt_path,json.dumps(ledger,separators=(",", ":")).encode()+b"\n")
         print(json.dumps({"operation":"transform_complete",**stats,"records":len(records)},sort_keys=True))

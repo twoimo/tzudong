@@ -3051,6 +3051,7 @@ function AdminEvaluationPage({
     ? (submissionInitialTab === 'reviews' ? 'reviews' : 'submissions')
     : 'restaurants';
   const ModuleTitle = embedded ? 'h2' : 'h1';
+  const compactReviewHeader = embedded && embeddedModuleId === 'restaurants';
 
   return (
     <div
@@ -3068,7 +3069,7 @@ function AdminEvaluationPage({
       >
         <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className={compactReviewHeader ? 'sr-only' : 'flex items-center gap-2'}>
               <AdminEvaluationTitleIcon embedded={embedded} />
               <ModuleTitle className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
                 {embeddedModuleId === 'submissions'
@@ -3107,7 +3108,9 @@ function AdminEvaluationPage({
               </div>
             )}
             <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
-              {pendingQueueSummaryContent}
+              {compactReviewHeader ? !isInitialEvaluationDataLoading
+                ? `전체 ${stats.total}건${stats.deleted > 0 ? ` · 삭제 ${stats.deleted}건` : ''}`
+                : '전체 집계 중' : pendingQueueSummaryContent}
             </div>
           </div>
 

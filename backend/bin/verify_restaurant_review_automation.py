@@ -16,11 +16,13 @@ from psycopg2.extras import Json
 
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATION = ROOT / 'backend/supabase/migrations/20261003081915_restaurant_review_automation.sql'
+MANUAL_MIGRATION = ROOT / 'backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql'
 
 
 def main(argv=None):
     parser=argparse.ArgumentParser()
     parser.add_argument('--benchmark',action='store_true')
+    parser.add_argument('--manual-guards',action='store_true')
     args=parser.parse_args(argv)
     params = dict(host=os.environ.get('TZUDONG_TEST_PG_SOCKET', str(Path.home()/'.codex/runtime-cache/tzudong-postgresql-17.6/socket')),
                   port=int(os.environ.get('TZUDONG_TEST_PG_PORT', '18797')), user='postgres')
@@ -45,6 +47,8 @@ def main(argv=None):
         cursor.execute("CREATE TABLE pipeline_control.admin_evaluation_catalog_revision(singleton boolean PRIMARY KEY,revision bigint); INSERT INTO pipeline_control.admin_evaluation_catalog_revision VALUES(true,1); GRANT SELECT,UPDATE ON pipeline_control.admin_evaluation_catalog_revision TO service_role; GRANT SELECT,UPDATE ON public.restaurants TO service_role;")
         cursor.execute("CREATE FUNCTION public.admin_evaluation_revision() RETURNS text LANGUAGE sql AS 'SELECT revision::text FROM pipeline_control.admin_evaluation_catalog_revision'; CREATE FUNCTION public.extract_youtube_video_id(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT nullif(split_part($1,''v='',2),'''')'; CREATE FUNCTION public.normalize_restaurant_identity_name(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT lower(btrim($1))';")
         cursor.execute(MIGRATION.read_text())
+        if args.manual_guards:
+            cursor.execute(MANUAL_MIGRATION.read_text())
         actor = str(uuid.uuid4())
         cursor.execute('INSERT INTO public.user_roles VALUES(%s,\'admin\'); INSERT INTO public.user_account_status VALUES(%s,\'active\')', (actor,actor))
         row = dict(id=str(uuid.uuid4()),status='pending',origin_name='합성 식당',approved_name='합성 식당',naver_name='합성 식당',trace_id='fixture-1',youtube_link='https://www.youtube.com/watch?v=ABCDEFGHIJK',
@@ -181,9 +185,55 @@ def main(argv=None):
             checks[role+'_private_table_denied']=denied('SELECT count(*) FROM pipeline_control.restaurant_review_policy')
             cursor.execute('RESET ROLE')
         checks['public_security_definers_zero']=scalar("SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND prosecdef")==0
+        if args.manual_guards:
+            cursor.execute('TRUNCATE pipeline_control.restaurant_review_items,pipeline_control.restaurant_review_runs,public.restaurants CASCADE')
+            cursor.execute('UPDATE pipeline_control.restaurant_review_policy SET enabled=true,operator_id=%s,version=version+1,batch_size=2,daily_limit=1',(actor,))
+            first=insert(100); second=insert(101); third=insert(102)
+            late_hold=insert(103,lambda value:value['evaluation_results']['visit_authenticity'].update(eval_value=2))
+            late_recheck=insert(104,lambda value:value['evaluation_results']['visit_authenticity'].update(eval_basis=''))
+            cursor.execute('RESET ROLE')
+            for index,value in enumerate([first,second,third,late_hold,late_recheck]):
+                cursor.execute("UPDATE public.restaurants SET created_at=now()-interval '1 day'+%s*interval '1 second' WHERE id=%s",(index,value['id']))
+            cursor.execute('SET ROLE service_role')
+            checks['manual_daily_limit_one']=tick()['approved']==1
+            capped=tick()
+            checks['daily_cap_does_not_starve_later_work']=capped['approved']==0 and capped['held']==1 and capped['recheck']==1
+            def manual(action,preview=None,request=None):
+                return scalar('SELECT public.restaurant_review_automation_manual(%s,%s,%s,%s,%s)',
+                              (actor,action,(preview or {}).get('version',''),(preview or {}).get('previewHash',''),request))
+            capped_preview=manual('preview-run')
+            checks['preview_respects_daily_cap']=capped_preview['remainingApprovals']==0 and capped_preview['counts'].get('approve',0)==0
+            cursor.execute('RESET ROLE')
+            cursor.execute('UPDATE pipeline_control.restaurant_review_policy SET daily_limit=200,version=version+1')
+            cursor.execute('SET ROLE service_role')
+            preview=manual('preview-run'); runs_before=scalar('SELECT count(*) FROM pipeline_control.restaurant_review_runs')
+            checks['manual_preview_is_read_only']=scalar('SELECT count(*) FROM pipeline_control.restaurant_review_runs')==runs_before
+            cursor.execute('UPDATE pipeline_control.admin_evaluation_catalog_revision SET revision=revision+1')
+            checks['manual_changed_source_denied']=denied('SELECT public.restaurant_review_automation_manual(%s,\'run\',%s,%s,%s)',(actor,preview['version'],preview['previewHash'],str(uuid.uuid4())))
+            checks['stale_manual_has_no_run']=scalar('SELECT count(*) FROM pipeline_control.restaurant_review_runs')==runs_before
+            preview=manual('preview-run'); request_id=str(uuid.uuid4())
+            manual_result=manual('run',preview,request_id)
+            checks['manual_run_readback']=manual_result['run']['approved']==2 and manual_result['policy']['enabled'] is True
+            cursor.execute('UPDATE pipeline_control.admin_evaluation_catalog_revision SET revision=revision+1')
+            replay=manual('run',preview,request_id)
+            checks['lost_manual_response_replays_original_run']=replay['run']==manual_result['run'] and scalar('SELECT count(*) FROM pipeline_control.restaurant_review_runs')==runs_before+1
+            stop_preview=manual('preview-stop')
+            checks['stop_preview_reports_queue']=stop_preview['queue']['queued']==1
+            cursor.execute("UPDATE pipeline_control.restaurant_review_items SET state='running' WHERE state='queued'")
+            checks['stop_queue_change_invalidates_preview']=denied('SELECT public.restaurant_review_automation_manual(%s,\'stop\',%s,%s,NULL)',(actor,stop_preview['version'],stop_preview['previewHash']))
+            stop_preview=manual('preview-stop'); stopped=manual('stop',stop_preview)
+            checks['confirmed_stop_cancels_exact_current_queue']=stopped['policy']['enabled'] is False and stopped['queue']['queued']==0 and stopped['queue']['running']==0
+            cursor.execute('RESET ROLE')
+            for role in ['anon','authenticated']:
+                cursor.execute('SET ROLE '+role)
+                checks[role+'_manual_rpc_denied']=denied('SELECT public.restaurant_review_automation_manual(%s,\'preview-run\',\'\',\'\',NULL)',(actor,))
+                cursor.execute('RESET ROLE')
+            checks['tick_keeps_lock_timeout']=scalar("SELECT proconfig @> ARRAY['lock_timeout=2s'] FROM pg_proc WHERE oid='public.restaurant_review_automation_tick(uuid)'::regprocedure")
         result=dict(kind='synthetic-restaurant-review-automation',postgresVersion=version,hostedMutation=False,
                     migrationSha256=hashlib.sha256(MIGRATION.read_bytes()).hexdigest(),assertions=checks,passed=sum(checks.values()),total=len(checks),success=all(checks.values()))
-        output=ROOT/'apps/web/performance/ui-renewal-20261003/restaurant-automation-local.json'
+        if args.manual_guards:
+            result['manualMigrationSha256']=hashlib.sha256(MANUAL_MIGRATION.read_bytes()).hexdigest()
+        output=ROOT/'apps/web/performance/ui-renewal-20261003'/('restaurant-automation-manual-local.json' if args.manual_guards else 'restaurant-automation-local.json')
         output.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps(result,ensure_ascii=False))
         if not result['success']: return 1

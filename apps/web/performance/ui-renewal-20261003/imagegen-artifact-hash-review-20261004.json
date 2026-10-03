@@ -1,0 +1,16 @@
+{
+  "finding": "py/weak-sensitive-data-hashing",
+  "classification": "artifact-fingerprint; not password storage or authentication",
+  "sourceSha256": "18df50a5e48a258abef2bb32e474047f7d872f1b2bafc2169cd9f1a2f2dfa601",
+  "function": "_sha256_json",
+  "callSites": [
+    413,
+    414
+  ],
+  "inputs": [
+    "Responses endpoint and generation request payload",
+    "redacted response metadata"
+  ],
+  "authenticationExcluded": "auth_file is passed separately to _run_oauth_responses; it is not an input to _sha256_json",
+  "hashContract": "HMAC-SHA256 domain-separated artifact fingerprint; no password security claim"
+}

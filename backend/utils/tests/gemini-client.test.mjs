@@ -10,6 +10,7 @@ import { GoogleGenAI } from '@google/genai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { generateChunkContent } from '../../restaurant-crawling/scripts/gemini_chunk_video_request.mjs';
 import { createGeminiClient, generateWithProjectBudget, geminiHttpOptions, logGeminiUsage, requireGeminiText, withGeminiDeadline } from '../gemini-client.mjs';
+import { withProjectBudget } from '../provider-budget.mjs';
 
 const execute = promisify(execFile);
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gemini-budget-test-'));
@@ -26,6 +27,38 @@ async function leases() {
     return Number(stdout.trim());
 }
 const responseBody = {candidates:[{content:{role:'model',parts:[{text:'{"ok":true}'}]}}],usageMetadata:{promptTokenCount:3,candidatesTokenCount:5,totalTokenCount:8}};
+async function removeFixtureLeases(budgetPath) {
+    await execute(process.env.RUN_DAILY_PYTHON || 'python3', ['-c',
+        'import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute("DELETE FROM leases"); c.commit(); c.close()', budgetPath]);
+}
+
+test('successful paid result survives a real lease-release storage failure', async () => {
+    const originalPath=process.env.GEMINI_BUDGET_PATH;let calls=0;
+    const expected={text:'settled-result',usageMetadata:{totalTokenCount:8}};
+    try {
+        const result=await withProjectBudget(async()=>{
+            calls++;process.env.GEMINI_BUDGET_PATH=directory;return expected;
+        });
+        assert.strictEqual(result,expected);assert.equal(calls,1);
+    } finally {
+        process.env.GEMINI_BUDGET_PATH=originalPath;
+        await removeFixtureLeases(originalPath);
+    }
+    assert.equal(await leases(),0);
+});
+
+test('provider error identity survives cooldown and release storage failures', async () => {
+    const originalPath=process.env.GEMINI_BUDGET_PATH;
+    const expected=Object.assign(new Error('synthetic-provider-failure'),{headers:{'retry-after':'1'}});
+    try {
+        await assert.rejects(withProjectBudget(async()=>{
+            process.env.GEMINI_BUDGET_PATH=directory;throw expected;
+        }),error=>error===expected);
+    } finally {
+        process.env.GEMINI_BUDGET_PATH=originalPath;
+        await removeFixtureLeases(originalPath);
+    }
+});
 async function serverFixture(handler) {
     const server=createServer(handler);
     await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
