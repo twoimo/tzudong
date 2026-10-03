@@ -134,9 +134,8 @@ def main(argv: list[str] | None = None) -> int:
             args.channel,
             "--limit",
             str(new_limit),
+            *(["--dry-run"] if args.dry_run else []),
         ]
-    if args.dry_run:
-        evaluate_command.append("--dry-run")
     evaluate_exit = _run(evaluate_command, required=False) if new_limit > 0 else 0
     print(f"evaluate_exit={evaluate_exit}")
     if evaluate_exit != 0:

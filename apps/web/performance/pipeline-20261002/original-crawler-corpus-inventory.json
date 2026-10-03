@@ -1,0 +1,25 @@
+{
+  "kind": "read-only-original-crawler-corpus-inventory",
+  "root": "original-project/restaurant-crawling/data/tzuyang",
+  "directories": {
+    "meta": {
+      "files": 1127,
+      "bytes": 16937422,
+      "sha256": "48b161415b22ff28f9beb72fa2fb1a89c7538938d204e623d4c11e4e1d16faed"
+    },
+    "transcript": {
+      "files": 1125,
+      "bytes": 13138998,
+      "sha256": "da96337f2a011d4ea7e36e12178a5a0fe455c67526e632b3b0024f0c4a13dfa5"
+    },
+    "crawling": {
+      "files": 1111,
+      "bytes": 1624413,
+      "sha256": "87f6dca24e1a6548e0ed4d8edc1275b36502b12a445bd53946d3914b776c0098"
+    }
+  },
+  "files": 3363,
+  "bytes": 31700833,
+  "sha256": "47fbf61b39cc93be7830fb965f662a7c1f1100bc90426451e69ebf7be2ee30ef",
+  "transformDatasetIsDifferent": true
+}

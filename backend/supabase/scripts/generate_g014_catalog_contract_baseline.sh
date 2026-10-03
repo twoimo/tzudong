@@ -1349,6 +1349,25 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20261003065736_g014_current_service_rpc_registry.sql)
+      # Bounded catalog metadata only: diagnose a source-replay prerequisite
+      # without printing function bodies, request data, or credentials. Keep
+      # the applied migration and its fail-closed prerequisite check immutable.
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At -c "
+        WITH required(signature) AS (VALUES
+          ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)'),
+          ('public.extract_youtube_video_id(text)'),
+          ('public.normalize_restaurant_identity_name(text)'),
+          ('public.record_app_web_vitals(text,text,text,text,smallint)'),
+          ('public.record_app_web_vitals_bounded(text,text,text,text,smallint)'),
+          ('public.resolve_restaurant_identity_name(text,text,text,text)')
+        ) SELECT jsonb_agg(jsonb_build_object('signature',required.signature,
+          'present',p.oid IS NOT NULL,'owner',pg_get_userbyid(p.proowner),
+          'serviceAllowed',has_function_privilege('service_role',p.oid,'EXECUTE'))
+          ORDER BY required.signature)
+        FROM required LEFT JOIN pg_proc p ON p.oid=to_regprocedure(required.signature);"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
+      ;;
     20260906064252_g014_pg17_workflow_owner_contract.sql)
       owner_verification="$staging_dir/g014-owner-pg15-verification.sql"
       python3 "$script_dir/verify_g014_pg17_owner_replay.py" --source "$migration" --output "$owner_verification"

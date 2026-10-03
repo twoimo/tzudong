@@ -12,6 +12,7 @@
     "apps/web/performance/pipeline-20261002/transform-final-raw.json": "177d5b8b5ea03e8f6fb5e8ee6b0c26d19a7f4bdf289b08eb6bb591fdf1a0fcdc",
     "apps/web/performance/pipeline-20261002/transform-intermediate-v2.json": "48dcdc70b028cc4708be57981e77efd47d69069d2b618b244a7617dcbd98cfd7",
     "apps/web/performance/pipeline-20261002/transform-raw.json": "3153e24e4a682599126b0e0c89ce1183f5e20b07af092b7fe883153e20cda190",
-    "apps/web/performance/pipeline-20261002/transform-rejected-v1.json": "48b3f8a0a5a1edae8aa7b71c3d78e77c4cb2b5d5cf0d10ee21a7c9f21192075c"
+    "apps/web/performance/pipeline-20261002/transform-rejected-v1.json": "48b3f8a0a5a1edae8aa7b71c3d78e77c4cb2b5d5cf0d10ee21a7c9f21192075c",
+    "apps/web/performance/pipeline-20261002/original-crawler-corpus-inventory.json": "b1d3910ca7f117e0f421ea07205c2cd87d6afaad10525d20e4721b5ac27fd38a"
   }
 }
