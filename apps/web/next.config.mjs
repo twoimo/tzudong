@@ -2,7 +2,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bundleAnalyzer from '@next/bundle-analyzer';
 import { resolveConfiguredSupabaseOrigin } from './lib/profile-avatar-url.ts';
-import { publicLargeAssetRedirects } from './lib/public-large-assets.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -174,7 +173,6 @@ const nextConfig = {
     typedRoutes: false,
     async redirects() {
         return [
-            ...publicLargeAssetRedirects,
             {
                 source: '/submissions',
                 destination: '/mypage',
