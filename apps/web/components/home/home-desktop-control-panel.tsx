@@ -1715,7 +1715,7 @@ export default function HomeDesktopControlPanel({
             >
               <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0">
                 <Image
-                  src="/apple-touch-icon.png"
+                  src="/logo-png-129-8d374bb80346.png"
                   unoptimized
                   alt="로고"
                   width={24}
