@@ -7,7 +7,7 @@ import {
 
 const appRoot = join(import.meta.dir, '..');
 const migration = readFileSync(
-  join(appRoot, '../../backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql'), 'utf8',
+  join(appRoot, '../../backend/supabase/migrations/20261003000811_storyboard_historical_restore.sql'), 'utf8',
 ).replace(/\r\n/g, '\n');
 
 describe('storyboard provider allowlist parity', () => {

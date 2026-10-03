@@ -54,3 +54,7 @@ OCR 중복 후보의 adapter 호출은 배치당 150→100이었다. 이는 Goog
 원시 측정은 apps/web/performance/pipeline-20261002/metadata-reader-v2-raw.json 및 이전 raw.json과 apps/web/performance/ui-renewal-20261003/에 보관한다. 24시간 관측·완전한 G003 scorer/validator가 없어 공식 운영 성능이나 세계 순위를 주장하지 않는다.
 
 공식 기준: https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash · https://ai.google.dev/gemini-api/docs/generate-content/image-generation · https://ui.shadcn.com/blocks?category=dashboard · https://www.tremor.so/ · https://www.w3.org/TR/WCAG22/#contrast-minimum
+
+## 운영 스토리보드 준비 적용
+
+2026-10-03에 기반·복원·Gemini 정책 마이그레이션을 실제 이력 20261003000711 / 20261003000811 / 20261003000812로 적용했다. 첫 시도의 소유권 이전은 거부되어 전체 롤백됐고, 역할 소속이나 기존 auth 테이블 조회 권한을 확대하지 않고 비공개 void 검사 함수와 service_role 공개 invoker로 준비안을 수정했다. 적용 후 공개 definer 0개, 브라우저 실행 거부, private bucket, Gemini 허용·이전 모델 거부, 기존 auth 테이블 직접 조회 권한 부재를 확인했다. 서비스 역할로 실제 비공개 권한 검사에 도달하는 것도 확인했다. 새 프로젝트·워커 행은 0개이며 생성 워커/배포 성공 증빙은 아직 아니다. 적용된 SQL 본문은 이후 변경하지 않는다.

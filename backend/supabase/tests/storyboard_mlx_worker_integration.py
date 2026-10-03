@@ -18,8 +18,8 @@ import uuid
 
 
 ROOT = Path(__file__).resolve().parents[3]
-MIGRATION = ROOT / "backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql"
-RESTORE_MIGRATION = ROOT / "backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql"
+MIGRATION = ROOT / "backend/supabase/migrations/20261003000711_storyboard_production_foundation.sql"
+RESTORE_MIGRATION = ROOT / "backend/supabase/migrations/20261003000811_storyboard_historical_restore.sql"
 
 
 def sql_value(value):

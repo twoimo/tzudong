@@ -51,7 +51,7 @@ try:
             c.execute("INSERT INTO public.user_roles VALUES (%s,'admin')", (owner,))
             c.execute("INSERT INTO public.user_account_status VALUES (%s,'active')", (owner,))
             conn.commit()
-            names = ['20260918021531_storyboard_mlx_worker.sql', '20260920021531_storyboard_historical_restore.sql', '20261003031531_storyboard_gemini_only.sql']
+            names = ['20261003000711_storyboard_production_foundation.sql', '20261003000811_storyboard_historical_restore.sql', '20261003000812_storyboard_gemini_only.sql']
             for name in names:
                 phase = name
                 path = ROOT / 'backend/supabase/migrations' / name
