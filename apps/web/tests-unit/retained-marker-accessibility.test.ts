@@ -5,6 +5,7 @@ class AppMarkerElement {
     attributes = new Map<string, string>();
     matches(selector: string) { return selector === '[data-testid="marker"]'; }
     querySelector() { return null; }
+    closest() { return null; }
     getAttribute(name: string) { return this.attributes.get(name) ?? null; }
     setAttribute(name: string, value: string) { this.attributes.set(name, value); }
     removeAttribute(name: string) { this.attributes.delete(name); }
@@ -87,4 +88,16 @@ test('an SDK root replacement with the same desired state is masked again', () =
     syncRetainedMarkerAccessibility(marker,false);
     expect(after.getAttribute('aria-hidden')).toBe('true');
     expect(after.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
+});
+test('hides the app overlay anchor containing a sibling review button and restores it', () => {
+    const anchor=new AppMarkerElement(),root=new AppMarkerElement();
+    root.closest=()=>anchor as never;
+    anchor.setAttribute('data-visible-marker-review-bubble-anchor','true');
+    const marker=fixture(root);syncRetainedMarkerAccessibility(marker,false);
+    expect(anchor.getAttribute('aria-hidden')).toBe('true');
+    expect(anchor.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
+    expect(root.getAttribute('aria-hidden')).toBeNull();
+    syncRetainedMarkerAccessibility(marker,true);
+    expect(anchor.getAttribute('aria-hidden')).toBeNull();
+    expect(anchor.getAttribute('data-visible-marker-review-bubble-anchor')).toBe('true');
 });
