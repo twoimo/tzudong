@@ -26,9 +26,9 @@ describe('admin announcements console integration source contract', () => {
     expect(announcementPanelSource).toContain('useActiveAnnouncements(!canManageInline)');
     expect(announcementPanelSource).toContain('canManageInline ? adminAnnouncements : activeAnnouncements');
     expect(announcementPanelSource).toContain('쯔동여지도 공지');
-    expect(announcementPanelSource).toContain('shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4');
-    expect(announcementPanelSource).toContain('h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted');
-    expect(announcementPanelSource).toContain('flex min-w-0 flex-wrap items-center gap-1.5');
+    expect(announcementPanelSource).toContain('<MapPanelHeader');
+    expect(announcementPanelSource).toContain('className={mapPanelIconButtonClass}');
+    expect(source('components/home/map-panel-chrome.tsx')).toContain('shrink-0 border-b border-border bg-background px-3 py-3');
     expect(announcementPanelSource).not.toContain('공지 목록으로 돌아가기');
     expect(announcementPanelSource).not.toContain("isBottomSheet || canManageInline ? '' : 'border-l border-border'");
     expect(announcementPanelSource).not.toContain("router.push('/admin?module=announcements')");
@@ -48,8 +48,8 @@ describe('admin announcements console integration source contract', () => {
     expect(announcementPanelSource).toContain("setViewMode('detail')");
     expect(announcementPanelSource).toContain("viewMode === 'detail'");
     expect(announcementPanelSource).not.toContain('목록 보기');
-    expect(announcementPanelSource).toContain("onClick={viewMode === 'list' ? onClose : handleCancel}");
-    expect(announcementPanelSource).toContain("aria-label={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}");
+    expect(announcementPanelSource).toContain("onClose={!hideCloseButton ? (viewMode === 'list' ? onClose : handleCancel) : undefined}");
+    expect(announcementPanelSource).toContain("closeLabel={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}");
     expect(announcementPanelSource).toContain('group w-full rounded-xl border border-border/70 bg-card px-3 py-3 text-left');
     expect(announcementPanelSource).toContain('aria-label="공지사항 목록 로딩 중"');
     expect(announcementPanelSource).toContain('<AnnouncementListItemSkeleton key={index} index={index} />');
