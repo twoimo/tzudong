@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-03T10:28:01.835992+00:00",
+  "captureMechanism": "IAB rawCDP Page.captureScreenshot clip",
+  "requestedClipOriginIgnored": true,
+  "accountContextSeen": true,
+  "pixelsPersisted": false,
+  "bufferDiscarded": true,
+  "safeFollowupFullScreenshotInspected": true,
+  "safeScreenshotLocalExport": "download event timed out; default Downloads filename absent; outcome not treated as saved",
+  "settingsRestorePending": true
+}

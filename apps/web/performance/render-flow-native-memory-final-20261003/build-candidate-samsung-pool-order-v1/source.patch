@@ -1,0 +1,52 @@
+diff --git a/apps/web/lib/marker-pool.ts b/apps/web/lib/marker-pool.ts
+index be94cd27..03fdcb28 100644
+--- a/apps/web/lib/marker-pool.ts
++++ b/apps/web/lib/marker-pool.ts
+@@ -245,7 +245,12 @@ export class MarkerPool {
+      * @param ids 마커 ID 배열
+      */
+     public releaseMultiple(ids: string[]): void {
+-        ids.forEach((id) => this.release(id));
++        // The pool is a stack. Reverse a batch's release order so a returning
++        // render in the same ID order reacquires its own icon/position rather
++        // than rebuilding every SDK icon for a different restaurant.
++        for (let index = ids.length - 1; index >= 0; index--) {
++            this.release(ids[index]);
++        }
+     }
+ 
+     /**
+diff --git a/apps/web/tests-unit/marker-pool.test.ts b/apps/web/tests-unit/marker-pool.test.ts
+index 48c5ad44..5760908c 100644
+--- a/apps/web/tests-unit/marker-pool.test.ts
++++ b/apps/web/tests-unit/marker-pool.test.ts
+@@ -321,6 +321,29 @@ describe('marker pool', () => {
+     expect(marker.zIndex).toBe(12);
+   });
+ 
++  test('a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons', () => {
++    const ids = ['restaurant-a', 'restaurant-b', 'restaurant-c'];
++    const clicks: string[] = [];
++    const original = ids.map(id => markerPool.acquire(id, makePosition(id), { content: id }, 'map', () => clicks.push('stale')));
++    markerPool.releaseAll();
++
++    ids.forEach((id, index) => {
++      const marker = markerPool.acquire(id, makePosition(id), { content: id }, 'map', () => clicks.push(id)) as unknown as FakeMarker;
++      expect(marker).toBe(original[index]);
++      expect(marker.setIconCalls).toBe(0);
++      expect(marker.setPositionCalls).toBe(0);
++      marker.clickListener?.({});
++    });
++    expect(clicks).toEqual(ids);
++    expect(markerPool.getStats()).toMatchObject({ created: 3, reused: 3, activeCount: 3, poolSize: 0 });
++
++    markerPool.releaseAll();
++    const changed = markerPool.acquire('new-restaurant', makePosition('new-position'), { content: 'new-icon' }, 'map') as unknown as FakeMarker;
++    expect(changed.getPosition().id).toBe('new-position');
++    expect(changed.getIcon().content).toBe('new-icon');
++    expect(changed.setIconCalls).toBe(1);
++  });
++
+   test('releaseExcept and releaseAll keep only the requested active ids before delayed cleanup', () => {
+     const timers = captureTimeouts();
+     try {

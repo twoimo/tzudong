@@ -1,0 +1,65 @@
+{
+  "observedAt": "2026-10-03T09:18:58.378240+00:00",
+  "uiSaveExecutedOnce": true,
+  "reopenedPolicyMatches": true,
+  "policy": [
+    {
+      "AllowedOrigins": [
+        "https://www.tzudong.app",
+        "https://tzudong.app"
+      ],
+      "AllowedMethods": [
+        "GET",
+        "HEAD"
+      ],
+      "AllowedHeaders": [
+        "Range"
+      ],
+      "ExposeHeaders": [
+        "ETag",
+        "Content-Type",
+        "Content-Length"
+      ],
+      "MaxAgeSeconds": 3600
+    }
+  ],
+  "credentialless": true,
+  "samples": [
+    {
+      "origin": "https://www.tzudong.app",
+      "status": 200,
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "vary": "Origin",
+        "access-control-expose-headers": "ETag,Content-Type,Content-Length",
+        "access-control-allow-origin": "https://www.tzudong.app",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cf-cache-status": "DYNAMIC"
+      }
+    },
+    {
+      "origin": "https://tzudong.app",
+      "status": 200,
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "vary": "Origin",
+        "access-control-expose-headers": "ETag,Content-Type,Content-Length",
+        "access-control-allow-origin": "https://tzudong.app",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cf-cache-status": "DYNAMIC"
+      }
+    },
+    {
+      "origin": "https://unapproved.example",
+      "status": 200,
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cf-cache-status": "DYNAMIC"
+      }
+    }
+  ]
+}

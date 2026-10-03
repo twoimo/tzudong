@@ -1,0 +1,32 @@
+{
+  "observedAt": "2026-10-03T11:20:21.795831+00:00",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "sourceBaseSha": "f6e5d940dc88c2d74fdff9c5e6ca6d470d4b980f",
+  "bun": {
+    "tests": 48,
+    "pass": 48,
+    "fail": 0,
+    "assertions": 1016,
+    "files": [
+      "admin-announcements-console-source.test.ts",
+      "admin-review-merge.test.ts",
+      "profile-avatar-consumers-source.test.ts",
+      "mobile-desktop-parity-source.test.ts",
+      "home-map-contextual-restaurants-source.test.ts",
+      "r2-public-url.test.ts",
+      "proxy.test.ts",
+      "security-headers-source.test.ts"
+    ]
+  },
+  "targetedLintExit": 0,
+  "typecheckParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2374,
+    "nonLibraryContentSha256": "8e205d5dd137c14eb1b70cd239fc1514ca94a5d7c2a1c06266ed0ff32d63f8af"
+  },
+  "build": "build-candidate-ui-png-v3/receipt.json",
+  "unverifiedMemorySourceExcludedFromThisDelivery": true,
+  "renderedBeforeFinalUiBuildScope": "responsive-ui-v6 uses priorv2; finalv3 verification in progress",
+  "deployed": false
+}

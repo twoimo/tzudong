@@ -1,0 +1,74 @@
+{
+  "observedAt": "2026-10-03T05:18:09.224981+00:00",
+  "captures": [
+    {
+      "file": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspected/cycle-000.png",
+      "sha256": "fa4556433ee3ba3006b322ba5ab8c7f3a3aec496d28388dfbf93de75f9c82870",
+      "cycle": 0,
+      "capturedAt": null,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspected/cycle-010.png",
+      "sha256": "ad3589d3184becbe5b19358a3ab7ce9b1ec0cce0ec9c07a9680663b5e2830a8a",
+      "cycle": 10,
+      "capturedAt": "2026-10-03T05:12:03.196Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspected/cycle-020.png",
+      "sha256": "e4e0cbcae4d7f7f1574f749ede587b60340b0243cee0d9e931d659374a7ab2b8",
+      "cycle": 20,
+      "capturedAt": "2026-10-03T05:12:28.007Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspected/cycle-030.png",
+      "sha256": "21bb1b547d2c2bbdb5b8c34d0d95243ea6eb3c7fcd8a73bd5fe0691681fded06",
+      "cycle": 30,
+      "capturedAt": "2026-10-03T05:12:52.386Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspected/cycle-040.png",
+      "sha256": "5b9f30da72e3484ef2ee69b571506aece5fb400ccfa65e73f86c991f3d99dc1f",
+      "cycle": 40,
+      "capturedAt": "2026-10-03T05:13:17.413Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspected/cycle-050.png",
+      "sha256": "2a8f4ad5ee5f79276bb65873392b221504582128680a06b473fcf9d0f5bbb659",
+      "cycle": 50,
+      "capturedAt": "2026-10-03T05:13:42.551Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspected/cycle-060.png",
+      "sha256": "2f0b2963103f3456c736fe0074293ed085ebe71ef9abac73a818263ff0c12355",
+      "cycle": 60,
+      "capturedAt": "2026-10-03T05:14:08.314Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    }
+  ],
+  "nativeCurrentFocusCheckedEachCycle": true,
+  "noOSShadeSeenInObservedFrames": true,
+  "notIndependentUsers": true,
+  "originalRawUntouched": true,
+  "limits": "start and each10cycles; transient overlays/flicker between captures not excluded",
+  "ownedTemporaryRemovalVerified": true
+}

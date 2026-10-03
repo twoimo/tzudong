@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-03T12:14:34.465962+00:00",
+  "uiSourceCommit": "bca48572eabd1f20eaf6ff529141c43460d25ad5",
+  "pr": "https://github.com/twoimo/tzudong/pull/3100",
+  "merged": false,
+  "newUiDeployed": false,
+  "buildHandle": 6047,
+  "lintHandle": 81876,
+  "nativePhoneQuestionPending": true,
+  "physicalConnectionKnownUnavailable": true,
+  "memoryPrototype": "ret-v1; V7Samsung4tabbudgetpass; Chrome/cold/large/frame/deploy pending",
+  "evidenceCopiedToAuthoritativeWorktree": true,
+  "evidenceNewMapsOrPushPending": true,
+  "originalGoalStillActive": true,
+  "next": "inspect exact build/CI state; font307 no-store positive/HEAD/POST test; protected develop->data->main then exact guard deployment and live verification; continue actualphone whenconnected"
+}

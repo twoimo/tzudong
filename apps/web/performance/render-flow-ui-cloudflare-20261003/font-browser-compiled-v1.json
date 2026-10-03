@@ -1,0 +1,20 @@
+{
+  "productionBuildSource": "bca48572eabd1f20eaf6ff529141c43460d25ad5",
+  "browser": "154.0.8037.97",
+  "freshIsolatedContext": true,
+  "compiledWwwTransport": "Only GET www requests fulfilled from the owned localhost production build; actual CSP preserved; not live deployment evidence",
+  "remoteFontNotIntercepted": true,
+  "fieldAdmitted": 0,
+  "requests": [
+    {
+      "status": 200,
+      "fontObjectMatched": true
+    }
+  ],
+  "passed": true,
+  "font": {
+    "status": "loaded",
+    "checked": true,
+    "origin": "https://www.tzudong.app"
+  }
+}

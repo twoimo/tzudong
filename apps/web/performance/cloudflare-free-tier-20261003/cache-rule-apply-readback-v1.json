@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-10-03T10:28:01.835007+00:00",
+  "zone": "tzudong.app",
+  "plan": "Free",
+  "ruleId": "2e05ace8286f414f89125c8eca336859",
+  "ruleName": "Tzudong public hashed font",
+  "match": {
+    "host": "assets.tzudong.app",
+    "path": "/sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+    "methods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  "action": "Eligible for cache; respect origin cache-control or default status TTL if absent",
+  "cacheKeyUnmodified": true,
+  "originKeyPreserved": true,
+  "browserTtlUnmodified": true,
+  "deployExecutedOnce": true,
+  "uiReadback": "1active; exact rule Active",
+  "otherRulesChanged": false,
+  "paidPlanEnabled": false,
+  "purge": {
+    "target": "single new font URL only",
+    "executedOnce": true,
+    "modalRecentlyPurgedMatched": true,
+    "postReadback": "public-font-cache-cors-readback-v2.json"
+  },
+  "limitations": "Only this public file; no main/API/auth/dynamic caching change; no projected cost or user latency gain claim"
+}

@@ -1,0 +1,374 @@
+{
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "manifestSha256": "2b1dbb95163c42bd06ac479fa4e36836921910238ee97d1a57fdded925a5f205",
+  "rows": [
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "a1",
+      "raw": "direct-samsung-memory-direct-samsung-memory-focus-confirm-v4-before-a2-retry2/raw.json",
+      "inspection": "direct-samsung-memory-direct-samsung-memory-focus-confirm-v4-before-a2-retry2/native-inspection-v1.json",
+      "plan": "direct-focus-before-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs",
+      "rawSha256": "e05a90343cdacecd539dfd2ea0910167c8098fe692a4856619d2181692067507",
+      "inspectionSha256": "337e60fdb45818142b93ff8abe628a2663638c193bb0b0f84beecd8eef4db348",
+      "startedAt": "2026-10-03T04:55:35.063Z",
+      "endedAt": "2026-10-03T04:58:11.267Z",
+      "tabMedianMB": 28.355898,
+      "peakMB": 51.175364,
+      "endpointMB": 16.404336,
+      "initialMB": 16.514076,
+      "withinTabRangeMB": [
+        15.755504,
+        51.175364
+      ],
+      "withinTabMadMB": 11.28381,
+      "expectedMarkers": 513,
+      "viewport": {
+        "width": 467,
+        "height": 810,
+        "dpr": 3.0824999809265137
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "b1",
+      "raw": "direct-samsung-memory-focus-confirm-v4-after-b1/raw.json",
+      "inspection": "direct-samsung-memory-focus-confirm-v4-after-b1/native-inspection-v1.json",
+      "plan": "direct-focus-after-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs",
+      "rawSha256": "073d0b963a9826a517e81d63a20dbae7e66c2b54cc86daf7162c78c594da1ddf",
+      "inspectionSha256": "b27474093352b79c5f28f7d80663c5f815338efceedc167a11b49e2bcd7c1905",
+      "startedAt": "2026-10-03T05:06:37.014Z",
+      "endedAt": "2026-10-03T05:09:13.204Z",
+      "tabMedianMB": 43.951080000000005,
+      "peakMB": 51.033896,
+      "endpointMB": 44.614364,
+      "initialMB": 18.43322,
+      "withinTabRangeMB": [
+        15.840848,
+        51.033896
+      ],
+      "withinTabMadMB": 3.830689999999997,
+      "expectedMarkers": 513,
+      "viewport": {
+        "width": 467,
+        "height": 810,
+        "dpr": 3.0824999809265137
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "b2",
+      "raw": "direct-samsung-memory-focus-confirm-v4-after-b2/raw.json",
+      "inspection": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspection-v1.json",
+      "plan": "direct-focus-after-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs",
+      "rawSha256": "44bef7a26e4df63c4a6f4389c7c54f44dfaafc570c7b64c73b7368dd6bbe47ea",
+      "inspectionSha256": "a54ef6fd971a62d086a721c5bf3cf498dc2f41421c8306a5e1dd0b5a0046a66d",
+      "startedAt": "2026-10-03T05:11:32.866Z",
+      "endedAt": "2026-10-03T05:14:08.389Z",
+      "tabMedianMB": 44.103592,
+      "peakMB": 54.416084,
+      "endpointMB": 51.017584,
+      "initialMB": 18.414104,
+      "withinTabRangeMB": [
+        16.270944,
+        54.416084
+      ],
+      "withinTabMadMB": 3.4138480000000015,
+      "expectedMarkers": 513,
+      "viewport": {
+        "width": 467,
+        "height": 810,
+        "dpr": 3.0824999809265137
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    },
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "a2",
+      "raw": "direct-samsung-memory-focus-confirm-v4-before-a2/raw.json",
+      "inspection": "direct-samsung-memory-focus-confirm-v4-before-a2/native-inspection-v1.json",
+      "plan": "direct-focus-before-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs",
+      "rawSha256": "a3d591797e7ae2b2223464e7210ecf4bd40f7b9a352cafab88e13a5794afd542",
+      "inspectionSha256": "2fb7c2d1bbd2feacbfdb8d195d39c382f676b495c2fa549047d89a1d89fc325e",
+      "startedAt": "2026-10-03T05:16:13.239Z",
+      "endedAt": "2026-10-03T05:18:52.409Z",
+      "tabMedianMB": 43.510397999999995,
+      "peakMB": 51.0012,
+      "endpointMB": 16.382604,
+      "initialMB": 13.58138,
+      "withinTabRangeMB": [
+        15.664436,
+        51.0012
+      ],
+      "withinTabMadMB": 4.051804000000001,
+      "expectedMarkers": 513,
+      "viewport": {
+        "width": 467,
+        "height": 810,
+        "dpr": 3.0824999809265137
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    },
+    {
+      "mode": "physical",
+      "role": "before",
+      "label": "a1",
+      "raw": "direct-physical-memory-focus-confirm-v4-before-a1/raw.json",
+      "inspection": "direct-physical-memory-focus-confirm-v4-before-a1/native-inspection-v1.json",
+      "plan": "direct-focus-before-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs",
+      "rawSha256": "45875a9807d8d66a31c06c93a66dd2f29a79df30e49c244cdb4787b7925006f6",
+      "inspectionSha256": "f3407fe0d42416c3ac6c1a78cbb44d1a45eb0f5500477d107c0d63cede7bb12b",
+      "startedAt": "2026-10-03T04:59:34.261Z",
+      "endedAt": "2026-10-03T05:02:06.349Z",
+      "tabMedianMB": 24.202448,
+      "peakMB": 31.411648,
+      "endpointMB": 21.292888,
+      "initialMB": 19.229648,
+      "withinTabRangeMB": [
+        17.52138,
+        31.411648
+      ],
+      "withinTabMadMB": 3.7379239999999996,
+      "expectedMarkers": 468,
+      "viewport": {
+        "width": 420,
+        "height": 769,
+        "dpr": 3.424999952316284
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36",
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    },
+    {
+      "mode": "physical",
+      "role": "after",
+      "label": "b1",
+      "raw": "direct-physical-memory-focus-confirm-v4-after-b1/raw.json",
+      "inspection": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspection-v1.json",
+      "plan": "direct-focus-after-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs",
+      "rawSha256": "3834955e03f4bf534615801b7e98b2391eea36f637b5785231c3658b479b7466",
+      "inspectionSha256": "89d73f06697329fa35ef2c88243dc9ae9bfeb9028e3fa861025d5bb8f6fad1f0",
+      "startedAt": "2026-10-03T05:02:48.215Z",
+      "endedAt": "2026-10-03T05:05:18.877Z",
+      "tabMedianMB": 23.465288,
+      "peakMB": 30.739604,
+      "endpointMB": 18.378808,
+      "initialMB": 18.172136,
+      "withinTabRangeMB": [
+        16.983176,
+        30.739604
+      ],
+      "withinTabMadMB": 4.11373,
+      "expectedMarkers": 468,
+      "viewport": {
+        "width": 420,
+        "height": 769,
+        "dpr": 3.424999952316284
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36",
+      "cycles": 60,
+      "nativeFramesInspected": 7
+    }
+  ],
+  "independentDevices": 1,
+  "freshBrowserProcesses": 0,
+  "cyclesNotIndependentUsers": true,
+  "fieldAdmitted": 0,
+  "forcedGc": false,
+  "confidenceIntervals": null,
+  "p95": null,
+  "noiseSeparatedImprovementProven": false,
+  "regressionTolerancePercent": 20,
+  "protocolChanges": [
+    "All six use V4 explicit synthetic camera; v2 membership497 samples excluded",
+    "Actual order Samsung A1, Chrome A1 B1, Samsung B1 B2 A2; existing processes and browser interleaving disclosed",
+    "First raw label says A2 retry2 but is first completed V4 Before; original raw is unchanged"
+  ],
+  "browsers": {
+    "samsung": {
+      "tabsPerVariant": 2,
+      "cyclesPerTab": 60,
+      "pairs": [
+        {
+          "before": "a1",
+          "after": "b1",
+          "metrics": {
+            "tabMedianMB": {
+              "before": 28.355898,
+              "after": 43.951080000000005,
+              "absoluteReductionMB": -15.595182000000005,
+              "relativeReductionPercent": -54.99801840167433,
+              "growthPercent": 54.99801840167433,
+              "guardPassed": false
+            },
+            "peakMB": {
+              "before": 51.175364,
+              "after": 51.033896,
+              "absoluteReductionMB": 0.14146800000000326,
+              "relativeReductionPercent": 0.2764377015471805,
+              "growthPercent": -0.2764377015471805,
+              "guardPassed": true
+            },
+            "endpointMB": {
+              "before": 16.404336,
+              "after": 44.614364,
+              "absoluteReductionMB": -28.210028,
+              "relativeReductionPercent": -171.96689948316103,
+              "growthPercent": 171.96689948316103,
+              "guardPassed": false
+            }
+          },
+          "primaryMedianGuardPassed": false
+        },
+        {
+          "before": "a2",
+          "after": "b2",
+          "metrics": {
+            "tabMedianMB": {
+              "before": 43.510397999999995,
+              "after": 44.103592,
+              "absoluteReductionMB": -0.593194000000004,
+              "relativeReductionPercent": -1.3633384829070148,
+              "growthPercent": 1.3633384829070148,
+              "guardPassed": true
+            },
+            "peakMB": {
+              "before": 51.0012,
+              "after": 54.416084,
+              "absoluteReductionMB": -3.4148840000000007,
+              "relativeReductionPercent": -6.695693434664284,
+              "growthPercent": 6.695693434664284,
+              "guardPassed": true
+            },
+            "endpointMB": {
+              "before": 16.382604,
+              "after": 51.017584,
+              "absoluteReductionMB": -34.63498,
+              "relativeReductionPercent": -211.4131550759574,
+              "growthPercent": 211.4131550759574,
+              "guardPassed": false
+            }
+          },
+          "primaryMedianGuardPassed": true
+        }
+      ],
+      "metrics": {
+        "tabMedianMB": {
+          "before": 35.933147999999996,
+          "after": 44.027336000000005,
+          "absoluteReductionMB": -8.09418800000001,
+          "relativeReductionPercent": -22.525685754000765,
+          "growthPercent": 22.525685754000765,
+          "aggregateGuardPassed": false
+        },
+        "peakMB": {
+          "before": 51.088282,
+          "after": 52.72499,
+          "absoluteReductionMB": -1.6367079999999987,
+          "relativeReductionPercent": -3.2036857297334813,
+          "growthPercent": 3.2036857297334813,
+          "aggregateGuardPassed": true
+        },
+        "endpointMB": {
+          "before": 16.39347,
+          "after": 47.815974,
+          "absoluteReductionMB": -31.422503999999996,
+          "relativeReductionPercent": -191.67695429948628,
+          "growthPercent": 191.67695429948628,
+          "aggregateGuardPassed": false
+        }
+      }
+    },
+    "physical": {
+      "tabsPerVariant": 1,
+      "cyclesPerTab": 60,
+      "pairs": [
+        {
+          "before": "a1",
+          "after": "b1",
+          "metrics": {
+            "tabMedianMB": {
+              "before": 24.202448,
+              "after": 23.465288,
+              "absoluteReductionMB": 0.7371599999999994,
+              "relativeReductionPercent": 3.0458075976446652,
+              "growthPercent": -3.0458075976446652,
+              "guardPassed": true
+            },
+            "peakMB": {
+              "before": 31.411648,
+              "after": 30.739604,
+              "absoluteReductionMB": 0.6720439999999996,
+              "relativeReductionPercent": 2.1394738665096455,
+              "growthPercent": -2.1394738665096455,
+              "guardPassed": true
+            },
+            "endpointMB": {
+              "before": 21.292888,
+              "after": 18.378808,
+              "absoluteReductionMB": 2.914080000000002,
+              "relativeReductionPercent": 13.685696369604733,
+              "growthPercent": -13.685696369604733,
+              "guardPassed": true
+            }
+          },
+          "primaryMedianGuardPassed": true
+        }
+      ],
+      "metrics": {
+        "tabMedianMB": {
+          "before": 24.202448,
+          "after": 23.465288,
+          "absoluteReductionMB": 0.7371599999999994,
+          "relativeReductionPercent": 3.0458075976446652,
+          "growthPercent": -3.0458075976446652,
+          "aggregateGuardPassed": true
+        },
+        "peakMB": {
+          "before": 31.411648,
+          "after": 30.739604,
+          "absoluteReductionMB": 0.6720439999999996,
+          "relativeReductionPercent": 2.1394738665096455,
+          "growthPercent": -2.1394738665096455,
+          "aggregateGuardPassed": true
+        },
+        "endpointMB": {
+          "before": 21.292888,
+          "after": 18.378808,
+          "absoluteReductionMB": 2.914080000000002,
+          "relativeReductionPercent": 13.685696369604733,
+          "growthPercent": -13.685696369604733,
+          "aggregateGuardPassed": true
+        }
+      }
+    }
+  },
+  "limits": [
+    "Existing browser processes and natural GC phases; dependent tabs/cycles",
+    "No independent native A/A estimate or population confidence interval",
+    "Finite JS isolate heap only; not RSS/GPU or absence of a long-term leak",
+    "Every10-cycle pixels may miss shorter overlays or flicker",
+    "All individual pair results retained; aggregate cannot waive a failed pair"
+  ],
+  "allPrimaryPairGuardsPassed": false,
+  "allSecondaryPairGuardsPassed": false
+}

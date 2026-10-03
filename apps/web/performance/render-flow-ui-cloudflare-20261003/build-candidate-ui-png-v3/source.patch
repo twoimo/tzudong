@@ -1,0 +1,1393 @@
+diff --git a/apps/web/components/admin/AdminReviewPanel.tsx b/apps/web/components/admin/AdminReviewPanel.tsx
+index b0c4c948..7a7a1375 100644
+--- a/apps/web/components/admin/AdminReviewPanel.tsx
++++ b/apps/web/components/admin/AdminReviewPanel.tsx
+@@ -1,5 +1,7 @@
+ 'use client';
+ 
++import { MapPanelHeader } from '@/components/home/map-panel-chrome';
++
+ import { useState, useRef, useCallback, useEffect, forwardRef } from "react";
+ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+ import { supabase } from "@/integrations/supabase/client";
+@@ -21,7 +23,6 @@ import {
+     Trash2,
+     MapPin,
+     Calendar,
+-    X,
+     Loader2,
+     ChevronRight,
+     ChevronLeft,
+@@ -531,12 +532,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
+     if (!user || !isAdmin) {
+         return (
+             <div className="h-full flex flex-col bg-background">
+-                <div className="flex items-center justify-between p-4 border-b border-border">
+-                    <h2 className="text-lg font-bold">리뷰관리</h2>
+-                    <Button variant="ghost" size="icon" onClick={onClose}>
+-                        <X className="h-5 w-5" />
+-                    </Button>
+-                </div>
++                <MapPanelHeader title="리뷰관리" onClose={onClose} closeLabel="리뷰관리 패널 닫기" />
+                 <div className="flex-1 flex items-center justify-center p-8">
+                     <Card className="p-8 text-center">
+                         <div className="text-4xl mb-3">🔒</div>
+@@ -567,15 +563,12 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
+             )}
+ 
+             {/* 헤더 */}
+-            <div className="flex items-center justify-between p-4 border-b border-border bg-card">
+-                <div>
+-                    <h2 className="text-lg font-bold">리뷰관리</h2>
+-                    <p className="text-sm text-muted-foreground">사용자 리뷰 승인/거부</p>
+-                </div>
+-                <Button variant="ghost" size="icon" onClick={onClose}>
+-                    <X className="h-5 w-5" />
+-                </Button>
+-            </div>
++            <MapPanelHeader
++                title="리뷰관리"
++                description="사용자 리뷰 승인/거부"
++                onClose={onClose}
++                closeLabel="리뷰관리 패널 닫기"
++            />
+ 
+             {/* 통계 */}
+             <div className="grid grid-cols-3 gap-2 p-3 border-b border-border">
+diff --git a/apps/web/components/announcement/AnnouncementPanel.tsx b/apps/web/components/announcement/AnnouncementPanel.tsx
+index d9ce48ab..1fa98b7f 100644
+--- a/apps/web/components/announcement/AnnouncementPanel.tsx
++++ b/apps/web/components/announcement/AnnouncementPanel.tsx
+@@ -1,8 +1,9 @@
+ 'use client';
+ 
+ import { useState, useEffect, useMemo, useRef } from 'react';
+-import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
++import { ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
+ import { Button } from '@/components/ui/button';
++import { MapPanelHeader, mapPanelIconButtonClass } from '@/components/home/map-panel-chrome';
+ import { Card } from '@/components/ui/card';
+ import { Input } from '@/components/ui/input';
+ import { Textarea } from '@/components/ui/textarea';
+@@ -308,55 +309,29 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
+                 </button>
+             )}
+ 
+-            {/* 헤더 */}
+-            <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+-                <div className="flex flex-wrap items-start justify-between gap-3">
+-                    <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
+-                        <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+-                            <Megaphone className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
+-                            <span className="min-w-0 truncate">쯔동여지도 공지</span>
+-                            {viewMode === 'list' && (
+-                                <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
+-                                    {isAnnouncementsLoading ? <InlineCountSkeleton /> : `(${allDisplayAnnouncements.length}개)`}
+-                                </span>
+-                            )}
+-                        </h1>
+-                        <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+-                            {viewMode === 'list' && '쯔동여지도 소식과 운영 안내를 확인하세요.'}
+-                            {viewMode === 'detail' && '공지 내용을 자세히 확인하세요.'}
+-                            {viewMode === 'create' && '새 공지사항을 작성합니다.'}
+-                            {viewMode === 'edit' && '공지사항 내용을 수정합니다.'}
+-                        </p>
+-                    </div>
+-                    <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+-                        {canManageInline && viewMode === 'list' && (
+-                            <Button
+-                                type="button"
+-                                variant="ghost"
+-                                size="icon"
+-                                onClick={handleCreate}
+-                                disabled={isMutating}
+-                                className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+-                                title="새 공지 작성"
+-                                aria-label="새 공지 작성"
+-                            >
+-                                <Plus className="h-5 w-5" aria-hidden="true" />
+-                            </Button>
+-                        )}
+-                        {!hideCloseButton && (
+-                            <Button
+-                                variant="ghost"
+-                                size="icon"
+-                                onClick={viewMode === 'list' ? onClose : handleCancel}
+-                                className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+-                                aria-label={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}
+-                            >
+-                                <X className="h-5 w-5" aria-hidden="true" />
+-                            </Button>
+-                        )}
+-                    </div>
+-                </div>
+-            </div>
++            <MapPanelHeader
++                title="쯔동여지도 공지"
++                titleAs="h1"
++                titleIcon={<Megaphone />}
++                count={viewMode === 'list' && !isAnnouncementsLoading ? allDisplayAnnouncements.length : undefined}
++                description={viewMode === 'list' ? '쯔동여지도 소식과 운영 안내를 확인하세요.' : viewMode === 'detail' ? '공지 내용을 자세히 확인하세요.' : viewMode === 'create' ? '새 공지사항을 작성합니다.' : '공지사항 내용을 수정합니다.'}
++                onClose={!hideCloseButton ? (viewMode === 'list' ? onClose : handleCancel) : undefined}
++                closeLabel={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}
++                actions={canManageInline && viewMode === 'list' ? (
++                    <Button
++                        type="button"
++                        variant="ghost"
++                        size="icon"
++                        onClick={handleCreate}
++                        disabled={isMutating}
++                        className={mapPanelIconButtonClass}
++                        title="새 공지 작성"
++                        aria-label="새 공지 작성"
++                    >
++                        <Plus className="h-4 w-4" aria-hidden="true" />
++                    </Button>
++                ) : undefined}
++            />
+ 
+             {/* 본문 */}
+             <div className="flex-1 overflow-hidden">
+diff --git a/apps/web/components/announcement/AnnouncementPanelLoadingFallback.tsx b/apps/web/components/announcement/AnnouncementPanelLoadingFallback.tsx
+index c79c0bd9..51acb0e1 100644
+--- a/apps/web/components/announcement/AnnouncementPanelLoadingFallback.tsx
++++ b/apps/web/components/announcement/AnnouncementPanelLoadingFallback.tsx
+@@ -1,7 +1,7 @@
+ 'use client';
+ 
+-import { X, Megaphone } from 'lucide-react';
+-import { Button } from '@/components/ui/button';
++import { Megaphone } from 'lucide-react';
++import { MapPanelHeader } from '@/components/home/map-panel-chrome';
+ import { Skeleton } from '@/components/ui/skeleton';
+ 
+ type AnnouncementPanelLoadingFallbackProps = {
+@@ -41,33 +41,14 @@ export default function AnnouncementPanelLoadingFallback({
+ }: AnnouncementPanelLoadingFallbackProps) {
+     return (
+         <div className="relative flex h-full flex-col bg-background">
+-            <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+-                <div className="flex flex-wrap items-start justify-between gap-3">
+-                    <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
+-                        <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+-                            <Megaphone className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
+-                            <span className="min-w-0 truncate">쯔동여지도 공지</span>
+-                            <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
+-                                (<InlineCountSkeleton />)
+-                            </span>
+-                        </h1>
+-                        <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+-                            쯔동여지도 소식과 운영 안내를 확인하세요.
+-                        </p>
+-                    </div>
+-                    {!hideCloseButton && (
+-                        <Button
+-                            variant="ghost"
+-                            size="icon"
+-                            onClick={onClose}
+-                            className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+-                            aria-label="공지 패널 닫기"
+-                        >
+-                            <X className="h-5 w-5" aria-hidden="true" />
+-                        </Button>
+-                    )}
+-                </div>
+-            </div>
++            <MapPanelHeader
++                title="쯔동여지도 공지"
++                titleAs="h1"
++                titleIcon={<Megaphone />}
++                description="쯔동여지도 소식과 운영 안내를 확인하세요."
++                onClose={!hideCloseButton ? onClose : undefined}
++                closeLabel="공지 패널 닫기"
++            />
+             <div className="flex-1 overflow-hidden">
+                 <div className="space-y-3 p-4" role="status" aria-busy="true" aria-label="공지사항 목록 로딩 중">
+                     <span className="sr-only">공지사항 목록 데이터를 불러오는 중입니다.</span>
+diff --git a/apps/web/components/feed/FeedContent.tsx b/apps/web/components/feed/FeedContent.tsx
+index 087edb8f..6724d643 100644
+--- a/apps/web/components/feed/FeedContent.tsx
++++ b/apps/web/components/feed/FeedContent.tsx
+@@ -4,14 +4,14 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+ import { createPortal } from 'react-dom';
+ import dynamic from 'next/dynamic';
+ import { useRouter } from 'next/navigation';
+-import { MessageSquareText, Plus, Eye, EyeOff, Filter, Search, X } from 'lucide-react';
++import { MessageSquareText, Plus, Eye, EyeOff, Filter, Search } from 'lucide-react';
+ import { Button } from '@/components/ui/button';
+ import { Input } from '@/components/ui/input';
+ import { useAuth } from '@/contexts/AuthContext';
+ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+ import { supabase } from '@/integrations/supabase/client';
+ import { toast } from '@/hooks/use-toast';
+-import { mapPanelIconButtonClass } from '@/components/home/map-panel-chrome';
++import { MapPanelHeader, mapPanelIconButtonClass } from '@/components/home/map-panel-chrome';
+ import { cn } from '@/lib/utils';
+ import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
+ import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
+@@ -584,40 +584,30 @@ export default function FeedContent({
+             )}>
+                 {/* 헤더 */}
+                 {showHeader && (
+-                    <div className={cn("shrink-0 border-b border-border bg-background", isOverlay ? "px-4 py-3" : "px-3 py-3 sm:px-5 sm:py-4")}>
+-                        <div className="flex items-center justify-between gap-2">
+-                            <div className="min-w-0 flex-1">
+-                                <h1 className={cn(
+-                                    "flex min-w-0 items-center gap-1.5 font-semibold leading-tight",
+-                                    isOverlay ? "text-base text-foreground" : "text-[1.0625rem] text-primary xs:text-xl sm:text-2xl"
+-                                )}>
+-                                    {!isOverlay && <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />}
+-                                    <span className="min-w-0 truncate">{isOverlay ? "리뷰" : "쯔동여지도 리뷰"}</span>
+-                                    <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
+-                                        ({allReviews.length}개)
+-                                    </span>
+-                                </h1>
+-                                {!isOverlay && <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+-                                    {isLoggedIn
+-                                        ? "맛집 방문 후기를 공유해보세요!"
+-                                        : "로그인하여 리뷰를 작성해보세요!"
+-                                    }
+-                                </p>}
+-                            </div>
+-                            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
++                    <div className="shrink-0 bg-background">
++                        <MapPanelHeader
++                            title={isOverlay ? '리뷰' : '쯔동여지도 리뷰'}
++                            titleAs="h1"
++                            titleIcon={!isOverlay ? <MessageSquareText /> : undefined}
++                            count={isLoading ? undefined : allReviews.length}
++                            description={!isOverlay ? (isLoggedIn ? '맛집 방문 후기를 공유해보세요!' : '로그인하여 리뷰를 작성해보세요!') : undefined}
++                            onClose={isOverlay ? onClose : undefined}
++                            closeLabel="리뷰 패널 닫기"
++                            actions={(
++                                <>
+                                 {isLoggedIn && (
+                                     <Button
+                                         variant="ghost"
+                                         size="icon"
+-                                        className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"}
++                                        className={mapPanelIconButtonClass}
+                                         onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
+                                         title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                         aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                     >
+                                         {showMyReviewsOnly ? (
+-                                            <EyeOff className="h-5 w-5 text-primary" aria-hidden="true" />
++                                            <EyeOff className="h-4 w-4 text-primary" aria-hidden="true" />
+                                         ) : (
+-                                            <Eye className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
++                                            <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                                         )}
+                                     </Button>
+                                 )}
+@@ -625,7 +615,7 @@ export default function FeedContent({
+                                     variant="ghost"
+                                     size="icon"
+                                     onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+-                                    className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"}
++                                    className={mapPanelIconButtonClass}
+                                     title="검색 필터"
+                                     aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}
+                                 >
+@@ -636,22 +626,18 @@ export default function FeedContent({
+                                         variant="ghost"
+                                         size="icon"
+                                         onClick={handleWriteReview}
+-                                        className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"}
++                                        className={mapPanelIconButtonClass}
+                                         title="리뷰 작성"
+                                         aria-label="리뷰 작성"
+                                     >
+-                                        <Plus className="h-5 w-5" aria-hidden="true" />
+-                                    </Button>
+-                                )}
+-                                {isOverlay && onClose && (
+-                                    <Button variant="ghost" size="icon" onClick={onClose} className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"} aria-label="리뷰 패널 닫기">
+-                                        <X className="h-5 w-5" aria-hidden="true" />
++                                        <Plus className="h-4 w-4" aria-hidden="true" />
+                                     </Button>
+                                 )}
+-                            </div>
+-                        </div>
++                                </>
++                            )}
++                        />
+                         {isFilterExpanded && (
+-                            <div className="mt-4">
++                            <div className="border-b border-border px-3 py-3">
+                                 <div className="relative">
+                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                                     <Input
+diff --git a/apps/web/components/filters/CategoryFilter.tsx b/apps/web/components/filters/CategoryFilter.tsx
+index 1df55b55..511055ae 100644
+--- a/apps/web/components/filters/CategoryFilter.tsx
++++ b/apps/web/components/filters/CategoryFilter.tsx
+@@ -10,6 +10,7 @@ import { Region, Restaurant } from "@/types/restaurant";
+ import { mergeRestaurants } from "@/hooks/use-restaurants";
+ import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
+ import { buildRestaurantRegionAddressOrFilter } from "@/lib/popular-restaurants";
++import { MapFilterTriggerLabel } from './MapFilterTriggerLabel';
+ 
+ interface CategoryFilterProps {
+     selectedCategories: string[];
+@@ -20,6 +21,7 @@ interface CategoryFilterProps {
+     contentSide?: "top" | "right" | "bottom" | "left";
+     contentAlign?: "start" | "center" | "end";
+     contentClassName?: string;
++    compactTrigger?: boolean;
+ }
+ 
+ const CATEGORIES = [
+@@ -48,7 +50,8 @@ const CategoryFilter = ({
+     className,
+     contentSide = "bottom",
+     contentAlign = "start",
+-    contentClassName
++    contentClassName,
++    compactTrigger = false,
+ }: CategoryFilterProps) => {
+     const [isOpen, setIsOpen] = useState(false);
+ 
+@@ -131,7 +134,13 @@ const CategoryFilter = ({
+                     aria-label="카테고리 필터"
+                     className={cn("justify-between", className)}
+                 >
+-                    <div className="flex min-w-max flex-1 items-center gap-2 whitespace-nowrap">
++                    {compactTrigger ? (
++                        <MapFilterTriggerLabel
++                            icon={ChefHat}
++                            label={selectedCategories.length > 0 ? `${selectedCategories.length}개 선택됨` : '카테고리'}
++                            count={selectedCategories.length === 0 ? totalCount : undefined}
++                        />
++                    ) : <div className="flex min-w-max flex-1 items-center gap-2 whitespace-nowrap">
+                         <ChefHat className="h-4 w-4 text-muted-foreground shrink-0" />
+                         <div className="flex min-w-max flex-1 items-center justify-between whitespace-nowrap">
+                             <span className={selectedCategories.length > 0 ? "truncate" : ""}>
+@@ -144,8 +153,8 @@ const CategoryFilter = ({
+                                 <span className="ml-2 shrink-0 whitespace-nowrap text-xs text-muted-foreground">({totalCount}개)</span>
+                             )}
+                         </div>
+-                    </div>
+-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
++                    </div>}
++                    <ChevronsUpDown className={compactTrigger ? 'h-3.5 w-3.5 shrink-0 opacity-50' : 'ml-2 h-4 w-4 shrink-0 opacity-50'} />
+                 </Button>
+             </PopoverTrigger>
+             <PopoverContent
+diff --git a/apps/web/components/home/DesktopLeftPanelMapHome.tsx b/apps/web/components/home/DesktopLeftPanelMapHome.tsx
+index 763bd145..62305370 100644
+--- a/apps/web/components/home/DesktopLeftPanelMapHome.tsx
++++ b/apps/web/components/home/DesktopLeftPanelMapHome.tsx
+@@ -1,4 +1,5 @@
+ 'use client';
++import { MapPanelHeader } from '@/components/home/map-panel-chrome';
+ 
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+ import {
+@@ -333,23 +334,17 @@ export default function DesktopLeftPanelMapHome({
+       >
+         {hasContextualRestaurants ? (
+           <div
+-            className="border-b border-border/70 px-3 pb-2 pt-3"
++            className="border-b border-border/70"
+             data-desktop-left-panel-visible-marker-restaurants="true"
+           >
+-            <div className="mb-1 flex min-w-0 items-center justify-between gap-2 px-1">
+-              <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-bold leading-5 text-foreground">
+-                <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+-                <span className="truncate">맛집 목록</span>
+-              </h2>
+-              <span
+-                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-2xs font-semibold leading-4 text-primary-foreground"
+-                aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}
+-              >
+-                {visibleMarkerRestaurantCount}곳
+-              </span>
+-            </div>
++            <MapPanelHeader
++              title="맛집 목록"
++              titleIcon={<MapPin />}
++              count={visibleMarkerRestaurantCount}
++              countUnit="곳"
++            />
+ 
+-            <div className="grid grid-cols-1 gap-3">
++            <div className="grid grid-cols-1 gap-3 px-3 py-3">
+               {contextualRestaurants.map((restaurant) => (
+                 <StampCard
+                   key={restaurant.id}
+diff --git a/apps/web/components/home/MobileControlOverlay.tsx b/apps/web/components/home/MobileControlOverlay.tsx
+index a29b7574..adb8cf5a 100644
+--- a/apps/web/components/home/MobileControlOverlay.tsx
++++ b/apps/web/components/home/MobileControlOverlay.tsx
+@@ -1015,12 +1015,13 @@ function MobileControlOverlayComponent({
+                         title={searchQuery.trim() ? `${searchQuery.trim()} 검색` : '쯔동여지도 검색하기'}
+                     >
+                         <Image
+-                            src="/logo.webp"
++                            src="/logo.png"
++                            unoptimized
+                             alt=""
+                             aria-hidden="true"
+                             width={26}
+                             height={26}
+-                            className="rounded-md object-contain shrink-0"
++                            className="rounded-md bg-transparent object-contain shrink-0"
+                         />
+                         <span className={cn(
+                             'text-sm truncate',
+@@ -1076,7 +1077,7 @@ function MobileControlOverlayComponent({
+             {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
+             {shouldRenderMobileBottomControls && (
+                 <div
+-                    className="fixed bottom-[calc(env(safe-area-inset-bottom)+var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex min-w-0 flex-col gap-2"
++                    className="fixed bottom-[calc(env(safe-area-inset-bottom)+var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex min-w-0 flex-col gap-1.5"
+                     data-layout-primitives="cluster wrap-row overlay-stack"
+                     data-fixed-control-region="mobile-map-bottom-controls"
+                     role="group"
+@@ -1084,14 +1085,14 @@ function MobileControlOverlayComponent({
+                 >
+                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
+                 {onModeChange && (
+-                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 rounded-full shadow-sm border border-border w-[clamp(118px,34vw,148px)]">
++                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 rounded-full shadow-sm border border-border w-[clamp(110px,29vw,128px)]">
+                         <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={() => onModeChange('domestic')}
+                             aria-pressed={mapMode === 'domestic'}
+                             aria-label="국내 맛집 지도 보기"
+-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
++                            className={`rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                                 ? 'bg-primary text-primary-foreground shadow-sm'
+                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+                                 }`}
+@@ -1104,7 +1105,7 @@ function MobileControlOverlayComponent({
+                             onClick={() => onModeChange('overseas')}
+                             aria-pressed={mapMode === 'overseas'}
+                             aria-label="해외 맛집 지도 보기"
+-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
++                            className={`rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                                 ? 'bg-primary text-primary-foreground shadow-sm'
+                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+                                 }`}
+@@ -1122,7 +1123,7 @@ function MobileControlOverlayComponent({
+                     aria-expanded={false}
+                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
+                     data-mobile-map-sheet-trigger="region"
+-                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
++                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(110px,29vw,128px)] h-8 px-2 home-map-floating-control-text"
+                 >
+                     <div className="flex items-center w-full gap-1">
+                         <div className="flex items-center justify-center w-4 shrink-0">
+@@ -1140,7 +1141,7 @@ function MobileControlOverlayComponent({
+                     aria-expanded={false}
+                     aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
+                     data-mobile-map-sheet-trigger="category"
+-                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
++                    className="rounded-full shadow-sm bg-background/95 border border-border hover:bg-secondary/80 w-[clamp(110px,29vw,128px)] h-8 px-2 home-map-floating-control-text"
+                 >
+                     <div className="flex items-center w-full gap-1">
+                         <div className="flex items-center justify-center w-4 shrink-0">
+@@ -1296,7 +1297,8 @@ function MobileControlOverlayComponent({
+                             <div className="flex min-w-0 items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5">
+                                 <div className="min-w-0 flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40">
+                                     <Image
+-                                        src="/logo.webp"
++                                        src="/logo.png"
++                                        unoptimized
+                                         alt="로고"
+                                         width={24}
+                                         height={24}
+diff --git a/apps/web/components/home/home-desktop-control-panel.tsx b/apps/web/components/home/home-desktop-control-panel.tsx
+index 268fd393..3125b6f6 100644
+--- a/apps/web/components/home/home-desktop-control-panel.tsx
++++ b/apps/web/components/home/home-desktop-control-panel.tsx
+@@ -12,6 +12,7 @@ import {
+ } from "react";
+ import dynamic from "next/dynamic";
+ import Image from "next/image";
++import { MapPanelHeader } from '@/components/home/map-panel-chrome';
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { flushSync } from "react-dom";
+ import {
+@@ -294,7 +295,7 @@ interface HomeDesktopControlPanelProps {
+ }
+ 
+ const DESKTOP_LEFT_PANEL_WIDTH_PX = 392;
+-const DESKTOP_MAP_FLOATING_FILTER_WIDTH = "10.9375rem";
++const DESKTOP_MAP_FLOATING_FILTER_WIDTH = "9.5rem";
+ const desktopMapMenuItemClass =
+   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
+ type DesktopMapMenuItem = {
+@@ -489,36 +490,19 @@ function DesktopMapSettingsPanel({
+       data-desktop-left-panel-view="settings"
+       aria-labelledby="desktop-map-settings-title"
+     >
+-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
+-        <div className="min-w-0">
+-          <p className="flex items-center gap-1.5 text-2xs font-bold tracking-[0.12em] text-primary">
+-            <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+-            계정별 환경설정
+-          </p>
+-          <h2
+-            id="desktop-map-settings-title"
+-            className="mt-1 text-lg font-bold tracking-[-0.04em] text-foreground"
+-          >
+-            지도와 사이드 패널 맞춤 설정
+-          </h2>
+-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+-            이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고, 다음
+-            데스크탑 접속부터 같은 배치로 시작합니다.
+-          </p>
+-        </div>
+-        <Button
+-          type="button"
+-          variant="ghost"
+-          size="icon"
+-          className="h-8 w-8 shrink-0 rounded-full"
+-          onClick={onClose}
+-          aria-label="환경설정 닫기"
+-        >
+-          <X className="h-4 w-4" aria-hidden="true" />
+-        </Button>
+-      </header>
++      <MapPanelHeader
++        title="지도와 사이드 패널 맞춤 설정"
++        titleId="desktop-map-settings-title"
++        titleIcon={<SlidersHorizontal />}
++        onClose={onClose}
++        closeLabel="환경설정 닫기"
++      />
+ 
+       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4">
++        <p className="mb-4 text-xs leading-5 text-muted-foreground">
++          이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고, 다음
++          데스크탑 접속부터 같은 배치로 시작합니다.
++        </p>
+         <div className="space-y-4">
+           <section className="rounded-2xl border border-border bg-card p-3">
+             <div className="flex items-start gap-2">
+@@ -1563,7 +1547,7 @@ export default function HomeDesktopControlPanel({
+           </div>
+ 
+           <div
+-            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
++            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5"
+             style={desktopMapFloatingControlStyle}
+             data-desktop-map-floating-filters="true"
+             onMouseDownCapture={handlePanelMouseDownCapture}
+@@ -1581,7 +1565,7 @@ export default function HomeDesktopControlPanel({
+                   aria-pressed={mapMode === "domestic"}
+                   aria-label="국내 맛집 지도 보기"
+                   className={cn(
+-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
++                    "h-8 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
+                     mapMode === "domestic"
+                       ? "bg-primary text-primary-foreground shadow-sm"
+                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
+@@ -1596,7 +1580,7 @@ export default function HomeDesktopControlPanel({
+                   aria-pressed={mapMode === "overseas"}
+                   aria-label="해외 맛집 지도 보기"
+                   className={cn(
+-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
++                    "h-8 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
+                     mapMode === "overseas"
+                       ? "bg-primary text-primary-foreground shadow-sm"
+                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
+@@ -1611,7 +1595,8 @@ export default function HomeDesktopControlPanel({
+                 selectedRegion={selectedRegion}
+                 onRegionChange={onRegionChange}
+                 onRegionSelect={onSearchExecute}
+-                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80"
++                className="!h-8 !w-full !min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>svg]:h-3.5 [&>svg]:w-3.5"
++                compactTrigger
+                 contentSide="top"
+                 contentAlign="start"
+               />
+@@ -1620,7 +1605,7 @@ export default function HomeDesktopControlPanel({
+                 value={selectedCountry || undefined}
+                 onValueChange={onCountryChange}
+               >
+-                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80">
++                <SelectTrigger className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>span]:truncate">
+                   <SelectValue placeholder="해외 지역" />
+                 </SelectTrigger>
+                 <SelectContent
+@@ -1642,7 +1627,8 @@ export default function HomeDesktopControlPanel({
+               onCategoryChange={onCategoryChange}
+               selectedRegion={mapMode === "domestic" ? selectedRegion : null}
+               selectedCountry={mapMode === "overseas" ? selectedCountry : null}
+-              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm hover:bg-secondary/80"
++              className="h-8 w-full min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&_svg]:size-3.5"
++              compactTrigger
+               contentSide="top"
+               contentAlign="start"
+             />
+@@ -1729,11 +1715,12 @@ export default function HomeDesktopControlPanel({
+             >
+               <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0">
+                 <Image
+-                  src="/logo.webp"
++                  src="/logo.png"
++                  unoptimized
+                   alt="로고"
+                   width={24}
+                   height={24}
+-                  className="shrink-0 rounded-md object-contain"
++                  className="shrink-0 rounded-md bg-transparent object-contain"
+                 />
+                 <input
+                   ref={desktopSearchInputRef}
+diff --git a/apps/web/components/home/map-panel-chrome.tsx b/apps/web/components/home/map-panel-chrome.tsx
+index 4fdbb8f0..0dcf7023 100644
+--- a/apps/web/components/home/map-panel-chrome.tsx
++++ b/apps/web/components/home/map-panel-chrome.tsx
+@@ -1,5 +1,5 @@
+ import type { ReactNode } from "react";
+-import { X } from "lucide-react";
++import { ArrowLeft, X } from "lucide-react";
+ 
+ import { Button } from "@/components/ui/button";
+ 
+@@ -9,37 +9,46 @@ export const mapPanelIconButtonClass =
+ export function MapPanelHeader({
+   title,
+   count,
++  countUnit = "개",
+   description,
++  titleIcon,
++  titleId,
+   actions,
+   onClose,
+   closeLabel,
++  closeAction = "close",
+   titleAs: TitleTag = "h2",
+ }: {
+   title: string;
+   count?: number;
++  countUnit?: string;
+   description?: string;
++  titleIcon?: ReactNode;
++  titleId?: string;
+   actions?: ReactNode;
+   onClose?: () => void;
+-  closeLabel: string;
++  closeLabel?: string;
++  closeAction?: "close" | "back";
+   titleAs?: "h1" | "h2";
+ }) {
+   return (
+-    <header className="shrink-0 border-b border-border bg-background px-4 py-3" data-layout-primitives="stack">
+-      <div className="flex items-center gap-2">
++    <header className="min-h-14 shrink-0 border-b border-border bg-background px-3 py-3" data-layout-primitives="stack" data-map-panel-header="true">
++      <div className="flex min-h-8 items-center gap-2">
+         <div className="min-w-0 flex-1">
+-          <TitleTag className="truncate text-base font-semibold leading-6 tracking-tight text-foreground">
+-            {title}
++          <TitleTag id={titleId} className="flex min-w-0 items-center gap-2 text-sm font-semibold leading-5 text-foreground">
++            {titleIcon ? <span className="shrink-0 text-primary [&_svg]:size-4" aria-hidden="true">{titleIcon}</span> : null}
++            <span className="min-w-0 truncate" title={title}>{title}</span>
+             {typeof count === "number" ? (
+-              <span className="ml-1.5 text-xs font-normal tabular-nums text-muted-foreground">
+-                {count.toLocaleString()}
++              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium leading-4 tabular-nums text-primary" aria-label={`${count.toLocaleString()}${countUnit}`}>
++                {count.toLocaleString()}{countUnit}
+               </span>
+             ) : null}
+           </TitleTag>
+           {description ? (
+-            <p className="mt-0.5 truncate text-xs leading-5 text-muted-foreground">{description}</p>
++            <p className="mt-1 truncate text-xs leading-4 text-muted-foreground">{description}</p>
+           ) : null}
+         </div>
+-        <div className="flex shrink-0 items-center gap-2">
++        <div className="flex shrink-0 items-center gap-1.5">
+           {actions}
+           {onClose ? (
+             <Button
+@@ -48,9 +57,9 @@ export function MapPanelHeader({
+               size="icon"
+               onClick={onClose}
+               className={mapPanelIconButtonClass}
+-              aria-label={closeLabel}
++              aria-label={closeLabel ?? `${title} 닫기`}
+             >
+-              <X className="h-4 w-4" aria-hidden="true" />
++              {closeAction === "back" ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <X className="h-4 w-4" aria-hidden="true" />}
+             </Button>
+           ) : null}
+         </div>
+diff --git a/apps/web/components/layout/Header.tsx b/apps/web/components/layout/Header.tsx
+index 4391dcfb..e19fa43e 100644
+--- a/apps/web/components/layout/Header.tsx
++++ b/apps/web/components/layout/Header.tsx
+@@ -287,11 +287,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
+       {!isMobileBannerOnlyHeader && (
+         <Link href="/" className="relative z-10 flex-shrink-0 flex items-center justify-center">
+           <NextImage
+-            src="/logo.webp"
++            src="/logo.png"
++            unoptimized
+             alt="Tzudong Logo"
+             width={32}
+             height={32}
+-            className="rounded-lg object-contain"
++            className="rounded-lg bg-transparent object-contain"
+             priority
+           />
+         </Link>
+diff --git a/apps/web/components/profile/UserProfilePanel.tsx b/apps/web/components/profile/UserProfilePanel.tsx
+index f0d5c60f..eec14d12 100644
+--- a/apps/web/components/profile/UserProfilePanel.tsx
++++ b/apps/web/components/profile/UserProfilePanel.tsx
+@@ -5,6 +5,7 @@ import { useState, memo, useMemo, useCallback, useRef, useEffect } from "react";
+ import Link from "next/link";
+ import { Badge } from "@/components/ui/badge";
+ import { Button } from "@/components/ui/button";
++import { MapPanelHeader, mapPanelIconButtonClass } from '@/components/home/map-panel-chrome';
+ import {
+     ChevronLeft,
+     Stamp,
+@@ -12,8 +13,7 @@ import {
+     MessageSquare,
+     Users,
+     Trophy,
+-    User,
+-    X
++    User
+ } from "lucide-react";
+ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+ import {
+@@ -353,9 +353,24 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
+     }, [activeTab, likers.length, visibleLikerCount]);
+ 
+ 
++    const profilePanelHeader = (
++        <MapPanelHeader
++            title="프로필"
++            titleAs="h1"
++            onClose={showBackButton && onClose ? handleBack : undefined}
++            closeLabel="프로필 패널 닫기"
++            actions={showBackButton && !onClose ? (
++                <Button type="button" variant="ghost" size="icon" onClick={handleBack} className={mapPanelIconButtonClass} aria-label="프로필 뒤로 가기">
++                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
++                </Button>
++            ) : undefined}
++        />
++    );
++
+     if (profileLoading) {
+         return (
+             <UserProfileProgressiveSkeleton
++                header={profilePanelHeader}
+                 showCloseButton={showBackButton && Boolean(onClose)}
+                 onBack={handleBack}
+             />
+@@ -365,14 +380,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
+     if (profileError) {
+         return (
+             <div className="flex flex-col h-full bg-background">
+-                <div className="p-4 border-b">
+-                    {showBackButton && (
+-                        <Button variant="ghost" size="sm" onClick={handleBack}>
+-                            {onClose ? <X className="h-4 w-4 mr-1" /> : <ChevronLeft className="h-4 w-4 mr-1" />}
+-                            {onClose ? "닫기" : "뒤로"}
+-                        </Button>
+-                    )}
+-                </div>
++                {profilePanelHeader}
+                 <div className="flex items-center justify-center h-64">
+                     <div className="text-center text-muted-foreground" aria-live="polite">
+                         <p className="text-lg mb-2">프로필을 불러올 수 없습니다</p>
+@@ -395,14 +403,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
+     if (!profile) {
+         return (
+             <div className="flex flex-col h-full bg-background">
+-                <div className="p-4 border-b">
+-                    {showBackButton && (
+-                        <Button variant="ghost" size="sm" onClick={handleBack}>
+-                            {onClose ? <X className="h-4 w-4 mr-1" /> : <ChevronLeft className="h-4 w-4 mr-1" />}
+-                            {onClose ? "닫기" : "뒤로"}
+-                        </Button>
+-                    )}
+-                </div>
++                {profilePanelHeader}
+                 <div className="flex items-center justify-center h-64">
+                     <div className="text-center text-muted-foreground">
+                         <p className="text-lg mb-2">사용자를 찾을 수 없습니다</p>
+@@ -415,20 +416,11 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
+ 
+     return (
+         <div className="flex flex-col h-full bg-background">
+-            {/* Header */}
++            {profilePanelHeader}
++            {/* Profile identity and activity summary */}
+             <div className="flex flex-col gap-3 border-b border-border bg-background px-4 py-3">
+                 <div className="flex items-center justify-between min-w-0">
+                     <div className="flex items-center gap-3">
+-                        {showBackButton && !onClose && (
+-                            <Button
+-                                variant="ghost"
+-                                size="icon"
+-                                onClick={handleBack}
+-                                className="flex-shrink-0 -ml-2"
+-                            >
+-                                <ChevronLeft className="h-5 w-5" />
+-                            </Button>
+-                        )}
+                         {/* 프로필 아바타 */}
+                         <Avatar className="h-12 w-12 ring-2 ring-primary/10 shadow-sm flex-shrink-0">
+                             {profileAvatarUrl && (
+@@ -440,9 +432,9 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
+                         </Avatar>
+                         <div className="min-w-0">
+                             <div className="flex items-center gap-2">
+-                                <h1 className="text-xl font-bold truncate">
++                                <h2 className="text-xl font-bold truncate">
+                                     {profile.nickname}
+-                                </h1>
++                                </h2>
+                                 <Badge
+                                     variant="outline"
+                                     className={cn(
+@@ -460,17 +452,6 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
+                             </p>
+                         </div>
+                     </div>
+-                    {/* ... stats ... */}
+-                    {showBackButton && onClose && (
+-                        <Button
+-                            variant="ghost"
+-                            size="icon"
+-                            onClick={handleBack}
+-                            className="h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary"
+-                        >
+-                            <X className="h-5 w-5" />
+-                        </Button>
+-                    )}
+                 </div>
+ 
+                 {/* 통계 카드 */}
+diff --git a/apps/web/components/profile/UserProfileProgressiveSkeleton.tsx b/apps/web/components/profile/UserProfileProgressiveSkeleton.tsx
+index 118f5434..48010290 100644
+--- a/apps/web/components/profile/UserProfileProgressiveSkeleton.tsx
++++ b/apps/web/components/profile/UserProfileProgressiveSkeleton.tsx
+@@ -1,12 +1,14 @@
+ "use client";
+ 
+ import { X } from "lucide-react";
++import type { ReactNode } from "react";
+ import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
+ import { Button } from "@/components/ui/button";
+ import { Skeleton } from "@/components/ui/skeleton";
+ 
+ type UserProfileProgressiveSkeletonProps = {
+     label?: string;
++    header?: ReactNode;
+     showCloseButton?: boolean;
+     onBack?: () => void;
+ };
+@@ -15,6 +17,7 @@ export function UserProfileProgressiveSkeleton({
+     label = "사용자 프로필을 불러오는 중",
+     showCloseButton = false,
+     onBack,
++    header,
+ }: UserProfileProgressiveSkeletonProps) {
+     return (
+         <div
+@@ -26,6 +29,7 @@ export function UserProfileProgressiveSkeleton({
+             data-user-profile-panel-skeleton="true"
+             data-user-profile-route-skeleton="true"
+         >
++            {header}
+             <div className="border-b border-border/70 bg-background p-4">
+                 <div className="flex items-center justify-between gap-3">
+                     <div className="flex min-w-0 items-center gap-3">
+@@ -35,7 +39,7 @@ export function UserProfileProgressiveSkeleton({
+                             <Skeleton className="h-3 w-44 max-w-full rounded-full" />
+                         </div>
+                     </div>
+-                    {showCloseButton && onBack && (
++                    {!header && showCloseButton && onBack && (
+                         <Button
+                             variant="ghost"
+                             size="icon"
+diff --git a/apps/web/components/region/RegionSelector.tsx b/apps/web/components/region/RegionSelector.tsx
+index 5c7aa982..babab963 100644
+--- a/apps/web/components/region/RegionSelector.tsx
++++ b/apps/web/components/region/RegionSelector.tsx
+@@ -11,6 +11,7 @@ import { MapPin } from "lucide-react";
+ import { useQuery } from "@tanstack/react-query";
+ import { mergeRestaurants } from "@/hooks/use-restaurants";
+ import { fetchSupabaseRows } from "@/lib/supabase-rest-client";
++import { MapFilterTriggerLabel } from '@/components/filters/MapFilterTriggerLabel';
+ 
+ interface RegionSelectorProps {
+   selectedRegion: Region | null;
+@@ -20,6 +21,7 @@ interface RegionSelectorProps {
+   contentSide?: "top" | "right" | "bottom" | "left";
+   contentAlign?: "start" | "center" | "end";
+   contentClassName?: string;
++  compactTrigger?: boolean;
+ }
+ 
+ const RegionSelector = ({
+@@ -29,7 +31,8 @@ const RegionSelector = ({
+   className,
+   contentSide = "bottom",
+   contentAlign = "start",
+-  contentClassName
++  contentClassName,
++  compactTrigger = false,
+ }: RegionSelectorProps) => {
+   const [isOpen, setIsOpen] = useState(false);
+ 
+@@ -115,10 +118,18 @@ const RegionSelector = ({
+         aria-label="지역 필터"
+         className={`w-full min-w-0 sm:w-[200px] ${className}`}
+       >
+-        <div className="flex min-w-max items-center gap-2 whitespace-nowrap">
++        {compactTrigger ? (
++          <div className="flex min-w-0 flex-1">
++            <MapFilterTriggerLabel
++              icon={MapPin}
++              label={selectedRegion ?? '대한민국'}
++              count={selectedRegion ? regionCounts[selectedRegion] ?? 0 : totalCount}
++            />
++          </div>
++        ) : <div className="flex min-w-max items-center gap-2 whitespace-nowrap">
+           <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+           <SelectValue placeholder="지역을 선택하세요" />
+-        </div>
++        </div>}
+       </SelectTrigger>
+       <SelectContent
+         side={contentSide}
+diff --git a/apps/web/components/restaurant/RestaurantDetailPanel.tsx b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+index fad196b0..37392ef6 100644
+--- a/apps/web/components/restaurant/RestaurantDetailPanel.tsx
++++ b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+@@ -1,4 +1,5 @@
+ import { Button } from "@/components/ui/button";
++import { MapPanelHeader, mapPanelIconButtonClass } from "@/components/home/map-panel-chrome";
+ import { Badge } from "@/components/ui/badge";
+ import { Separator } from "@/components/ui/separator";
+ import { cn } from "@/lib/utils";
+@@ -1043,37 +1044,62 @@ export function RestaurantDetailPanel({
+                     </button>
+                 )}
+ 
+-                {/* 헤더 */}
+-                <div className="p-4 border-b border-border h-[80px] flex flex-col justify-center">
+-                    <div className="flex items-center justify-between gap-2">
+-                        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+-
+-                            {viewMode === 'reviews' && (
+-                                <>
+-                                    <Button
+-                                        variant="ghost"
+-                                        size="icon"
+-                                        onClick={handleBackToDetail}
+-                                        className="mr-2 shrink-0"
+-                                        aria-label="상세 정보로 돌아가기"
+-                                    >
+-                                        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+-                                    </Button>
+-                                    <div className="flex-1 min-w-0">
+-                                        <div className="flex items-center gap-2">
+-                                            <h3 className="text-lg font-semibold truncate">
+-                                                {restaurant.name}
+-                                            </h3>
+-                                        </div>
+-                                        <p className="text-sm text-muted-foreground truncate">
+-                                            전체 리뷰 {totalReviewCount}개
+-                                        </p>
+-                                    </div>
+-                                </>
++                <MapPanelHeader
++                    title={restaurant.name}
++                    titleAs="h2"
++                    count={viewMode === 'reviews' ? totalReviewCount : undefined}
++                    description={viewMode === 'reviews' ? '전체 리뷰' : undefined}
++                    titleIcon={viewMode === 'detail' ? (
++                        <span className="relative block h-4 w-4">
++                            <Image src={getCategoryImagePath(categories[0] || '')} alt="" fill sizes="16px" className="object-contain" />
++                        </span>
++                    ) : undefined}
++                    onClose={viewMode === 'reviews' ? handleBackToDetail : onClose}
++                    closeLabel={viewMode === 'reviews' ? '상세 정보로 돌아가기' : (showDesktopBackButton && !isMobile ? '이전 목록으로 돌아가기' : isMobile ? '이전 화면으로 돌아가기' : '맛집 상세 닫기')}
++                    closeAction={viewMode === 'reviews' || showDesktopBackButton || isMobile ? 'back' : 'close'}
++                    actions={(
++                        <>
++                            {/* 공유하기 버튼 */}
++                            {viewMode === 'detail' && (
++                                <Button
++                                    variant="ghost"
++                                    size="icon"
++                                    onClick={handleShareUrl}
++                                    title={isShareCopied ? "복사됨!" : "공유하기"}
++                                    aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
++                                    className={cn(mapPanelIconButtonClass, isShareCopied && "bg-green-50 border-green-300 text-green-600")}
++                                >
++                                    {isShareCopied ? (
++                                        <Check className="h-4 w-4" />
++                                    ) : (
++                                        <Share2 className="h-4 w-4" />
++                                    )}
++                                </Button>
+                             )}
++                            {/* 북마크 버튼 - 모든 사용자에게 표시 */}
+                             {viewMode === 'detail' && (
+-                                <>
+-                                    <div className="flex-1 min-w-0">
++                                <BookmarkButton
++                                    restaurantId={restaurant.id}
++                                    className="h-8 w-8 shrink-0 rounded-full shadow-none"
++                                    onRequireAuth={handleBookmarkRequireAuth}
++                                />
++                            )}
++                            {isAdmin && onEditRestaurant && viewMode === 'detail' && (
++                                <Button
++                                    variant="ghost"
++                                    size="icon"
++                                    onClick={onEditRestaurant}
++                                    className={cn(mapPanelIconButtonClass, "text-primary hover:text-primary")}
++                                    aria-label="맛집 정보 관리자 편집"
++                                >
++                                    <Settings className="h-4 w-4" aria-hidden="true" />
++                                </Button>
++                            )}
++                        </>
++                    )}
++                />
++                {viewMode === 'detail' && (
++                    <div className="shrink-0 border-b border-border px-3 py-2">
+                                         <ScrollableTagContainer className="mb-1" maxWidth="100%">
+                                             {categories.map((cat, index) => (
+                                                 <Badge
+@@ -1121,90 +1147,8 @@ export function RestaurantDetailPanel({
+                                                 ) : null;
+                                             })()}
+                                         </ScrollableTagContainer>
+-                                        <div className="flex items-center gap-2">
+-                                            {/* 카테고리 이미지 - 이모지 대신 이미지 표시 */}
+-                                            <div className="relative w-8 h-8 shrink-0">
+-                                                <Image
+-                                                    src={getCategoryImagePath(categories[0] || '')}
+-                                                    alt={categories[0] || '카테고리'}
+-                                                    fill
+-                                                    sizes="32px"
+-                                                    className="object-contain"
+-                                                />
+-                                            </div>
+-                                            <h2
+-                                                className="text-lg font-semibold truncate"
+-                                                title={restaurant.name}
+-                                            >
+-                                                {restaurant.name}
+-                                            </h2>
+-                                        </div>
+-                                    </div>
+-                                </>
+-                            )}
+-                        </div>
+-                        <div className="flex gap-1 shrink-0">
+-                            {/* 공유하기 버튼 */}
+-                            {viewMode === 'detail' && (
+-                                <Button
+-                                    variant="outline"
+-                                    size="icon"
+-                                    onClick={handleShareUrl}
+-                                    title={isShareCopied ? "복사됨!" : "공유하기"}
+-                                    aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
+-                                    className={isShareCopied ? "bg-green-50 border-green-300 text-green-600" : ""}
+-                                >
+-                                    {isShareCopied ? (
+-                                        <Check className="h-4 w-4" />
+-                                    ) : (
+-                                        <Share2 className="h-4 w-4" />
+-                                    )}
+-                                </Button>
+-                            )}
+-                            {/* 북마크 버튼 - 모든 사용자에게 표시 */}
+-                            {viewMode === 'detail' && (
+-                                <BookmarkButton
+-                                    restaurantId={restaurant.id}
+-                                    onRequireAuth={handleBookmarkRequireAuth}
+-                                />
+-                            )}
+-                            {isAdmin && onEditRestaurant && viewMode === 'detail' && (
+-                                <Button
+-                                    variant="outline"
+-                                    size="icon"
+-                                    onClick={onEditRestaurant}
+-                                    className="text-primary hover:text-primary"
+-                                    aria-label="맛집 정보 관리자 편집"
+-                                >
+-                                    <Settings className="h-4 w-4" aria-hidden="true" />
+-                                </Button>
+-                            )}
+-                            {showDesktopBackButton && !isMobile && viewMode === 'detail' && (
+-                                <Button
+-                                    variant="outline"
+-                                    size="icon"
+-                                    onClick={onClose}
+-                                    title="이전 목록으로 돌아가기"
+-                                    aria-label="이전 목록으로 돌아가기"
+-                                >
+-                                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+-                                </Button>
+-                            )}
+-                            {isMobile && viewMode === 'detail' && (
+-                                <Button
+-                                    variant="outline"
+-                                    size="icon"
+-                                    onClick={onClose}
+-                                    title="이전 화면으로 돌아가기"
+-                                    aria-label="이전 화면으로 돌아가기"
+-                                >
+-                                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+-                                </Button>
+-                            )}
+-                        </div>
+                     </div>
+-
+-                </div>
++                )}
+ 
+                 {/* 내용 */}
+ 	                <div
+diff --git a/apps/web/lib/r2-public-url.ts b/apps/web/lib/r2-public-url.ts
+index 5b69fd6a..22f34c25 100644
+--- a/apps/web/lib/r2-public-url.ts
++++ b/apps/web/lib/r2-public-url.ts
+@@ -1,12 +1,13 @@
+ const R2_DEV_ORIGIN_PATTERN =
+   /^https:\/\/pub-[a-z0-9]{8,64}\.r2\.dev$/;
++const R2_PRODUCTION_ORIGIN = 'https://assets.tzudong.app';
+ 
+ export function resolveR2PublicBase(
+   environment: Record<string, string | undefined> = process.env,
+ ): string | null {
+   const value = environment.NEXT_PUBLIC_R2_PUBLIC_BASE?.trim() ?? '';
+   if (!value) return null;
+-  if (!R2_DEV_ORIGIN_PATTERN.test(value)) return null;
++  if (value !== R2_PRODUCTION_ORIGIN && !R2_DEV_ORIGIN_PATTERN.test(value)) return null;
+   return value;
+ }
+ 
+diff --git a/apps/web/next.config.mjs b/apps/web/next.config.mjs
+index 0766bca1..a62cee83 100644
+--- a/apps/web/next.config.mjs
++++ b/apps/web/next.config.mjs
+@@ -2,6 +2,7 @@ import path from 'path';
+ import { fileURLToPath } from 'url';
+ import bundleAnalyzer from '@next/bundle-analyzer';
+ import { resolveConfiguredSupabaseOrigin } from './lib/profile-avatar-url.ts';
++import { publicLargeAssetRedirects } from './lib/public-large-assets.mjs';
+ 
+ const __filename = fileURLToPath(import.meta.url);
+ const __dirname = path.dirname(__filename);
+@@ -173,6 +174,7 @@ const nextConfig = {
+     typedRoutes: false,
+     async redirects() {
+         return [
++            ...publicLargeAssetRedirects,
+             {
+                 source: '/submissions',
+                 destination: '/mypage',
+@@ -201,6 +203,13 @@ const nextConfig = {
+                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                 ],
+             },
++            {
++                source: '/fonts/ChosunCentennial_otf.otf',
++                headers: [
++                    ...securityHeaders,
++                    { key: 'Cache-Control', value: 'no-store' },
++                ],
++            },
+             {
+                 source: '/favicon.ico',
+                 headers: [
+diff --git a/apps/web/proxy.ts b/apps/web/proxy.ts
+index 4d3371ea..71fb8340 100644
+--- a/apps/web/proxy.ts
++++ b/apps/web/proxy.ts
+@@ -263,7 +263,7 @@ function buildContentSecurityPolicy(nonce: string) {
+         "script-src-attr 'none'",
+         "style-src 'self' 'unsafe-inline'",
+         `img-src ${buildImageSources()}`,
+-        "font-src 'self' data:",
++        "font-src 'self' data: https://assets.tzudong.app",
+         `connect-src 'self'${developmentConnectSources} https://api.openai.com https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.naver.com https://*.naver.net https://*.pstatic.net`,
+         "media-src 'self' blob: https://*.supabase.co",
+         "worker-src 'self' blob:",
+diff --git a/apps/web/tests-unit/admin-announcements-console-source.test.ts b/apps/web/tests-unit/admin-announcements-console-source.test.ts
+index cd3087b3..27d101c6 100644
+--- a/apps/web/tests-unit/admin-announcements-console-source.test.ts
++++ b/apps/web/tests-unit/admin-announcements-console-source.test.ts
+@@ -26,9 +26,9 @@ describe('admin announcements console integration source contract', () => {
+     expect(announcementPanelSource).toContain('useActiveAnnouncements(!canManageInline)');
+     expect(announcementPanelSource).toContain('canManageInline ? adminAnnouncements : activeAnnouncements');
+     expect(announcementPanelSource).toContain('쯔동여지도 공지');
+-    expect(announcementPanelSource).toContain('shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4');
+-    expect(announcementPanelSource).toContain('h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted');
+-    expect(announcementPanelSource).toContain('flex min-w-0 flex-wrap items-center gap-1.5');
++    expect(announcementPanelSource).toContain('<MapPanelHeader');
++    expect(announcementPanelSource).toContain('className={mapPanelIconButtonClass}');
++    expect(source('components/home/map-panel-chrome.tsx')).toContain('shrink-0 border-b border-border bg-background px-3 py-3');
+     expect(announcementPanelSource).not.toContain('공지 목록으로 돌아가기');
+     expect(announcementPanelSource).not.toContain("isBottomSheet || canManageInline ? '' : 'border-l border-border'");
+     expect(announcementPanelSource).not.toContain("router.push('/admin?module=announcements')");
+@@ -48,8 +48,8 @@ describe('admin announcements console integration source contract', () => {
+     expect(announcementPanelSource).toContain("setViewMode('detail')");
+     expect(announcementPanelSource).toContain("viewMode === 'detail'");
+     expect(announcementPanelSource).not.toContain('목록 보기');
+-    expect(announcementPanelSource).toContain("onClick={viewMode === 'list' ? onClose : handleCancel}");
+-    expect(announcementPanelSource).toContain("aria-label={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}");
++    expect(announcementPanelSource).toContain("onClose={!hideCloseButton ? (viewMode === 'list' ? onClose : handleCancel) : undefined}");
++    expect(announcementPanelSource).toContain("closeLabel={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}");
+     expect(announcementPanelSource).toContain('group w-full rounded-xl border border-border/70 bg-card px-3 py-3 text-left');
+     expect(announcementPanelSource).toContain('aria-label="공지사항 목록 로딩 중"');
+     expect(announcementPanelSource).toContain('<AnnouncementListItemSkeleton key={index} index={index} />');
+diff --git a/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts b/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts
+index 05eab6b4..23a8fe7f 100644
+--- a/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts
++++ b/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts
+@@ -162,7 +162,9 @@ describe('home map contextual visible-marker restaurants', () => {
+     expect(desktopHomeSource).not.toContain('bg-primary/5 px-3 pb-2 pt-3');
+     expect(desktopHomeSource).not.toContain('확대된 지도에서 현재 마커로 보이는 곳이에요');
+     expect(desktopHomeSource).toContain('맛집 목록');
+-    expect(desktopHomeSource).toContain('aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}');
++    expect(desktopHomeSource).toContain('count={visibleMarkerRestaurantCount}');
++    expect(desktopHomeSource).toContain('countUnit="곳"');
++    expect(source('components/home/map-panel-chrome.tsx')).toContain('aria-label={`${count.toLocaleString()}${countUnit}`}');
+     expect(desktopHomeSource).toContain('restaurantThumbnailIndexes[restaurant.id] ?? 0');
+     expect(desktopHomeSource).toContain('onThumbnailChange={handleRestaurantThumbnailChange}');
+     expect(desktopHomeSource).toContain('layout="list"');
+diff --git a/apps/web/tests-unit/mobile-desktop-parity-source.test.ts b/apps/web/tests-unit/mobile-desktop-parity-source.test.ts
+index 09262920..827d34ff 100644
+--- a/apps/web/tests-unit/mobile-desktop-parity-source.test.ts
++++ b/apps/web/tests-unit/mobile-desktop-parity-source.test.ts
+@@ -376,7 +376,7 @@ describe("mobile and desktop parity source contracts", () => {
+     );
+     expect(mobileOverlaySource).toContain("text-xs font-medium");
+     expect(mobileOverlaySource).toContain(
+-      "rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium",
++      "rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium",
+     );
+     expect(homeAppGlobalsSource).toContain(".home-map-floating-control-text");
+     expect(homeAppGlobalsSource).toContain("font-size: 0.75rem");
+@@ -606,10 +606,10 @@ describe("mobile and desktop parity source contracts", () => {
+       'setActiveLeftPanelView("map");',
+     );
+     expect(homeDesktopControlPanelSource).toContain(
+-      "grid auto-rows-auto grid-cols-[max-content] items-start gap-2",
++      "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5",
+     );
+     expect(homeDesktopControlPanelSource).toContain(
+-      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"10.9375rem\"",
++      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"9.5rem\"",
+     );
+     expect(homeDesktopControlPanelSource).toContain(
+       '"--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH',
+@@ -628,7 +628,7 @@ describe("mobile and desktop parity source contracts", () => {
+     expect(themeFilterIconSource).toContain('"fresh-video": Clock3');
+     expect(themeFilterIconSource).toContain('"repeat-video": Repeat2');
+     expect(themeFilterIconSource).toContain('"fan-signal": Sparkles');
+-    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-max");
++    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-0");
+     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
+     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
+     expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
+@@ -713,20 +713,17 @@ describe("mobile and desktop parity source contracts", () => {
+       "components/restaurant/RestaurantDetailPanel.tsx",
+     );
+     expect(restaurantDetailPanelSource).toContain(
+-      'aria-label="이전 목록으로 돌아가기"',
++      "'이전 목록으로 돌아가기'",
+     );
+     expect(restaurantDetailPanelSource).toContain(
+       "{isAdmin && onEditRestaurant && viewMode === 'detail' && (",
+     );
+     expect(restaurantDetailPanelSource).toContain(
+-      "{showDesktopBackButton && !isMobile && viewMode === 'detail' && (",
++      "showDesktopBackButton && !isMobile",
+     );
+-    expect(
+-      restaurantDetailPanelSource.indexOf(
+-        '<Settings className="h-4 w-4" aria-hidden="true" />',
+-      ),
+-    ).toBeLessThan(
+-      restaurantDetailPanelSource.indexOf('aria-label="이전 목록으로 돌아가기"'),
++    const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
++    expect(sharedPanelHeaderSource.indexOf("{actions}")).toBeLessThan(
++      sharedPanelHeaderSource.indexOf("{onClose ?"),
+     );
+     expect(restaurantDetailPanelSource).not.toContain(
+       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
+@@ -738,7 +735,7 @@ describe("mobile and desktop parity source contracts", () => {
+     expect(restaurantDetailPanelSource).not.toContain(
+       'className="h-9 w-9 shrink-0 rounded-full"',
+     );
+-    expect(restaurantDetailPanelSource).toContain(
++    expect(sharedPanelHeaderSource).toContain(
+       '<ArrowLeft className="h-4 w-4" aria-hidden="true" />',
+     );
+     expect(restaurantDetailPanelSource).toContain("function MapProviderLogo");
+@@ -1000,9 +997,9 @@ describe("mobile and desktop parity source contracts", () => {
+     expect(stampOverlaySource).toContain("<MapPanelHeader");
+     expect(stampOverlaySource).toContain('title="도장"');
+     expect(stampOverlaySource).toContain('titleAs="h1"');
+-    expect(mapPanelChromeSource).toContain("shrink-0 border-b border-border bg-background px-4 py-3");
+-    expect(mapPanelChromeSource).toContain("flex items-center gap-2");
+-    expect(mapPanelChromeSource).toContain('aria-label={closeLabel}');
++    expect(mapPanelChromeSource).toContain("shrink-0 border-b border-border bg-background px-3 py-3");
++    expect(mapPanelChromeSource).toContain("flex min-h-8 items-center gap-2");
++    expect(mapPanelChromeSource).toContain('aria-label={closeLabel ?? `${title} 닫기`}');
+     expect(stampOverlaySource).toContain('stampSize="mobile"');
+     expect(stampOverlaySource).toContain('size="default"');
+     expect(stampPageSource).toContain(
+diff --git a/apps/web/tests-unit/r2-public-url.test.ts b/apps/web/tests-unit/r2-public-url.test.ts
+index c5c7244d..0e6877d4 100644
+--- a/apps/web/tests-unit/r2-public-url.test.ts
++++ b/apps/web/tests-unit/r2-public-url.test.ts
+@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
+ import { resolveR2PublicBase, resolveR2PublicObjectUrl } from '@/lib/r2-public-url';
+ 
+ describe('r2 public url', () => {
+-  test('accepts cloudflare-issued r2.dev origins only', () => {
++  test('accepts cloudflare-issued development origins', () => {
+     const env = {
+       NEXT_PUBLIC_R2_PUBLIC_BASE: 'https://pub-966471b3a9f0473ab2d25f21066c3605.r2.dev',
+     };
+@@ -16,6 +16,14 @@ describe('r2 public url', () => {
+     );
+   });
+ 
++  test('accepts the verified production origin without admitting sibling hosts or credentials', () => {
++    const env = { NEXT_PUBLIC_R2_PUBLIC_BASE: 'https://assets.tzudong.app' };
++    expect(resolveR2PublicObjectUrl('public/font.otf', env)).toBe('https://assets.tzudong.app/public/font.otf');
++    for (const value of ['https://assets.tzudong.app.example.org', 'https://assets.tzudong.app:444', 'https://user@assets.tzudong.app', 'http://assets.tzudong.app', 'https://assets.tzudong.app/private']) {
++      expect(resolveR2PublicBase({ NEXT_PUBLIC_R2_PUBLIC_BASE: value })).toBeNull();
++    }
++  });
++
+   test('rejects invented hostnames and path traversal', () => {
+     expect(
+       resolveR2PublicBase({
+diff --git a/apps/web/tests-unit/security-headers-source.test.ts b/apps/web/tests-unit/security-headers-source.test.ts
+index 578bb776..6c7a66ae 100644
+--- a/apps/web/tests-unit/security-headers-source.test.ts
++++ b/apps/web/tests-unit/security-headers-source.test.ts
+@@ -8,7 +8,7 @@ const source = (path: string) => readFileSync(join(webRoot, path), 'utf8');
+ function imagePolicySource() {
+   const proxy = source('proxy.ts');
+   const start = proxy.indexOf('const SUPABASE_IMAGE_PUBLIC_PATHS');
+-  const end = proxy.indexOf('"font-src \'self\' data:"');
++  const end = proxy.indexOf('"font-src ');
+ 
+   expect(start).toBeGreaterThanOrEqual(0);
+   expect(end).toBeGreaterThan(start);

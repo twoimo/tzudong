@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-03T09:43:18.985712+00:00",
+  "goal": "Original performance goal active; UI/Cloudflare/logo additional steering active",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "branch": "codex/compact-map-filter-controls-20261003",
+  "memoryWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong",
+  "originalUntouched": true,
+  "newUserLogoRequest": "Search-logo black rectangle; original logo.png256RGBA verified transparent corners; use direct PNG unoptimized in mobile trigger/searchsheet, desktop search, common Header; source edited, not deployed",
+  "sourceOnlyBuildSession": 60935,
+  "retainedProbeBuildFinished": true,
+  "retainedBeforeSession": 75754,
+  "pending": [
+    "UI actual rendering/PNG native verification",
+    "Protected UI source promotion then exactSHAdeploy",
+    "retained SDK set memory experiment; pool-only V6 Samsung failed20%median guard",
+    "Cloudflare targeted purge readback and cache rules",
+    "New evidence copy to authoritative evidence branch, maps/pins/readback",
+    "Full final report and goal audit"
+  ]
+}

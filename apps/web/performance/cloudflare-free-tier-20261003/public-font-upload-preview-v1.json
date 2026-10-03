@@ -1,0 +1,20 @@
+{
+  "preparedAt": "2026-10-03T06:36:55.639383+00:00",
+  "assetSource": "apps/web/public/fonts/ChosunCentennial_otf.otf",
+  "sourceRepositoryVisibility": "PUBLIC",
+  "sourcePathKept": true,
+  "bytes": 11420784,
+  "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+  "destinationBucket": "tzudong-pipeline-artifacts",
+  "objectName": "sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+  "storageClass": "Standard",
+  "currentAccountStorageDisplayMB": 474.98,
+  "candidateAddedDecimalMB": 11.420784,
+  "candidateAccountBytesEstimate": 486400784.0,
+  "freeTierReferenceGBMonth": 10,
+  "privateDataIncluded": false,
+  "paidPlanNeeded": false,
+  "uploadExecuted": false,
+  "deliveryScope": "Immutable public-asset storage/mirror; existing main-site delivery remains until verified production route",
+  "r2DevProductionCacheEstablished": false
+}

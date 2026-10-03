@@ -1,0 +1,8 @@
+{
+  "observedAt": "2026-10-03T06:49:42.895633+00:00",
+  "captureRejected": true,
+  "reason": "Browser screenshot clip did not match observed object-row rectangle; account context remained in frame",
+  "imageStoredInEvidence": false,
+  "accountEmailStoredInReceipt": false,
+  "uploadOutcomeIndependentlyVerifiedByObjectBytes": true
+}

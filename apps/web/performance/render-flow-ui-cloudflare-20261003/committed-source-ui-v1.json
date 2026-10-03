@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-03T11:40:29.932042+00:00",
+  "sourceCommit": "0bd2bae72acd521c686d3873ae0817c83814b8ac",
+  "productionBuildReceipt": "build-candidate-ui-png-v3/receipt.json",
+  "runtimeAndRelevantTestInputsMatchCommittedGitBlobs": 25,
+  "unverifiedMemoryInputsExcluded": true,
+  "commitNoRenamesPaths": 26,
+  "stagingPreflightFailure": "rename destination-only output mismatch; exact no-renames commit audit passed before remote push",
+  "unexpectedFilesCommitted": false,
+  "privateConfigurationCommitted": false,
+  "renderedFinalSource": "responsive-ui-v9/raw.json"
+}

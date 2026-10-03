@@ -1,0 +1,48 @@
+{
+  "observedAt": "2026-10-03T06:25:01.293949+00:00",
+  "scope": "Public HEAD; no response body/auth/session data persisted",
+  "requests": [
+    {
+      "assetPath": "/fonts/ChosunCentennial_otf.otf",
+      "attempt": 1,
+      "status": 200,
+      "bytes": null,
+      "cacheStatus": "MISS",
+      "age": "0",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "contentType": "font/otf"
+    },
+    {
+      "assetPath": "/fonts/ChosunCentennial_otf.otf",
+      "attempt": 2,
+      "status": 200,
+      "bytes": null,
+      "cacheStatus": "HIT",
+      "age": "0",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "contentType": "font/otf"
+    },
+    {
+      "assetPath": "/images/readme-storyboard-demo.gif",
+      "attempt": 1,
+      "status": 200,
+      "bytes": "10168887",
+      "cacheStatus": "MISS",
+      "age": "0",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "contentType": "image/gif"
+    },
+    {
+      "assetPath": "/images/readme-storyboard-demo.gif",
+      "attempt": 2,
+      "status": 200,
+      "bytes": "10168887",
+      "cacheStatus": "MISS",
+      "age": "0",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "contentType": "image/gif"
+    }
+  ],
+  "samePopVerified": false,
+  "latencyImprovementClaimed": false
+}

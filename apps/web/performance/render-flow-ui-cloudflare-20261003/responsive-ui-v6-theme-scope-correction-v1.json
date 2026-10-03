@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-03T10:47:06.411256+00:00",
+  "source": "Rendered screenshot inspection",
+  "originalRawAndImagesUntouched": true,
+  "themeLabelMeaning": "Requested Playwright OS colorScheme; not actual app theme attestation",
+  "observedDarkLabelScreenshotStillLight": true,
+  "actualAppDarkAcceptanceUnverified": true,
+  "nativeSamsungForcedDarkValidationPending": true,
+  "priorCommentaryDarkBackgroundScopeCorrected": true
+}

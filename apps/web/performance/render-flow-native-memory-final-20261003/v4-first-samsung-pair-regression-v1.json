@@ -1,0 +1,247 @@
+{
+  "scope": "Observed first V4 native pair; not a complete six-tab comparison",
+  "rows": [
+    {
+      "raw": "direct-samsung-memory-direct-samsung-memory-focus-confirm-v4-before-a2-retry2/raw.json",
+      "medianMB": 28.355898,
+      "peakMB": 51.175364,
+      "endMB": 16.404336,
+      "counts10": [
+        {
+          "cycle": 10,
+          "heapMB": 20.93504,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 10463
+            },
+            {
+              "name": "Nodes",
+              "value": 26041
+            }
+          ]
+        },
+        {
+          "cycle": 20,
+          "heapMB": 44.674136,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 13566
+            },
+            {
+              "name": "Nodes",
+              "value": 44231
+            }
+          ]
+        },
+        {
+          "cycle": 30,
+          "heapMB": 44.2688,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 10289
+            },
+            {
+              "name": "Nodes",
+              "value": 26029
+            }
+          ]
+        },
+        {
+          "cycle": 40,
+          "heapMB": 16.085776,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 2761
+            },
+            {
+              "name": "Nodes",
+              "value": 7557
+            }
+          ]
+        },
+        {
+          "cycle": 50,
+          "heapMB": 30.011456,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 10287
+            },
+            {
+              "name": "Nodes",
+              "value": 26038
+            }
+          ]
+        },
+        {
+          "cycle": 60,
+          "heapMB": 16.404336,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 2763
+            },
+            {
+              "name": "Nodes",
+              "value": 7566
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "raw": "direct-samsung-memory-focus-confirm-v4-after-b1/raw.json",
+      "medianMB": 43.951080000000005,
+      "peakMB": 51.033896,
+      "endMB": 44.614364,
+      "counts10": [
+        {
+          "cycle": 10,
+          "heapMB": 44.081576,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 10329
+            },
+            {
+              "name": "Nodes",
+              "value": 14259
+            }
+          ]
+        },
+        {
+          "cycle": 20,
+          "heapMB": 47.307068,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 17887
+            },
+            {
+              "name": "Nodes",
+              "value": 24551
+            }
+          ]
+        },
+        {
+          "cycle": 30,
+          "heapMB": 47.585348,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 21132
+            },
+            {
+              "name": "Nodes",
+              "value": 34556
+            }
+          ]
+        },
+        {
+          "cycle": 40,
+          "heapMB": 50.681752,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 25413
+            },
+            {
+              "name": "Nodes",
+              "value": 34838
+            }
+          ]
+        },
+        {
+          "cycle": 50,
+          "heapMB": 41.051044,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 6016
+            },
+            {
+              "name": "Nodes",
+              "value": 13972
+            }
+          ]
+        },
+        {
+          "cycle": 60,
+          "heapMB": 44.614364,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 2
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 10451
+            },
+            {
+              "name": "Nodes",
+              "value": 14268
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "medianGrowthPercent": 54.99801840167433,
+  "fixedGuardPercent": 20,
+  "primaryMedianGuardPassed": false,
+  "cannotBeWaivedByAggregateOrForcedGC": true,
+  "hypothesesUnproven": [
+    "Transient DOM allocation during identity changes in pooled markers",
+    "Natural GC timing/browser-process carryover",
+    "Retained SDK/application objects"
+  ],
+  "nextAction": "Complete planned B2 A2; separately profile synthetic allocation counters and heap categories"
+}

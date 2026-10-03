@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-10-03T08:04:32.941062+00:00",
+  "domain": "assets.tzudong.app",
+  "bucket": "tzudong-pipeline-artifacts",
+  "dnsPreview": {
+    "type": "CNAME",
+    "name": "assets",
+    "targetType": "managed R2 bucket"
+  },
+  "conflictReadback": "DNS search assets returned No DNS records before connection",
+  "connectOperationExecutedOnce": true,
+  "uiReadback": {
+    "status": "Active",
+    "access": "Enabled",
+    "minTls": "1.2"
+  },
+  "otherDnsRecordsEdited": false,
+  "rootOrWwwDnsEdited": false,
+  "paidFeaturesEnabled": false,
+  "scopeAuthority": "User explicitly requested Cloudflare optimization within free tier; bounded first-party public static-asset connection",
+  "releaseGuideContext": "Vercel deploy recovery does not mutate DNS; this separately requested Cloudflare task creates only the unused assets subdomain",
+  "httpObjectReadbackPending": true,
+  "providerDiagnosticsOrPrivateContentStored": false
+}

@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-03T08:14:31.825474+00:00",
+  "raw": "direct-samsung-memory-pool-order-primary-v1-after-b1/raw.json",
+  "excludedFromCompletePrimaryComparison": true,
+  "cyclesRecorded": 30,
+  "lastRecordedCycleVisibility": "hidden",
+  "unrelatedForegroundWorkObserved": true,
+  "privateFramePreserved": false,
+  "removedOwnedTemporaryFrameSha256": "48b572be218b163365431956748a4423f2203f47f6bde29be7afff1b3ca1040e",
+  "ownedTemporaryRemovalVerified": true,
+  "otherAppQueueOrDraftTouched": false,
+  "deviceAutomationSuspendedUntilAvailable": true,
+  "noHeapBudgetWaiverOrSuccessful60Claim": true
+}

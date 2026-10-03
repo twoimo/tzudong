@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-03T11:24:55.313404+00:00",
+  "invalidDiagnosis": "dark-style-trial-rejection-v1.json dark class persistence diagnosis",
+  "actualCause": "Earlier script generation replacement did not match its stage-prefixed line; class toggle was never injected",
+  "productThemeGuardInferredWithoutEvidence": true,
+  "sourceThemeBehaviorNotChanged": true,
+  "newScriptAnchorsAsserted": true,
+  "newCssCoverageDriver": "verify-responsive-ui-v9.mjs",
+  "originalEvidenceUntouched": true
+}

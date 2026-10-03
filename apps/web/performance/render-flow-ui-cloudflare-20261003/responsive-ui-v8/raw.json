@@ -1,0 +1,561 @@
+{
+  "buildId": "bpZefjsIkgpm1CdW26ltC",
+  "sourceReceipt": "build-candidate-ui-png-v3/receipt.json",
+  "browser": "154.0.8037.97",
+  "productionBuild": true,
+  "loopbackAssetTransport": "CSP-upgraded HTTPS loopback assets fulfilled from the same owned HTTP production build; remote SDK/tiles unmodified",
+  "actualSdk": true,
+  "syntheticData": true,
+  "fieldAdmitted": 0,
+  "cases": [
+    {
+      "name": "desktop",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "mobile": false,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 5
+      },
+      "fixtureRequests": 72,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 152,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 72,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 72,
+            "height": 32
+          },
+          {
+            "text": "대한민국(735개)",
+            "width": 152,
+            "height": 32
+          },
+          {
+            "text": "카테고리(735개)",
+            "width": 152,
+            "height": 32
+          }
+        ],
+        "counts": [
+          {
+            "text": "(735개)",
+            "right": 533
+          },
+          {
+            "text": "(735개)",
+            "right": 533
+          }
+        ],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "category committed",
+        "category reset",
+        "region keyboard close",
+        "shared restaurant list header",
+        "marker detail close",
+        "shared feed header",
+        "shared stamp header",
+        "shared leaderboard header",
+        "shared announcement header"
+      ],
+      "screenshot": "desktop-light-home.png"
+    },
+    {
+      "name": "desktop",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "mobile": false,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "fixtureRequests": 11,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 152,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 72,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 72,
+            "height": 32
+          },
+          {
+            "text": "대한민국(735개)",
+            "width": 152,
+            "height": 32
+          },
+          {
+            "text": "카테고리(735개)",
+            "width": 152,
+            "height": 32
+          }
+        ],
+        "counts": [
+          {
+            "text": "(735개)",
+            "right": 533
+          },
+          {
+            "text": "(735개)",
+            "right": 533
+          }
+        ],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "category committed",
+        "category reset",
+        "region keyboard close"
+      ],
+      "screenshot": "desktop-dark-home.png"
+    },
+    {
+      "name": "mobile",
+      "theme": "light",
+      "width": 384,
+      "height": 824,
+      "mobile": true,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "fixtureRequests": 5,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 111.359375,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 51.671875,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 51.6875,
+            "height": 32
+          },
+          {
+            "text": "전체",
+            "width": 111.359375,
+            "height": 32
+          },
+          {
+            "text": "카테고리",
+            "width": 111.359375,
+            "height": 32
+          }
+        ],
+        "counts": [],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "mobile category sheet close"
+      ],
+      "screenshot": "mobile-light-home.png"
+    },
+    {
+      "name": "mobile",
+      "theme": "dark",
+      "width": 384,
+      "height": 824,
+      "mobile": true,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "fixtureRequests": 5,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 111.359375,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 51.671875,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 51.6875,
+            "height": 32
+          },
+          {
+            "text": "전체",
+            "width": 111.359375,
+            "height": 32
+          },
+          {
+            "text": "카테고리",
+            "width": 111.359375,
+            "height": 32
+          }
+        ],
+        "counts": [],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "mobile category sheet close"
+      ],
+      "screenshot": "mobile-dark-home.png"
+    },
+    {
+      "name": "tablet",
+      "theme": "light",
+      "width": 768,
+      "height": 1024,
+      "mobile": true,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "fixtureRequests": 5,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 128,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "전체",
+            "width": 128,
+            "height": 32
+          },
+          {
+            "text": "카테고리",
+            "width": 128,
+            "height": 32
+          }
+        ],
+        "counts": [],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "mobile category sheet close"
+      ],
+      "screenshot": "tablet-light-home.png"
+    },
+    {
+      "name": "tablet",
+      "theme": "dark",
+      "width": 768,
+      "height": 1024,
+      "mobile": true,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "fixtureRequests": 5,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 128,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "전체",
+            "width": 128,
+            "height": 32
+          },
+          {
+            "text": "카테고리",
+            "width": 128,
+            "height": 32
+          }
+        ],
+        "counts": [],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "mobile category sheet close"
+      ],
+      "screenshot": "tablet-dark-home.png"
+    },
+    {
+      "name": "landscape",
+      "theme": "light",
+      "width": 1024,
+      "height": 768,
+      "mobile": true,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "fixtureRequests": 5,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 128,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "전체",
+            "width": 128,
+            "height": 32
+          },
+          {
+            "text": "카테고리",
+            "width": 128,
+            "height": 32
+          }
+        ],
+        "counts": [],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "mobile category sheet close"
+      ],
+      "screenshot": "landscape-light-home.png"
+    },
+    {
+      "name": "landscape",
+      "theme": "dark",
+      "width": 1024,
+      "height": 768,
+      "mobile": true,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "fixtureRequests": 5,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 128,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 60,
+            "height": 32
+          },
+          {
+            "text": "전체",
+            "width": 128,
+            "height": 32
+          },
+          {
+            "text": "카테고리",
+            "width": 128,
+            "height": 32
+          }
+        ],
+        "counts": [],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "mobile category sheet close"
+      ],
+      "screenshot": "landscape-dark-home.png"
+    }
+  ],
+  "passed": true
+}

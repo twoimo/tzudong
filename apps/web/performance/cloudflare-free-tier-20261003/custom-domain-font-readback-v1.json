@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-03T08:29:44.870380+00:00",
+  "publicUrl": "https://assets.tzudong.app/sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+  "samples": [
+    {
+      "attempt": 1,
+      "status": 200,
+      "cacheStatus": "MISS",
+      "cacheControl": "max-age=14400",
+      "pop": "HKG",
+      "contentType": "font/otf",
+      "bytes": 11420784,
+      "sha256Matches": true
+    },
+    {
+      "attempt": 2,
+      "status": 200,
+      "cacheStatus": "HIT",
+      "cacheControl": "max-age=14400",
+      "pop": "HKG",
+      "contentType": "font/otf",
+      "bytes": 11420784,
+      "sha256Matches": true
+    }
+  ],
+  "responseBodiesPersisted": false,
+  "latencySavingsClaimed": false
+}

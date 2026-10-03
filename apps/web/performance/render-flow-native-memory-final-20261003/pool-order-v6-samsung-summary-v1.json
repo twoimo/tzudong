@@ -1,0 +1,86 @@
+{
+  "observedAt": "2026-10-03T09:43:18.892158+00:00",
+  "driver": "direct-mobile-memory-setup-v6.mjs",
+  "trials": [
+    {
+      "role": "before",
+      "label": "a1-retry1",
+      "raw": "direct-samsung-memory-pool-order-v6-before-a1-retry1/raw.json",
+      "rawSha256": "7444de94b19ba03cac50b14bd91751013c081cac438ccaae1cd21442ca238d91",
+      "cycles": 60,
+      "passed": true,
+      "medianMB": 34.026324,
+      "peakMB": 50.752992,
+      "endpointMB": 48.00654
+    },
+    {
+      "role": "after",
+      "label": "b1",
+      "raw": "direct-samsung-memory-pool-order-v6-after-b1/raw.json",
+      "rawSha256": "fe94bc7c04a054b521559809aaff56fc090cbb7ae7fef3ec806f303adc5c950a",
+      "cycles": 60,
+      "passed": true,
+      "medianMB": 33.13461,
+      "peakMB": 54.40794,
+      "endpointMB": 54.40794
+    },
+    {
+      "role": "after",
+      "label": "b2",
+      "raw": "direct-samsung-memory-pool-order-v6-after-b2/raw.json",
+      "rawSha256": "b71e5a5ee6567610e859d222b37ace6b6f84ccf4481c4ab20125f6ef860c200b",
+      "cycles": 60,
+      "passed": true,
+      "medianMB": 33.867194,
+      "peakMB": 53.815528,
+      "endpointMB": 36.034508
+    },
+    {
+      "role": "before",
+      "label": "a2",
+      "raw": "direct-samsung-memory-pool-order-v6-before-a2/raw.json",
+      "rawSha256": "e7f33efea87bd829c686d31f5cfb0666d673ee08682abb5dae68bdb6f1ce4198",
+      "cycles": 60,
+      "passed": true,
+      "medianMB": 18.09194,
+      "peakMB": 50.996232,
+      "endpointMB": 16.345428
+    }
+  ],
+  "fixedTolerancePercent": 20,
+  "metrics": {
+    "medianMB": {
+      "before": 26.059132,
+      "after": 33.500901999999996,
+      "absoluteReductionMB": -7.441769999999995,
+      "relativeReductionPercent": -28.55724434720233,
+      "regressionGuardPassed": false
+    },
+    "peakMB": {
+      "before": 50.874612,
+      "after": 54.111734,
+      "absoluteReductionMB": -3.2371219999999994,
+      "relativeReductionPercent": -6.362941893296403,
+      "regressionGuardPassed": true
+    },
+    "endpointMB": {
+      "before": 32.175984,
+      "after": 45.22122400000001,
+      "absoluteReductionMB": -13.045240000000007,
+      "relativeReductionPercent": -40.543406535756624,
+      "regressionGuardPassed": false
+    }
+  },
+  "independentDevices": 1,
+  "freshBrowserProcesses": 0,
+  "tabsPerVariant": 2,
+  "cyclesPerTab": 60,
+  "ci": null,
+  "p95": null,
+  "naturalHeapNoise": "Baseline tab medians34.026324 and18.09194MB; no independent nativeAA available",
+  "memoryRegressionResolved": false,
+  "forcedGC": false,
+  "fieldAdmitted": 0,
+  "prototypeAdoption": "pending; SDK icon allocation diagnostic benefit does not waive failed natural heap budget",
+  "earlierFailuresUntouched": true
+}

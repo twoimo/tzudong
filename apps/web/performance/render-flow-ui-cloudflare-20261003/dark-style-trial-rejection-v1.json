@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-03T11:23:10.095909+00:00",
+  "source": "responsive-ui-v7 raw and screenshot",
+  "darkClassDidNotPersist": true,
+  "stylesGuardOrThemeLifecycleNotChanged": true,
+  "appDarkClaimNotMade": true,
+  "supportedLightAppAgainstOsDarkRetained": true,
+  "nativeForcedDarkStillPending": true,
+  "originalFailedEvidencePreserved": true
+}

@@ -1,0 +1,74 @@
+{
+  "observedAt": "2026-10-03T10:13:49.478879+00:00",
+  "captures": [
+    {
+      "file": "direct-samsung-memory-retain-v7-after-b1/native-inspected/cycle-000.png",
+      "sha256": "80d56aac4195d7df0d9a2863485670ffea11eaa9fc405c7299babcb6c0c2e7a6",
+      "cycle": 0,
+      "capturedAt": null,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-retain-v7-after-b1/native-inspected/cycle-010.png",
+      "sha256": "77a564a6dfd6d4333c73b7c9860f2bbeb3051e7179ceb95a63ae78791f81d64b",
+      "cycle": 10,
+      "capturedAt": "2026-10-03T09:49:44.665Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-retain-v7-after-b1/native-inspected/cycle-020.png",
+      "sha256": "d28dc5bf5b051074077059b4db72d9f8c11ead76fbcbe9e00f4eb31c7f7e77e7",
+      "cycle": 20,
+      "capturedAt": "2026-10-03T09:50:09.742Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-retain-v7-after-b1/native-inspected/cycle-030.png",
+      "sha256": "8a106db9aa8847f6afc890cfb3261ffb12a8642553c1a4e93880c8797a149c9c",
+      "cycle": 30,
+      "capturedAt": "2026-10-03T09:50:35.080Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-retain-v7-after-b1/native-inspected/cycle-040.png",
+      "sha256": "ffc660aaf9de27f3cf189c99c8cf3bc262ac2948136d490c2452d3fb5aa6cd7c",
+      "cycle": 40,
+      "capturedAt": "2026-10-03T09:51:01.635Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-retain-v7-after-b1/native-inspected/cycle-050.png",
+      "sha256": "fdca18386c9b59bedcf632b1c0a1d9a88eab8172f6e97198b088c5e53fe8c30e",
+      "cycle": 50,
+      "capturedAt": "2026-10-03T09:51:27.990Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-samsung-memory-retain-v7-after-b1/native-inspected/cycle-060.png",
+      "sha256": "bff418ccf01fa4544c8466f4922f902b9edec0031550fb4bf0aa95cbffdbd97f",
+      "cycle": 60,
+      "capturedAt": "2026-10-03T09:51:52.188Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    }
+  ],
+  "nativeCurrentFocusCheckedEachCycle": true,
+  "noOSShadeSeenInObservedFrames": true,
+  "notIndependentUsers": true,
+  "originalRawUntouched": true,
+  "limits": "start and each10cycles; transient overlays/flicker between captures not excluded",
+  "ownedTemporaryRemovalVerified": true
+}

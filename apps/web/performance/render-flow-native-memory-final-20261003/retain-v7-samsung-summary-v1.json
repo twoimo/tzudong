@@ -1,0 +1,146 @@
+{
+  "observedAt": "2026-10-03T10:30:31.534539+00:00",
+  "driver": "direct-mobile-memory-retain-v7.mjs",
+  "trials": [
+    {
+      "role": "before",
+      "label": "a1",
+      "raw": "direct-samsung-memory-retain-v7-before-a1/raw.json",
+      "medianMB": 29.024824,
+      "peakMB": 50.701916,
+      "endpointMB": 28.424892,
+      "markers": 513,
+      "viewportMarkers": 513,
+      "inspectedNativeFrames": 7
+    },
+    {
+      "role": "after",
+      "label": "b1",
+      "raw": "direct-samsung-memory-retain-v7-after-b1/raw.json",
+      "medianMB": 24.430101999999998,
+      "peakMB": 47.458228,
+      "endpointMB": 18.776352,
+      "markers": 735,
+      "viewportMarkers": 513,
+      "inspectedNativeFrames": 7
+    },
+    {
+      "role": "after",
+      "label": "b2",
+      "raw": "direct-samsung-memory-retain-v7-after-b2/raw.json",
+      "medianMB": 20.54346,
+      "peakMB": 48.101868,
+      "endpointMB": 35.435212,
+      "markers": 735,
+      "viewportMarkers": 513,
+      "inspectedNativeFrames": 7
+    },
+    {
+      "role": "before",
+      "label": "a2",
+      "raw": "direct-samsung-memory-retain-v7-before-a2/raw.json",
+      "medianMB": 30.18398,
+      "peakMB": 51.10272,
+      "endpointMB": 46.46772,
+      "markers": 513,
+      "viewportMarkers": 513,
+      "inspectedNativeFrames": 7
+    }
+  ],
+  "pairs": [
+    {
+      "before": "a1",
+      "after": "b1",
+      "metrics": {
+        "medianMB": {
+          "before": 29.024824,
+          "after": 24.430101999999998,
+          "absoluteReductionMB": 4.594722000000001,
+          "relativeReductionPercent": 15.830318213126809,
+          "guardPassed": true
+        },
+        "peakMB": {
+          "before": 50.701916,
+          "after": 47.458228,
+          "absoluteReductionMB": 3.243687999999999,
+          "relativeReductionPercent": 6.397564936204776,
+          "guardPassed": true
+        },
+        "endpointMB": {
+          "before": 28.424892,
+          "after": 18.776352,
+          "absoluteReductionMB": 9.64854,
+          "relativeReductionPercent": 33.94398121196028,
+          "guardPassed": true
+        }
+      }
+    },
+    {
+      "before": "a2",
+      "after": "b2",
+      "metrics": {
+        "medianMB": {
+          "before": 30.18398,
+          "after": 20.54346,
+          "absoluteReductionMB": 9.640519999999999,
+          "relativeReductionPercent": 31.939194234822576,
+          "guardPassed": true
+        },
+        "peakMB": {
+          "before": 51.10272,
+          "after": 48.101868,
+          "absoluteReductionMB": 3.0008519999999947,
+          "relativeReductionPercent": 5.8721962353471495,
+          "guardPassed": true
+        },
+        "endpointMB": {
+          "before": 46.46772,
+          "after": 35.435212,
+          "absoluteReductionMB": 11.032508,
+          "relativeReductionPercent": 23.742305411154238,
+          "guardPassed": true
+        }
+      }
+    }
+  ],
+  "metrics": {
+    "medianMB": {
+      "before": 29.604402,
+      "after": 22.486781,
+      "absoluteReductionMB": 7.117621,
+      "relativeReductionPercent": 24.042441390979626
+    },
+    "peakMB": {
+      "before": 50.902317999999994,
+      "after": 47.780048,
+      "absoluteReductionMB": 3.122269999999993,
+      "relativeReductionPercent": 6.13384639968654
+    },
+    "endpointMB": {
+      "before": 37.446306,
+      "after": 27.105781999999998,
+      "absoluteReductionMB": 10.340524000000002,
+      "relativeReductionPercent": 27.61426988285574
+    }
+  },
+  "allPairGuardsPassed": true,
+  "fixedRegressionTolerancePercent": 20,
+  "independentDevices": 1,
+  "freshBrowserProcesses": 0,
+  "tabsPerVariant": 2,
+  "cyclesPerTab": 60,
+  "ci": null,
+  "p95": null,
+  "causalPercentageProven": false,
+  "nativeAaAvailable": false,
+  "domTradeoff": {
+    "before513": 513,
+    "after735": 735,
+    "increasePercent": 43.27485380116959,
+    "samePaddedViewportMembership": 513,
+    "largeResultsAbove1000RetainCulling": true
+  },
+  "forcedGc": false,
+  "fieldAdmitted": 0,
+  "adoption": "candidate passes this finiteSamsung heap budget; Chrome, frame,cold,large,integratedSource verification pending"
+}

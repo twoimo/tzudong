@@ -1,0 +1,62 @@
+{
+  "createdAt": "2026-10-02T14:19:12.854151+00:00",
+  "buildRole": "candidate",
+  "build": "pool-v1",
+  "expectedBuildId": "MhMOUSyEIEcKFIg3x5A3-",
+  "sourceInputs": {
+    "lib/naver-map-mobile-offset-helpers.ts": "cc72d2ce8fb94a574cb605cc7962ecb036855aba7df8a94d94d012e3f24c21ea",
+    "components/home/MobileControlOverlay.tsx": "8e7b033aaef1a242f9255c8cb352251aebb70ffc94cad7483285490a46418b53",
+    "app/home-runtime-shell.tsx": "7fdfd2cec739e5fbc14791b247e8c907ec1af6ac530b50323d94db28ecccf602",
+    "app/home-app-globals.css": "6755130f075ce73901c105491544fed256d7dea9315b3f8b9fcbfb9959c03368",
+    "components/home/home-control-panel.tsx": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da",
+    "components/layout/MobileBottomNav.tsx": "8619057c625f84f78eaf3f1f96fc29327313cd90a0c6980aec5d0b3153737977",
+    "components/map/NaverMapView.tsx": "53c421ac4580aee00c5d43b1ffcd25333554b20f2ab5e9ac419e90fdf707060f",
+    "lib/naver-map-render-plan.ts": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab",
+    "lib/marker-pool.ts": "e5bf35db78f31b3523d8dd374ff49b04c05970fcc0dd2e91e33bfd6332b01c27",
+    "package-lock.json": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0",
+    "lib/web-vitals.tsx": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac",
+    "lib/performance/field-vitals.ts": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854",
+    "next.config.mjs": "23566f91aa5a22d063e6f77f833a15cdfd32cbaccb3414bc390bbab3f113cd4c",
+    "lib/cluster-marker.ts": "63ed7540499f5d282ec8a7c6301210e6b07d711c7b77f648ca5051d7ce58fc59",
+    "components/legal/PrivacyPolicyContent.tsx": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6",
+    "components/legal/HydratedContactEmail.tsx": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c",
+    "components/admin/AdminOverviewDashboard.tsx": "8e44714ee3e6a46bd11dce35d745bcaffc7f93fbe5b374b952606629015efc6a",
+    "components/map/marker-icons.css": "d77c2f5ee74e3035f17e6f08ba5df557a0d2844633178481c26215c04969c258",
+    "lib/deferred-marker-renders.ts": "5b16f00f4960f24b9a811177704378d5775bc0ba968f4ac348aac93f7ca39a7b"
+  },
+  "cycles": 60,
+  "awayMs": 350,
+  "returnSettleMs": 1000,
+  "nativeGesture": {
+    "start": [
+      660,
+      900
+    ],
+    "end": [
+      600,
+      900
+    ],
+    "durationMs": 160
+  },
+  "sameFlowBeforeAfter": true,
+  "actualSdk": true,
+  "nativeCpuUnthrottled": true,
+  "noForcedGC": true,
+  "independentDevices": 1,
+  "oneOwnedTabExistingBrowserProcess": true,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "measurementScope": "same browser native swipe+providerAPIawayreturn finiteheap window; no n60independentusers/pixelelimination",
+  "fixedNaturalHeapRegressionTolerancePercent": 20,
+  "plannedSequence": "Fresh V6 Samsung A1 B1 B2 A2; same driver per variant; independent user/device counts unchanged",
+  "freshAfterSource": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "nativeCurrentFocusOnly": true,
+  "nativeValidationCaptureEveryCycles": 10,
+  "captureOccurs": "after primary heap/metric read; same capture cadence both variants",
+  "priorInvalidSampleNotReused": true,
+  "changeScope": "marker-pool batch release order only; UI changes excluded",
+  "setupVersion": "V6 ensure native foreground before measurement; post-read foreground guard before capture; owned server shutdown bounded4s",
+  "sourceBaseSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "sourcePatchSha256": "602729792769c9949cea6866ee2979ca6fcd71a0aebc0cc637614f6dc4c5ccb3",
+  "interferenceIsInvalidNotProductRegression": true
+}

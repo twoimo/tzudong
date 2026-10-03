@@ -1,0 +1,34 @@
+{
+  "observedAt": "2026-10-03T12:15:58.007154+00:00",
+  "sourceCommit": "bca48572eabd1f20eaf6ff529141c43460d25ad5",
+  "build": "build-candidate-ui-v4/receipt.json",
+  "requests": [
+    {
+      "method": "GET",
+      "status": 307,
+      "location": "https://assets.tzudong.app/sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+      "cacheControl": "no-store",
+      "allow": null,
+      "bodyBytes": 0
+    },
+    {
+      "method": "HEAD",
+      "status": 307,
+      "location": "https://assets.tzudong.app/sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+      "cacheControl": "no-store",
+      "allow": null,
+      "bodyBytes": 0
+    },
+    {
+      "method": "POST",
+      "status": 405,
+      "location": null,
+      "cacheControl": "no-store",
+      "allow": null,
+      "bodyBytes": 0
+    }
+  ],
+  "priorConfigRedirectNoStoreFailurePreserved": true,
+  "legacyUrlAndMethodsPreserved": true,
+  "notDeployed": true
+}

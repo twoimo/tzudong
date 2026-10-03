@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-03T06:05:06.276694+00:00",
+  "source": "authenticated Cloudflare dashboard; account and domain Tzudong verified",
+  "accountTotalStorageDisplayMB": 474.98,
+  "billableUsageDisplayUSD": 0,
+  "billingPeriodDisplay": "September22-October22",
+  "tzudongBucket": {
+    "name": "tzudong-pipeline-artifacts",
+    "objects": 1,
+    "bytes": 263,
+    "defaultClass": "Standard",
+    "publicAccess": "Enabled",
+    "rootPrefix": "data-plane/"
+  },
+  "otherBucketsUntouched": true,
+  "currentR2LargeFileOffloadEstablished": false,
+  "sourceWiring": {
+    "classificationThresholdBytes": 1000000,
+    "actualUploadAdapterPresentInAuditedPlanner": false,
+    "publicR2ResolverImportedInProductionConsumersFound": false
+  },
+  "freeTier": {
+    "standardGBMonth": 10,
+    "classAOpsPerMonth": 1000000,
+    "classBOpsPerMonth": 10000000,
+    "egressFree": true,
+    "infrequentAccessFreeTier": false,
+    "source": "https://developers.cloudflare.com/r2/pricing/"
+  },
+  "limits": [
+    "Displayed billable counters are not evidence of zero total requests",
+    "Current byte inventory is not an average GB-month forecast",
+    "Shared account usage includes other project buckets"
+  ],
+  "externalSettingsChanged": false,
+  "providerDiagnosticsOrAccountEmailStored": false
+}

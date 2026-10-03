@@ -1,0 +1,179 @@
+{
+  "buildId": "bpZefjsIkgpm1CdW26ltC",
+  "sourceReceipt": "build-candidate-ui-png-v3/receipt.json",
+  "browser": "154.0.8037.97",
+  "productionBuild": true,
+  "loopbackAssetTransport": "CSP-upgraded HTTPS loopback assets fulfilled from the same owned HTTP production build; remote SDK/tiles unmodified",
+  "actualSdk": true,
+  "syntheticData": true,
+  "fieldAdmitted": 0,
+  "cases": [
+    {
+      "name": "desktop",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "mobile": false,
+      "stage": "geometry",
+      "errors": {
+        "page": 0,
+        "console": 5
+      },
+      "fixtureRequests": 72,
+      "geometry": {
+        "actualRootDarkClass": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "group": {
+          "width": 152,
+          "height": 114
+        },
+        "buttons": [
+          {
+            "text": "국내",
+            "width": 72,
+            "height": 32
+          },
+          {
+            "text": "해외",
+            "width": 72,
+            "height": 32
+          },
+          {
+            "text": "대한민국(735개)",
+            "width": 152,
+            "height": 32
+          },
+          {
+            "text": "카테고리(735개)",
+            "width": 152,
+            "height": 32
+          }
+        ],
+        "counts": [
+          {
+            "text": "(735개)",
+            "right": 533
+          },
+          {
+            "text": "(735개)",
+            "right": 533
+          }
+        ],
+        "logo": {
+          "src": "/logo.png",
+          "naturalWidth": 256,
+          "corner": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        "overflow": 0,
+        "sdk": {
+          "remote": true,
+          "loaded": true,
+          "stub": false
+        }
+      },
+      "interactions": [
+        "category committed",
+        "category reset",
+        "region keyboard close",
+        "shared restaurant list header",
+        "marker detail close",
+        "shared feed header",
+        "shared stamp header",
+        "shared leaderboard header",
+        "shared announcement header"
+      ],
+      "screenshot": "desktop-light-home.png"
+    }
+  ],
+  "passed": false,
+  "failure": "bounded responsive UI verification failed",
+  "failureCode": "geometry assertion",
+  "failedCase": {
+    "name": "desktop",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "mobile": false,
+    "stage": "geometry",
+    "errors": {
+      "page": 0,
+      "console": 1
+    },
+    "fixtureRequests": 10,
+    "geometry": {
+      "actualRootDarkClass": false,
+      "bodyBackground": "rgb(251, 250, 248)",
+      "group": {
+        "width": 152,
+        "height": 114
+      },
+      "buttons": [
+        {
+          "text": "국내",
+          "width": 72,
+          "height": 32
+        },
+        {
+          "text": "해외",
+          "width": 72,
+          "height": 32
+        },
+        {
+          "text": "대한민국(735개)",
+          "width": 152,
+          "height": 32
+        },
+        {
+          "text": "카테고리(735개)",
+          "width": 152,
+          "height": 32
+        }
+      ],
+      "counts": [
+        {
+          "text": "(735개)",
+          "right": 533
+        },
+        {
+          "text": "(735개)",
+          "right": 533
+        }
+      ],
+      "logo": {
+        "src": "/logo.png",
+        "naturalWidth": 256,
+        "corner": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "overflow": 0,
+      "sdk": {
+        "remote": true,
+        "loaded": true,
+        "stub": false
+      }
+    }
+  },
+  "readinessDiagnostic": {
+    "readyState": "complete",
+    "remoteSdkScript": true,
+    "sdkLoaded": true,
+    "mapCaptured": true,
+    "zoom": 9,
+    "clusterCount": 1,
+    "markerCount": 0,
+    "logoPng": true,
+    "mapContainer": true
+  },
+  "diagnosticSyntheticScreenshot": true
+}

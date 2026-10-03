@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-03T12:31:31.264872+00:00",
+  "pr": "https://github.com/twoimo/tzudong/pull/3100",
+  "sourceCommit": "bca48572eabd1f20eaf6ff529141c43460d25ad5",
+  "developMerge": "8bd6cf5cb633996d8f18ed7c5d3189dd699a7af3",
+  "mergedThroughProtection": true,
+  "allCiChecksPassed": true,
+  "compiledCommittedInputsVerified": 29,
+  "fontRouteReadback": "font-route-compiled-readback-v2.json",
+  "actualFontBrowserLoad": "font-browser-compiled-v1.json",
+  "newProductionDeploymentPerformed": false,
+  "memoryExperimentalCodeExcluded": true
+}

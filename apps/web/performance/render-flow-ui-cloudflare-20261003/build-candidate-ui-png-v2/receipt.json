@@ -1,0 +1,113 @@
+{
+  "sourceCommit": "f6e5d940dc88c2d74fdff9c5e6ca6d470d4b980f",
+  "patchSha256": "f76c52992ee9fe4c18305b54a2256267acbd9f5baa4f714cd6c2c0f4ac166c58",
+  "inputs": [
+    {
+      "path": "components/announcement/AnnouncementPanel.tsx",
+      "sha256": "4a0cde4af80f34df977f98caea06f31dcfca4b9cb4af7c3b4fe7dbc8b7bd07f0"
+    },
+    {
+      "path": "components/feed/FeedContent.tsx",
+      "sha256": "312fdcee6b344bc969595a0d4cd45d0a58c1b9a3226fb917220dcbd32269e085"
+    },
+    {
+      "path": "components/filters/CategoryFilter.tsx",
+      "sha256": "8e5cf36934a9a7d3239cab97503c374be83248f361dc248c87dd203025beb8b9"
+    },
+    {
+      "path": "components/home/DesktopLeftPanelMapHome.tsx",
+      "sha256": "516b4df058cf345af5e5d24651d8a4501a8b58cb9ee466eed116e28abb48c122"
+    },
+    {
+      "path": "components/home/MobileControlOverlay.tsx",
+      "sha256": "a88d9e83cfbd57c106bc9f50ca47c2cdb4c89cc690bef55ba0b476fded232d1a"
+    },
+    {
+      "path": "components/home/home-desktop-control-panel.tsx",
+      "sha256": "6572e6d7cd6073fa05182bbc2709f4c9317693c5e3b319b9d7603f814f61c523"
+    },
+    {
+      "path": "components/home/map-panel-chrome.tsx",
+      "sha256": "804bc8c2012edb60369f78dd033327c031b62b19c6b4b1c706484291d1215dc1"
+    },
+    {
+      "path": "components/layout/Header.tsx",
+      "sha256": "70f2f35384d5121b79b99621168f9107c9753a02d900879794ef6957b5054940"
+    },
+    {
+      "path": "components/profile/UserProfilePanel.tsx",
+      "sha256": "756366e5951cdaf31775da581fa41e28743acf3f1762d6894dd61c8f5d1bf25c"
+    },
+    {
+      "path": "components/profile/UserProfileProgressiveSkeleton.tsx",
+      "sha256": "7aa3c72ddcc97e16f371eae192e3287ba0e50da2d609b7f56fbe0b4027dd86a1"
+    },
+    {
+      "path": "components/region/RegionSelector.tsx",
+      "sha256": "cfb13f33133dd49d502906b0dbaca24c2fb28ad0372954f1f86e095e0dab4f04"
+    },
+    {
+      "path": "components/restaurant/RestaurantDetailPanel.tsx",
+      "sha256": "1938c083bb63ae8fb098b14ccbf161c84dff15db783b26cdf0e3e1bf5de961cc"
+    },
+    {
+      "path": "lib/r2-public-url.ts",
+      "sha256": "edc78dc61f40bd9a798d4e99e4d46a22c62ddaff4fc85ed15ccd12bbbc0413f8"
+    },
+    {
+      "path": "next.config.mjs",
+      "sha256": "8e54a1c28380d3dedaf1554bdd0edddec7f59cf187415d1022d5f146c36c05c3"
+    },
+    {
+      "path": "proxy.ts",
+      "sha256": "472d03816a70687a6941cd7c4705103eaf62b4bdede24a3e5ac5b72ad9f16d66"
+    },
+    {
+      "path": "tests-unit/home-map-contextual-restaurants-source.test.ts",
+      "sha256": "5caf4ff7bdd0d0a62556545d1517a399229d047a2ba94879da32d04e3d06003f"
+    },
+    {
+      "path": "tests-unit/mobile-desktop-parity-source.test.ts",
+      "sha256": "308fb9800cd7b81a6e22d9fafeffd6b9cc385309a1a2deeac60f8d1d2b1286ce"
+    },
+    {
+      "path": "tests-unit/r2-public-url.test.ts",
+      "sha256": "31867a7bd4dc340763557f6495419b731ed7e8d55337ae26b099c038bddd485f"
+    },
+    {
+      "path": "tests-unit/security-headers-source.test.ts",
+      "sha256": "a9f1f62dae0ef460f86079cd33565f299dccdf05e57e6c7492876965db6d620d"
+    },
+    {
+      "path": "components/filters/MapFilterTriggerLabel.tsx",
+      "sha256": "c2a21f96f41ef034ed88a8c6a17c3e9de124421951eb94447b809ac9a3b93154"
+    },
+    {
+      "path": "lib/public-large-assets.mjs",
+      "sha256": "57cb976dacb4c257c6013e2675731a280123b0fc11b1756eaa49227adf9a342e"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    }
+  ],
+  "removedPublicFont": {
+    "path": "apps/web/public/fonts/ChosunCentennial_otf.otf",
+    "bytes": 11420784,
+    "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+    "sourcePreserved": true
+  },
+  "distDir": ".next-ui-ui-png-v2",
+  "buildId": "_hBLKw3e0nfqfwiLB6fW_",
+  "node": "v24.21.0",
+  "next": "16.3.5",
+  "configurationNames": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_NAVER_CLIENT_ID"
+  ],
+  "privateConfigurationInArtifacts": false,
+  "uiAndCloudflareSourceIncluded": true,
+  "poolOrderCandidateIncluded": false,
+  "deployed": false
+}

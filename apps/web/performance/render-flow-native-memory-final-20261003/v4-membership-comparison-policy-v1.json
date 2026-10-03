@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-03T05:08:09.135313+00:00",
+  "v2SamsungMarkerCount": 497,
+  "v4SamsungMarkerCount": 513,
+  "fullV4ComparisonRequired": true,
+  "v2SamplesRetainedSeparately": true,
+  "v4WarmProtocolUnchanged": true,
+  "changeInSetup": "Explicit synthetic camera query lat/lng/z; setup wake heartbeat clears before quiet/measurement",
+  "primaryGuardPercentUnchanged": 20,
+  "reason": "Different expanded viewport membership; do not combine incomplete v2 ABBA with v4 A2 as a matching four-tab comparison",
+  "newV4SamsungA1Raw": "direct-samsung-memory-direct-samsung-memory-focus-confirm-v4-before-a2-retry2/raw.json",
+  "rawLabelPreserved": true,
+  "newA1Order": "Samsung A1; Chrome A1 B1; Samsung B1 B2 A2; disclose browser interleaving"
+}

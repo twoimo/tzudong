@@ -1,0 +1,134 @@
+{
+  "observedAt": "2026-10-03T10:08:41.004262+00:00",
+  "url": "https://assets.tzudong.app/sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+  "credentialless": true,
+  "publicBodyPersisted": false,
+  "samples": [
+    {
+      "origin": "https://www.tzudong.app",
+      "repeat": 0,
+      "method": "GET",
+      "status": 200,
+      "bytes": 11420784,
+      "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+      "pop": "HKG",
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "vary": "Origin",
+        "access-control-expose-headers": "ETag,Content-Type,Content-Length",
+        "access-control-allow-origin": "https://www.tzudong.app",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cache-control": "max-age=14400",
+        "cf-cache-status": "MISS"
+      }
+    },
+    {
+      "origin": "https://www.tzudong.app",
+      "repeat": 1,
+      "method": "GET",
+      "status": 200,
+      "bytes": 11420784,
+      "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+      "pop": "HKG",
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "vary": "Origin",
+        "access-control-expose-headers": "ETag,Content-Type,Content-Length",
+        "access-control-allow-origin": "https://www.tzudong.app",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cache-control": "max-age=14400",
+        "cf-cache-status": "HIT"
+      }
+    },
+    {
+      "origin": "https://tzudong.app",
+      "repeat": 0,
+      "method": "GET",
+      "status": 200,
+      "bytes": 11420784,
+      "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+      "pop": "NRT",
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "vary": "Origin",
+        "access-control-expose-headers": "ETag,Content-Type,Content-Length",
+        "access-control-allow-origin": "https://tzudong.app",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cache-control": "max-age=14400",
+        "cf-cache-status": "MISS"
+      }
+    },
+    {
+      "origin": "https://tzudong.app",
+      "repeat": 1,
+      "method": "GET",
+      "status": 200,
+      "bytes": 11420784,
+      "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+      "pop": "KIX",
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "vary": "Origin",
+        "access-control-expose-headers": "ETag,Content-Type,Content-Length",
+        "access-control-allow-origin": "https://tzudong.app",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cache-control": "max-age=14400",
+        "cf-cache-status": "HIT"
+      }
+    },
+    {
+      "method": "GET",
+      "origin": "https://www.tzudong.app",
+      "rangeRequested": "bytes=0-1023",
+      "status": 206,
+      "observedBodyBytes": 1024,
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "1024",
+        "vary": "Origin",
+        "access-control-expose-headers": "ETag,Content-Type,Content-Length",
+        "access-control-allow-origin": "https://www.tzudong.app",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "content-range": "bytes 0-1023/11420784",
+        "cache-control": "max-age=14400",
+        "cf-cache-status": "HIT"
+      }
+    },
+    {
+      "method": "OPTIONS",
+      "origin": "https://www.tzudong.app",
+      "rangeRequested": null,
+      "status": 204,
+      "observedBodyBytes": 0,
+      "headers": {
+        "access-control-allow-methods": "GET, HEAD",
+        "access-control-max-age": "3600",
+        "access-control-allow-origin": "https://www.tzudong.app",
+        "vary": "Origin",
+        "access-control-allow-headers": "Range",
+        "cf-cache-status": "DYNAMIC"
+      }
+    },
+    {
+      "method": "HEAD",
+      "origin": "https://unapproved.example",
+      "rangeRequested": null,
+      "status": 200,
+      "observedBodyBytes": 0,
+      "headers": {
+        "content-type": "font/otf",
+        "content-length": "11420784",
+        "etag": "\"1ec59975d06fada112eb12a45dcd2009\"",
+        "cf-cache-status": "DYNAMIC"
+      }
+    }
+  ],
+  "integrityPassed": true,
+  "corsPassed": true,
+  "unauthorizedOriginNotAllowed": true,
+  "fieldPerformanceClaim": false
+}

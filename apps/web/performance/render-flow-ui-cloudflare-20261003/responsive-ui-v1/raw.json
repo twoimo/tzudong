@@ -1,0 +1,19 @@
+{
+  "buildId": "_hBLKw3e0nfqfwiLB6fW_",
+  "sourceReceipt": "build-candidate-ui-png-v2/receipt.json",
+  "browser": "154.0.8037.97",
+  "productionBuild": true,
+  "actualSdk": true,
+  "syntheticData": true,
+  "fieldAdmitted": 0,
+  "cases": [],
+  "passed": false,
+  "failure": "bounded responsive UI verification failed",
+  "failedCase": {
+    "name": "desktop",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "mobile": false
+  }
+}

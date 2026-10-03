@@ -1,0 +1,29 @@
+import {chromium} from '@playwright/test';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {catalog} from '../render-flow-native-memory-final-20261003/catalog.mjs';
+const root=new URL('./',import.meta.url),out=new URL('responsive-ui-v1/',root);await mkdir(out);
+const build=JSON.parse(await readFile(new URL('build-candidate-ui-png-v2/receipt.json',root),'utf8'));
+const browser=await chromium.launch({channel:'chrome',headless:true}),rows=catalog(735),result={buildId:build.buildId,sourceReceipt:'build-candidate-ui-png-v2/receipt.json',browser:await browser.version(),productionBuild:true,actualSdk:true,syntheticData:true,fieldAdmitted:0,cases:[],passed:false};
+let activeCase;
+try{
+ for(const [name,width,height,mobile] of [['desktop',1440,900,false],['mobile',384,824,true],['tablet',768,1024,true],['landscape',1024,768,true]])for(const theme of ['light','dark']){
+  activeCase={name,theme,width,height,mobile};const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,colorScheme:theme,locale:'ko-KR',serviceWorkers:'block'}),page=await context.newPage(),errors={page:0,console:0};page.on('pageerror',()=>errors.page++);page.on('console',m=>{if(m.type()==='error')errors.console++;});
+  await page.route('**/rest/v1/**',async route=>{const u=new URL(route.request().url());let data=[];
+   if(u.pathname.endsWith('/restaurants')){data=rows;const category=u.searchParams.get('categories');if(category)data=data.filter(r=>category.includes(r.categories[0]));const name=u.searchParams.get('approved_name');if(name){const term=name.replace(/^ilike\.%|%$/g,'').replace(/^eq\./,'');data=data.filter(r=>r.name.includes(term));}const limit=Number(u.searchParams.get('limit')||data.length),offset=Number(u.searchParams.get('offset')||0);data=data.slice(offset,offset+limit);}
+   await route.fulfill({status:route.request().method()==='OPTIONS'?204:200,contentType:'application/json',body:route.request().method()==='OPTIONS'?'':JSON.stringify(data),headers:{'access-control-allow-origin':'http://localhost:3100','access-control-allow-headers':'*','content-range':`0-${Math.max(0,data.length-1)}/${data.length}`}});
+  });
+  await page.route('**/auth/v1/user',r=>r.fulfill({status:401,contentType:'application/json',body:'{"message":"Auth session missing!"}',headers:{'access-control-allow-origin':'http://localhost:3100'}}));
+  await page.route('**/_vercel/**',r=>r.abort());
+  await page.addInitScript(()=>{window.__uiMapRef=null;document.addEventListener('load',e=>{if(e.target?.tagName==='SCRIPT'&&e.target.src.includes('oapi.map.naver.com/openapi/v3/maps.js')){const maps=window.naver?.maps;if(maps?.Map)maps.Map=new Proxy(maps.Map,{construct(fn,args,target){const m=Reflect.construct(fn,args,target);window.__uiMapRef=new WeakRef(m);return m;}});}},true);});
+  await page.goto('http://localhost:3100/?__qa=ui-verify&lat=37.5665&lng=126.978&z=9',{waitUntil:'domcontentloaded'});
+  await page.locator('.cluster-marker-container').filter({hasText:'735'}).waitFor({state:'visible',timeout:45000});
+  await page.locator('img[src="/logo.png"]').first().waitFor({state:'visible'});await page.waitForFunction(()=>Array.from(document.querySelectorAll('img[src="/logo.png"]')).some(x=>x.complete&&x.naturalWidth===256));
+  const geometry=await page.evaluate(()=>{const groups=Array.from(document.querySelectorAll('[aria-label="지도 필터 제어"]')),g=groups.find(e=>e.getBoundingClientRect().width>0);if(!g)throw Error('filter group missing');const box=g.getBoundingClientRect(),buttons=Array.from(g.querySelectorAll('button')).map(x=>({text:x.textContent.trim(),width:x.getBoundingClientRect().width,height:x.getBoundingClientRect().height})),counts=Array.from(g.querySelectorAll('[data-map-filter-count]')).map(x=>({text:x.textContent,right:x.getBoundingClientRect().right}));const img=document.querySelector('img[src="/logo.png"]'),canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const c=canvas.getContext('2d');c.drawImage(img,0,0);const pixel=Array.from(c.getImageData(0,0,1,1).data);return {group:{width:box.width,height:box.height},buttons,counts,logo:{src:img.getAttribute('src'),naturalWidth:img.naturalWidth,corner:pixel,background:getComputedStyle(img).backgroundColor},overflow:document.documentElement.scrollWidth-innerWidth,sdk:{remote:!!document.querySelector('script[src*="oapi.map.naver.com/openapi/v3/maps.js"]'),loaded:!!window.naver?.maps?.Map,stub:!!document.querySelector('script[data-local-naver-maps="true"]')}};});
+  assert.equal(geometry.logo.corner[3],0);assert.equal(geometry.overflow,0);assert.ok(geometry.sdk.remote&&geometry.sdk.loaded&&!geometry.sdk.stub);assert.ok(geometry.buttons.every(b=>b.height>=24&&b.height<=32.1));
+  if(!mobile){assert.ok(Math.abs(geometry.group.width-152)<1);assert.equal(geometry.counts.length,2);assert.ok(Math.abs(geometry.counts[0].right-geometry.counts[1].right)<=1);}
+  const screenshot=`${name}-${theme}-home.png`;await page.screenshot({path:new URL(screenshot,out).pathname});
+  result.cases.push({...activeCase,geometry,screenshot,errors});console.log(JSON.stringify({name,theme,passed:true,filterWidth:geometry.group.width,filterHeight:geometry.group.height,counts:geometry.counts}));await context.close();
+ }
+ result.passed=true;
+}catch{result.failure='bounded responsive UI verification failed';result.failedCase=activeCase;process.exitCode=1;}finally{await browser.close();await writeFile(new URL('raw.json',out),JSON.stringify(result,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({passed:result.passed,cases:result.cases.length,failedCase:result.failedCase}));}

@@ -1,0 +1,13 @@
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -2386,8 +2386,8 @@
+         if (!naver.maps.LatLng || !naver.maps.Point) return;
+         const map = mapInstanceRef.current;
+         const currentZoom = Math.floor(map.getZoom());
+-        const retainSmallExpandedDesktop = !isMobileOrTablet
+-            && expandedClusterRestaurantIds.length > 0 && expandedClusterRestaurantIds.length <= 1000;
++        const retainSmallExpandedDesktop =
++            expandedClusterRestaurantIds.length > 0 && expandedClusterRestaurantIds.length <= 1000;
+         const deferredMarkerRenders: Array<(() => void) | undefined> = [];
+         const markerViewportKey = getNaverMarkerViewportKey(map, mapRef.current);
+ 

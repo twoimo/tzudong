@@ -1,0 +1,91 @@
+{
+  "observedAt": "2026-10-03 05:05:31 UTC",
+  "source": "Read-only hosted aggregate query; allowed histogram columns only",
+  "projectIdentity": "existing Tzudong Supabase project verified by prior receipt",
+  "rows": [
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-01",
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 120,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "bucket": 0,
+      "sample_count": 2
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "bucket": 4,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 13,
+      "sample_count": 1
+    },
+    {
+      "observed_day": "2026-10-02",
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "bucket": 26,
+      "sample_count": 1
+    }
+  ],
+  "cohorts": {
+    "old": {
+      "CLS": 1,
+      "LCP": 1,
+      "INP": 0
+    },
+    "final": {
+      "CLS": 2,
+      "LCP": 2,
+      "INP": 1
+    }
+  },
+  "finalIntervals": {
+    "CLS": "2 observations in [0,0.01)",
+    "INP": "1 observation in [64,80) ms",
+    "LCP": "one observation in [1300,1400) ms and one in [2600,2700) ms"
+  },
+  "oldLcp": "1 overflow observation >=12000 ms",
+  "matchedComparisonAvailable": false,
+  "p75": null,
+  "p95": null,
+  "fieldImprovementProven": false,
+  "independentHumanAttestation": false,
+  "syntheticWritesPerformed": 0,
+  "requestOrResponseBodiesStored": false,
+  "limits": [
+    "Very small metric-instance counts; not independent users",
+    "No matching viewport/network/cache cohorts; no retroactive baseline",
+    "Current final release is the prospective baseline for subsequent changes"
+  ]
+}

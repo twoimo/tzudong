@@ -1,0 +1,67 @@
+{
+  "observedAt": "2026-10-03T06:15:56.541229+00:00",
+  "sourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "regressionTolerancePercent": 20,
+  "trials": [
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "a1",
+      "raw": "direct-samsung-memory-direct-samsung-memory-focus-confirm-v4-before-a2-retry2/raw.json",
+      "inspection": "direct-samsung-memory-direct-samsung-memory-focus-confirm-v4-before-a2-retry2/native-inspection-v1.json",
+      "plan": "direct-focus-before-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs"
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "b1",
+      "raw": "direct-samsung-memory-focus-confirm-v4-after-b1/raw.json",
+      "inspection": "direct-samsung-memory-focus-confirm-v4-after-b1/native-inspection-v1.json",
+      "plan": "direct-focus-after-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs"
+    },
+    {
+      "mode": "samsung",
+      "role": "after",
+      "label": "b2",
+      "raw": "direct-samsung-memory-focus-confirm-v4-after-b2/raw.json",
+      "inspection": "direct-samsung-memory-focus-confirm-v4-after-b2/native-inspection-v1.json",
+      "plan": "direct-focus-after-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs"
+    },
+    {
+      "mode": "samsung",
+      "role": "before",
+      "label": "a2",
+      "raw": "direct-samsung-memory-focus-confirm-v4-before-a2/raw.json",
+      "inspection": "direct-samsung-memory-focus-confirm-v4-before-a2/native-inspection-v1.json",
+      "plan": "direct-focus-before-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs"
+    },
+    {
+      "mode": "physical",
+      "role": "before",
+      "label": "a1",
+      "raw": "direct-physical-memory-focus-confirm-v4-before-a1/raw.json",
+      "inspection": "direct-physical-memory-focus-confirm-v4-before-a1/native-inspection-v1.json",
+      "plan": "direct-focus-before-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs"
+    },
+    {
+      "mode": "physical",
+      "role": "after",
+      "label": "b1",
+      "raw": "direct-physical-memory-focus-confirm-v4-after-b1/raw.json",
+      "inspection": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspection-v1.json",
+      "plan": "direct-focus-after-plan-v2.json",
+      "driver": "direct-mobile-memory-setup-v4.mjs"
+    }
+  ],
+  "protocolChanges": [
+    "All six use V4 explicit synthetic camera; v2 membership497 samples excluded",
+    "Actual order Samsung A1, Chrome A1 B1, Samsung B1 B2 A2; existing processes and browser interleaving disclosed",
+    "First raw label says A2 retry2 but is first completed V4 Before; original raw is unchanged"
+  ],
+  "priorInvalidSequencesExcluded": true
+}

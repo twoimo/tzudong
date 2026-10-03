@@ -1,0 +1,22 @@
+{
+  "buildId": "_hBLKw3e0nfqfwiLB6fW_",
+  "sourceReceipt": "build-candidate-ui-png-v2/receipt.json",
+  "browser": "154.0.8037.97",
+  "productionBuild": true,
+  "loopbackAssetTransport": "CSP-upgraded HTTPS loopback assets fulfilled from the same owned HTTP production build; remote SDK/tiles unmodified",
+  "actualSdk": true,
+  "syntheticData": true,
+  "fieldAdmitted": 0,
+  "cases": [],
+  "passed": false,
+  "failure": "bounded responsive UI verification failed",
+  "failureCode": "readiness unavailable",
+  "failedCase": {
+    "name": "desktop",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "mobile": false,
+    "stage": "sdk-ready"
+  }
+}

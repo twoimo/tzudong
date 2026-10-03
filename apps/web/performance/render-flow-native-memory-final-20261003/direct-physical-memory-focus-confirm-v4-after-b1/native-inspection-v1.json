@@ -1,0 +1,74 @@
+{
+  "observedAt": "2026-10-03T05:08:09.084439+00:00",
+  "captures": [
+    {
+      "file": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspected/cycle-000.png",
+      "sha256": "518f7f480ba29bd9afd3a6985dc04ea101761e210af30fc6a568d1000b0e9219",
+      "cycle": 0,
+      "capturedAt": null,
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspected/cycle-010.png",
+      "sha256": "3f8c3a157169bae74233e9ab53d27c9d9c1257d5be183f5a932d6f7f6958420a",
+      "cycle": 10,
+      "capturedAt": "2026-10-03T05:03:17.709Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspected/cycle-020.png",
+      "sha256": "3f8c3a157169bae74233e9ab53d27c9d9c1257d5be183f5a932d6f7f6958420a",
+      "cycle": 20,
+      "capturedAt": "2026-10-03T05:03:41.843Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspected/cycle-030.png",
+      "sha256": "50ab06518d1472bba46930ea6df1a6b618ba3beaa30e0aef0dacfd976cd98ce9",
+      "cycle": 30,
+      "capturedAt": "2026-10-03T05:04:06.341Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspected/cycle-040.png",
+      "sha256": "79528fde0946f14c163b949c5b0d2e8f0f7cd080a8c4842bf33edc85b3e7d89a",
+      "cycle": 40,
+      "capturedAt": "2026-10-03T05:04:30.322Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspected/cycle-050.png",
+      "sha256": "011ad43fad28673ba9501a39b0c66eca78add825433474fb745d058f21e0bd4c",
+      "cycle": 50,
+      "capturedAt": "2026-10-03T05:04:53.833Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    },
+    {
+      "file": "direct-physical-memory-focus-confirm-v4-after-b1/native-inspected/cycle-060.png",
+      "sha256": "8095328f6bd57c0c30ea21f70fdef913df31ed9bc0c179f270db1f1bb699cb65",
+      "cycle": 60,
+      "capturedAt": "2026-10-03T05:05:18.769Z",
+      "inspected": true,
+      "actualMapAndSyntheticListVisible": true,
+      "privateDataSeen": false
+    }
+  ],
+  "nativeCurrentFocusCheckedEachCycle": true,
+  "noOSShadeSeenInObservedFrames": true,
+  "notIndependentUsers": true,
+  "originalRawUntouched": true,
+  "limits": "start and each10cycles; transient overlays/flicker between captures not excluded",
+  "ownedTemporaryRemovalVerified": true
+}
