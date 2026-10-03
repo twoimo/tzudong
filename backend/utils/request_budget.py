@@ -55,14 +55,17 @@ class RequestPacer:
         self._lock = threading.Lock()
 
     def wait(self) -> None:
-        with self._lock:
-            now = self.clock()
-            start = max(now, self._next)
-            self._next = start + self.interval
-        if start - now > self.max_wait:
-            raise TimeoutError("PROVIDER_RATE_LIMITED")
-        if start > now:
-            self.sleep(start - now)
+        deadline=self.clock()+self.max_wait
+        while True:
+            with self._lock:
+                now=self.clock()
+                if now>=self._next:
+                    self._next=now+self.interval
+                    return
+                delay=self._next-now
+            if delay>deadline-now:
+                raise TimeoutError("PROVIDER_RATE_LIMITED")
+            self.sleep(delay)
 
     def cooldown(self, seconds: float) -> None:
         with self._lock:

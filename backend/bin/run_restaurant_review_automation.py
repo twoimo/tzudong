@@ -58,6 +58,43 @@ def last_record(path):
     return last
 
 
+def cached_source_record(path, directory, original, video_id, channel):
+    latest=last_record(path)
+    references=original.get('recollect_version') or {}
+    if not isinstance(references,dict) or any(type(value) is not int or value<0 for value in references.values()):
+        raise WorkerFailure('source_unavailable')
+    def identity(record):
+        if not isinstance(record,dict) or youtube_id(record.get('youtube_link'))!=video_id:
+            raise WorkerFailure('source_unavailable')
+        if record.get('channel_name') is not None and record['channel_name']!=channel:
+            raise WorkerFailure('source_unavailable')
+        if record.get('video_id') is not None and record['video_id']!=video_id:
+            raise WorkerFailure('source_unavailable')
+        if 'recollect_id' in record and (type(record['recollect_id']) is not int or record['recollect_id']<0):
+            raise WorkerFailure('source_unavailable')
+        nested=record.get('recollect_version') or {}
+        if not isinstance(nested,dict) or any(type(value) is not int or value<0 for value in nested.values()):
+            raise WorkerFailure('source_unavailable')
+    def matches(record):
+        if directory=='crawling':
+            cached=record.get('recollect_version') or {}
+            return all(cached.get(key,0)==value for key,value in references.items() if key in ('meta','transcript'))
+        if directory in references:
+            # Legacy collectors used zero when an optional recollect_id was absent.
+            return record.get('recollect_id',0)==references[directory]
+        return True
+    identity(latest)
+    if matches(latest):return latest
+    selected=None
+    with path.open(encoding='utf-8') as stream:
+        for line in stream:
+            if not line.strip():continue
+            record=json.loads(line);identity(record)
+            if matches(record):selected=record
+    if selected is None:raise WorkerFailure('source_unavailable')
+    return selected
+
+
 def result_fields(records, original):
     matches = [record for record in records if record.get('trace_id')==original.get('trace_id')]
     if not matches:
@@ -74,7 +111,8 @@ def result_fields(records, original):
     for key in ['visit_authenticity','rb_inference_score','review_faithfulness_score']:
         metric=evaluation.get(key)
         value=metric.get('eval_value') if isinstance(metric,dict) else None
-        if type(value) not in (int,float) or not math.isfinite(value) or not 1<=value<=5 or not isinstance(metric.get('eval_basis'),str) or metric['eval_basis'].strip() in ('','-','근거 내용 없음','평가 근거 없음'):
+        maximum={'visit_authenticity':4,'rb_inference_score':2,'review_faithfulness_score':1}[key]
+        if type(value) not in (int,float) or not math.isfinite(value) or not 0<=value<=maximum or (key!='review_faithfulness_score' and not float(value).is_integer()) or not isinstance(metric.get('eval_basis'),str) or metric['eval_basis'].strip() in ('','-','근거 내용 없음','평가 근거 없음'):
             raise WorkerFailure('evaluation_incomplete')
     for key in ['rb_grounding_TF','category_TF','category_validity_TF']:
         metric=evaluation.get(key)
@@ -120,13 +158,14 @@ def evaluate(original, crawling_root, run_command=subprocess.run):
     video_id = youtube_id(original.get('youtube_link'))
     source_root = Path(crawling_root)/channel
     source_files = [(directory, source_root/directory/(video_id+'.jsonl')) for directory in ['crawling','meta','transcript','visual-location']]
-    for directory,path in source_files[:3]:
-        if path.is_file(): last_record(path)
+    selected_sources={directory:cached_source_record(path,directory,original,video_id,channel)
+                      for directory,path in source_files if path.is_file()}
     with tempfile.TemporaryDirectory(prefix='tzudong-review-') as scratch:
         scratch=Path(scratch); crawl=scratch/'crawl'; evaluation=scratch/'evaluation'
         for directory,path in source_files:
-            if path.is_file():
-                destination=crawl/directory/path.name; destination.parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(path,destination)
+            if directory in selected_sources:
+                destination=crawl/directory/path.name; destination.parent.mkdir(parents=True,exist_ok=True)
+                destination.write_text(json.dumps(selected_sources[directory],ensure_ascii=False)+'\n',encoding='utf-8')
         scripts=ROOT/'backend/restaurant-evaluation/scripts'
         def run(command):
             try:
@@ -142,7 +181,7 @@ def evaluate(original, crawling_root, run_command=subprocess.run):
         if not (crawl/'transcript'/(video_id+'.jsonl')).is_file():
             (crawl/'urls.txt').write_text('https://www.youtube.com/watch?v='+video_id+'\n',encoding='utf-8')
             run(['node',str(ROOT/'backend/bin/review_recheck_transcript.mjs'),channel,str(crawl)])
-            last_record(crawl/'transcript'/(video_id+'.jsonl'))
+            cached_source_record(crawl/'transcript'/(video_id+'.jsonl'),'transcript',original,video_id,channel)
         common=['--channel',channel,'--evaluation-path',str(evaluation),'--video-id',video_id]
         run([sys.executable,str(scripts/'09-target-selection.py'),'--crawling-path',str(crawl),*common])
         selection_file=evaluation/'evaluation/selection'/(video_id+'.jsonl')

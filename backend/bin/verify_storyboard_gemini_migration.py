@@ -213,9 +213,35 @@ try:
                 conn.rollback()
             assert row_state()==catalog_before
             raw['assertions']['unknown_installed_body_fails_and_rolls_back']=True
+            phase='uncertain_lease_recovery'
+            uncertainty=ROOT/'backend/supabase/migrations/20261003205335_storyboard_uncertain_lease_recovery.sql'
+            c.execute(uncertainty.read_text())
+            c.execute("INSERT INTO public.admin_storyboard_production_workers(owner_id,token_sha256,models) VALUES (%s,%s,%s::jsonb) RETURNING id",(owner,'2'*64,json.dumps(models)))
+            uncertainty_worker=str(c.fetchone()[0])
+            uncertain_request={**request,'requestId':str(uuid.uuid4())}
+            c.execute("SELECT public.storyboard_production_admin(%s,'create',NULL,NULL,%s::jsonb)",(owner,json.dumps(uncertain_request)))
+            uncertain_project=c.fetchone()[0]['project']['id']
+            c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(uncertainty_worker,))
+            uncertain_claim=c.fetchone()[0]['job'];assert uncertain_claim['projectId']==uncertain_project
+            c.execute("UPDATE public.admin_storyboard_production_jobs SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE id=%s",(uncertain_claim['id'],))
+            for _ in range(3):
+                c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(uncertainty_worker,))
+                assert c.fetchone()[0]['job'] is None
+            c.execute('SELECT status,stage,attempts FROM public.admin_storyboard_production_jobs WHERE id=%s',(uncertain_claim['id'],))
+            assert c.fetchone()==('failed','uncertain',1)
+            raw['assertions']['expired_claim_never_requeues_paid_generation']=True
+            c.execute("SELECT public.storyboard_production_admin(%s,'read',%s)",(owner,uncertain_project))
+            uncertain_view=c.fetchone()[0]
+            c.execute("SELECT public.storyboard_production_admin(%s,'retry',%s,%s,%s::jsonb)",(owner,uncertain_project,uncertain_view['project']['revision'],json.dumps({'requestId':str(uuid.uuid4())})))
+            retried=c.fetchone()[0]
+            assert retried['job']['id']!=uncertain_claim['id']
+            c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(uncertainty_worker,))
+            assert c.fetchone()[0]['job']['id']==retried['job']['id']
+            raw['assertions']['explicit_operator_retry_creates_one_fresh_job']=True
+            raw['migrations'].append({'file':uncertainty.name,'sha256':hashlib.sha256(uncertainty.read_bytes()).hexdigest()})
             raw['passed'] = True
             raw['limitations'] = ['Synthetic fixture database only.', 'Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only.']
-    out = ROOT / 'apps/web/performance/ui-renewal-20261003' / f'storyboard-history-{args.chain}-verification.json'
+    out = ROOT / 'apps/web/performance/ui-renewal-20261003' / f'storyboard-current-{args.chain}-verification.json'
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(raw, indent=2) + '\n')
     print(json.dumps({'passed': True, 'assertions': list(raw['assertions']), 'operationalDatabaseChanges': False}))

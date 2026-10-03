@@ -143,3 +143,14 @@ CLI 호환 작업 폴더도 늦은 helper 권한 복구를 registry prerequisite
 Step08은 lock 획득 → fingerprint/receipt 재검증 → 실제 child 작업 → 입력 재확인 → receipt publication 전체를 하나의 영상 lock 안에서 처리한다. 각 실행은 독립 temp directory를 사용한다. 실제 shell dispatch 경로를 두 subprocess로 겹친 합성 실험에서 **2회 호출·작업 1회·중복 0회**였다(조건 1개; 모집단 CI 없음). 부모의 과거 pending snapshot으로 완료 여부를 판단하지 않는다. 실패·변경·손상 출력은 재사용하지 않는다. 이 실험에서는 외부 provider 호출 0회였으며 실제 요금·지연 개선을 주장하지 않는다.
 
 관련 Python **33 pass**, Node/실제 ffmpeg **5 pass**, layout **6 pass**다. 새 receipt/validation/resource 검증은 보호 CI에도 등록했다. 원시 경계 증빙은 `pipeline-boundary-review-20261004.json`과 분리된 SHA256 파일에 보관한다. 전체 pipeline의 최종 처리시간 측정과 운영 적용·readback은 별도 완료 조건으로 남는다.
+
+
+## 원본·제한 대기·불확실한 생성 경계
+
+캐시를 읽을 때 영상 ID·optional channel·수집 버전을 확인한다. leased recollect version에 해당하는 이전 JSONL 행이 있으면 해당 행만 격리 scratch에 사용하며 원본 파일은 변경하지 않는다. 다른 영상·다른 채널·잘못된 버전은 명령 실행 전에 거부한다. 기존 평가 프롬프트의 점수 영역도 재확인했다: 방문 int 0–4, 추론 int 0–2, 리뷰 float 0–1이며 0과 4를 손실하지 않는다.
+
+RequestPacer는 sleep 후 최신 shared deadline을 재확인하고 실제 출발 시 interval을 할당한다. 가상 clock 실험에서 1초 대기 중 추가된 5초 cooldown을 반영해 clock 6에 출발했다. 이는 provider 성능 개선 측정이 아닌 Retry-After 준수 검증이며 실제 외부 호출은 0회다.
+
+새 `20261003205335_storyboard_uncertain_lease_recovery.sql`은 expired claimed job을 failed/uncertain으로 남기고 checkpoint를 보존한다. 오래된 자동 backoff는 역사적 기본 경로 검증으로만 남긴다. 현재 안전 경로에서 반복 claim 3회·자동 재claim 0회·기존 job attempts 1을 확인했다. 원래/운영 receipt 경로 각각 **19개** 검증이 통과했다. 명시적인 운영자 retry는 새로운 job 하나를 만든다. UI는 저장된 결과와 revision을 확인하고 추가 크레딧 사용 가능성을 확인한 뒤 재요청하도록 한다.
+
+관련 Python **30 pass**, 웹 affected **64 pass**, TypeScript parity 진단 0·ESLint를 확인했다. 실제 hosted 적용·생성 결과·billing 차감은 이 증빙이 아니다. 검수의 cold request 전체 catalog 조회는 여전히 DB-side bounded query로 교체할 구현 항목이며 완료로 표시하지 않는다.

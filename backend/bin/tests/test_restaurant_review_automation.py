@@ -85,10 +85,13 @@ class ReviewWorkerTests(unittest.TestCase):
                 with self.subTest(key=key,value=value),self.assertRaises(worker.WorkerFailure) as raised:
                     worker.result_fields([{'trace_id':'fixed','evaluation_results':metrics}],{'trace_id':'fixed'})
                 self.assertEqual(raised.exception.code,'evaluation_incomplete')
-        for value in [True,0,6,float('nan'),'1']:
+        for value in [True,-1,5,float('nan'),'1']:
             metrics=copy.deepcopy(good);metrics['visit_authenticity']['eval_value']=value
             with self.subTest(value=value),self.assertRaises(worker.WorkerFailure):
                 worker.result_fields([{'trace_id':'fixed','evaluation_results':metrics}],{'trace_id':'fixed'})
+        metrics=copy.deepcopy(good)
+        for key in ['visit_authenticity','rb_inference_score','review_faithfulness_score']:metrics[key]['eval_value']=0
+        self.assertEqual(worker.result_fields([{'trace_id':'fixed','evaluation_results':metrics}],{'trace_id':'fixed'})['evaluation_results'],metrics)
 
     def test_location_provenance_must_be_complete_but_need_not_pass_approval(self):
         good=self.complete_metrics()
@@ -104,6 +107,27 @@ class ReviewWorkerTests(unittest.TestCase):
 
     def test_ambiguous_source_result_is_rejected(self):
         with self.assertRaises(worker.WorkerFailure):worker.result_fields([{'trace_id':'fixed'},{'trace_id':'fixed'}],{'trace_id':'fixed'})
+
+    def test_cached_inputs_match_video_channel_and_leased_recollect_identity(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'ABCDEFGHIJK.jsonl'
+            first={'youtube_link':'https://youtu.be/ABCDEFGHIJK','channel_name':'tzuyang','recollect_id':0}
+            latest={**first,'recollect_id':13}
+            path.write_text(json.dumps(first)+'\n'+json.dumps(latest)+'\n')
+            original={'recollect_version':{'meta':0}}
+            self.assertEqual(worker.cached_source_record(path,'meta',original,'ABCDEFGHIJK','tzuyang'),first)
+            for change in [{'youtube_link':'https://youtu.be/ZZZZZZZZZZZ'},{'channel_name':'other'},{'recollect_id':True}]:
+                path.write_text(json.dumps({**first,**change})+'\n')
+                with self.subTest(change=change),self.assertRaises(worker.WorkerFailure):
+                    worker.cached_source_record(path,'meta',original,'ABCDEFGHIJK','tzuyang')
+            path.write_text(json.dumps(latest)+'\n')
+            with self.assertRaises(worker.WorkerFailure):worker.cached_source_record(path,'meta',original,'ABCDEFGHIJK','tzuyang')
+
+    def test_misfiled_cached_source_never_starts_a_command(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)/'tzuyang/meta';root.mkdir(parents=True)
+            (root/'ABCDEFGHIJK.jsonl').write_text('{"youtube_link":"https://youtu.be/ZZZZZZZZZZZ","channel_name":"tzuyang"}\n')
+            with self.assertRaises(worker.WorkerFailure):worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,run_command=lambda *args,**kw:self.fail('command called'))
 
     def test_shared_daily_budget_and_dry_run(self):
         import contextlib,io

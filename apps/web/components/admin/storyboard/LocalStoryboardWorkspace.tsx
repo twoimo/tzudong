@@ -21,6 +21,7 @@ import {
 } from "@/lib/admin/storyboard/production-contract";
 import { STORYBOARD_GEMINI_TEXT_MODEL, STORYBOARD_GEMINI_IMAGE_MODELS, STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, isAllowedStoryboardGeminiModel } from "@/lib/admin/storyboard/gemini-models";
 import { ADMIN_STORYBOARD_PROJECT_QUERY } from "@/lib/admin/admin-module-routing";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 const API = "/api/admin/storyboard/production";
 const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
@@ -366,6 +367,7 @@ function SavedProjectWorkspace({ projectId, onProject }: {
   const [readError, setReadError] = useState<string | null>(null);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [retryConfirmation, setRetryConfirmation] = useState<{ revision: number; jobId: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [needsReadback, setNeedsReadback] = useState(false);
@@ -532,7 +534,7 @@ function SavedProjectWorkspace({ projectId, onProject }: {
       </div>
       {readError && <p role="alert" className="mt-2 text-sm text-destructive">{readError}</p>}
       {writeError && <p role="alert" className="mt-2 text-sm text-destructive">{writeError}</p>}
-      {view?.job?.errorCode && <p role="alert" className="mt-2 text-sm text-destructive">{message(view.job.errorCode)}</p>}
+      {view?.job?.errorCode && <p role="alert" className="mt-2 text-sm text-destructive">{view.job.stage === 'uncertain' ? '생성 결과를 확인하지 못했습니다. 저장 결과를 확인한 뒤 재시도하세요.' : message(view.job.errorCode)}</p>}
       {view && <>
         <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">제작 요청과 모델 정보</summary><p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{view.project.request.prompt}</p>
         <p className="mt-2 text-xs text-muted-foreground">텍스트: {PROVIDERS[view.project.request.providers.text.id]} · 이미지: {PROVIDERS[view.project.request.providers.image.id]}</p>
@@ -547,12 +549,25 @@ function SavedProjectWorkspace({ projectId, onProject }: {
           {!scenesComplete && <button type="button" className={buttonClass}
             disabled={locked || retryBlocked || scenesComplete
               || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
-            onClick={() => { void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() }); }}>재시도</button>}
+            onClick={() => {
+              if (view.job?.stage === 'uncertain') setRetryConfirmation({ revision: view.project.revision, jobId: view.job.id });
+              else void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() });
+            }}>재시도</button>}
         </div>
         {(retryBlocked || regenerateBlocked) && <p className="mt-2 text-sm text-muted-foreground">이전 모델로 만든 프로젝트는 기록과 편집을 보존합니다. 새 생성은 Gemini 프로젝트에서 진행하세요.</p>}
         {active && <p className="mt-2 text-sm text-muted-foreground">작업이 실행되거나 워커를 기다리는 동안 편집과 가져오기를 잠급니다. 이 화면을 닫아도 서버 작업은 취소되지 않습니다.</p>}
       </>}
     </div>
+    <AlertDialog open={Boolean(retryConfirmation)} onOpenChange={open => { if (!open && !busy) setRetryConfirmation(null); }}>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>확인되지 않은 생성을 다시 요청할까요?</AlertDialogTitle><AlertDialogDescription>이전 요청이 처리됐을 수 있습니다. 저장 결과를 확인한 뒤 진행하세요. 재요청은 크레딧을 추가 사용할 수 있습니다.</AlertDialogDescription></AlertDialogHeader>
+      {writeError && <p role="alert" className="text-sm text-destructive">{writeError}</p>}
+      <AlertDialogFooter><AlertDialogCancel disabled={busy}>취소</AlertDialogCancel><AlertDialogAction disabled={locked || !view || view.project.revision !== retryConfirmation?.revision || view.job?.id !== retryConfirmation?.jobId} onClick={event => {
+        event.preventDefault();
+        if (retryConfirmation && view?.job?.id === retryConfirmation.jobId && view.project.revision === retryConfirmation.revision) {
+          void mutate({ action: 'retry', revision: retryConfirmation.revision, requestId: crypto.randomUUID() }).then(applied => { if (applied) setRetryConfirmation(null); });
+        }
+      }}>저장 결과 확인 후 재요청</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+    </AlertDialog>
     {view && <>
       <nav aria-label="스토리보드 작업" className="flex gap-1 border-b border-border/60">
         {([["scenes", "장면 편집"], ["history", "버전 이력"], ...(canImportText ? [["import", "결과 가져오기"] as const] : [])] as const).map(([id, label]) =>

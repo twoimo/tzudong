@@ -136,6 +136,18 @@ class ReadBudgetTests(unittest.TestCase):
         pacer.cooldown(3600)
         with self.assertRaises(TimeoutError): pacer.wait()
 
+    def test_waiter_observes_a_cooldown_received_during_sleep(self):
+        now=[0.0];sleeps=[]
+        def sleep(delay):
+            sleeps.append(delay);now[0]+=delay
+            if len(sleeps)==1:pacer.cooldown(5)
+        pacer=RequestPacer(1,clock=lambda:now[0],sleep=sleep)
+        pacer.wait();pacer.wait()
+        self.assertEqual(sleeps,[1,5])
+        self.assertEqual(now[0],6)
+        pacer.wait()
+        self.assertEqual(sleeps,[1,5,1])
+
 
 class OwnedMediaCacheTests(unittest.TestCase):
     def test_success_cleans_only_owned_run_and_failure_preserves_resume(self):
