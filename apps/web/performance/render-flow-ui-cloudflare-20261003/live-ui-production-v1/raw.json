@@ -1,0 +1,577 @@
+{
+  "observedAt": "2026-10-03T15:56:24.674Z",
+  "productionReceipt": "ui-production-ready-status-20261004-v1.json",
+  "sourceSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "browser": "154.0.8037.97",
+  "transport": "actual public HTTPS; remote SDK, data and images unmodified",
+  "physicalDevice": false,
+  "fieldAdmitted": 0,
+  "cases": [
+    {
+      "name": "desktop",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "emulatedMobile": false,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 3
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "filter": {
+          "width": 152,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 72,
+              "height": 32
+            },
+            {
+              "width": 72,
+              "height": 32
+            },
+            {
+              "width": 152,
+              "height": 32
+            },
+            {
+              "width": 152,
+              "height": 32
+            }
+          ],
+          "counts": [
+            {
+              "right": 533
+            },
+            {
+              "right": 533
+            }
+          ]
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 900,
+        "staleReadySkeletons": 0
+      },
+      "liveFont": {
+        "status": "loaded",
+        "documentFontsCheck": true,
+        "realAssetOrigin": "https://assets.tzudong.app",
+        "usedProductFontChanged": false
+      },
+      "screenshot": "desktop-light-logo.png"
+    },
+    {
+      "name": "desktop",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "emulatedMobile": false,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": true,
+        "bodyBackground": "rgb(28, 25, 23)",
+        "filter": {
+          "width": 152,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 72,
+              "height": 32
+            },
+            {
+              "width": 72,
+              "height": 32
+            },
+            {
+              "width": 152,
+              "height": 32
+            },
+            {
+              "width": 152,
+              "height": 32
+            }
+          ],
+          "counts": [
+            {
+              "right": 533
+            },
+            {
+              "right": 533
+            }
+          ]
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 900,
+        "staleReadySkeletons": 0
+      },
+      "screenshot": "desktop-dark-logo.png"
+    },
+    {
+      "name": "mobile",
+      "theme": "light",
+      "viewport": {
+        "width": 384,
+        "height": 824
+      },
+      "emulatedMobile": true,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "filter": {
+          "width": 111.359375,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 51.671875,
+              "height": 32
+            },
+            {
+              "width": 51.6875,
+              "height": 32
+            },
+            {
+              "width": 111.359375,
+              "height": 32
+            },
+            {
+              "width": 111.359375,
+              "height": 32
+            }
+          ],
+          "counts": []
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 763,
+        "staleReadySkeletons": 0
+      },
+      "screenshot": "mobile-light-logo.png"
+    },
+    {
+      "name": "mobile",
+      "theme": "dark",
+      "viewport": {
+        "width": 384,
+        "height": 824
+      },
+      "emulatedMobile": true,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": true,
+        "bodyBackground": "rgb(28, 25, 23)",
+        "filter": {
+          "width": 111.359375,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 51.671875,
+              "height": 32
+            },
+            {
+              "width": 51.6875,
+              "height": 32
+            },
+            {
+              "width": 111.359375,
+              "height": 32
+            },
+            {
+              "width": 111.359375,
+              "height": 32
+            }
+          ],
+          "counts": []
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 763,
+        "staleReadySkeletons": 0
+      },
+      "screenshot": "mobile-dark-logo.png"
+    },
+    {
+      "name": "tablet",
+      "theme": "light",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "emulatedMobile": true,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "filter": {
+          "width": 128,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            }
+          ],
+          "counts": []
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 963,
+        "staleReadySkeletons": 0
+      },
+      "screenshot": "tablet-light-logo.png"
+    },
+    {
+      "name": "tablet",
+      "theme": "dark",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "emulatedMobile": true,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": true,
+        "bodyBackground": "rgb(28, 25, 23)",
+        "filter": {
+          "width": 128,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            }
+          ],
+          "counts": []
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 963,
+        "staleReadySkeletons": 0
+      },
+      "screenshot": "tablet-dark-logo.png"
+    },
+    {
+      "name": "landscape",
+      "theme": "light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "emulatedMobile": true,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": false,
+        "bodyBackground": "rgb(251, 250, 248)",
+        "filter": {
+          "width": 128,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            }
+          ],
+          "counts": []
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 707,
+        "staleReadySkeletons": 0
+      },
+      "screenshot": "landscape-light-logo.png"
+    },
+    {
+      "name": "landscape",
+      "theme": "dark",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "emulatedMobile": true,
+      "manualCssDarkNotDeviceForced": true,
+      "errors": {
+        "page": 0,
+        "console": 1
+      },
+      "passed": true,
+      "geometry": {
+        "rootDark": true,
+        "bodyBackground": "rgb(28, 25, 23)",
+        "filter": {
+          "width": 128,
+          "height": 114,
+          "buttons": [
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 60,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            },
+            {
+              "width": 128,
+              "height": 32
+            }
+          ],
+          "counts": []
+        },
+        "logo": {
+          "naturalWidth": 129,
+          "alpha": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "background": "rgba(0, 0, 0, 0)",
+          "originalPngPath": true,
+          "optimizerBypassed": true
+        },
+        "sdk": {
+          "remoteScript": true,
+          "loaded": true,
+          "stub": false
+        },
+        "overflow": 0,
+        "navTop": null,
+        "mapBottom": 707,
+        "staleReadySkeletons": 0
+      },
+      "screenshot": "landscape-dark-logo.png"
+    }
+  ],
+  "http": [
+    {
+      "resource": "public PNG",
+      "status": 200,
+      "bytes": 24213,
+      "contentType": "image/png",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "sha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646"
+    },
+    {
+      "resource": "legacy font route",
+      "status": 307,
+      "location": "https://assets.tzudong.app/sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+      "cacheControl": "no-store",
+      "bodyBytes": 0
+    }
+  ],
+  "passed": true
+}

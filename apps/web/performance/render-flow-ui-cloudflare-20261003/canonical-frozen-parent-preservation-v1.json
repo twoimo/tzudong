@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-03T16:38:10.459253+00:00",
+  "verification": {
+    "verifiedFiles": 2183,
+    "artifactMapExternalPinMatches": true
+  },
+  "priorPacket": "render-flow-memory-lifetime-20261001",
+  "externalPinSha256": "dfbe5ef1f7b946cdc21292fa9b225e555f42cc158f090a0ec0a7110683b34b1e",
+  "parentFrozenAndUnmodified": true,
+  "priorCanonicalSourceSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "newUiSourceSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "newUiOrPrototypeRowsAdmittedAsPriorPerformance": false,
+  "newCanonicalHealthAllZeroClaimed": false,
+  "newAppOwnedMatchedP75Produced": false,
+  "newG003OrFieldImprovementClaimed": false
+}

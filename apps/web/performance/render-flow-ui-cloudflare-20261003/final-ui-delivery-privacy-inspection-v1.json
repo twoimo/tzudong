@@ -1,0 +1,58 @@
+{
+  "observedAt": "2026-10-03T16:38:10.538837+00:00",
+  "screenInspections": [
+    {
+      "path": "live-ui-production-v1/desktop-light-logo.png",
+      "sha256": "ba6a705097193130bd1a1cc1626cc7a7622e61ca2a3c8825050ab6d6c8c0df8e",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    },
+    {
+      "path": "live-ui-production-v1/mobile-light-logo.png",
+      "sha256": "80b98074785adc70565f0cfdf18ba85c3fce246b58f3d33a5b7004d3a2e2697d",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    },
+    {
+      "path": "live-ui-production-v1/landscape-dark-logo.png",
+      "sha256": "4af427c2ce29df131100ce6da1a8fa3d792e4f8ffbc23a4af34951b7056b45d3",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    },
+    {
+      "path": "live-ui-production-v1/landscape-light-logo.png",
+      "sha256": "1809d3a2a3ad38fd4a63f9761f12cb14f8e3deda88cc10bb68f228d7dfb551fa",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    },
+    {
+      "path": "live-ui-production-v1/mobile-dark-logo.png",
+      "sha256": "eb5efd71e39ab04b3e7f7fdd98bd20c9a14c97fddebcfc19ebe96dfc8e9cc1ca",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    },
+    {
+      "path": "live-ui-production-v1/desktop-dark-logo.png",
+      "sha256": "b3367d24eea7b65e926edf322f19b16a7b42990ea2a487aee05f38fd1a41190a",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    },
+    {
+      "path": "live-ui-production-v1/tablet-light-logo.png",
+      "sha256": "97126c24690491d6db204c12da453e35c243bb4289f741e176da3a22514b20ad",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    },
+    {
+      "path": "live-ui-production-v1/tablet-dark-logo.png",
+      "sha256": "e713177c6e50da5d9060d43063ccc2bc9616dcfa15227440b5d06648a8d02e7c",
+      "inspected": true,
+      "content": "anonymous logo and search placeholder crop, no profile/review/account content"
+    }
+  ],
+  "textFilesChecked": 109,
+  "literalKnownCredentialOrDeviceTargetMatches": [],
+  "fullPiiDetectionGuaranteed": false,
+  "requestResponseBodiesHeadersQueriesStored": false,
+  "privacyRule": "scoped public pixels and bounded metadata; actual credentials, identifiers, provider error text excluded"
+}

@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-03T13:49:28.786163+00:00",
+  "sourceCommit": "2a4120f1729094b1ca1df2fff72d62bdf4d03a96",
+  "raw": "compact-png-ui-v10/raw.json",
+  "rawSha256": "f02262979e852ed64bef63e51b4f4b0b9a6414a1dce669429282e8f954a51531",
+  "cases": 8,
+  "actualRemoteNaverSdk": true,
+  "syntheticData": true,
+  "allAlphaCornersZero": true,
+  "pngNaturalWidth": 180,
+  "stylesOfLightAndDarkConfirmed": true,
+  "fields": "same152/111.36/128width114height; desktopcountsright533",
+  "previous89615PngDirectPathNotShipped": true,
+  "physicalSamsungForcedDarkNotProven": true,
+  "fieldAdmitted": 0,
+  "packetEvidenceNotFinalized": true
+}

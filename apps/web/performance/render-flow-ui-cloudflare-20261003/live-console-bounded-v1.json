@@ -1,0 +1,74 @@
+{
+  "observedAt": "2026-10-03T16:01:19.264Z",
+  "sourceSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "rawBodiesHeadersQueriesMessagesRetained": false,
+  "cases": [
+    {
+      "name": "desktop",
+      "httpErrors": [
+        {
+          "class": "supabase_public_rest",
+          "status": 401,
+          "method": "GET"
+        },
+        {
+          "class": "supabase_public_rest",
+          "status": 401,
+          "method": "GET"
+        }
+      ],
+      "consoleCodes": [
+        {
+          "code": "csp_block",
+          "source": "naver_public_sdk_tiles"
+        },
+        {
+          "code": "http_resource_error",
+          "source": "supabase_public_rest"
+        },
+        {
+          "code": "http_resource_error",
+          "source": "supabase_public_rest"
+        }
+      ],
+      "requestFailures": [
+        {
+          "class": "naver_public_sdk_tiles",
+          "method": "POST"
+        }
+      ],
+      "pageErrors": 0
+    },
+    {
+      "name": "mobile",
+      "httpErrors": [
+        {
+          "class": "supabase_public_rest",
+          "status": 401,
+          "method": "GET"
+        }
+      ],
+      "consoleCodes": [
+        {
+          "code": "csp_block",
+          "source": "naver_public_sdk_tiles"
+        },
+        {
+          "code": "http_resource_error",
+          "source": "supabase_public_rest"
+        }
+      ],
+      "requestFailures": [
+        {
+          "class": "other_public_resource",
+          "method": "GET"
+        },
+        {
+          "class": "naver_public_sdk_tiles",
+          "method": "POST"
+        }
+      ],
+      "pageErrors": 0
+    }
+  ]
+}

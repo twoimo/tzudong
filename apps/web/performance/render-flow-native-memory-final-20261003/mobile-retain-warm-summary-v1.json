@@ -1,0 +1,209 @@
+{
+  "raw": "mobile-retain-warm-v1/raw.json",
+  "runs": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "medianHeapMB": 66.56954,
+      "peakHeapMB": 118.340444,
+      "endpointHeapMB": 118.340444,
+      "initialHeapMB": 22.4032,
+      "endpointGrowthMB": 95.937244,
+      "frameSamples": 3043,
+      "frameGapP95Ms": 33.400000000001455,
+      "frameGapMaxMs": 416.59999999999854,
+      "gapsAbove50Ms": 123,
+      "longTaskMs": 35438,
+      "allExactMembership": true
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "medianHeapMB": 62.6594,
+      "peakHeapMB": 104.231676,
+      "endpointHeapMB": 83.593488,
+      "initialHeapMB": 19.054396,
+      "endpointGrowthMB": 64.539092,
+      "frameSamples": 5116,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50.10000000000218,
+      "gapsAbove50Ms": 5,
+      "longTaskMs": 0,
+      "allExactMembership": true
+    },
+    {
+      "run": 2,
+      "kind": "candidate",
+      "medianHeapMB": 63.31872,
+      "peakHeapMB": 103.107048,
+      "endpointHeapMB": 90.199376,
+      "initialHeapMB": 18.996384,
+      "endpointGrowthMB": 71.202992,
+      "frameSamples": 5107,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50.10000000000582,
+      "gapsAbove50Ms": 8,
+      "longTaskMs": 0,
+      "allExactMembership": true
+    },
+    {
+      "run": 3,
+      "kind": "baseline",
+      "medianHeapMB": 67.978398,
+      "peakHeapMB": 117.583276,
+      "endpointHeapMB": 107.361604,
+      "initialHeapMB": 22.557908,
+      "endpointGrowthMB": 84.803696,
+      "frameSamples": 3011,
+      "frameGapP95Ms": 33.400000000001455,
+      "frameGapMaxMs": 450.09999999999854,
+      "gapsAbove50Ms": 122,
+      "longTaskMs": 36235,
+      "allExactMembership": true
+    }
+  ],
+  "metrics": {
+    "medianHeapMB": {
+      "before": 67.273969,
+      "after": 62.989059999999995,
+      "beforeProcessRange": [
+        66.56954,
+        67.978398
+      ],
+      "afterProcessRange": [
+        62.6594,
+        63.31872
+      ],
+      "absoluteReduction": 4.284908999999999,
+      "relativeReductionPercent": 6.369341758325571,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "peakHeapMB": {
+      "before": 117.96186,
+      "after": 103.669362,
+      "beforeProcessRange": [
+        117.583276,
+        118.340444
+      ],
+      "afterProcessRange": [
+        103.107048,
+        104.231676
+      ],
+      "absoluteReduction": 14.292497999999995,
+      "relativeReductionPercent": 12.11620264380368,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "endpointHeapMB": {
+      "before": 112.851024,
+      "after": 86.896432,
+      "beforeProcessRange": [
+        107.361604,
+        118.340444
+      ],
+      "afterProcessRange": [
+        83.593488,
+        90.199376
+      ],
+      "absoluteReduction": 25.95459199999999,
+      "relativeReductionPercent": 22.998986699491528,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "frameGapP95Ms": {
+      "before": 33.400000000001455,
+      "after": 16.799999999999272,
+      "beforeProcessRange": [
+        33.400000000001455,
+        33.400000000001455
+      ],
+      "afterProcessRange": [
+        16.799999999999272,
+        16.799999999999272
+      ],
+      "absoluteReduction": 16.600000000002183,
+      "relativeReductionPercent": 49.70059880239958,
+      "guardTolerancePercent": 15,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "frameGapMaxMs": {
+      "before": 433.34999999999854,
+      "after": 50.100000000004,
+      "beforeProcessRange": [
+        416.59999999999854,
+        450.09999999999854
+      ],
+      "afterProcessRange": [
+        50.10000000000218,
+        50.10000000000582
+      ],
+      "absoluteReduction": 383.24999999999454,
+      "relativeReductionPercent": 88.43890619591458,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "gapsAbove50Ms": {
+      "before": 122.5,
+      "after": 6.5,
+      "beforeProcessRange": [
+        122,
+        123
+      ],
+      "afterProcessRange": [
+        5,
+        8
+      ],
+      "absoluteReduction": 116.0,
+      "relativeReductionPercent": 94.6938775510204,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "longTaskMs": {
+      "before": 35836.5,
+      "after": 0.0,
+      "beforeProcessRange": [
+        35438,
+        36235
+      ],
+      "afterProcessRange": [
+        0,
+        0
+      ],
+      "absoluteReduction": 35836.5,
+      "relativeReductionPercent": 100.0,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    }
+  },
+  "freshProcessesPerVariant": 2,
+  "dependentCyclesPerProcess": 60,
+  "independentDevices": 0,
+  "mobileEmulation": true,
+  "cpuRate": 4,
+  "actualSdk": true,
+  "forcedGC": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "regressionGuardsPassed": true,
+  "limitations": [
+    "no independently matched warm A/A; n2 processes per variant, no population confidence interval",
+    "positive within-process natural-heap growth remains visible and is not evidence of a resolved leak",
+    "rAF p95 refers to thousands of frame gaps within each finite process window, not user latency p95",
+    "prototype source is committed UI plus the retained experimental patch, not yet the production memory implementation"
+  ]
+}

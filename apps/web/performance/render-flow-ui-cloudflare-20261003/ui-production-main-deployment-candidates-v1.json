@@ -1,0 +1,71 @@
+{
+  "observedAt": "2026-10-03T15:40:28.913071+00:00",
+  "projectVerified": true,
+  "deployments": [
+    {
+      "id": "dpl_HY5iVLSAobPD4RC19xxpTrWrL6sr",
+      "url": "tzudong-doyqhiqtm-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "gitSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+      "ref": "main"
+    },
+    {
+      "id": "dpl_G55TzNuyiMaUJPZ4tMBKiCpJjT3G",
+      "url": "tzudong-p9w13r5wi-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "ref": "main"
+    },
+    {
+      "id": "dpl_6ghFkpwCQAb2zWKyytKdfsV9c9wM",
+      "url": "tzudong-n4hy05u1i-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "gitSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "ref": "main"
+    },
+    {
+      "id": "dpl_7cRLCj7QpUA4SiCDYS9p9iagJv8c",
+      "url": "tzudong-q01xhhc9x-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+      "ref": "main"
+    },
+    {
+      "id": "dpl_ELXBuvG4rQ7MgDvcW6fmdJB8AYQ9",
+      "url": "tzudong-6m85jftt1-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "gitSha": "b977c717a7c3f06d1b5269f74437c6ac57829176",
+      "ref": "main"
+    },
+    {
+      "id": "dpl_6KxTFSFu79mVynCU4tubaYsiuvgL",
+      "url": "tzudong-l967utqik-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+      "ref": "main"
+    },
+    {
+      "id": "dpl_EEdU7nEerKvs67JyWzRNXpCq1s6e",
+      "url": "tzudong-blt92vmmv-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "gitSha": "e728c8ec5dc7889028054e9d2346d4ef1cafe184",
+      "ref": "main"
+    },
+    {
+      "id": "dpl_EWyZkP5BW8adjrSG5jiJ2anoJTwM",
+      "url": "tzudong-ib4jq4sah-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "ref": "main"
+    }
+  ],
+  "secretConfigurationOrDiagnosticsRetained": false
+}

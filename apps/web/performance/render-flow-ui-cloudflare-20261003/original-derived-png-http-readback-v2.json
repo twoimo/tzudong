@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-03T14:46:52.392182+00:00",
+  "sourceCommit": "0acbcb395a7b91fe1021531c28cd68c2bd8b9e31",
+  "urlPath": "/logo-png-129-8d374bb80346.png",
+  "status": 200,
+  "contentType": "image/png",
+  "cacheControl": "public, max-age=31536000, immutable",
+  "bytes": 24213,
+  "previousFullPngBytes": 89915,
+  "absoluteBodyByteReduction": 65702,
+  "relativeBodyByteReductionPercent": 73.07123394316855,
+  "actualOldOptimizedTransferComparisonNotMade": true,
+  "centerAndHoleBrowserAlphaGate": "original-derived-png-ui-v11/raw.json",
+  "nearestDerivedAssetNeedsNativeForcedDarkCheck": true
+}

@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-03T13:18:05.842103+00:00",
+  "runId": 37123983624,
+  "attempt": 2,
+  "rerunSpecificOriginalJob": 111205486843,
+  "newJobId": 111208433041,
+  "stillLiveAtReadback": true,
+  "thresholdChanged": false,
+  "originalFailureFile": "ci-windows-bun-sampler-failure-v1.json",
+  "mainMergeNotAttemptedWhilePending": true,
+  "remainingPhysicalBlocker": "ADB ports closed; user reconnection question pending",
+  "goalStatus": "active"
+}

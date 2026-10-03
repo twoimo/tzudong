@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-03T15:25:35.010922+00:00",
+  "thread": {
+    "id": "PRRT_kwDOQGRyNc6onuXU",
+    "isResolved": true
+  },
+  "verifiedDataHead": "dd37016ec753059e8ca5901ffb6571ca880ae9db",
+  "assetBytes": 24213,
+  "assetSha256": "8d374bb803469959cb37a2f6193f177d063265d077f717de0dc6dcc64bc3a646",
+  "reviewedOriginalUnoptimizedPNGBytes": 89915,
+  "originalPNGUnchanged": true,
+  "browserAlphaAndResponsiveEvidence": "original-derived-png-ui-v11/raw.json",
+  "sourceTreeMatchesTested": true
+}

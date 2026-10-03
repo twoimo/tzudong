@@ -1,0 +1,22 @@
+{
+  "observedAt": "2026-10-03T14:22:27.188188+00:00",
+  "derivatives": [
+    {
+      "file": "rejected-png-derivatives-v1/logo-mark-128-ca9551920578.png",
+      "sha256": "ca9551920578af5c0fbb0aefb8aa60835ed4c27f2426c0986642c3912a62b51b",
+      "bytes": 25107,
+      "reason": "Geometric center alpha97; strict center-zero candidate gate failed",
+      "privateData": false
+    },
+    {
+      "file": "rejected-png-derivatives-v1/logo-png-128-1a36669e4fd7.png",
+      "sha256": "1a36669e4fd76674101f08fadd95a0d2ff3a09010365a6052a42113e0bbf216b",
+      "bytes": 26411,
+      "reason": "Exact WebP pixel equivalence but geometric center alpha100; not adopted",
+      "privateData": false
+    }
+  ],
+  "originalRasterAssetsUnmodified": true,
+  "appleCandidateRejected": "original semanticCenter90,65was0 but geometric90,90alpha47; narrower corner test missed edge coverage; automatic255claim not exactPILreadback",
+  "chosenOriginalDerived129CenterAlpha": 0
+}

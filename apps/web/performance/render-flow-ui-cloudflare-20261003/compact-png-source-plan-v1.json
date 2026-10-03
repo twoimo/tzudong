@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-10-03T13:36:56.819517+00:00",
+  "sourceCommit": "2a4120f1729094b1ca1df2fff72d62bdf4d03a96",
+  "existingOriginalAsset": "public/apple-touch-icon.png",
+  "pngSize": [
+    180,
+    180
+  ],
+  "oldDirectPngSourceBytes": 89915,
+  "newDirectPngSourceBytes": 14801,
+  "absoluteSourceByteReduction": 75114,
+  "relativeSourceByteReductionPercent": 83.53889784796753,
+  "sameRasterAssetsUnmodified": true,
+  "formatRetained": "PNG",
+  "cornerAlpha": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "pinCenterAlpha": 0,
+  "newPngSha256": "b5dc8bb3c8e207062935c08cac8cab143df3dbdb42cd9f9634b6f845e4519f37",
+  "fourUiImageRefsUpdated": true,
+  "fixedCssDimensionsUnchanged": true,
+  "samplingOfActualPriorOptimizedTransfer": false,
+  "fieldLatencyGainClaim": false,
+  "reviewThread": "PRRT_kwDOQGRyNc6onuXU",
+  "resolveOnlyAfterProtectedPromotionAndVerifiedDataHead": true
+}

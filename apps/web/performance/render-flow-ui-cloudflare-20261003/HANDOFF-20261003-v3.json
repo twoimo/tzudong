@@ -1,0 +1,32 @@
+{
+  "observedAt": "2026-10-03T13:14:25.197168+00:00",
+  "mainPromotionPr": "https://github.com/twoimo/tzudong/pull/3102",
+  "mainHeadExpectedData": "79bc3099018d5292eea82d40f8d3071287a2c9ff",
+  "productionSourceLastObserved": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "mainNotMergedAtCheckpoint": true,
+  "ciSpecificRetry": {
+    "runId": 37123983624,
+    "originalJobId": 111205486843,
+    "requestedOnce": true,
+    "reason": "warmup sampler86.8554ms gap exceeded unchanged60ms limit; no performance result admitted"
+  },
+  "nativePhoneQuestionPending": true,
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong",
+  "sourceCommit": "bca48572eabd1f20eaf6ff529141c43460d25ad5",
+  "memoryUncommittedFiles": [
+    "apps/web/lib/marker-pool.ts",
+    "apps/web/tests-unit/marker-pool.test.ts"
+  ],
+  "successfulMemoryExperiment": "ret-v1/V7Samsung4tabs; Chrome,frame,cold,large,sourceadoption anddeploy pending",
+  "evidenceRemoteCommit": "037f66ec95b42ca99cb4b7bbbabbe52293a6e92f",
+  "gitBlobReadbackArtifacts": 366,
+  "remaining": [
+    "Complete CI then protected main merge",
+    "Fresh exactproject+rollback+guard update; READYdeploy andindependentWWWreadback",
+    "LivePNG andfilter/header/font/CSP/SDK verification",
+    "PhysicalSamsungforceddarkPNG/Chrome retention whenADB restored",
+    "Finalmemoryintegration/regression checks andcanonical evidence maps/report",
+    "Prospective field cohorts remain insufficient; keep collection andno gain claim"
+  ],
+  "originalGoalActive": true
+}

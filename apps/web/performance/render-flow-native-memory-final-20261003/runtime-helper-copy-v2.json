@@ -1,0 +1,21 @@
+{
+  "copied": [
+    {
+      "source": "render-flow-memory-lifetime-20261001/real-sdk-runtime-minimal-probe-v2.mjs",
+      "destination": "real-sdk-runtime-retain-v2.mjs",
+      "sha256": "4ef9cde6372a059b0f1a24ff065d91917fa195af5e3e68dcbcae84817fad6fd5",
+      "bytes": 11161,
+      "exactByteCopy": true
+    },
+    {
+      "source": "render-flow-memory-lifetime-20261001/catalog.mjs",
+      "destination": "catalog.mjs",
+      "sha256": "230a084b2e50a46603e5400af6225baccfdd75d810d933236b7de8801cbddf1d",
+      "bytes": 618,
+      "exactByteCopy": true
+    }
+  ],
+  "frozenParentUnmodified": true,
+  "initialCopyStoppedSafelyAtExistingIdenticalCatalog": true,
+  "existingBytesVerifiedBeforeReuse": true
+}

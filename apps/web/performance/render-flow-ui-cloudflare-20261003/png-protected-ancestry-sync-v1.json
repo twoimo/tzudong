@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-03T15:02:00.571005+00:00",
+  "head": "85aa2cdb125bfeae0cd1f0eb5ae82453e20558bc",
+  "developBase": "f85b638c0149ba2d63e70a620ee1988928b3a148",
+  "dataParent": "79bc3099018d5292eea82d40f8d3071287a2c9ff",
+  "contentDiffPaths": [],
+  "protectionStrict": true,
+  "prUrl": "https://github.com/twoimo/tzudong/pull/3105",
+  "ownDirtyMemoryFilesExcluded": true
+}

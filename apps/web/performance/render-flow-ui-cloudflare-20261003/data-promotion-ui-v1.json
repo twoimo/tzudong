@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-03T12:48:44.140369+00:00",
+  "pr": "https://github.com/twoimo/tzudong/pull/3101",
+  "dataMerge": "79bc3099018d5292eea82d40f8d3071287a2c9ff",
+  "headAtMerge": "8bd6cf5cb633996d8f18ed7c5d3189dd699a7af3",
+  "allCiChecksPassed": true,
+  "protectedMerge": true,
+  "forceOrAdminBypass": false,
+  "productionStillPriorSource": true
+}

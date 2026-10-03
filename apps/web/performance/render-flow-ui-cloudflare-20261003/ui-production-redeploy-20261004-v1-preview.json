@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-03T15:45:36.170239+00:00",
+  "exactProjectVerified": true,
+  "approvedMainSha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+  "redeploySourceId": "dpl_HY5iVLSAobPD4RC19xxpTrWrL6sr",
+  "sourceState": "CANCELED",
+  "namedRollback": {
+    "id": "dpl_G55TzNuyiMaUJPZ4tMBKiCpJjT3G",
+    "url": "tzudong-p9w13r5wi-twoimos-projects.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "gitSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99"
+  },
+  "guardNotDisabled": true,
+  "otherConfigurationChanged": false
+}

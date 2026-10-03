@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-03T15:09:53.111336+00:00",
+  "validSamples": 0,
+  "reason": "default Playwright headless-shell executable unavailable; installed Chrome will be selected explicitly",
+  "productRegression": false,
+  "ownedOrphanRuntimeTerminated": 0,
+  "globalProcessesChanged": false,
+  "measurementsNotOverwritten": true
+}

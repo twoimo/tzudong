@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-03T13:04:40.526193+00:00",
+  "runId": 37123983624,
+  "jobId": 111205486843,
+  "artifactId": 11273359677,
+  "artifactEntry": "835c124b08f65a93fc48e6288ac6b33aa53509b6/windows-bun/failure-receipt.json",
+  "sha256": "74879bd33c9f3f43184961cc1439da0109a27a7c62b3a8f2a31fd029e5bea147",
+  "failureCode": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+  "samplingGapMs": 86.85540000000037,
+  "fixedAllowedGapMs": 60,
+  "warmupEvidenceRejected": true,
+  "performanceRegressionMeasurementProduced": false,
+  "thresholdChanged": false,
+  "retryPendingCompletedRun": true
+}

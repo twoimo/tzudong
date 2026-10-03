@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-03T13:47:04.178326+00:00",
+  "sourceCommit": "2a4120f1729094b1ca1df2fff72d62bdf4d03a96",
+  "samples": [
+    {
+      "path": "/logo.png",
+      "status": 200,
+      "contentType": "image/png",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "bytes": 89915,
+      "sha256": "6b0a06ce493dbf34e3dd69b2fad2db542a4ba2d717f590016f6fa7a04c7cd4ba"
+    },
+    {
+      "path": "/apple-touch-icon.png",
+      "status": 200,
+      "contentType": "image/png",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "bytes": 14801,
+      "sha256": "b5dc8bb3c8e207062935c08cac8cab143df3dbdb42cd9f9634b6f845e4519f37"
+    }
+  ],
+  "absoluteFullPngRequestByteReduction": 75114,
+  "relativeFullPngRequestByteReductionPercent": 83.53889784796753,
+  "priorNextOptimizedRequestBytesNotClaimed": true,
+  "coldLabHttpBytesNotFieldLatency": true,
+  "rawBodiesPersisted": false
+}
