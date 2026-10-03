@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-03T16:52:55.936297+00:00",
+  "evidenceBlobCommit": "f2af1e2441ce8e91b9c82ba990760eccf8330f9b",
+  "remoteBranch": "codex/render-memory-evidence-20261002",
+  "remoteHeadMatches": true,
+  "verifiedGitBlobFiles": 558,
+  "uiMapSha256": "336300fb58c9194227ff27c2a14ce07534166ae265fce61bef15cf5d02a43b00",
+  "cloudflareMapSha256": "7157406a6bfd178b201a5450bcf6f142aed9d61b52a729e3f9d00d462707647b",
+  "frozenRootsNotModified": true,
+  "nativeRootStillMutableForRemainingGoal": true,
+  "globalGoalComplete": false
+}

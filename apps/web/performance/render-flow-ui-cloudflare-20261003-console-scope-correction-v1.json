@@ -1,0 +1,8 @@
+{
+  "observedAt": "2026-10-03T16:57:37.552537+00:00",
+  "appliesTo": "render-flow-ui-cloudflare-20261003/REPORT-DELIVERED-20261004.md and commentary",
+  "observed": "Naver SDK-family POST was blocked by CSP; REST GET401 and no observed pageerror were recorded",
+  "limit": "Bounded classification does not establish the exact POST endpoint/purpose. Any statistics/telemetry description is an inference, not a verified root cause. No global error-free or new canonical-health-zero claim is made.",
+  "rawDiagnosticsRetained": false,
+  "pngTransparencyAndDeploymentConclusionChanged": false
+}
