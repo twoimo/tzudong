@@ -121,3 +121,14 @@ Windows npm 측정 실패 영수증은 샘플 간격 141.397ms를 기록했다. 
 일반 `db push`는 timestamp를 비교하므로 이 두 운영 이력에는 준비한 호환 workspace를 사용한다. [공식 CLI 문서](https://supabase.com/docs/reference/cli/supabase-migration-repair)는 history repair가 SQL 실행 없이 이력을 바꾸는 작업임을 설명한다. 이번 단계에서는 DB 이력을 변경하거나 테이블을 다시 생성하지 않았다. 격리 재생 전용 owner membership window는 transaction 안에서 원상복구하며 hosted SQL에는 추가하지 않는다.
 
 보호 CI의 전체 fresh replay와 운영 SQL 적용·배포 readback은 후속 단계다. 기존 측정 파일을 새 실행으로 덮어쓴 시도는 `storyboard-history-output-attempt.json`으로 분리했고, 기존 파일의 frozen bytes를 복원했다.
+
+
+## 재검수 진행·시간 경계 보완
+
+추가 `20261003193717_restaurant_review_claim_progress.sql`은 이미 적용한 worker SQL을 수정하지 않고 새 버전으로 보완한다. 오래된 항목은 200개까지만 정리하고, 유효 후보는 현재 맛집 행과 fingerprint를 함께 확인해 대기열의 어느 위치에서도 선택한다. 격리 PG17.6에서 오래된 항목 250개 뒤의 유효 항목이 첫 claim 요청에서 선택됐으며 전체 **83/83** 경계 검증을 통과했다. 실제 provider call은 0회다.
+
+허용 실행은 자막 수집이 필요한 경우를 포함해 최대 6개 순차 명령 × 480초 = **2,880초(48분)**다. 임대는 **1,800 → 3,600초**, 차이 +1,800초·+100%로 보완한다. RPC 두 번의 20초 한도를 포함한 2,920초보다 680초 길다. 이는 설정으로 계산한 상한이며 통계적 신뢰구간을 만들지 않는다. 개별 명령 timeout·provider 호출 횟수·재검수 1건 한도는 유지한다. 중단된 프로세스의 임대 만료 대기 상한은 30분 악화될 수 있다. 48분을 경과한 임대 상태의 완료 readback과 2초 lock timeout 보존도 검증했다.
+
+Catalog CI의 제한된 재생 계정이 Gemini 교체 단계에서 기존 함수 owner에 접근하지 못한 실패를 확인했다. immutable SQL의 hash에 결속한 transaction 내부 membership window를 해당 단계에도 적용한 후, run **37146883677**의 독립 재생 두 번·비교가 통과했다. 이후 다른 작업의 모바일 marker 보완을 정상 merge로 보존했고 관련 29개 검사가 통과했다.
+
+CLI 호환 작업 폴더도 늦은 helper 권한 복구를 registry prerequisite 전에 실행하도록 순서를 명시한다. 두 원본 SQL 파일은 그대로 보존하며, 이미 registry가 적용된 ledger에는 변환을 추가하지 않는다. 이 dependency adapter와 기존 source/history 검증 **9개**가 통과했다. 운영 DB 변경과 원래 SQL 실행을 증명한 것으로 표시하지 않는다.

@@ -29,6 +29,18 @@ def prepare(root: Path, ledger: dict, destination: Path) -> dict:
             raise ValueError('migration_workspace_ledger_duplicate')
         by_version[row['version']]=row
     plan={p.name:p.read_bytes() for p in (root/'backend/supabase/migrations').glob('*.sql')}
+    dependencies=[]
+    registry='20261003065736_g014_current_service_rpc_registry.sql'
+    restoration='20261003095444_restore_service_identity_helpers.sql'
+    if registry[:14] not in by_version:
+        original=plan[registry]
+        # The later restoration is idempotent. Run its exact bytes before the
+        # registry prerequisite, preserving both immutable canonical SQL files.
+        plan[registry]=plan[restoration]+b'\n'+original
+        dependencies.append({'target':registry,'predecessor':restoration,
+            'canonicalSha256':hashlib.sha256(original).hexdigest(),
+            'predecessorSha256':hashlib.sha256(plan[restoration]).hexdigest(),
+            'workspaceSha256':hashlib.sha256(plan[registry]).hexdigest()})
     manifest=json.loads((root/RECEIPTS/'manifest.json').read_text())
     aliases=[]
     for item in manifest['receipts']:
@@ -58,7 +70,7 @@ def prepare(root: Path, ledger: dict, destination: Path) -> dict:
     for name,body in sorted(plan.items()):
         (directory/name).write_bytes(body)
     report={'kind':'read-only-migration-workspace-plan','databaseMutations':False,
-            'aliases':aliases,'fileCount':len(plan),'files':[{'name':name,'sha256':hashlib.sha256(body).hexdigest()} for name,body in sorted(plan.items())]}
+            'aliases':aliases,'dependencyAdapters':dependencies,'fileCount':len(plan),'files':[{'name':name,'sha256':hashlib.sha256(body).hexdigest()} for name,body in sorted(plan.items())]}
     (destination/'migration-workspace-plan.json').write_text(json.dumps(report,indent=2)+'\n')
     return report
 

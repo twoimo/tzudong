@@ -56,6 +56,23 @@ class StoryboardHistoryTests(unittest.TestCase):
             report=prepare(ROOT,ledger,Path(temp)/'both')
             self.assertEqual(report['aliases'],[])
 
+    def test_registry_dependency_precedes_verification_without_source_changes(self):
+        registry='20261003065736_g014_current_service_rpc_registry.sql'
+        restoration='20261003095444_restore_service_identity_helpers.sql'
+        canonical=(ROOT/'backend/supabase/migrations'/registry).read_bytes()
+        dependency=(ROOT/'backend/supabase/migrations'/restoration).read_bytes()
+        with tempfile.TemporaryDirectory() as temp:
+            destination=Path(temp)/'fresh'
+            report=prepare(ROOT,{'migrations':[]},destination)
+            self.assertEqual((destination/'supabase/migrations'/registry).read_bytes(),dependency+b'\n'+canonical)
+            self.assertEqual(len(report['dependencyAdapters']),1)
+            self.assertEqual((ROOT/'backend/supabase/migrations'/registry).read_bytes(),canonical)
+        with tempfile.TemporaryDirectory() as temp:
+            destination=Path(temp)/'already_applied'
+            report=prepare(ROOT,{'migrations':[{'version':registry[:14],'name':Path(registry).stem[15:]}]},destination)
+            self.assertEqual(report['dependencyAdapters'],[])
+            self.assertEqual((destination/'supabase/migrations'/registry).read_bytes(),canonical)
+
     def test_unverified_receipts_and_duplicate_history_fail_before_files(self):
         for change in ('hash','name','count','duplicate'):
             ledger=self.ledger()

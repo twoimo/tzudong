@@ -17,6 +17,7 @@ from psycopg2.extras import Json
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATION = ROOT / 'backend/supabase/migrations/20261003081915_restaurant_review_automation.sql'
 MANUAL_MIGRATION = ROOT / 'backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql'
+CLAIM_MIGRATION = ROOT / 'backend/supabase/migrations/20261003193717_restaurant_review_claim_progress.sql'
 
 
 def main(argv=None):
@@ -49,6 +50,7 @@ def main(argv=None):
         cursor.execute(MIGRATION.read_text())
         if args.manual_guards:
             cursor.execute(MANUAL_MIGRATION.read_text())
+            cursor.execute(CLAIM_MIGRATION.read_text())
         actor = str(uuid.uuid4())
         cursor.execute('INSERT INTO public.user_roles VALUES(%s,\'admin\'); INSERT INTO public.user_account_status VALUES(%s,\'active\')', (actor,actor))
         row = dict(id=str(uuid.uuid4()),status='pending',origin_name='합성 식당',approved_name='합성 식당',naver_name='합성 식당',trace_id='fixture-1',youtube_link='https://www.youtube.com/watch?v=ABCDEFGHIJK',
@@ -229,11 +231,27 @@ def main(argv=None):
                 checks[role+'_manual_rpc_denied']=denied('SELECT public.restaurant_review_automation_manual(%s,\'preview-run\',\'\',\'\',NULL)',(actor,))
                 cursor.execute('RESET ROLE')
             checks['tick_keeps_lock_timeout']=scalar("SELECT proconfig @> ARRAY['lock_timeout=2s'] FROM pg_proc WHERE oid='public.restaurant_review_automation_tick(uuid)'::regprocedure")
+            cursor.execute('UPDATE pipeline_control.restaurant_review_policy SET enabled=true,version=version+1')
+            valid=insert(200,lambda value:value['evaluation_results']['visit_authenticity'].update(eval_basis=''))
+            tick()
+            cursor.execute('RESET ROLE')
+            cursor.execute("INSERT INTO pipeline_control.restaurant_review_items(restaurant_id,fingerprint,decision,reason,state,created_at) SELECT gen_random_uuid(),md5(value::text),'recheck','missing_evaluation','queued',now()-interval '1 day' FROM generate_series(1,250) value")
+            cursor.execute('SET ROLE service_role')
+            valid_token=str(uuid.uuid4()); valid_claim=worker('claim',token=valid_token)
+            checks['valid_claim_passes_250_stale_items']=valid_claim is not None and valid_claim['restaurant']['id']==valid['id']
+            checks['stale_cleanup_bounded_at_200']=scalar("SELECT count(*) FROM pipeline_control.restaurant_review_items WHERE reason='source_changed' AND state='cancelled' AND created_at<now()-interval '1 hour'")==200
+            lease_seconds=scalar('SELECT extract(epoch FROM lease_until-now()) FROM pipeline_control.restaurant_review_items WHERE id=%s',(valid_claim['id'],))
+            checks['lease_covers_six_480s_commands_and_control_calls']=lease_seconds>6*480+2*20
+            cursor.execute('RESET ROLE');cursor.execute("UPDATE pipeline_control.restaurant_review_items SET lease_until=lease_until-interval '48 minutes' WHERE id=%s",(valid_claim['id'],));cursor.execute('SET ROLE service_role')
+            # At the end of a 48-minute run, the 60-minute lease remains valid.
+            checks['long_run_completion_stays_valid']=worker('complete',valid_claim['id'],valid_token,{'evaluation_results':row['evaluation_results']})['state']=='succeeded'
+            checks['worker_keeps_lock_timeout']=scalar("SELECT proconfig @> ARRAY['lock_timeout=2s'] FROM pg_proc WHERE oid='public.restaurant_review_automation_worker(text,uuid,uuid,jsonb)'::regprocedure")
         result=dict(kind='synthetic-restaurant-review-automation',postgresVersion=version,hostedMutation=False,
                     migrationSha256=hashlib.sha256(MIGRATION.read_bytes()).hexdigest(),assertions=checks,passed=sum(checks.values()),total=len(checks),success=all(checks.values()))
         if args.manual_guards:
             result['manualMigrationSha256']=hashlib.sha256(MANUAL_MIGRATION.read_bytes()).hexdigest()
-        output=ROOT/'apps/web/performance/ui-renewal-20261003'/('restaurant-automation-manual-local.json' if args.manual_guards else 'restaurant-automation-local.json')
+            result['claimMigrationSha256']=hashlib.sha256(CLAIM_MIGRATION.read_bytes()).hexdigest()
+        output=ROOT/'apps/web/performance/ui-renewal-20261003'/('restaurant-automation-claim-local.json' if args.manual_guards else 'restaurant-automation-local.json')
         output.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps(result,ensure_ascii=False))
         if not result['success']: return 1
