@@ -1,4 +1,4 @@
-import { mediaPool, boundedLimit, mapBounded } from '../../utils/resource-budget.mjs';
+import { mediaPool, boundedLimit, mapBounded, networkConcurrency } from '../../utils/resource-budget.mjs';
 import { mediaInputHash, frameInputFingerprint, reusableFrames, withFrameWriter, publishFrames } from '../../utils/frame-receipt.mjs';
 /**
  * 유튜브 히트맵 기반 고화질 프레임 추출 및 자동 수집기
@@ -2330,9 +2330,7 @@ async function processBatch(params, dependencies = {}) {
     }
     
     // 명시적 환경변수가 있으면 최우선 적용
-    if (process.env.MAX_JOBS) {
-        CONCURRENCY = boundedLimit(process.env.PIPELINE_NETWORK_JOBS || process.env.MAX_JOBS, CONCURRENCY, CONCURRENCY);
-    }
+    CONCURRENCY = networkConcurrency(CONCURRENCY);
     
     log('info', 'FRAME_CONCURRENCY_CONFIGURED');
 

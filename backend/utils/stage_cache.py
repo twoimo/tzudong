@@ -11,6 +11,8 @@ from contextlib import contextmanager
 import hashlib
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 from typing import Iterator
@@ -117,9 +119,33 @@ def stage_lock(receipt: Path) -> Iterator[None]:
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
 
+STAGE_REUSED_EXIT = 10
+
+
+def run_stage(receipt: Path, inputs: list[Path], outputs: list[Path], command: list[str], *,
+              metadata: list[Path] = (), assets: list[Path] = (), settings: object = None,
+              force: bool = False) -> int:
+    """Own the lock across admission, child execution and receipt publication."""
+    if not command:
+        raise ValueError('stage_command_missing')
+    with stage_lock(receipt):
+        expected=fingerprint(inputs,metadata=metadata,assets=assets,settings=settings)
+        if not force and reusable(receipt,expected,outputs):
+            return STAGE_REUSED_EXIT
+        env=os.environ.copy()
+        env['TZUDONG_STAGE_LOCK_RECEIPT']=str(receipt.resolve())
+        result=subprocess.run(command,env=env,check=False)
+        if result.returncode:
+            return result.returncode
+        if fingerprint(inputs,metadata=metadata,assets=assets,settings=settings)!=expected:
+            return 1
+        complete(receipt,expected,outputs)
+        return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("check", "complete", "fingerprint", "scan"))
+    parser.add_argument("action", choices=("check", "complete", "fingerprint", "scan", "run"))
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--input", type=Path, action="append", default=[])
     parser.add_argument("--metadata", type=Path, action="append", default=[])
@@ -128,8 +154,14 @@ def main() -> int:
     parser.add_argument("--setting", action="append", default=[])
     parser.add_argument("--expected", default=None)
     parser.add_argument("--scan-dir", type=Path)
-    args = parser.parse_args()
+    parser.add_argument("--force", action='store_true')
+    argv=sys.argv[1:]
+    separator=argv.index('--') if '--' in argv else len(argv)
+    args = parser.parse_args(argv[:separator])
     try:
+        if args.action == 'run':
+            return run_stage(args.receipt,args.input,args.output,argv[separator+1:],
+                             metadata=args.metadata,assets=args.asset,settings=args.setting,force=args.force)
         if args.action == "scan":
             if args.scan_dir is None:
                 return 1

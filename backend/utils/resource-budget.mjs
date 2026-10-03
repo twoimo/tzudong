@@ -6,6 +6,10 @@ export function boundedLimit(value, fallback, ceiling = 8) {
     return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(parsed, ceiling) : fallback;
 }
 
+export function networkConcurrency(defaultLimit, env = process.env) {
+    return boundedLimit(env.PIPELINE_NETWORK_JOBS || env.MAX_JOBS, defaultLimit, defaultLimit);
+}
+
 export class Semaphore {
     constructor(limit) { this.limit = limit; this.active = 0; this.waiters = []; }
     async run(work) {

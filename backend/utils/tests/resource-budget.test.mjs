@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Semaphore, mapBounded, boundedLimit } from '../resource-budget.mjs';
+import { Semaphore, mapBounded, boundedLimit, networkConcurrency } from '../resource-budget.mjs';
 
 test('nested jobs share one resource cap and retain input order', async () => {
     const pool = new Semaphore(2);
@@ -34,4 +34,18 @@ test('a failure drains active jobs before returning and stops new admissions', a
     assert.equal(completed, true);
     assert.deepEqual(visited, [0, 1]);
     await assert.rejects(mapBounded([0], 0, async () => 1));
+});
+test('a standalone network limit bounds work without MAX_JOBS', async () => {
+    const env = { PIPELINE_NETWORK_JOBS: '1' };
+    let active = 0, peak = 0;
+    await mapBounded([0,1,2,3], networkConcurrency(8, env), async () => {
+        peak = Math.max(peak, ++active);
+        await new Promise(resolve => setTimeout(resolve, 1));
+        active--;
+    });
+    assert.equal(peak, 1);
+    assert.equal(networkConcurrency(8, { MAX_JOBS: '2' }), 2);
+    assert.equal(networkConcurrency(4, { PIPELINE_NETWORK_JOBS: '1', MAX_JOBS: '3' }), 1);
+    assert.equal(networkConcurrency(4, { PIPELINE_NETWORK_JOBS: '100' }), 4);
+    assert.equal(networkConcurrency(4, {}), 4);
 });

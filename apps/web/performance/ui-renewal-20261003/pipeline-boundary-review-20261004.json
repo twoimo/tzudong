@@ -1,0 +1,48 @@
+{
+  "kind": "synthetic-receipt-and-review-boundary-verification",
+  "providerCalls": 0,
+  "hostedMutations": false,
+  "python": {
+    "passed": 33,
+    "failed": 0
+  },
+  "node": {
+    "passed": 5,
+    "failed": 0
+  },
+  "layout": {
+    "passed": 6,
+    "failed": 0
+  },
+  "actualStep08Dispatch": {
+    "invocations": 2,
+    "workExecutions": 1,
+    "duplicateWorkExecutions": 0,
+    "samples": 1,
+    "confidenceInterval95": null,
+    "statisticalPerformanceClaim": false
+  },
+  "standaloneNetworkLimit": {
+    "configured": 1,
+    "legacyMaxJobsPresent": false,
+    "observedPeak": 1,
+    "defaultCeilingUsedInFixture": 8
+  },
+  "reviewCompletion": {
+    "requiredEvaluationFamiliesBefore": 4,
+    "requiredEvaluationFamiliesAfter": 7,
+    "incompleteResultsRejectedBeforeSave": true,
+    "approvalPredicateUnchanged": true
+  },
+  "limits": [
+    "Local synthetic work; no real Gemini or database requests.",
+    "No before/after latency or monetary saving claim."
+  ],
+  "sourceSha256": {
+    "backend/bin/run_restaurant_review_automation.py": "67ddbf38ed1177422873609baf0e67e9e3e5d3446873a937c238c2a48fd9be88",
+    "backend/utils/stage_cache.py": "9d8232c87cba780df09f6f4ea393d9144be7b4f0b0147490aa485b92cb27e02a",
+    "backend/utils/resource-budget.mjs": "7b09eff5084770c4eee889e6d8aac41705276ad1ba91e4ec6b7c9132905cf40c",
+    "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh": "0ae35b33ecccc07dfda6e7a5762b57220940b0ac14561c34f9b8cabfa921f0a5",
+    "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js": "511920c4242b7a1e702275fa9b8729046030cf48e4f5c2d0eb4c72841e2cbbb3"
+  }
+}

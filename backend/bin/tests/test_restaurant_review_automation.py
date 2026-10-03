@@ -1,4 +1,5 @@
 from pathlib import Path
+import copy
 import json
 import tempfile
 import unittest
@@ -8,6 +9,13 @@ from backend.bin import run_hosted_new_video_pipeline as runner
 
 
 class ReviewWorkerTests(unittest.TestCase):
+    @staticmethod
+    def complete_metrics():
+        return {**{key:{'eval_value':1,'eval_basis':'synthetic'} for key in ['visit_authenticity','rb_inference_score','review_faithfulness_score']},
+                'rb_grounding_TF':{'eval_value':True,'eval_basis':'synthetic'},
+                'category_TF':{'eval_value':True},'category_validity_TF':{'eval_value':True},
+                'location_match_TF':{'eval_value':True,'match_status':'matched','evidence_families':['source_geo','provider_candidate']}}
+
     def test_stored_original_fields_are_preserved_without_inventing_evidence(self):
         original={'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK','origin_name':'합성 식당','reasoning_basis':'합성 원본 근거','tzuyang_review':'합성 원본 리뷰','origin_address':{'address':'합성 원본 주소','lat':37,'lng':127},'categories':['한식'],'youtube_meta':{'title':'합성 원본 영상'},'recollect_version':{'meta':3}}
         before=json.dumps(original,sort_keys=True)
@@ -65,9 +73,34 @@ class ReviewWorkerTests(unittest.TestCase):
         self.assertEqual(raised.exception.code,'source_unavailable')
 
     def test_result_identifier_and_admin_fields_cannot_escape(self):
-        metrics={key:{'eval_value':1,'eval_basis':'synthetic'} for key in ['visit_authenticity','rb_inference_score','rb_grounding_TF','review_faithfulness_score']}
+        metrics=self.complete_metrics()
         result=worker.result_fields([{'trace_id':'fixed','status':'approved','approved_name':'untrusted','updated_by_admin_id':'untrusted','roadAddress':'synthetic','category':['한식'],'evaluation_results':metrics}],{'trace_id':'fixed'})
         self.assertEqual(set(result),{'road_address','categories','evaluation_results'})
+
+    def test_every_missing_or_malformed_metric_fails_before_completion(self):
+        good=self.complete_metrics()
+        for key in good:
+            for value in [None,{},'invalid']:
+                metrics=copy.deepcopy(good);metrics[key]=value
+                with self.subTest(key=key,value=value),self.assertRaises(worker.WorkerFailure) as raised:
+                    worker.result_fields([{'trace_id':'fixed','evaluation_results':metrics}],{'trace_id':'fixed'})
+                self.assertEqual(raised.exception.code,'evaluation_incomplete')
+        for value in [True,0,6,float('nan'),'1']:
+            metrics=copy.deepcopy(good);metrics['visit_authenticity']['eval_value']=value
+            with self.subTest(value=value),self.assertRaises(worker.WorkerFailure):
+                worker.result_fields([{'trace_id':'fixed','evaluation_results':metrics}],{'trace_id':'fixed'})
+
+    def test_location_provenance_must_be_complete_but_need_not_pass_approval(self):
+        good=self.complete_metrics()
+        for patch in [{'evidence_families':[]},{'evidence_families':['source_geo']},{'evidence_families':['source_geo','source_geo']},{'match_status':'pending'},{'pending_reason':'missing'},{'eval_value':'true'}]:
+            metrics=copy.deepcopy(good);metrics['location_match_TF'].update(patch)
+            with self.subTest(patch=patch),self.assertRaises(worker.WorkerFailure):
+                worker.result_fields([{'trace_id':'fixed','evaluation_results':metrics}],{'trace_id':'fixed'})
+        for location in [
+            {'eval_value':True,'match_status':'matched','evidence_families':['source_geo','llm_verification']},
+            {'eval_value':False,'match_status':'pending','evidence_families':[],'pending_reason':'insufficient_evidence'}]:
+            metrics=copy.deepcopy(good);metrics['location_match_TF']=location
+            self.assertEqual(worker.result_fields([{'trace_id':'fixed','evaluation_results':metrics}],{'trace_id':'fixed'})['evaluation_results'],metrics)
 
     def test_ambiguous_source_result_is_rejected(self):
         with self.assertRaises(worker.WorkerFailure):worker.result_fields([{'trace_id':'fixed'},{'trace_id':'fixed'}],{'trace_id':'fixed'})

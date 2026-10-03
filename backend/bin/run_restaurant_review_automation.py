@@ -9,6 +9,7 @@ policy-bound, input-bound, idempotent RPCs. No raw source/provider output logs.
 from __future__ import annotations
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -70,10 +71,25 @@ def result_fields(records, original):
     if isinstance(result.get('categories'),str): result['categories']=[result['categories']]
     evaluation=result.get('evaluation_results')
     if not isinstance(evaluation,dict): raise WorkerFailure('evaluation_incomplete')
-    for key in ['visit_authenticity','rb_inference_score','rb_grounding_TF','review_faithfulness_score']:
+    for key in ['visit_authenticity','rb_inference_score','review_faithfulness_score']:
         metric=evaluation.get(key)
-        if not isinstance(metric,dict) or metric.get('eval_value') is None or not isinstance(metric.get('eval_basis'),str) or not metric['eval_basis'].strip():
+        value=metric.get('eval_value') if isinstance(metric,dict) else None
+        if type(value) not in (int,float) or not math.isfinite(value) or not 1<=value<=5 or not isinstance(metric.get('eval_basis'),str) or metric['eval_basis'].strip() in ('','-','근거 내용 없음','평가 근거 없음'):
             raise WorkerFailure('evaluation_incomplete')
+    for key in ['rb_grounding_TF','category_TF','category_validity_TF']:
+        metric=evaluation.get(key)
+        if not isinstance(metric,dict) or type(metric.get('eval_value')) is not bool:
+            raise WorkerFailure('evaluation_incomplete')
+        if key=='rb_grounding_TF' and (not isinstance(metric.get('eval_basis'),str) or metric['eval_basis'].strip() in ('','-','근거 내용 없음','평가 근거 없음')):
+            raise WorkerFailure('evaluation_incomplete')
+    location=evaluation.get('location_match_TF')
+    if not isinstance(location,dict) or type(location.get('eval_value')) is not bool or not isinstance(location.get('evidence_families'),list) or not all(isinstance(f,str) and f.strip() for f in location['evidence_families']):
+        raise WorkerFailure('evaluation_incomplete')
+    if location['eval_value']:
+        if location.get('match_status')!='matched' or len(set(location['evidence_families']))<2 or location.get('pending_reason') or location.get('falseMessage'):
+            raise WorkerFailure('evaluation_incomplete')
+    elif location.get('match_status') not in ('pending','failed','unmatched') or not any(isinstance(location.get(key),str) and location[key].strip() for key in ('pending_reason','falseMessage')):
+        raise WorkerFailure('evaluation_incomplete')
     return result
 
 

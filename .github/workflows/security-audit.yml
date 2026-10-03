@@ -30,6 +30,12 @@ on:
       - 'backend/bin/schema_mirror_report.py'
       - 'backend/bin/seed_fixture_guard.py'
       - 'backend/bin/tests/**'
+      - 'backend/utils/stage_cache.py'
+      - 'backend/utils/resource-budget.mjs'
+      - 'backend/utils/tests/test_stage_execution.py'
+      - 'backend/utils/tests/test_pipeline_restart_integration.py'
+      - 'backend/utils/tests/resource-budget.test.mjs'
+      - 'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh'
       - 'backend/bin/tests/test_check_deployment_descriptor_set_unittest.py'
       - 'backend/bin/tests/test_metrics_contract_report_unittest.py'
       - 'backend/bin/tests/test_observability_up_unittest.py'
@@ -284,6 +290,17 @@ jobs:
 
       - name: Install focused test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
+
+      - name: Set up pinned pipeline Node runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24.21.0'
+
+      - name: Verify pipeline receipts, review completeness and resource limits
+        run: |
+          command -v jq
+          python -m unittest backend.bin.tests.test_restaurant_review_automation backend.utils.tests.test_stage_execution backend.utils.tests.test_pipeline_restart_integration
+          node --test backend/utils/tests/resource-budget.test.mjs
 
       - name: Install Helm for actual local descriptor rendering
         uses: Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4

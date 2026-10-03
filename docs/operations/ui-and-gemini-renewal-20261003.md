@@ -132,3 +132,14 @@ Windows npm 측정 실패 영수증은 샘플 간격 141.397ms를 기록했다. 
 Catalog CI의 제한된 재생 계정이 Gemini 교체 단계에서 기존 함수 owner에 접근하지 못한 실패를 확인했다. immutable SQL의 hash에 결속한 transaction 내부 membership window를 해당 단계에도 적용한 후, run **37146883677**의 독립 재생 두 번·비교가 통과했다. 이후 다른 작업의 모바일 marker 보완을 정상 merge로 보존했고 관련 29개 검사가 통과했다.
 
 CLI 호환 작업 폴더도 늦은 helper 권한 복구를 registry prerequisite 전에 실행하도록 순서를 명시한다. 두 원본 SQL 파일은 그대로 보존하며, 이미 registry가 적용된 ledger에는 변환을 추가하지 않는다. 이 dependency adapter와 기존 source/history 검증 **9개**가 통과했다. 운영 DB 변경과 원래 SQL 실행을 증명한 것으로 표시하지 않는다.
+
+
+## 추출·재검수 경계 검증 보완
+
+재검수의 저장 전 필수 평가 family를 4→7개로 확장했다(+3개·+75%, 스키마 항목의 정확한 개수). 숫자 점수·boolean·category 결과·location 근거가 누락되거나 잘못된 형식이면 완료 RPC를 보내지 않는다. 위치 결과의 completeness와 자동 승인 여부는 구분하며, 기존 신뢰 근거 기준의 승인 조건은 그대로 유지한다.
+
+`PIPELINE_NETWORK_JOBS=1`만 설정해도 legacy `MAX_JOBS` 없이 적용된다. ceiling 8의 합성 작업에서 실행 peak 1을 확인했다. 이 설정 수치에 통계 신뢰구간이나 운영 처리량 개선을 붙이지 않는다.
+
+Step08은 lock 획득 → fingerprint/receipt 재검증 → 실제 child 작업 → 입력 재확인 → receipt publication 전체를 하나의 영상 lock 안에서 처리한다. 각 실행은 독립 temp directory를 사용한다. 실제 shell dispatch 경로를 두 subprocess로 겹친 합성 실험에서 **2회 호출·작업 1회·중복 0회**였다(조건 1개; 모집단 CI 없음). 부모의 과거 pending snapshot으로 완료 여부를 판단하지 않는다. 실패·변경·손상 출력은 재사용하지 않는다. 이 실험에서는 외부 provider 호출 0회였으며 실제 요금·지연 개선을 주장하지 않는다.
+
+관련 Python **33 pass**, Node/실제 ffmpeg **5 pass**, layout **6 pass**다. 새 receipt/validation/resource 검증은 보호 CI에도 등록했다. 원시 경계 증빙은 `pipeline-boundary-review-20261004.json`과 분리된 SHA256 파일에 보관한다. 전체 pipeline의 최종 처리시간 측정과 운영 적용·readback은 별도 완료 조건으로 남는다.
