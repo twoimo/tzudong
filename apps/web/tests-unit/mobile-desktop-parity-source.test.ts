@@ -376,7 +376,7 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(mobileOverlaySource).toContain("text-xs font-medium");
     expect(mobileOverlaySource).toContain(
-      "rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium",
+      "rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium",
     );
     expect(homeAppGlobalsSource).toContain(".home-map-floating-control-text");
     expect(homeAppGlobalsSource).toContain("font-size: 0.75rem");
@@ -606,10 +606,10 @@ describe("mobile and desktop parity source contracts", () => {
       'setActiveLeftPanelView("map");',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "grid auto-rows-auto grid-cols-[max-content] items-start gap-2",
+      "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"10.9375rem\"",
+      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"9.5rem\"",
     );
     expect(homeDesktopControlPanelSource).toContain(
       '"--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH',
@@ -628,7 +628,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(themeFilterIconSource).toContain('"fresh-video": Clock3');
     expect(themeFilterIconSource).toContain('"repeat-video": Repeat2');
     expect(themeFilterIconSource).toContain('"fan-signal": Sparkles');
-    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-max");
+    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-0");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
@@ -713,20 +713,17 @@ describe("mobile and desktop parity source contracts", () => {
       "components/restaurant/RestaurantDetailPanel.tsx",
     );
     expect(restaurantDetailPanelSource).toContain(
-      'aria-label="이전 목록으로 돌아가기"',
+      "'이전 목록으로 돌아가기'",
     );
     expect(restaurantDetailPanelSource).toContain(
       "{isAdmin && onEditRestaurant && viewMode === 'detail' && (",
     );
     expect(restaurantDetailPanelSource).toContain(
-      "{showDesktopBackButton && !isMobile && viewMode === 'detail' && (",
+      "showDesktopBackButton && !isMobile",
     );
-    expect(
-      restaurantDetailPanelSource.indexOf(
-        '<Settings className="h-4 w-4" aria-hidden="true" />',
-      ),
-    ).toBeLessThan(
-      restaurantDetailPanelSource.indexOf('aria-label="이전 목록으로 돌아가기"'),
+    const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
+    expect(sharedPanelHeaderSource.indexOf("{actions}")).toBeLessThan(
+      sharedPanelHeaderSource.indexOf("{onClose ?"),
     );
     expect(restaurantDetailPanelSource).not.toContain(
       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
@@ -738,7 +735,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(restaurantDetailPanelSource).not.toContain(
       'className="h-9 w-9 shrink-0 rounded-full"',
     );
-    expect(restaurantDetailPanelSource).toContain(
+    expect(sharedPanelHeaderSource).toContain(
       '<ArrowLeft className="h-4 w-4" aria-hidden="true" />',
     );
     expect(restaurantDetailPanelSource).toContain("function MapProviderLogo");
@@ -1000,9 +997,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(stampOverlaySource).toContain("<MapPanelHeader");
     expect(stampOverlaySource).toContain('title="도장"');
     expect(stampOverlaySource).toContain('titleAs="h1"');
-    expect(mapPanelChromeSource).toContain("shrink-0 border-b border-border bg-background px-4 py-3");
-    expect(mapPanelChromeSource).toContain("flex items-center gap-2");
-    expect(mapPanelChromeSource).toContain('aria-label={closeLabel}');
+    expect(mapPanelChromeSource).toContain("shrink-0 border-b border-border bg-background px-3 py-3");
+    expect(mapPanelChromeSource).toContain("flex min-h-8 items-center gap-2");
+    expect(mapPanelChromeSource).toContain('aria-label={closeLabel ?? `${title} 닫기`}');
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
     expect(stampPageSource).toContain(

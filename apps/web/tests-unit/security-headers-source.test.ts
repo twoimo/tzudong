@@ -8,7 +8,7 @@ const source = (path: string) => readFileSync(join(webRoot, path), 'utf8');
 function imagePolicySource() {
   const proxy = source('proxy.ts');
   const start = proxy.indexOf('const SUPABASE_IMAGE_PUBLIC_PATHS');
-  const end = proxy.indexOf('"font-src \'self\' data:"');
+  const end = proxy.indexOf('"font-src ');
 
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);

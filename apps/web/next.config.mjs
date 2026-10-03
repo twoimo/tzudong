@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bundleAnalyzer from '@next/bundle-analyzer';
 import { resolveConfiguredSupabaseOrigin } from './lib/profile-avatar-url.ts';
+import { publicLargeAssetRedirects } from './lib/public-large-assets.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -173,6 +174,7 @@ const nextConfig = {
     typedRoutes: false,
     async redirects() {
         return [
+            ...publicLargeAssetRedirects,
             {
                 source: '/submissions',
                 destination: '/mypage',
@@ -199,6 +201,13 @@ const nextConfig = {
                 headers: [
                     ...securityHeaders,
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            {
+                source: '/fonts/ChosunCentennial_otf.otf',
+                headers: [
+                    ...securityHeaders,
+                    { key: 'Cache-Control', value: 'no-store' },
                 ],
             },
             {

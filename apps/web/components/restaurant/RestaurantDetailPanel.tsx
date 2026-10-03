@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { MapPanelHeader, mapPanelIconButtonClass } from "@/components/home/map-panel-chrome";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -1043,37 +1044,62 @@ export function RestaurantDetailPanel({
                     </button>
                 )}
 
-                {/* 헤더 */}
-                <div className="p-4 border-b border-border h-[80px] flex flex-col justify-center">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-
-                            {viewMode === 'reviews' && (
-                                <>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={handleBackToDetail}
-                                        className="mr-2 shrink-0"
-                                        aria-label="상세 정보로 돌아가기"
-                                    >
-                                        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                                    </Button>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="text-lg font-semibold truncate">
-                                                {restaurant.name}
-                                            </h3>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground truncate">
-                                            전체 리뷰 {totalReviewCount}개
-                                        </p>
-                                    </div>
-                                </>
-                            )}
+                <MapPanelHeader
+                    title={restaurant.name}
+                    titleAs="h2"
+                    count={viewMode === 'reviews' ? totalReviewCount : undefined}
+                    description={viewMode === 'reviews' ? '전체 리뷰' : undefined}
+                    titleIcon={viewMode === 'detail' ? (
+                        <span className="relative block h-4 w-4">
+                            <Image src={getCategoryImagePath(categories[0] || '')} alt="" fill sizes="16px" className="object-contain" />
+                        </span>
+                    ) : undefined}
+                    onClose={viewMode === 'reviews' ? handleBackToDetail : onClose}
+                    closeLabel={viewMode === 'reviews' ? '상세 정보로 돌아가기' : (showDesktopBackButton && !isMobile ? '이전 목록으로 돌아가기' : isMobile ? '이전 화면으로 돌아가기' : '맛집 상세 닫기')}
+                    closeAction={viewMode === 'reviews' || showDesktopBackButton || isMobile ? 'back' : 'close'}
+                    actions={(
+                        <>
+                            {/* 공유하기 버튼 */}
                             {viewMode === 'detail' && (
-                                <>
-                                    <div className="flex-1 min-w-0">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={handleShareUrl}
+                                    title={isShareCopied ? "복사됨!" : "공유하기"}
+                                    aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
+                                    className={cn(mapPanelIconButtonClass, isShareCopied && "bg-green-50 border-green-300 text-green-600")}
+                                >
+                                    {isShareCopied ? (
+                                        <Check className="h-4 w-4" />
+                                    ) : (
+                                        <Share2 className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            )}
+                            {/* 북마크 버튼 - 모든 사용자에게 표시 */}
+                            {viewMode === 'detail' && (
+                                <BookmarkButton
+                                    restaurantId={restaurant.id}
+                                    className="h-8 w-8 shrink-0 rounded-full shadow-none"
+                                    onRequireAuth={handleBookmarkRequireAuth}
+                                />
+                            )}
+                            {isAdmin && onEditRestaurant && viewMode === 'detail' && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={onEditRestaurant}
+                                    className={cn(mapPanelIconButtonClass, "text-primary hover:text-primary")}
+                                    aria-label="맛집 정보 관리자 편집"
+                                >
+                                    <Settings className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                            )}
+                        </>
+                    )}
+                />
+                {viewMode === 'detail' && (
+                    <div className="shrink-0 border-b border-border px-3 py-2">
                                         <ScrollableTagContainer className="mb-1" maxWidth="100%">
                                             {categories.map((cat, index) => (
                                                 <Badge
@@ -1121,90 +1147,8 @@ export function RestaurantDetailPanel({
                                                 ) : null;
                                             })()}
                                         </ScrollableTagContainer>
-                                        <div className="flex items-center gap-2">
-                                            {/* 카테고리 이미지 - 이모지 대신 이미지 표시 */}
-                                            <div className="relative w-8 h-8 shrink-0">
-                                                <Image
-                                                    src={getCategoryImagePath(categories[0] || '')}
-                                                    alt={categories[0] || '카테고리'}
-                                                    fill
-                                                    sizes="32px"
-                                                    className="object-contain"
-                                                />
-                                            </div>
-                                            <h2
-                                                className="text-lg font-semibold truncate"
-                                                title={restaurant.name}
-                                            >
-                                                {restaurant.name}
-                                            </h2>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                        <div className="flex gap-1 shrink-0">
-                            {/* 공유하기 버튼 */}
-                            {viewMode === 'detail' && (
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={handleShareUrl}
-                                    title={isShareCopied ? "복사됨!" : "공유하기"}
-                                    aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
-                                    className={isShareCopied ? "bg-green-50 border-green-300 text-green-600" : ""}
-                                >
-                                    {isShareCopied ? (
-                                        <Check className="h-4 w-4" />
-                                    ) : (
-                                        <Share2 className="h-4 w-4" />
-                                    )}
-                                </Button>
-                            )}
-                            {/* 북마크 버튼 - 모든 사용자에게 표시 */}
-                            {viewMode === 'detail' && (
-                                <BookmarkButton
-                                    restaurantId={restaurant.id}
-                                    onRequireAuth={handleBookmarkRequireAuth}
-                                />
-                            )}
-                            {isAdmin && onEditRestaurant && viewMode === 'detail' && (
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={onEditRestaurant}
-                                    className="text-primary hover:text-primary"
-                                    aria-label="맛집 정보 관리자 편집"
-                                >
-                                    <Settings className="h-4 w-4" aria-hidden="true" />
-                                </Button>
-                            )}
-                            {showDesktopBackButton && !isMobile && viewMode === 'detail' && (
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={onClose}
-                                    title="이전 목록으로 돌아가기"
-                                    aria-label="이전 목록으로 돌아가기"
-                                >
-                                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                                </Button>
-                            )}
-                            {isMobile && viewMode === 'detail' && (
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={onClose}
-                                    title="이전 화면으로 돌아가기"
-                                    aria-label="이전 화면으로 돌아가기"
-                                >
-                                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                                </Button>
-                            )}
-                        </div>
                     </div>
-
-                </div>
+                )}
 
                 {/* 내용 */}
 	                <div
