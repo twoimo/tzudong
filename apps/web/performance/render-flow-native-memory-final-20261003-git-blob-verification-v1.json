@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-03T23:19:31.437977+00:00",
+  "evidenceCommit": "b12df0f318f955401d45c67789147574aa6d2dfc",
+  "packetRoot": "apps/web/performance/render-flow-native-memory-final-20261003",
+  "mappedGitBlobsVerified": 787,
+  "externalPinMatchesGitMap": true,
+  "artifactMapSha256": "91ba57cbc0b3a753675c7def732508e18b627734f439925f725e8ec9ae598ad5",
+  "allMappedBytesAndFileSetMatch": true,
+  "unrelatedFilesVerifiedOrModified": false,
+  "receiptOutsideFrozenPacket": true
+}
