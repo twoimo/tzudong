@@ -596,7 +596,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(shellSource).toContain('data-admin-module-actions="top-right"');
     expect(shellSource).toContain('data-admin-module-content="bounded"');
     expect(shellSource).toContain(
-      '"shrink-0 border-b border-border bg-card px-4 py-3"',
+      '"shrink-0 border-b border-border bg-card px-3 py-2"',
     );
     expect(shellSource).not.toContain("bg-gradient-primary bg-clip-text");
     expect(shellSource).toContain('"min-h-0 min-w-0 flex-1 overflow-hidden"');
@@ -1503,7 +1503,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).not.toContain('var(--font-noto-serif-kr, "Noto Serif KR")');
     expect(appGlobalsSource).not.toContain("serif !important;");
     expect(consoleSource).toContain(
-      "grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible",
+      "grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible",
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
     expect(consoleSource).toContain('? "overflow-y-auto"');
@@ -1616,7 +1616,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "sparklineData={subscriberSparklinePoints}",
     );
-    expect(consoleSource).toContain("YouTube Data API");
     expect(consoleSource).toContain("로컬 채널 스냅샷 없음 · KPI 수집 후 표시");
     expect(consoleSource).toContain("채널 통계 확인 필요");
     expect(consoleSource).toContain(
@@ -2613,10 +2612,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("periodMetricScopeLabel");
     expect(consoleSource).not.toContain("기간 업로드</span>");
     expect(consoleSource).toContain(
-      "현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}",
+      "현재 구독자 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}",
     );
     expect(consoleSource).toContain(
-      "`현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`",
+      "`${selectedPeriodLabel} 구독자 순증 ${formatSignedNumber(subscriberDelta)}`",
     );
     expect(consoleSource).toContain(
       'const subscriberCardTitle = "현재 구독자"',
@@ -2673,7 +2672,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-metric-tooltip="beginner-plain"',
     );
     expect(consoleSource).toContain(
-      'className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+      'className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
     );
     expect(consoleSource).not.toContain("md:h-5 md:w-5");
     expect(consoleSource).toContain(
@@ -2705,7 +2704,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 채널 구독자 수를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain(
-      "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
+      "relative z-0 grid min-h-[96px] grid-rows-[auto_minmax(0,1fr)_auto] gap-2 overflow-visible p-2.5 sm:p-3 hover:z-20 focus-within:z-20",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-row="single-line"',
@@ -3355,7 +3354,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(appGlobalsSource).toContain("@media (max-width: 767px)");
     expect(appGlobalsSource).toContain(
-      '[data-admin-dashboard-management="true"] .recharts-wrapper',
+      '[data-admin-dashboard-management="true"] .recharts-responsive-container',
     );
     expect(appGlobalsSource).toContain("max-width: 100% !important;");
     expect(appGlobalsSource).toContain(

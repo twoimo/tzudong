@@ -53,7 +53,7 @@ export function AdminEmbeddedModuleShell({
       ) : (
         <div
           className={cn(
-            "shrink-0 border-b border-border bg-card px-4 py-3",
+            "shrink-0 border-b border-border bg-card px-3 py-2",
             headerClassName,
           )}
           data-admin-module-header="compact"
@@ -62,16 +62,16 @@ export function AdminEmbeddedModuleShell({
           <div className="flex min-w-0 flex-row items-start justify-between gap-1.5 lg:items-center">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
-                <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <h2
                   id={titleId}
-                  className="min-w-0 text-lg font-semibold leading-snug tracking-tight text-foreground"
+                  className="min-w-0 text-base font-semibold leading-snug tracking-tight text-foreground"
                 >
                   {title}
                 </h2>
               </div>
               <div
-                className="mt-1 min-w-0 text-xs leading-5 text-muted-foreground"
+                className="mt-0.5 min-w-0 text-xs leading-4 text-muted-foreground"
                 data-admin-module-summary="true"
               >
                 {summary}

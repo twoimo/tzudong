@@ -1071,8 +1071,10 @@ div[style*="z-index"] > div > .custom-marker {
     max-width: 100%;
   }
 
-  [data-admin-dashboard-management="true"] .recharts-responsive-container,
-  [data-admin-dashboard-management="true"] .recharts-wrapper {
+  /* Recharts 3 measures inside a zero-width, overflow-visible element.
+     Clamp its outer responsive container; a percentage cap on the inner
+     wrapper collapses the painted chart to zero on mobile. */
+  [data-admin-dashboard-management="true"] .recharts-responsive-container {
     max-width: 100% !important;
   }
 }

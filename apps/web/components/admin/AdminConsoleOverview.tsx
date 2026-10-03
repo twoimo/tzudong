@@ -1860,10 +1860,10 @@ function getAdminDashboardDataQualityStatus(
 function getAdminDashboardDeltaSourceLabel(
   source: AdminYouTubeChannelStats["deltaSource"],
 ) {
-  if (source === "snapshot-delta") return "수집 delta";
-  if (source === "derived-live-comparison") return "실시간-스냅샷 비교";
-  if (source === "derived-snapshot-comparison") return "스냅샷 재계산";
-  return "delta 대기";
+  if (source === "snapshot-delta") return "수집한 변화량";
+  if (source === "derived-live-comparison") return "현재·이전 비교";
+  if (source === "derived-snapshot-comparison") return "이전 기록 비교";
+  return "비교 기록 없음";
 }
 
 function getVideoEngagementTotal(video: InsightTreemapVideoRow) {
@@ -3207,30 +3207,29 @@ function AdminDashboardInfoTooltip({
   lines: string[];
 }) {
   return (
-    <UiTooltipProvider delayDuration={150}>
-      <UiTooltip>
-        <UiTooltipTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label={`${label} · 초보자 설명`}
-            data-admin-dashboard-metric-tooltip="beginner-plain"
-          >
-            <Info className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </UiTooltipTrigger>
-        <UiTooltipContent
-          side="top"
-          align="start"
-          className={adminDashboardTooltipPortalClassName}
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`${label} · 초보자 설명`}
+          data-admin-dashboard-metric-tooltip="beginner-plain"
         >
-          <AdminDashboardTooltipLinesPanel
-            lines={lines}
-            dataAttribute="metric-info"
-          />
-        </UiTooltipContent>
-      </UiTooltip>
-    </UiTooltipProvider>
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        aria-label={label}
+        className={adminDashboardTooltipPortalClassName}
+      >
+        <AdminDashboardTooltipLinesPanel
+          lines={lines}
+          dataAttribute="metric-info"
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -3896,7 +3895,7 @@ function AdminDashboardManagementSkeleton() {
         KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
       </p>
 
-      <div className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
+      <div className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
         <AdminDashboardKpiCard
           widgetId="subscribers"
           title="현재 구독자"
@@ -3951,7 +3950,7 @@ function AdminDashboardManagementSkeleton() {
           value="—"
           progress={0}
           tone="neutral"
-          className="lg:col-span-2"
+          className="col-span-2 lg:col-span-2"
           delta="—"
           deltaLabel="기간 대비"
           isLoading
@@ -4291,12 +4290,15 @@ function AdminDashboardKpiCard({
   const chartData = sparklineData.filter((point) =>
     Number.isFinite(point.value),
   );
+  const metricInfoLines = infoLines.filter(
+    (line) => !/^(설명|읽는 법|주의):/.test(line),
+  );
 
   return (
     <div
       className={cn(
         adminDashboardCardClass,
-        "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
+        "relative z-0 grid min-h-[96px] grid-rows-[auto_minmax(0,1fr)_auto] gap-2 overflow-visible p-2.5 sm:p-3 hover:z-20 focus-within:z-20",
         emphasisClass,
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
@@ -4322,7 +4324,7 @@ function AdminDashboardKpiCard({
             {infoLines.length > 0 ? (
               <AdminDashboardInfoTooltip
                 label={`${title} 지표 설명`}
-                lines={infoLines}
+                lines={caption ? [caption, ...metricInfoLines] : metricInfoLines}
               />
             ) : null}
           </div>
@@ -4375,7 +4377,7 @@ function AdminDashboardKpiCard({
               {value}
             </p>
             {caption ? (
-              <p className="mt-1.5 line-clamp-2 text-2xs font-semibold leading-4 text-muted-foreground">
+              <p className="mt-1 line-clamp-1 text-2xs font-medium leading-4 text-muted-foreground" data-admin-dashboard-kpi-caption="true">
                 {caption}
               </p>
             ) : null}
@@ -5972,6 +5974,9 @@ function AdminDashboardManagementPanel({
     () => normalizeAdminDashboardWidgetOrder(dashboardWidgetOrder),
     [dashboardWidgetOrder],
   );
+  const lastMetricWidgetId = orderedDashboardWidgetIds
+    .filter((widgetId) => getAdminDashboardWidgetLayoutGroup(widgetId) === 0)
+    .at(-1);
   const isDashboardWidgetOrderDefault = useMemo(
     () =>
       areAdminDashboardWidgetOrdersEqual(
@@ -6371,12 +6376,13 @@ function AdminDashboardManagementPanel({
   const getDashboardReorderCardClassName = useCallback(
     (widgetId: AdminDashboardWidgetId) =>
       cn(
+        widgetId === lastMetricWidgetId && "col-span-2 lg:col-span-2",
         isDashboardOrderEditorOpen &&
           "cursor-grab select-none ring-1 ring-primary/20 transition-[box-shadow,opacity,transform] hover:ring-primary/45 active:cursor-grabbing",
         draggedDashboardWidgetId === widgetId &&
           "scale-[0.99] opacity-70 ring-2 ring-primary/50",
       ),
-    [draggedDashboardWidgetId, isDashboardOrderEditorOpen],
+    [draggedDashboardWidgetId, isDashboardOrderEditorOpen, lastMetricWidgetId],
   );
   const getDashboardCardReorderProps = useCallback(
     (widgetId: AdminDashboardWidgetId): AdminDashboardCardReorderProps => ({
@@ -6765,7 +6771,7 @@ function AdminDashboardManagementPanel({
     period === "ALL"
       ? `전체 영상 · 현재 ${formatNumber(cumulativeVideoTotal)}`
       : hasSnapshotVideoCountComparison
-        ? `${selectedPeriodLabel} · 채널 videoCount 순증 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)} · 현재 ${formatNumber(cumulativeVideoTotal)}`
+        ? `${selectedPeriodLabel} 영상 순증 · 전체 ${formatNumber(cumulativeVideoTotal)}`
         : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
   const periodUploadVideoProgress =
     typeof periodUploadVideoValue === "number" && periodUploadVideoValue > 0
@@ -6826,8 +6832,8 @@ function AdminDashboardManagementPanel({
     : !hasSubscriberCount
       ? "채널 통계 확인 필요"
       : subscriberDelta == null
-        ? `현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
-        : `현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`;
+        ? `현재 구독자 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
+        : `${selectedPeriodLabel} 구독자 순증 ${formatSignedNumber(subscriberDelta)}`;
   const subscriberCardTitle = "현재 구독자";
   const viewCardTitle = hasPeriodGrowthComparison
     ? "기간 조회 증가"
@@ -7375,7 +7381,7 @@ function AdminDashboardManagementPanel({
       ) : null}
 
       <div
-        className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible"
+        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible"
         data-admin-dashboard-order-mode={
           isDashboardOrderEditorOpen ? "direct-drag" : "off"
         }

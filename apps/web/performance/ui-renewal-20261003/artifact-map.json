@@ -100,10 +100,106 @@
       "role": "capture-attempt"
     },
     {
+      "path": "catalog-dual-clean-replay-37121857541.json",
+      "bytes": 5385,
+      "sha256": "fde452d8523ac4c36f907a31e3ad354f21f9c1c7fa145a895c2b65fdaf830ce9",
+      "role": "verification-readback"
+    },
+    {
       "path": "css-security-build.json",
       "bytes": 611,
       "sha256": "704f8984df0c90748d6bbc1fa003862cfd945eff4adf9ea70d46ac8032ca0d73",
       "role": "raw-measurement"
+    },
+    {
+      "path": "density-after-20261003.json",
+      "bytes": 3685,
+      "sha256": "13e6cb3e787bfe02033f15ca08e10a69641b19cfd6f78dbb2a3249a3a641963b",
+      "role": "verification-readback"
+    },
+    {
+      "path": "density-before-20261003.json",
+      "bytes": 3646,
+      "sha256": "729522bff05f66f7f4c5dea38832088ca4ad6e440c605b418738759eda6a13d5",
+      "role": "verification-readback"
+    },
+    {
+      "path": "density-final-1440-capture-attempt.png",
+      "bytes": 9596,
+      "sha256": "1eae366c12250bde948bf6db79a624663a551efec88839b4163bad332274c6e9",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-final-1440.png",
+      "bytes": 164245,
+      "sha256": "a0eb6e7c0d49b2f9f460d4fb6cb80cd368906cb3c9c3599cb343dc78c1581881",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "density-final-20261003.json",
+      "bytes": 3934,
+      "sha256": "4ac8f13f8b4f7623a2c7cfebba0d2569680fef6929993e0fd3ccee529fa19fe9",
+      "role": "verification-readback"
+    },
+    {
+      "path": "density-final-390.png",
+      "bytes": 39557,
+      "sha256": "9b453e3442a63bb112337f4487a33ceeca5b805431977d0474e2e36f741d1808",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "density-final-834.png",
+      "bytes": 86183,
+      "sha256": "5908a69d8ff6abc3f4af4cc03c41e876107832bcb37b361024d9010b907f98c3",
+      "role": "verified-synthetic-viewport-capture"
+    },
+    {
+      "path": "density-kpi-after-1440.png",
+      "bytes": 163376,
+      "sha256": "f7ef81b4f61fd41f3811d0c5343c829137e957b1209ce50b93eb49c6715c2c6a",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-kpi-after-390-fresh.png",
+      "bytes": 33581,
+      "sha256": "929de1a8a661edd77dbbdf43d95775216734d8ba69c7ec9444ddf548c277a327",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-kpi-after-390-ready.png",
+      "bytes": 33602,
+      "sha256": "3919003c472ec9d67d2a1eea467c2e3a14c20ded60171feebcb99d7ea0248cce",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-kpi-after-390.png",
+      "bytes": 33602,
+      "sha256": "3919003c472ec9d67d2a1eea467c2e3a14c20ded60171feebcb99d7ea0248cce",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-kpi-after-834.png",
+      "bytes": 100501,
+      "sha256": "e067e5d691b8633fcdbba54847886dc772b15c776e88b2904c5bb985914cd1a4",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-mobile-info-popover.png",
+      "bytes": 48129,
+      "sha256": "fcb9526031bc6cfb4c68173183a12c6cd013f42e493f4e12bc3c0e8ba72509fa",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-restaurants-1440.png",
+      "bytes": 129441,
+      "sha256": "c17734f142d31122e910657928ffc30215f9b4957dfcbadd8bdca4bca90d69b2",
+      "role": "capture-attempt"
+    },
+    {
+      "path": "density-summary-20261003.json",
+      "bytes": 1939,
+      "sha256": "32f23af80e50e551107fbaac0678833eaae5cc8e272ccc8418751c805673ba76",
+      "role": "verification-readback"
     },
     {
       "path": "feed-mobile-reviewed.jpg",
