@@ -2,7 +2,7 @@
 
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { z } from "zod";
 import { Clapperboard } from "lucide-react";
 import {
@@ -72,6 +72,21 @@ type Catalog = z.infer<typeof catalogSchema>;
 type Model = Catalog["workers"][number]["models"][number];
 type ProviderId = StoryboardProvider["id"];
 type DraftScene = StoryboardProductionDocument["scenes"][number];
+type PendingEdit = { draft: StoryboardDraftScene; revision: number };
+type DepartureState = { dirty: boolean; busy: boolean; uncertain: boolean };
+const EMPTY_DEPARTURE: DepartureState = { dirty: false, busy: false, uncertain: false };
+const DISCARD_EDIT = "저장하지 않은 편집 내용이 있습니다. 편집 내용을 버리고 이동할까요?";
+const DISCARD_UNCERTAIN = "저장 여부를 아직 확인하지 못했습니다. 편집 내용을 잃을 수 있습니다. 확인하지 않고 이동할까요?";
+function departureMessage(state: DepartureState): string | null {
+  return state.uncertain ? DISCARD_UNCERTAIN : state.dirty ? DISCARD_EDIT : null;
+}
+function sameDraft(left: StoryboardDraftScene, right: StoryboardDraftScene): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+function confirmsEdit(view: View, pending: PendingEdit): boolean {
+  const scene = view.project.document?.scenes.find((item) => item.sceneNo === pending.draft.sceneNo);
+  return view.project.revision > pending.revision && !!scene && sameDraft(pickDraft(scene), pending.draft);
+}
 
 const PROVIDERS: Record<ProviderId, string> = {
   "gemini-api": "Gemini API",
@@ -192,20 +207,75 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
   const [imageProvider, setImageProvider] = useState<StoryboardProvider>({ id: "gemini-api", model: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [departureNotice, setDepartureNotice] = useState<string | null>(null);
+  const departure = useRef<DepartureState>(EMPTY_DEPARTURE);
+  const acceptedLocation = useRef<{ href: string; state: unknown } | null>(null);
   const createController = useRef<AbortController | null>(null);
+  const onDepartureChange = useCallback((state: DepartureState) => { departure.current = state; }, []);
+  const mayLeave = useCallback(() => {
+    if (departure.current.busy) {
+      setDepartureNotice("요청 처리 중입니다. 저장 결과를 확인한 뒤 이동하세요.");
+      return false;
+    }
+    const warning = departureMessage(departure.current);
+    const allowed = !warning || window.confirm(warning);
+    if (allowed) setDepartureNotice(null);
+    return allowed;
+  }, []);
   // Preserve the idempotency key when a user retries an uncertain identical create.
   const createAttempt = useRef<{ fingerprint: string; requestId: string } | null>(null);
 
   useEffect(() => {
-    function readLocation() {
+    function readLocation(event?: PopStateEvent) {
+      const previous = acceptedLocation.current;
+      if (event && previous && previous.href !== window.location.href && !mayLeave()) {
+        // popstate is not cancelable. Restore the accepted URL before the router
+        // observes it, retaining its state and the mounted editor. The rejected
+        // destination is replaced in the forward stack, never rendered.
+        window.history.pushState(previous.state, "", previous.href);
+        event.stopImmediatePropagation();
+        return;
+      }
+      acceptedLocation.current = { href: window.location.href, state: window.history.state };
       const id = new URL(window.location.href).searchParams.get(PROJECT_QUERY);
       setProjectId(id && z.uuid().safeParse(id).success ? id : null);
       if (id && !z.uuid().safeParse(id).success) setCreateError(message("invalid_request"));
     }
+    function beforeUnload(event: BeforeUnloadEvent) {
+      if (departure.current.busy || departureMessage(departure.current)) {
+        event.preventDefault(); event.returnValue = "";
+      }
+    }
+    function followLink(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      // Both desktop and portaled mobile sidebar entries are buttons whose
+      // handlers replace the module before changing the URL. Guard the click
+      // in capture phase, before React can unmount this workspace.
+      const moduleButton = event.target instanceof Element
+        ? event.target.closest('button[data-admin-console-menu-item-mode][aria-controls="admin-console-canvas"]') : null;
+      if (moduleButton) {
+        if (!mayLeave()) { event.preventDefault(); event.stopImmediatePropagation(); }
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+      const url = new URL(link.href, window.location.href);
+      const current = new URL(window.location.href);
+      if (url.pathname === current.pathname && url.search === current.search && url.origin === current.origin) return;
+      if (!mayLeave()) { event.preventDefault(); event.stopImmediatePropagation(); }
+    }
     readLocation();
-    window.addEventListener("popstate", readLocation);
-    return () => { window.removeEventListener("popstate", readLocation); createController.current?.abort(); };
-  }, []);
+    window.addEventListener("popstate", readLocation, true);
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", followLink, true);
+    return () => {
+      window.removeEventListener("popstate", readLocation, true);
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", followLink, true);
+      createController.current?.abort();
+    };
+  }, [mayLeave]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -221,11 +291,13 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
   }, [catalogTick]);
 
   const selectProject = useCallback((id: string | null) => {
+    if (id === projectId || !mayLeave()) return;
     const url = new URL(window.location.href);
     if (id) url.searchParams.set(PROJECT_QUERY, id); else url.searchParams.delete(PROJECT_QUERY);
     window.history.pushState(window.history.state, "", url);
+    acceptedLocation.current = { href: window.location.href, state: window.history.state };
     setProjectId(id); setShowSetup(false);
-  }, []);
+  }, [mayLeave, projectId]);
   const updateSummary = useCallback((project: Project) => {
     const item = { id: project.id, revision: project.revision, status: project.status,
       title: project.document?.title ?? project.request.prompt.slice(0, 120), createdAt: project.createdAt, updatedAt: project.updatedAt };
@@ -294,6 +366,7 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
         {projectId && <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>}
       </div>}
     />
+    {departureNotice && <p role="alert" className="mb-3 text-sm text-destructive">{departureNotice}</p>}
     {archive}
     <div className={`grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "w-full" : ""}`} aria-label="프로젝트 설정과 기록">
@@ -356,15 +429,15 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
             </p>)}
           </div>)}
         </section>}
-        {showSetup && onOpenLegacy && <button type="button" className="min-h-11 text-sm text-muted-foreground underline underline-offset-4" onClick={onOpenLegacy}>이전 작업 공간 열기</button>}
+        {showSetup && onOpenLegacy && <button type="button" className="min-h-11 text-sm text-muted-foreground underline underline-offset-4" onClick={() => { if (mayLeave()) onOpenLegacy(); }}>이전 작업 공간 열기</button>}
       </aside>}
-      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} onProject={updateSummary} />}
+      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} onProject={updateSummary} onDepartureChange={onDepartureChange} />}
     </div>
   </section>;
 }
 
-function SavedProjectWorkspace({ projectId, onProject }: {
-  projectId: string; onProject: (project: Project) => void;
+function SavedProjectWorkspace({ projectId, onProject, onDepartureChange }: {
+  projectId: string; onProject: (project: Project) => void; onDepartureChange: (state: DepartureState) => void;
 }) {
   const [view, setView] = useState<View | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"scenes" | "history" | "import">("scenes");
@@ -378,7 +451,9 @@ function SavedProjectWorkspace({ projectId, onProject }: {
   const [busy, setBusy] = useState(false);
   const [needsReadback, setNeedsReadback] = useState(false);
   const [importText, setImportText] = useState("");
-  const [editing, setEditing] = useState<{ draft: StoryboardDraftScene; revision: number } | null>(null);
+  const [editing, setEditing] = useState<(PendingEdit & { initial: StoryboardDraftScene }) | null>(null);
+  const pendingEdit = useRef<PendingEdit | null>(null);
+  const [uncertainEdit, setUncertainEdit] = useState(false);
   const readController = useRef<AbortController | null>(null);
   const writeController = useRef<AbortController | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -386,6 +461,25 @@ function SavedProjectWorkspace({ projectId, onProject }: {
   const editReturnFocus = useRef<{ sceneNo: number; waiting: boolean } | null>(null);
   const endpoint = `${API}/${encodeURIComponent(projectId)}`;
 
+  const dirty = !!editing && !sameDraft(editing.draft, editing.initial);
+  useLayoutEffect(() => {
+    onDepartureChange({ dirty: dirty || !!importText.trim(), busy, uncertain: needsReadback || uncertainEdit });
+    return () => onDepartureChange(EMPTY_DEPARTURE);
+  }, [dirty, importText, busy, needsReadback, uncertainEdit, onDepartureChange]);
+  const acceptEdit = useCallback((next: View, pending: PendingEdit) => {
+    pendingEdit.current = null; setUncertainEdit(false); setWriteError(null);
+    setNotice("저장한 편집 내용을 서버에서 확인했습니다.");
+    setEditing((current) => {
+      if (!current) return null;
+      // A delayed readback must never discard changes made after that request.
+      const parsed = storyboardDraftSceneSchema.safeParse(current.draft);
+      if (parsed.success && sameDraft(parsed.data, pending.draft)) {
+        editReturnFocus.current = { sceneNo: current.draft.sceneNo, waiting: false };
+        return null;
+      }
+      return { ...current, initial: pending.draft, revision: next.project.revision };
+    });
+  }, []);
   const stopReading = useCallback(() => {
     readController.current?.abort();
     if (timer.current) clearTimeout(timer.current);
@@ -399,6 +493,8 @@ function SavedProjectWorkspace({ projectId, onProject }: {
         const next = parseView(await json(endpoint, controller.signal), projectId);
         if (controller.signal.aborted) return;
         setView(next); onProject(next.project); setReadError(null); setNeedsReadback(false);
+        const pending = pendingEdit.current;
+        if (pending && confirmsEdit(next, pending)) acceptEdit(next, pending);
         if (isActive(next)) timer.current = setTimeout(() => { void load(); }, POLL_MS);
       } catch (error) {
         if (!controller.signal.aborted) setReadError(failure(error));
@@ -407,7 +503,7 @@ function SavedProjectWorkspace({ projectId, onProject }: {
     }
     void load();
     return stopReading;
-  }, [endpoint, projectId, readTick, onProject, stopReading]);
+  }, [endpoint, projectId, readTick, onProject, stopReading, acceptEdit]);
   useEffect(() => () => writeController.current?.abort(), []);
   const loadedId = view?.project.id;
   useEffect(() => { if (loadedId) heading.current?.focus({ preventScroll: true }); }, [loadedId]);
@@ -444,10 +540,11 @@ function SavedProjectWorkspace({ projectId, onProject }: {
     editReturnFocus.current = null;
   }, [editing, locked]);
 
-  async function mutate(body: Record<string, unknown> | FormData, suffix = ""): Promise<boolean> {
+  async function mutate(body: Record<string, unknown> | FormData, suffix = "", expectedEdit?: PendingEdit): Promise<boolean> {
     if (!view || writeController.current || needsReadback || readError) return false;
     const controller = new AbortController();
     writeController.current = controller;
+    if (expectedEdit) { pendingEdit.current = expectedEdit; setUncertainEdit(true); }
     stopReading(); setBusy(true); setWriteError(null); setNotice("");
     let saved = false;
     try {
@@ -455,6 +552,8 @@ function SavedProjectWorkspace({ projectId, onProject }: {
         method: "POST", ...(body instanceof FormData ? { body } : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
       }), projectId);
       if (!controller.signal.aborted) {
+        if (expectedEdit && !confirmsEdit(next, expectedEdit)) throw new UiError("invalid_response");
+        if (expectedEdit) acceptEdit(next, expectedEdit);
         setView((previous) => ({ ...next, events: previous?.events ?? next.events }));
         onProject(next.project); setNotice("서버에 변경 사항을 저장했습니다."); saved = true;
       }
@@ -509,6 +608,9 @@ function SavedProjectWorkspace({ projectId, onProject }: {
     finally { if (!controller.signal.aborted) { writeController.current = null; setBusy(false); } }
   }
   function finishEdit() {
+    const warning = departureMessage({ dirty, busy, uncertain: uncertainEdit || needsReadback });
+    if (busy || (warning && !window.confirm(warning))) return;
+    pendingEdit.current = null; setUncertainEdit(false);
     if (editing) editReturnFocus.current = { sceneNo: editing.draft.sceneNo, waiting: false };
     setEditing(null);
   }
@@ -517,7 +619,8 @@ function SavedProjectWorkspace({ projectId, onProject }: {
     if (!editing || locked) return;
     const parsed = storyboardDraftSceneSchema.safeParse(editing.draft);
     if (!parsed.success) { setWriteError(message("invalid_request")); return; }
-    if (await mutate({ action: "edit", revision: editing.revision, sceneNo: parsed.data.sceneNo, scene: parsed.data })) finishEdit();
+    await mutate({ action: "edit", revision: editing.revision, sceneNo: parsed.data.sceneNo, scene: parsed.data }, "",
+      { draft: parsed.data, revision: editing.revision });
   }
 
   return <section className="min-w-0 space-y-4" aria-label="저장된 스토리보드">
@@ -540,6 +643,7 @@ function SavedProjectWorkspace({ projectId, onProject }: {
       </div>
       {readError && <p role="alert" className="mt-2 text-sm text-destructive">{readError}</p>}
       {writeError && <p role="alert" className="mt-2 text-sm text-destructive">{writeError}</p>}
+      {uncertainEdit && !busy && <p role="alert" className="mt-2 text-sm text-destructive">편집 내용의 저장 여부를 확인하지 못했습니다. 입력은 유지됩니다. 새로고침으로 확인한 뒤 필요한 경우 직접 다시 저장하세요.</p>}
       {view?.job?.errorCode && <p role="alert" className="mt-2 text-sm text-destructive">{view.job.stage === 'uncertain' ? '생성 결과를 확인하지 못했습니다. 저장 결과를 확인한 뒤 재시도하세요.' : message(view.job.errorCode)}</p>}
       {view && <>
         <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">제작 요청과 모델 정보</summary><p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{view.project.request.prompt}</p>
@@ -622,7 +726,7 @@ function SavedProjectWorkspace({ projectId, onProject }: {
             <p className="mb-3 text-xs text-muted-foreground">{scene.durationSec}초 · 장면 v{scene.revision}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button id={`local-edit-${scene.sceneNo}`} type="button" className={buttonClass} disabled={locked || !!editing}
-                onClick={() => setEditing({ draft: pickDraft(scene), revision: view.project.revision })} aria-label={`장면 ${scene.sceneNo} 편집`}>편집</button>
+                onClick={() => setEditing({ draft: pickDraft(scene), initial: pickDraft(scene), revision: view.project.revision })} aria-label={`장면 ${scene.sceneNo} 편집`}>편집</button>
               <button type="button" className={buttonClass} disabled={locked || regenerateBlocked || !!editing} aria-label={`장면 ${scene.sceneNo} 재생성`}
                 onClick={() => { void mutate({ action: "regenerate", revision: view.project.revision, sceneNo: scene.sceneNo, requestId: crypto.randomUUID() }); }}>장면 재생성</button>
               <button type="button" className={buttonClass} aria-label={`장면 ${scene.sceneNo} 이미지 프롬프트 복사`}
