@@ -25,7 +25,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest]
+        include:
+          - os: ubuntu-24.04
+            python: '3.12.13'
+          # 3.12.13 has no Windows binary in the official action manifest.
+          # This supplements the exact 3.12.13 Linux/macOS boundary checks.
+          - os: windows-latest
+            python: '3.13.16'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
@@ -35,7 +41,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: '3.12.13'
+          python-version: ${{ matrix.python }}
       - name: Verify owned process cleanup and stage isolation
         env:
           PYTHON_DOTENV_DISABLED: '1'
