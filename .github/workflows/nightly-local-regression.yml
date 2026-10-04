@@ -142,6 +142,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Verify Linux anonymous unit reporter custody
+        if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'unit' }}
         working-directory: apps/web
         run: |
           printf '%s' '{"files":["tests-unit/nightly-unit-failure-sites.test.ts"]}' | python3 ../../.github/scripts/nightly-unit-failure-sites.py --run-linux

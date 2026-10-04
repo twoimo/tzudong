@@ -37,14 +37,25 @@ def count(value: object, maximum: int = MAX_TESTS) -> bool:
 
 
 def validate(payload: object, files: dict[str, int]) -> dict:
-    if not isinstance(payload, dict) or set(payload) != FIELDS:
+    if not isinstance(payload, dict):
         fail()
-    if payload["schema"] != "nightly-unit-failure-sites-v1":
+    legacy = payload.get("schema") == "nightly-unit-failure-sites-v1"
+    if (legacy and set(payload) != FIELDS) or (not legacy and (
+        payload.get("schema") != "nightly-unit-failure-sites-v2" or set(payload) != FIELDS | {"omitted_site_count"}
+    )):
         fail()
     if not all(count(payload[k]) for k in ("test_count", "failure_count", "skip_count")):
         fail()
     sites = payload["sites"]
-    if not isinstance(sites, list) or len(sites) > MAX_SITES or len(sites) != payload["failure_count"]:
+    if not isinstance(sites, list) or len(sites) > MAX_SITES:
+        fail()
+    if legacy and len(sites) != payload["failure_count"]:
+        fail()
+    if not legacy and (
+        not count(payload["omitted_site_count"])
+        or len(sites) != min(payload["failure_count"], MAX_SITES)
+        or payload["omitted_site_count"] != payload["failure_count"] - len(sites)
+    ):
         fail()
     if payload["failure_count"] + payload["skip_count"] > payload["test_count"]:
         fail()
@@ -104,13 +115,16 @@ def derive(data: dict, root: Path) -> dict:
             line = case.get("line", "")
             if not line.isascii() or not line.isdigit():
                 fail()
+            if not 1 <= int(line) <= admitted[file]:
+                fail()
             sites.append({"file": file, "test_index": index, "line": int(line), "kind": outcomes[0]})
     if not total or int(report.get("tests", "-1")) != total or int(report.get("failures", "-1")) != failed:
         fail()
     if int(report.get("skipped", "-1")) != skipped:
         fail()
-    return validate({"schema": "nightly-unit-failure-sites-v1", "test_count": total,
-                     "failure_count": failed, "skip_count": skipped, "sites": sites}, admitted)
+    return validate({"schema": "nightly-unit-failure-sites-v2", "test_count": total,
+                     "failure_count": failed, "skip_count": skipped, "sites": sites[:MAX_SITES],
+                     "omitted_site_count": max(0, failed - MAX_SITES)}, admitted)
 
 
 def main() -> int:
@@ -131,7 +145,7 @@ def main() -> int:
                 if len(body) > MAX_INPUT:
                     fail()
             records = [line[len(PREFIX):] for line in body.decode("utf-8").splitlines() if line.startswith(PREFIX)]
-            if len(records) > 2:
+            if not 1 <= len(records) <= 2:
                 fail()
             files = inventory(root)
             for record in records:

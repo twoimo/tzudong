@@ -559,7 +559,7 @@ export function buildNightlyPlaywrightFailureEvidence(report, commandExitCode) {
     fail('Playwright JSON report exit and failure counts disagree.');
   }
 
-  return {
+  const evidence = {
     schema: 'nightly-playwright-failure-evidence-v1',
     source: 'playwright-json-report-v2',
     command_exit_code: commandExitCode,
@@ -572,6 +572,14 @@ export function buildNightlyPlaywrightFailureEvidence(report, commandExitCode) {
     failure_class_counts: failureClassCounts,
     failures,
   };
+  // Preserve every admitted failure/classification. Optional coordinates are
+  // best effort within the existing byte bound; retain earlier sites first.
+  for (let index = failures.length - 1;
+    index >= 0 && Buffer.byteLength(`${JSON.stringify(evidence)}\n`) > MAX_EVIDENCE_BYTES;
+    index -= 1) {
+    delete failures[index].source_location;
+  }
+  return evidence;
 }
 
 export function sanitizePrivatePlaywrightReport(rawReportPath, outputPath, commandExitCode) {

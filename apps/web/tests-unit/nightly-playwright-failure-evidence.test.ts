@@ -99,6 +99,27 @@ function privateFailureReport() {
 const adminSourceFile = resolve(import.meta.dir, "../tests/local-supabase-admin.spec.ts");
 const adminErrorLocation = { file: adminSourceFile, line: 693, column: 43 };
 
+test('keeps all 64 located failure classifications inside the immutable 8 KiB bound', () => {
+  const report = {
+    config: { rootDir: '/PRIVATE_ROOT_MARKER' }, errors: [],
+    stats: { expected: 0, flaky: 0, skipped: 0, unexpected: 64 },
+    suites: [{ file: 'local-supabase-admin.spec.ts', specs: Array.from({ length: 64 }, () => ({
+      file: 'local-supabase-admin.spec.ts', title: 'PRIVATE_PROVIDER_TITLE_MARKER',
+      tests: [testResult('unexpected', [result('failed', [{
+        location: { ...adminErrorLocation, line: 100000, column: 10000 },
+        message: 'PRIVATE_PROVIDER_MESSAGE_MARKER',
+      }])])],
+    })) }],
+  };
+  const evidence = buildNightlyPlaywrightFailureEvidence(report, 1);
+  expect(evidence.failure_count).toBe(64); expect(evidence.failures).toHaveLength(64);
+  expect(evidence.failure_class_counts.failed).toBe(64);
+  const located = evidence.failures.filter(value => value.source_location).length;
+  expect(located).toBeGreaterThan(0); expect(located).toBeLessThan(64);
+  expect(Buffer.byteLength(`${JSON.stringify(evidence)}\n`)).toBeLessThanOrEqual(8192);
+  expect(JSON.stringify(evidence)).not.toContain('PRIVATE_PROVIDER');
+});
+
 function adminFailureReport(location: unknown = adminErrorLocation) {
   // Pinned JSON reporter shape: a raw `error` and formatted `errors`, both with
   // location metadata. Synthetic 27-test/three-attempt fixture, not a run receipt.

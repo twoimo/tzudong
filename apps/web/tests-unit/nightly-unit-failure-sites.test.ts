@@ -27,7 +27,7 @@ describe('bounded nightly unit failure source coordinates', () => {
     const r = derive(xml());
     expect(r.status).toBe(0);
     expect(JSON.parse(r.stdout)).toEqual({
-      schema: 'nightly-unit-failure-sites-v1', test_count: 2, failure_count: 1,
+      schema: 'nightly-unit-failure-sites-v2', test_count: 2, failure_count: 1, omitted_site_count: 0,
       skip_count: 0, sites: [{ file, test_index: 1, line: 10, kind: 'failure' }],
     });
     expect(r.stdout + r.stderr).not.toContain(canary);
@@ -39,6 +39,20 @@ describe('bounded nightly unit failure source coordinates', () => {
     expect(r.status).toBe(0);
     expect(JSON.parse(r.stdout).failure_count).toBe(1);
     expect(r.stdout).not.toContain('private-file');
+  });
+
+  test('keeps every failure count and explicitly reports omitted sites above 64', () => {
+    const cases = Array.from({ length: 65 }, () => `<testcase file="${file}" line="10"><failure message="${canary}"/></testcase>`).join('');
+    const r = derive(`<testsuites tests="65" failures="65" skipped="0"><testsuite>${cases}</testsuite></testsuites>`);
+    expect(r.status).toBe(0);
+    const payload = JSON.parse(r.stdout);
+    expect(payload.failure_count).toBe(65); expect(payload.omitted_site_count).toBe(1);
+    expect(payload.sites).toHaveLength(64); expect(payload.sites[63].test_index).toBe(63);
+    expect(r.stdout).not.toContain(canary);
+    const last = cases.lastIndexOf('line="10"');
+    const malformedLast = cases.slice(0, last) + 'line="0"' + cases.slice(last + 'line="10"'.length);
+    const bad = derive(`<testsuites tests="65" failures="65" skipped="0"><testsuite>${malformedLast}</testsuite></testsuites>`);
+    expect(bad.status).toBe(1);
   });
 
   test('rejects foreign source, entity expansion, inconsistent counts and invalid lines', () => {
@@ -74,6 +88,13 @@ describe('bounded nightly unit failure source coordinates', () => {
       expect(safe.status).toBe(0);
       expect(safe.stdout).toBe(`NIGHTLY_UNIT_DIAGNOSTIC=${r.stdout.trim()}\n`);
       expect(safe.stdout + safe.stderr).not.toContain(canary);
+      const legacy = JSON.parse(r.stdout); legacy.schema = 'nightly-unit-failure-sites-v1'; delete legacy.omitted_site_count;
+      writeFileSync(log, `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(legacy)}\n`);
+      expect(spawnSync('python3', [script, '--log', log]).status).toBe(0);
+      writeFileSync(log, `discarded-private-log-${canary}\n`);
+      const empty = spawnSync('python3', [script, '--log', log], { encoding: 'utf8' });
+      expect(empty.status).toBe(1); expect(empty.stdout).toBe('');
+      expect(empty.stderr.trim()).toBe('unit_diagnostic_unavailable');
       symlinkSync(log, link);
       expect(spawnSync('python3', [script, '--log', link]).status).toBe(1);
       const payload = JSON.parse(r.stdout); payload.raw_message = canary;
