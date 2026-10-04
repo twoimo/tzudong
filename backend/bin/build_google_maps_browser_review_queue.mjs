@@ -17,7 +17,7 @@ import { logSafeError } from '../utils/privacy-log.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const BACKEND_ROOT = path.resolve(path.dirname(__filename), '..');
 const DEFAULT_REPORT_ROOT = path.join(BACKEND_ROOT, 'restaurant-evaluation', 'reports');
-config({ path: path.join(BACKEND_ROOT, '.env') });
+config({ path: path.join(BACKEND_ROOT, '.env'), quiet: true });
 
 const TARGET_SELECT = `
   select

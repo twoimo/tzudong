@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 export const ONBOARDING_CHALLENGE_COOKIE = 'tzudong_onboarding_challenge';
@@ -27,6 +27,7 @@ const ONBOARDING_START_REQUIRED_KEYS = ['policyVersion', 'ageBand', 'intent', 'p
 const ONBOARDING_START_OPTIONAL_KEYS = ['marketing'];
 const MARKETING_OPTIONAL_KEYS = ['email', 'sms', 'push', 'nightByChannel'];
 const NIGHT_MARKETING_OPTIONAL_KEYS = ['email', 'sms', 'push'];
+const ONBOARDING_CHALLENGE_SIGNING_CONTEXT = 'tzudong:onboarding-challenge:v1:';
 
 export const UNDER_14_SIGNUP_UNAVAILABLE = {
   code: 'UNDER_14_SIGNUP_UNAVAILABLE',
@@ -99,8 +100,15 @@ function getCookieSecret() {
 }
 
 export function sha256(value: string) {
-  // HMAC-SHA256 over a challenge/token digest. Not password storage.
-  return createHmac('sha256', 'tzudong:privacy-digest:v1').update(value).digest('hex'); // lgtm[js/insufficient-password-hash]
+  // Random challenge token digest; matches PostgreSQL digest(token, 'sha256'). Not password storage.
+  return createHash('sha256').update(value).digest('hex'); // lgtm[js/insufficient-password-hash]
+}
+
+function signOnboardingChallenge(encoded: string, secret: string) {
+  // Cookie authentication is separate from the token digest stored by PostgreSQL.
+  return createHmac('sha256', secret)
+    .update(`${ONBOARDING_CHALLENGE_SIGNING_CONTEXT}${encoded}`)
+    .digest('base64url'); // lgtm[js/insufficient-password-hash]
 }
 
 export function safeEquals(left: string, right: string) {
@@ -205,7 +213,7 @@ export function sealOnboardingChallenge(payload: OnboardingChallengeCookie) {
   if (!secret || !isRecord(payload) || !isValidOnboardingChallengePayload(payload, null)) return null;
 
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const signature = createHmac('sha256', secret).update(`tzudong:onboarding-challenge:v1:${encoded}`).digest('base64url'); // lgtm[js/insufficient-password-hash]
+  const signature = signOnboardingChallenge(encoded, secret);
   return `${encoded}.${signature}`;
 }
 
@@ -219,7 +227,7 @@ export function readOnboardingChallenge(
   const [encoded, signature, ...rest] = value.split('.');
   if (!encoded || !signature || rest.length > 0) return null;
 
-  const expectedSignature = createHmac('sha256', secret).update(encoded).digest('base64url');
+  const expectedSignature = signOnboardingChallenge(encoded, secret);
   if (!safeEquals(signature, expectedSignature)) return null;
 
   try {

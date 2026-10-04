@@ -66,9 +66,13 @@ describe('Next image optimizer trust boundary', () => {
     expect(resolveConfiguredSupabaseOrigin(`${SUPABASE_ORIGIN}/`)).toBe(SUPABASE_ORIGIN);
   });
 
-  test('disables SVG and local-IP optimizer exceptions', () => {
+  test('disables SVG and limits the local-IP exception to the declared local stack mode', () => {
     expect(nextConfig.images?.dangerouslyAllowSVG).toBe(false);
-    expect(nextConfig.images).not.toHaveProperty('dangerouslyAllowLocalIP');
+    if (shouldAllowLoopbackImageUpstreams(process.env)) {
+      expect(nextConfig.images?.dangerouslyAllowLocalIP).toBe(true);
+    } else {
+      expect(nextConfig.images).not.toHaveProperty('dangerouslyAllowLocalIP');
+    }
   });
 
   test('enables the loopback optimizer exception only for the gated local stacks', () => {

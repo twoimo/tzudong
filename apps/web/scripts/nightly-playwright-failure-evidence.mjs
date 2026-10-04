@@ -12,12 +12,16 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const MAX_PRIVATE_REPORT_BYTES = 8 * 1024 * 1024;
 const MAX_EVIDENCE_BYTES = 8 * 1024;
 const MAX_TESTS = 128;
 const MAX_RESULTS_PER_TEST = 8;
 const MAX_REPORT_ERRORS = 64;
+// Shared diagnostic bounds with verify-nightly-local-publication.py (one-based).
+const MAX_SOURCE_LINE = 100_000;
+const MAX_SOURCE_COLUMN = 10_000;
 const RUNNER_STAGE_FAILURE_CLASSES = new Map([
   ['admission', new Set([
     'contract_rejected', 'custody_rejected', 'runtime_unavailable', 'unexpected_failure',
@@ -383,6 +387,41 @@ function classifyUnexpectedResult(results) {
   fail('Playwright JSON report contains an invalid unexpected result.');
 }
 
+function sameSpecSourceLocation(result, specFile) {
+  if (
+    !result
+    || !['failed', 'interrupted', 'timedOut'].includes(result.status)
+    || result.errors.length === 0
+  ) return undefined;
+
+  // The JSON reporter retains TestError.location on `error` and `errors[0]`.
+  // Never parse messages/stacks, borrow an earlier retry, or trust config.rootDir.
+  const location = result.error?.location !== undefined
+    ? result.error.location
+    : result.errors[0]?.location;
+  if (
+    !location
+    || typeof location !== 'object'
+    || Array.isArray(location)
+    || Object.keys(location).sort().join(',') !== 'column,file,line'
+    || !boundedInteger(location.line, MAX_SOURCE_LINE)
+    || location.line === 0
+    || !boundedInteger(location.column, MAX_SOURCE_COLUMN)
+    || location.column === 0
+  ) return undefined;
+
+  // specFile has already passed the curated suite/spec identity checks.
+  const basename = path.posix.basename(specFile.replaceAll('\\', '/'));
+  const sourceFile = fileURLToPath(new URL(`../tests/${basename}`, import.meta.url));
+  if (
+    location.file !== sourceFile
+    && location.file !== basename
+    && location.file !== `tests/${basename}`
+  ) return undefined;
+
+  return { line: location.line, column: location.column };
+}
+
 function collectSpecs(suites) {
   if (!Array.isArray(suites)) {
     fail('Playwright JSON report suites are invalid.');
@@ -483,6 +522,7 @@ export function buildNightlyPlaywrightFailureEvidence(report, commandExitCode) {
 
     if (test.status === 'unexpected') {
       const classification = classifyUnexpectedResult(test.results);
+      const sourceLocation = sameSpecSourceLocation(test.results.at(-1), spec.file);
       failureClassCounts[classification] += 1;
       failures.push({
         spec_id: specId,
@@ -490,6 +530,7 @@ export function buildNightlyPlaywrightFailureEvidence(report, commandExitCode) {
         classification,
         attempt_count: test.results.length,
         result_error_count: resultErrorCount,
+        ...(sourceLocation === undefined ? {} : { source_location: sourceLocation }),
       });
     }
   }
@@ -518,7 +559,7 @@ export function buildNightlyPlaywrightFailureEvidence(report, commandExitCode) {
     fail('Playwright JSON report exit and failure counts disagree.');
   }
 
-  return {
+  const evidence = {
     schema: 'nightly-playwright-failure-evidence-v1',
     source: 'playwright-json-report-v2',
     command_exit_code: commandExitCode,
@@ -531,6 +572,14 @@ export function buildNightlyPlaywrightFailureEvidence(report, commandExitCode) {
     failure_class_counts: failureClassCounts,
     failures,
   };
+  // Preserve every admitted failure/classification. Optional coordinates are
+  // best effort within the existing byte bound; retain earlier sites first.
+  for (let index = failures.length - 1;
+    index >= 0 && Buffer.byteLength(`${JSON.stringify(evidence)}\n`) > MAX_EVIDENCE_BYTES;
+    index -= 1) {
+    delete failures[index].source_location;
+  }
+  return evidence;
 }
 
 export function sanitizePrivatePlaywrightReport(rawReportPath, outputPath, commandExitCode) {

@@ -6,6 +6,7 @@ import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
 import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn } from "@/lib/supabase-rest-client";
 import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
+import { fetchVerifiedReviewCountRows } from "@/lib/verified-review-count-rows";
 import {
     applyHomeMapThemeFilter,
     isHomeMapThemeFilterId,
@@ -303,11 +304,28 @@ function buildRestaurantQueryKey(
     ];
 }
 
-function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
+function projectSingletonRestaurant(restaurant: DBRestaurant): Restaurant {
+    const categories = Array.from(new Set(restaurant.categories || []));
+    const youtubeLink = restaurant.youtube_link || null;
+    const review = restaurant.tzuyang_review || null;
+    const meta = (restaurant.youtube_meta as YoutubeMeta | null) || null;
+
     return {
-        ...dbData,
-        address: dbData.road_address || dbData.jibun_address || '',
-        category: dbData.categories,
+        ...restaurant,
+        name: getRestaurantName(restaurant as RestaurantWithOptionalName),
+        lat: restaurant.lat || 0,
+        lng: restaurant.lng || 0,
+        categories,
+        address: restaurant.road_address || restaurant.jibun_address || '',
+        category: categories,
+        youtube_link: youtubeLink,
+        tzuyang_review: review,
+        youtube_meta: meta,
+        mergedYoutubeLinks: youtubeLink ? [youtubeLink] : [],
+        mergedTzuyangReviews: review ? [review] : [],
+        mergedYoutubeMetas: meta ? [meta] : [],
+        review_count: restaurant.review_count || 0,
+        mergedRestaurants: [restaurant],
     } as Restaurant;
 }
 
@@ -356,11 +374,7 @@ async function fetchRelatedRestaurantCandidates(names: string[]): Promise<Review
 async function fetchVerifiedReviewRows(restaurantIds: string[]): Promise<ReviewCountRow[]> {
     if (restaurantIds.length === 0) return [];
 
-    return fetchChunkedInOrder(restaurantIds, (idChunk) => fetchSupabaseRows<ReviewCountRow>('reviews', [
-        ['select', 'restaurant_id'],
-        ['restaurant_id', postgrestIn(idChunk)],
-        ['is_verified', 'eq.true'],
-    ]));
+    return fetchChunkedInOrder(restaurantIds, (idChunk) => fetchVerifiedReviewCountRows(idChunk));
 }
 
 export async function buildRelatedVerifiedReviewCounts(restaurants: RestaurantWithOptionalName[]): Promise<Map<string, number>> {
@@ -528,6 +542,9 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     }
 
     const mergedResults: Restaurant[] = Array.from(groups.values()).map((indices) => {
+        if (indices.length === 1) {
+            return projectSingletonRestaurant(restaurants[indices[0]]);
+        }
         const groupRestaurants = indices.map(idx => restaurants[idx]);
 
         // 메인 레스토랑은 단일 패스 비교로 선택 (정렬 제거)

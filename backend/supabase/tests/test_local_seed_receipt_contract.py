@@ -6,6 +6,7 @@ import tempfile
 import unittest
 import unicodedata
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -468,21 +469,55 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
                     local_migrate.parse_readback(_receipt_ndjson(rows))
                 self.assertEqual(error.exception.code, expected_code)
 
-    def test_manifest_contains_exactly_ninety_nine_immutable_units(self) -> None:
+    def test_manifest_contains_exactly_one_hundred_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 99)
-        self.assertEqual(len(manifest["source"]["files"]), 99)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 100)
+        self.assertEqual(len(manifest["source"]["files"]), 100)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
-            "backend/supabase/migrations/20260920171524_public_profile_summary_read_boundary.sql",
+            "backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
         )
         self.assertEqual(
             manifest["source"]["files"][-1]["transaction"]["class"],
             "self_committing",
         )
 
+    def test_receipt_ledger_rejects_missing_extra_or_changed_current_units(self) -> None:
+        manifest = local_migrate.build_manifest()
+        ledger = local_migrate._expected_ledger_records(manifest)
+        service = [["service", "150008", "UTF8", "UTC"]]
+        records = _receipt_rows()
+        local_migrate._receipt_payload_digests(records, ledger, service, manifest)
+        for mutation in ("missing", "extra", "duplicate", "reordered", "checksum", "status", "evidence"):
+            changed = [list(row) for row in ledger]
+            if mutation == "missing":
+                changed.pop()
+            elif mutation == "extra":
+                changed.append(list(changed[-1]))
+            elif mutation == "duplicate":
+                changed[-1] = list(changed[-2])
+            elif mutation == "reordered":
+                changed[-1], changed[-2] = changed[-2], changed[-1]
+            elif mutation == "checksum":
+                changed[-1][3] = "0" * 64
+            elif mutation == "status":
+                changed[-1][6] = "verified-existing"
+            else:
+                changed[-1][7] = "0" * 64
+            with self.subTest(mutation=mutation):
+                with self.assertRaisesRegex(local_migrate.LocalMigrationError, "receipt_ledger_state"):
+                    local_migrate._receipt_payload_digests(records, changed, service, manifest)
+
     def test_two_reset_comparator_compares_ordered_ledger_and_digests(self) -> None:
         project = local_stack._project_name(ROOT)
+        # This offline comparator fixture owns no stack or operator secrets.
+        # Keep tracked source bindings real; isolate only the runtime env digest.
+        self.enterContext(mock.patch.object(
+            local_migrate.PsqlExecutor, "_binding", return_value=(project, ROOT, {}),
+        ))
+        self.enterContext(mock.patch.object(
+            local_migrate, "_environment_contract_sha256", return_value="8" * 64,
+        ))
         ledger = [
             [
                 "ledger",
