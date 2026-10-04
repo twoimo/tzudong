@@ -1,0 +1,714 @@
+{
+  "kind": "local-transform-component-three-condition-replay",
+  "liveEvidenceEligible": false,
+  "formalPerformanceClaim": "not_established",
+  "baselineCommit": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+  "baselineSourceSha256": "5bb46aee715d0258f9ff1d8d69629f5f21be27bbd4d589e45a97b93e0c732a3a",
+  "sourceHashesBefore": {
+    "backend/restaurant-evaluation/scripts/12-transform.py": "ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4",
+    "backend/utils/stage_cache.py": "f1fda8ef6c5dd63c6a20a4edf4549ad8e04d4a4f1c40ed15304c563c528dc18b",
+    "backend/utils/jsonl_utils.py": "c6038dba73205181cbf446e9be2be0a3c4342e41da8826787898f4d13915a96d",
+    "backend/bin/benchmark_pipeline_transform.py": "c0dc9284b920c7779f68a4709aba128f47268c685e2a214340bb353a9f9007d0",
+    "backend/bin/benchmark_pipeline_transform_followup.py": "a9f6f26837bd928575980bd43dda49e3ea77cf7494f95b7c6fcd351637cf7680",
+    "backend/bin/analyze_pipeline_performance.py": "037b3c03decf9acbc5006beec9dff66f5570de73d65fb847e1b305e30753b7cc",
+    "backend/bin/benchmark_pipeline_transform_three_conditions.py": "e27246c6de8b216c134379e9ac43a34875b7914b0ee4bb58b2bc14df5de2ab8a"
+  },
+  "sourceHashesAfter": {
+    "backend/restaurant-evaluation/scripts/12-transform.py": "ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4",
+    "backend/utils/stage_cache.py": "f1fda8ef6c5dd63c6a20a4edf4549ad8e04d4a4f1c40ed15304c563c528dc18b",
+    "backend/utils/jsonl_utils.py": "c6038dba73205181cbf446e9be2be0a3c4342e41da8826787898f4d13915a96d",
+    "backend/bin/benchmark_pipeline_transform.py": "c0dc9284b920c7779f68a4709aba128f47268c685e2a214340bb353a9f9007d0",
+    "backend/bin/benchmark_pipeline_transform_followup.py": "a9f6f26837bd928575980bd43dda49e3ea77cf7494f95b7c6fcd351637cf7680",
+    "backend/bin/analyze_pipeline_performance.py": "037b3c03decf9acbc5006beec9dff66f5570de73d65fb847e1b305e30753b7cc",
+    "backend/bin/benchmark_pipeline_transform_three_conditions.py": "e27246c6de8b216c134379e9ac43a34875b7914b0ee4bb58b2bc14df5de2ab8a"
+  },
+  "sourcePreserved": true,
+  "datasetBefore": {
+    "sha256": "71d4a176f6eff028cecf4963f3332f97c14284148b6d769e3617fce8ef8361c9",
+    "files": 3307,
+    "bytes": 23636539
+  },
+  "datasetAfter": {
+    "sha256": "71d4a176f6eff028cecf4963f3332f97c14284148b6d769e3617fce8ef8361c9",
+    "files": 3307,
+    "bytes": 23636539
+  },
+  "deltaInputs": [
+    {
+      "name": "-1OU4tkFJns.jsonl",
+      "beforeSha256": "7e28185fc9e5829b586c78f49e3bd0f5cf3387696a9b5ac50922b7009ee723b5",
+      "afterSha256": "0ef782c0d9ffe7f1a774febf04dc737172cfcdc65a5872821356ba49459d184b"
+    },
+    {
+      "name": "-8wi-fVqTwk.jsonl",
+      "beforeSha256": "5d9256d030ef41d96538ac107a5fadac4b4fc12cdd98819b74061de7599b6e2d",
+      "afterSha256": "a53f6e17edbc491ae132f36a5154009b7dd43fd54e0bb79b51a2725ee78025d2"
+    },
+    {
+      "name": "-D43ezc57z8.jsonl",
+      "beforeSha256": "66d7449355e64cb37643d5ac30b58eedbc6f21dc509ec81f697162dc56015cfc",
+      "afterSha256": "edd4c52ecb3eccc3b5b5fcd8b85b96d6927336095ba4b61472a361427501027b"
+    },
+    {
+      "name": "-H-mhUeu_qk.jsonl",
+      "beforeSha256": "6d99869ebcc7f62b4390fa68f553bce66fdee57d3be1b6065ad626fa01cd9a97",
+      "afterSha256": "0c9171015be4ba2f35a9e2e1fbf9b2412c977007f8c7aafd1f9d083e33ea6136"
+    },
+    {
+      "name": "-HyRSLWcOeA.jsonl",
+      "beforeSha256": "2c3afff9e0e393de952ee6c11e818c11629b72cf037ed81525b9c9152024fb1e",
+      "afterSha256": "9ff7688297cb28ae9d0697fb9e6e653bc83a3417d368ca47bb4d9b3b0e659b53"
+    }
+  ],
+  "environment": {
+    "python": "3.14.8",
+    "pythonExecutable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpuCount": 18,
+    "cpuModel": "Apple M5 Max",
+    "physicalMemoryBytes": 137438953472,
+    "headAtReadback": "344f80e48d104a4a0142ef8d0597fb9bd0d7d631",
+    "workRoot": "tmp/transform-three-ownership-20261005-astra",
+    "startedAt": "2026-10-04T18:43:18.639357+00:00",
+    "finishedAt": "2026-10-04T18:43:36.972670+00:00",
+    "elapsedExperimentSeconds": 18.333338022232056,
+    "timingScope": "transform main only, imports/preparation/validation excluded",
+    "rssScope": "worker high-water including imports and output validation",
+    "pairOrder": "AB/BA alternating, A first for repeat 0",
+    "networkAndDotenvGuard": true,
+    "originalSourceWriteGuard": true,
+    "providerCalls": 0,
+    "dbCalls": 0
+  },
+  "hypotheses": {
+    "cold": "Candidate fingerprints, ownership index and atomic output/receipt publication add initial work; no assumption of a cold speedup.",
+    "unchanged": "A verified receipt can reuse all groups while scanning input metadata and validating the existing output.",
+    "delta-five": "Candidate reuses unchanged groups and republishes the complete output; append-only baseline must rebuild from empty output to reflect changed existing rows correctly."
+  },
+  "limitations": [
+    "Transform component only; no whole-pipeline, provider, hosted DB or monetary cost claim.",
+    "Cold means no transform output or receipt, not cold OS filesystem cache. Host workload is not isolated.",
+    "Seven paired samples; paired percentile bootstrap with 10000 draws and seed 20261002 is exploratory, particularly p95.",
+    "The original benchmark delta-five uses baseline full rebuild versus candidate primed incremental update; both must equal a fresh delta oracle.",
+    "As in the original benchmark, each pair copies the seed receipt to a fresh evaluation path; absolute-path file-hash memo keys are not all reusable. Stable-path cache speed is not inferred.",
+    "Worker audit guards add instrumentation overhead. RSS is whole-process high-water and cannot be accumulated or amortized.",
+    "Amortization is arithmetic on measured component percentiles, not a measured sequential run or pipeline-wide break-even.",
+    "Legacy rows lacking both current input and receipt ownership remain preserved without deletion evidence. These conditions do not prove cleanup.",
+    "Frozen new-input/failure-restart and earlier-source experiments are retained separately and were not rerun or pooled."
+  ],
+  "rawFile": "apps/web/performance/pipeline-20261002/transform-ownership-three-20261005-raw.json",
+  "rawSha256": "12ec16a99b1188f3a166cba0c6073346cfa05d47888c3f626314df05a02c6e20",
+  "confidenceMethod": "10000 paired bootstrap draws; seed 20261002; nearest-rank quantiles; 2*MAD paired-difference noise",
+  "comparisons": {
+    "cold": {
+      "pairedSamples": 7,
+      "allOutputsEquivalent": true,
+      "records": [
+        1257
+      ],
+      "wallMs": {
+        "unit": "ms",
+        "p50": {
+          "samples": 7,
+          "before": 266.973040997982,
+          "after": 443.59879195690155,
+          "absoluteChange": 176.62575095891953,
+          "changePercent": 66.15864669281517,
+          "change95CI": [
+            60.03608161598648,
+            81.54557949290557
+          ],
+          "absoluteChange95CI": [
+            160.64950008876622,
+            210.57379129342735
+          ],
+          "experimentalNoiseBudget": 10.672999545931816
+        },
+        "p75": {
+          "samples": 7,
+          "before": 275.56958398781717,
+          "after": 468.80212519317865,
+          "absoluteChange": 193.23254120536149,
+          "changePercent": 70.12114269254921,
+          "change95CI": [
+            53.79429532074678,
+            75.59905054110772
+          ],
+          "absoluteChange95CI": [
+            165.5279160477221,
+            201.82908419519663
+          ],
+          "experimentalNoiseBudget": 10.672999545931816
+        },
+        "p95": {
+          "samples": 7,
+          "before": 307.70533392205834,
+          "after": 473.23324996978045,
+          "absoluteChange": 165.5279160477221,
+          "changePercent": 53.79429532074678,
+          "change95CI": [
+            53.79429532074678,
+            75.19533290980776
+          ],
+          "absoluteChange95CI": [
+            165.5279160477221,
+            201.21387531980872
+          ],
+          "experimentalNoiseBudget": 10.672999545931816
+        },
+        "pairedRegressions": {
+          "count": 7,
+          "pairs": 7,
+          "largestAdverseChange": 213.11862510628998,
+          "largestSignedChange": 213.11862510628998
+        }
+      },
+      "cpuMs": {
+        "unit": "ms",
+        "p50": {
+          "samples": 7,
+          "before": 260.455,
+          "after": 434.782,
+          "absoluteChange": 174.327,
+          "changePercent": 66.9317156514561,
+          "change95CI": [
+            59.85414260172088,
+            80.0662084819285
+          ],
+          "absoluteChange95CI": [
+            157.00400000000008,
+            203.40500000000003
+          ],
+          "experimentalNoiseBudget": 16.263999999999783
+        },
+        "p75": {
+          "samples": 7,
+          "before": 269.646,
+          "after": 457.451,
+          "absoluteChange": 187.805,
+          "changePercent": 69.64872462413683,
+          "change95CI": [
+            55.994023256444315,
+            75.63533047935347
+          ],
+          "absoluteChange95CI": [
+            165.13599999999997,
+            196.99600000000004
+          ],
+          "experimentalNoiseBudget": 16.263999999999783
+        },
+        "p95": {
+          "samples": 7,
+          "before": 295.144,
+          "after": 460.40700000000004,
+          "absoluteChange": 165.26300000000003,
+          "changePercent": 55.994023256444315,
+          "change95CI": [
+            55.994023256444315,
+            74.39261029846253
+          ],
+          "absoluteChange95CI": [
+            165.26300000000003,
+            195.14000000000004
+          ],
+          "experimentalNoiseBudget": 16.263999999999783
+        },
+        "pairedRegressions": {
+          "count": 7,
+          "pairs": 7,
+          "largestAdverseChange": 206.43800000000005,
+          "largestSignedChange": 206.43800000000005
+        }
+      },
+      "peakRssMiB": {
+        "unit": "MiB",
+        "p50": {
+          "samples": 7,
+          "before": 101.34375,
+          "after": 141.0,
+          "absoluteChange": 39.65625,
+          "changePercent": 39.13043478260869,
+          "change95CI": [
+            37.70894034657262,
+            40.32083911769242
+          ],
+          "absoluteChange95CI": [
+            38.421875,
+            40.84375
+          ],
+          "experimentalNoiseBudget": 1.125
+        },
+        "p75": {
+          "samples": 7,
+          "before": 101.890625,
+          "after": 142.140625,
+          "absoluteChange": 40.25,
+          "changePercent": 39.503143689618156,
+          "change95CI": [
+            14.896867838044315,
+            41.2118408880666
+          ],
+          "absoluteChange95CI": [
+            18.28125,
+            41.765625
+          ],
+          "experimentalNoiseBudget": 1.125
+        },
+        "p95": {
+          "samples": 7,
+          "before": 122.71875,
+          "after": 143.109375,
+          "absoluteChange": 20.390625,
+          "changePercent": 16.615737203972493,
+          "change95CI": [
+            15.024191494779737,
+            41.1465557096625
+          ],
+          "absoluteChange95CI": [
+            18.4375,
+            41.71875
+          ],
+          "experimentalNoiseBudget": 1.125
+        },
+        "pairedRegressions": {
+          "count": 7,
+          "pairs": 7,
+          "largestAdverseChange": 41.8125,
+          "largestSignedChange": 41.8125
+        }
+      }
+    },
+    "unchanged": {
+      "pairedSamples": 7,
+      "allOutputsEquivalent": true,
+      "records": [
+        1257
+      ],
+      "wallMs": {
+        "unit": "ms",
+        "p50": {
+          "samples": 7,
+          "before": 249.56133286468685,
+          "after": 113.69929206557572,
+          "absoluteChange": -135.86204079911113,
+          "changePercent": -54.44034107350119,
+          "change95CI": [
+            -56.02271227332438,
+            -49.94535198730401
+          ],
+          "absoluteChange95CI": [
+            -142.93020917102695,
+            -122.6777508854866
+          ],
+          "experimentalNoiseBudget": 13.531331904232502
+        },
+        "p75": {
+          "samples": 7,
+          "before": 255.12904208153486,
+          "after": 122.94620811007917,
+          "absoluteChange": -132.1828339714557,
+          "changePercent": -51.810187069652514,
+          "change95CI": [
+            -56.550352051196114,
+            -49.85075477780535
+          ],
+          "absoluteChange95CI": [
+            -147.98129093833268,
+            -123.91670886427164
+          ],
+          "experimentalNoiseBudget": 13.531331904232502
+        },
+        "p95": {
+          "samples": 7,
+          "before": 261.6805830039084,
+          "after": 125.15312479808927,
+          "absoluteChange": -136.52745820581913,
+          "changePercent": -52.1733239197881,
+          "change95CI": [
+            -53.99902288933846,
+            -50.739996935063516
+          ],
+          "absoluteChange95CI": [
+            -141.30495791323483,
+            -128.91329219564795
+          ],
+          "experimentalNoiseBudget": 13.531331904232502
+        },
+        "pairedRegressions": {
+          "count": 0,
+          "pairs": 7,
+          "largestAdverseChange": 0,
+          "largestSignedChange": -118.69695922359824
+        }
+      },
+      "cpuMs": {
+        "unit": "ms",
+        "p50": {
+          "samples": 7,
+          "before": 247.58100000000002,
+          "after": 112.935,
+          "absoluteChange": -134.64600000000002,
+          "changePercent": -54.384625637670105,
+          "change95CI": [
+            -55.7505074210326,
+            -50.01251595271021
+          ],
+          "absoluteChange95CI": [
+            -140.63399999999996,
+            -121.87499999999999
+          ],
+          "experimentalNoiseBudget": 12.09599999999989
+        },
+        "p75": {
+          "samples": 7,
+          "before": 252.25599999999997,
+          "after": 121.81400000000001,
+          "absoluteChange": -130.44199999999995,
+          "changePercent": -51.710167448940744,
+          "change95CI": [
+            -56.550593829711104,
+            -49.96788929683619
+          ],
+          "absoluteChange95CI": [
+            -146.98799999999994,
+            -123.081
+          ],
+          "experimentalNoiseBudget": 12.09599999999989
+        },
+        "p95": {
+          "samples": 7,
+          "before": 259.92299999999994,
+          "after": 123.87,
+          "absoluteChange": -136.05299999999994,
+          "changePercent": -52.343578675223036,
+          "change95CI": [
+            -54.03561824078669,
+            -50.74242267590287
+          ],
+          "absoluteChange95CI": [
+            -140.45099999999996,
+            -127.60400000000001
+          ],
+          "experimentalNoiseBudget": 12.09599999999989
+        },
+        "pairedRegressions": {
+          "count": 0,
+          "pairs": 7,
+          "largestAdverseChange": 0,
+          "largestSignedChange": -118.44799999999998
+        }
+      },
+      "peakRssMiB": {
+        "unit": "MiB",
+        "p50": {
+          "samples": 7,
+          "before": 103.03125,
+          "after": 69.875,
+          "absoluteChange": -33.15625,
+          "changePercent": -32.1807703973309,
+          "change95CI": [
+            -42.26006191950464,
+            -32.0995145631068
+          ],
+          "absoluteChange95CI": [
+            -51.1875,
+            -33.0625
+          ],
+          "experimentalNoiseBudget": 0.5
+        },
+        "p75": {
+          "samples": 7,
+          "before": 121.125,
+          "after": 69.9375,
+          "absoluteChange": -51.1875,
+          "changePercent": -42.26006191950464,
+          "change95CI": [
+            -42.26006191950464,
+            -32.12010919017288
+          ],
+          "absoluteChange95CI": [
+            -51.1875,
+            -33.09375
+          ],
+          "experimentalNoiseBudget": 0.5
+        },
+        "p95": {
+          "samples": 7,
+          "before": 121.28125,
+          "after": 70.96875,
+          "absoluteChange": -50.3125,
+          "changePercent": -41.48415356866787,
+          "change95CI": [
+            -42.26006191950464,
+            -37.126000842814996
+          ],
+          "absoluteChange95CI": [
+            -51.1875,
+            -41.296875
+          ],
+          "experimentalNoiseBudget": 0.5
+        },
+        "pairedRegressions": {
+          "count": 0,
+          "pairs": 7,
+          "largestAdverseChange": 0,
+          "largestSignedChange": -33.0625
+        }
+      }
+    },
+    "delta-five": {
+      "pairedSamples": 7,
+      "allOutputsEquivalent": true,
+      "records": [
+        1257
+      ],
+      "wallMs": {
+        "unit": "ms",
+        "p50": {
+          "samples": 7,
+          "before": 261.0216671600938,
+          "after": 212.85920892842114,
+          "absoluteChange": -48.162458231672645,
+          "changePercent": -18.45151736086833,
+          "change95CI": [
+            -21.137550420901995,
+            -17.096869800676416
+          ],
+          "absoluteChange95CI": [
+            -59.78208314627409,
+            -46.69745685532689
+          ],
+          "experimentalNoiseBudget": 3.5643335431814194
+        },
+        "p75": {
+          "samples": 7,
+          "before": 282.8240829985589,
+          "after": 226.43708414398134,
+          "absoluteChange": -56.38699885457754,
+          "changePercent": -19.937127792213104,
+          "change95CI": [
+            -24.034140179662135,
+            -17.096869800676416
+          ],
+          "absoluteChange95CI": [
+            -70.56620833463967,
+            -46.69745685532689
+          ],
+          "experimentalNoiseBudget": 3.5643335431814194
+        },
+        "p95": {
+          "samples": 7,
+          "before": 293.60820818692446,
+          "after": 232.87945799529552,
+          "absoluteChange": -60.72875019162893,
+          "changePercent": -20.683600968323823,
+          "change95CI": [
+            -24.034140179662135,
+            -17.096869800676416
+          ],
+          "absoluteChange95CI": [
+            -70.56620833463967,
+            -46.69745685532689
+          ],
+          "experimentalNoiseBudget": 3.5643335431814194
+        },
+        "pairedRegressions": {
+          "count": 0,
+          "pairs": 7,
+          "largestAdverseChange": 0,
+          "largestSignedChange": -46.69745685532689
+        }
+      },
+      "cpuMs": {
+        "unit": "ms",
+        "p50": {
+          "samples": 7,
+          "before": 258.197,
+          "after": 210.439,
+          "absoluteChange": -47.75800000000001,
+          "changePercent": -18.496729241625587,
+          "change95CI": [
+            -19.70802652037432,
+            -17.576964222037304
+          ],
+          "absoluteChange95CI": [
+            -53.74299999999997,
+            -47.319999999999965
+          ],
+          "experimentalNoiseBudget": 4.456000000000017
+        },
+        "p75": {
+          "samples": 7,
+          "before": 272.69599999999997,
+          "after": 221.89600000000004,
+          "absoluteChange": -50.799999999999926,
+          "changePercent": -18.6288027693842,
+          "change95CI": [
+            -22.72837959450158,
+            -16.560565611523437
+          ],
+          "absoluteChange95CI": [
+            -64.40199999999996,
+            -45.15999999999994
+          ],
+          "experimentalNoiseBudget": 4.456000000000017
+        },
+        "p95": {
+          "samples": 7,
+          "before": 283.35499999999996,
+          "after": 227.53600000000003,
+          "absoluteChange": -55.81899999999993,
+          "changePercent": -19.699317111044422,
+          "change95CI": [
+            -22.72837959450158,
+            -16.560565611523437
+          ],
+          "absoluteChange95CI": [
+            -64.40199999999996,
+            -45.15999999999994
+          ],
+          "experimentalNoiseBudget": 4.456000000000017
+        },
+        "pairedRegressions": {
+          "count": 0,
+          "pairs": 7,
+          "largestAdverseChange": 0,
+          "largestSignedChange": -45.15999999999994
+        }
+      },
+      "peakRssMiB": {
+        "unit": "MiB",
+        "p50": {
+          "samples": 7,
+          "before": 101.25,
+          "after": 73.21875,
+          "absoluteChange": -28.03125,
+          "changePercent": -27.68518518518519,
+          "change95CI": [
+            -28.506027773538833,
+            -27.486102532427424
+          ],
+          "absoluteChange95CI": [
+            -29.1875,
+            -27.8125
+          ],
+          "experimentalNoiseBudget": 0.53125
+        },
+        "p75": {
+          "samples": 7,
+          "before": 102.390625,
+          "after": 73.375,
+          "absoluteChange": -29.015625,
+          "changePercent": -28.338165725621856,
+          "change95CI": [
+            -36.68599164082514,
+            -26.697530864197528
+          ],
+          "absoluteChange95CI": [
+            -42.515625,
+            -27.03125
+          ],
+          "experimentalNoiseBudget": 0.53125
+        },
+        "p95": {
+          "samples": 7,
+          "before": 115.890625,
+          "after": 74.21875,
+          "absoluteChange": -41.671875,
+          "changePercent": -35.95793447485506,
+          "change95CI": [
+            -36.68599164082514,
+            -26.75404780262144
+          ],
+          "absoluteChange95CI": [
+            -42.515625,
+            -27.109375
+          ],
+          "experimentalNoiseBudget": 0.53125
+        },
+        "pairedRegressions": {
+          "count": 0,
+          "pairs": 7,
+          "largestAdverseChange": 0,
+          "largestSignedChange": -26.9375
+        }
+      }
+    }
+  },
+  "amortization": {
+    "scope": "modeled accumulated transform cost, not a measured sequential pipeline; RSS is not additive",
+    "formula": "cold overhead + N * subsequent delta < 0; smallest integer N >= 0",
+    "metrics": {
+      "wallMs": {
+        "p50": {
+          "coldOverhead": 176.62575095891953,
+          "unchanged": {
+            "perRunSaving": 135.86204079911113,
+            "reruns": 2
+          },
+          "delta-five": {
+            "perRunSaving": 48.162458231672645,
+            "reruns": 4
+          }
+        },
+        "p75": {
+          "coldOverhead": 193.23254120536149,
+          "unchanged": {
+            "perRunSaving": 132.1828339714557,
+            "reruns": 2
+          },
+          "delta-five": {
+            "perRunSaving": 56.38699885457754,
+            "reruns": 4
+          }
+        },
+        "p95": {
+          "coldOverhead": 165.5279160477221,
+          "unchanged": {
+            "perRunSaving": 136.52745820581913,
+            "reruns": 2
+          },
+          "delta-five": {
+            "perRunSaving": 60.72875019162893,
+            "reruns": 3
+          }
+        }
+      },
+      "cpuMs": {
+        "p50": {
+          "coldOverhead": 174.327,
+          "unchanged": {
+            "perRunSaving": 134.64600000000002,
+            "reruns": 2
+          },
+          "delta-five": {
+            "perRunSaving": 47.75800000000001,
+            "reruns": 4
+          }
+        },
+        "p75": {
+          "coldOverhead": 187.805,
+          "unchanged": {
+            "perRunSaving": 130.44199999999995,
+            "reruns": 2
+          },
+          "delta-five": {
+            "perRunSaving": 50.799999999999926,
+            "reruns": 4
+          }
+        },
+        "p95": {
+          "coldOverhead": 165.26300000000003,
+          "unchanged": {
+            "perRunSaving": 136.05299999999994,
+            "reruns": 2
+          },
+          "delta-five": {
+            "perRunSaving": 55.81899999999993,
+            "reruns": 3
+          }
+        }
+      }
+    }
+  }
+}

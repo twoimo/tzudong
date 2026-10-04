@@ -180,11 +180,11 @@ test('empty or blocked SDK text cannot be published as a completed result',()=>{
     assert.equal(requireGeminiText({text:'{"ok":true}'}),'{"ok":true}');
 });
 
-test('thinking fallback retains chunk temperature and output limit',async()=>{
+test('thinking fallback retains Gemini 3 default sampling and chunk output limit',async()=>{
     let request;
     const ai={models:{generateContent:async value=>{request=value;return {text:'{"ok":true}'};}}};
     await generateChunkContent(ai,'gemini-3.7-flash','fixture',{uri:'fixture-file',mimeType:'video/mp4'},'video/mp4','');
-    assert.equal(request.config.temperature,.2);
+    assert.equal(Object.hasOwn(request.config,'temperature'),false);
     assert.equal(request.config.maxOutputTokens,4096);
     assert.equal(request.config.thinkingConfig,undefined);
     assert.equal(request.contents[0].parts[1].fileData.fileUri,'fixture-file');

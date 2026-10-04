@@ -153,9 +153,11 @@ export async function generateChunkContent(ai, modelName, promptText, processedF
         contents,
     };
     request.config = {
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-            ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
+        // Gemini 3 reasoning uses the default sampling settings (temperature 1.0).
+        // https://ai.google.dev/gemini-api/docs/generate-content/gemini-3#temperature
+        ...(/^(?:models\/)?gemini-3(?:\.\d+)?(?:-|$)/.test(modelName) ? {} : { temperature: 0.2 }),
+        maxOutputTokens: 4096,
+        ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
     };
     return generateWithProjectBudget(ai, request, GENERATE_TIMEOUT_MS);
 }

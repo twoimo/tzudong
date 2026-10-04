@@ -81,6 +81,8 @@ time.sleep(0.15)
         assets=self.root/'asset.txt';assets.write_text('synthetic asset')
         (copy.parent/'final_merge_chunk.mjs').write_text('synthetic asset')
         splitter=copy.parent/'split_video_chunks.mjs';splitter.write_text('synthetic splitter')
+        chunk_api=copy.parent/'gemini_chunk_video_request.mjs'
+        chunk_api.write_text((script.parent/chunk_api.name).read_text())
         final_prompt=copy.parent.parent/'prompts/final_merge_prompt.txt';final_prompt.parent.mkdir(parents=True)
         final_prompt.write_text('synthetic merge prompt')
         data=self.root/'data'
@@ -99,7 +101,7 @@ time.sleep(0.15)
         overrides='''
 PROJECT_ROOT="$FX_BACKEND"
 PROMPT_FILE="$FX_ASSET"; CHUNK_PLANNER="$FX_ASSET"; MERGE_RESULTS="$FX_ASSET"
-PARSER_SCRIPT="$FX_ASSET"; GEMINI_CHUNK_API="$FX_ASSET"
+PARSER_SCRIPT="$FX_ASSET"; GEMINI_CHUNK_API="$FX_CHUNK_API"
 get_local_python_cmd() { echo "$PYTHON_CMD"; }
 get_channel_data_path() { echo "$FX_DATA_REL"; }
 get_channel_name() { echo fixture; }
@@ -110,7 +112,9 @@ main() { process_channel tzuyang; }
         self.assertEqual(source.count(anchor),1)
         copy.write_text(source.replace(anchor,overrides+'\n'+anchor,1))
         env=os.environ.copy();env.update(PYTHON_CMD=sys.executable,FX_BACKEND=str(ROOT/'backend'),FX_ROOT=str(self.root),
-            FX_DATA_REL=os.path.relpath(data,ROOT/'backend'),FX_ASSET=str(assets),FX_WORKER=str(stub))
+            FX_DATA_REL=os.path.relpath(data,ROOT/'backend'),FX_ASSET=str(assets),FX_WORKER=str(stub),
+            FX_CHUNK_API=str(chunk_api),PRIMARY_MODEL='gemini-3.7-flash',FALLBACK_MODEL='gemini-3.7-flash',
+            GEMINI_CHUNK_THINKING_LEVEL='LOW')
         bash='/opt/homebrew/bin/bash' if Path('/opt/homebrew/bin/bash').is_file() else shutil.which('bash')
         command=[bash,str(copy),'--channel','tzuyang','--url','https://www.youtube.com/watch?v='+video]
         with subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE) as first:
@@ -119,12 +123,33 @@ main() { process_channel tzuyang; }
                 self.assertEqual(first.returncode,0,first_error.decode()[-500:])
                 self.assertEqual(second.returncode,0,second_error.decode()[-500:])
         self.assertEqual(self.calls.read_text().splitlines(),['work'])
-        self.assertTrue((data/'crawling/.receipts'/f'{video}.json').is_file())
+        receipt=data/'crawling/.receipts'/f'{video}.json'
+        self.assertTrue(receipt.is_file())
         for index,asset in enumerate([splitter,final_prompt],2):
             asset.write_text(asset.read_text()+' changed')
             completed=subprocess.run(command,env=env,capture_output=True,timeout=15)
             self.assertEqual(completed.returncode,0,completed.stderr.decode()[-500:])
             self.assertEqual(len(self.calls.read_text().splitlines()),index)
+
+        # Exercise the real shell cache arguments: generation policy bytes,
+        # both model selections and thinking changes must invalidate a receipt.
+        original_output=(data/'crawling'/f'{video}.jsonl').read_bytes()
+        policy_source=chunk_api.read_text()
+        changed_policy=policy_source.replace('temperature: 0.2','temperature: 0.3')
+        self.assertNotEqual(changed_policy,policy_source)
+        mutations=[lambda: chunk_api.write_text(changed_policy),
+                   lambda: env.update(PRIMARY_MODEL='gemini-3.8-flash'),
+                   lambda: env.update(FALLBACK_MODEL='gemini-2.5-flash'),
+                   lambda: env.update(GEMINI_CHUNK_THINKING_LEVEL='HIGH')]
+        for count,mutate in enumerate(mutations,4):
+            before=json.loads(receipt.read_text())['inputHash']
+            mutate()
+            for expected_calls in (count,count):
+                completed=subprocess.run(command,env=env,capture_output=True,timeout=15)
+                self.assertEqual(completed.returncode,0,completed.stderr.decode()[-500:])
+                self.assertEqual(len(self.calls.read_text().splitlines()),expected_calls)
+                self.assertEqual((data/'crawling'/f'{video}.jsonl').read_bytes(),original_output)
+                self.assertNotEqual(json.loads(receipt.read_text())['inputHash'],before)
 
 
 if __name__=='__main__':unittest.main()

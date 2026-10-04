@@ -1,0 +1,10 @@
+{
+  "sourceSha256": "de64777c29fc14b52522f0e2451d4072951ea3b0c3717783bfd1242db38eed40",
+  "sourceByteLength": 4547,
+  "statementCount": 3,
+  "statementsArraySha256": "7f1452c48d099b8b11aab5172e4d627eb2e18e95e46a68076fa090fec9699ce5",
+  "parserDeclaredUpstream": "v2.109.1",
+  "cliObservedVersion": "2.119.0",
+  "actualLedgerVectorMatchesSourcePort": true,
+  "initialAssumptionOneStatementRejected": true
+}

@@ -184,3 +184,14 @@ PR7c7e1eed의 Admin CI 실패를 같은103개 cohort에서 재현했다(102pass/
 이 변경은 agent 관련28tests/284assertions 및 root refresh+responsive30tests/823assertions가 통과했다(겹침은 합산하지 않는다). 390/834/1423 가로 넘침0, keyboard/Sheet와 세 합성 POST 실패/readback을 검증했다. 실제 browser mutation/provider/운영 호출0이다. GET은 메모·결정 주체를 반환하지 않으므로 동일 상태의 작성자까지 입증하지 않으며, 잠금은 컴포넌트 수명 동안이다. 전체 새로고침/부모 unmount를 넘는 복구라고 표시하지 않는다. 로그인 fixture의 기존 MyPage hydration 오류1건은 별도 기록했고 관리자 후속 화면에서 새 오류는 없었다.
 
 스토리보드 프로젝트 전환/신규/사이드바/링크/뒤로가기·편집 닫기는 미저장·불확실 저장을 확인하고 저장 중 전환을 막는다. 보낸 장면 내용과 증가한 revision을 확인하여 저장을 확정하고 늦은 readback 뒤 새 편집을 버리지 않는다. 신규 browser 회귀8개/기존 단위5개/기존 Playwright3개가 통과했다. Gemini 모델·worker·API·billing은 바꾸지 않았다. 취소한 popstate의 URL 복구는 앞으로가기 stack을 축약할 수 있으며 실제 제공자 성능 증거는 아니다.
+
+
+## 2026-10-05 현 transform 5조건과 운영79 증빙
+
+동일 ae9ad574 source의 cold/unchanged/delta-five도 각각7쌍 재측정했다. p75 cold275.570→468.802ms(+193.233/+70.12%,95%CI[53.79,75.60]), unchanged255.129→122.946ms(−132.183/−51.81%,CI[−56.55,−49.85]), delta-five282.824→226.437ms(−56.387/−19.94%,CI[−24.03,−17.10])다. cold 시간·CPU·RSS는 모두7/7악화다. 나머지는0/7악화이며 unchanged의 시간/CPU2회, delta-five4회로 cold 추가 비용을 회수한다. RSS는 누적 상각하지 않는다. 원본3307파일/23636539bytes·입력 SHA를 보존하고42개 출력1257행이 동일하다. 이로써 같은 source의 transform component5조건 표본은 채웠지만 전체 pipeline/media/provider/운영/100쌍HTTP/G003 관측을 대체하지 않는다. raw/summary/report는 transform-ownership-three-20261005에 있다.
+
+새 deferred migration은 actual fresh ledger78·old tick SHA/metadata·policyOFF·running/queued0·맛집1659행 동일 hash 확인 후 single-pending 팩/CLI2.119/skip-vault/TLSverify-full로1회 적용했다. actual ledger79, prior78동일, 새 tick body658473cae9137b04ddd810cb6ccf688b9ae998446880fa164e912eb8a1fbef6d 및 metadata 동일을 새readback에서 확인했다. 맛집 전체 행 SHA32a58ac590418a889708c0fc97539fe7ca5b20a97f0ba43c7b5226340acc8458·정책OFF/version1·자동운영 미실행을 보존했다. Vault/seed/roles/history repair/provider/추가billing은0이다.
+
+최초 root readback은 파일 전체가1statement일 것이라는 잘못된 기대값과 property-order 비교를 사용하여 proven=false였다. 이 실패를 보존했고 SQL을 재적용하지 않았다. 실제 ledger는3statements였으며 source-pinned parser의3개 vector가 actualCLI2.119 배열 SHA7f1452c48d099b8b11aab5172e4d627eb2e18e95e46a68076fa090fec9699ce5와 일치했다. 원래 parser port 표기는v2.109.1이며 이 해당source의actualvector 일치를 확인한 것이다. canonical object 비교의 readback-only 검증에서proven=true였다. rollout-preflight/deferred-20261005의 initial/canonicalreadback·intent·transport·source-vector-proof와 detachedmap이 실제증빙이다.
+
+Gemini3 청크 temperature는 공식 권고에 따라 생략하여 기본1.0을 사용한다. 비Gemini3은 기존0.2다. prompt/model/thinking/output4096/한도는 유지하며 helper SHA가 기존stagecache dependency에 포함되므로 이전조건을 잘못 재사용하지 않는다. SDK2.24와2.26의 request serialization24개씩, stageexecution6개를 검증했고 actualprovider 결과 품질은 아직 측정하지 않았다.
