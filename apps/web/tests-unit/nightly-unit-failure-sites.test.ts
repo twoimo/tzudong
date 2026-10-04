@@ -65,6 +65,12 @@ describe('bounded nightly unit failure source coordinates', () => {
       expect(r.status).toBe(0);
       writeFileSync(log, `discarded-private-log-${canary}\nNIGHTLY_UNIT_DIAGNOSTIC=${r.stdout.trim()}\n`, { mode: 0o600 });
       const safe = spawnSync('python3', [script, '--log', log], { encoding: 'utf8' });
+      if (process.platform === 'win32') {
+        expect(safe.status).toBe(1);
+        expect(safe.stdout).toBe('');
+        expect(safe.stderr.trim()).toBe('unit_diagnostic_unavailable');
+        return;
+      }
       expect(safe.status).toBe(0);
       expect(safe.stdout).toBe(`NIGHTLY_UNIT_DIAGNOSTIC=${r.stdout.trim()}\n`);
       expect(safe.stdout + safe.stderr).not.toContain(canary);
@@ -76,7 +82,10 @@ describe('bounded nightly unit failure source coordinates', () => {
       expect(rejected.status).toBe(1);
       expect(rejected.stdout + rejected.stderr).not.toContain(canary);
     } finally {
-      unlinkSync(link); unlinkSync(log); rmdirSync(dir);
+      try { unlinkSync(link); } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      unlinkSync(log); rmdirSync(dir);
     }
   });
 });

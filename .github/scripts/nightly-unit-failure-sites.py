@@ -116,6 +116,10 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2] / "apps/web"
     try:
         if len(sys.argv) == 3 and sys.argv[1] == "--log":
+            # Canonical local Nightly requires POSIX custody. Never substitute
+            # a following open or pretend that Windows mode bits prove ACLs.
+            if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "getuid"):
+                fail()
             path = Path(sys.argv[2])
             fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
             with os.fdopen(fd, "rb") as handle:
