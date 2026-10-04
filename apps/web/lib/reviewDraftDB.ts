@@ -405,6 +405,59 @@ export async function deleteDraft(userId: string, restaurantId: string): Promise
     }
 }
 
+// Capture the existing bounded text row before a review write. The returned
+// cleanup may finish after the composer unmounts, but cannot delete a newer
+// draft from another composer. Compare and delete share one IDB transaction.
+// This adds no persisted fields, media, operation IDs, or retention policy.
+export async function prepareDraftDeletion(userId: string, restaurantId: string): Promise<() => Promise<boolean>> {
+    if (!isValidIdentifier(userId) || !isValidIdentifier(restaurantId)) return async () => false;
+    const key: DraftKey = [userId, restaurantId];
+    let snapshot: PersistedReviewDraft | null;
+    let db: IDBPDatabase<ReviewDraftDB> | undefined;
+    try {
+        db = await initDB();
+        const stored = await db.get(STORE_NAME, key);
+        snapshot = stored === undefined ? null : readPersistedReviewDraft(stored);
+        if (stored !== undefined && !snapshot) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
+    } catch {
+        // No deletion authority was captured. The operation must retry this
+        // read before it dispatches uploads/insert, rather than retaining a
+        // permanent false closure after an otherwise committed review.
+        throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
+    } finally {
+        db?.close();
+    }
+    const expected = JSON.stringify(snapshot);
+    return async () => {
+        let cleanupDb: IDBPDatabase<ReviewDraftDB> | undefined;
+        try {
+            cleanupDb = await initDB();
+            const transaction = cleanupDb.transaction(STORE_NAME, 'readwrite');
+            const stored = await transaction.store.get(key);
+            if (stored === undefined) { await transaction.done; return true; }
+            const current = readPersistedReviewDraft(stored);
+            if (!current) {
+                await transaction.done;
+                return false;
+            }
+            if (JSON.stringify(current) !== expected) {
+                // The submitted row has already been replaced. Its cleanup is
+                // complete; preserve the replacement instead of trapping the
+                // saved composer in an impossible deletion retry.
+                await transaction.done;
+                return true;
+            }
+            await transaction.store.delete(key);
+            await transaction.done;
+            return true;
+        } catch {
+            return false;
+        } finally {
+            cleanupDb?.close();
+        }
+    };
+}
+
 // Delete every scoped row and read back from the same transaction before reporting success.
 export async function deleteAllDraftsByUser(userId: string): Promise<boolean> {
     if (!isValidIdentifier(userId)) return false;
