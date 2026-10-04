@@ -7,7 +7,7 @@
   <p>
     <a href="https://tzudong.app">Live app</a>
     ·
-    <a href="https://github.com/twoimo/tzudong/releases/tag/v1.2.4">Latest release</a>
+    <a href="https://github.com/twoimo/tzudong/releases/latest">Latest release</a>
     ·
     <a href="README.ko.md">한국어</a>
     ·
@@ -28,6 +28,8 @@
 
 Tzudong Map turns mukbang video evidence into a usable restaurant map: users discover places on mobile, operators verify data in an admin console, and the storyboard workspace creates visual cuts for content production.
 
+[Highlights](#highlights) · [Stack](#stack) · [Quick start](#quick-start) · [Product tour](#product-tour)
+
 ## Highlights
 
 | Product surface | What it does |
@@ -40,11 +42,30 @@ Tzudong Map turns mukbang video evidence into a usable restaurant map: users dis
 
 ## Stack
 
+- Frontend: Next.js 16 (App Router), React 19, Tailwind CSS, and Lucide icons.
 - Web runtime: Node 24.x. Day-to-day install/unit flows may use Bun; npm 11.6.2, `package.json`, and `package-lock.json` are the release package authority.
 - TypeScript: native CLI `@typescript/native` `7.0.2`; stable API/compatibility bridge `6.0.2` via `npm run typecheck:parity`.
 - Serialized content patches: `develop -> data -> main`. Hosted apply, legal compliance, and live URL state are not claimed by this tree.
 - Change history: [CHANGELOG.md](CHANGELOG.md) / [CHANGELOG.ko.md](CHANGELOG.ko.md).
 - Docs index: [docs/README.md](docs/README.md). Product design: [docs/product/DESIGN.md](docs/product/DESIGN.md).
+
+## Quick start
+
+Use Node 24.x and npm 11.6.2. The web package lives in `apps/web`:
+
+```bash
+git clone https://github.com/twoimo/tzudong.git
+cd tzudong/apps/web
+npm ci
+```
+
+Prepare and migrate the repository-owned [local Supabase stack](backend/supabase/README.md), then run from `apps/web`:
+
+```bash
+npm run dev -- --port 8080
+```
+
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080). The development runner validates the generated local stack, allowed browser origin, and migration ledger before starting Next.js with webpack. See the [web development guide](apps/web/README.md) for Bun commands and explicit hosted debugging.
 
 ## Product tour
 
@@ -179,4 +200,4 @@ On the Hobby team, commits must be authored by the team owner. Commits authored 
 
 Source safeguards stay fail-closed: challenge-bound account creation, no under-14 registration until a verified guardian path exists, purpose/channel marketing consent with a separate night grant, shared redaction, memory-only device location, and Preview → Confirm → Apply → Readback → Audit for deletion/retention/incidents.
 
-These are not legal compliance or production proof. Release stays blocked until the external gates in `AGENTS.md` have named receipts. The live app and release links above are status references only.
+These safeguards are not legal compliance or production proof. The external evidence gates were parked on 2026-09-22; product safeguards remain fail-closed. Current promotion, rollback, and deployment readback requirements are in [docs/agents/release.md](docs/agents/release.md). The live app and release links above are status references only.

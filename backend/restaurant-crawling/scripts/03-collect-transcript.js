@@ -39,7 +39,7 @@ async function loadEnvironment() {
     const envPath = path.resolve(__dirname, '../.env');
     if (!fs.existsSync(envPath)) return;
     const { config } = await import('dotenv');
-    config({ path: envPath });
+    config({ path: envPath, quiet: true });
 }
 
 // config 로드 (CHANNELS_CONFIG 환경변수로 지정 가능)

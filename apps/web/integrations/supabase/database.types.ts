@@ -1604,6 +1604,347 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_storyboard_production_assets: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string | null
+          metadata: Json
+          owner_id: string
+          project_id: string
+          scene_no: number
+          scene_revision: number
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          job_id?: string | null
+          metadata: Json
+          owner_id: string
+          project_id: string
+          scene_no: number
+          scene_revision: number
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          metadata?: Json
+          owner_id?: string
+          project_id?: string
+          scene_no?: number
+          scene_revision?: number
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_storyboard_production_assets_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_storyboard_production_assets_project_id_owner_id_fkey"
+            columns: ["project_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_projects"
+            referencedColumns: ["id", "owner_id"]
+          },
+          {
+            foreignKeyName: "admin_storyboard_production_assets_worker_id_owner_id_fkey"
+            columns: ["worker_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_workers"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      admin_storyboard_production_events: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          id: number
+          job_id: string | null
+          operation: string
+          owner_id: string
+          project_id: string
+          revision: number
+          scene_no: number | null
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          id?: never
+          job_id?: string | null
+          operation: string
+          owner_id: string
+          project_id: string
+          revision: number
+          scene_no?: number | null
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          id?: never
+          job_id?: string | null
+          operation?: string
+          owner_id?: string
+          project_id?: string
+          revision?: number
+          scene_no?: number | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_storyboard_production_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_storyboard_production_events_project_id_owner_id_fkey"
+            columns: ["project_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_projects"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      admin_storyboard_production_jobs: {
+        Row: {
+          attempts: number
+          available_at: string
+          base_revision: number
+          created_at: string
+          error_code: string | null
+          id: string
+          kind: string
+          last_heartbeat: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          owner_id: string
+          project_id: string
+          request_id: string
+          requested_revision: number
+          result_request_ids: string[]
+          scene_no: number | null
+          scene_versions: Json
+          stage: string
+          status: string
+          updated_at: string
+          worker_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          available_at?: string
+          base_revision: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          kind: string
+          last_heartbeat?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          owner_id: string
+          project_id: string
+          request_id: string
+          requested_revision: number
+          result_request_ids?: string[]
+          scene_no?: number | null
+          scene_versions?: Json
+          stage?: string
+          status?: string
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          available_at?: string
+          base_revision?: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          kind?: string
+          last_heartbeat?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          owner_id?: string
+          project_id?: string
+          request_id?: string
+          requested_revision?: number
+          result_request_ids?: string[]
+          scene_no?: number | null
+          scene_versions?: Json
+          stage?: string
+          status?: string
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_storyboard_production_jobs_project_id_owner_id_fkey"
+            columns: ["project_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_projects"
+            referencedColumns: ["id", "owner_id"]
+          },
+          {
+            foreignKeyName: "admin_storyboard_production_jobs_worker_id_owner_id_fkey"
+            columns: ["worker_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_workers"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      admin_storyboard_production_projects: {
+        Row: {
+          created_at: string
+          document: Json | null
+          draft_worker_id: string | null
+          id: string
+          owner_id: string
+          request: Json
+          request_id: string
+          revision: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document?: Json | null
+          draft_worker_id?: string | null
+          id?: string
+          owner_id: string
+          request: Json
+          request_id: string
+          revision?: number
+          status: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document?: Json | null
+          draft_worker_id?: string | null
+          id?: string
+          owner_id?: string
+          request?: Json
+          request_id?: string
+          revision?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_storyboard_production_restores: {
+        Row: {
+          applied_revision: number
+          created_at: string
+          project_id: string
+          request_id: string
+          scene_no: number | null
+          target_revision: number
+        }
+        Insert: {
+          applied_revision: number
+          created_at?: string
+          project_id: string
+          request_id: string
+          scene_no?: number | null
+          target_revision: number
+        }
+        Update: {
+          applied_revision?: number
+          created_at?: string
+          project_id?: string
+          request_id?: string
+          scene_no?: number | null
+          target_revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_storyboard_production_restores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_storyboard_production_revisions: {
+        Row: {
+          created_at: string
+          document: Json
+          owner_id: string
+          project_id: string
+          revision: number
+        }
+        Insert: {
+          created_at?: string
+          document: Json
+          owner_id: string
+          project_id: string
+          revision: number
+        }
+        Update: {
+          created_at?: string
+          document?: Json
+          owner_id?: string
+          project_id?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_storyboard_production_revisions_project_id_owner_id_fkey"
+            columns: ["project_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "admin_storyboard_production_projects"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      admin_storyboard_production_workers: {
+        Row: {
+          created_at: string
+          disabled: boolean
+          id: string
+          last_heartbeat: string | null
+          models: Json
+          owner_id: string
+          revoked_at: string | null
+          token_sha256: string
+        }
+        Insert: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          last_heartbeat?: string | null
+          models?: Json
+          owner_id: string
+          revoked_at?: string | null
+          token_sha256: string
+        }
+        Update: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          last_heartbeat?: string | null
+          models?: Json
+          owner_id?: string
+          revoked_at?: string | null
+          token_sha256?: string
+        }
+        Relationships: []
+      }
       admin_trend_job_requests: {
         Row: {
           claimed_at: string | null
@@ -6465,6 +6806,62 @@ export type Database = {
         }[]
       }
       soft_delete_user: { Args: never; Returns: undefined }
+      storyboard_production_admin: {
+        Args: {
+          p_action: string
+          p_owner_id: string
+          p_payload?: Json
+          p_project_id?: string
+          p_revision?: number
+        }
+        Returns: Json
+      }
+      storyboard_production_assert_owner: {
+        Args: { p_owner_id: string }
+        Returns: undefined
+      }
+      storyboard_production_auth_worker: {
+        Args: { p_token_sha256: string }
+        Returns: Json
+      }
+      storyboard_production_error_allowed: {
+        Args: { p_code: string }
+        Returns: boolean
+      }
+      storyboard_production_final_status: {
+        Args: { p_document: Json; p_request: Json }
+        Returns: string
+      }
+      storyboard_production_job_json: {
+        Args: {
+          j: Database["public"]["Tables"]["admin_storyboard_production_jobs"]["Row"]
+        }
+        Returns: Json
+      }
+      storyboard_production_model_available: {
+        Args: { p_capability: string; p_model: string; p_models: Json }
+        Returns: boolean
+      }
+      storyboard_production_project_json: {
+        Args: {
+          p: Database["public"]["Tables"]["admin_storyboard_production_projects"]["Row"]
+        }
+        Returns: Json
+      }
+      storyboard_production_snapshot: {
+        Args: { p_owner_id: string; p_project_id: string }
+        Returns: Json
+      }
+      storyboard_production_worker: {
+        Args: {
+          p_action: string
+          p_job_id?: string
+          p_lease_token?: string
+          p_payload?: Json
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       storyboard_sparse_dot_product: {
         Args: { document_weights: Json; query_weights: Json }
         Returns: number
@@ -7224,12 +7621,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7253,11 +7650,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7278,11 +7675,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7303,11 +7700,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7320,11 +7717,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

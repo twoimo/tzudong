@@ -2,8 +2,22 @@
   "schemaVersion": 1,
   "scope": {
     "note": "저장소가 추적하거나 현재 후보에 추가한 1단·2단 디렉터리 전체에 대해 항목 하나씩(요구사항 6.1). 소스 항목은 git ls-files --cached --others --exclude-standard 결과와 양방향 대응한다(요구사항 6.9). build_artifact·local_ephemeral 항목은 버전 관리 추적 제외를 vcsTracked=false로 기록한다(요구사항 6.8).",
-    "trackedTopLevelDirectories": [".github", "apps", "assets", "backend", "docs", "scripts"],
-    "excludedTopLevelDirectories": [".git", ".venv", ".hypothesis", ".cursor", ".kiro", ".local-archive"]
+    "trackedTopLevelDirectories": [
+      ".github",
+      "apps",
+      "assets",
+      "backend",
+      "docs",
+      "scripts"
+    ],
+    "excludedTopLevelDirectories": [
+      ".git",
+      ".venv",
+      ".hypothesis",
+      ".cursor",
+      ".kiro",
+      ".local-archive"
+    ]
   },
   "entries": [
     {
@@ -28,8 +42,13 @@
       "path": ".github/scripts",
       "depth": 2,
       "ownership": "CI 워크플로가 호출하는 보조 스크립트",
-      "allowedContents": ["워크플로 지원 파이썬·셸 스크립트"],
-      "forbiddenContents": ["시크릿 값 리터럴", "장시간 파이프라인 실행"],
+      "allowedContents": [
+        "워크플로 지원 파이썬·셸 스크립트"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "장시간 파이프라인 실행"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -37,8 +56,13 @@
       "path": ".github/workflows",
       "depth": 2,
       "ownership": "GitHub Actions 워크플로 정의",
-      "allowedContents": ["워크플로 YAML 정의"],
-      "forbiddenContents": ["시크릿 값 리터럴", "보호 브랜치 직접·강제 푸시 명령"],
+      "allowedContents": [
+        "워크플로 YAML 정의"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "보호 브랜치 직접·강제 푸시 명령"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -46,8 +70,13 @@
       "path": ".agents",
       "depth": 1,
       "ownership": "저장소 에이전트 스킬 정의 소유 경계",
-      "allowedContents": ["프로젝트 전용 에이전트 스킬 정의"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "프로젝트 전용 에이전트 스킬 정의"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -55,8 +84,13 @@
       "path": ".agents/skills",
       "depth": 2,
       "ownership": "저장소 범위 에이전트 스킬",
-      "allowedContents": ["저장소 전용 스킬 지침(SKILL.md)"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "저장소 전용 스킬 지침(SKILL.md)"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -64,8 +98,13 @@
       "path": "apps",
       "depth": 1,
       "ownership": "모노레포 애플리케이션 컨테이너",
-      "allowedContents": ["애플리케이션 패키지 디렉터리"],
-      "forbiddenContents": ["Backend_Runtime 파이프라인 소스", "운영 산출물"],
+      "allowedContents": [
+        "애플리케이션 패키지 디렉터리"
+      ],
+      "forbiddenContents": [
+        "Backend_Runtime 파이프라인 소스",
+        "운영 산출물"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -94,8 +133,14 @@
       "path": "assets",
       "depth": 1,
       "ownership": "공개 배포 자산의 저장소 원본 입력 경계",
-      "allowedContents": ["공개 정적 자산의 원본 디렉터리"],
-      "forbiddenContents": ["애플리케이션 실행 소스", "운영 산출물", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "공개 정적 자산의 원본 디렉터리"
+      ],
+      "forbiddenContents": [
+        "애플리케이션 실행 소스",
+        "운영 산출물",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -103,8 +148,14 @@
       "path": "assets/source-fonts",
       "depth": 2,
       "ownership": "내용 해시로 검증하는 공개 폰트의 원본 입력",
-      "allowedContents": ["공개 정적 폰트 원본"],
-      "forbiddenContents": ["라우트 핸들러", "크롤링·추론 실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "공개 정적 폰트 원본"
+      ],
+      "forbiddenContents": [
+        "라우트 핸들러",
+        "크롤링·추론 실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -129,8 +180,13 @@
       "path": "backend/bin",
       "depth": 2,
       "ownership": "경로로 로드되는 독립 실행 운영자·검사기 CLI(패키지 아님, __init__.py 없음)",
-      "allowedContents": ["독립 실행 파이썬·mjs·셸 CLI 스크립트"],
-      "forbiddenContents": ["임포트 가능한 파이썬 패키지 초기화", "컨테이너·설정 산출물"],
+      "allowedContents": [
+        "독립 실행 파이썬·mjs·셸 CLI 스크립트"
+      ],
+      "forbiddenContents": [
+        "임포트 가능한 파이썬 패키지 초기화",
+        "컨테이너·설정 산출물"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -138,8 +194,14 @@
       "path": "backend/config",
       "depth": 2,
       "ownership": "채널·런타임 설정 데이터",
-      "allowedContents": ["채널·API 설정 YAML", "상대 경로 데이터 지시"],
-      "forbiddenContents": ["시크릿 값 리터럴", "이동된 디렉터리에 대한 미해석 경로 참조"],
+      "allowedContents": [
+        "채널·API 설정 YAML",
+        "상대 경로 데이터 지시"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "이동된 디렉터리에 대한 미해석 경로 참조"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -147,8 +209,16 @@
       "path": "backend/data",
       "depth": 2,
       "ownership": "운영자 검사기에 Git·해시로 고정한 최소 데이터 계약 입력",
-      "allowedContents": ["공개 영상 프레임의 상대 경로·크기·시각·해시 식별 목록"],
-      "forbiddenContents": ["시크릿 값 리터럴", "개인정보", "사용자 행", "원시 프레임·미디어", "런타임 로그·원시 원격 목록"],
+      "allowedContents": [
+        "공개 영상 프레임의 상대 경로·크기·시각·해시 식별 목록"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "개인정보",
+        "사용자 행",
+        "원시 프레임·미디어",
+        "런타임 로그·원시 원격 목록"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -189,8 +259,13 @@
       "path": "backend/docs",
       "depth": 2,
       "ownership": "Backend_Runtime 문서",
-      "allowedContents": ["백엔드 운영·아키텍처 문서"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "백엔드 운영·아키텍처 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -198,8 +273,14 @@
       "path": "backend/fixtures",
       "depth": 2,
       "ownership": "백엔드 테스트·계약 픽스처",
-      "allowedContents": ["`LOCAL_TEST_ONLY:NOT_PRODUCTION` 표기 픽스처", "계약 검증 픽스처"],
-      "forbiddenContents": ["프로덕션 데이터", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "`LOCAL_TEST_ONLY:NOT_PRODUCTION` 표기 픽스처",
+        "계약 검증 픽스처"
+      ],
+      "forbiddenContents": [
+        "프로덕션 데이터",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -207,8 +288,14 @@
       "path": "backend/pipeline",
       "depth": 2,
       "ownership": "파이프라인 검증기·데이터 계약 소스",
-      "allowedContents": ["validators·state·data-contracts 파이썬 모듈", "모듈 인접 단위 테스트"],
-      "forbiddenContents": ["컨테이너·설정 산출물", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "validators·state·data-contracts 파이썬 모듈",
+        "모듈 인접 단위 테스트"
+      ],
+      "forbiddenContents": [
+        "컨테이너·설정 산출물",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -216,8 +303,16 @@
       "path": "backend/knowledge_graph",
       "depth": 2,
       "ownership": "Backend_Runtime 롱폼 분석·OSK 지식 그래프 처리",
-      "allowedContents": ["검증된 영상 입력·완료 영수증", "Scope 전용 projection·publication 모듈", "격리 fixture 테스트·운영 안내"],
-      "forbiddenContents": ["HTTP Route Handler의 장시간 실행", "다른 Scope의 개인 기억·원료 전사", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "검증된 영상 입력·완료 영수증",
+        "Scope 전용 projection·publication 모듈",
+        "격리 fixture 테스트·운영 안내"
+      ],
+      "forbiddenContents": [
+        "HTTP Route Handler의 장시간 실행",
+        "다른 Scope의 개인 기억·원료 전사",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -225,7 +320,10 @@
       "path": "backend/pipeline_control",
       "depth": 2,
       "ownership": "Backend_Runtime 파이썬 제어 평면 모듈(유일한 임포트 가능 패키지)",
-      "allowedContents": ["임포트 가능한 파이썬 모듈", "모듈 인접 단위·속성 테스트"],
+      "allowedContents": [
+        "임포트 가능한 파이썬 모듈",
+        "모듈 인접 단위·속성 테스트"
+      ],
       "forbiddenContents": [
         "Dockerfile",
         "docker-compose*.yml",
@@ -240,8 +338,15 @@
       "path": "backend/restaurant-crawling",
       "depth": 2,
       "ownership": "크롤링 단계 스크립트와 채널 데이터",
-      "allowedContents": ["크롤링 Node·파이썬 스크립트", "채널별 크롤 데이터", "크롤링 프롬프트"],
-      "forbiddenContents": ["Route_Handler_Boundary 진입점", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "크롤링 Node·파이썬 스크립트",
+        "채널별 크롤 데이터",
+        "크롤링 프롬프트"
+      ],
+      "forbiddenContents": [
+        "Route_Handler_Boundary 진입점",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -249,8 +354,15 @@
       "path": "backend/restaurant-evaluation",
       "depth": 2,
       "ownership": "평가 단계 스크립트와 평가 데이터",
-      "allowedContents": ["평가·삽입 스크립트", "채널별 평가 데이터", "평가 프롬프트"],
-      "forbiddenContents": ["Route_Handler_Boundary 진입점", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "평가·삽입 스크립트",
+        "채널별 평가 데이터",
+        "평가 프롬프트"
+      ],
+      "forbiddenContents": [
+        "Route_Handler_Boundary 진입점",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -258,8 +370,16 @@
       "path": "backend/rust",
       "depth": 2,
       "ownership": "선택적 Rust_Component 워크스페이스와 패리티 계약 소스",
-      "allowedContents": ["Cargo 워크스페이스 소스", "Python 바인딩 선언", "패리티 테스트와 마이그레이션 원장"],
-      "forbiddenContents": ["target/ 빌드 산출물", "성능 원시 측정 산출물", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "Cargo 워크스페이스 소스",
+        "Python 바인딩 선언",
+        "패리티 테스트와 마이그레이션 원장"
+      ],
+      "forbiddenContents": [
+        "target/ 빌드 산출물",
+        "성능 원시 측정 산출물",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -267,8 +387,13 @@
       "path": "backend/storyboard-agent",
       "depth": 2,
       "ownership": "스토리보드 생성 에이전트 소스",
-      "allowedContents": ["스토리보드 에이전트 스크립트와 프롬프트"],
-      "forbiddenContents": ["시크릿 값 리터럴", "컨테이너·설정 산출물"],
+      "allowedContents": [
+        "스토리보드 에이전트 스크립트와 프롬프트"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "컨테이너·설정 산출물"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -293,8 +418,13 @@
       "path": "backend/thumbnail-agent",
       "depth": 2,
       "ownership": "썸네일 생성 에이전트 소스",
-      "allowedContents": ["썸네일 에이전트 스크립트와 프롬프트"],
-      "forbiddenContents": ["시크릿 값 리터럴", "컨테이너·설정 산출물"],
+      "allowedContents": [
+        "썸네일 에이전트 스크립트와 프롬프트"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "컨테이너·설정 산출물"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -302,8 +432,13 @@
       "path": "backend/trend",
       "depth": 2,
       "ownership": "트렌드 분석 모듈 소스",
-      "allowedContents": ["트렌드 분석 스크립트와 데이터 계약"],
-      "forbiddenContents": ["시크릿 값 리터럴", "컨테이너·설정 산출물"],
+      "allowedContents": [
+        "트렌드 분석 스크립트와 데이터 계약"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "컨테이너·설정 산출물"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -311,8 +446,15 @@
       "path": "backend/utils",
       "depth": 2,
       "ownership": "공유 백엔드 유틸리티와 레다크션 경계(privacy_log.py)",
-      "allowedContents": ["공유 유틸리티 모듈", "backend 레다크션·어설션 경계", "유틸 단위·속성 테스트"],
-      "forbiddenContents": ["컨테이너·설정 산출물", "Forbidden_Log_Field 값 로깅"],
+      "allowedContents": [
+        "공유 유틸리티 모듈",
+        "backend 레다크션·어설션 경계",
+        "유틸 단위·속성 테스트"
+      ],
+      "forbiddenContents": [
+        "컨테이너·설정 산출물",
+        "Forbidden_Log_Field 값 로깅"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -320,8 +462,15 @@
       "path": "docs",
       "depth": 1,
       "ownership": "제품·운영 문서 소유 경계",
-      "allowedContents": ["제품 문서", "운영 문서", "보관 문서"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "제품 문서",
+        "운영 문서",
+        "보관 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -329,8 +478,13 @@
       "path": "docs/agents",
       "depth": 2,
       "ownership": "에이전트 작업 지침 문서",
-      "allowedContents": ["검증·개인정보·릴리스 작업 지침"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "검증·개인정보·릴리스 작업 지침"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -338,8 +492,14 @@
       "path": "docs/architecture",
       "depth": 2,
       "ownership": "아키텍처 다이어그램 산출물",
-      "allowedContents": ["아키텍처 다이어그램 JSON·HTML", "렌더링 시각 검수 캡처"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "아키텍처 다이어그램 JSON·HTML",
+        "렌더링 시각 검수 캡처"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -347,8 +507,13 @@
       "path": "docs/archive",
       "depth": 2,
       "ownership": "보관 문서",
-      "allowedContents": ["보관된 과거 문서"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "보관된 과거 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -384,8 +549,13 @@
       "path": "docs/operations",
       "depth": 2,
       "ownership": "운영 문서",
-      "allowedContents": ["운영 절차·런북 문서"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "운영 절차·런북 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -393,8 +563,13 @@
       "path": "docs/product",
       "depth": 2,
       "ownership": "제품 문서",
-      "allowedContents": ["제품 기획·설명 문서"],
-      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "제품 기획·설명 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -402,8 +577,13 @@
       "path": "scripts",
       "depth": 1,
       "ownership": "저장소 수준 운영자 스크립트 소유 경계",
-      "allowedContents": ["릴리스·시드·프로바이더 보조 스크립트"],
-      "forbiddenContents": ["Web_App·Backend_Runtime 런타임 소스", "시크릿 값 리터럴"],
+      "allowedContents": [
+        "릴리스·시드·프로바이더 보조 스크립트"
+      ],
+      "forbiddenContents": [
+        "Web_App·Backend_Runtime 런타임 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -411,8 +591,13 @@
       "path": "scripts/security",
       "depth": 2,
       "ownership": "저장소 수준 보안 스크립트",
-      "allowedContents": ["보안 감사·점검 스크립트"],
-      "forbiddenContents": ["시크릿 값 리터럴", "장시간 파이프라인 실행"],
+      "allowedContents": [
+        "보안 감사·점검 스크립트"
+      ],
+      "forbiddenContents": [
+        "시크릿 값 리터럴",
+        "장시간 파이프라인 실행"
+      ],
       "classification": "source",
       "vcsTracked": true
     },
@@ -420,8 +605,15 @@
       "path": "backend/performance",
       "depth": 2,
       "ownership": "Rust_Component 원시·스코어·검증 성능 아티팩트",
-      "allowedContents": ["원시 측정 NDJSON", "스코어러 출력", "검증기 출력"],
-      "forbiddenContents": ["정규 예산 입력 파일", "웹 표면 성능 아티팩트"],
+      "allowedContents": [
+        "원시 측정 NDJSON",
+        "스코어러 출력",
+        "검증기 출력"
+      ],
+      "forbiddenContents": [
+        "정규 예산 입력 파일",
+        "웹 표면 성능 아티팩트"
+      ],
       "classification": "build_artifact",
       "vcsTracked": false
     },
@@ -429,8 +621,14 @@
       "path": "backend/log",
       "depth": 2,
       "ownership": "로컬 실행 로그와 단계 산출물 색인",
-      "allowedContents": ["단계 게이트 산출물", "게이트·도구 실행 로그"],
-      "forbiddenContents": ["Forbidden_Log_Field 값", "버전 관리 커밋"],
+      "allowedContents": [
+        "단계 게이트 산출물",
+        "게이트·도구 실행 로그"
+      ],
+      "forbiddenContents": [
+        "Forbidden_Log_Field 값",
+        "버전 관리 커밋"
+      ],
       "classification": "local_ephemeral",
       "vcsTracked": false
     }

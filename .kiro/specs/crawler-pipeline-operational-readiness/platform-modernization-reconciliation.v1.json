@@ -3,7 +3,7 @@
   "kind": "platform_modernization_reconciliation",
   "baseCommit": "3f4ca55742aa33869b776291e0d035a16024eef1",
   "sourceCommit": "880bf06d375dbc6ebe8dcf108419c3f455048a97",
-  "candidateContentSha256": "e6136e712d66fb9914d03a17f6e089b2078fc2549e2baca78bb4f6fa9ca463f4",
+  "candidateContentSha256": "747df34c2f60f3c5e6a9ec060a46dc05f326b990b727c56fe85911bba5dcb694",
   "candidateWorkingTreeStateIncluded": true,
   "sourceDeltaEntryCount": 207,
   "dispositionCounts": {
@@ -16,9 +16,9 @@
     "superseded_spec_source": 5
   },
   "contentStateCounts": {
-    "base_exact": 8,
+    "base_exact": 7,
     "candidate_absent": 8,
-    "candidate_transformed": 116,
+    "candidate_transformed": 117,
     "source_and_base_exact": 10,
     "source_exact": 65
   },
@@ -61,7 +61,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": "4d409898342291ad17243294761af73fecb087a9",
       "sourceGitBlobSha1": "ea5d570c971db7cb583d5890baa477c87a627f84",
-      "candidateGitBlobSha1": "1cbba54b265224e162a03c532946e65937d64814",
+      "candidateGitBlobSha1": "c0a4a028e290bc1bf1bf28367d31104fe49555de",
       "contentState": "candidate_transformed",
       "disposition": "candidate_transformed_present",
       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."
@@ -1111,8 +1111,8 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": "af1d0257b965a284f4c546e578c52e215bad8759",
       "sourceGitBlobSha1": "f62c3ebb33464f063f46f8a6d90986c8c9cb1c08",
-      "candidateGitBlobSha1": "af1d0257b965a284f4c546e578c52e215bad8759",
-      "contentState": "base_exact",
+      "candidateGitBlobSha1": "35276b9016585bd66de22cec9892f8470c88b329",
+      "contentState": "candidate_transformed",
       "disposition": "current_layout_retained",
       "rationale": "The parked path move or deletion stays unapplied so backend/pipeline-control remains the sole owned compose tree."
     },
@@ -1265,7 +1265,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": "92ba461990acd75a9677171814de9849838f97ee",
       "sourceGitBlobSha1": "92ba461990acd75a9677171814de9849838f97ee",
-      "candidateGitBlobSha1": "f924a7ccbe6695a4ebd60443bbfcff76c4aca5df",
+      "candidateGitBlobSha1": "261350685ec082b46522123205b14f69e832aa9b",
       "contentState": "candidate_transformed",
       "disposition": "current_layout_retained",
       "rationale": "The parked path move or deletion stays unapplied so backend/pipeline-control remains the sole owned compose tree."
@@ -1335,7 +1335,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": null,
       "sourceGitBlobSha1": "e2cd20c357e627ab90adf2f54a6bc958757bb927",
-      "candidateGitBlobSha1": "b0335b18d6e7c8be404c98d73fbcca6d649d83a2",
+      "candidateGitBlobSha1": "772f9418a5877f40eaa69bd5ded46fbf6ae7de15",
       "contentState": "candidate_transformed",
       "disposition": "candidate_transformed_present",
       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."

@@ -933,9 +933,35 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_99_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 99)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 99)
+    def test_publication_uses_the_current_100_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 100)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 100)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 100)
+        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 100)
+
+    def test_rejects_missing_or_extra_manifest_units_with_recomputed_chain(self) -> None:
+        manifest = local_migrate.verify_manifest()
+        for mutation in ("missing", "extra"):
+            bad = copy.deepcopy(manifest)
+            files = bad["source"]["files"]
+            if mutation == "missing":
+                files.pop()
+            else:
+                extra = copy.deepcopy(files[-1])
+                extra["ordinal"] += 1
+                extra["path"] = "backend/supabase/migrations/20990101000000_extra.sql"
+                files.append(extra)
+            bad["source"]["migrationCount"] = len(files)
+            bad["source"]["chainSha256"] = verifier.sha256_bytes(b"".join(
+                item["path"].encode("utf-8") + b"\0"
+                + item["sha256"].encode("ascii") + b"\n"
+                for item in files
+            ))
+            with self.subTest(mutation=mutation):
+                with self.assertRaisesRegex(SystemExit, "manifest contract mismatch"):
+                    verifier.verify_manifest(bad)
+                with self.assertRaisesRegex(local_migrate.LocalMigrationError, "receipt_ledger_state"):
+                    local_migrate._expected_ledger_records(bad)
 
     def test_rejects_missing_extra_swapped_or_digest_only_replay_proofs(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

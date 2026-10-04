@@ -456,23 +456,41 @@ def _posix_process_group_is_empty(process_group_id: int) -> bool:
     return False
 
 
-def _wait_for_posix_process_group(process_group_id: int, deadline: float) -> bool:
-    while time.monotonic() < deadline:
+def _wait_for_posix_process_group(
+    process_group_id: int,
+    deadline: float,
+    *,
+    process: subprocess.Popen[bytes] | None = None,
+) -> bool:
+    while True:
+        # An exited, unreaped leader can keep its process group present. Reap
+        # only our direct child while still requiring the whole group to exit.
+        if process is not None:
+            process.poll()
         if _posix_process_group_is_empty(process_group_id):
             return True
+        if time.monotonic() >= deadline:
+            return False
         time.sleep(0.02)
-    return _posix_process_group_is_empty(process_group_id)
 
 
-def _terminate_posix_process_group(process_group_id: int) -> bool:
+def _terminate_posix_process_group(
+    process_group_id: int,
+    *,
+    process: subprocess.Popen[bytes] | None = None,
+) -> bool:
     term_sent = _signal_posix_process_group(process_group_id, "TERM")
-    if term_sent and _wait_for_posix_process_group(process_group_id, time.monotonic() + 2):
+    if term_sent and _wait_for_posix_process_group(
+        process_group_id, time.monotonic() + 2, process=process,
+    ):
         return True
 
     kill_sent = _signal_posix_process_group(process_group_id, "KILL")
     if not kill_sent:
         return False
-    return _wait_for_posix_process_group(process_group_id, time.monotonic() + 5)
+    return _wait_for_posix_process_group(
+        process_group_id, time.monotonic() + 5, process=process,
+    )
 
 
 def _windows_kernel32() -> tuple[Any, Any, Any]:
@@ -764,7 +782,7 @@ class _ProcessTreeSupervisor:
             return False
         return (
             self.process_group_id is not None
-            and _terminate_posix_process_group(self.process_group_id)
+            and _terminate_posix_process_group(self.process_group_id, process=self.process)
             and _wait_for_process(self.process)
         )
 
@@ -997,7 +1015,7 @@ def run_command(
                 if os.name == "nt":
                     _terminate_unresumed_windows_process(process)
                 else:
-                    _terminate_posix_process_group(process.pid)
+                    _terminate_posix_process_group(process.pid, process=process)
                 result = _cleanup_failure_result(pinned_command)
             elif os.name == "nt" and not _resume_windows_process(process):
                 if supervisor.terminate():

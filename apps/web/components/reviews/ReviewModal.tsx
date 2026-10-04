@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
-import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
+import { saveDraft, getDraft, prepareDraftDeletion, type ReviewDraft } from "@/lib/reviewDraftDB";
 import {
     buildReviewPhotoObjectPath,
     cleanupCanonicalReviewPhotoObjects,
@@ -82,9 +82,13 @@ const compressFoodImage = async (file: File): Promise<File> => {
     }
 };
 // The controller retains exactly one operation in memory; draft persistence stays unchanged.
-function createReviewSaveOperation(currentOwner: () => string | undefined) {
+function createReviewSaveOperation(
+    currentOwner: () => string | undefined,
+    currentDraftRevision: () => ReviewDraft | null,
+) {
     return new ReviewSaveOperation({
         currentOwner,
+        captureDraftDeletion: draft => prepareDraftDeletion(draft.ownerId, draft.restaurantId, currentDraftRevision()),
         newId: () => {
             const reviewId = crypto.randomUUID();
             return reviewId;
@@ -456,6 +460,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const [isSearching, setIsSearching] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<{ id: string; name: string } | null>(restaurant);
     const reviewTargetRestaurant = selectedRestaurant || restaurant;
+    // One bounded text revision, obtained only from our committed save or load.
+    // Scope object identity also fences asynchronous completions across A -> B -> A.
+    const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null as ReviewDraft | null });
     const saveOwnerRef = useRef(user?.id);
     const saveOperationRef = useRef<ReviewSaveOperation | null>(null);
     const submitInFlightRef = useRef(false);
@@ -463,10 +470,13 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const composerOpenRef = useRef(isOpen);
     const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id });
     useLayoutEffect(() => {
+        if (draftScopeRef.current.ownerId !== user?.id || draftScopeRef.current.restaurantId !== reviewTargetRestaurant?.id || !isOpen) {
+            draftScopeRef.current = { ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null };
+        }
         saveOwnerRef.current = user?.id;
         composerOpenRef.current = isOpen;
         latestSaveInputsRef.current = { visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id };
-        saveOperationRef.current ??= createReviewSaveOperation(() => saveOwnerRef.current);
+        saveOperationRef.current ??= createReviewSaveOperation(() => saveOwnerRef.current, () => draftScopeRef.current.revision);
     }, [user?.id, isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, reviewTargetRestaurant?.id]);
 
     useLayoutEffect(() => {
@@ -478,6 +488,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         return () => {
             composerOpenRef.current = false;
             saveOwnerRef.current = undefined;
+            draftScopeRef.current = { ...draftScopeRef.current, revision: null };
             // A dispatched insert cannot be safely aborted. The controller waits
             // for it and preserves objects whenever its outcome stays unknown.
             operation.requestCancel();
@@ -1342,14 +1353,14 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             setOcrProgress(null);
         }
     }
-    // Await already-started IndexedDB writes before deleting the submitted draft.
-    // Submit/close refs also stop queued autosave callbacks from starting a write.
+    // Use the scoped pre-write snapshot; a newer composer may already have saved
+    // another draft at this key. Submit/close refs stop queued autosaves here.
     const clearDraft = useCallback(async (): Promise<boolean> => {
         const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
         if (!user?.id || !targetRestaurantId) return false;
         try {
             await autoSaveInFlightRef.current;
-            await deleteDraft(user.id, targetRestaurantId);
+            if (!await saveOperationRef.current?.clearSavedDraft()) return false;
             setLastSavedAt(null);
             return true;
         } catch {
@@ -1422,12 +1433,20 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         submitInFlightRef.current = true;
         setIsSubmitting(true);
         try {
+            await autoSaveInFlightRef.current;
+            if (closeRequestedRef.current || saveOwnerRef.current !== user.id) return;
             const result = await saveOperationRef.current!.submit(draft);
-            if (saveOwnerRef.current !== user.id) return;
             const latest = latestSaveInputsRef.current;
             const changedDuringSave = Object.keys(submittedInputs).some(key => (
                 submittedInputs[key as keyof typeof submittedInputs] !== latest[key as keyof typeof latest]
             ));
+            if (saveOwnerRef.current !== user.id) {
+                // A known commit survives unmount/auth changes. Finish only the
+                // captured local draft cleanup; do not notify a different owner
+                // or update an unmounted form, and never remove saved photos.
+                if (result === 'saved' && !changedDuringSave) await saveOperationRef.current!.clearSavedDraft();
+                return;
+            }
             if (closeRequestedRef.current) return; // handleClose owns cancellation readback and notification.
             if (!composerOpenRef.current) {
                 if (result === 'saved' || result === 'saved-previous') {
@@ -1463,7 +1482,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             toast({ title: "등록 후 화면 갱신 실패", description: "내 리뷰에서 등록 결과를 확인해주세요.", variant: "destructive" });
         } finally {
             submitInFlightRef.current = false;
-            setIsSubmitting(false);
+            if (saveOwnerRef.current === user.id) setIsSubmitting(false);
         }
     };
 
@@ -1576,9 +1595,16 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
         if (!user?.id || !targetRestaurantId) return;
 
+        const scope = draftScopeRef.current;
+        if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current
+            || submitInFlightRef.current || closeRequestedRef.current) return;
+        const previousRevision = scope.revision;
         try {
             const draft = await getDraft(user.id, targetRestaurantId);
+            if (draftScopeRef.current !== scope || scope.revision !== previousRevision || !composerOpenRef.current
+                || saveOwnerRef.current !== user.id || submitInFlightRef.current || closeRequestedRef.current) return;
             if (draft) {
+                scope.revision = draft;
                 setVisitedDate(draft.visitedDate);
                 setVisitedTime(draft.visitedTime);
                 setCategories(draft.categories as Category[]);
@@ -1614,21 +1640,26 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             return;
         }
 
+        const scope = draftScopeRef.current;
+        if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current) return;
         const previousSave = autoSaveInFlightRef.current;
         const pendingSave = (async () => {
             await previousSave;
-            if (submitInFlightRef.current || closeRequestedRef.current) return;
+            if (submitInFlightRef.current || closeRequestedRef.current || draftScopeRef.current !== scope
+                || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
             try {
                 setIsSaving(true);
-                await saveDraft({
+                const committed = await saveDraft({
                     userId: user.id, restaurantId: targetRestaurantId,
                     visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep,
                 });
-                setLastSavedAt(new Date());
+                if (draftScopeRef.current !== scope || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
+                scope.revision = committed;
+                setLastSavedAt(committed ? new Date(committed.savedAt) : null);
             } catch {
                 console.error('자동 저장 실패:');
             } finally {
-                setIsSaving(false);
+                if (draftScopeRef.current === scope && composerOpenRef.current) setIsSaving(false);
             }
         })();
         autoSaveInFlightRef.current = pendingSave;

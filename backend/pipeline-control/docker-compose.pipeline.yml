@@ -29,6 +29,8 @@ services:
       - supabase_network_local
 
   pipeline-worker:
+    # Reap adopted stage descendants while Python supervises owned leaders.
+    init: true
     build:
       context: ../..
       dockerfile: backend/pipeline-control/Dockerfile

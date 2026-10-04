@@ -1229,8 +1229,8 @@ async function loadChannelsConfig() {
     const config = readContainedRegularFile(backendRoot(), 'config/channels.yaml', {
         maxBytes: FILE_LIMITS.maxConfigBytes
     });
-    const { default: yaml } = await import('js-yaml');
-    return yaml.load(config);
+    const { load } = await import('js-yaml');
+    return load(config);
 }
 
 // 텍스트 정제 (제어 문자 제거, 네이버 접미사 제거)
