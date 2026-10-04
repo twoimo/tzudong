@@ -68,6 +68,26 @@ class SourceContract(unittest.TestCase):
         self.assertNotRegex(source, r'\b(?:GRANT|REVOKE|ALTER ROLE)\b')
         self.assertIn('metadata_after IS DISTINCT FROM metadata_before', source)
 
+    def test_warning_extension_accepts_exact_post_page_sources(self):
+        extension=(MIGRATIONS/'20261004050600_admin_evaluation_warning_invoker_contract.sql').read_text()
+        base=MIGRATION.read_text()
+        current=definitions()[0]
+        for name,definition in current.items():
+            body=tagged(definition,'function')
+            body=replace_exact(body,tagged(base,name+'_anchor'),tagged(base,name+'_addition')+tagged(base,name+'_anchor'))
+            for filename in ['20261003172126_restaurant_review_manual_invoker_contract.sql','20261003220841_admin_evaluation_page_invoker_contract.sql']:
+                patch=(MIGRATIONS/filename).read_text()
+                addition=tagged(patch,'signature' if 'manual' in filename else 'addition')
+                body=replace_exact(body,tagged(patch,'anchor'),addition+tagged(patch,'anchor'))
+                if 'manual' in filename:
+                    anchor=tagged(patch,name+'_lock')
+                    body=replace_exact(body,anchor,anchor.replace(tagged(patch,'tick'),tagged(patch,'manual')))
+            self.assertIn(hashlib.sha256(body.encode()).hexdigest(),extension)
+            after=replace_exact(body,tagged(extension,'anchor'),tagged(extension,'addition')+tagged(extension,'anchor'))
+            self.assertEqual(after.replace(tagged(extension,'addition'),'',1),body)
+            self.assertEqual(after.count("'public.admin_evaluation_warning_groups(uuid[],text)'"),1)
+        self.assertNotRegex(extension,r'\b(?:GRANT|REVOKE|ALTER ROLE)\b')
+
 
 @unittest.skipUnless(os.environ.get('TZUDONG_SERVICE_INVOKER_LOCAL_PG') == '1', 'owned private PG17 opt-in required')
 class PostgreSQLContract(unittest.TestCase):
@@ -265,6 +285,68 @@ class PostgreSQLContract(unittest.TestCase):
         self.cursor.execute('BEGIN; GRANT EXECUTE ON FUNCTION '+page+' TO authenticated')
         with self.assertRaisesRegex(self.psycopg2.Error,'SECURITY INVOKER contract mismatch'):self.check()
         self.cursor.execute('ROLLBACK');self.check()
+
+    def prepare_warning_extension(self):
+        self.apply()
+        signatures=['public.restaurant_review_automation_manual(uuid,text,text,text,uuid)',
+                    'public.admin_evaluation_page(jsonb,integer,uuid,text)',
+                    'public.admin_evaluation_warning_groups(uuid[],text)']
+        for signature in signatures:
+            config="search_path=''"+(" SET lock_timeout='2s'" if 'manual' in signature else '')
+            self.cursor.execute('CREATE FUNCTION '+signature+" RETURNS boolean LANGUAGE sql SECURITY INVOKER SET "+config+" AS 'SELECT true'; REVOKE ALL ON FUNCTION "+signature+' FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION '+signature+' TO service_role;')
+            self.cursor.execute("INSERT INTO privacy_retention.g014_public_rpc_allowlist VALUES(%s,'service_role')",(signature,))
+        for filename in ['20261003172126_restaurant_review_manual_invoker_contract.sql','20261003220841_admin_evaluation_page_invoker_contract.sql']:
+            self.cursor.execute((MIGRATIONS/filename).read_text())
+        return (MIGRATIONS/'20261004050600_admin_evaluation_warning_invoker_contract.sql').read_bytes()
+
+    def test_warning_extension_owner_replay_metadata_acl_and_rollback(self):
+        from backend.supabase.scripts.transform_service_invoker_replay import transform
+        source=self.prepare_warning_extension()
+        bundle=ROOT/'backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_BUNDLE.v4.json'
+        replay=transform(source,bundle.read_bytes()).decode()
+        def memberships():
+            self.cursor.execute('SELECT roleid,member,grantor,admin_option,inherit_option,set_option FROM pg_auth_members ORDER BY roleid,member,grantor')
+            return self.cursor.fetchall()
+        before=self.state();members_before=memberships()
+        self.cursor.execute(replay.replace('COMMIT;','ROLLBACK;'))
+        self.assertEqual(self.state(),before);self.assertEqual(memberships(),members_before)
+        self.cursor.execute(replay)
+        after=self.state();self.assertEqual(memberships(),members_before)
+        self.assertEqual([dict(row,prosrc='') for _,row in before],[dict(row,prosrc='') for _,row in after])
+        self.install_loop();self.check()
+        signature='public.admin_evaluation_warning_groups(uuid[],text)'
+        # Execute the complete real allowlist assertion too. The complete
+        # catalog assertion additionally requires the canonical replay's full
+        # protected relation manifest; the invoker loop alone is not that proof.
+        self.cursor.execute('ALTER TABLE privacy_retention.g014_public_rpc_allowlist ADD COLUMN function_schema name, ADD COLUMN function_name name, ADD COLUMN identity_arguments text;')
+        self.cursor.execute("UPDATE privacy_retention.g014_public_rpc_allowlist a SET function_schema=n.nspname,function_name=p.proname,identity_arguments=p.proargtypes::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.oid=to_regprocedure(a.source_signature)")
+        boundary=(MIGRATIONS/'20260713002000_g014_public_api_private_boundary.sql').read_text()
+        assertion=re.search(r'CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_public_rpc_allowlist\(\).*?\$function\$;',boundary,re.S).group()
+        self.cursor.execute(assertion+' ALTER FUNCTION privacy_retention.assert_g014_public_rpc_allowlist() OWNER TO privacy_workflow_owner; REVOKE ALL ON FUNCTION privacy_retention.assert_g014_public_rpc_allowlist() FROM PUBLIC,anon,authenticated,service_role;')
+        self.cursor.execute('SELECT privacy_retention.assert_g014_public_rpc_allowlist()')
+        self.cursor.execute("BEGIN; CREATE FUNCTION public.admin_evaluation_warning_groups(text,text) RETURNS boolean LANGUAGE sql AS 'SELECT true';")
+        with self.assertRaisesRegex(self.psycopg2.Error,'unexpected overload'):self.cursor.execute('SELECT privacy_retention.assert_g014_public_rpc_allowlist()')
+        self.cursor.execute('ROLLBACK')
+        mutations=['ALTER FUNCTION '+signature+' '+change for change in ['SECURITY DEFINER',"SET search_path=public",'OWNER TO privacy_workflow_owner']]
+        mutations += ['GRANT EXECUTE ON FUNCTION '+signature+' TO '+role for role in ['PUBLIC','anon','authenticated']]
+        mutations += ['REVOKE EXECUTE ON FUNCTION '+signature+' FROM service_role','GRANT EXECUTE ON FUNCTION '+signature+' TO service_role WITH GRANT OPTION']
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                self.cursor.execute('BEGIN; '+mutation)
+                with self.assertRaisesRegex(self.psycopg2.Error,'SECURITY INVOKER contract mismatch'):self.check()
+                self.cursor.execute('ROLLBACK')
+        self.check()
+        with self.assertRaisesRegex(self.psycopg2.Error,'G014_WARNING_INVOKER_SOURCE_DRIFT'):self.cursor.execute(replay)
+        self.cursor.execute('ROLLBACK')
+        self.assertEqual(self.state(),after);self.assertEqual(memberships(),members_before)
+
+    def test_warning_second_contract_drift_is_atomic(self):
+        source=self.prepare_warning_extension().decode()
+        self.cursor.execute("SELECT pg_get_functiondef(to_regprocedure('privacy_retention.assert_g014_catalog_contract()'))")
+        self.cursor.execute(self.cursor.fetchone()[0].replace('END;\n','END;\n\n'))
+        before=self.state()
+        with self.assertRaisesRegex(self.psycopg2.Error,'G014_WARNING_INVOKER_SOURCE_DRIFT'):self.cursor.execute(source)
+        self.cursor.execute('ROLLBACK');self.assertEqual(self.state(),before)
 
 
 if __name__ == '__main__':

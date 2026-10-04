@@ -1295,7 +1295,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<caption className="sr-only">관리자 사용자 목록 로딩</caption>',
     );
     expect(usersSource).toContain(
-      '<th scope="col" className="px-3 py-2 font-semibold">사용자</th>',
+      '<th scope="col" className="w-[40%] px-3 py-2 font-semibold">사용자</th>',
     );
     expect(refreshHistorySource).toContain(
       "function RefreshCandidateListSkeleton()",
@@ -1449,7 +1449,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(homeSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).toContain(
-      'getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "sentry"])',
+      'getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"])',
     );
     expect(opsSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).not.toContain('"storyboard"');
@@ -1473,7 +1473,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(labSectionSource.indexOf('id: "llm"')).toBeLessThan(
       labSectionSource.indexOf('"audit"'),
     );
-    expect(consoleSource).toContain('title: "핵심 인사이트"');
+    expect(consoleSource).toContain('title: "영상 성과 분석"');
     expect(consoleSource).toContain("fetchAdminDashboardInsightSummary");
     expect(consoleSource).toContain("/api/insights/treemap");
     expect(consoleSource).toContain(
@@ -3418,7 +3418,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '검수: ["restaurants", "submissions", "reviews"]',
     );
     expect(sidebarOrderSource).toContain(
-      '운영: ["users", "banners", "insights", "pipeline", "sentry"]',
+      '운영: ["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"]',
     );
     expect(sidebarOrderSource).toContain(
       '실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"]',
@@ -8387,7 +8387,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(preferenceRouteSource).toContain('from "@/lib/admin/sidebar-order"');
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
     expect(sidebarOrderSource).toContain(
-      '운영: ["users", "banners", "insights", "pipeline", "sentry"]',
+      '운영: ["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"]',
     );
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(
@@ -8632,7 +8632,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("function AnnouncementWorkspace");
     expect(usersSource).toContain("flex h-full min-h-0 flex-col overflow-hidden bg-background");
     expect(usersSource).toContain("gap-2 overflow-y-auto p-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]");
-    expect(usersSource).toContain("h-9 rounded-full pl-9 sm:rounded-lg");
+    expect(usersSource).toContain("h-9 rounded-md pl-9");
     expect(consoleSource).toContain(
       "const controller = new AbortController();",
     );
@@ -8711,12 +8711,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'Badge variant="secondary" className="rounded-full text-2xs"',
     );
     expect(bannersSource).not.toContain("bannersLoading && <Loader2");
-    expect(bannersSource).toContain(
-      "모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.",
-    );
+    expect(bannersSource).toContain("Boolean(pendingReadback)");
     expect(bannersSource).toContain("deleteConfirmation !== '배너삭제'");
     expect(bannersSource).toContain(
-      "onClick={() => { setBannerToDelete(editingBanner); void handleDelete(); }}",
+      "onClick={() => void handleDelete()}",
     );
     expect(bannersSource).toContain("if (!bannerToDelete) return;");
     expect(bannersSource).toContain(

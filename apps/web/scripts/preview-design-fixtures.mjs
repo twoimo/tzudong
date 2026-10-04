@@ -85,8 +85,8 @@ const refreshCandidates = restaurants.slice(0,3).map((row,i)=>({
   evidence:{source:'synthetic-fixture'},created_at:stamp,decided_at:null,applied_at:null,
   readback_state:{status:'not_required',checked_at:null,run_id:null,notes:null},
 }));
-const pending = { submissions: 4, recommendationRequests: 2, reviews: 3, total: 9, asOf: stamp,
-  recommendationRequestsLifecycleReady: true, domains: {}, readiness: { status: 'ready', recommendationRequestsLifecycleReady: true, reasons: [] }, diagnostics: {} };
+const pending = { submissions: 6, recommendationRequests: 2, reviews: 3, total: 9, asOf: stamp,
+  recommendationRequestsLifecycleReady: true, domains: { restaurant_submissions: { id: 'restaurant_submissions', count: 4, ready: true, status: 'ready' }, restaurant_recommendation_requests: { id: 'restaurant_recommendation_requests', count: 2, ready: true, status: 'ready' }, reviews: { id: 'reviews', count: 3, ready: true, status: 'ready' } }, readiness: { status: 'ready', recommendationRequestsLifecycleReady: true, reasons: [] }, diagnostics: {} };
 const summary = { asOf: stamp, totals: { restaurants: 25, videos: 25, categories: 3, withCoordinates: 25 },
   topCategories: [{ name: '한식', count: 25 }], videos: videos.map((video) => ({ videoId: video.id, youtubeLink: null,
     title: video.title, publishedAt: video.publishedAt, restaurantCount: 1, notSelectedCount: 0, geocodingFailedCount: 0, updatedAt: stamp })) };
@@ -111,13 +111,25 @@ function fixtureAutomationAction(body) {
   }
   return fixtureAutomation;
 }
-function api(pathname) {
+function api(pathname, params = new URLSearchParams()) {
+  if (pathname === '/api/admin/sentry') return { state: 'not_configured', collection: { browser: false, server: false }, dashboardUrl: null, issues: [], nextCursor: null, fetchedAt: null };
+  if (pathname === '/api/admin/knowledge-graph') {
+    const snapshot = JSON.parse(readFileSync('data/knowledge-graph/tzudong.json', 'utf8'));
+    const q = (params.get('q') ?? '').normalize('NFKC').toLowerCase().trim(), kind = params.get('kind');
+    const filtered = snapshot.nodes.filter(node => (!kind || node.kind === kind) && (!q || `${node.label} ${node.summary}`.normalize('NFKC').toLowerCase().includes(q)));
+    const nodes = filtered.slice(0, 100), ids = new Set(nodes.map(node => node.id));
+    const edges = snapshot.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target));
+    return { revision: snapshot.revision, generatedAt: snapshot.generatedAt, coverage: snapshot.coverage, nodes, edges,
+      selected: snapshot.nodes.find(node => node.id === params.get('node')) ?? null,
+      totalNodes: snapshot.nodes.length, totalEdges: snapshot.edges.length, filteredTotal: filtered.length,
+      omittedEdges: snapshot.edges.length - edges.length, nextCursor: null };
+  }
   if (pathname === '/api/admin/evaluations/automation') return fixtureAutomation;
   if (pathname === '/api/dashboard/restaurants') return {asOf:stamp,total:restaurants.length,limit:500,offset:0,filters:{onlyWithCoordinates:true},items:restaurants.map(row=>({
     id:row.id,name:row.name,category:'한식',address:row.road_address,lat:row.lat,lng:row.lng,youtubeLink:null,videoId:null,
     sourceType:'crawl',status:'approved',geocodingSuccess:true,isNotSelected:false,createdAt:stamp,updatedAt:stamp}))};
   if (pathname === '/api/admin/pipeline') return {source:'github_actions',hardware:'합성 환경',dataEnv:'fixture',targets:[],jobs:[
-    {id:'fixture-run-1',target:'tzuyang',profile:'lite_gha',status:'Completed',dry_run:true,adapter_index:6}],failures:[],failureFrames:[],gauges:{}};
+    {id:'fixture-run-1',target:'tzuyang',profile:'lite_gha',status:'Succeeded',dry_run:true,adapter_index:6}],failures:[],failureFrames:[],gauges:{}};
   if (pathname.startsWith('/api/admin/evaluations/')) return {record:evaluations.find(row=>row.id===pathname.split('/').at(-1))??null,revision:'1'};
   if (pathname === '/api/privacy/consents') return {
     policy:{policyVersionId:'00000000-0000-4000-8000-000000000001',version:'2026-08-04.1',contentSha256:'6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b'},
@@ -202,7 +214,7 @@ const preview = http.createServer(async (req, res) => {
       return response(res,{rows:ids.map(id=>({userId:id,nickname:fixtureProfiles.find(profile=>profile.user_id===id)?.nickname??null}))});
     }
     if (req.method !== 'GET') return response(res, { error: 'FIXTURE_WRITES_DISABLED' }, 405);
-    return response(res, api(url.pathname));
+    return response(res, api(url.pathname, url.searchParams));
   }
   if (url.pathname.startsWith('/_next/image')) {
     res.writeHead(200, { 'Content-Type': 'image/webp' }); return res.end(logo);

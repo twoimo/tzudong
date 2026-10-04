@@ -55,6 +55,10 @@ async function main() {
         console.log(`DEBUG: Prompt Size=${prompt.length}`);
         const modelName = process.env.PRIMARY_MODEL || 'gemini-3.7-flash';
         const thinkingLevel = resolveThinkingLevel(process.env.LAAJ_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
+        const isGemini38 = modelName.replace(/^models\//, '') === 'gemini-3.8-flash';
+        if (isGemini38 && thinkingLevel === 'MINIMAL') {
+            throw Object.assign(new Error('GEMINI_THINKING_LEVEL_UNSUPPORTED'), { code: 'GEMINI_THINKING_LEVEL_UNSUPPORTED' });
+        }
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -65,7 +69,8 @@ async function main() {
                     model: modelName,
                     contents: prompt,
                     config: {
-                        temperature: 0.1,
+                        // Preserve older-model settings; 3.8 removed sampling overrides.
+                        ...(isGemini38 ? {} : { temperature: 0.1 }),
                         maxOutputTokens: 4096,
                         thinkingConfig: { thinkingLevel },
                     },

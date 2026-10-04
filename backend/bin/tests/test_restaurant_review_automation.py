@@ -2,13 +2,76 @@ from pathlib import Path
 import copy
 import json
 import tempfile
+import hashlib
+import subprocess
+import os
+import sys
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from backend.bin import run_restaurant_review_automation as worker
 from backend.bin import run_hosted_new_video_pipeline as runner
+from backend.bin import review_rule_evaluation
 
 
 class ReviewWorkerTests(unittest.TestCase):
+    def test_foreign_location_fallback_never_spends_a_second_gemini_call(self):
+        # Do not read operator .env/key files while loading the actual shared
+        # rule module. Its fallback must be blocked even with synthetic keys.
+        no_http=SimpleNamespace(Session=lambda:self.fail('unexpected provider HTTP'))
+        with patch.object(sys,'path',[str(worker.ROOT/'backend'),*sys.path]),patch.dict(os.environ,{},clear=True),patch.dict(sys.modules,{'requests':no_http}):
+            with patch('utils.runtime_paths.load_backend_env'):
+                rules=review_rule_evaluation.load_review_rules()
+        with patch.object(rules.subprocess,'run',side_effect=AssertionError('unexpected CLI call')), \
+             patch.dict(os.environ,{'GEMINI_API_KEY':'synthetic'},clear=True):
+            result=rules.evaluate_with_gemini_fallback('fixture restaurant','France Paris','synthetic unmatched location')
+        self.assertFalse(result['eval_value'])
+        self.assertEqual(result['match_status'],'pending')
+        self.assertNotIn('llm_verification',result['evidence_families'])
+
+    def test_evaluation_and_decision_share_one_call_through_real_parser_and_transform(self):
+        name='fixture branch';video='ABCDEFGHIJK';link='https://www.youtube.com/watch?v='+video
+        original={'channel_name':'tzuyang','youtube_link':link,'origin_name':name,'reasoning_basis':'fixture evidence',
+                  'tzuyang_review':'fixture review','origin_address':{'address':'synthetic public business address'},
+                  'youtube_meta':{'title':'synthetic video'},'categories':['한식'],'recollect_version':{}}
+        original['trace_id']=hashlib.sha256((link+name+original['tzuyang_review']).encode()).hexdigest()
+        source={'origin_name':name,'reasoning_basis':original['reasoning_basis'],'youtuber_review':original['tzuyang_review'],'category':['한식']}
+        rule={'channel_name':'tzuyang','youtube_link':link,'restaurants':[source],'evaluation_target':{name:True},'evaluation_results':{
+            'category_validity_TF':[{'origin_name':name,'name':name,'eval_value':True}],
+            'location_match_TF':[{'origin_name':name,'naver_name':name,'matched_provider':'naver','matched_name':name,
+                'eval_value':True,'match_status':'matched','evidence_families':['source_geo','provider_candidate'],
+                'matched_address':{'jibunAddress':'synthetic public business address','x':'127','y':'37.5'}}]}}
+        laaj={key:[{'name':name,**value}] for key,value in self.complete_metrics().items() if key not in ['category_validity_TF','location_match_TF']}
+        laaj['visit_authenticity']={'values':laaj['visit_authenticity'],'missing':[]}
+        calls=[]
+        def command(argv,**kwargs):
+            calls.append(Path(argv[1]).name)
+            if Path(argv[1]).name in ['09-target-selection.py','review_rule_evaluation.py']:
+                folder='selection' if '09-target' in argv[1] else 'rule_results'
+                target=Path(argv[argv.index('--evaluation-path')+1])/'evaluation'/folder/(video+'.jsonl')
+                target.parent.mkdir(parents=True,exist_ok=True);target.write_text(json.dumps(rule)+'\n')
+                return subprocess.CompletedProcess(argv,0)
+            if Path(argv[1]).name=='review_decision_gemini.mjs':
+                prompt=Path(argv[2]).read_text()
+                self.assertIn('untrusted evidence',prompt);self.assertIn('restaurant-review-v1',prompt)
+                self.assertIn('a'*64,prompt);self.assertEqual(argv[4],'a'*64)
+                decision={'schemaVersion':1,'model':'gemini-3.8-flash','modelVersion':'gemini-3.8-flash','promptVersion':'restaurant-review-v1',
+                          'inputSha256':'a'*64,'promptSha256':hashlib.sha256(prompt.encode()).hexdigest(),
+                          'recommendation':'recheck','evidenceCodes':['insufficient_evidence']}
+                Path(argv[3]).write_text(json.dumps({'evaluation':laaj,'gemini_decision':decision}))
+                return subprocess.CompletedProcess(argv,0)
+            self.assertIn(Path(argv[1]).name,['parse_laaj_evaluation.py','12-transform.py'])
+            return subprocess.run(argv,**kwargs)
+        with tempfile.TemporaryDirectory() as folder:
+            transcript=Path(folder)/'tzuyang/transcript'/(video+'.jsonl');transcript.parent.mkdir(parents=True)
+            transcript.write_text(json.dumps({'youtube_link':link,'channel_name':'tzuyang','transcript':[{'start':0,'text':'synthetic subtitle'}]})+'\n')
+            result=worker.evaluate(original,Path(folder),run_command=command,decision_context={'inputSha256':'a'*64})
+        self.assertEqual(calls,['09-target-selection.py','review_rule_evaluation.py','review_decision_gemini.mjs','parse_laaj_evaluation.py','12-transform.py'])
+        self.assertEqual(result['gemini_decision']['recommendation'],'recheck')
+        self.assertEqual(result['evaluation_results']['rb_grounding_TF']['eval_value'],True)
+        self.assertEqual(result['lat'],37.5)
+        self.assertNotIn('status',result)
+
     def test_null_claim_distinguishes_active_rechecks_from_an_empty_queue(self):
         for queued,running in [(0,1),(1,0),(0,0)]:
             calls=[]
@@ -61,7 +124,7 @@ class ReviewWorkerTests(unittest.TestCase):
             calls.append(body)
             if body.get('action')=='claim': return {'id':'fixture-item','restaurant':{'trace_id':'fixture'}}
             return {}
-        def evaluate(*args): generations.append(1); raise RuntimeError('untrusted provider diagnostics')
+        def evaluate(*args,**kwargs): generations.append(1); raise RuntimeError('untrusted provider diagnostics')
         worker.run_once(rpc,recheck_limit=1,evaluator=evaluate)
         self.assertEqual(len(generations),1)
         self.assertEqual(calls[-1]['result'],{'code':'evaluation_failed'})
@@ -74,15 +137,56 @@ class ReviewWorkerTests(unittest.TestCase):
             if body.get('action')=='claim': return {'id':'fixture-item','restaurant':{}}
             if body.get('action')=='complete': raise TimeoutError()
             return {}
-        def evaluate(*args): generations.append(1); return {'evaluation_results':{}}
-        with self.assertRaises(TimeoutError):worker.run_once(rpc,recheck_limit=1,evaluator=evaluate)
+        def evaluate(*args,**kwargs): generations.append(1); return {'evaluation_results':{}}
+        with self.assertRaises(worker.WorkerFailure) as raised:worker.run_once(rpc,recheck_limit=1,evaluator=evaluate)
+        self.assertEqual(raised.exception.code,'result_unconfirmed')
         self.assertEqual(len(generations),1)
-        self.assertEqual([x.get('action') for x in calls],[None,'claim','complete'])
+        self.assertEqual([x.get('action') for x in calls],[None,'claim','complete','read'])
+
+    def test_lost_completion_ack_uses_only_readback(self):
+        for state in ['applied','succeeded','cancelled','failed']:
+            calls=[];generations=[]
+            def rpc(name,body):
+                calls.append(body)
+                if body.get('action')=='claim':return {'id':'fixture','restaurant':{},'decisionContext':{'inputSha256':'a'*64}}
+                if body.get('action')=='complete':raise TimeoutError('private diagnostics')
+                if body.get('action')=='read':return {'state':state}
+                return {}
+            def evaluate(*args,**kwargs):
+                generations.append(kwargs['decision_context']);return {'evaluation_results':{}}
+            worker.run_once(rpc,recheck_limit=1,evaluator=evaluate)
+            self.assertEqual(generations,[{'inputSha256':'a'*64}])
+            self.assertEqual([c.get('action') for c in calls],[None,'claim','complete','read',None])
+
+    def test_uncertain_provider_is_failed_once_without_retry(self):
+        calls=[]
+        def rpc(name,body):
+            calls.append(body)
+            return {'id':'fixture','restaurant':{}} if body.get('action')=='claim' else {}
+        def uncertain(*args,**kwargs):raise worker.WorkerFailure('gemini_result_uncertain')
+        worker.run_once(rpc,recheck_limit=1,evaluator=uncertain)
+        self.assertEqual([c.get('action') for c in calls],[None,'claim','fail'])
+        self.assertEqual(calls[-1]['result'],{'code':'gemini_result_uncertain'})
+
+    def test_partial_completion_receipt_requires_readback_before_followup(self):
+        for readback in [{},{'state':'running'},TimeoutError('private diagnostics')]:
+            calls=[]
+            def rpc(name,body):
+                calls.append(body)
+                if body.get('action')=='claim':return {'id':'fixture','restaurant':{}}
+                if body.get('action')=='read':
+                    if isinstance(readback,Exception):raise readback
+                    return readback
+                return {}
+            with self.assertRaises(worker.WorkerFailure) as raised:
+                worker.run_once(rpc,recheck_limit=1,evaluator=lambda *a,**k:{})
+            self.assertEqual(raised.exception.code,'result_unconfirmed')
+            self.assertEqual([c.get('action') for c in calls],[None,'claim','complete','read'])
 
     def test_missing_original_never_launches_command(self):
         with tempfile.TemporaryDirectory() as folder:
             with self.assertRaises(worker.WorkerFailure) as raised:
-                worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},Path(folder),run_command=lambda *args,**kwargs:self.fail('command launched'))
+                worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},Path(folder),decision_context={'inputSha256':'a'*64},run_command=lambda *args,**kwargs:self.fail('command launched'))
         self.assertEqual(raised.exception.code,'source_unavailable')
 
     def test_result_identifier_and_admin_fields_cannot_escape(self):
@@ -140,7 +244,7 @@ class ReviewWorkerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)/'tzuyang/meta';root.mkdir(parents=True)
             (root/'ABCDEFGHIJK.jsonl').write_text('{"youtube_link":"https://youtu.be/ZZZZZZZZZZZ","channel_name":"tzuyang"}\n')
-            with self.assertRaises(worker.WorkerFailure):worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,run_command=lambda *args,**kw:self.fail('command called'))
+            with self.assertRaises(worker.WorkerFailure):worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,decision_context={'inputSha256':'a'*64},run_command=lambda *args,**kw:self.fail('command called'))
 
     def test_cached_transcript_segments_are_validated_before_commands_or_paid_work(self):
         invalid=[[],[{}],[{'start':True,'text':'fixture'}],[{'start':-1,'text':'fixture'}],[{'start':float('nan'),'text':'fixture'}],
@@ -152,7 +256,7 @@ class ReviewWorkerTests(unittest.TestCase):
                 record={'youtube_link':'https://youtu.be/ABCDEFGHIJK','channel_name':'tzuyang','transcript':segments}
                 path=root/'ABCDEFGHIJK.jsonl';path.write_text(json.dumps(record)+'\n');before=path.read_bytes()
                 with self.assertRaises(worker.WorkerFailure) as raised:
-                    worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,run_command=lambda *a,**k:self.fail('command called'))
+                    worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,decision_context={'inputSha256':'a'*64},run_command=lambda *a,**k:self.fail('command called'))
                 self.assertEqual(raised.exception.code,'source_unavailable');self.assertEqual(path.read_bytes(),before)
         for duration in [None,0,1.25]:
             record={'transcript':[{'start':0,'text':'fixture','duration':duration}]}

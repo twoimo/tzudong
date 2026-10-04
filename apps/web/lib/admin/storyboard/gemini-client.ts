@@ -85,7 +85,8 @@ export class GeminiStoryboardClient {
     let response;
     try {
       response = await this.client.models.generateContent({ model, contents: buildStoryboardDraftPrompt(request), config: {
-        temperature: 0.2, thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM }, maxOutputTokens: 8192,
+        // Gemini 3.8 Flash no longer accepts sampling overrides.
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM }, maxOutputTokens: 8192,
         responseMimeType: 'application/json', abortSignal: signal,
         httpOptions: { timeout: 120_000, retryOptions: { attempts: 1 } },
       } });

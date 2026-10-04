@@ -1,5 +1,7 @@
 "use client";
 
+import { createPortal } from 'react-dom';
+import { useRestaurantManagementHeader } from '@/components/admin/RestaurantManagementWorkspace';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import { isEvaluationRecordStatus, isRecord, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { fetchAdminEvaluationPage, isEvaluationCursorStale, type EvaluationWarnings } from '@/lib/admin/evaluation-page-client';
@@ -984,7 +986,7 @@ function AdminEvaluationRouteSkeleton() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <AdminEvaluationTitleIcon embedded />
-              <h1 className="truncate bg-gradient-primary bg-clip-text text-lg font-bold text-transparent">관리자 데이터 검수</h1>
+              <h1 className="truncate text-base font-semibold leading-6">관리자 데이터 검수</h1>
             </div>
             <div className="mt-0.5 truncate text-xs text-muted-foreground">
               필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
@@ -1052,6 +1054,7 @@ function AdminEvaluationPage({
   onInitialContentReady?: () => void;
 }) {
   const { toast } = useToast();
+  const managementHeader = useRestaurantManagementHeader();
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -3059,7 +3062,41 @@ function AdminEvaluationPage({
     ? (submissionInitialTab === 'reviews' ? 'reviews' : 'submissions')
     : 'restaurants';
   const ModuleTitle = embedded ? 'h2' : 'h1';
-  const compactReviewHeader = embedded && embeddedModuleId === 'restaurants';
+  const compactReviewHeader = embedded && embeddedModuleId === 'restaurants' && managementHeader !== null;
+
+  const reviewSummary = !isInitialEvaluationDataLoading
+    ? `전체 ${stats.total}건${stats.deleted > 0 ? ` · 삭제 ${stats.deleted}건` : ''}`
+    : '전체 집계 중';
+  const reviewViewActions = canSwitchEvaluationView && (
+    <>
+      <Button
+        variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={switchToEvaluationListView}
+        title="리스트 뷰"
+        aria-label="리스트 뷰"
+        aria-pressed={!isAlternateView && !showSubmissionView}
+        data-admin-evaluation-view-toggle="list"
+      >
+        <LayoutList className="h-4 w-4" />
+        <span className="sr-only">리스트</span>
+      </Button>
+      <Button
+        variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={switchToEvaluationSlideView}
+        title="슬라이드 뷰"
+        aria-label="슬라이드 뷰"
+        aria-pressed={isAlternateView && !showSubmissionView}
+        data-admin-evaluation-view-toggle="slide"
+      >
+        <MonitorPlay className="h-4 w-4" />
+        <span className="sr-only">슬라이드</span>
+      </Button>
+    </>
+  );
 
   return (
     <div
@@ -3069,24 +3106,34 @@ function AdminEvaluationPage({
       data-admin-embedded-module-shell={embedded ? "true" : undefined}
       data-admin-embedded-module-id={embedded ? embeddedModuleId : undefined}
     >
-      {/* Header */}
-      <div
+      {compactReviewHeader && managementHeader.count && createPortal(
+        <span data-admin-module-summary="true">{reviewSummary}</span>,
+        managementHeader.count,
+      )}
+      {compactReviewHeader && managementHeader.views && createPortal(
+        <div className="flex items-center gap-1 [&_button]:min-h-11 [&_button]:min-w-11 sm:[&_button]:min-h-8 sm:[&_button]:min-w-8" data-admin-evaluation-view-actions="top-right" data-admin-module-actions="top-right">
+          {reviewViewActions}
+        </div>,
+        managementHeader.views,
+      )}
+      {/* Standalone modules retain their own header; the restaurant workspace owns its primary row. */}
+      {(!compactReviewHeader || deepLinkFilter) && <div
         className={embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}
         data-admin-module-header={embedded ? "compact" : undefined}
         data-admin-module-header-module={embedded ? embeddedModuleId : undefined}
       >
         <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
           <div className="min-w-0 flex-1">
-            <div className={compactReviewHeader ? 'sr-only' : 'flex items-center gap-2'}>
+            {!compactReviewHeader && <div className="flex items-center gap-2">
               <AdminEvaluationTitleIcon embedded={embedded} />
-              <ModuleTitle className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
+              <ModuleTitle className="whitespace-nowrap text-base font-semibold leading-6">
                 {embeddedModuleId === 'submissions'
                   ? '제보 관리'
                   : embeddedModuleId === 'reviews'
                     ? '리뷰 관리'
                     : '관리자 데이터 검수'}
               </ModuleTitle>
-            </div>
+            </div>}
             {deepLinkFilter && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted-foreground">딥링크 필터:</span>
@@ -3115,15 +3162,13 @@ function AdminEvaluationPage({
                 </Button>
               </div>
             )}
-            <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
-              {compactReviewHeader ? !isInitialEvaluationDataLoading
-                ? `전체 ${stats.total}건${stats.deleted > 0 ? ` · 삭제 ${stats.deleted}건` : ''}`
-                : '전체 집계 중' : pendingQueueSummaryContent}
-            </div>
+            {!compactReviewHeader && <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
+              {embeddedModuleId === 'restaurants' ? reviewSummary : pendingQueueSummaryContent}
+            </div>}
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
+          {!compactReviewHeader && <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
             <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}
@@ -3131,36 +3176,7 @@ function AdminEvaluationPage({
               showStatusChips={!showSubmissionView}
             >
               <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right" data-admin-module-actions={embedded ? "top-right" : undefined}>
-                {canSwitchEvaluationView && (
-                  <>
-                    <Button
-                      variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={switchToEvaluationListView}
-                      title="리스트 뷰"
-                      aria-label="리스트 뷰"
-                      aria-pressed={!isAlternateView && !showSubmissionView}
-                      data-admin-evaluation-view-toggle="list"
-                    >
-                      <LayoutList className="h-4 w-4" />
-                      <span className="sr-only">리스트</span>
-                    </Button>
-                    <Button
-                      variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={switchToEvaluationSlideView}
-                      title="슬라이드 뷰"
-                      aria-label="슬라이드 뷰"
-                      aria-pressed={isAlternateView && !showSubmissionView}
-                      data-admin-evaluation-view-toggle="slide"
-                    >
-                      <MonitorPlay className="h-4 w-4" />
-                      <span className="sr-only">슬라이드</span>
-                    </Button>
-                  </>
-                )}
+                {reviewViewActions}
                 {!embedded && (
                   <>
                     {/* 사용자 제보 검수 버튼 */}
@@ -3199,10 +3215,14 @@ function AdminEvaluationPage({
               {/* 구분선 */}
               <div className="hidden h-6 w-px bg-border sm:block" />
             </CategorySidebar>
-          </div>
+          </div>}
         </div>
-      </div>
+      </div>}
 
+      {!showSubmissionView && <RestaurantReviewAutomation
+        controlsTarget={compactReviewHeader ? managementHeader.automation : undefined}
+        onApplied={() => { void loadAllRecords(); void invalidateRestaurantDiscoveryQueries(queryClient); }}
+      />}
       <div className="flex-1 min-h-0 flex flex-col" data-admin-module-content={embedded ? "bounded" : undefined}>
         {pendingRecordAction && (
           <section
@@ -3315,7 +3335,6 @@ function AdminEvaluationPage({
         ) : (
           /* 테이블 영역 (무한 스크롤) */
           <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-2">
-            <RestaurantReviewAutomation onApplied={() => { void loadAllRecords(); void invalidateRestaurantDiscoveryQueries(queryClient); }} />
             <EvaluationTable
               records={visibleDisplayedRecords}
               onApprove={handleApprove}

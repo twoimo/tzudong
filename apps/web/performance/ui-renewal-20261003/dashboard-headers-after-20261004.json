@@ -1,0 +1,124 @@
+{
+  "kind": "synthetic-dashboard-header-geometry",
+  "sourceSha256": "03a622ecb42daaa6e1f190e9a33f1f8ad4915da31f300008f42ad0969fb42c58",
+  "node": "v24.21.0",
+  "browser": "154.0.8037.97",
+  "cases": [
+    {
+      "width": 1423,
+      "card": "topContent",
+      "headerHeight": 28,
+      "titleCenterY": 628.40625,
+      "actionCenterY": 628.40625,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 1423,
+      "card": "engagementRate",
+      "headerHeight": 28,
+      "titleCenterY": 624.40625,
+      "actionCenterY": 624.40625,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "topContent",
+      "headerHeight": 28,
+      "titleCenterY": 1520.806640625,
+      "actionCenterY": 1520.806640625,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "engagementRate",
+      "headerHeight": 28,
+      "titleCenterY": 688,
+      "actionCenterY": 688,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "topContent",
+      "headerHeight": 28,
+      "titleCenterY": 1483,
+      "actionCenterY": 1483,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "engagementRate",
+      "headerHeight": 28,
+      "titleCenterY": 616.203125,
+      "actionCenterY": 616.203125,
+      "alignedSameRow": true,
+      "overflow": false
+    }
+  ],
+  "baseline": [
+    {
+      "width": 1423,
+      "card": "topContent",
+      "headerHeight": 60,
+      "titleCenterY": 646.40625,
+      "actionCenterY": 680.40625,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 1423,
+      "card": "engagementRate",
+      "headerHeight": 60,
+      "titleCenterY": 642.40625,
+      "actionCenterY": 676.40625,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "topContent",
+      "headerHeight": 60,
+      "titleCenterY": 1511,
+      "actionCenterY": 1545,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "engagementRate",
+      "headerHeight": 60,
+      "titleCenterY": 1869,
+      "actionCenterY": 1903,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "topContent",
+      "headerHeight": 60,
+      "titleCenterY": 1473,
+      "actionCenterY": 1507,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "engagementRate",
+      "headerHeight": 60,
+      "titleCenterY": 1837,
+      "actionCenterY": 1871,
+      "alignedSameRow": false,
+      "overflow": false
+    }
+  ],
+  "independentSamplesPerCondition": 1,
+  "confidenceInterval": null,
+  "reason": "deterministic geometry, one populated fixture per viewport; no latency or operating performance claim",
+  "errors": 0,
+  "hostedWrites": 0,
+  "providerCalls": 0
+}

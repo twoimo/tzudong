@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
+import { readAdminNaverCoordinate } from "@/lib/admin/naver-coordinate";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import "@/components/map/marker-icons.css";
@@ -382,14 +383,6 @@ function getAdminNaverMaps(): AdminNaverMapsApi | null {
     (window as Window & { naver?: { maps?: AdminNaverMapsApi } }).naver?.maps ??
     null
   );
-}
-
-function readAdminNaverCoordinate(
-  value: AdminNaverLatLngLike | undefined,
-  key: "lat" | "lng",
-) {
-  const coordinate = value?.[key];
-  return typeof coordinate === "function" ? coordinate() : coordinate;
 }
 
 function getAdminMapBbox(

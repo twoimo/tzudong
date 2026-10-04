@@ -212,7 +212,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(evaluationsSource).toContain(
       "const canSwitchEvaluationView = !embedded || initialView === 'evaluations';",
     );
-    expect(evaluationsSource).toContain("{canSwitchEvaluationView && (");
+    expect(evaluationsSource).toContain("const reviewViewActions = canSwitchEvaluationView && (");
     expect(evaluationsSource).toContain("onClick={switchToEvaluationListView}");
     expect(evaluationsSource).toContain(
       "onClick={switchToEvaluationSlideView}",
@@ -232,11 +232,11 @@ describe("mobile and desktop parity source contracts", () => {
     expect(bannerSource).toContain("데스크톱 배너");
     expect(bannerSource).toContain("모바일 팝업");
     expect(bannerSource).not.toContain(">사이드바</Badge>");
-    expect(bannerSource).toContain("선택하면 오른쪽에서 바로 수정합니다.");
+    expect(bannerSource).toContain("requestEditor(banner)");
     expect(bannerSource).toContain(
-      "모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.",
+      "Boolean(pendingReadback)",
     );
-    expect(bannerSource).toContain("삭제는 모달 없이 이 패널에서 처리합니다.");
+    expect(bannerSource).toContain("deleteConfirmation !== '배너삭제'");
     expect(bannerSource).toContain('role="button"');
     expect(bannerSource).toContain("tabIndex={0}");
     expect(bannerSource).toContain('aria-label="배너 이미지 또는 영상 업로드"');

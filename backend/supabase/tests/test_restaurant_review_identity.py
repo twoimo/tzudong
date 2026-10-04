@@ -8,6 +8,7 @@ import uuid
 
 ROOT=Path(__file__).resolve().parents[3]
 MIGRATION=ROOT/'backend/supabase/migrations/20261004010334_restaurant_review_identity_evidence.sql'
+CATEGORIES=ROOT/'backend/supabase/migrations/20261004045404_restaurant_review_category_contract.sql'
 
 
 @unittest.skipUnless(os.environ.get('TZUDONG_REVIEW_IDENTITY_LOCAL_PG')=='1','owned private PG opt-in required')
@@ -30,6 +31,7 @@ class ReviewIdentityTests(unittest.TestCase):
             c.execute("CREATE FUNCTION public.extract_youtube_video_id(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT nullif(split_part($1,''v='',2),'''')';CREATE FUNCTION public.normalize_restaurant_identity_name(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT lower(btrim($1))';")
             c.execute((ROOT/'backend/supabase/migrations/20261003081915_restaurant_review_automation.sql').read_text())
             c.execute(MIGRATION.read_text())
+            c.execute(CATEGORIES.read_text())
 
     @classmethod
     def cleanup(cls):
@@ -54,6 +56,26 @@ class ReviewIdentityTests(unittest.TestCase):
         for value in [None,'another branch',3,{},'']:
             row=copy.deepcopy(good);row['evaluation_results']['location_match_TF']['origin_name']=value
             self.assertEqual(self.scalar('SELECT pipeline_control.restaurant_review_classify(%s)',(Json(row),)),'hold:location_identity_mismatch')
+
+    def test_invalid_category_elements_are_held_and_canonical_values_are_preserved(self):
+        from psycopg2.extras import Json
+        good=self.good()
+        for categories in [None,[],[None],[''],[' '],['unknown-value'],['한식',None],['한식','unknown-value'],[3],[{}],{},'한식',[' 한식 ']]:
+            row={**good,'categories':categories}
+            self.assertEqual(self.scalar('SELECT pipeline_control.restaurant_review_classify(%s)',(Json(row),)),'hold:source_incomplete')
+        for category in ['치킨','중식','돈까스·회','피자','패스트푸드','찜·탕','족발·보쌈','분식','카페·디저트','한식','고기','양식','아시안','야식','도시락']:
+            row={**good,'categories':[category]}
+            self.assertEqual(self.scalar('SELECT pipeline_control.restaurant_review_classify(%s)',(Json(row),)),'approve:all_checks_passed')
+        self.assertEqual(self.scalar('SELECT pipeline_control.restaurant_review_classify(%s)',(Json({**good,'categories':[None],'updated_by_admin_id':str(uuid.uuid4())}),)),'protected:admin_or_terminal')
+
+    def test_category_patch_preserves_metadata_and_rejects_source_drift(self):
+        with self.conn.cursor() as c:
+            c.execute("SELECT proowner,proacl,proconfig,prosecdef,provolatile,proparallel,md5(prosrc) FROM pg_proc WHERE oid='pipeline_control.restaurant_review_classify(jsonb)'::regprocedure")
+            before=c.fetchone()
+            with self.assertRaisesRegex(self.driver.Error,'REVIEW_CATEGORY_SOURCE_DRIFT'):c.execute(CATEGORIES.read_text())
+            c.execute('ROLLBACK')
+            c.execute("SELECT proowner,proacl,proconfig,prosecdef,provolatile,proparallel,md5(prosrc) FROM pg_proc WHERE oid='pipeline_control.restaurant_review_classify(jsonb)'::regprocedure")
+            self.assertEqual(c.fetchone(),before)
 
     def test_deleted_history_does_not_block_replacement_but_active_duplicates_do(self):
         from psycopg2.extras import Json

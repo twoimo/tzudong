@@ -38,6 +38,7 @@ import {
   Maximize2,
   Minimize2,
   Monitor,
+  Network,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -136,6 +137,7 @@ import {
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { RestaurantManagementWorkspace } from "@/components/admin/RestaurantManagementWorkspace";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
+import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
@@ -169,6 +171,15 @@ type SidebarSection = {
 };
 
 const consoleModules: ConsoleModule[] = [
+  {
+    id: "knowledge-graph",
+    title: "지식 그래프",
+    description: "쯔양 영상·맛집·메뉴 근거",
+    href: "/admin?module=knowledge-graph",
+    icon: Network,
+    badge: "OSK",
+    actionLabel: "지식 탐색",
+  },
   {
     id: "sentry",
     title: "오류 모니터링",
@@ -255,13 +266,13 @@ const consoleModules: ConsoleModule[] = [
   },
   {
     id: "insights",
-    title: "핵심 인사이트",
+    title: "영상 성과 분석",
     description:
       "조회수/좋아요/댓글/영상 길이 기반 트리맵과 변화 추이를 확인합니다.",
     href: "/admin?module=insights",
     icon: BarChart2,
     badge: "분석",
-    actionLabel: "핵심 인사이트 보기",
+    actionLabel: "영상 성과 분석 보기",
   },
   {
     id: "pipeline",
@@ -411,7 +422,7 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
-    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "sentry"]),
+    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"]),
   },
   {
     label: "실험실",
@@ -701,6 +712,10 @@ function loadAdminSentryModule() {
   return import("@/components/admin/AdminSentryPanel").then((module) => module.AdminSentryPanel);
 }
 
+function loadAdminKnowledgeGraphModule() {
+  return import("@/components/admin/AdminKnowledgeGraphPanel").then((module) => module.AdminKnowledgeGraphPanel);
+}
+
 function loadAdminStoryboardGenerator() {
   return import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
     (module) => module.AdminStoryboardGenerator,
@@ -886,6 +901,7 @@ const AdminUsersModule = dynamic(loadAdminUsersModule, {
 });
 
 const AdminSentryModule = dynamic(loadAdminSentryModule, { ssr: false, loading: () => null });
+const AdminKnowledgeGraphModule = dynamic(loadAdminKnowledgeGraphModule, { ssr: false, loading: () => null });
 
 const AdminStoryboardGenerator = dynamic(loadAdminStoryboardGenerator, {
   ssr: false,
@@ -941,6 +957,8 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
       return loadAdminUsersModule();
     case "sentry":
       return loadAdminSentryModule();
+    case "knowledge-graph":
+      return loadAdminKnowledgeGraphModule();
     case "insights":
       return loadInsightsModule();
     case "pipeline":
@@ -4371,9 +4389,9 @@ function AdminDashboardKpiCard({
                 )}
               >
                 <span data-admin-dashboard-kpi-delta="timeframe">
-                  <span className="font-extrabold text-muted-foreground">
+                  <span className="font-extrabold text-muted-foreground" data-admin-dashboard-kpi-delta-label="full">
                     {deltaLabel}
-                  </span>{" "}
+                  </span><span className="hidden font-extrabold text-muted-foreground" data-admin-dashboard-kpi-delta-label="compact">대비</span>{" "}
                   {delta}
                 </span>
               </AdminDashboardInlineTooltip>
@@ -8950,109 +8968,8 @@ function AdminSidebar({
   );
 }
 
-function GuardedApplyCard() {
-  return (
-    <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-lg">안전 적용 원칙</CardTitle>
-          <Badge variant="outline" className="border-primary/30 text-primary">
-            관리자 확인 필수
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {guardedSteps.map((step, index) => (
-            <div key={step} className="flex items-center gap-2">
-              <Badge
-                variant={index === 0 ? "default" : "secondary"}
-                className={cn(
-                  index === 0 && "bg-primary text-primary-foreground",
-                )}
-              >
-                {step}
-              </Badge>
-              {index < guardedSteps.length - 1 && (
-                <span className="text-muted-foreground">→</span>
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="text-sm leading-6 text-muted-foreground">
-          제보 승인, 리뷰 반려, 맛집 삭제/복구, 배너 공개처럼 사용자에게 보이는
-          변경은 적용 전에 한 번 더 확인하고, 적용 후에는 실제 상태를 다시 읽어
-          관리자에게 보여주는 흐름을 기본값으로 둡니다.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function LlmSessionWorkspace() {
-  return (
-    <AdminEmbeddedModuleShell
-      moduleId="llm"
-      titleId="admin-llm-session-title"
-      title="운영 보조"
-      icon={Bot}
-      summary="읽기 전용 · 제안만 제공 · 적용은 각 모듈에서"
-      contentClassName="overflow-y-auto p-2 md:p-3"
-    >
-      <section aria-label="운영 보조 제안" className="space-y-3">
-        <div className="grid gap-3 xl:grid-cols-3">
-          {[
-            [
-              "현재 화면 요약",
-              "선택한 모듈의 대기 건수, 실패 상태, 위험 액션 후보를 한 문단으로 요약합니다.",
-            ],
-            [
-              "다음 검수 추천",
-              "오래된 제보, 지오코딩 실패, 미승인 리뷰, 배너 공개 변경을 우선순위로 정리합니다.",
-            ],
-            [
-              "위험 액션 체크리스트",
-              "삭제·반려·공개 배너 변경 전 미리보기 → 확인 → 적용 → 재확인 → 감사 기록 순서를 확인합니다.",
-            ],
-          ].map(([title, description]) => (
-            <Card key={title} className="border-border bg-card/95 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-          <GuardedApplyCard />
-          <Card className="border-border bg-card/95 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bot className="h-5 w-5 text-primary" aria-hidden="true" />
-                운영 원칙
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <p>1. 자동 운영 보조는 읽기 전용 제안 화면으로 유지합니다.</p>
-              <p>
-                2. 데이터 변경, 권한 정책, 데이터 구조 변경은 이 화면에서 직접
-                수행하지 않습니다.
-              </p>
-              <p>
-                3. 위험 작업은 반드시 관리자 UI의 명시적 확인과 상태 재확인을
-                거칩니다.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-    </AdminEmbeddedModuleShell>
-  );
+  return <AdminOperationsPanel />;
 }
 
 function getAdminAuditActionLabel(action: string) {
@@ -9365,6 +9282,8 @@ function InlineModulePanel({
         return <AdminPipelineDashboard key="admin-pipeline" />;
       case "sentry":
         return <AdminSentryModule key="admin-sentry" />;
+      case "knowledge-graph":
+        return <AdminKnowledgeGraphModule key="admin-knowledge-graph" />;
       default: {
         const exhaustiveModuleId: never = module.id;
         return exhaustiveModuleId;
@@ -9517,7 +9436,7 @@ function getAdminConsoleCanvasSkeletonConfig({
     case "insights":
       return {
         moduleId,
-        title: title ?? "핵심 인사이트",
+        title: title ?? "영상 성과 분석",
         description: "지표 카드, 트리맵, 추세 차트를 뷰포트에 맞춰 준비합니다.",
         icon: BarChart2,
         variant: "insights-grid",

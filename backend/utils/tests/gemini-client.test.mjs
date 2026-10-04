@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createServer } from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { GoogleGenAI } from '@google/genai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -188,4 +189,59 @@ test('thinking fallback retains chunk temperature and output limit',async()=>{
     assert.equal(request.config.thinkingConfig,undefined);
     assert.equal(request.contents[0].parts[1].fileData.fileUri,'fixture-file');
     assert.equal(await leases(),0);
+});
+
+test('evaluation entrypoints keep model and thinking settings while omitting sampling only for 3.8', async () => {
+    const input = path.join(directory, 'compatibility-input.txt');
+    const output = path.join(directory, 'compatibility-output.txt');
+    const wire = path.join(directory, 'compatibility-wire.jsonl');
+    const preload = path.join(directory, 'compatibility-transport.mjs');
+    fs.writeFileSync(input, 'synthetic evaluation prompt');
+    // All SDK HTTP requests terminate here; no real key, headers or network leave the child.
+    fs.writeFileSync(preload, `import fs from 'node:fs';
+globalThis.fetch = async (input, init) => {
+  const request = new Request(input, init);
+  const url = new URL(request.url);
+  if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error('UNEXPECTED_FIXTURE_HOST');
+  fs.appendFileSync(process.env.FX_COMPATIBILITY_WIRE, JSON.stringify({ path: url.pathname, method: request.method, body: await request.json() }) + '\\n');
+  return Response.json(${JSON.stringify(responseBody)});
+};\n`);
+    const scripts = ['../../restaurant-evaluation/scripts/gemini_api_request.mjs', '../../bin/review_recheck_gemini.mjs'];
+    for (const script of scripts) {
+        for (const model of [undefined, 'gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash']) {
+            for (const thinking of ['LOW', 'MEDIUM', 'HIGH', 'MINIMAL', 'minimal']) {
+                fs.writeFileSync(wire, '');
+                fs.rmSync(output, { force: true });
+                const env = {
+                    PATH: process.env.PATH,
+                    GEMINI_API_KEY: 'synthetic-compatibility-key',
+                    GEMINI_BUDGET_PATH: path.join(directory, 'compatibility-budget.sqlite'),
+                    GEMINI_BUDGET_PROJECT: 'compatibility-fixture',
+                    GEMINI_REQUESTS_PER_MINUTE: '100000', GEMINI_MAX_INFLIGHT: '1',
+                    FX_COMPATIBILITY_WIRE: wire, LAAJ_THINKING_LEVEL: thinking,
+                    ...(model ? { PRIMARY_MODEL: model } : {}),
+                };
+                const task = execute(process.execPath, ['--import', preload, fileURLToPath(new URL(script, import.meta.url)), input, output], { env });
+                const unsupported = model?.includes('gemini-3.8-flash') && thinking.toUpperCase() === 'MINIMAL';
+                if (unsupported) {
+                    await assert.rejects(task, error => error.code === 1);
+                    assert.equal(fs.readFileSync(wire, 'utf8'), '');
+                    assert.equal(fs.existsSync(output), false);
+                    continue;
+                }
+                await task;
+                const requests = fs.readFileSync(wire, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+                assert.equal(requests.length, 1);
+                assert.equal(requests[0].path, `/v1beta/models/${(model || 'gemini-3.7-flash').replace(/^models\//, '')}:generateContent`);
+                assert.equal(requests[0].method, 'POST');
+                assert.deepEqual(requests[0].body.contents, [{ role: 'user', parts: [{ text: 'synthetic evaluation prompt' }] }]);
+                assert.deepEqual(requests[0].body.generationConfig, {
+                    ...(model?.includes('gemini-3.8-flash') ? {} : { temperature: 0.1 }),
+                    maxOutputTokens: 4096,
+                    thinkingConfig: { thinkingLevel: script.includes('gemini_api_request') ? thinking.toUpperCase() : thinking },
+                });
+                assert.equal(fs.readFileSync(output, 'utf8'), '{"ok":true}');
+            }
+        }
+    }
 });

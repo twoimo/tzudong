@@ -19,6 +19,7 @@ describe("admin sidebar order normalization", () => {
       "banners",
       "insights",
       "pipeline",
+      "knowledge-graph",
       "sentry",
     ]);
 
@@ -75,6 +76,7 @@ describe("admin sidebar order normalization", () => {
       "banners",
       "insights",
       "pipeline",
+      "knowledge-graph",
       "sentry",
     ]);
 
@@ -108,6 +110,7 @@ describe("admin sidebar order normalization", () => {
       "users",
       "insights",
       "pipeline",
+      "knowledge-graph",
       "sentry",
     ]);
   });

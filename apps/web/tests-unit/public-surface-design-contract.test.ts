@@ -171,6 +171,8 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'storyboard-canvas-toolbar',
   'storyboard-chat-examples',
   'storyboard-chat-attachments',
+  'knowledge-graph-canvas',
+  'insights-controls',
 ] as const;
 
 const LIGHT_TOKEN_LITERALS = [
@@ -232,7 +234,7 @@ function collectOwnerAttributeValues(root: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) {
+        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".next")) {
           continue;
         }
         visit(fullPath);
@@ -260,7 +262,7 @@ function walkCssUnder(root: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) {
+        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".next")) {
           continue;
         }
         visit(fullPath);

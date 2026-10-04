@@ -8,11 +8,12 @@ from pathlib import Path
 SOURCE_SHA256 = '527286d204fc8a5b07891763535fcb27ce6e28a0e2489c27796a63bc306b6f9c'
 MANUAL_SOURCE_SHA256 = '8ce3a87564b8b5bb2c4caffd1b62bc2f50c3055f11fc7dc3e2fa9700cffa1af3'
 PAGE_SOURCE_SHA256 = '4471f02096c0c7ee73d074ea7a3c4c0c36674edbaacbf998f4059d7b48d1f095'
+WARNING_SOURCE_SHA256 = '3feb3f3da7209d02ce6f76d02a481eb4acbde77c6228702f2e17b2ecd35d9175'
 BUNDLE_SHA256 = '15c849887cf3cd9641181545146bbf1226b3c0a2dc45f84d892022dd9041f5a5'
 
 
 def transform(source, bundle):
-    if hashlib.sha256(source).hexdigest() not in (SOURCE_SHA256, MANUAL_SOURCE_SHA256, PAGE_SOURCE_SHA256):
+    if hashlib.sha256(source).hexdigest() not in (SOURCE_SHA256, MANUAL_SOURCE_SHA256, PAGE_SOURCE_SHA256, WARNING_SOURCE_SHA256):
         raise ValueError('service_invoker_replay_source_drift')
     if hashlib.sha256(bundle).hexdigest() != BUNDLE_SHA256:
         raise ValueError('service_invoker_replay_bundle_drift')

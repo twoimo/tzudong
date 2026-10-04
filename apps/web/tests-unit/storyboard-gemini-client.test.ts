@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { GenerateContentResponse } from '@google/genai';
+import { GenerateContentResponse, GoogleGenAI } from '@google/genai';
 import { GeminiStoryboardClient, resolveStoryboardGeminiKey } from '../lib/admin/storyboard/gemini-client';
-import { storyboardProductionRequestSchema, StoryboardProductionError } from '../lib/admin/storyboard/production-contract';
+import { buildStoryboardDraftPrompt, storyboardProductionRequestSchema, StoryboardProductionError } from '../lib/admin/storyboard/production-contract';
 import { STORYBOARD_GEMINI_IMAGE_MODELS } from '../lib/admin/storyboard/gemini-models';
 
 const request = () => storyboardProductionRequestSchema.parse({ workflow: 'storyboard-mlx-v1', requestId: crypto.randomUUID(),
@@ -20,7 +20,58 @@ function fakeClient(generate = async () => response('gemini-3.8-flash')) {
   const client = { models: { get: async ({ model }: { model: string }) => { reads++; return { name: `models/${model}` }; }, generateContent: generate } };
   return { client, reads: () => reads };
 }
+
+async function captureSdkRequests(work: (client: GoogleGenAI) => Promise<void>) {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ path: string; method: string; body: Record<string, unknown> }> = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const url = new URL(request.url);
+    expect(url.hostname).toBe('generativelanguage.googleapis.com');
+    requests.push({ path: url.pathname, method: request.method, body: await request.json() });
+    const model = url.pathname.split('/').at(-1)!.replace(':generateContent', '');
+    return Response.json({ modelVersion: model, responseId: 'synthetic-transport', candidates: [{ content: { role: 'model', parts:
+      model === 'gemini-3.8-flash' ? [{ text: JSON.stringify(draft) }] : [{ inlineData: { mimeType: 'image/png', data: Buffer.from('synthetic-image').toString('base64') } }],
+    } }] });
+  }) as typeof fetch;
+  try {
+    await work(new GoogleGenAI({ apiKey: 'synthetic-compatibility-key', vertexai: false, httpOptions: { retryOptions: { attempts: 1 } } }));
+    return requests;
+  } finally { globalThis.fetch = originalFetch; }
+}
+
 describe('Gemini storyboard worker client', () => {
+  test('installed SDK serializes 3.8 draft without removed sampling fields and preserves the existing contract', async () => {
+    const input = request();
+    const requests = await captureSdkRequests(async client => {
+      const result = await new GeminiStoryboardClient({ client, apiKey: 'synthetic-compatibility-key' }).draft(input);
+      expect(result.draft.scenes).toHaveLength(5);
+      expect(result.provenance.responseModel).toBe(input.providers.text.model);
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].method).toBe('POST');
+    expect(requests[0].path).toBe('/v1beta/models/gemini-3.8-flash:generateContent');
+    expect(requests[0].body.contents).toEqual([{ role: 'user', parts: [{ text: buildStoryboardDraftPrompt(input) }] }]);
+    expect(requests[0].body.generationConfig).toEqual({ thinkingConfig: { thinkingLevel: 'MEDIUM' }, maxOutputTokens: 8192, responseMimeType: 'application/json' });
+  });
+  test('installed SDK does not itself remove obsolete model-specific sampling fields', async () => {
+    const config = { temperature: 0.2, topP: 0.8, topK: 20, candidateCount: 1 };
+    const requests = await captureSdkRequests(async client => { await client.models.generateContent({ model: 'gemini-3.8-flash', contents: 'synthetic control', config }); });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].body.generationConfig).toEqual(config);
+  });
+  test('both Nano Banana models retain their independent image configuration on the SDK wire', async () => {
+    const requests = await captureSdkRequests(async client => {
+      for (const model of STORYBOARD_GEMINI_IMAGE_MODELS) {
+        const input = request(); input.providers.image.model = model.id;
+        const result = await new GeminiStoryboardClient({ client, apiKey: 'synthetic-compatibility-key' }).image(input, 'synthetic image prompt');
+        expect(result.bytes.toString()).toBe('synthetic-image');
+        expect(result.provenance.responseModel).toBe(model.id);
+      }
+    });
+    expect(requests.map(request => request.path)).toEqual(STORYBOARD_GEMINI_IMAGE_MODELS.map(model => `/v1beta/models/${model.id}:generateContent`));
+    expect(requests.map(request => request.body.generationConfig)).toEqual(STORYBOARD_GEMINI_IMAGE_MODELS.map(() => ({ responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '16:9', imageSize: '1K' } })));
+  });
   test('prefers the funded server credential and never a public key', () => {
     expect(resolveStoryboardGeminiKey({ GEMINI_CREDITS_API_KEY: 'funded', STORYBOARD_GEMINI_API_KEY: 'other' })).toBe('funded');
     expect(resolveStoryboardGeminiKey({ NEXT_PUBLIC_GOOGLE_API_KEY: 'public' })).toBeNull();

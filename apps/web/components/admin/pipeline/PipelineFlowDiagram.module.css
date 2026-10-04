@@ -1,0 +1,14 @@
+.diagram { display: block; overflow: visible; }
+.edge, .activeEdge { fill: none; stroke: hsl(var(--muted-foreground)); stroke-opacity: .4; stroke-width: 1.3; }
+.activeEdge { stroke: hsl(var(--primary)); stroke-opacity: .85; stroke-width: 1.8; }
+.arrow { fill: hsl(var(--muted-foreground)); }
+.node { cursor: pointer; outline: none; }
+.node rect { fill: hsl(var(--card)); stroke: hsl(var(--border)); stroke-width: 1.2; }
+.node:hover rect { fill: hsl(var(--muted)); }
+.node:focus-visible rect, .selected rect { stroke: hsl(var(--primary)); stroke-width: 2.3; }
+.failed rect { stroke: hsl(var(--destructive)); }
+.failed .status { fill: hsl(var(--destructive)); }
+.skipped rect, .blocked rect, .unknown rect, .partial rect, .manual rect { stroke-dasharray: 4 3; }
+.title { font-size: 14px; font-weight: 600; fill: hsl(var(--foreground)); }
+.status { font-size: 12px; fill: hsl(var(--foreground)); }
+.time { font-size: 11px; fill: hsl(var(--muted-foreground)); }

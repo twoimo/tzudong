@@ -23,7 +23,6 @@ describe('admin user-management source contract', () => {
     const panelSource = source('components/admin/AdminUsersPanel.tsx');
 
     expect(panelSource).toContain('사용자 관리');
-    expect(panelSource).toContain('계정·권한 운영');
     expect(panelSource).toContain('xl:grid-cols-[minmax(340px,0.95fr)_minmax(400px,1.05fr)]');
     expect(panelSource).toContain('권한 변경 전 확인');
     expect(panelSource).toContain('계정 처리 전 확인');
@@ -41,8 +40,8 @@ describe('admin user-management source contract', () => {
     expect(panelSource).not.toContain('type="password"');
     expect(panelSource).toContain('자기 잠금 방지');
     expect(panelSource).toContain('border-b border-border bg-card px-2 py-1.5');
-    expect(panelSource).toContain('bg-gradient-primary bg-clip-text text-base font-bold text-transparent');
-    expect(panelSource).toContain('min-w-0 rounded-2xl border border-border/70 bg-muted/25 px-3 py-2 shadow-sm');
+    expect(panelSource).toContain('text-base font-semibold leading-6 text-foreground');
+    expect(panelSource).toContain('data-admin-users-summary');
     expect(panelSource).toContain('min-h-0 border-border bg-card shadow-sm');
     expect(panelSource).toContain('hidden overflow-hidden rounded-lg border bg-card md:block');
     expect(panelSource).toContain('data-admin-users-mobile-card');
@@ -66,6 +65,14 @@ describe('admin user-management source contract', () => {
     expect(panelSource).toContain('사용자를 선택하면 상세 정보와 변경 작업이 표시됩니다.');
     expect(panelSource).toContain('setProfileForm({ nickname: "", username: "", avatarUrl: "" });');
     expect(panelSource).toContain('return current.targetUserId === selectedUser?.id ? current : null;');
+    expect(panelSource).toContain('if (isProfileDirty) setPendingIntent(intent);');
+    expect(panelSource).toContain('else applyIntent(intent);');
+    expect(panelSource).toContain('onClick={() => setPendingIntent(null)}');
+    expect(panelSource).toContain('detailRef.current?.focus()');
+    expect(panelSource).toContain('mutationResult?.status === "warning" || isProfileDirty');
+    expect(panelSource).toContain('accountConfirmation === "비활성화"');
+    expect(panelSource).toContain('accountConfirmation === "재활성화"');
+    expect(panelSource).toContain('confirmation: action === "accountStatus" ? accountConfirmation : riskConfirmation');
   });
 
   test('keeps admin user APIs server-only and service-role contained', () => {

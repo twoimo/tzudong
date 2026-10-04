@@ -1,0 +1,152 @@
+{
+  "kind": "pipeline-console-delivery",
+  "observedAt": "2026-10-04T10:00:51.479842+00:00",
+  "candidate": "/Users/twoimo/.codex/worktrees/pipeline-performance-20261002/tzudong",
+  "sourceFiles": [
+    {
+      "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "79884d8dd038bb196b088324e7095cffd60e6965a74b6b03cfc7b30f2b6b98fb"
+    },
+    {
+      "path": "apps/web/components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "4d95e99c62bee331c9984d83be79982129bdab978fdd208fb1af210666d9798e"
+    },
+    {
+      "path": "apps/web/components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "d2892622ab059d24cf12208ebc741b565ea77f227f62e1fa84cea9cc72cf577c"
+    },
+    {
+      "path": "apps/web/lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "4ffbfe3e0ea1479c7639bf33cf271824088b9345e35295c98ac1db02f972694a"
+    },
+    {
+      "path": "apps/web/lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    },
+    {
+      "path": "apps/web/tests-unit/pipeline-flow-view-model.test.ts",
+      "sha256": "0048d2d9459d67bf3e9201a1a3fee07fdd7a8908fcac82edc5e8aa9dc815ab44"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-pipeline-control.test.ts",
+      "sha256": "3b9c759ae6274e15ab41a92cbd8f2fdf84b27473ef21584d4201d6d8ee7c5897"
+    },
+    {
+      "path": "apps/web/scripts/verify-admin-pipeline-browser.ts",
+      "sha256": "550425fa1a69d6e8a608b555fe899b025ba750189ea5712456a3544047ed5bf1"
+    }
+  ],
+  "behavior": [
+    "Eight-stage responsive SVG DAG with click, Arrow and Space selection; inputs, outputs, canonical step records, durations and source references.",
+    "API execution snapshot and last manifest are independent; absent, stale, partial, duplicate, skipped and failed records remain distinct.",
+    "GHA status requires enabled/configured/reachable evidence for the exact run ID; fallback failure/live/adapter defaults are not displayed as observations.",
+    "Server preview is displayed before explicit confirmation; hash, revision, ticket, correlation ID and idempotency key persist through apply and refreshed GET. No automatic apply retry.",
+    "Only fixed safe error messages and allowlisted records enter the view."
+  ],
+  "verification": {
+    "unit": {
+      "status": "pass",
+      "tests": 26,
+      "note": "13 unchanged pipeline guard contracts passed; 13 view-model/preview cases rerun after final GHA projection changes, 120 assertions in that targeted rerun."
+    },
+    "typecheckParity": {
+      "status": "pass",
+      "diagnostics": 0,
+      "logicalInputs": 3169,
+      "nonLibraryContentSha256": "4de1c1d29f21380f4400363b3ec0e92a900d26115a327fd021abf45cc30f303b"
+    },
+    "targetedEslint": "pass",
+    "diffCheck": "pass",
+    "appRender": {
+      "status": "pass",
+      "widths": [
+        390,
+        834,
+        1423
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "cases": 6,
+      "nodes": 8,
+      "edges": 8,
+      "clippedLabels": 0,
+      "horizontalOverflow": 0,
+      "headingPx": [
+        16,
+        600,
+        24
+      ],
+      "manualScreenshotReview": "pass"
+    },
+    "appBehavior": {
+      "status": "pass",
+      "syntheticApplyChecks": 2,
+      "serverBoundPosts": 0,
+      "pageErrors": 0,
+      "states": [
+        "GHA in progress with fallback failure code",
+        "malformed response",
+        "HTTP unavailable"
+      ],
+      "previewConflict": true,
+      "applyUnavailable": true
+    },
+    "postRenderDelta": {
+      "files": [
+        "lib/admin/pipeline-flow-view-model.ts"
+      ],
+      "scope": "Only GHA/unknown-source projection changed after six layout captures; final-source focused state checks cover this change. Diagram, CSS and dashboard match final render evidence."
+    },
+    "console": {
+      "renderErrors": 6,
+      "explanation": "A separate one-case diagnostic reproduced the synthetic Realtime websocket handshake receiving HTTP 200. Final focused state run classified three such fixture errors plus two deliberately injected HTTP failures; zero page runtime errors."
+    },
+    "staticArtifact": {
+      "validation": "9/9; 0 errors, 0 warnings",
+      "browser": "pass",
+      "manualReview": "pass",
+      "artifactSha256": "924d0f5a5fe53f84c08e08efb321342dbc44e8b93f4a743f09ab6429bc5a74cd",
+      "specificationSha256": "c62ece7848973ea7776fee4c29485a456ee0ebcfdaf1abf1465a95a1ff2b1529"
+    }
+  },
+  "evidence": [
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-browser-20261004.json",
+      "sha256": "3c172d3bc62c9f32c6bc6e0afc89536cf7fcb047a8f0ee3f43e19ccf9e741633"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-render-20261004.json",
+      "sha256": "3d5e0bb6a2c7c98774449faaa82cb51a80f7a2ed031613f45208869d67d60a9b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-states-20261004.json",
+      "sha256": "37f7f77741d37d508e29015a711d92f470fb7a61bf36d84b5388a7cf5748a260"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-console-probe-20261004.json",
+      "sha256": "dcc2b54e3d1c4745af722705b298e1d053d04a648bd11b8c023d88142a5dfd0b"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.review.json",
+      "sha256": "28291f8b18f84dd980722da77cacacc78afbc40cbbc56b291ab1f14d4d4f3e07"
+    }
+  ],
+  "browser": {
+    "session": "tzudong-pipeline-astra",
+    "closed": true,
+    "otherSessionsClosed": false
+  },
+  "limits": [
+    "Synthetic local UI and transport evidence only; no real provider, worker execution, database write, hosted availability or deployment is established.",
+    "The current API exposes no shared run identity or execution mode for manifest stepEvents; the UI intentionally does not associate them with current jobs.",
+    "The control API lists current admitted jobs and up to 20 failures, not a complete completed-run history."
+  ],
+  "externalOperations": {
+    "providerCalls": 0,
+    "serverBoundMutationRequests": 0,
+    "deployment": false,
+    "commitOrPush": false
+  }
+}

@@ -311,13 +311,13 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     return (
       <TableRow
         ref={ref}
-        className={cn("group hover:bg-muted transition-colors cursor-pointer", isExpanded && "bg-muted border-l-4 border-l-primary")}
+        className={cn("group bg-card hover:bg-primary/5 transition-colors cursor-pointer", isExpanded && "bg-primary/5 border-l-4 border-l-primary")}
         onClick={onToggleExpand}
       >
         <TableCell
           className={cn(
             "sticky left-0 z-10 px-2 sm:px-4 transition-colors",
-            isExpanded ? "bg-muted" : "bg-background group-hover:bg-muted"
+            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
           <Button
@@ -342,7 +342,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         <TableCell
           className={cn(
             "min-w-[220px] sm:min-w-[280px] lg:sticky lg:left-12 lg:z-10 transition-colors",
-            isExpanded ? "lg:bg-muted" : "lg:bg-background lg:group-hover:bg-muted"
+            isExpanded ? "lg:bg-card lg:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "lg:bg-card lg:group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
           <div className="flex items-center gap-3">
@@ -440,7 +440,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         <TableCell
           className={cn(
             "sticky right-[120px] z-10 min-w-[84px] text-center lg:right-[160px] lg:min-w-[96px] transition-colors",
-            isExpanded ? "bg-muted" : "bg-background group-hover:bg-muted"
+            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
           <div className="flex flex-col items-center gap-1">
@@ -452,7 +452,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         <TableCell
           className={cn(
             "sticky right-0 z-10 min-w-[120px] lg:min-w-[160px] transition-colors",
-            isExpanded ? "bg-muted" : "bg-background group-hover:bg-muted"
+            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
           <div className="flex justify-center gap-1 lg:gap-2">
