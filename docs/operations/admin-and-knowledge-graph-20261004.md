@@ -82,4 +82,8 @@ UI는 실제 judgmentEngine metadata가 있을 때만 Gemini 검수 상태를 �
 
 네이티브 GPT-6 Astra Xhigh 독립 검토가 SQL 동등성/계산량, 승인·개인정보, 성과 증빙, 전체 화면에 참여했고 실재 결함과 소스-증빙 불일치를 보고했다. AGY Claude Opus 5.5 High 경로와 실행 모델 ID를 확인했지만 CLI 최종 결과 회수 지연 및 HTTP429로 완료된 독립 검토라고 표시하지 않는다. 기존 기록을 보존했고 다른 모델/낮은 추론 강도로 조용히 대체하거나 용량을 구매하지 않았다.
 
-아직 전체 롱폼 분석·독립 근거 검증·운영 스케줄의 OSK publication·최종 파이프라인 5조건×7쌍·실제 HTTP/화면 전후100쌍·G003 운영 관측·source 보호 승격/배포/readback이 남는다. 경고 집계 SQL의 허용 Unicode 동등성과 계산량 admission, G014 소스 계약을 보완했다. 기본은 기존 전체 경고 stream이며 새 RPC는 명시 opt-in이다. 전체 canonical replay와 운영 적용은 아직 미완료다. Sentry 저장 region/연결 정보와 카드 삭제의 유효 대체 결제 수단도 미확인이다. 기존 측정의 cold/media/DB write 회귀를 숨기지 않는다.
+아직 전체 롱폼 분석·독립 근거 검증·운영 스케줄의 OSK publication·최종 파이프라인 5조건×7쌍·실제 HTTP/화면 전후100쌍·G003 운영 관측·source 보호 승격/배포/readback이 남는다. 경고 집계 SQL의 허용 Unicode 동등성과 계산량 admission, G014 소스 계약을 보완했다. 기본은 기존 전체 경고 stream이며 새 RPC는 명시 opt-in이다. 전체 canonical 로컬 replay를 통과했으며 운영 적용은 미완료다. Sentry 저장 region/연결 정보와 카드 삭제의 유효 대체 결제 수단도 미확인이다. 기존 측정의 cold/media/DB write 회귀를 숨기지 않는다.
+
+## 전체 DB 재생 후속 증빙
+
+깨끗한 관련 source commit에서 G014 전체 canonical 로컬 replay를 완료했다. 격리 Docker 설정은 사용자 자격 증명/플러그인 경로를 복사하지 않고 설치된 Compose v2 호환 CLI를 사용한다. Docker plugin2.39.4와 standalone5.6.0의 차이를 확인했고 현재 전체 실행은 standalone5.6.0이다. 관련50개 검사, source/schema/권한 재생과 산출물 checksum 검증이 통과했다. 기존 컨테이너·설정·데이터를 정리하거나 운영 DB를 호출하지 않았다. `apps/web/performance/catalog-replay-20261004/local-replay-summary.json`이 source commit, 실제 server version, catalog row 수와 원시 산출물을 연결한다. 이는 격리 source 재생이며 운영 현재 catalog·마이그레이션 이력·배포/readback을 대체하지 않는다.
