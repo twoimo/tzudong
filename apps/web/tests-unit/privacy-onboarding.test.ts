@@ -11,6 +11,7 @@ import {
   parseOnboardingStart,
   readOnboardingChallenge,
   sealOnboardingChallenge,
+  sha256,
   parseFreshPrivacyOnboardingConfirmationReceipt,
 } from '@/lib/privacy/onboarding';
 import {
@@ -73,7 +74,7 @@ function signedChallenge(expiresAt: number) {
 
 function rawSignedChallenge(payload: Record<string, unknown>) {
   const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
-  return `${encoded}.${createHmac('sha256', testCookieSecret).update(encoded).digest('base64url')}`;
+  return `${encoded}.${createHmac('sha256', testCookieSecret).update(`tzudong:onboarding-challenge:v1:${encoded}`).digest('base64url')}`;
 }
 function validEligibilityReceipt(overrides: Record<string, unknown> = {}) {
   return {
@@ -115,6 +116,48 @@ const { GET } = await import('../app/auth/callback/route.ts');
 const { revokeRejectedCallbackSession } = await import('../lib/auth/callback-session.ts');
 
 describe('privacy onboarding challenge', () => {
+  test('fresh password and OAuth cookies roundtrip with the issuer signing context', () => {
+    const now = 1_800_000_000_000;
+    const password = {
+      version: 1 as const,
+      challengeId: CHALLENGE_ID,
+      challengeToken: 'b'.repeat(64),
+      policyVersionId: POLICY_ID,
+      contentSha256: 'c'.repeat(64),
+      ageBand: 'age_14_plus' as const,
+      intent: 'password' as const,
+      origin: 'https://www.tzudong.app',
+      expiresAt: now + 60_000,
+    };
+    const oauth = { ...password, intent: 'oauth' as const, oauthNonce: password.challengeToken };
+    for (const payload of [password, oauth]) {
+      const sealed = sealOnboardingChallenge(payload);
+      expect(sealed).not.toBeNull();
+      expect(readOnboardingChallenge(sealed!, now)).toEqual(payload);
+      expect(readOnboardingChallenge(sealed!, payload.expiresAt)).toBeNull();
+      const [encoded] = sealed!.split('.');
+      const rawSignature = createHmac('sha256', testCookieSecret).update(encoded).digest('base64url');
+      const otherContext = createHmac('sha256', testCookieSecret).update(`tzudong:other:v1:${encoded}`).digest('base64url');
+      expect(readOnboardingChallenge(`${encoded}.${rawSignature}`, now)).toBeNull();
+      expect(readOnboardingChallenge(`${encoded}.${otherContext}`, now)).toBeNull();
+      expect(readOnboardingChallenge(`${sealed}.extra`, now)).toBeNull();
+      process.env.PRIVACY_ONBOARDING_COOKIE_SECRET = 'short';
+      expect(readOnboardingChallenge(sealed!, now)).toBeNull();
+      expect(sealOnboardingChallenge(payload)).toBeNull();
+      process.env.PRIVACY_ONBOARDING_COOKIE_SECRET = testCookieSecret;
+    }
+  });
+
+  test('random token digest follows the immutable SQL SHA-256 contract rather than cookie HMAC', () => {
+    const migration = source('../../backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql');
+    expect(migration).toContain("pg_catalog.encode(extensions.digest(p_challenge_token, 'sha256'), 'hex')");
+    expect(sha256('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    const token = 'b'.repeat(64);
+    expect(sha256(token)).toBe(createHash('sha256').update(token).digest('hex'));
+    expect(sha256(token)).not.toBe(createHmac('sha256', 'tzudong:privacy-digest:v1').update(token).digest('hex'));
+    expect(sha256(token)).not.toBe(sha256('a'.repeat(64)));
+  });
+
   test('만료·변조·비정규 정책 해시 또는 nonce challenge를 거부한다', () => {
     const expired = signedChallenge(Date.now() - 1);
     const active = signedChallenge(Date.now() + 60_000);
