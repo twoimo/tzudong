@@ -141,6 +141,11 @@ jobs:
         working-directory: apps/web
         run: bun install --frozen-lockfile
 
+      - name: Verify Linux anonymous unit reporter custody
+        working-directory: apps/web
+        run: |
+          printf '%s' '{"files":["tests-unit/nightly-unit-failure-sites.test.ts"]}' | python3 ../../.github/scripts/nightly-unit-failure-sites.py --run-linux
+
       - name: Install Chromium for the browser lane
         if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'e2e' }}
         working-directory: apps/web

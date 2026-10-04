@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
@@ -135,6 +136,37 @@ def main() -> int:
             files = inventory(root)
             for record in records:
                 print(PREFIX + json.dumps(validate(json.loads(record), files), separators=(",", ":")))
+        elif len(sys.argv) == 2 and sys.argv[1] == "--run-linux":
+            if not hasattr(os, "memfd_create"):
+                fail()
+            raw = sys.stdin.buffer.read(MAX_INPUT + 1)
+            if len(raw) > MAX_INPUT:
+                fail()
+            data = json.loads(raw)
+            if not isinstance(data, dict) or set(data) != {"files"} or not isinstance(data["files"], list):
+                fail()
+            files = inventory(root)
+            if not data["files"] or any(not isinstance(p, str) or p not in files for p in data["files"]):
+                fail()
+            fd = os.memfd_create("nightly-unit-report", os.MFD_CLOEXEC)
+            try:
+                result = subprocess.run(
+                    ["bun", "test", *data["files"], "--timeout", "30000", "--reporter", "junit",
+                     "--reporter-outfile", f"/proc/self/fd/{fd}"],
+                    cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    pass_fds=(fd,), check=False,
+                )
+                if os.fstat(fd).st_size > MAX_INPUT:
+                    fail()
+                os.lseek(fd, 0, os.SEEK_SET)
+                report = os.read(fd, MAX_INPUT + 1).decode("utf-8")
+                payload = derive({"xml": report, "files": data["files"]}, root)
+                print(json.dumps(payload, separators=(",", ":")))
+                if result.returncode == 0 and payload["failure_count"] != 0:
+                    fail()
+                return result.returncode if result.returncode >= 0 else 1
+            finally:
+                os.close(fd)
         elif len(sys.argv) == 1:
             raw = sys.stdin.buffer.read(MAX_INPUT + 1)
             if len(raw) > MAX_INPUT:

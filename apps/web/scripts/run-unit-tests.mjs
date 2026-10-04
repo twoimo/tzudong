@@ -29,6 +29,17 @@ if (isolatedFiles.length !== isolated.size || generalFiles.length === 0) {
 
 function run(filesToRun) {
   const localDiagnostic = process.env.NIGHTLY_MODE === 'local';
+  if (localDiagnostic && process.platform === 'linux') {
+    // Linux libuv extra pipes are sockets and cannot be reopened through
+    // /dev/fd. A memfd is an anonymous RAM file inherited only by this Bun.
+    const result = spawnSync('python3', [path.resolve('../../.github/scripts/nightly-unit-failure-sites.py'), '--run-linux'], {
+      input: JSON.stringify({ files: filesToRun }), encoding: 'utf8',
+      env: process.env, stdio: ['pipe', 'pipe', 'ignore'],
+      maxBuffer: 64 * 1024, shell: false,
+    });
+    if (result.stdout?.trim()) console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${result.stdout.trim()}`);
+    return typeof result.status === 'number' ? result.status : 1;
+  }
   const reportArgs = localDiagnostic ? ['--reporter', 'junit', '--reporter-outfile', '/dev/fd/3'] : [];
   const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000', ...reportArgs], {
     cwd: process.cwd(),
