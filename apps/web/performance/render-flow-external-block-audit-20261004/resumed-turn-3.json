@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-10-04T05:10:36.033Z",
+  "resumedBlockedAuditTurn": 3,
+  "previousGoalTurnClassification": "no_progress: device/cohort prerequisites unchanged; no live process wait",
+  "thisGoalTurnClassification": "no_progress: the same current device/cohort blockers remain",
+  "device": {
+    "observedAt": "2026-10-04T05:08:14.899219+00:00",
+    "ready": 0,
+    "offline": 0,
+    "mdnsConnectServices": 0,
+    "verifiedModels": [],
+    "identifiersOrAddressesRetained": false
+  },
+  "field": {
+    "observedAt": "2026-10-04T05:08:16.058Z",
+    "metricInstances": 15,
+    "releaseCounts": {
+      "2b94cc6a652def29d3a886b3c6e15aff9b8adf98": 2,
+      "1ab5b7520357d56261a5961d8b10cdd235e12a99": 13
+    },
+    "readOnly": true,
+    "rawDiagnosticsRetained": false
+  },
+  "blockingConditionRepeatedAcrossResumedTurns": [
+    1,
+    2,
+    3
+  ],
+  "completionProven": false,
+  "independentSourceDeliveryRegressionAndClientCollectorChecksAlreadyCompleted": true,
+  "missingProof": [
+    "Galaxy Chrome and Samsung exact-main native UI/memory/force-dark/flicker",
+    "comparable real current-release field cohort and final complete health evidence"
+  ],
+  "nextAvailableActionRequiresExternalStateChange": true,
+  "blockedThresholdMet": true,
+  "requestedGoalTransition": "blocked; not complete or paused",
+  "sourceDeploymentOrFrozenEvidenceChanged": false
+}

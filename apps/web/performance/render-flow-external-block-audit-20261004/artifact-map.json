@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "render-flow-evidence-map.v1",
+  "releaseId": "render-flow-external-block-audit-20261004",
+  "artifacts": {
+    "resumed-turn-2.json": {
+      "size": 1246,
+      "sha256": "c9580ad2e2a5bd1db177fed4c757c27607d22954c9fabf5b67661f8550194f9a"
+    },
+    "resumed-turn-3.json": {
+      "size": 1366,
+      "sha256": "7a38026d8561fb47fcb32beb8c57eb7d2f7a5b153eff4d04f321048b2965bfe5"
+    }
+  }
+}
