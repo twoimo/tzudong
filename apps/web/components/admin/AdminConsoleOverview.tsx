@@ -9044,7 +9044,7 @@ function AuditPlaceholder() {
           <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input aria-label="감사 로그 검색" placeholder="작업·대상·감사 ID 검색" value={search} maxLength={256} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
           <select aria-label="감사 처리 상태" value={status} onChange={(event) => setStatus(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs"><option value="">전체 상태</option><option value="intent">적용 전</option><option value="applied">적용됨</option><option value="failed">실패</option></select>
           <Button size="sm" variant="ghost" aria-label="감사 로그 새로고침" disabled={auditEventsQuery.isFetching} onClick={() => auditEventsQuery.refetch()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /></Button>
-          <Link href="/admin/privacy-incidents" className="inline-flex min-h-8 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground" data-admin-privacy-incidents-link="true">개인정보 사고 대응<ExternalLink aria-hidden="true" className="h-3 w-3" /></Link>
+          <Link href="/admin/privacy-incidents" className="inline-flex min-h-8 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground" title="사람이 검토하고 처리합니다. 자동 신고나 수리 완료를 주장하지 않습니다." data-admin-privacy-incidents-link="true">개인정보 사고 대응<ExternalLink aria-hidden="true" className="h-3 w-3" /></Link>
         </div>
         <details
           className="border-b border-border px-3 py-2 text-xs leading-5 text-muted-foreground"
