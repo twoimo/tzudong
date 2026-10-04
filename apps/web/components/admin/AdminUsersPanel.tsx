@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
 import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
@@ -424,24 +426,15 @@ export default function AdminUsersPanel({
       data-admin-embedded-module-shell="true"
       data-admin-embedded-module-id="users"
     >
-      <div
-        className="shrink-0 border-b border-border bg-card px-2 py-1.5"
-        data-admin-module-header="compact"
-        data-admin-module-header-module="users"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-          <div className="flex items-center gap-2">
-            <UsersRound className="h-4 w-4 text-primary" aria-hidden="true" />
-            <h2 id="admin-users-title" className="text-base font-semibold leading-6 text-foreground">사용자 관리</h2>
-          </div>
-          <div className="flex flex-wrap gap-1" data-admin-users-summary data-admin-module-summary="true">
+      <AdminPageHeader title="사용자 관리" titleId="admin-users-title" titleAs="h2" icon={UsersRound}
+        data-admin-module-header="compact" data-admin-module-header-module="users"
+        summary={<div className="flex flex-wrap gap-1" data-admin-users-summary data-admin-module-summary="true">
             <SummaryMetric label="불러온 사용자" value={summary.loadedUsers} isLoading={isLoading && users.length === 0} />
             <SummaryMetric label="관리자" value={summary.adminUsers} isLoading={isLoading && users.length === 0} />
             <SummaryMetric label="비활성" value={summary.disabledUsers} isLoading={isLoading && users.length === 0} />
             <SummaryMetric label="이메일 미확인" value={summary.unconfirmedUsers} isLoading={isLoading && users.length === 0} />
-          </div>
-        </div>
-      </div>
+          </div>}
+      />
 
       {pendingIntent && (
         <div role="alert" className="flex shrink-0 flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50 p-2 text-sm text-amber-950">

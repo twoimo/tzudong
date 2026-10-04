@@ -43,6 +43,8 @@ relevant_sources=(
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
   'backend/supabase/scripts/verify_admin_management_group_replay.py'
   'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+  'backend/supabase/scripts/verify_g014_owner_final_replay.py'
+  'backend/supabase/scripts/local_replay_contract.py'
   'backend/supabase/scripts/admin_management_group_plan.py'
   'backend/supabase/scripts/advisor_successor_plan.py'
   'backend/supabase/scripts/g037_supabase_statement_vector.mjs'
@@ -1432,6 +1434,64 @@ for migration in "${effective_migrations[@]}"; do
       jq -e '.schema == "g014-owner-pg15-replay-v1" and .read_only == true and .disposition == "legacy-contract-preserved"' \
         "$staging_dir/g014-owner-pg15-receipt.json" >/dev/null
       g026_chain_apply "g014-owner-pg15-receipt" "$staging_dir/g014-owner-pg15-receipt.json"
+      ;;
+    20261004115554_g014_pg17_owner_final_verifier.sql)
+      final_verification="$staging_dir/g014-owner-final-pg15-verification.sql"
+      # Hash-bound catalog verification only: never execute the hosted PG17 mutation/verifier.
+      python3 - "$repo_root" "$migration" "$final_verification" <<'PY'
+import sys
+from pathlib import Path
+root, source, output = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+with output.open('xb') as destination:
+    destination.write(contract.generate_verification_sql(source.relative_to(root).as_posix()))
+PY
+      for dependency in verify_g014_owner_final_replay.py verify_g014_pg17_owner_replay.py verify_g016_identity_correction_replay.py local_replay_contract.py; do
+        g026_chain_apply "g014-owner-final-source-dependency:$dependency" "$script_dir/$dependency"
+      done
+      g026_chain_apply "g014-owner-final-pg15-verification" "$final_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$final_verification" >"$staging_dir/g014-owner-final-pg15-receipt.json"
+      python3 - "$repo_root" "$migration" "$final_verification" "$staging_dir/g014-owner-final-pg15-receipt.json" <<'PY'
+import sys
+from pathlib import Path
+root, source, sql, receipt = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+proof = contract.assemble_proof(source.relative_to(root).as_posix(), sql.read_bytes(), receipt.read_bytes())
+contract.validate_proof(proof, sql.read_bytes())
+PY
+      g026_chain_apply "g014-owner-final-pg15-receipt" "$staging_dir/g014-owner-final-pg15-receipt.json"
+      ;;
+    20261004123034_g016_onboarding_allowlist_identity_correction.sql)
+      final_verification="$staging_dir/g016-identity-pg15-verification.sql"
+      # Hash-bound catalog verification only: never execute the hosted PG17 mutation/verifier.
+      python3 - "$repo_root" "$migration" "$final_verification" <<'PY'
+import sys
+from pathlib import Path
+root, source, output = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+with output.open('xb') as destination:
+    destination.write(contract.generate_verification_sql(source.relative_to(root).as_posix()))
+PY
+      for dependency in verify_g014_owner_final_replay.py verify_g014_pg17_owner_replay.py verify_g016_identity_correction_replay.py local_replay_contract.py; do
+        g026_chain_apply "g016-identity-source-dependency:$dependency" "$script_dir/$dependency"
+      done
+      g026_chain_apply "g016-identity-pg15-verification" "$final_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$final_verification" >"$staging_dir/g016-identity-pg15-receipt.json"
+      python3 - "$repo_root" "$migration" "$final_verification" "$staging_dir/g016-identity-pg15-receipt.json" <<'PY'
+import sys
+from pathlib import Path
+root, source, sql, receipt = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+proof = contract.assemble_proof(source.relative_to(root).as_posix(), sql.read_bytes(), receipt.read_bytes())
+contract.validate_proof(proof, sql.read_bytes())
+PY
+      g026_chain_apply "g016-identity-pg15-receipt" "$staging_dir/g016-identity-pg15-receipt.json"
       ;;
     20260906053936_admin_management_group_catalog_slice.sql)
       admin_group_verification="$staging_dir/admin-management-group-overlap-verification.sql"

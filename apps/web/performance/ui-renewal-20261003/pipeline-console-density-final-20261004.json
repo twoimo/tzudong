@@ -1,0 +1,196 @@
+{
+  "kind": "pipeline-console-synthetic-browser",
+  "browserSession": "tzudong-pipeline-density-astra",
+  "observedAt": "2026-10-04T12:15:16.986Z",
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0",
+  "sourceStart": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "74951230acb2597304fc38847c4b4f45e51c1baa439e9f573ceba73548b7604c"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "f9fb6b217509be9373fa39655bd9bfdfb48359d5d18ced07c0ce2c4d5249132d"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "3a19f6295e3b2dc4d2ca637bdc5a50b93f47c34077db58bb1764e35258c886de"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "4ffbfe3e0ea1479c7639bf33cf271824088b9345e35295c98ac1db02f972694a"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "74951230acb2597304fc38847c4b4f45e51c1baa439e9f573ceba73548b7604c"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "f9fb6b217509be9373fa39655bd9bfdfb48359d5d18ced07c0ce2c4d5249132d"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "3a19f6295e3b2dc4d2ca637bdc5a50b93f47c34077db58bb1764e35258c886de"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "4ffbfe3e0ea1479c7639bf33cf271824088b9345e35295c98ac1db02f972694a"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceStable": true,
+  "sharedGeometryStart": [
+    {
+      "path": "components/admin/AdminPageHeader.tsx",
+      "sha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6"
+    },
+    {
+      "path": "styles/admin-ui.css",
+      "sha256": "b2aa7f6deef59a57253d1ae1f335f158ded82ee64c249a9a9b9cd0ee860d4088"
+    }
+  ],
+  "sharedGeometryEnd": [
+    {
+      "path": "components/admin/AdminPageHeader.tsx",
+      "sha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6"
+    },
+    {
+      "path": "styles/admin-ui.css",
+      "sha256": "b2aa7f6deef59a57253d1ae1f335f158ded82ee64c249a9a9b9cd0ee860d4088"
+    }
+  ],
+  "cases": [
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "density": {
+        "panelHeight": 727,
+        "panelWidth": 370,
+        "diagramHeight": 291,
+        "executionOffset": 515,
+        "visibleTextCharacters": 271,
+        "explanationBlocks": 0,
+        "explanationCharacters": 0,
+        "visibleImplementationTerms": 0
+      },
+      "invisibleLabels": 0,
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true,
+      "detailCollapsedInitially": true,
+      "selectionOpensDetail": true,
+      "detailCanCollapse": true,
+      "newExecutionDisclosureOnly": true
+    },
+    {
+      "width": 834,
+      "colorScheme": "light",
+      "density": {
+        "panelHeight": 723,
+        "panelWidth": 602,
+        "diagramHeight": 291,
+        "executionOffset": 511,
+        "visibleTextCharacters": 271,
+        "explanationBlocks": 0,
+        "explanationCharacters": 0,
+        "visibleImplementationTerms": 0
+      },
+      "invisibleLabels": 0,
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true,
+      "detailCollapsedInitially": true,
+      "selectionOpensDetail": true,
+      "detailCanCollapse": true,
+      "newExecutionDisclosureOnly": true
+    },
+    {
+      "width": 1423,
+      "colorScheme": "light",
+      "density": {
+        "panelHeight": 637,
+        "panelWidth": 1191,
+        "diagramHeight": 205,
+        "executionOffset": 425,
+        "visibleTextCharacters": 271,
+        "explanationBlocks": 0,
+        "explanationCharacters": 0,
+        "visibleImplementationTerms": 0
+      },
+      "invisibleLabels": 0,
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true,
+      "detailCollapsedInitially": true,
+      "selectionOpensDetail": true,
+      "detailCanCollapse": true,
+      "newExecutionDisclosureOnly": true
+    }
+  ],
+  "mutationChecks": [],
+  "safety": {
+    "serverBoundPosts": 0,
+    "fixturePostsFulfilled": 0,
+    "otherPostsDenied": 0,
+    "externalDenied": 0,
+    "realProviderCalls": 0
+  },
+  "errors": {
+    "pageErrors": 0,
+    "consoleErrors": 3,
+    "consoleKinds": {
+      "synthetic-realtime-handshake": 3
+    },
+    "expectedHttpFailures": false
+  },
+  "limitations": [
+    "All pipeline and manifest bodies are synthetic browser fixtures.",
+    "No real API preview ticket, worker execution, provider output, DB write, deployment or production availability was tested."
+  ]
+}

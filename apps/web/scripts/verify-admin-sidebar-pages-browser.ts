@@ -201,12 +201,34 @@ async function observation(pattern: string) {
     if (!root) return null;
     const visible = (element: Element) => {
       const style = getComputedStyle(element), box = element.getBoundingClientRect();
-      return box.width > 0 && box.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && !element.closest('[hidden], [aria-hidden="true"]');
+      return box.width > 0 && box.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && !element.closest('[hidden], [aria-hidden="true"], .sr-only');
     };
     const text = root.innerText;
     const headings = [...root.querySelectorAll('h1,h2')].filter(visible);
-    const title = headings.find(element => new RegExp(pattern).test(element.textContent ?? ''));
+    const matchesTitle = (element: Element) => new RegExp(pattern).test(element.textContent ?? '');
+    const title = headings.find(element => element.closest('[data-admin-page-header="true"]') && matchesTitle(element))
+      ?? headings.find(matchesTitle);
     const titleStyle = title ? getComputedStyle(title) : null;
+    const pageHeader = title?.closest<HTMLElement>('[data-admin-page-header="true"], [data-admin-module-header="compact"], header');
+    const bounds = (element: Element) => { const value = element.getBoundingClientRect(); return { x: value.x, y: value.y, width: value.width, height: value.height, centerY: value.y + value.height / 2 }; };
+    const headerBox = pageHeader ? bounds(pageHeader) : null;
+    const titleBox = title ? bounds(title) : null;
+    const headerStyle = pageHeader ? getComputedStyle(pageHeader) : null;
+    const headerActions = pageHeader ? [...pageHeader.querySelectorAll<HTMLElement>('button,a[href],select,input')].filter(visible).map(element => ({
+      label: element.getAttribute('aria-label') || element.getAttribute('title') || (element instanceof HTMLSelectElement ? element.labels?.[0]?.textContent?.trim() : element.textContent?.trim()) || element.tagName,
+      ...bounds(element),
+    })) : [];
+    const headerSummary = pageHeader?.querySelector<HTMLElement>('.admin-page-header-summary');
+    const headerGeometry = headerBox && titleBox && headerStyle ? {
+      ...headerBox, title: titleBox, titleInset: titleBox.x - headerBox.x,
+      padding: { top: headerStyle.paddingTop, right: headerStyle.paddingRight, bottom: headerStyle.paddingBottom, left: headerStyle.paddingLeft },
+      summary: headerSummary && visible(headerSummary) ? bounds(headerSummary) : null,
+      summaryGap: headerSummary && visible(headerSummary) ? bounds(headerSummary).x - titleBox.x - titleBox.width : null,
+      actionRightInset: headerActions.length ? headerBox.x + headerBox.width - Math.max(...headerActions.map(action => action.x + action.width)) : null,
+      actions: headerActions, actionCenterDelta: headerActions.length ? Math.max(...headerActions.map(action => Math.abs(action.centerY - titleBox.centerY))) : null,
+      headerOverflow: Math.max(0, pageHeader!.scrollWidth - pageHeader!.clientWidth),
+      commonContract: pageHeader!.getAttribute('data-admin-page-header') === 'true',
+    } : null;
     const controls = [...root.querySelectorAll<HTMLElement>('a[href],button,input:not([type="hidden"]),textarea,select,[tabindex]:not([tabindex="-1"])')]
       .filter(element => visible(element) && !element.hasAttribute('disabled') && element.getAttribute('aria-disabled') !== 'true');
     const box = root.getBoundingClientRect();
@@ -230,6 +252,7 @@ async function observation(pattern: string) {
       activeModule: root.getAttribute('data-admin-console-active-module'),
       characters: text.length, headingCount: headings.length,
       titleMatched: headings.some(element => new RegExp(pattern).test(element.textContent ?? '')),
+      headerGeometry,
       titleStyle: titleStyle ? { fontSize: titleStyle.fontSize, fontWeight: titleStyle.fontWeight, lineHeight: titleStyle.lineHeight } : null,
       titleCount: headings.filter(element => element.tagName === 'H1').length,
       loading, controls: controls.length, unnamedControls: controls.filter(element => !named(element)).length,

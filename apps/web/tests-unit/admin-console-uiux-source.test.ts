@@ -586,18 +586,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const routeSource = source("lib/admin/admin-module-routing.ts");
     const shellSource = source("components/admin/AdminEmbeddedModuleShell.tsx");
+    const headerSource = source("components/admin/AdminPageHeader.tsx");
 
     expect(shellSource).toContain("export function AdminEmbeddedModuleShell");
     expect(shellSource).toContain('data-admin-embedded-module-shell="true"');
     expect(shellSource).toContain("data-admin-embedded-module-id={moduleId}");
     expect(shellSource).toContain('data-admin-module-header="compact"');
     expect(shellSource).toContain("data-admin-module-header-module={moduleId}");
-    expect(shellSource).toContain('data-admin-module-summary="true"');
-    expect(shellSource).toContain('data-admin-module-actions="top-right"');
+    expect(headerSource).toContain('data-admin-module-summary="true"');
+    expect(headerSource).toContain('data-admin-module-actions="top-right"');
     expect(shellSource).toContain('data-admin-module-content="bounded"');
-    expect(shellSource).toContain(
-      '"shrink-0 border-b border-border bg-card px-3 py-2"',
-    );
+    expect(shellSource).toContain('<AdminPageHeader');
+    expect(shellSource).toContain('actions={actions}');
+    expect(shellSource).toContain('summary={summary}');
     expect(shellSource).not.toContain("bg-gradient-primary bg-clip-text");
     expect(shellSource).toContain('"min-h-0 min-w-0 flex-1 overflow-hidden"');
     expect(shellSource).toContain('moduleId === "overview"');
@@ -1542,7 +1543,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42",
     );
-    expect(consoleSource).toMatch(/>\s*Tzuyang KPI Dashboard\s*</);
+    expect(consoleSource).toContain('<AdminPageHeader title="쯔양 성과 대시보드"');
     expect(consoleSource).not.toMatch(/>\s*쯔양 KPI 대시보드\s*</);
     expect(consoleSource).not.toContain(
       "구독자·조회수·좋아요·댓글·영상 수를 1페이지 KPI 보드에서 한눈에 봅니다.",
@@ -1618,12 +1619,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("로컬 채널 스냅샷 없음 · KPI 수집 후 표시");
     expect(consoleSource).toContain("채널 통계 확인 필요");
-    expect(consoleSource).toContain(
-      '<div className="hidden min-w-0 md:block">',
-    );
-    expect(consoleSource).toContain(
-      '<h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">',
-    );
+    expect(consoleSource).not.toContain('<div className="hidden min-w-0 md:block">');
+    expect(consoleSource).toContain('<AdminPageHeader title="쯔양 성과 대시보드"');
     expect(consoleSource).toContain("data-admin-dashboard-kpi-value-size=\"bounded\"");
     expect(consoleSource).toContain("text-xl font-semibold");
     expect(consoleSource).toContain("sm:text-2xl");
@@ -8689,7 +8686,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("배너 관리 화면 준비 중");
     expect(consoleSource).not.toContain("공지사항 운영 화면 준비 중");
     expect(consoleSource).not.toContain("사용자 관리 화면 준비 중");
-    expect(bannersSource).toContain('embedded ? "shrink-0 px-2 py-1.5"');
+    expect(bannersSource).toContain('<AdminPageHeader title="배너 관리"');
     expect(bannersSource).toContain(
       'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-sans"',
     );

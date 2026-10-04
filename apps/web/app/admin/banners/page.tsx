@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import { useState, useRef, useMemo, Suspense, useEffect, useLayoutEffect } from 'react';
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
@@ -645,26 +647,10 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
             )}
 
             <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", embedded ? "h-full" : "container mx-auto min-h-screen max-w-7xl p-3 md:p-4")}>
-                <div className={cn("flex flex-none flex-col gap-2 border-b border-border bg-card lg:flex-row lg:items-center lg:justify-between", embedded ? "shrink-0 px-2 py-1.5" : "rounded-t-2xl border px-3 py-2.5 shadow-sm")} data-admin-module-header={embedded ? "compact" : undefined} data-admin-module-header-module={embedded ? "banners" : undefined}>
-                    <div className="flex min-w-0 items-start gap-2">
-                        {!embedded && (
-                            <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9 rounded-xl hover:bg-muted" aria-label="이전 화면으로 돌아가기">
-                                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                        )}
-                        <div className="flex min-w-0 gap-2">
-                            <div className={cn("flex shrink-0 items-center justify-center text-primary", embedded ? "h-6 w-6" : "h-8 w-8 rounded-lg border border-primary/20 bg-primary/5")}>
-                                <ImageIcon className={embedded ? "h-5 w-5" : "h-4 w-4"} aria-hidden="true" />
-                            </div>
-                            <div className="min-w-0">
-                                <h1 className="text-base font-semibold leading-6 text-foreground">배너 관리</h1>
-                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground" data-admin-module-summary={embedded ? "true" : undefined}>
-                                    전체 {bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length}개 · 활성 {bannersLoading ? <InlineCountSkeleton /> : activeBannerCount}개 · 비활성 {bannersLoading ? <InlineCountSkeleton /> : inactiveBannerCount}개
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:w-auto" data-admin-module-actions={embedded ? "top-right" : undefined}>
+                <AdminPageHeader title="배너 관리" icon={ImageIcon}
+                    data-admin-module-header={embedded ? "compact" : undefined} data-admin-module-header-module={embedded ? "banners" : undefined}
+                    summary={<>전체 {bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length}개 · 활성 {bannersLoading ? <InlineCountSkeleton /> : activeBannerCount}개 · 비활성 {bannersLoading ? <InlineCountSkeleton /> : inactiveBannerCount}개</>}
+                    actions={<div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:w-auto" data-admin-module-actions={embedded ? "top-right" : undefined}>
                         <div className="flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
                             <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
                             <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : mobileTargetCount}</Badge>
@@ -672,8 +658,10 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                         <Button onClick={openCreatePanel} disabled={isBusy} className="h-9 w-full rounded-md bg-primary px-3 text-primary-foreground hover:bg-primary/90 sm:w-auto">
                             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />새 배너
                         </Button>
-                    </div>
-                </div>
+                    </div>}
+                >
+                    {!embedded && <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9" aria-label="이전 화면으로 돌아가기"><ArrowLeft className="h-4 w-4" aria-hidden="true" /></Button>}
+                </AdminPageHeader>
 
                 {pendingEditor && <div role="alert" className="flex shrink-0 flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50 p-2 text-sm text-amber-950">
                     <span className="flex-1">저장하지 않은 배너 변경이 있습니다.</span>

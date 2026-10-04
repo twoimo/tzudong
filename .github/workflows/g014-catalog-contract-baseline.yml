@@ -20,6 +20,14 @@ on:
       - 'backend/supabase/tests/test_advisor_replay.py'
       - 'backend/supabase/scripts/verify_admin_management_group_replay.py'
       - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+      - 'backend/supabase/scripts/verify_g014_owner_final_replay.py'
+      - 'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
+      - 'backend/supabase/scripts/g016_onboarding_identity_correction.py'
+      - 'backend/supabase/scripts/g014_owner_recovery_plan.py'
+      - 'backend/supabase/scripts/local_replay_contract.py'
+      - 'backend/supabase/tests/test_local_replay_contract.py'
+      - 'backend/supabase/tests/test_g014_owner_final_verifier.py'
+      - 'backend/supabase/tests/test_g014_owner_final_replay.py'
       - 'backend/supabase/tests/test_g014_pg17_owner_contract.py'
       - 'backend/supabase/tests/test_service_invoker_contract.py'
       - 'backend/supabase/scripts/transform_service_invoker_replay.py'
@@ -103,6 +111,9 @@ jobs:
           backend.supabase.tests.test_admin_management_group
           backend.supabase.tests.test_admin_management_group_replay
           backend.supabase.tests.test_g014_pg17_owner_contract
+          backend.supabase.tests.test_g014_owner_final_verifier.SourceContract
+          backend.supabase.tests.test_g014_owner_final_replay
+          backend.supabase.tests.test_local_replay_contract
           backend.supabase.tests.test_service_invoker_contract.SourceContract
           backend.supabase.tests.test_service_invoker_replay
           backend.supabase.tests.test_admin_user_ids_catalog_slice
@@ -128,6 +139,11 @@ jobs:
           backend.supabase.tests.test_admin_management_group
           backend.supabase.tests.test_admin_management_group_replay
           backend.supabase.tests.test_g014_pg17_owner_contract
+
+      - name: Verify PG15 disposition for the hosted-only final owner verifier
+        env:
+          TZUDONG_ADMIN_IDS_LOCAL_PG: '1'
+        run: python -m unittest backend.supabase.tests.test_g014_owner_final_replay.PrivatePG15Replay
 
       - name: Check generator shell syntax
         shell: bash

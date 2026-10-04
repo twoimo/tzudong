@@ -10,7 +10,8 @@ import { sanitizeStoryboardPublicText } from "@/lib/admin/storyboard/prompt-safe
 export function AdminStoryboardGenerator({ initialStoryboardResult }: { initialStoryboardResult?: StoryboardInitialResult | null } = {}) {
   return <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" data-admin-storyboard-workspace="true">
     <div id="admin-storyboard-selected-workspace" className="min-h-0 min-w-0 flex-1 overflow-auto">
-      {initialStoryboardResult && <details className="mx-4 mt-4 rounded-xl border border-border bg-card p-4" data-storyboard-archive="read-only">
+
+      <LocalStoryboardWorkspace archive={initialStoryboardResult && <details className="mb-4 rounded-xl border border-border bg-card p-4" data-storyboard-archive="read-only">
         <summary className="cursor-pointer text-sm font-medium">이전 스토리보드 기록 · {sanitizeStoryboardPublicText(initialStoryboardResult.result.storyboard.title)}</summary>
         <p className="mt-2 text-xs text-muted-foreground">저장된 결과입니다. 새 생성은 아래 Gemini 작업 공간에서 진행하세요.</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -28,8 +29,7 @@ export function AdminStoryboardGenerator({ initialStoryboardResult }: { initialS
             </article>;
           })}
         </div>
-      </details>}
-      <LocalStoryboardWorkspace />
+      </details>} />
     </div>
   </div>;
 }

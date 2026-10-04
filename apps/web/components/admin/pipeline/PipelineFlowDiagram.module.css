@@ -10,5 +10,4 @@
 .failed .status { fill: hsl(var(--destructive)); }
 .skipped rect, .blocked rect, .unknown rect, .partial rect, .manual rect { stroke-dasharray: 4 3; }
 .title { font-size: 14px; font-weight: 600; fill: hsl(var(--foreground)); }
-.status { font-size: 12px; fill: hsl(var(--foreground)); }
-.time { font-size: 11px; fill: hsl(var(--muted-foreground)); }
+.status { font-size: 11px; fill: hsl(var(--foreground)); }

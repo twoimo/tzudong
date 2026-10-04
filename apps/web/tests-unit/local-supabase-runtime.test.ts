@@ -99,7 +99,19 @@ describe('local Supabase runtime source contract', () => {
     const rows = generatedFixture.rows;
     expect(generatedFixture.sourceCount).toBeGreaterThanOrEqual(100);
     expect(rows).toHaveLength(generatedFixture.sourceCount);
-    expect(rows.filter((row: { replayProof: unknown }) => row.replayProof !== null)).toHaveLength(3);
+    const replayRows = rows.filter((row: { replayProof: unknown }) => row.replayProof !== null);
+    expect(replayRows.map((row: { path: string }) => row.path)).toEqual([
+      'backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql',
+      'backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql',
+      'backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql',
+      'backend/supabase/migrations/20261004115554_g014_pg17_owner_final_verifier.sql',
+      'backend/supabase/migrations/20261004123034_g016_onboarding_allowlist_identity_correction.sql',
+    ]);
+    const finalVerifier = replayRows.find((row: { path: string }) => row.path.endsWith('g014_pg17_owner_final_verifier.sql'));
+    expect(finalVerifier.status).toBe('legacy-contract-preserved');
+    expect(finalVerifier.replayProof.receipt.hosted_final_verifier_executed).toBe(false);
+    expect(finalVerifier.replayProof.receipt.hosted_ledger_admission_verified).toBe(false);
+    expect(finalVerifier.replayProof.receipt.required_hosted_ledger_count).toBe(77);
     const validate = (snapshot: unknown) => __localSupabaseRuntimeForTests.validateLedgerSnapshot(
       { repositoryRoot: root }, snapshot,
     );

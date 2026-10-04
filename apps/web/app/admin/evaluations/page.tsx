@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import { createPortal } from 'react-dom';
 import { useRestaurantManagementHeader } from '@/components/admin/RestaurantManagementWorkspace';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
@@ -3116,15 +3118,22 @@ function AdminEvaluationPage({
         </div>,
         managementHeader.views,
       )}
+      {embedded && !compactReviewHeader && <AdminPageHeader
+        title={embeddedModuleId === 'submissions' ? '제보 관리' : embeddedModuleId === 'reviews' ? '리뷰 관리' : '관리자 데이터 검수'}
+        titleAs="h2" icon={ClipboardCheck}
+        summary={embeddedModuleId === 'restaurants' ? reviewSummary : pendingQueueSummaryContent}
+        data-admin-module-header="compact" data-admin-module-header-module={embeddedModuleId}
+        actions={canSwitchEvaluationView ? <div data-admin-evaluation-view-actions="top-right">{reviewViewActions}</div> : undefined}
+      />}
       {/* Standalone modules retain their own header; the restaurant workspace owns its primary row. */}
-      {(!compactReviewHeader || deepLinkFilter) && <div
+      {((!embedded && !compactReviewHeader) || deepLinkFilter) && <div
         className={embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}
         data-admin-module-header={embedded ? "compact" : undefined}
         data-admin-module-header-module={embedded ? embeddedModuleId : undefined}
       >
         <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
           <div className="min-w-0 flex-1">
-            {!compactReviewHeader && <div className="flex items-center gap-2">
+            {!embedded && !compactReviewHeader && <div className="flex items-center gap-2">
               <AdminEvaluationTitleIcon embedded={embedded} />
               <ModuleTitle className="whitespace-nowrap text-base font-semibold leading-6">
                 {embeddedModuleId === 'submissions'
@@ -3162,13 +3171,13 @@ function AdminEvaluationPage({
                 </Button>
               </div>
             )}
-            {!compactReviewHeader && <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
+            {!embedded && !compactReviewHeader && <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
               {embeddedModuleId === 'restaurants' ? reviewSummary : pendingQueueSummaryContent}
             </div>}
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          {!compactReviewHeader && <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
+          {!embedded && !compactReviewHeader && <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
             <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}

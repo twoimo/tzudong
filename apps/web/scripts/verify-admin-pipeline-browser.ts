@@ -7,6 +7,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const connection = process.argv[2];
 const renderOnly = process.argv.includes('--render-only');
+const density = process.argv.find(arg => arg.startsWith('--density='))?.split('=')[1];
+if (density && !['before', 'after', 'final'].includes(density)) throw new Error('INVALID_DENSITY_PHASE');
 const statesOnly = process.argv.includes('--states-only');
 const consoleProbe = process.argv.includes('--console-probe');
 if (!/^ws:\/\/127\.0\.0\.1:\d+\/devtools\/browser\/[a-z0-9-]+$/i.test(connection ?? '')) throw new Error('OWNED_LOCAL_BROWSER_REQUIRED');
@@ -16,6 +18,8 @@ const files = ['components/admin/pipeline/AdminPipelineDashboard.tsx', 'componen
 const hash = (v: string | Buffer) => createHash('sha256').update(v).digest('hex');
 const sourceHashes = () => files.map(path => ({ path, sha256: hash(readFileSync(resolve(root, path))) }));
 const sourceStart = sourceHashes();
+const sharedGeometryHashes = () => ['components/admin/AdminPageHeader.tsx', 'styles/admin-ui.css'].map(path => ({ path, sha256: hash(readFileSync(resolve(root, path))) }));
+const sharedGeometryStart = density === 'final' ? sharedGeometryHashes() : [];
 const browser = await chromium.connectOverCDP(connection), context = browser.contexts()[0];
 assert(context.pages().every(p => ['about:blank', 'chrome://new-tab-page/', 'chrome://newtab/'].includes(p.url()) || p.url().startsWith(origin)));
 const page = context.pages().find(page => page.url().startsWith(origin))!; page.setDefaultTimeout(10_000);
@@ -89,7 +93,7 @@ await page.goto(origin + '/__fixture/session', { waitUntil: 'domcontentloaded' }
 const panel = page.locator('[data-admin-pipeline-dashboard]');
 async function ready() { await panel.waitFor(); await page.locator('[data-pipeline-stage="collect"]').waitFor(); await page.waitForFunction(() => Number(document.querySelector('[data-pipeline-flow-diagram] svg')?.getAttribute('viewBox')?.split(' ')[2]) === Math.floor(document.querySelector('[data-pipeline-flow-diagram]')?.getBoundingClientRect().width ?? 0)); }
 const cases: Array<Record<string, unknown>> = [];
-for (const width of (statesOnly ? [] : consoleProbe ? [390] : [390, 834, 1423])) for (const colorScheme of (consoleProbe ? ['light'] as const : ['light', 'dark'] as const)) {
+for (const width of (statesOnly ? [] : consoleProbe ? [390] : [390, 834, 1423])) for (const colorScheme of (consoleProbe || density ? ['light'] as const : ['light', 'dark'] as const)) {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 960 }); await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
   await page.goto(origin + '/admin?module=pipeline', { waitUntil: 'domcontentloaded' }); await ready();
   await page.waitForFunction(() => document.querySelector('[data-pipeline-stage="collect"]')?.getAttribute('data-stage-state') === 'completed');
@@ -101,20 +105,43 @@ for (const width of (statesOnly ? [] : consoleProbe ? [390] : [390, 834, 1423]))
       return [...node.querySelectorAll('text')].filter(text => { const b = text.getBoundingClientRect(); return b.left < box.left + 2 || b.right > box.right - 2 || b.top < box.top || b.bottom > box.bottom; });
     }).length;
     const invisibleLabels = [...svg.querySelectorAll('g[role="button"]')].flatMap(node => [...node.querySelectorAll('text')].filter(text => getComputedStyle(text).fill === getComputedStyle(node.querySelector('rect')!).fill)).length;
-    return { invisibleLabels, nodes: svg.querySelectorAll('g[role="button"]').length, edgePaths: svg.querySelectorAll(':scope > path').length, clippedText, horizontalOverflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - innerWidth,
+    const shown = (element: Element) => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0 && !element.closest('[hidden], details:not([open])'); };
+    const explanations = [...root.querySelectorAll('p[data-pipeline-explanation], [data-pipeline-stage-detail] > p, [aria-labelledby="pipeline-flow-title"] > div.text-muted-foreground')].filter(shown);
+    const box = root.getBoundingClientRect(), jobs = root.querySelector('[aria-labelledby="pipeline-jobs-title"]')!.getBoundingClientRect();
+    const visibleText = (root as HTMLElement).innerText.replace(/\s+/g, ' ').trim();
+    const density = { panelHeight: Math.round(box.height), panelWidth: Math.round(box.width), diagramHeight: Math.round(svg.getBoundingClientRect().height), executionOffset: Math.round(jobs.top - box.top), visibleTextCharacters: visibleText.length, explanationBlocks: explanations.length, explanationCharacters: explanations.reduce((sum, el) => sum + (el.textContent?.replace(/\s+/g, ' ').trim().length ?? 0), 0), visibleImplementationTerms: (visibleText.match(/manifest|Step \d|backend\/|heavy_local|lite_gha|dry-run|\blive\b/g) ?? []).length };
+    return { density, invisibleLabels, nodes: svg.querySelectorAll('g[role="button"]').length, edgePaths: svg.querySelectorAll(':scope > path').length, clippedText, horizontalOverflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - innerWidth,
       heading: { size: title.fontSize, weight: title.fontWeight, lineHeight: title.lineHeight }, rawLeak: root.textContent?.includes('DO_NOT_RENDER_PRIVATE_RAW'), theme: document.documentElement.classList.contains('dark') };
   });
   assert.equal(observation.invisibleLabels, 0); assert.equal(observation.nodes, 8); assert.equal(observation.edgePaths, 8); assert.equal(observation.clippedText, 0); assert(observation.horizontalOverflow <= 1); assert.equal(observation.rawLeak, false); assert.equal(observation.theme, colorScheme === 'dark');
   assert.deepEqual(observation.heading, { size: '16px', weight: '600', lineHeight: '24px' });
-  await page.screenshot({ path: resolve(output, `pipeline-console-${width}-${colorScheme}.png`) });
+  if (density === 'final') {
+    assert.equal(await panel.locator('[data-admin-page-header]').count(), 1);
+    assert.equal(await panel.locator('[data-admin-page-header] h2').count(), 1);
+  }
+  if (density === 'after' || density === 'final') assert.equal(await page.locator('#pipeline-stage-body').isHidden(), true);
+  await page.screenshot({ path: resolve(output, `pipeline-console-${density ? `density-${density}-` : ''}${width}-${colorScheme}.png`) });
+  if (density === 'after' || density === 'final') {
+    const countBefore = postsFulfilled;
+    await panel.locator('[data-pipeline-open-controls]').click();
+    assert.equal(await panel.locator('[data-admin-pipeline-enqueue]').isVisible(), true);
+    await panel.locator('summary').filter({ hasText: '실행 제어' }).click();
+    assert.equal(await panel.locator('[data-admin-pipeline-enqueue]').isHidden(), true);
+    assert.equal(postsFulfilled, countBefore);
+  }
   await page.locator('[data-pipeline-stage="evaluate"]').click(); await page.locator('[data-pipeline-stage-detail="evaluate"]').waitFor();
   assert.equal(await page.locator('[data-pipeline-stage="evaluate"]').getAttribute('aria-pressed'), 'true');
+  if (density === 'after' || density === 'final') {
+    assert.equal(await page.locator('#pipeline-stage-body').isVisible(), true);
+    await panel.locator('[data-pipeline-toggle-detail]').click();
+    assert.equal(await page.locator('#pipeline-stage-body').isHidden(), true);
+  }
   const collect = page.locator('[data-pipeline-stage="collect"]'); await collect.focus(); await collect.press('ArrowRight');
   await page.locator('[data-pipeline-stage-detail="media"]').waitFor();
   assert.equal(await page.locator('[data-pipeline-stage="media"]').evaluate(el => document.activeElement === el), true);
   await page.locator('[data-pipeline-stage="review"]').focus(); await page.keyboard.press('Space'); await page.locator('[data-pipeline-stage-detail="review"]').waitFor();
   assert.equal(await page.locator('[data-pipeline-stage-detail="review"] a').getAttribute('href'), '/admin?module=restaurants');
-  cases.push({ width, colorScheme, ...observation, clickSelection: true, arrowNavigation: true, spaceSelection: true, manualReviewLink: true });
+  cases.push({ width, colorScheme, ...observation, clickSelection: true, arrowNavigation: true, spaceSelection: true, manualReviewLink: true, ...((density === 'after' || density === 'final') ? { detailCollapsedInitially: true, selectionOpensDetail: true, detailCanCollapse: true, newExecutionDisclosureOnly: true } : {}) });
 }
 if (!renderOnly) {
 if (!statesOnly) {
@@ -148,9 +175,11 @@ for (const state of ['gha', 'malformed', 'unavailable'] as const) {
   cases.push({ scenario: state, controlsDisabled: true, falseHealthyOrLiveClaim: false, rawLeak: false });
 }
 }
-const sourceEnd = sourceHashes(); assert.deepEqual(sourceEnd, sourceStart); assert.equal(pageErrors, 0);
-const report = { kind: 'pipeline-console-synthetic-browser', browserSession: 'tzudong-pipeline-astra', observedAt: new Date().toISOString(), browser: browser.version(), node: process.version, sourceStart, sourceEnd, sourceStable: true, cases, mutationChecks, safety: { serverBoundPosts: 0, fixturePostsFulfilled: postsFulfilled, otherPostsDenied, externalDenied, realProviderCalls: 0 }, errors: { pageErrors, consoleErrors, consoleKinds, expectedHttpFailures: !renderOnly }, limitations: ['All pipeline and manifest bodies are synthetic browser fixtures.', 'No real API preview ticket, worker execution, provider output, DB write, deployment or production availability was tested.'] };
-const reportFile = `pipeline-console-${statesOnly ? 'states' : consoleProbe ? 'console-probe' : renderOnly ? 'render' : 'browser'}-20261004.json`;
+const sourceEnd = sourceHashes(); assert.deepEqual(sourceEnd, sourceStart);
+const sharedGeometryEnd = density === 'final' ? sharedGeometryHashes() : [];
+assert.deepEqual(sharedGeometryEnd, sharedGeometryStart); assert.equal(pageErrors, 0);
+const report = { kind: 'pipeline-console-synthetic-browser', browserSession: density ? 'tzudong-pipeline-density-astra' : 'tzudong-pipeline-astra', observedAt: new Date().toISOString(), browser: browser.version(), node: process.version, sourceStart, sourceEnd, sourceStable: true, sharedGeometryStart, sharedGeometryEnd, cases, mutationChecks, safety: { serverBoundPosts: 0, fixturePostsFulfilled: postsFulfilled, otherPostsDenied, externalDenied, realProviderCalls: 0 }, errors: { pageErrors, consoleErrors, consoleKinds, expectedHttpFailures: !renderOnly }, limitations: ['All pipeline and manifest bodies are synthetic browser fixtures.', 'No real API preview ticket, worker execution, provider output, DB write, deployment or production availability was tested.'] };
+const reportFile = `pipeline-console-${density ? `density-${density}` : statesOnly ? 'states' : consoleProbe ? 'console-probe' : renderOnly ? 'render' : 'browser'}-20261004.json`;
 const encoded = JSON.stringify(report, null, 2) + '\n'; writeFileSync(resolve(output, reportFile), encoded); writeFileSync(resolve(output, reportFile + '.sha256'), hash(encoded) + '\n');
 console.log(JSON.stringify({ status: 'passed', cases: cases.length, syntheticApplyChecks: mutationChecks.length, pageErrors, consoleErrors, serverBoundPosts: 0, evidenceSha256: hash(encoded) }));
 await context.unrouteAll({ behavior: 'wait' });

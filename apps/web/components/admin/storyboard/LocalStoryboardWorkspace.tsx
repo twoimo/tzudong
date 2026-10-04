@@ -1,7 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { z } from "zod";
+import { Clapperboard } from "lucide-react";
 import {
   MAX_STORYBOARD_DOCUMENT_BYTES,
   MAX_STORYBOARD_IMAGE_BYTES,
@@ -174,7 +177,7 @@ function ProviderField({ kind, value, externalAI, models, onChange }: {
   </fieldset>;
 }
 
-export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () => void } = {}) {
+export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLegacy?: () => void; archive?: ReactNode } = {}) {
   const [showSetup, setShowSetup] = useState(false);
   const [catalog, setCatalog] = useState<Catalog>({ ok: true, projects: [], workers: [] });
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -278,11 +281,9 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
     className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-3 pb-24 text-foreground sm:p-4 sm:pb-6">
-    <header className="mb-4 flex min-w-0 flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h2 id="local-storyboard-title" className="text-xl font-semibold tracking-tight">스토리보드</h2>
-      </div>
-      <div className={`grid w-full min-w-0 items-center gap-2 sm:w-auto ${projectId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
+    <AdminPageHeader title="스토리보드" titleId="local-storyboard-title" titleAs="h2" icon={Clapperboard}
+      className="admin-storyboard-page-header"
+      actions={<div className={`grid w-full min-w-0 items-center gap-2 sm:w-auto ${projectId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
         <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-56`} value={projectId ?? ""}
           onChange={(event) => selectProject(event.target.value || null)}>
@@ -291,8 +292,9 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
         </select>
         <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
         {projectId && <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>}
-      </div>
-    </header>
+      </div>}
+    />
+    {archive}
     <div className={`grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "w-full" : ""}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">

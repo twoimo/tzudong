@@ -59,6 +59,15 @@ on:
       - 'backend/supabase/tests/test_g037_reviewed_artifacts.py'
       - 'backend/supabase/g037-readonly-transaction-source-transition.v1.json'
       - 'backend/supabase/migrations/*.sql'
+      - 'backend/supabase/scripts/g014_owner_recovery_plan.py'
+      - 'backend/supabase/scripts/verify_g014_owner_final_replay.py'
+      - 'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
+      - 'backend/supabase/scripts/g016_onboarding_identity_correction.py'
+      - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+      - 'backend/supabase/scripts/local_replay_contract.py'
+      - 'backend/supabase/tests/test_g014_owner_final_verifier.py'
+      - 'backend/supabase/tests/test_g014_owner_final_replay.py'
+      - 'backend/supabase/tests/test_local_replay_contract.py'
       - 'backend/supabase/advisor-classification.v1.json'
       - 'backend/supabase/auth-hardening-decision.v1.json'
       - 'backend/supabase/hosted-db-access-decision.v1.json'
@@ -438,6 +447,13 @@ jobs:
 
       - name: Verify publication admin route boundary
         run: bun test apps/web/tests-unit/publish-jobs-request-contract.test.ts
+
+      - name: Verify immutable owner stages and read-only PG15 replay bindings
+        run: >-
+          python -m unittest
+          backend.supabase.tests.test_g014_owner_final_verifier.SourceContract
+          backend.supabase.tests.test_g014_owner_final_replay.SourceContract
+          backend.supabase.tests.test_local_replay_contract
 
       - name: Verify Supabase advisor, Auth hardening, and hosted DB access source
         run: |

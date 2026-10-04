@@ -1,5 +1,7 @@
 'use client';
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Network, RefreshCw, Search } from 'lucide-react';
@@ -38,11 +40,10 @@ export function AdminKnowledgeGraphPanel() {
     else resetPage();
   };
   return <div className="flex min-h-[360px] min-w-0 flex-col md:h-full" data-admin-knowledge-graph-panel>
-    <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-      <Network className="h-4 w-4 text-primary" aria-hidden="true" /><h1 className="mr-auto text-sm font-semibold">쯔양 지식 그래프</h1>
-      <span className="text-xs tabular-nums text-muted-foreground">분석 {data ? number.format(data.coverage.analyzedCount) : '—'} / {data?.coverage.eligibleCount == null ? '대상 확인 중' : number.format(data.coverage.eligibleCount)}</span>
-      <Button size="sm" variant="ghost" disabled={query.isFetching} aria-label="지식 그래프 새로고침" onClick={reload}><RefreshCw className={`h-3.5 w-3.5 ${query.isFetching ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" /></Button>
-    </header>
+    <AdminPageHeader title="쯔양 지식 그래프" icon={Network}
+      summary={<span className="text-xs tabular-nums text-muted-foreground">분석 {data ? number.format(data.coverage.analyzedCount) : '—'} / {data?.coverage.eligibleCount == null ? '대상 확인 중' : number.format(data.coverage.eligibleCount)}</span>}
+      actions={<><Button size="sm" variant="ghost" disabled={query.isFetching} aria-label="지식 그래프 새로고침" onClick={reload}><RefreshCw className={`h-3.5 w-3.5 ${query.isFetching ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" /></Button></>}
+    />
     <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
       <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input aria-label="지식 검색" value={search} onChange={event => { setSearch(event.target.value); resetPage(); }} maxLength={256} placeholder="영상·맛집·메뉴 검색" className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
       <select aria-label="지식 종류" value={kind} onChange={event => { setKind(event.target.value); resetPage(); }} className="h-8 rounded-md border bg-background px-2 text-xs"><option value="">전체</option>{KNOWLEDGE_KINDS.map(value => <option key={value} value={value}>{labels[value]}</option>)}</select>

@@ -1,5 +1,7 @@
 'use client';
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Bug, ChevronLeft, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
@@ -37,14 +39,12 @@ export function AdminSentryPanel() {
 
   return (
     <div className="flex h-full min-h-[320px] min-w-0 flex-col" data-admin-sentry-panel>
-      <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <Bug className="h-4 w-4 text-primary" aria-hidden="true" />
-        <h1 className="mr-auto text-sm font-semibold">Sentry 오류 모니터링</h1>
-        <Button size="sm" variant="ghost" onClick={() => void query.refetch()} disabled={query.isFetching} aria-label="오류 목록 새로고침">
+      <AdminPageHeader title="Sentry 오류 모니터링" icon={Bug}
+      actions={<><Button size="sm" variant="ghost" onClick={() => void query.refetch()} disabled={query.isFetching} aria-label="오류 목록 새로고침">
           <RefreshCw className={`h-3.5 w-3.5 ${query.isFetching ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
         </Button>
-        {data?.dashboardUrl ? <Button size="sm" variant="outline" asChild><a href={data.dashboardUrl} target="_blank" rel="noopener noreferrer">Sentry 열기<ExternalLink className="ml-1 h-3 w-3" aria-hidden="true" /></a></Button> : null}
-      </header>
+        {data?.dashboardUrl ? <Button size="sm" variant="outline" asChild><a href={data.dashboardUrl} target="_blank" rel="noopener noreferrer">Sentry 열기<ExternalLink className="ml-1 h-3 w-3" aria-hidden="true" /></a></Button> : null}</>}
+    />
       <div className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2">
         {(Object.keys(statusLabels) as SentryIssueStatus[]).map((value) => <Button key={value} size="sm" variant={status === value ? 'default' : 'ghost'} aria-pressed={status === value} onClick={() => { setStatus(value); setCursors([null]); }}>{statusLabels[value]}</Button>)}
         <div className="ml-auto flex flex-wrap gap-1 text-xs text-muted-foreground">

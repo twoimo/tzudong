@@ -39,8 +39,8 @@ describe('admin user-management source contract', () => {
     expect(panelSource).not.toContain('new-user-email');
     expect(panelSource).not.toContain('type="password"');
     expect(panelSource).toContain('자기 잠금 방지');
-    expect(panelSource).toContain('border-b border-border bg-card px-2 py-1.5');
-    expect(panelSource).toContain('text-base font-semibold leading-6 text-foreground');
+    expect(panelSource).toContain('<AdminPageHeader title="사용자 관리"');
+    expect(panelSource).toContain('titleId="admin-users-title"');
     expect(panelSource).toContain('data-admin-users-summary');
     expect(panelSource).toContain('min-h-0 border-border bg-card shadow-sm');
     expect(panelSource).toContain('hidden overflow-hidden rounded-lg border bg-card md:block');

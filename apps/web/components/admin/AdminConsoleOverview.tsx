@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import dynamic from "next/dynamic";
 import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import Image from "next/image";
@@ -3832,13 +3834,8 @@ function AdminDashboardManagementSkeleton() {
       role="status"
       aria-busy="true"
     >
-      <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="hidden min-w-0 md:block">
-          <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
-          </h1>
-        </div>
-        <div
+      <AdminPageHeader title="쯔양 성과 대시보드" icon={Activity} className="mb-2"
+        actions={<div
           className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
@@ -3922,8 +3919,8 @@ function AdminDashboardManagementSkeleton() {
               </Button>
             ))}
           </div>
-        </div>
-      </div>
+        </div>}
+      />
       <p
         className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-2xs font-semibold leading-5 text-muted-foreground md:hidden"
         data-admin-dashboard-mobile-loading-prompt="true"
@@ -7306,13 +7303,8 @@ function AdminDashboardManagementPanel({
       data-admin-dashboard-realtime-charts="true"
       data-admin-dashboard-channel-kpi="true"
     >
-      <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="hidden min-w-0 md:block">
-          <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            쯔양 성과 대시보드
-          </h1>
-        </div>
-        <div
+      <AdminPageHeader title="쯔양 성과 대시보드" icon={Activity} className="mb-2"
+        actions={<div
           className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
@@ -7385,8 +7377,8 @@ function AdminDashboardManagementPanel({
               }
             }}
           />
-        </div>
-      </div>
+        </div>}
+      />
       {shouldShowMobileDashboardLoadingPrompt ? (
         <p
           className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-2xs font-semibold leading-5 text-muted-foreground md:hidden"

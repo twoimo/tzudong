@@ -64,7 +64,7 @@
 
 사용자가 요청한 실제 Tzudong scope에도 pilot를 반영했다. 이전 11개 노드의 본문을 보존하고 publication 출처를 연결했으며, 원래 유료 분석에 있던 식당 내부 관찰 1개를 추가했다. 저장 후 12개 노드 hash의 readback 차이는 0개였고, 같은 publisher 재시작은 12개 재사용·새 생성/갱신 0개·추가 provider call 0이었다. 현재 export는 13노드·43간선·11,201bytes, revision `3f598e25271f223a0415c1560c151b79c3cdbc781fc64e2270c0196aa1d60767`다. 근거 상태는 모두 미확인이며 독립 검증 완료는 여전히 0/1,069다. 실제 로컬 OSK 저장과 운영 맛집 DB·배포는 구분한다.
 
-사용자의 후속 요청에 따라 메뉴·본문 제목·접근성 이름은 ‘영상 성과 분석’으로 바꿨다. `/admin?module=insights`와 저장된 메뉴 ID는 유지한다. 관련 기존 47개 검사는 통과했다. 크롤러 페이지의 실제 흐름 시각화와 Gemini 추천이 선행하는 자동 검수를 구현·격리 검증했다. 신규 SQL과 운영 배포는 아직 적용하지 않았다. 설명을 더하는 대신 상태·근거·필요한 실행 제어를 밀도 있게 배치한다.
+사용자의 후속 요청에 따라 메뉴·본문 제목·접근성 이름은 ‘영상 성과 분석’으로 바꿨다. `/admin?module=insights`와 저장된 메뉴 ID는 유지한다. 관련 기존 47개 검사는 통과했다. 크롤러 페이지의 실제 흐름 시각화와 Gemini 추천이 선행하는 자동 검수를 구현·격리 검증했다. 당시 신규 SQL과 운영 배포는 적용 전이었다. 아래 후속 검증에서 운영 SQL 상태를 갱신한다. 설명을 더하는 대신 상태·근거·필요한 실행 제어를 밀도 있게 배치한다.
 
 ## 파이프라인 다이어그램·Gemini 자동 판단 최종 검증
 
@@ -99,3 +99,32 @@ UI는 실제 judgmentEngine metadata가 있을 때만 Gemini 검수 상태를 �
 후속 admission UI는 390/1423px67개 assertion·가로 넘침10개 관측0·예상 밖 오류0을 확인했다. 이전70개 보고서는 원시 SHA 그대로 유지한다. 새 API/DTO15개·worker28개·native/compat 진단0·최종 Next build·CSS 경계가 통과했다. 마지막 전체 suite2,756/skip9 이후 변경은 해당 경로만 재검사했으며 전체 숫자를 추정해 늘리지 않았다.
 
 CI의 layout/naming 검사는 새 backend/knowledge_graph 패키지의 소유 경계 등록 누락으로 실패했다. 실제 소유·허용/금지 내용과 source classification을 layout manifest에 추가하고 트리 개수를38로 갱신했다. 관련76개 검사와 재생 원장을 다시 확인한다. 기능 변경이나 사용자 파일 이동은 없다.
+
+
+## 헤더·파이프라인 밀도 후속 검증
+
+15개 메뉴가 공통 `AdminPageHeader`를 사용한다. 390/834/1423px의 45조건에서 제목은 16px/600/24px, 좌우 padding12px, 가로 넘침0이었다. 데스크톱 헤더 높이의 범위는28–59px에서57px으로 통일했다. 최소 높이는29px(+103.6%) 늘고 최대 높이는2px(−3.4%) 줄었다. 범위 폭(max−min)은31→0px이다. 모바일 버튼은 최소44×44px이며, 필요한 행동을 숨기지 않고 좁은 화면에서 줄을 바꾼다. 본문 결과는42개 렌더 검사 통과/3개 Sentry 미설정이다. 이를 전체 운영 페이지 정상 동작이나 Sentry 연결 완료로 표시하지 않는다.
+
+| 파이프라인 기본 화면 | 전→후 | 절대 차이 | 변화율 | 표본·환경·95% CI |
+|---|---|---:|---:|---|
+| 높이/390px | 1314→727px | −587px | −44.7% | n=1/조건, 합성 로컬 Chromium; CI 미추정 |
+| 높이/834px | 1248→723px | −525px | −42.1% | 동일 |
+| 높이/1423px | 1017→637px | −380px | −37.4% | 동일 |
+| 기본 노출 문자 | 757→271 | −486 | −64.2% | 동일; DOM innerText, 공백 정규화 |
+| 설명 블록 | 3→0 | −3 | −100% | 동일 |
+
+이 값은 결정적인 화면 기하·문자 수의 관측이며 처리 속도·통계적 우월성 주장이 아니다. 기하 noise budget은±1px, 문자수0이다. 상태·건수·실행은 기본 화면에 두고 실행 ID/환경/근거는 상세로 옮겼다. DAG8노드/8간선·선택·키보드·실행 확인/적용 경로를 보존했다. 헤더77개/파이프라인26개 관련 검사 및3개 파이프라인 렌더가 통과했다. 최종 web build는 소스·lock·설치가 일치하는Next16.3.8/Node24에서 통과했고 route CSS 경계도 통과했다. 전체 unit 실행은2717pass/1skip/새 replay 등록 기대값1fail이었다. 이를 수정한 해당17개 검사를 재검증했고, 다른 통과한 검사를 다시 실행한 전체 green 결과로 바꾸어 쓰지 않는다.
+
+증빙은 `ui-renewal-20261003/admin-page-header-comparison-20261004-astra.json`, `pipeline-density-comparison-20261004.json` 및 각각의 detached SHA에 있다. source/로컬 render/운영/배포는 별개다.
+
+## 운영 SQL 적용·가입 확인 정합 수정
+
+운영 PostgreSQL17.6의 정확한 이력62건을 읽기 전용으로 대조했다. CLI2.119.0/TLS verify-full/저장소 CA를 사용해 선택형13개만 dry-run 대조 후 적용했다. Vault 동기화·seed·일괄 role 파일·history repair는 사용하지 않았다. 이후 원본 PG17 owner 복구, 가입 확인 identity 정합 수정, 최종 verifier를 각각 fresh ledger/단일 pending 팩으로 적용했다. 이력은62→75→76→77→78이고 각 단계의 기존 version/name/statement 배열 SHA는 보존됐다.
+
+최초 최종 verifier는 오래된5인자 가입 확인 항목 때문에 실패했다. 실제6인자 nonce-bound 함수는 canonical 본문 SHA `b6a478e40bbb98fbd0d2e4a7993295000d33792093dcf0688b05b33f6363bf4e`와 일치했다. 폐기된5인자/service_role 항목1건과 catalog assertion의 같은 서명1곳만 정합하게 바꿨다. 6인자 함수·ACL·기본 인자0개·nonce 검증·다른 catalog 조건은 보존했다. 실패·롤백 preview는 별도 증빙으로 남겼으며, 처음 실패한 verifier source `a2a50b99…`도 보관했다. 신규 수정은 운영 적용 전 nativePG17 성공/각 assertion 실패/권한·함수 metadata·rollback 검사15개를 통과했다.
+
+최종 실제 운영에서 workflow-owner/public-RPC/definer/catalog assertions4개가 통과했다. 임시 helper0, postgres의 workflow-owner USAGE/SET 모두false다. 맛집1659건 전체 to_jsonb 행 SHA는 모든 단계 전후 `32a58ac590418a889708c0fc97539fe7ca5b20a97f0ba43c7b5226340acc8458`로 같다. 검수 정책은 적용 전후 OFF/version1/회당50/하루50/last_run=null을 보존했다. 임의 승인·provider 추론·추가 충전은 수행하지 않았다.
+
+service_role의 운영 read RPC는 요청50건/반환50건/전체1659건/hasMore=true를 반환했다. JSON text188983bytes, n=1이다. 실제 전후 지연·전송량 비교 실험이 아니므로 개선율·95% CI·금액 절감을 추정하지 않는다. anon/authenticated EXECUTE는 모두false다. 운영 status의 판단 엔진은Gemini3.8Flash/restaurant-review-v1/승인 전 판단 필수/claim당 최대1회로 확인했다.
+
+`rollout-preflight/hosted-*-readback*.json`과 SHA가 실제 receipt다. PG15 replay adapter의 verified-existing/legacy-contract-preserved는 현재 소스의 로컬 읽기 검증이며 운영 DDL 또는 최종 assertions 실행 receipt로 재사용하지 않는다. 운영 배포는 아직 수행하지 않았고, 병행PR3114와의 소스 결합 후 보호된 develop→data→main 승격·live SHA/readback이 남는다.

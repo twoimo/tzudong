@@ -1,5 +1,7 @@
 'use client';
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQueries } from '@tanstack/react-query';
@@ -60,14 +62,15 @@ export function AdminOperationsPanel() {
   const selectedQuery = selected ? queries[OPERATIONS_SOURCES.indexOf(selected.sourceId)] : null;
 
   return <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background" aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
-    <header className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2" data-admin-module-header="compact" data-admin-module-header-module="llm">
-      <Bot className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-      <h1 id="admin-operations-title" className="mr-auto text-base font-semibold leading-6">운영 보조</h1>
-      <span className="text-xs text-muted-foreground">읽기 전용</span>
-      <Button variant="ghost" size="sm" disabled={busy} onClick={refresh} aria-label="운영 상태 새로고침" className="gap-1.5">
+    <AdminPageHeader title="운영 보조" icon={Bot}
+      titleId="admin-operations-title"
+      summary="읽기 전용"
+      data-admin-module-header="compact"
+      data-admin-module-header-module="llm"
+      actions={<><Button variant="ghost" size="sm" disabled={busy} onClick={refresh} aria-label="운영 상태 새로고침" className="gap-1.5">
         <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />새로고침
-      </Button>
-    </header>
+      </Button></>}
+    />
 
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="grid grid-cols-1 divide-y border-b sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="운영 집계">

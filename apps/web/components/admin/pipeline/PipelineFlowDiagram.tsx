@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { PIPELINE_FLOW_EDGES, PIPELINE_STAGE_LABELS, type PipelineStageId, type PipelineStageView } from '@/lib/admin/pipeline-flow-view-model';
+import { PIPELINE_FLOW_EDGES, type PipelineStageState, type PipelineStageId, type PipelineStageView } from '@/lib/admin/pipeline-flow-view-model';
 import styles from './PipelineFlowDiagram.module.css';
+
+export const COMPACT_STAGE_LABELS: Record<PipelineStageState, string> = { completed: '완료', failed: '실패', skipped: '선택 생략', blocked: '선행 단계로 생략', partial: '일부 기록', unknown: '미확인', manual: '검수' };
 
 export function formatPipelineDuration(seconds: number | null): string {
   if (seconds === null) return '시간 미확인';
@@ -25,13 +27,13 @@ export function PipelineFlowDiagram({ stages, selected, onSelect }: { stages: Pi
   const cols = compact ? 2 : 5;
   const cell = width / cols;
   const nodeWidth = Math.min(compact ? 210 : 170, cell - 28);
-  const nodeHeight = 70;
+  const nodeHeight = 54;
   const compactOrder: PipelineStageId[] = ['collect', 'media', 'transcript', 'extract', 'select', 'evaluate', 'persist', 'review'];
   const wide: Record<PipelineStageId, [number, number]> = { collect: [0, 1], media: [1, 0], transcript: [1, 2], extract: [2, 0], select: [2, 2], evaluate: [3, 2], persist: [4, 2], review: [4, 0] };
   const positions = new Map(stages.map(stage => {
     const index = compactOrder.indexOf(stage.id);
     const [column, row] = compact ? [index % 2, Math.floor(index / 2)] : wide[stage.id];
-    return [stage.id, { x: cell * (column + 0.5), y: compact ? 48 + row * 103 : 48 + row * 83 }];
+    return [stage.id, { x: cell * (column + 0.5), y: compact ? 35 + row * 73 : 35 + row * 65 }];
   }));
   const move = (id: PipelineStageId, direction: number) => {
     const index = compactOrder.indexOf(id), next = compactOrder[(index + direction + compactOrder.length) % compactOrder.length];
@@ -39,7 +41,7 @@ export function PipelineFlowDiagram({ stages, selected, onSelect }: { stages: Pi
     svg.current?.querySelector<SVGGElement>(`[data-pipeline-stage="${next}"]`)?.focus();
   };
   return <div ref={host} className="min-w-0" data-pipeline-flow-diagram>
-    <svg ref={svg} width="100%" height={compact ? 405 : 267} viewBox={`0 0 ${width} ${compact ? 405 : 267}`} className={styles.diagram} role="group" aria-label="크롤러 데이터 흐름 · 방향키로 단계 이동">
+    <svg ref={svg} width="100%" height={compact ? 291 : 205} viewBox={`0 0 ${width} ${compact ? 291 : 205}`} className={styles.diagram} role="group" aria-label="크롤러 데이터 흐름 · 방향키로 단계 이동">
       <defs><marker id="pipeline-flow-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8Z" className={styles.arrow} /></marker></defs>
       {PIPELINE_FLOW_EDGES.map(edge => {
         const a = positions.get(edge.from)!, b = positions.get(edge.to)!;
@@ -51,14 +53,13 @@ export function PipelineFlowDiagram({ stages, selected, onSelect }: { stages: Pi
       })}
       {stages.map(stage => {
         const p = positions.get(stage.id)!;
-        return <g key={stage.id} role="button" tabIndex={0} aria-pressed={selected === stage.id} aria-label={`${stage.label}: ${PIPELINE_STAGE_LABELS[stage.state]}, ${formatPipelineDuration(stage.durationSeconds)}`} data-pipeline-stage={stage.id} data-stage-state={stage.state} className={`${styles.node} ${styles[stage.state]} ${selected === stage.id ? styles.selected : ''}`} onClick={() => onSelect(stage.id)} onKeyDown={event => {
+        return <g key={stage.id} role="button" tabIndex={0} aria-pressed={selected === stage.id} aria-label={`${stage.label}: ${COMPACT_STAGE_LABELS[stage.state]}, ${formatPipelineDuration(stage.durationSeconds)}`} data-pipeline-stage={stage.id} data-stage-state={stage.state} className={`${styles.node} ${styles[stage.state]} ${selected === stage.id ? styles.selected : ''}`} onClick={() => onSelect(stage.id)} onKeyDown={event => {
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(stage.id); }
           if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) { event.preventDefault(); move(stage.id, event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1); }
         }}>
           <rect x={p.x - nodeWidth / 2} y={p.y - nodeHeight / 2} width={nodeWidth} height={nodeHeight} rx="9" />
-          <text x={p.x} y={p.y - 12} textAnchor="middle" className={styles.title}>{stage.label}</text>
-          <text x={p.x} y={p.y + 8} textAnchor="middle" className={styles.status}>{PIPELINE_STAGE_LABELS[stage.state]}</text>
-          <text x={p.x} y={p.y + 25} textAnchor="middle" className={styles.time}>{formatPipelineDuration(stage.durationSeconds)}</text>
+          <text x={p.x} y={p.y - 5} textAnchor="middle" className={styles.title}>{stage.label}</text>
+          <text x={p.x} y={p.y + 14} textAnchor="middle" className={styles.status}>{COMPACT_STAGE_LABELS[stage.state]}</text>
         </g>;
       })}
     </svg>
