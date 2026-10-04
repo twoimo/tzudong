@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-04T04:59:26.002672+00:00",
+  "ready": 0,
+  "offline": 0,
+  "mdnsConnectServices": 0,
+  "identifiersOrAddressesRetained": false,
+  "existingConnectionQuestionPending": true,
+  "resumedBlockedAuditTurn": 1
+}

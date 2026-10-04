@@ -1,0 +1,101 @@
+{
+  "sourceSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "browser": "154.0.8037.97",
+  "scope": "actual public compiled client; intercepted synthetic metric delivery and synthetic visibility/input; not field or physical lifecycle evidence",
+  "fieldAdmitted": 0,
+  "metricReceipts": [
+    {
+      "metricName": "LCP",
+      "schemaValidated": true,
+      "releaseMatched": true,
+      "cookieAbsent": true,
+      "authorizationAbsent": true,
+      "refererAbsent": true,
+      "productionWriteIntercepted": true
+    },
+    {
+      "metricName": "INP",
+      "schemaValidated": true,
+      "releaseMatched": true,
+      "cookieAbsent": true,
+      "authorizationAbsent": true,
+      "refererAbsent": true,
+      "productionWriteIntercepted": true
+    },
+    {
+      "metricName": "CLS",
+      "schemaValidated": true,
+      "releaseMatched": true,
+      "cookieAbsent": true,
+      "authorizationAbsent": true,
+      "refererAbsent": true,
+      "productionWriteIntercepted": true
+    }
+  ],
+  "qaReceipts": [],
+  "readiness": [
+    {
+      "qa": false,
+      "observerKinds": [
+        "resource",
+        "largest-contentful-paint",
+        "interaction-contentful-paint",
+        "soft-navigation",
+        "paint",
+        "long-animation-frame",
+        "event",
+        "first-input",
+        "soft-navigation",
+        "paint",
+        "soft-navigation",
+        "paint",
+        "paint",
+        "largest-contentful-paint",
+        "event",
+        "first-input",
+        "layout-shift",
+        "soft-navigation",
+        "layout-shift"
+      ],
+      "realSdkReady": true,
+      "pageErrors": 0
+    },
+    {
+      "qa": true,
+      "observerKinds": [
+        "resource",
+        "largest-contentful-paint",
+        "interaction-contentful-paint",
+        "soft-navigation",
+        "paint",
+        "long-animation-frame",
+        "event",
+        "first-input",
+        "soft-navigation",
+        "paint",
+        "soft-navigation",
+        "paint",
+        "paint",
+        "largest-contentful-paint",
+        "event",
+        "first-input",
+        "layout-shift",
+        "soft-navigation",
+        "layout-shift"
+      ],
+      "realSdkReady": true,
+      "pageErrors": 0
+    }
+  ],
+  "passed": true,
+  "names": [
+    "CLS",
+    "INP",
+    "LCP"
+  ],
+  "staleNegative": {
+    "status": 409,
+    "fixedCode": "field_release_stale",
+    "rawBodyRetained": false
+  }
+}

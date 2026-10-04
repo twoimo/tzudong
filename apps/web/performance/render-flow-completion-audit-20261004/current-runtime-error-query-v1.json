@@ -1,0 +1,18 @@
+{
+  "observedAt": "2026-10-04T04:25:25.377641+00:00",
+  "deploymentId": "dpl_D6wm9mbMeZEbLtHM3PFXMctZ9txm",
+  "gitSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "window": {
+    "start": "2026-10-04T03:40:22.716884+00:00",
+    "end": "2026-10-04T04:25:22.716884+00:00"
+  },
+  "filter": "level error, exact production deployment, no branch detection",
+  "limit": 500,
+  "cliExit": 0,
+  "returnedJsonObjects": 0,
+  "undecodedStdoutLines": 0,
+  "statusCodeCounts": {},
+  "rawLogsMessagesIdentifiersHeadersOrBodiesRetained": false,
+  "coverageLimit": "filtered retained request logs; availability, sampling and query completeness are not global invocation-error coverage",
+  "newCanonicalHealthZeroProduced": false
+}

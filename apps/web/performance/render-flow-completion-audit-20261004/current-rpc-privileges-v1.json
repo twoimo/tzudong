@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-04T04:44:36.844Z",
+  "queryType": "read-only fixed catalog privileges",
+  "rows": [
+    {
+      "proname": "record_app_web_vitals",
+      "security_definer": false,
+      "service_role_execute": true,
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "proname": "record_app_web_vitals_bounded",
+      "security_definer": false,
+      "service_role_execute": true,
+      "anon_execute": false,
+      "authenticated_execute": false
+    }
+  ],
+  "passed": true,
+  "databaseWrites": 0,
+  "servingRpcExecutionProven": false
+}

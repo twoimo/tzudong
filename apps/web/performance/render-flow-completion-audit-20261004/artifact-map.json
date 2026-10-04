@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "render-flow-evidence-map.v1",
+  "releaseId": "render-flow-completion-audit-20261004",
+  "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "fieldImprovementAdmitted": false,
+  "physicalFinalSourceVerified": false,
+  "artifacts": {
+    "REPORT.md": {
+      "size": 4599,
+      "sha256": "a4eeba91f7d4488a2a4cf987bf430a0d9d933b3a2899ff052250722176da5a02"
+    },
+    "completion-audit-v1.json": {
+      "size": 3875,
+      "sha256": "c346f55ddee7820c72c8e724640ac253726c85ba7677124cd042f6d11f7d75ed"
+    },
+    "current-collector-config-metadata-v1.json": {
+      "size": 569,
+      "sha256": "79452d83f4a9beeebf298be0b009e30d52c1f0ba8520e028efca4e8d35cdc1b2"
+    },
+    "current-field-producer-fixture-v1.json": {
+      "size": 2386,
+      "sha256": "734978b95cffd01d3e2863b564591575c945ae7e0f896d0aec25ca0d949e72af"
+    },
+    "current-field-v1.json": {
+      "size": 3605,
+      "sha256": "81c1b38ad199066143e93dba3503275ebcc9d333016132a50bd1493c2b2915ce"
+    },
+    "current-physical-readiness-v1.json": {
+      "size": 233,
+      "sha256": "a161c19e11a10e1b64e9fb44f81b9b72abe65e65eeea13cc24f3576cbd62478b"
+    },
+    "current-production-v1.json": {
+      "size": 407,
+      "sha256": "d2eb5e51308471b87476b7f75313747daeaaa68e3420feeb8770ea253e9086c5"
+    },
+    "current-rpc-privileges-v1.json": {
+      "size": 583,
+      "sha256": "78a5b1d4fefe178274280aeaa2006266221bc415d2aa013876bcf8d36875e1f9"
+    },
+    "current-runtime-error-query-v1.json": {
+      "size": 717,
+      "sha256": "0a7553d4e64b73c000e06e1db6d9a4934cd852294ff9977713a2719574866e2b"
+    },
+    "read-production-runtime-v1.py": {
+      "size": 3029,
+      "sha256": "e53e5c2d4e386b611b821b9b4dfa82dc500b9abf7e8604fca1ad5bdb8e49a662"
+    },
+    "verify-current-field-producer-v1.mjs": {
+      "size": 5603,
+      "sha256": "c4dcfc3fbce88d336716e39490b4bc81b883822d40cb27d020191aaa40de0726"
+    }
+  }
+}

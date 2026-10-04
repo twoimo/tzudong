@@ -1,0 +1,65 @@
+{
+  "previousGoalTurnClassification": "progress: source correction, protected promotion, production deployment, regression measurements and frozen evidence storage",
+  "resumedBlockedAuditTurn": 1,
+  "completionProven": false,
+  "currentProductionSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "requirements": [
+    {
+      "requirement": "1 \uc2e4\uc81c \ud750\ub984\uacfc \ubcd1\ubaa9 \uc5f0\uacb0",
+      "state": "source-specific lab/real SDK evidence retained; final physical and intermittent nav behavior incomplete",
+      "evidence": "../render-flow-native-memory-final-20261003/REPORT-DELIVERED-20261004-v2.md"
+    },
+    {
+      "requirement": "2 production \uae30\uc900\uc120\u00b7\ud658\uacbd\u00b7\uace0\uc815 \ubaa9\ud45c",
+      "state": "proved for recorded desktop/mobile-emulation/native prototype cells; unmeasured environments excluded",
+      "evidence": "../render-flow-native-memory-final-20261003/mobile-retain-overlay-plan-v1.json"
+    },
+    {
+      "requirement": "3 \uac04\ud5d0\uc801 \ud50c\ub9ac\ucee4 \uc815\uc758\u00b7\uc6d0\uc778\u00b7before/after",
+      "state": "SDK delayed root and review AX mask proved; final Galaxy nav/composite/force-dark still incomplete",
+      "evidence": "../render-flow-native-memory-final-20261003/live-memory-bottom-capture-inspection-v1.json"
+    },
+    {
+      "requirement": "4 \uce21\uc815 \uae30\ubc18 \ucd5c\uc801\ud654\u00b7\uc815\ud655\uc131\u00b7\uce90\uc2dc \uacbd\ub85c",
+      "state": "implemented and protected main deployed; finite heap/frame budgets pass, cold latency trade-off retained; no universal leak cure claim",
+      "evidence": "../render-flow-native-memory-final-20261003/overlay-source-main-equivalence-v1.json"
+    },
+    {
+      "requirement": "5 \ubc18\ubcf5 \ub3d9\uc77c \uc870\uac74\u00b7\ub178\uc774\uc988\u00b7CI\u00b7\ud68c\uadc0",
+      "state": "cold paired9/A-A9 and warmABBA4 recorded; memory/speed gains not generalized; final device/cohort missing",
+      "evidence": "../render-flow-native-memory-final-20261003/mobile-retain-overlay-summary-v1.json"
+    },
+    {
+      "requirement": "6 scripts/raw/traces/maps/pins/Git blobs/privacy",
+      "state": "frozen parent787 files and Git blobs proved; this continuation evidence will be mapped separately",
+      "evidence": "../render-flow-native-memory-final-20261003-git-blob-verification-v1.json"
+    },
+    {
+      "requirement": "7 mandatory checks\u00b7browser\u00b7delivery\u00b710-column report",
+      "state": "source/CI/live20/READY/alias/report proved; current health coverage and final native/field completion not proved",
+      "evidence": "../render-flow-native-memory-final-20261003/memory-release-preflight-v1.json"
+    },
+    {
+      "requirement": "\uc0c8 \ubc30\ud3ec prospective \uc218\uc9d1 \uacbd\ub85c",
+      "state": "current compiled client produces3 valid names matching source, QA0, privacy headers absent; all valid synthetic requests intercepted; stale server409; privileges pass. New accepted field RPC execution not proved",
+      "evidence": "current-field-producer-fixture-v1.json"
+    },
+    {
+      "requirement": "Galaxy Chrome\u00b7Samsung \uc2e4\uc81c \uae30\uae30 \ucd5c\uc885 source\u00b7\uc6b4\uc601",
+      "state": "not proved: no device/MDNS connection; existing connection question remains pending",
+      "evidence": "live ADB device/mDNS snapshot for this goal turn"
+    },
+    {
+      "requirement": "\uc2e4\uc0ac\uc6a9 field \uc131\uacfc \ube44\uad50",
+      "state": "not proved:15 old-release metric instances only; no matched current cohort",
+      "evidence": "current-field-v1.json"
+    }
+  ],
+  "fieldMetricInstances": 15,
+  "servingRpcExecutionClaimed": false,
+  "rpcPrivilegeChecksPassed": true,
+  "unknownCanonicalHealthGatesFilledWithZero": false,
+  "sourceOrProductionChangedInThisTurn": false,
+  "databaseWrites": 0,
+  "fieldSyntheticAdmissions": 0
+}

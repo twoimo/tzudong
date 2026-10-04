@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-04T04:44:37.309929+00:00",
+  "projectVerified": true,
+  "configuration": [
+    {
+      "configurationName": "SUPABASE_SERVICE_ROLE_KEY",
+      "productionConfigured": true,
+      "valuesOrEnvironmentIdsRetained": false
+    },
+    {
+      "configurationName": "NEXT_PUBLIC_SUPABASE_URL",
+      "productionConfigured": true,
+      "valuesOrEnvironmentIdsRetained": false
+    }
+  ],
+  "manualGitShaEnvironmentOverridePresent": false,
+  "readOnly": true,
+  "configurationValuesReadBackOrDecrypted": false,
+  "endToEndRpcExecutionProven": false
+}
