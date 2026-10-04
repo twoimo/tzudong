@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, spyOn, test } from 'bun:test';
 
 type MergeInput = Array<Record<string, unknown>>;
 
@@ -101,6 +101,87 @@ describe('buildRestaurantSelectFields', () => {
 });
 
 describe('mergeRestaurants', () => {
+    test('returns an empty list for empty input', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        expect(mergeRestaurants([])).toEqual([]);
+    });
+
+    test('projects a singleton with empty media, fallback address and deduplicated categories', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        const row = makeRestaurant({
+            id: 'solo', approved_name: '', name: '', lat: null, lng: null,
+            categories: ['한식', '한식', '분식'], youtube_link: '', tzuyang_review: '',
+            youtube_meta: null, review_count: null, road_address: '', jibun_address: '단일 주소',
+        });
+        const before = structuredClone(row);
+        const [merged] = mergeRestaurants([row]) as Array<Record<string, unknown>>;
+
+        expect(merged).toMatchObject({
+            id: 'solo', name: '', lat: 0, lng: 0, categories: ['한식', '분식'],
+            category: ['한식', '분식'], address: '단일 주소', youtube_link: null,
+            tzuyang_review: null, youtube_meta: null, review_count: 0,
+            mergedYoutubeLinks: [], mergedTzuyangReviews: [], mergedYoutubeMetas: [],
+            mergedRestaurants: [row],
+        });
+        expect(merged).not.toBe(row);
+        expect((merged.mergedRestaurants as unknown[])[0]).toBe(row);
+        expect(row).toEqual(before);
+    });
+
+    test('preserves alias names and populated media without sorting singleton groups', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        const meta = { title: '단일 영상', publishedAt: '2026-01-01T00:00:00Z' };
+        const row = makeRestaurant({
+            id: 'solo-media', approved_name: null, name: '별칭 식당',
+            youtube_link: 'https://www.youtube.com/watch?v=abcdefghijk',
+            tzuyang_review: '영상 리뷰', youtube_meta: meta, review_count: 7,
+        });
+        const sort = spyOn(Array.prototype, 'sort');
+        let result: unknown[];
+        let sorts: number;
+        try {
+            result = mergeRestaurants([row]);
+            sorts = sort.mock.calls.length;
+        } finally {
+            sort.mockRestore();
+        }
+
+        expect(sorts).toBe(0);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({
+            name: '별칭 식당', lat: row.lat, lng: row.lng, address: row.road_address,
+            youtube_link: row.youtube_link, tzuyang_review: row.tzuyang_review,
+            youtube_meta: meta, review_count: 7,
+            mergedYoutubeLinks: [row.youtube_link], mergedTzuyangReviews: [row.tzuyang_review],
+            mergedYoutubeMetas: [meta], mergedRestaurants: [row],
+        });
+    });
+
+    test('keeps singleton and multi-row group order and sorts only the multi-row media', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        const rows = [
+            makeRestaurant({ id: 'solo', approved_name: '단독', road_address: '', jibun_address: '' }),
+            makeRestaurant({ id: 'old', approved_name: '병합', youtube_link: 'old', youtube_meta: { publishedAt: '2026-01-01' } }),
+            makeRestaurant({ id: 'new', approved_name: '병합', youtube_link: 'new', youtube_meta: { publishedAt: '2026-02-01' } }),
+        ];
+        const sort = spyOn(Array.prototype, 'sort');
+        let result: Array<{ mergedRestaurants: Array<{ id: string }>; mergedYoutubeLinks: string[]; review_count: number }>;
+        let sorts: number;
+        try {
+            result = mergeRestaurants(rows) as typeof result;
+            sorts = sort.mock.calls.length;
+        } finally {
+            sort.mockRestore();
+        }
+
+        expect(sorts).toBe(1);
+        expect(result.map(group => group.mergedRestaurants.map(row => row.id))).toEqual([
+            ['solo'], ['old', 'new'],
+        ]);
+        expect(result[1].mergedYoutubeLinks).toEqual(['new', 'old']);
+        expect(result[1].review_count).toBe(2);
+    });
+
     test('retains every member of a large already-connected address group', async () => {
         const { mergeRestaurants } = await loadUseRestaurants();
         const rows = Array.from({ length: 12000 }, (_, index) => makeRestaurant({

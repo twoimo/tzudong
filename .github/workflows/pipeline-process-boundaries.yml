@@ -1,0 +1,75 @@
+name: Pipeline Process Boundaries
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/pipeline-process-boundaries.yml'
+      - 'backend/bin/check_pipeline_process_boundaries.py'
+      - 'backend/pipeline/**'
+      - 'backend/pipeline-control/docker-compose.pipeline.yml'
+      - 'backend/utils/privacy_log.py'
+  push:
+    branches: [develop, data, main]
+    paths:
+      - '.github/workflows/pipeline-process-boundaries.yml'
+      - 'backend/bin/check_pipeline_process_boundaries.py'
+      - 'backend/pipeline/**'
+      - 'backend/pipeline-control/docker-compose.pipeline.yml'
+      - 'backend/utils/privacy_log.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boundaries:
+    name: Process boundaries (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python: '3.12.13'
+          # 3.12.13 has no Windows binary in the official action manifest.
+          # This supplements the exact 3.12.13 Linux/macOS boundary checks.
+          - os: windows-latest
+            python: '3.13.16'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Verify owned process cleanup and stage isolation
+        env:
+          PYTHON_DOTENV_DISABLED: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python backend/bin/check_pipeline_process_boundaries.py
+      - name: Verify PID 1 orphan reaping with the worker init boundary
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f backend/pipeline-control/docker-compose.pipeline.yml config --format json | python -c 'import json,sys;assert json.load(sys.stdin)["services"]["pipeline-worker"]["init"] is True'
+          image_ref="$(python -c 'from pathlib import Path;print(next(line.split()[1] for line in Path("backend/pipeline-control/Dockerfile").read_text().splitlines() if line.startswith("FROM python:")))')"
+          docker pull "$image_ref" > /dev/null
+          image_id="$(docker image inspect --format '{{.Id}}' "$image_ref")"
+          printf 'Owned container runtime: %s\n' "$image_id"
+          set +e
+          docker run --rm --network none --pull never --volume "$GITHUB_WORKSPACE:/workspace:ro" --workdir /workspace --env PYTHONDONTWRITEBYTECODE=1 --env PYTHON_DOTENV_DISABLED=1 "$image_id" python backend/bin/check_pipeline_process_boundaries.py > "$RUNNER_TEMP/process-boundary-without-init.json"
+          before_exit=$?
+          set -e
+          docker run --rm --init --network none --pull never --volume "$GITHUB_WORKSPACE:/workspace:ro" --workdir /workspace --env PYTHONDONTWRITEBYTECODE=1 --env PYTHON_DOTENV_DISABLED=1 "$image_id" python backend/bin/check_pipeline_process_boundaries.py > "$RUNNER_TEMP/process-boundary-with-init.json"
+          python - "$RUNNER_TEMP/process-boundary-without-init.json" "$RUNNER_TEMP/process-boundary-with-init.json" "$before_exit" <<'PY'
+          import json,sys
+          from pathlib import Path
+          before=json.loads(Path(sys.argv[1]).read_text())
+          after=json.loads(Path(sys.argv[2]).read_text())
+          assert int(sys.argv[3]) != 0 and not before['successful']
+          assert after['successful'] and after['passed'] == 17 and after['skips'] == 2
+          print(json.dumps({'schemaVersion':1,'containerBoundary':'without-init_to_worker-init','network':'none','before':before,'after':after}))
+          PY

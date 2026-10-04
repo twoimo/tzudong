@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { DashboardRestaurantRow } from '../lib/dashboard/supabase';
-import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows } from '../lib/dashboard/summary';
+import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows, selectDashboardRowsForVideoId } from '../lib/dashboard/summary';
 import { buildDashboardFunnelFromRows, buildDashboardFailuresFromRows } from '../lib/dashboard/evaluation';
 import { buildDashboardQualityFromRows } from '../lib/dashboard/quality';
 
@@ -30,6 +30,42 @@ function makeRow(overrides: Partial<DashboardRestaurantRow>): DashboardRestauran
 }
 
 describe('dashboard aggregations', () => {
+    test('never advertises an overlong video token or a truncated detail link', () => {
+        const allowed = 'a'.repeat(128);
+        const rows = [
+            makeRow({ id: 'allowed', youtube_link: `https://youtu.be/${allowed}` }),
+            makeRow({ id: 'overlong', youtube_link: `https://youtu.be/${allowed}a` }),
+        ];
+        const summary = buildDashboardSummaryFromRows(rows);
+        expect(summary.totals.videos).toBe(1);
+        expect(summary.videos.map((video) => video.videoId)).toEqual([allowed]);
+        expect(summary.videos[0].restaurantCount).toBe(1);
+        const page = buildDashboardRestaurantsFromRows(rows, { onlyWithCoordinates: false });
+        expect(page.items.map((item) => item.videoId)).toEqual([allowed, null]);
+        expect(selectDashboardRowsForVideoId(rows, allowed).map((row) => row.id)).toEqual(['allowed']);
+        expect(selectDashboardRowsForVideoId(rows, `${allowed}a`)).toEqual([]);
+    });
+
+    test('selects current rows after array and link edits and returns an independently owned array', () => {
+        const first = makeRow({ id: 'first', youtube_link: 'https://youtu.be/vidAAA111' });
+        const second = makeRow({ id: 'second', youtube_link: 'https://youtu.be/vidBBB222' });
+        const rows = [first, second];
+        selectDashboardRowsForVideoId(rows, 'vidAAA111').length = 0;
+        expect(selectDashboardRowsForVideoId(rows, 'vidAAA111')).toEqual([first]);
+        first.youtube_link = 'https://youtu.be/vidBBB222';
+        expect(selectDashboardRowsForVideoId(rows, 'vidAAA111')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([first, second]);
+        rows.reverse();
+        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([second, first]);
+        const replacement = makeRow({ id: 'replacement', youtube_link: second.youtube_link });
+        rows[0] = replacement;
+        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')[0]).toBe(replacement);
+        rows.pop();
+        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([replacement]);
+        rows.push(second);
+        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([replacement, second]);
+    });
+
     test('buildDashboardSummaryFromRows aggregates totals/categories/videos', () => {
         const rows: DashboardRestaurantRow[] = [
             makeRow({
@@ -101,6 +137,20 @@ describe('dashboard aggregations', () => {
         });
         expect(result.freshness?.generatedAt).toBe('2026-02-10T00:00:00.000Z');
         expect(result.freshness?.checksum).toMatch(/^[a-f0-9]{24}$/);
+    });
+
+    test('keeps equal updated times in input order when paging restaurants', () => {
+        const rows = [
+            makeRow({ id: 'tie-a', name: '앞', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
+            makeRow({ id: 'newer', name: '최신', lat: 37, lng: 127, updated_at: '2026-03-01T00:00:00.000Z' }),
+            makeRow({ id: 'tie-b', name: '뒤', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
+            makeRow({ id: 'blank', name: '', lat: 37, lng: 127, youtube_link: null, updated_at: '2026-01-01T00:00:00.000Z' }),
+        ];
+
+        const page = buildDashboardRestaurantsFromRows(rows, { onlyWithCoordinates: true, limit: 10 }, new Date('2026-04-01T00:00:00.000Z'));
+        expect(page.items.map((item) => item.id)).toEqual(['newer', 'tie-a', 'tie-b', 'blank']);
+        expect(page.items[3]?.name).toBe('미승인 맛집');
+        expect(buildDashboardRestaurantsFromRows([], { onlyWithCoordinates: true }, new Date('2026-04-01T00:00:00.000Z')).items).toEqual([]);
     });
 
     test('buildDashboardRestaurantsFromRows filters raw rows before paging and normalization', () => {
@@ -346,5 +396,46 @@ describe('dashboard aggregations', () => {
         expect(result.reviewFaithfulness.median).toBe(0.8);
         expect(result.reviewFaithfulness.min).toBe(0.8);
         expect(result.reviewFaithfulness.max).toBe(0.8);
+    });
+
+    test('selectDashboardRowsForVideoId keeps encounter order and rejects unsafe ids', () => {
+        const rows = [
+            makeRow({ id: 'first', youtube_link: 'https://youtu.be/vidAAA111' }),
+            makeRow({ id: 'other', youtube_link: 'https://www.youtube.com/watch?v=vidBBB222' }),
+            makeRow({ id: 'second', youtube_link: 'https://www.youtube.com/shorts/vidAAA111' }),
+            makeRow({ id: 'blank-name', name: '   ', youtube_link: 'https://youtu.be/vidAAA111' }),
+        ];
+
+        const selected = selectDashboardRowsForVideoId(rows, ' vidAAA111 ');
+        expect(selected.map((row) => row.id)).toEqual(['first', 'second', 'blank-name']);
+        expect(selectDashboardRowsForVideoId(rows, ' vidAAA111 ').map((row) => row.id)).toEqual([
+            'first',
+            'second',
+            'blank-name',
+        ]);
+        expect(selectDashboardRowsForVideoId(rows, 'missing999')).toEqual([]);
+        expect(selectDashboardRowsForVideoId([], 'vidAAA111')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '   ')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, "' OR 1=1 --")).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '<script>alert(1)</script>')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '../etc/passwd')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, 'a'.repeat(129))).toEqual([]);
+
+        const named = buildDashboardRestaurantsFromRows(
+            [makeRow({ id: 'unnamed', name: '', youtube_link: 'https://youtu.be/vidAAA111' })],
+            { onlyWithCoordinates: false },
+            new Date('2026-02-10T00:00:00.000Z'),
+        );
+        expect(named.items[0]?.name).toBe('vidAAA111');
+        expect(named.items[0]?.videoId).toBe('vidAAA111');
+
+        const emptyName = buildDashboardRestaurantsFromRows(
+            [makeRow({ id: 'empty', name: '   ', youtube_link: null })],
+            { onlyWithCoordinates: false },
+            new Date('2026-02-10T00:00:00.000Z'),
+        );
+        expect(emptyName.items[0]?.name).toBe('미승인 맛집');
+        expect(emptyName.total).toBe(1);
     });
 });

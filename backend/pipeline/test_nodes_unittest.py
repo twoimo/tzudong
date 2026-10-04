@@ -6,6 +6,7 @@ import ctypes
 import json
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import time
@@ -259,6 +260,179 @@ class RunCommandBoundaryTests(unittest.TestCase):
             initial_size = heartbeat_file.stat().st_size
             time.sleep(0.2)
             self.assertEqual(initial_size, heartbeat_file.stat().st_size)
+
+
+@unittest.skipIf(os.name == "nt", "POSIX process-group reaping")
+class PosixProcessGroupReapingTests(unittest.TestCase):
+    def test_exited_leader_is_reaped_while_waiting_for_group_empty(self) -> None:
+        process = subprocess.Popen(
+            [nodes._python_cmd(), "-c", "pass"],
+            start_new_session=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=nodes._helper_environment(nodes._python_cmd()),
+        )
+        try:
+            self.assertTrue(nodes._wait_for_posix_process_group(
+                process.pid, time.monotonic() + 3, process=process,
+            ))
+            self.assertEqual(0, process.returncode)
+            self.assertTrue(nodes._posix_process_group_is_empty(process.pid))
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=5)
+
+    def test_reaped_leader_still_requires_stubborn_descendant_to_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ready = Path(directory) / "ready"
+            heartbeat = Path(directory) / "heartbeat"
+            child = "\n".join((
+                "import json, os, signal, time",
+                "from pathlib import Path",
+                "signal.signal(signal.SIGTERM, signal.SIG_IGN)",
+                f"Path({str(ready)!r}).write_text(json.dumps({{'pid': os.getpid(), 'pgid': os.getpgrp()}}))",
+                "while True:",
+                f"    with Path({str(heartbeat)!r}).open('a') as output:",
+                "        output.write('x')",
+                "    time.sleep(0.02)",
+            ))
+            parent = "\n".join((
+                "import subprocess, sys",
+                f"subprocess.Popen([sys.executable, '-c', {child!r}])",
+            ))
+            process = subprocess.Popen(
+                [nodes._python_cmd(), "-c", parent],
+                start_new_session=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=nodes._helper_environment(nodes._python_cmd()),
+            )
+            try:
+                deadline = time.monotonic() + 3
+                while not heartbeat.exists() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(heartbeat.exists())
+                identity = json.loads(ready.read_text())
+                self.assertEqual(process.pid, identity["pgid"])
+                self.assertEqual(process.pid, os.getpgid(identity["pid"]))
+                self.assertEqual(process.pid, os.getsid(identity["pid"]))
+                self.assertEqual(0, process.wait(timeout=3))
+
+                self.assertFalse(nodes._wait_for_posix_process_group(
+                    process.pid, time.monotonic(), process=process,
+                ))
+                self.assertTrue(nodes._terminate_posix_process_group(
+                    process.pid, process=process,
+                ))
+                self.assertTrue(nodes._posix_process_group_is_empty(process.pid))
+                stopped_size = heartbeat.stat().st_size
+                time.sleep(0.1)
+                self.assertEqual(stopped_size, heartbeat.stat().st_size)
+            finally:
+                if not nodes._posix_process_group_is_empty(process.pid):
+                    os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=5)
+                self.assertTrue(nodes._wait_for_posix_process_group(
+                    process.pid, time.monotonic() + 3, process=process,
+                ))
+
+    def test_reaped_leader_does_not_override_unconfirmed_group(self) -> None:
+        process = mock.Mock(spec=["poll"])
+        process.poll.return_value = 0
+        with mock.patch.object(nodes, "_posix_process_group_is_empty", return_value=False):
+            self.assertFalse(nodes._wait_for_posix_process_group(
+                123, time.monotonic(), process=process,
+            ))
+        process.poll.assert_called_once()
+
+    def test_reaping_preserves_nonzero_status_and_unrelated_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ready = Path(directory) / "ready"
+            release = Path(directory) / "release"
+            sibling_code = "\n".join((
+                "from pathlib import Path",
+                "import time",
+                f"Path({str(ready)!r}).touch()",
+                f"while not Path({str(release)!r}).exists():",
+                "    time.sleep(0.01)",
+                "raise SystemExit(23)",
+            ))
+            owned_processes = []
+            try:
+                sibling = subprocess.Popen(
+                    [nodes._python_cmd(), "-c", sibling_code],
+                    start_new_session=True,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    env=nodes._helper_environment(nodes._python_cmd()),
+                )
+                owned_processes.append(sibling)
+                deadline = time.monotonic() + 3
+                while not ready.exists() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(ready.exists())
+
+                process = subprocess.Popen(
+                    [nodes._python_cmd(), "-c", "raise SystemExit(17)"],
+                    start_new_session=True,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    env=nodes._helper_environment(nodes._python_cmd()),
+                )
+                owned_processes.append(process)
+                self.assertTrue(nodes._wait_for_posix_process_group(
+                    process.pid, time.monotonic() + 3, process=process,
+                ))
+                self.assertEqual(17, process.returncode)
+                self.assertIsNone(sibling.poll())
+                self.assertEqual(sibling.pid, os.getpgid(sibling.pid))
+                self.assertEqual(sibling.pid, os.getsid(sibling.pid))
+                release.touch()
+                self.assertEqual(23, sibling.wait(timeout=3))
+            finally:
+                for process in owned_processes:
+                    if process.poll() is None:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=5)
+
+    def test_signal_failures_never_fall_back_to_parent_only_cleanup(self) -> None:
+        process = mock.Mock(spec=["poll", "wait", "kill"])
+        supervisor = nodes._ProcessTreeSupervisor(process=process, process_group_id=123)
+        with mock.patch.object(nodes, "_signal_posix_process_group", return_value=False):
+            self.assertFalse(supervisor.terminate())
+        process.kill.assert_not_called()
+        process.wait.assert_not_called()
+
+    def test_failed_supervision_reaps_child_without_claiming_success(self) -> None:
+        owned_processes = []
+
+        def reject_supervisor(process):
+            owned_processes.append(process)
+            self.assertEqual(process.pid, os.getpgid(process.pid))
+            self.assertEqual(process.pid, os.getsid(process.pid))
+            return None
+
+        try:
+            with mock.patch.object(nodes, "_start_process_tree_supervisor", side_effect=reject_supervisor):
+                result = nodes.run_command(
+                    StepName.GEMINI.value,
+                    [nodes._python_cmd(), "-c", "import time; time.sleep(60)"],
+                    timeout=1,
+                )
+            self.assertEqual(nodes.SUBPROCESS_CLEANUP_FAILED, result.reason_code)
+            self.assertEqual(1, len(owned_processes))
+            self.assertIsNotNone(owned_processes[0].returncode)
+            self.assertTrue(nodes._posix_process_group_is_empty(owned_processes[0].pid))
+        finally:
+            for process in owned_processes:
+                if not nodes._posix_process_group_is_empty(process.pid):
+                    os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=5)
 
 
 class NodeCommandResultPropagationTests(unittest.TestCase):

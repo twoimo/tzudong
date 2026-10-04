@@ -6,7 +6,7 @@
  * - 지역별 동적 maxZoom 설정 지원
  */
 
-import Supercluster from 'supercluster';
+import Supercluster, { type ClusterFeature, type PointFeature } from 'supercluster';
 import { REGION_MAP_CONFIG } from '@/config/maps';
 import type { Restaurant, Region } from '@/types/restaurant';
 import { getPerformanceBasedClusterOptions } from './device-performance';
@@ -186,8 +186,8 @@ export const getClusters = (
     index: Supercluster<ClusterProperties>,
     bbox: BBox,
     zoom: number
-): Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>> => {
-    return index.getClusters(bbox, Math.floor(zoom)) as Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>;
+): Array<ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>> => {
+    return index.getClusters(bbox, Math.floor(zoom)) as Array<ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>>;
 };
 
 /**
@@ -251,8 +251,8 @@ export const getClusterCategories = (
  * @returns 클러스터면 true
  */
 export const isCluster = (
-    feature: Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>
-): feature is Supercluster.ClusterFeature<ClusterProperties> => {
+    feature: ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>
+): feature is ClusterFeature<ClusterProperties> => {
     return feature.properties.cluster === true;
 };
 
