@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { benchmarkInstallerMatches, buildBenchmarkDecision, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
+import { basename, join, resolve } from "node:path";
+import { benchmarkInstallerMatches, buildBenchmarkDecision, isRetryableWarmupFailure, publishFailureEvidence, runWarmup, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
 import { validateBenchmarkReportDocument, verifyPublishedBenchmarkDirectory } from "../scripts/verify-typecheck-benchmark-report.mjs";
 
 const root = resolve(import.meta.dir, "..");
@@ -184,6 +184,208 @@ function samplerEvidence(rawOutput: string) {
     },
   };
 }
+
+function cadenceFailure(rawOutput: string) {
+  const evidence = samplerEvidence(basename(rawOutput));
+  const rows = evidence.contents.trimEnd().split("\n").map((line) => JSON.parse(line));
+  rows[2].monotonicMs = 106.9706;
+  rows[2].observedGapMs = rows[2].monotonicMs - rows[1].monotonicMs;
+  rows[2].errors = ["sampling-gap-exceeded"];
+  return {
+    contents: `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`,
+    error: Object.assign(new Error("fixture cadence failure"), {
+      code: "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+      samplerEvidence: {
+        code: 1, signal: null, errorCode: null, compilerClean: true, rawOutput,
+        summary: { ...evidence.summary, valid: false, invalidReasons: ["sampling-gap-exceeded"], maximumGapMs: rows[2].observedGapMs },
+      },
+    }),
+  };
+}
+
+async function warmupSample(rawOutput: string, reject: boolean) {
+  if (reject) {
+    const failure = cadenceFailure(rawOutput);
+    await writeFile(rawOutput, failure.contents, { flag: "wx" });
+    throw failure.error;
+  }
+  const evidence = samplerEvidence(basename(rawOutput));
+  await writeFile(rawOutput, evidence.contents, { flag: "wx" });
+  return { code: 0, signal: null, stdout: "", stderr: "", samplerCode: 0, samplerSignal: null, durationMs: 1000, samplerSummary: evidence.summary };
+}
+
+test("warm-up cadence recovery checkpoints both attempts without changing rejected bytes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-recovery-"));
+  try {
+    const outcomes: Array<Record<string, unknown>> = [];
+    const invalidRuns = { native: 0, compat: 0 };
+    const result = await runWarmup("native", {}, directory, invalidRuns, async (outcome: Record<string, unknown>) => {
+      expect(await readFile(join(directory, String(outcome.rawOutput)), "utf8")).not.toBeEmpty();
+      outcomes.push(outcome);
+    }, async (_kind: string, _profile: unknown, output: string, retry: number) => {
+      expect(outcomes).toHaveLength(retry - 1);
+      return warmupSample(output, retry === 1);
+    });
+    expect(result.retry).toBe(2);
+    expect(result.rawOutput).toBe("warmup-native-attempt-2.ndjson");
+    expect(invalidRuns).toEqual({ native: 1, compat: 0 });
+    expect(outcomes.map((outcome) => outcome.accepted)).toEqual([false, true]);
+    const original = cadenceFailure(join(directory, "warmup-native.ndjson")).contents;
+    expect(await readFile(join(directory, "warmup-native.ndjson"), "utf8")).toBe(original);
+    expect(outcomes[0].rawSha256).toBe(digest(original));
+    expect(result.rawSha256).toBe(outcomes[1].rawSha256);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("warm-up retry eligibility excludes setup, protocol, pressure, identity and compiler failures", () => {
+  const valid = cadenceFailure("warmup-native.ndjson").error;
+  expect(isRetryableWarmupFailure(valid)).toBe(true);
+  const invalid = [
+    { ...valid, code: "TYPECHECK_SAMPLER_EVIDENCE_TIMEOUT" },
+    { ...valid, code: "TYPECHECK_SAMPLER_START_FAILED" },
+    { ...valid, code: "TYPECHECK_SAMPLER_JSON_INVALID" },
+    { ...valid, samplerEvidence: { ...valid.samplerEvidence, compilerClean: false } },
+    { ...valid, samplerEvidence: { ...valid.samplerEvidence, signal: "SIGTERM" } },
+    ...[
+      { invalidReasons: ["host-memory-pressure"] },
+      { invalidReasons: ["root-identity-reused"] },
+      { invalidReasons: ["sampling-gap-exceeded", "missing-root-identity"] },
+      { maximumGapMs: Number.NaN }, { samples: 2 }, { terminalObserved: false }, { schemaVersion: 1 },
+    ].map((summary) => ({ ...valid, samplerEvidence: { ...valid.samplerEvidence, summary: { ...valid.samplerEvidence.summary, ...summary } } })),
+  ];
+  for (const failure of invalid) expect(isRetryableWarmupFailure(failure)).toBe(false);
+});
+
+test("warm-up exhaustion retains all failed raw files and stops at the existing retry and invalid-run caps", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-exhaustion-"));
+  try {
+    for (const priorFailures of [0, 2]) {
+      const stage = join(directory, `stage-${priorFailures}`);
+      const raw = join(stage, "raw");
+      await mkdir(raw, { recursive: true });
+      await mkdir(join(stage, "cache"));
+      await writeFile(join(stage, "cache", "private-cache"), "must never publish");
+      const outcomes: Array<Record<string, unknown>> = [];
+      const invalidRuns = { native: priorFailures, compat: 0 };
+      let failure: unknown;
+      try {
+        await runWarmup("native", {}, raw, invalidRuns, async (outcome: Record<string, unknown>) => { outcomes.push(outcome); },
+          async (_kind: string, _profile: unknown, output: string) => warmupSample(output, true));
+      } catch (error) { failure = error; }
+      expect(failure).toBeDefined();
+      expect(invalidRuns.native).toBe(3);
+      expect(outcomes).toHaveLength(3 - priorFailures);
+      const destination = join(directory, `failed-${priorFailures}`);
+      await publishFailureEvidence(stage, destination, failure, "WARMUP_NATIVE_RUN", outcomes);
+      const receipt = JSON.parse(await readFile(join(destination, "failure-receipt.json"), "utf8"));
+      expect(receipt.failureCode).toBe("TYPECHECK_SAMPLER_SUMMARY_INVALID");
+      expect(receipt.failureStage).toBe("WARMUP_NATIVE_RUN");
+      expect(receipt.lastFailure.retry).toBe(3 - priorFailures);
+      expect(receipt.lastFailure.sampler.invalidReasons).toEqual(["sampling-gap-exceeded"]);
+      expect((await readdir(destination)).sort()).toEqual(["attempt-outcomes.json", "failure-receipt.json", "raw"]);
+      for (const outcome of outcomes) {
+        const retained = await readFile(join(destination, "raw", String(outcome.rawOutput)));
+        expect(digest(retained)).toBe(outcome.rawSha256);
+      }
+      await expect(verifyPublishedBenchmarkDirectory({ report: join(destination, "report.json") })).rejects.toThrow();
+    }
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("schema 5 readback binds recovered warm-ups, rejected raw bytes, ordering and shared invalid counts", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-report-"));
+  try {
+    await mkdir(join(directory, "raw"));
+    const report = benchmarkReport(Array(7).fill(1000), Array(7).fill(1000));
+    report.schemaVersion = 5;
+    const outcomes: Array<Record<string, unknown>> = [];
+    for (const [index, kind] of (["native", "compat"] as const).entries()) {
+      const warmup = await runWarmup(kind, {}, join(directory, "raw"), report.invalidRuns, async (outcome: Record<string, unknown>) => { outcomes.push(outcome); },
+        async (_kind: string, _profile: unknown, output: string, retry: number) => warmupSample(output, kind === "native" && retry === 1));
+      Object.assign(report.warmups[index], warmup);
+    }
+    for (const run of report.runs) {
+      const evidence = samplerEvidence(run.rawOutput);
+      await writeFile(join(directory, "raw", run.rawOutput), evidence.contents);
+      run.rawSha256 = digest(evidence.contents);
+      outcomes.push({ phase: "measured", position: run.position, retry: run.retry, kind: run.kind, accepted: true, durationMs: run.durationMs, rawOutput: run.rawOutput, rawSha256: run.rawSha256, summary: evidence.summary, failure: null });
+    }
+    const preflight = `${JSON.stringify(report.receipts, null, 2)}\n`;
+    await writeFile(join(directory, "preflight-receipts.json"), preflight);
+    const refresh = async () => {
+      const serialized = `${JSON.stringify(outcomes, null, 2)}\n`;
+      await writeFile(join(directory, "attempt-outcomes.json"), serialized);
+      report.rawEvidence = { preflight: "preflight-receipts.json", preflightSha256: digest(preflight), outcomes: "attempt-outcomes.json", outcomesSha256: digest(serialized), attempts: outcomes.map(({ rawOutput, rawSha256 }) => ({ rawOutput, rawSha256 })) };
+      await writeFile(join(directory, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
+    };
+    const options = { report: join(directory, "report.json"), tree: report.releaseId, profile: "ubuntu-npm", platform: "linux-x64", installer: "npm" };
+    await refresh();
+    expect(await verifyPublishedBenchmarkDirectory(options)).toEqual({ status: "conclusive", admittedSlices: 2 });
+    expect(report.invalidRuns).toEqual({ native: 1, compat: 0 });
+    report.invalidRuns.native = 0;
+    await refresh();
+    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("outcome bounds");
+    report.invalidRuns.native = 1;
+    Object.assign(report.warmups[0], { retry: 3 });
+    await refresh();
+    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("warm-up evidence");
+    Object.assign(report.warmups[0], { retry: 2 });
+    outcomes[0].retry = 2;
+    await refresh();
+    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("attempt manifest");
+    outcomes[0].retry = 1;
+    outcomes[0].failure = "TYPECHECK_SAMPLER_START_FAILED";
+    await refresh();
+    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("attempt manifest");
+    outcomes[0].failure = "TYPECHECK_SAMPLER_SUMMARY_INVALID";
+
+    const rejectedFile = join(directory, "raw", "warmup-native.ndjson");
+    const rejected = await readFile(rejectedFile, "utf8");
+    await writeFile(rejectedFile, samplerEvidence("warmup-native.ndjson").contents);
+    outcomes[0].rawSha256 = digest(await readFile(rejectedFile));
+    await refresh();
+    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("cadence failure was not observed");
+    const rows = rejected.trimEnd().split("\n").map((line) => JSON.parse(line));
+    rows[1].errors = ["host-memory-pressure"];
+    const pressure = `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
+    await writeFile(rejectedFile, pressure);
+    outcomes[0].rawSha256 = digest(pressure);
+    await refresh();
+    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("cadence-only failure");
+    await writeFile(rejectedFile, rejected);
+    outcomes[0].rawSha256 = digest(rejected);
+    await refresh();
+    expect(await verifyPublishedBenchmarkDirectory(options)).toEqual({ status: "conclusive", admittedSlices: 2 });
+    report.schemaVersion = 4;
+    await refresh();
+    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("warm-up evidence");
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("warm-up setup failure is not retried and untrusted failure bytes stay outside publication", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-setup-"));
+  try {
+    const stage = join(directory, "stage");
+    await mkdir(join(stage, "raw"), { recursive: true });
+    const outcomes: Array<Record<string, unknown>> = [];
+    let calls = 0;
+    await expect(runWarmup("native", {}, join(stage, "raw"), { native: 0, compat: 0 }, async (outcome: Record<string, unknown>) => { outcomes.push(outcome); }, async () => {
+      calls += 1;
+      throw Object.assign(new Error("fixture setup failure"), { code: "TYPECHECK_SAMPLER_START_FAILED" });
+    })).rejects.toThrow("Benchmark samples failed");
+    expect(calls).toBe(1);
+    expect(outcomes[0].rawSha256).toBeNull();
+    await writeFile(join(stage, "raw", "warmup-native.ndjson"), "unknown bytes\n");
+    const destination = join(directory, "failed");
+    await publishFailureEvidence(stage, destination, cadenceFailure("warmup-native.ndjson").error, "WARMUP_NATIVE_RUN", outcomes);
+    expect(await readdir(destination)).toEqual(["failure-receipt.json"]);
+    expect(await readFile(join(stage, "raw", "warmup-native.ndjson"), "utf8")).toBe("unknown bytes\n");
+    const receipt = JSON.parse(await readFile(join(destination, "failure-receipt.json"), "utf8"));
+    expect(receipt.rawRetention).toBe("unpublished-stage");
+    await expect(publishFailureEvidence(stage, destination, {}, "PREFLIGHT", [])).rejects.toThrow();
+    expect(JSON.parse(await readFile(join(destination, "failure-receipt.json"), "utf8"))).toEqual(receipt);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
   test("pins independent TS7 CLI and exact stable TS6 bridge", () => {
