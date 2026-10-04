@@ -10,6 +10,7 @@ import platform
 from pathlib import Path
 import sys
 import time
+import traceback
 import unittest
 
 
@@ -35,6 +36,21 @@ class BoundedResult(unittest.TestResult):
     def addError(self, test, err) -> None:
         super().addError(test, err)
         self.outcomes.append({"test": test.id(), "outcome": "ERROR", "type": err[0].__name__})
+
+    def addSubTest(self, test, subtest, err) -> None:
+        super().addSubTest(test, subtest, err)
+        if err is not None:
+            # Subtest parameter values and exception messages may contain
+            # synthetic credentials. Retain only the parent ID and code site.
+            frames = [
+                {"file": Path(frame.filename).name, "line": frame.lineno}
+                for frame in traceback.extract_tb(err[2])
+                if Path(frame.filename).name in {"nodes.py", "test_nodes_unittest.py", "privacy_log.py"}
+            ][-4:]
+            self.outcomes.append({
+                "test": test.id(), "outcome": "SUBTEST_FAILURE",
+                "type": err[0].__name__, "frames": frames,
+            })
 
     def addSkip(self, test, reason) -> None:
         super().addSkip(test, "platform-specific test")
