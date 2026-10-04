@@ -141,6 +141,12 @@ jobs:
         working-directory: apps/web
         run: bun install --frozen-lockfile
 
+      - name: Verify Linux anonymous unit reporter custody
+        if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'unit' }}
+        working-directory: apps/web
+        run: |
+          printf '%s' '{"files":["tests-unit/nightly-unit-failure-sites.test.ts"]}' | python3 ../../.github/scripts/nightly-unit-failure-sites.py --run-linux
+
       - name: Install Chromium for the browser lane
         if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'e2e' }}
         working-directory: apps/web
@@ -919,6 +925,10 @@ jobs:
             --provenance-file "../../${LOCAL_STATE#"$GITHUB_WORKSPACE/"}/stack.env.provenance.json" \
             > nightly-unit-run.log 2>&1
           exit_code=$?
+          # Only validated public source coordinates reach workflow logs.
+          if ! python3 ../../.github/scripts/nightly-unit-failure-sites.py --log nightly-unit-run.log --exit-code "$exit_code" 2>/dev/null; then
+            echo '[nightly] bounded unit source diagnostic unavailable'
+          fi
           [[ "$exit_code" =~ ^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$ ]] || exit 2
           printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT" || exit 2
           exit "$exit_code"

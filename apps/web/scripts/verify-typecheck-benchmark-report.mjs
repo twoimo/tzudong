@@ -125,14 +125,14 @@ function expectedDecision(runs, initialNoise) {
 }
 
 export function validateBenchmarkReportDocument(report, expected) {
-  if (!exactKeys(report, ['schemaVersion', 'releaseId', 'candidate', 'receipts', 'contracts', 'warmups', 'sequence', 'initialNoise', 'invalidRuns', 'runs', 'rawEvidence', 'profiles', 'evidenceDecision', 'comparison', 'acceptance']) || report.schemaVersion !== 4 || report.releaseId !== expected.tree || !sha(report.releaseId, 40)) throw new Error('Benchmark report release binding is invalid');
+  if (!exactKeys(report, ['schemaVersion', 'releaseId', 'candidate', 'receipts', 'contracts', 'warmups', 'sequence', 'initialNoise', 'invalidRuns', 'runs', 'rawEvidence', 'profiles', 'evidenceDecision', 'comparison', 'acceptance']) || ![4, 5].includes(report.schemaVersion) || report.releaseId !== expected.tree || !sha(report.releaseId, 40)) throw new Error('Benchmark report release binding is invalid');
   const expectedPlatform = expected.profile?.startsWith('windows-') ? 'win32-x64' : 'linux-x64';
   if (expected.platform !== expectedPlatform || !expected.profile?.endsWith(`-${expected.installer}`)) throw new Error('Benchmark verifier lane binding is invalid');
   const candidate = report.candidate;
   if (!exactKeys(candidate, ['tree', 'repositoryTopLevelSha256', 'headCommit', 'headTree', 'provenanceSha256', 'platform', 'installer', 'profile', 'node', 'arch', 'installerUserAgentSha256']) || candidate.tree !== expected.tree || candidate.headTree !== expected.tree || candidate.profile !== expected.profile || candidate.platform !== expected.platform || candidate.installer !== expected.installer || candidate.arch !== 'x64' || !/^v24\.[0-9]+\.[0-9]+$/.test(candidate.node ?? '') || !sha(candidate.installerUserAgentSha256, 64) || !sha(candidate.headCommit, 40) || !sha(candidate.repositoryTopLevelSha256, 64) || !sha(candidate.provenanceSha256, 64)) throw new Error('Benchmark report candidate binding is invalid');
   if (!exactKeys(report.contracts, ['requestedSamplerCadenceMs', 'maximumObservedGapMs', 'hostPressureMaximumPercent', 'retryCapPerPosition', 'invalidRunCapPerCompiler', 'publication', 'publicationMaximumBytes', 'metadataMaximumBytes', 'rawFileMaximumBytes', 'rawRowMaximum', 'budgets']) || !exactJson(report.contracts.budgets, BUDGETS) || report.contracts.requestedSamplerCadenceMs !== 10 || report.contracts.maximumObservedGapMs !== 60 || report.contracts.hostPressureMaximumPercent !== 80 || report.contracts.publication !== 'atomic-directory-rename' || report.contracts.publicationMaximumBytes !== TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES || report.contracts.metadataMaximumBytes !== TYPECHECK_BENCHMARK_MAX_METADATA_BYTES || report.contracts.rawFileMaximumBytes !== TYPECHECK_BENCHMARK_MAX_RAW_FILE_BYTES || report.contracts.rawRowMaximum !== TYPECHECK_BENCHMARK_MAX_RAW_ROWS || report.contracts.retryCapPerPosition !== 2 || report.contracts.invalidRunCapPerCompiler !== 3) throw new Error('Benchmark report budgets or bounded contracts are invalid');
   if (!validatePreflightReceipts(report.receipts, expected.platform)) throw new Error('Benchmark report compiler or parity receipts are invalid');
-  if (!Array.isArray(report.warmups) || report.warmups.length !== 2 || report.warmups[0]?.kind !== 'native' || report.warmups[1]?.kind !== 'compat' || !report.warmups.every((warmup) => exactKeys(warmup, ['kind', 'durationMs', 'rawSha256']) && finite(warmup.durationMs) && warmup.durationMs > 0 && sha(warmup.rawSha256, 64))) throw new Error('Benchmark report warm-up evidence is invalid');
+  if (!Array.isArray(report.warmups) || report.warmups.length !== 2 || report.warmups[0]?.kind !== 'native' || report.warmups[1]?.kind !== 'compat' || !report.warmups.every((warmup) => exactKeys(warmup, ['kind', 'durationMs', 'rawSha256', ...(report.schemaVersion === 5 ? ['retry', 'rawOutput'] : [])]) && (report.schemaVersion === 4 || [1, 2, 3].includes(warmup.retry) && warmup.rawOutput === warmupName(warmup.kind, warmup.retry)) && finite(warmup.durationMs) && warmup.durationMs > 0 && sha(warmup.rawSha256, 64))) throw new Error('Benchmark report warm-up evidence is invalid');
   if (!exactKeys(report.invalidRuns, ['native', 'compat']) || !['native', 'compat'].every((kind) => Number.isInteger(report.invalidRuns[kind]) && report.invalidRuns[kind] >= 0 && report.invalidRuns[kind] <= 3)) throw new Error('Benchmark report invalid-run bounds are invalid');
   if (!Array.isArray(report.runs) || ![14, 18].includes(report.runs.length) || !report.runs.every((run, index) => exactKeys(run, ['position', 'retry', 'kind', 'durationMs', 'peakRssBytes', 'samples', 'maximumGapMs', 'rawOutput', 'rawSha256']) && run.position === index + 1 && [1, 2, 3].includes(run.retry) && ['native', 'compat'].includes(run.kind) && finite(run.durationMs) && run.durationMs > 0 && Number.isSafeInteger(run.peakRssBytes) && run.peakRssBytes > 0 && Number.isInteger(run.samples) && run.samples >= 3 && finite(run.maximumGapMs) && run.maximumGapMs >= 0 && run.maximumGapMs <= 60 && run.rawOutput === `${String(run.position).padStart(2, '0')}-${run.kind}-attempt-${run.retry}.ndjson` && sha(run.rawSha256, 64))) throw new Error('Benchmark report measured runs are invalid');
   if (!Array.isArray(report.sequence) || !exactJson(report.sequence, seededOrder(report.releaseId, report.runs.length / 2)) || !report.sequence.every((kind, index) => kind === report.runs[index].kind)) throw new Error('Benchmark report sequence is invalid');
@@ -166,20 +166,37 @@ async function publicationEntries(directory, prefix = '') {
 function validSamplerSummary(summary, rawOutput) {
   return exactKeys(summary, ['schemaVersion', 'rootPid', 'rootStartIdentity', 'requestedIntervalMs', 'maximumAllowedGapMs', 'samples', 'peakRssBytes', 'maximumGapMs', 'terminalObserved', 'valid', 'invalidReasons', 'output']) && summary.schemaVersion === 2 && Number.isInteger(summary.rootPid) && summary.rootPid > 0 && typeof summary.rootStartIdentity === 'string' && /^\d+$/.test(summary.rootStartIdentity) && summary.requestedIntervalMs === 10 && summary.maximumAllowedGapMs === 60 && Number.isInteger(summary.samples) && summary.samples >= 3 && summary.samples <= TYPECHECK_BENCHMARK_MAX_RAW_ROWS && Number.isSafeInteger(summary.peakRssBytes) && summary.peakRssBytes > 0 && finite(summary.maximumGapMs) && summary.maximumGapMs >= 0 && summary.maximumGapMs <= 60 && summary.terminalObserved === true && summary.valid === true && Array.isArray(summary.invalidReasons) && summary.invalidReasons.length === 0 && summary.output === rawOutput;
 }
-function validOutcomeShape(outcome) {
+function warmupName(kind, retry) { return retry === 1 ? `warmup-${kind}.ndjson` : `warmup-${kind}-attempt-${retry}.ndjson`; }
+function validRejectedSamplerSummary(summary, rawOutput) {
+  return record(summary) && summary.valid === false
+    && exactJson(summary.invalidReasons, ['sampling-gap-exceeded'])
+    && finite(summary.maximumGapMs) && summary.maximumGapMs > 60
+    && validSamplerSummary({ ...summary, valid: true, invalidReasons: [], maximumGapMs: 60 }, rawOutput);
+}
+function validOutcomeShape(outcome, schemaVersion) {
   if (!record(outcome) || !['warmup', 'measured'].includes(outcome.phase) || !['native', 'compat'].includes(outcome.kind) || typeof outcome.rawOutput !== 'string' || !(outcome.rawSha256 === null || sha(outcome.rawSha256, 64))) return false;
-  if (outcome.phase === 'warmup') return exactKeys(outcome, ['phase', 'kind', 'durationMs', 'rawOutput', 'rawSha256', 'summary']) && finite(outcome.durationMs) && outcome.durationMs > 0 && outcome.rawOutput === `warmup-${outcome.kind}.ndjson` && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput);
+  if (outcome.phase === 'warmup' && schemaVersion === 4) return exactKeys(outcome, ['phase', 'kind', 'durationMs', 'rawOutput', 'rawSha256', 'summary']) && finite(outcome.durationMs) && outcome.durationMs > 0 && outcome.rawOutput === `warmup-${outcome.kind}.ndjson` && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput);
   const hasSummary = Object.hasOwn(outcome, 'summary');
-  const expectedKeys = ['phase', 'position', 'retry', 'kind', 'accepted', 'rawOutput', 'rawSha256', 'failure', ...(hasSummary ? ['durationMs', 'summary'] : [])];
-  if (!exactKeys(outcome, expectedKeys) || !Number.isInteger(outcome.position) || outcome.position < 1 || outcome.position > 18 || ![1, 2, 3].includes(outcome.retry) || ![true, false].includes(outcome.accepted) || outcome.rawOutput !== `${String(outcome.position).padStart(2, '0')}-${outcome.kind}-attempt-${outcome.retry}.ndjson`) return false;
+  const expectedKeys = ['phase', ...(outcome.phase === 'measured' ? ['position'] : []), 'retry', 'kind', 'accepted', 'rawOutput', 'rawSha256', 'failure', ...(hasSummary ? (outcome.phase === 'warmup' && outcome.accepted === false ? ['summary'] : ['durationMs', 'summary']) : [])];
+  if (!exactKeys(outcome, expectedKeys) || (outcome.phase === 'measured' && (!Number.isInteger(outcome.position) || outcome.position < 1 || outcome.position > 18)) || ![1, 2, 3].includes(outcome.retry) || ![true, false].includes(outcome.accepted) || outcome.rawOutput !== (outcome.phase === 'warmup' ? warmupName(outcome.kind, outcome.retry) : `${String(outcome.position).padStart(2, '0')}-${outcome.kind}-attempt-${outcome.retry}.ndjson`)) return false;
   if (outcome.accepted === true) return outcome.failure === null && sha(outcome.rawSha256, 64) && hasSummary && finite(outcome.durationMs) && outcome.durationMs > 0 && validSamplerSummary(outcome.summary, outcome.rawOutput);
+  if (outcome.phase === 'warmup') return outcome.failure === 'TYPECHECK_SAMPLER_SUMMARY_INVALID' && sha(outcome.rawSha256, 64) && hasSummary && validRejectedSamplerSummary(outcome.summary, outcome.rawOutput);
   if (typeof outcome.failure !== 'string' || !OUTCOME_FAILURE_CODES.has(outcome.failure)) return false;
   return hasSummary ? outcome.failure === 'TYPECHECK_COMPILER_EVIDENCE_INVALID' && finite(outcome.durationMs) && outcome.durationMs > 0 && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput) : true;
 }
-function validateOutcomeOrdering(outcomes, runs) {
-  if (!Array.isArray(outcomes) || outcomes.length < 16 || outcomes.length > 56 || !outcomes.every(validOutcomeShape)) return false;
-  if (outcomes[0].phase !== 'warmup' || outcomes[0].kind !== 'native' || outcomes[1].phase !== 'warmup' || outcomes[1].kind !== 'compat' || outcomes.slice(2).some((outcome) => outcome.phase !== 'measured')) return false;
-  const measured = outcomes.slice(2);
+function validateOutcomeOrdering(outcomes, report) {
+  const { runs, schemaVersion } = report;
+  if (!Array.isArray(outcomes) || outcomes.length < 16 || outcomes.length > 56 || !outcomes.every((outcome) => validOutcomeShape(outcome, schemaVersion))) return false;
+  let warmupCursor = 0;
+  for (const warmup of report.warmups) {
+    const attempts = [];
+    while (warmupCursor < outcomes.length && outcomes[warmupCursor].phase === 'warmup' && outcomes[warmupCursor].kind === warmup.kind) attempts.push(outcomes[warmupCursor++]);
+    if (schemaVersion === 4) {
+      if (attempts.length !== 1) return false;
+    } else if (attempts.length !== warmup.retry || attempts.some((attempt, index) => attempt.retry !== index + 1 || attempt.accepted !== (index === attempts.length - 1)) || attempts.at(-1)?.rawOutput !== warmup.rawOutput) return false;
+  }
+  const measured = outcomes.slice(warmupCursor);
+  if (measured.some((outcome) => outcome.phase !== 'measured')) return false;
   let cursor = 0;
   for (const run of runs) {
     const attempts = [];
@@ -199,7 +216,7 @@ function validateRawRow(row) {
   const hostPressurePercent = ((row.totalPhysicalBytes - row.availablePhysicalBytes) * 100) / row.totalPhysicalBytes;
   return exactJson(row.included, includedNames) && includedRssBytes === row.includedRssBytes && hostPressurePercent === row.hostPressurePercent;
 }
-async function validateRawFile(file, summary) {
+export async function validateRawFile(file, summary) {
   const metadata = await stat(file);
   if (!metadata.isFile() || metadata.size < 0 || metadata.size > TYPECHECK_BENCHMARK_MAX_RAW_FILE_BYTES) throw new Error('Benchmark raw evidence size is invalid');
   const source = await readFile(file, 'utf8');
@@ -225,6 +242,30 @@ async function validateRawFile(file, summary) {
   if (rows.length !== summary.samples || peak !== summary.peakRssBytes || maximumGap !== summary.maximumGapMs) throw new Error('Benchmark raw aggregates do not match the sampler summary');
 }
 
+export async function validateRejectedWarmupRaw(file, summary) {
+  if (!validRejectedSamplerSummary(summary, path.basename(file))) throw new Error('Rejected warm-up summary is invalid');
+  await validateRawFile(file, null);
+  const rows = (await readFile(file, 'utf8')).trimEnd().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  let previous = null; let gapSeen = false;
+  if (rows.length < 3) throw new Error('Rejected warm-up cadence evidence is missing');
+  const rootIdentity = summary.rootStartIdentity;
+  let peak = 0; let maximumGap = 0;
+  const identities = new Map();
+  for (const row of rows) {
+    const gap = previous === null ? 0 : row.monotonicMs - previous;
+    if (gap > 60) gapSeen = true;
+    if (!rootIdentity || row.rootIdentity !== rootIdentity || row.observedGapMs !== gap || gap < 0 || row.hostPressurePercent > 80 || !row.processes.some((process) => process.pid === summary.rootPid && process.startIdentity === rootIdentity) || !exactJson(row.errors, gap > 60 ? ['sampling-gap-exceeded'] : [])) throw new Error('Rejected warm-up is not a cadence-only failure');
+    for (const process of row.processes) {
+      if (identities.has(process.pid) && identities.get(process.pid) !== process.startIdentity) throw new Error('Rejected warm-up process identity changed');
+      identities.set(process.pid, process.startIdentity);
+    }
+    previous = row.monotonicMs;
+    peak = Math.max(peak, row.includedRssBytes); maximumGap = Math.max(maximumGap, gap);
+  }
+  if (!gapSeen) throw new Error('Rejected warm-up cadence failure was not observed');
+  if (rows.length !== summary.samples || peak !== summary.peakRssBytes || maximumGap !== summary.maximumGapMs) throw new Error('Rejected warm-up raw aggregates do not match the sampler summary');
+}
+
 export async function verifyPublishedBenchmarkDirectory(options) {
   const reportPath = path.resolve(options.report);
   const directory = path.dirname(reportPath);
@@ -236,7 +277,7 @@ export async function verifyPublishedBenchmarkDirectory(options) {
   const attemptNames = [];
   const rawNames = [];
   for (const attempt of rawEvidence.attempts) {
-    if (!exactKeys(attempt, ['rawOutput', 'rawSha256']) || !/^(?:warmup-(?:native|compat)|\d{2}-(?:native|compat)-attempt-[1-3])\.ndjson$/.test(attempt.rawOutput) || !(attempt.rawSha256 === null || sha(attempt.rawSha256, 64))) throw new Error('Benchmark raw attempt reference is invalid');
+    if (!exactKeys(attempt, ['rawOutput', 'rawSha256']) || !/^(?:warmup-(?:native|compat)(?:-attempt-[23])?|\d{2}-(?:native|compat)-attempt-[1-3])\.ndjson$/.test(attempt.rawOutput) || !(attempt.rawSha256 === null || sha(attempt.rawSha256, 64))) throw new Error('Benchmark raw attempt reference is invalid');
     if (attemptNames.includes(attempt.rawOutput)) throw new Error('Benchmark raw attempt reference is duplicated');
     attemptNames.push(attempt.rawOutput);
     if (attempt.rawSha256 !== null) {
@@ -261,25 +302,26 @@ export async function verifyPublishedBenchmarkDirectory(options) {
   const preflight = (await parseCanonicalJson(preflightPath, TYPECHECK_BENCHMARK_MAX_METADATA_BYTES)).value;
   const outcomes = (await parseCanonicalJson(outcomesPath, TYPECHECK_BENCHMARK_MAX_METADATA_BYTES)).value;
   if (!exactJson(preflight, report.receipts)) throw new Error('Benchmark preflight receipt readback is invalid');
-  if (!validateOutcomeOrdering(outcomes, report.runs) || !exactJson(rawEvidence.attempts, outcomes.map(({ rawOutput, rawSha256 }) => ({ rawOutput, rawSha256 })))) throw new Error('Benchmark attempt manifest readback is invalid');
+  if (!validateOutcomeOrdering(outcomes, report) || !exactJson(rawEvidence.attempts, outcomes.map(({ rawOutput, rawSha256 }) => ({ rawOutput, rawSha256 })))) throw new Error('Benchmark attempt manifest readback is invalid');
   const measuredOutcomes = outcomes.filter((outcome) => outcome.phase === 'measured');
   const acceptedOutcomes = measuredOutcomes.filter((outcome) => outcome.accepted === true);
   if (acceptedOutcomes.length !== report.runs.length || report.runs.some((run) => !acceptedOutcomes.some((outcome) => outcome.position === run.position && outcome.retry === run.retry && outcome.kind === run.kind && outcome.failure === null && outcome.durationMs === run.durationMs && outcome.rawOutput === run.rawOutput && outcome.rawSha256 === run.rawSha256 && outcome.summary.peakRssBytes === run.peakRssBytes && outcome.summary.samples === run.samples && outcome.summary.maximumGapMs === run.maximumGapMs))) throw new Error('Benchmark accepted compiler outcomes do not match measured runs');
-  const warmupOutcomes = outcomes.slice(0, 2);
+  const warmupOutcomes = outcomes.filter((outcome) => outcome.phase === 'warmup' && (report.schemaVersion === 4 || outcome.accepted === true));
   if (report.warmups.some((warmup, index) => warmupOutcomes[index].kind !== warmup.kind || warmupOutcomes[index].durationMs !== warmup.durationMs || warmupOutcomes[index].rawSha256 !== warmup.rawSha256)) throw new Error('Benchmark warm-up outcomes do not match report evidence');
-  const invalidCounts = Object.fromEntries(['native', 'compat'].map((kind) => [kind, measuredOutcomes.filter((outcome) => outcome.kind === kind && outcome.accepted === false).length]));
+  const invalidCounts = Object.fromEntries(['native', 'compat'].map((kind) => [kind, outcomes.filter((outcome) => outcome.kind === kind && outcome.accepted === false).length]));
   if (!exactJson(invalidCounts, report.invalidRuns) || measuredOutcomes.some((outcome) => ![true, false].includes(outcome.accepted))) throw new Error('Benchmark compiler outcome bounds are invalid');
   for (const attempt of rawEvidence.attempts) {
     if (attempt.rawSha256 !== null) {
       const rawPath = path.join(directory, 'raw', attempt.rawOutput);
       if (await digestFile(rawPath) !== attempt.rawSha256) throw new Error('Benchmark raw attempt hash is invalid');
       const outcome = outcomes.find((candidate) => candidate.rawOutput === attempt.rawOutput);
-      await validateRawFile(rawPath, outcome?.summary ?? null);
+      if (outcome.phase === 'warmup' && outcome.accepted === false) await validateRejectedWarmupRaw(rawPath, outcome.summary);
+      else await validateRawFile(rawPath, outcome?.summary ?? null);
     }
   }
   const attemptByName = new Map(rawEvidence.attempts.map((attempt) => [attempt.rawOutput, attempt.rawSha256]));
   if (report.runs.some((run) => attemptByName.get(run.rawOutput) !== run.rawSha256)) throw new Error('Benchmark measured run hashes do not match the attempt manifest');
-  if (report.warmups.some((warmup) => attemptByName.get(`warmup-${warmup.kind}.ndjson`) !== warmup.rawSha256)) throw new Error('Benchmark warm-up hashes do not match the attempt manifest');
+  if (report.warmups.some((warmup) => attemptByName.get(report.schemaVersion === 5 ? warmup.rawOutput : `warmup-${warmup.kind}.ndjson`) !== warmup.rawSha256)) throw new Error('Benchmark warm-up hashes do not match the attempt manifest');
   return decision;
 }
 

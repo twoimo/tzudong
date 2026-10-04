@@ -868,22 +868,37 @@ test.describe('real local Supabase and admin lifecycle', () => {
         readbackHasFixture: readback.overlays?.some((overlay) => overlay.label === '로컬 나이틀리') === true,
       };
     }, { payload: normalized, payloadHash: expectedPayloadHash, previewHash: expectedPreviewHash });
-    expect(lifecycle).toEqual({
-      previewStatus: 200,
-      previewTextMatches: true,
-      previewHashMatches: true,
-      applyStatus: 200,
-      appliedOk: true,
-      auditIdIsUuid: true,
-      correlationMatches: true,
-      payloadHashMatches: true,
-      readbackMatchedPayloadHash: true,
-      readbackMatchedPreviewHash: true,
-      replayStatus: 200,
-      replayedOk: true,
-      replayAuditMatches: true,
-      readbackStatus: 200,
-      readbackHasFixture: true,
-    });
+    expect(lifecycle.previewStatus).toBe(200);
+    expect(lifecycle.previewTextMatches).toBe(true);
+    expect(lifecycle.previewHashMatches).toBe(true);
+    expect(lifecycle.applyStatus).toBe(200);
+    expect(lifecycle.appliedOk).toBe(true);
+    expect(lifecycle.auditIdIsUuid).toBe(true);
+    expect(lifecycle.correlationMatches).toBe(true);
+    expect(lifecycle.payloadHashMatches).toBe(true);
+    expect(lifecycle.readbackMatchedPayloadHash).toBe(true);
+    expect(lifecycle.readbackMatchedPreviewHash).toBe(true);
+    expect(lifecycle.replayStatus).toBe(200);
+    expect(lifecycle.replayedOk).toBe(true);
+    expect(lifecycle.replayAuditMatches).toBe(true);
+    expect(lifecycle.readbackStatus).toBe(200);
+    expect(lifecycle.readbackHasFixture).toBe(true);
+    expect(Object.keys(lifecycle).sort()).toEqual([
+      "previewStatus",
+      "previewTextMatches",
+      "previewHashMatches",
+      "applyStatus",
+      "appliedOk",
+      "auditIdIsUuid",
+      "correlationMatches",
+      "payloadHashMatches",
+      "readbackMatchedPayloadHash",
+      "readbackMatchedPreviewHash",
+      "replayStatus",
+      "replayedOk",
+      "replayAuditMatches",
+      "readbackStatus",
+      "readbackHasFixture",
+    ].sort());
   });
 });

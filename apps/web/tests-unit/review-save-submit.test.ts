@@ -131,6 +131,16 @@ function fixture() {
 }
 
 describe('actual ReviewModal submit and Supabase adapter', () => {
+    test('saved cleanup owns its revision even after the current restaurant selection is cleared', async () => {
+        const f = fixture(); await f.submit();
+        const clear = evaluate(`${nodeText(source, 'clearDraft')};`, {
+            ...f.bindings, selectedRestaurant: null, restaurant: null,
+            setLastSavedAt() {}, useCallback: (callback: unknown) => callback,
+        }) as () => Promise<boolean>;
+        expect(await clear()).toBe(true);
+        expect(f.rows.size).toBe(1); expect(f.counts.inserts).toBe(1);
+        expect(f.counts.removes).toBe(0); expect(f.objects.size).toBe(2);
+    });
     test('known success writes pending review with canonical owner/review-bound photos', async () => {
         const f = fixture(); await f.submit();
         expect(f.rows.size).toBe(1); expect(f.objects.size).toBe(2);
@@ -165,12 +175,12 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
         const f = fixture(); const pending = f.submit();
         f.bindings.latestSaveInputsRef.current = { ...f.bindings.latestSaveInputsRef.current, content: 'Changed during submission' };
         await pending;
-        expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(0); expect(f.counts.closes).toBe(0);
+        expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(1); expect(f.counts.closes).toBe(0);
         expect(f.messages[0].title).toBe('이전 내용으로 등록되었습니다');
         expect(f.recoveryStates).toEqual(['edit']);
         expect(f.counts.success).toBe(0); // An onSuccess consumer is allowed to unmount the form.
         await f.close()();
-        expect(f.counts.success).toBe(1); expect(f.counts.cleared).toBe(0);
+        expect(f.counts.success).toBe(1); expect(f.counts.cleared).toBe(2);
     });
     test('close during committed insert reports success and notifies consumers once', async () => {
         const f = fixture();
