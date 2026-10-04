@@ -82,6 +82,39 @@ LIFECYCLE_WRITER_SPEC.loader.exec_module(lifecycle_writer)
 
 
 class LocalPublicationVerifierTests(unittest.TestCase):
+    def test_builder_minimizes_only_empty_runtime_scanner_diagnostics(self) -> None:
+        for name in ("local-closure-rescan.json", "local-closure-smoke.json"):
+            fields = verifier.EXPECTED_FIELDS[name]
+            base = {key: None for key in fields}
+            raw = {**base, "unresolvedFunctions": []}
+            self.assertEqual(builder.project_runtime_diagnostics(raw, name, fields), base)
+            self.assertEqual(raw["unresolvedFunctions"], [])
+            self.assertEqual(set(raw), fields | {"unresolvedFunctions"})
+            self.assertIs(builder.project_runtime_diagnostics(base, name, fields), base)
+
+    def test_builder_rejects_unresolved_malformed_or_unknown_runtime_diagnostics(self) -> None:
+        name = "local-closure-rescan.json"
+        fields = verifier.EXPECTED_FIELDS[name]
+        base = {key: None for key in fields}
+        for raw in (
+            {**base, "unresolvedFunctions": [{"private": "provider-canary"}]},
+            {**base, "unresolvedFunctions": {}},
+            {**base, "unresolvedFunctions": None},
+            {**base, "unresolvedFunctions": [], "rawProviderBody": "provider-canary"},
+        ):
+            with self.assertRaises(SystemExit) as caught:
+                builder.project_runtime_diagnostics(raw, name, fields)
+            self.assertNotIn("provider-canary", str(caught.exception))
+
+    def test_empty_diagnostic_projection_does_not_admit_failed_runtime_counts(self) -> None:
+        name = "local-closure-rescan.json"
+        fields = verifier.EXPECTED_FIELDS[name]
+        raw = {key: None for key in fields}
+        raw.update({"unresolvedFunctions": [], "mode": "runtime", "unresolvedPathCount": 1})
+        projected = builder.project_runtime_diagnostics(raw, name, fields)
+        with self.assertRaises(SystemExit):
+            verifier.verify_runtime_receipt(projected, name)
+
     FIXTURE_GITHUB_SHA = "b" * 40
 
     def setUp(self) -> None:
