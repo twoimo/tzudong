@@ -46,6 +46,7 @@ const colors = (argument('colors')?.split(',') ?? ['light', 'dark']) as Array<'l
 if (colors.some(color => !['light', 'dark'].includes(color))) throw new Error('UNSUPPORTED_COLOR');
 const suffix = argument('report-suffix') ?? '20261004';
 if (!/^[a-z0-9-]{1,80}$/.test(suffix)) throw new Error('INVALID_REPORT_SUFFIX');
+const captureScreenshots = argument('screenshots') === 'true';
 const browserSession = argument('browser-session') ?? 'tzudong-sidebar-audit-astra';
 if (!/^[a-z0-9-]{1,80}$/.test(browserSession)) throw new Error('INVALID_BROWSER_SESSION');
 const output = resolve(root, `performance/ui-renewal-20261003/admin-sidebar-pages-browser-${suffix}.json`);
@@ -128,6 +129,19 @@ await context.route('**/*', async route => {
     externalBlocked++; totalExternalBlocked++;
     network.push({ endpoint: '(external-blocked)', method: request.method(), result: 'denied-external' });
     await route.abort('blockedbyclient'); return;
+  }
+  if (url.origin === origin && url.pathname === '/api/admin/audit-events' && request.method() === 'GET') {
+    // This exact bounded synthetic read model is never forwarded to an operating API.
+    const stamp = '2026-10-03T00:00:00.000Z';
+    syntheticReadMockCounts.audit = (syntheticReadMockCounts.audit ?? 0) + 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      asOf: stamp, source: 'admin_audit_events', unavailable: null,
+      coverage: { universal: false, mode: 'truthful-partial-domain-specific', domains: ['admin_user_management'], sources: ['admin_audit_events'] },
+      events: ['applied','intent','failed'].map((status, index) => ({ id: `fixture-audit-${index + 1}`, actorUserId: fixtureProfiles[0].user_id,
+        targetUserId: fixtureProfiles[index].user_id, action: ['admin_user_profile_updated','admin_user_role_granted','admin_user_disabled'][index], status,
+        reasonCode: 'operator-review', correlationId: `fixture-correlation-${index + 1}`, appliedAt: status === 'applied' ? stamp : null,
+        errorCode: status === 'failed' ? 'FIXTURE_REJECTED' : null, createdAt: stamp, counts: {}, flags: {} })),
+    }) }); return;
   }
   if (request.method() === 'POST' && Object.values(syntheticReadUrls).includes(url.href)) {
     let value: unknown;
@@ -262,13 +276,13 @@ async function observation(pattern: string) {
       graphs: [...root.querySelectorAll('svg[role],canvas')].filter(visible).length,
       graphNodes: root.querySelectorAll('svg[aria-label="지식 연결 그래프"] [role="button"]').length,
       graphEdges: root.querySelectorAll('svg[aria-label="지식 연결 그래프"] line').length,
-      operationsRows: root.querySelectorAll('ul[aria-label="운영 우선순위 목록"] li').length,
+      operationsRows: root.querySelectorAll('[data-operations-row]').length,
       operationsPending: (() => { const value = Number(root.querySelector('[data-operations-summary="pending"]')?.textContent?.match(/^\s*([0-9,]+)/)?.[1]?.replaceAll(',', '') ?? NaN); return Number.isFinite(value) ? value : null; })(),
       boundedHorizontalScrollRegions: [...root.querySelectorAll<HTMLElement>('[data-allow-horizontal-scroll="true"]')].filter(visible)
         .map(element => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, overflowX: getComputedStyle(element).overflowX })),
-      errorState: /불러올 수 없|불러오지 못|로드 실패|오류가 발생|Application error|예기치 않은 오류/.test(text),
+      errorState: Boolean(root.querySelector('[data-admin-audit-unavailable-state="true"], [data-admin-sentry-state="unavailable"]')) || /조회 실패|읽지 못|불러올 수 없|불러오지 못|로드 실패|오류가 발생|Application error|예기치 않은 오류/.test(text),
       authenticationBlocked: /접근 권한이 없습니다|로그인이 필요합니다|관리자만 접근할 수/.test(text),
-      notConfigured: /Sentry 연결 설정이 필요합니다/.test(text),
+      notConfigured: Boolean(root.querySelector('[data-admin-sentry-state="not_configured"]')) || /Sentry 연결 (설정이 필요합니다|미설정)/.test(text),
       providerFallback: /도로 경로 대신 로컬 후보|지도 .*불러올 수 없|지도 API 로딩 실패/.test(text),
       emptyState: /검색 결과가 없|일치하는 지식이 없|아직 없|등록된 .*없|내역이 없|이력이 없|기록이 없|데이터가 없|결과가 없|제보가 없|리뷰가 없|사용자가 없|항목이 없/.test(text),
       documentOverflow: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
@@ -306,19 +320,30 @@ async function safeInteraction(moduleId: string) {
     await settle('.*');
     const requestObserved = network.slice(before).some(event => event.method === 'GET');
     const state = await observation('.*');
+    const auditSearchEmpty = moduleId === 'audit' ? await canvas.locator('[data-admin-audit-event-list] tbody button[aria-expanded]').count() === 0 : null;
     interactionPhase = 'search-reset';
     await search.fill('');
     await settle('.*');
-    let detailVerified: boolean | null = null, graphKeyboardVerified: boolean | null = null;
+    let detailVerified: boolean | null = null, graphKeyboardVerified: boolean | null = null, statusFilterVerified: boolean | null = null;
     if (moduleId === 'users') {
       const detail = canvas.locator('[data-admin-users-detail-button]').filter({ visible: true }).first();
-      if (await detail.count()) { await detail.click(); detailVerified = await canvas.locator('[aria-label="사용자 상세"]').isVisible(); }
+      if (await detail.count()) { await detail.click(); detailVerified = await page.locator('[aria-label="사용자 상세"]').filter({ visible: true }).isVisible(); }
     } else if (moduleId === 'banners') {
-      const detail = canvas.locator('[aria-label="배너 목록"]').getByRole('button').first();
-      if (await detail.isVisible()) { await detail.click(); detailVerified = await detail.getAttribute('aria-current') === 'true' && (await canvas.locator('input#title').inputValue()).length > 0; }
+      const detail = canvas.locator('[aria-label="배너 목록"] button[aria-pressed]').filter({ visible: true }).first();
+      if (await detail.isVisible()) { await detail.click(); detailVerified = await detail.getAttribute('aria-pressed') === 'true' && (await page.locator('input#title').filter({ visible: true }).inputValue()).length > 0; }
+    } else if (moduleId === 'audit') {
+      const status = canvas.getByLabel('감사 처리 상태', { exact: true });
+      await status.selectOption('failed');
+      statusFilterVerified = await canvas.locator('[data-admin-audit-event-list] tbody button[aria-expanded]').count() === 1;
+      await status.selectOption('');
+      const detail = canvas.locator('[data-admin-audit-event-list] button[aria-expanded]').first();
+      if (await detail.isVisible()) { await detail.click(); detailVerified = await detail.getAttribute('aria-expanded') === 'true' && await canvas.locator('[aria-label="감사 항목 상세"]').isVisible(); }
     } else if (moduleId === 'llm') {
-      const detail = canvas.locator('ul[aria-label="운영 우선순위 목록"] button').last();
-      if (await detail.isVisible()) { await detail.click(); detailVerified = await detail.getAttribute('aria-pressed') === 'true' && await canvas.locator('[aria-label="운영 항목 상세"] h2').isVisible(); }
+      const detail = canvas.locator('[aria-label="운영 우선순위 목록"] button[aria-pressed]').last();
+      if (await detail.isVisible()) { await detail.click(); detailVerified = await detail.getAttribute('aria-pressed') === 'true' && await page.locator('[aria-label="운영 항목 상세"] h2').filter({ visible: true }).isVisible(); }
+    } else if (moduleId === 'sentry') {
+      const detail = canvas.locator('[data-sentry-issue] button[aria-pressed]').first();
+      if (await detail.isVisible()) { await detail.click(); detailVerified = await detail.getAttribute('aria-pressed') === 'true' && await page.locator('[aria-label="Sentry 오류 상세"] h2').filter({ visible: true }).isVisible(); }
     } else if (moduleId === 'knowledge-graph') {
       const graphNode = canvas.locator('svg[aria-label="지식 연결 그래프"] [role="button"]').first();
       if (await graphNode.count()) {
@@ -330,11 +355,25 @@ async function safeInteraction(moduleId: string) {
         await settle('.*');
         interactionPhase = 'graph-selection-readback';
         graphKeyboardVerified = focused && await graphNode.getAttribute('aria-pressed') === 'true';
-        detailVerified = await canvas.locator('[aria-label="지식 근거 상세"] h2').isVisible();
+        const detailDrawer = page.getByRole('dialog', { name: '지식 근거', exact: true });
+        await detailDrawer.waitFor({ state: 'visible' });
+        detailVerified = await detailDrawer.locator('[aria-label="지식 근거 상세"] h2').isVisible();
+        if (detailVerified) {
+          await page.keyboard.press('Escape');
+          await detailDrawer.waitFor({ state: 'detached' });
+          graphKeyboardVerified &&= await graphNode.evaluate(element => document.activeElement === element);
+        }
       }
     }
-    return { kind: 'search', accepted, requestObserved, emptyStateObserved: state?.emptyState ?? false,
-      detailVerified, graphKeyboardVerified, conclusion: state?.emptyState ? 'filtered-empty-state' : 'input-only-filter-semantics-unverified' };
+    if (detailVerified && (['users', 'banners', 'llm', 'sentry'].includes(moduleId))) {
+      const inspector = page.getByRole('dialog').filter({ visible: true });
+      if (await inspector.count()) {
+        await page.keyboard.press('Escape');
+        await inspector.waitFor({ state: 'detached' });
+      }
+    }
+    return { kind: 'search', accepted, requestObserved, emptyStateObserved: auditSearchEmpty ?? state?.emptyState ?? false,
+      detailVerified, graphKeyboardVerified, statusFilterVerified, conclusion: (auditSearchEmpty ?? state?.emptyState) ? 'filtered-empty-state' : 'input-only-filter-semantics-unverified' };
   }
   if (moduleId === 'overview') {
     const table = canvas.getByRole('button', { name: '표', exact: true }).first();
@@ -478,6 +517,14 @@ for (const width of widths) for (const colorScheme of colors) {
         bodyState = apiSchemas.some(schema => !schema.valid) ? 'fixture-response-contract-invalid' : 'api-unavailable';
       }
       if (moduleId === 'llm' && !state?.errorState) bodyState = state?.operationsRows ? 'rendered-read-model' : 'informational-workspace';
+      const geometry = await canvas.evaluate(root => {
+        const host = root.getBoundingClientRect();
+        const graph = root.querySelector('[data-knowledge-canvas]')?.getBoundingClientRect();
+        return { panelWidth: host.width, panelHeight: host.height, graphWidth: graph?.width ?? null,
+          graphHeight: graph?.height ?? null, graphHeightShare: graph ? graph.height / host.height : null };
+      });
+      const screenshot = captureScreenshots ? resolve(root, `performance/ui-renewal-20261003/cms-${moduleId}-${width}-${colorScheme}-${suffix}.png`) : null;
+      if (screenshot) await page.screenshot({ path: screenshot });
       await canvas.focus(); await page.keyboard.press('Tab');
       const keyboard = await page.evaluate(() => {
         const active = document.activeElement as HTMLElement | null, canvas = document.querySelector('#admin-console-canvas');
@@ -485,7 +532,7 @@ for (const width of widths) for (const colorScheme of colors) {
       });
       if (!keyboard.focusEnteredModule) issues.push('keyboard-focus-did-not-enter-module');
       if (!state?.errorState && !state?.loading) action = await safeInteraction(moduleId);
-      if (action.detailVerified === false || action.graphKeyboardVerified === false) issues.push('read-only-detail-interaction-failed');
+      if (action.detailVerified === false || action.graphKeyboardVerified === false || action.statusFilterVerified === false) issues.push('read-only-detail-interaction-failed');
       if (action.kind !== 'not-exercised') await settle(titlePattern);
       if (pageErrors.length) issues.push('pageerror');
       const requiredFailures = network.filter(event => (event.result === 'http-error' || event.result === 'failed')
@@ -497,7 +544,7 @@ for (const width of widths) for (const colorScheme of colors) {
       const sourceAfter = sources().signature;
       cases.push({ module: moduleId, width, colorScheme, reducedMotion: 'reduce', observedAt, completedAt: new Date().toISOString(), sourceBefore, sourceAfter,
         sourceStableDuringCase: sourceBefore === sourceAfter, enteredViaMenu, menuAttempts, mobileMenuRevealedByScroll, bodyState, observation: state, readinessTimedOut: settled.readinessTimedOut,
-        keyboard, safeInteraction: action, dataReadObserved, issues,
+        keyboard, safeInteraction: action, dataReadObserved, geometry, screenshot: screenshot ? relative(root, screenshot) : null, issues,
         verdict: issues.length ? 'needs-review' : state?.notConfigured ? 'not-configured' : dataReadObserved === false || moduleId === 'llm' && !state?.operationsRows || state?.providerFallback ? 'fixture-or-feature-limited' : 'rendered-checks-pass',
         network, apiSchemas, pageErrorHashes: pageErrors, consoleErrors, externalBlocked, mutationsBlocked });
     } catch (error) {

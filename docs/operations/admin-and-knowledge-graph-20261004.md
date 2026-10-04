@@ -141,3 +141,27 @@ service_role의 운영 read RPC는 요청50건/반환50건/전체1659건/hasMore
 PR3114의 develop 변경을 결합한 source9e5a6b6의 분리된 설치 환경에서 전체 web2965pass/9skip/0fail(16 Bun batches), Next16.3.8/React19.3 build 및 CSS 경계, native/compat parity(진단0), layout/supply-chain49개, clean source의 orchestration22모듈213개 검증이 통과했다. 이후 다이어그램 변경의 관련26개 및 새 Gemini SDK2.24에서 Node25개가 통과했다. 기존18792/18793/18794 미리보기와 사용자 작업은 보존했으며 설치/화면 검증은 별도 체크아웃과18810/18811/18812 합성 환경에서 수행했다.
 
 CI generate 실패는 타입 생성 단계 이전의 catalog artifact 비교였다. 새 PG15 검증 SQL/receipt4개가 artifact-manifest에서 빠졌음을 확인해 생성 목록에 등록했다. 비교기의 파일 집합/순서/SHA/양쪽 증빙 검사는 그대로다. 회귀21개가 누락/변조/체크섬 재작성 후 불일치 거부를 검증했다. 전체 CI replay의 최종 통과는 새 PR head에서 확인해야 하며, 운영 배포 완료로 표시하지 않는다.
+
+
+## 2026-10-05 CMS 목록·상세 및 그래프 후속
+
+Payload 공식 List/Pagination 문서의 검색·필터·선택 상세 패턴을 기존 앱에 적용했다. CMS 패키지를 새로 설치하지 않았다. 사용자·배너·제보·리뷰는 공통 toolbar, 목록 선택, 데스크톱 360px inspector와 좁은 화면 Sheet로 구성했다. 감사 로그는 최근 조회 항목 검색·상태 필터·선택한 항목의 펼침 상세로 바꾸고 범위 설명은 접었다. 사용자 expected-state readback, 배너 pending-readback 잠금, 미저장 편집 보호와 기존 제보·리뷰 mutation 함수는 보존한다. 리뷰·제보 및 감사의 필터와 수는 실제 조회된 범위에 한정하며 전체 운영 archive 검색이라고 표시하지 않는다.
+
+지식 그래프의 기본 목록/근거 패널은 버튼과 노드 선택 Sheet로 옮겼다. 데스크톱·태블릿은 종류별 열, 모바일은 두 열 묶음이며 연결과 전체 건수·페이지·미확인 근거 상태를 유지한다. 390/834/1423px의 최종 합성 graph/audit 6조건에서 가로 넘침·pageError·검증 문제0, graph keyboard 선택·Escape 포커스 복귀와 audit 상세 선택을 확인했다. 감사 검색/상태를 추가 검증한3조건도 통과했다. 기존 첫 화면 실험은 감사 fixture가 DTO 필드를 빠뜨려 조회 실패를 표시했고 검증기의 오류 문자열 누락으로 pass로 분류됐다. 그 원시 결과를 보존하고 현재 오류 감지·정확한 synthetic DTO와 추가 검증으로 구분한다. 이전 pass를 정상 감사 목록 근거로 사용하지 않는다.
+
+모바일 graph의 내부 sizing 수정 전후는 캔버스480→603px(+123px/+25.63%), 작업 면적 내 높이 비율60.91→76.52%(+15.61%p)다. 최종834/1423px 캔버스는773px/패널960px(80.52%)다. 내부 수정의 n=1/조건 합성 Chromium DOM 관측이며95% CI를 추정하지 않았다. 이는 원래 운영 화면과의 속도·비용 비교가 아니다. viewport 높이는960px, noise budget은 기하±1px이다. source/unit/render/운영 배포는 분리한다.
+
+공통 UI 및 KG/audit 관련55테스트/4734assertions가 통과했다. 앞선 CMS 관련74테스트와 겹치므로 합산하지 않는다. 새 보고서는 ui-renewal-20261003의 cms-audit-graph-v2, cms-audit-filters 및 source-bound manifest다. 운영 쓰기와 provider 호출은0이며 새 UI의 보호 승격·배포 검증은 남아 있다.
+
+## Transform ownership 수정 후 신규·재시작 측정
+
+receipt가 없는 최초 증분 실행에서 기존 파이프라인 소유 행이 남는 결함을 고쳤다. 현재 입력의 channel/source family/video와 미검수·미수정 조건으로 소유권을 입증한 행만 갱신한다. 소유권 근거 없는 legacy 행과 관리자 수정은 보존한다. 해당24개 restart/보호/원자적 출력 검사가 통과했다.
+
+수정 source SHA ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4로 신규 입력·실패 후 재시작을 각각7쌍 AB/BA 재측정했다. 신규 입력 p75는531.021→212.044ms(−318.977ms/−60.07%, paired bootstrap95% CI[−64.93,−53.61]), 실패+재시작 p75는936.374→386.303ms(−550.071ms/−58.74%, CI[−72.70,−54.60])다. 원본3307파일/23636539bytes SHA가 전후 같고 최종28/28 출력1257레코드 의미 digest가 일치했다. peakRSS/CPU/각 p50·p75·p95·절대CI·잡음은 transform-ownership-new-restart-20261005 raw/summary/report에 있다.
+
+Mac M5 Max/18CPU/128GiB/macOS26.6.2/Python3.14.8의 component 실험이다. baseline append-open 실패와 candidate atomic replace 실패를 통제했으므로 내부 실패 지점이 동일하다고 주장하지 않는다. 신규/재시작 조건의 결과를 기존 다른 source의 cold·warm·delta 측정에 섞지 않는다. cold 회귀의 기존 기록, G003·전체 pipeline·실제 HTTP100쌍·운영 관측 미완료 상태는 그대로다. 확인된 금액 절감·세계 순위·전체 모델 정확도 주장은 없다.
+
+
+운영 보조도 상태·정렬·목록 선택·상세 및 모바일 Sheet로 통일했다. 소스 조회 함수는 유지한다. 합성390/834/1423의 read-model 목록·상세 선택3조건이 통과했다. 오류 모니터링의 소스는 같은 CMS 구조지만 실제 region/DSN/읽기 연결은 미설정이다. 최종3조건은 모두 not-configured로 분류했다. 이전 중간 보고서가 바뀐 문구를 인식하지 못한 상태는 보존하며 Sentry 연결/오류 목록 성공 근거로 사용하지 않는다. typed data-admin-sentry-state와 audit unavailable marker로 검증기를 보완했다.
+
+CMS 관련 통합 native/compat parity는3254 logical inputs/진단0이다. Sentry route와 실제 feed 검사를 임의의 한 Bun 프로세스에 합치면 module mock 때문에6개가 실패했다. 저장소 run-unit-tests.mjs가 두 파일을 원래 분리하도록 지정함을 확인했고 실제 feed의 지정된 독립 실행8개는 통과했다. 서비스 로직을 바꾸어 mock 오염을 숨기지 않았으며 이 임의 합친 실행은 whole-suite green 증빙이 아니다.

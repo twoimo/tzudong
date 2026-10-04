@@ -8996,6 +8996,9 @@ function getAdminAuditStatusClassName(status: string) {
 
 function AuditPlaceholder() {
   const router = useRouter();
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const auditEventsQuery = useQuery({
     queryKey: ["admin-audit-events", "recent"],
     queryFn: fetchAdminAuditEvents,
@@ -9004,6 +9007,10 @@ function AuditPlaceholder() {
   });
   const auditPayload = auditEventsQuery.data;
   const events = auditPayload?.events ?? [];
+  const normalizedSearch = search.trim().toLocaleLowerCase("ko-KR");
+  const visibleEvents = events.filter((event) => (!status || event.status === status) &&
+    (!normalizedSearch || [getAdminAuditActionLabel(event.action), event.reasonCode, event.id, event.targetUserId]
+      .some((value) => value?.toLocaleLowerCase("ko-KR").includes(normalizedSearch))));
   const unavailable = auditPayload?.unavailable ?? null;
   const coverage = auditPayload?.coverage ?? adminAuditFallbackCoverage;
   const isAuditCoverageMissing =
@@ -9030,19 +9037,23 @@ function AuditPlaceholder() {
       title="감사 로그"
       icon={ScrollText}
       summary={coverageBadgeLabel}
-      contentClassName="overflow-y-auto p-2 md:p-3"
+      contentClassName="overflow-y-auto"
     >
-      <div className="min-h-[480px] space-y-3">
-        <div
-          className="rounded-2xl border border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground"
+      <div className="min-h-[480px]">
+        <div className="admin-cms-toolbar">
+          <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input aria-label="감사 로그 검색" placeholder="작업·대상·감사 ID 검색" value={search} maxLength={256} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
+          <select aria-label="감사 처리 상태" value={status} onChange={(event) => setStatus(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs"><option value="">전체 상태</option><option value="intent">적용 전</option><option value="applied">적용됨</option><option value="failed">실패</option></select>
+          <Button size="sm" variant="ghost" aria-label="감사 로그 새로고침" disabled={auditEventsQuery.isFetching} onClick={() => auditEventsQuery.refetch()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /></Button>
+          <Link href="/admin/privacy-incidents" className="inline-flex min-h-8 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground" data-admin-privacy-incidents-link="true">개인정보 사고 대응<ExternalLink aria-hidden="true" className="h-3 w-3" /></Link>
+        </div>
+        <details
+          className="border-b border-border px-3 py-2 text-xs leading-5 text-muted-foreground"
           data-admin-audit-coverage="partial-domain-specific"
           data-admin-audit-coverage-source={getAdminAuditCoverageSourceSummary(coverage)}
           data-admin-audit-coverage-domain={getAdminAuditCoverageDomainSummary(coverage)}
           data-admin-audit-universal={coverage.universal ? "true" : "false"}
         >
-          <p className="font-bold text-foreground">
-            {getAdminAuditCoverageLabel(coverage)}
-          </p>
+          <summary className="cursor-pointer font-medium text-foreground">{getAdminAuditCoverageLabel(coverage)}</summary>
           <p className="mt-1">
             소스: {getAdminAuditCoverageSourceSummary(coverage)} · 도메인:{" "}
             {getAdminAuditCoverageDomainSummary(coverage)}
@@ -9052,21 +9063,7 @@ function AuditPlaceholder() {
             검토 감사는 restaurant_request_review_audit의 별도 도메인별 경로입니다.
             전체 운영 변경을 포괄하는 범용 감사 로그처럼 표시하지 않습니다.
           </p>
-        </div>
-
-        <Link
-          href="/admin/privacy-incidents"
-          className="flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
-          data-admin-privacy-incidents-link="true"
-        >
-          <span>
-            <strong className="block">개인정보 사고 대응</strong>
-            <span className="mt-1 block text-xs">
-              사람의 평가·외부 제출 기록·72시간 기준을 관리하며 자동 신고나 수리 완료를 주장하지 않습니다.
-            </span>
-          </span>
-          <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" />
-        </Link>
+        </details>
 
         {auditEventsQuery.isLoading ? (
           <div className="space-y-2" aria-label="감사 로그 로딩 중">
@@ -9134,68 +9131,35 @@ function AuditPlaceholder() {
           </div>
         ) : null}
 
-        {events.length > 0 ? (
-          <ol
-            className="divide-y divide-border overflow-hidden rounded-2xl border border-border"
-            data-admin-audit-event-list="admin_audit_events"
-          >
-            {events.map((event) => (
-              <li key={event.id} className="bg-background p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">
-                      {getAdminAuditActionLabel(event.action)}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {formatDashboardDateTime(event.createdAt)}
-                      {event.reasonCode ? ` · ${event.reasonCode}` : ""}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "w-fit shrink-0 rounded-full px-2 py-0.5 text-2xs",
-                      getAdminAuditStatusClassName(event.status),
-                    )}
-                  >
-                    {event.status}
-                  </Badge>
-                </div>
-                <dl className="mt-2 grid gap-1 text-2xs leading-5 text-muted-foreground sm:grid-cols-2">
-                  <div>
-                    <dt className="font-semibold text-foreground">감사 ID</dt>
-                    <dd className="break-all font-mono">{event.id}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">대상</dt>
-                    <dd className="break-all font-mono">{event.targetUserId ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">범위</dt>
-                    <dd className="break-all font-mono">
-                      admin_user_management · admin_audit_events
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">적용 시각</dt>
-                    <dd className="break-all font-mono">
-                      {event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">상관 ID</dt>
-                    <dd className="break-all font-mono">{event.correlationId ?? "—"}</dd>
-                  </div>
-                  {event.errorCode ? (
-                    <div className="sm:col-span-2">
-                      <dt className="font-semibold text-destructive">오류 코드</dt>
-                      <dd className="break-all font-mono text-destructive">{event.errorCode}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </li>
-            ))}
-          </ol>
+        {events.length > 0 && !unavailable && !auditEventsQuery.isError ? (
+          <>
+            <div className="admin-cms-table-container">
+              <table className="admin-cms-table" data-admin-audit-event-list="admin_audit_events">
+                <thead><tr><th scope="col">작업 · 시각</th><th scope="col" className="hidden sm:table-cell">대상</th><th scope="col">상태</th></tr></thead>
+                <tbody>{visibleEvents.map((event) => (
+                  <Fragment key={event.id}>
+                    <tr className={selectedId === event.id ? "admin-cms-row-selected" : ""}>
+                      <td><button type="button" aria-expanded={selectedId === event.id} aria-controls={`audit-detail-${event.id}`} onClick={() => setSelectedId(selectedId === event.id ? null : event.id)} className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block text-sm font-medium">{getAdminAuditActionLabel(event.action)}</span><span className="block text-xs text-muted-foreground">{formatDashboardDateTime(event.createdAt)}</span></button></td>
+                      <td className="hidden max-w-48 truncate font-mono text-xs sm:table-cell">{event.targetUserId ?? "—"}</td>
+                      <td><Badge variant="outline" className={cn("whitespace-nowrap px-2 py-0.5 text-2xs", getAdminAuditStatusClassName(event.status))}>{event.status === "applied" ? "적용됨" : event.status === "failed" ? "실패" : event.status === "intent" ? "적용 전" : event.status}</Badge></td>
+                    </tr>
+                    {selectedId === event.id ? <tr id={`audit-detail-${event.id}`}><td colSpan={3}>
+                      <dl className="grid gap-2 break-all text-xs sm:grid-cols-2" aria-label="감사 항목 상세">
+                        <div><dt className="text-muted-foreground">감사 ID</dt><dd className="font-mono">{event.id}</dd></div>
+                        <div><dt className="text-muted-foreground">대상</dt><dd className="font-mono">{event.targetUserId ?? "—"}</dd></div>
+                        <div><dt className="text-muted-foreground">사유</dt><dd>{event.reasonCode || "—"}</dd></div>
+                        <div><dt className="text-muted-foreground">적용 시각</dt><dd>{event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}</dd></div>
+                        <div><dt className="text-muted-foreground">상관 ID</dt><dd className="font-mono">{event.correlationId ?? "—"}</dd></div>
+                        {event.errorCode ? <div><dt className="text-destructive">오류 코드</dt><dd className="font-mono text-destructive">{event.errorCode}</dd></div> : null}
+                      </dl>
+                    </td></tr> : null}
+                  </Fragment>
+                ))}</tbody>
+              </table>
+            </div>
+            {visibleEvents.length === 0 ? <p role="status" className="p-4 text-center text-xs text-muted-foreground">일치하는 감사 로그가 없습니다.</p> : null}
+            <footer className="admin-cms-footer"><span>최근 조회 {visibleEvents.length} / {events.length}개 · 사용자 관리</span><span className="ml-auto">항목을 선택해 상세 확인</span></footer>
+          </>
         ) : null}
       </div>
     </AdminEmbeddedModuleShell>
@@ -9286,7 +9250,7 @@ function InlineModulePanel({
   return (
     <section
       aria-label={`${module.title} 작업 화면`}
-      className="flex min-h-full min-w-0 flex-col md:h-full md:min-h-0"
+      className={cn("flex min-h-full min-w-0 flex-col md:h-full md:min-h-0", module.id === "knowledge-graph" && "!h-full !min-h-0")}
       data-admin-console-inline-module-frame="true"
       data-admin-console-inline-module-id={module.id}
     >
@@ -9294,6 +9258,7 @@ function InlineModulePanel({
         className={cn(
           "min-h-[360px] flex-1 rounded-lg bg-background shadow-none md:min-h-0 md:rounded-xl md:border md:border-border md:shadow-sm",
           "overflow-visible md:overflow-hidden",
+          module.id === "knowledge-graph" && "flex min-h-0 flex-col !overflow-hidden",
         )}
         data-admin-console-inline-module-panel="true"
       >

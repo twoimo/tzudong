@@ -23,7 +23,7 @@ describe('admin user-management source contract', () => {
     const panelSource = source('components/admin/AdminUsersPanel.tsx');
 
     expect(panelSource).toContain('사용자 관리');
-    expect(panelSource).toContain('xl:grid-cols-[minmax(340px,0.95fr)_minmax(400px,1.05fr)]');
+    expect(panelSource).toContain('xl:grid-cols-[minmax(0,1fr)_360px]');
     expect(panelSource).toContain('권한 변경 전 확인');
     expect(panelSource).toContain('계정 처리 전 확인');
     expect(panelSource).toContain('canApplyRoleAction');
@@ -42,8 +42,8 @@ describe('admin user-management source contract', () => {
     expect(panelSource).toContain('<AdminPageHeader title="사용자 관리"');
     expect(panelSource).toContain('titleId="admin-users-title"');
     expect(panelSource).toContain('data-admin-users-summary');
-    expect(panelSource).toContain('min-h-0 border-border bg-card shadow-sm');
-    expect(panelSource).toContain('hidden overflow-hidden rounded-lg border bg-card md:block');
+    expect(panelSource).toContain('admin-cms-inspector');
+    expect(panelSource).toContain('admin-cms-record-list hidden overflow-hidden md:block');
     expect(panelSource).toContain('data-admin-users-mobile-card');
     expect(panelSource).not.toContain('border-border bg-card/95 shadow-sm');
     expect(panelSource).toContain('aria-live="polite"');
@@ -69,7 +69,7 @@ describe('admin user-management source contract', () => {
     expect(panelSource).toContain('else applyIntent(intent);');
     expect(panelSource).toContain('onClick={() => setPendingIntent(null)}');
     expect(panelSource).toContain('detailRef.current?.focus()');
-    expect(panelSource).toContain('mutationResult?.status === "warning" || isProfileDirty');
+    expect(panelSource).toContain('Boolean(pendingReadback) || isProfileDirty');
     expect(panelSource).toContain('accountConfirmation === "비활성화"');
     expect(panelSource).toContain('accountConfirmation === "재활성화"');
     expect(panelSource).toContain('confirmation: action === "accountStatus" ? accountConfirmation : riskConfirmation');

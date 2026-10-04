@@ -8628,7 +8628,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("function AnnouncementWorkspace");
     expect(usersSource).toContain("flex h-full min-h-0 flex-col overflow-hidden bg-background");
-    expect(usersSource).toContain("gap-2 overflow-y-auto p-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]");
+    expect(usersSource).toContain("admin-cms-inspector-body");
     expect(usersSource).toContain("h-9 rounded-md pl-9");
     expect(consoleSource).toContain(
       "const controller = new AbortController();",
@@ -8691,7 +8691,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-sans"',
     );
     expect(bannersSource).toContain(
-      "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
+      "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(bannersSource).toContain(
       "bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length",
@@ -8790,7 +8790,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const OVERRIDE_APPROVAL_CONFIRMATION = '무시승인'",
     );
     expect(submissionSource).toContain(
-      "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
+      "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(submissionSource).toContain('aria-label="제보 상세 작업 패널"');
     expect(submissionSource).toContain('aria-label="리뷰 상세 작업 패널"');
@@ -8914,28 +8914,29 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(submissionSource).toContain("const RECOMMEND_APPROVE_CONFIRMATION = '추천승인'");
     expect(submissionSource).toContain("const RECOMMEND_REJECT_CONFIRMATION = '추천거부'");
     expect(submissionSource).toContain("쯔양 제보");
-    expect(submissionSource).toContain("추천 검수");
     expect(submissionSource).toContain("renderRecommendationDetailContent");
     expect(submissionSource).toContain("추천 승인 확인 문구가 일치하지 않습니다.");
     expect(submissionSource).toContain("추천 거부 확인 문구가 일치하지 않습니다.");
     expect(submissionSource).not.toContain("submission.submission_type === 'recommend' && !canApprove");
-    expect(submissionSource).toContain("const canDeleteSubmissionCard = submission.submission_type !== 'recommend';");
-    expect(submissionSource).toContain("onClick={(event) => {");
-    expect(submissionSource).toContain("event.stopPropagation();");
+    expect(submissionSource).toContain("selectedSubmission.submission_type !== 'recommend'");
+    expect(submissionSource).toContain('onClick={handleDeleteSelectedSubmission}');
+    expect(submissionSource).toContain('data-admin-moderation-drawer');
+    expect(submissionSource).toContain('rowTriggerRef.current?.focus()');
 
-    expect(submissionSource).toContain(
-      'className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}',
-    );
-    expect(submissionSource).not.toContain(
-      `className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}\n                                style={isMobile ? { touchAction: 'pan-y' } : undefined}`,
-    );
-    expect(
-      submissionSource.match(/onPointerDown=\{isMobile \? handleSubmissionTabPointerDown : undefined\}/g)
-        ?.length ?? 0,
-    ).toBe(1);
-    expect(submissionSource).toContain(
-      ") : (\n                    <div className={listContainerClassName}>",
-    );
+    expect(submissionSource).toContain('aria-label="제보·리뷰 종류"');
+    expect(submissionSource).toContain('aria-pressed={activeTab === tab.id}');
+    expect(submissionSource).toContain("onClick={() => setActiveTabWithReset(tab.id)}");
+    expect(submissionSource.match(/onPointerDown=\{isMobile && activeTab === 'reviews' \? handleSubmissionTabPointerDown : undefined\}/g)?.length ?? 0).toBe(1);
+    const pointerDown = submissionSource.slice(submissionSource.indexOf('const handleSubmissionTabPointerDown'), submissionSource.indexOf('const handleSubmissionTabPointerMove'));
+    expect(pointerDown).not.toContain('setPointerCapture');
+    const pointerMove = submissionSource.slice(submissionSource.indexOf('const handleSubmissionTabPointerMove'), submissionSource.indexOf('const handleSubmissionTabPointerEnd'));
+    expect(pointerMove).toContain('Math.abs(dx) >= SUBMISSION_TAB_SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy)');
+    expect(pointerMove).toContain('setPointerCapture');
+    const rowsMarkup = submissionSource.slice(submissionSource.indexOf('<table className="admin-cms-table'), submissionSource.indexOf('<div ref={loadMoreSentinelRef}'));
+    expect(rowsMarkup).toContain('openSubmissionDetail(submission)');
+    expect(rowsMarkup).not.toContain('onApprove');
+    expect(rowsMarkup).not.toContain('onDelete');
+    expect(rowsMarkup).not.toContain('handleConfirm');
     expect(reviewRouteSource).toContain("requireAdmin()");
     expect(reviewRouteSource).toContain("createSupabaseServiceRoleClient()");
     expect(reviewRouteSource).toContain("review_restaurant_request");

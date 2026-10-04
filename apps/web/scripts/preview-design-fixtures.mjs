@@ -148,7 +148,11 @@ function api(pathname, params = new URLSearchParams()) {
   if (pathname === '/api/admin/users') return { users: managedUsers,
     summary: { loadedUsers:3,adminUsers:1,disabledUsers:1,unconfirmedUsers:0 },page:1,perPage:120,total:3 };
   if (pathname === '/api/admin/restaurant-refresh-history') return {candidates:refreshCandidates,summary:{approved_restaurants_total:25,needs_review:3,approved:0,rejected:0,applied:0,last_checked_at:stamp}};
-  if (pathname === '/api/admin/audit-events') return { events: [], total: 0, coverage: { universal: false, mode: 'truthful-partial-domain-specific', domains: [] } };
+  if (pathname === '/api/admin/audit-events') return { asOf: stamp, source: 'admin_audit_events', unavailable: null,
+    coverage: { universal: false, mode: 'truthful-partial-domain-specific', domains: ['admin_user_management'], sources: ['admin_audit_events'] },
+    events: ['applied','intent','failed'].map((status,i)=>({id:`fixture-audit-${i+1}`,actorUserId:fixtureUser.id,targetUserId:fixtureProfiles[i].user_id,
+      action:['admin_user_profile_updated','admin_user_role_granted','admin_user_disabled'][i],status,reasonCode:'operator-review',correlationId:`fixture-correlation-${i+1}`,
+      appliedAt:status==='applied'?stamp:null,errorCode:status==='failed'?'FIXTURE_REJECTED':null,createdAt:stamp,counts:{},flags:{}})) };
   if (pathname === '/api/admin/storyboard/production') return { ok: true, projects: storyboardProjects.map(project=>({id:project.id,revision:project.revision,status:project.status,title:project.document.title,createdAt:stamp,updatedAt:stamp})), workers: [] };
   if (pathname.startsWith('/api/admin/storyboard/production/')) {const project=storyboardProjects.find(project=>project.id===pathname.split('/').at(-1));return project?{ok:true,project,job:null,events:[]}:{ok:false,error:'not_found'};}
   if (pathname === '/api/insights/treemap') return { asOf:stamp,videos,totalVideos:videos.length,period:'ALL',availablePeriods:['1M','ALL'],meta:{dataSource:'supabase-treemap'} };

@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { adminReviewModerationStatus, selectAdminModerationRows, type AdminModerationFilter, type AdminModerationSort } from '@/lib/admin/submission-list-view-model';
 import { toast } from '@/lib/no-toast';
 import {
     CheckCircle2,
@@ -265,6 +267,7 @@ export function SubmissionListView({
     hasNextSubmissionPage = false,
     isFetchingNextSubmissionPage = false,
     onLoadMoreSubmissions,
+    onRefresh,
     // 리뷰 관련 props
     reviews = [],
     onApproveReview,
@@ -277,11 +280,24 @@ export function SubmissionListView({
     const [activeTab, setActiveTab] = useState<SubmissionAdminTab>(initialTab);
     const submissionListSkeleton = useFilledSkeletonCount(76, 4, 40);
     const isMobile = useIsMobile();
+    const [inlineInspector, setInlineInspector] = useState(false);
+    const rowTriggerRef = useRef<HTMLButtonElement | null>(null);
+    const listScrollRef = useRef<HTMLDivElement | null>(null);
+    const reviewDetailPanelRef = useRef<HTMLElement>(null);
+    useEffect(() => {
+        const media = window.matchMedia('(min-width: 1280px)');
+        const update = () => setInlineInspector(media.matches);
+        update();
+        media.addEventListener('change', update);
+        return () => media.removeEventListener('change', update);
+    }, []);
     const SUBMISSION_LIST_PAGE_SIZE = 10;
 
     // 검색어
     const [searchQuery, setSearchQuery] = useState('');
     const [reviewSearchQuery, setReviewSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<AdminModerationFilter>('all');
+    const [sortOrder, setSortOrder] = useState<AdminModerationSort>('priority');
     const [queueReasonFilter, setQueueReasonFilter] = useState<AdminSubmissionQueueReasonFilter>('all');
 
     // 선택된 제보
@@ -362,7 +378,6 @@ export function SubmissionListView({
     const [visibleRecommendCount, setVisibleRecommendCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
     const [visibleReviewCount, setVisibleReviewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
 
-    const handleClearSubmissionSearch = useCallback(() => setSearchQuery(''), []);
 
     const SUBMISSION_TAB_SWIPE_DISTANCE = 24;
 
@@ -406,6 +421,12 @@ export function SubmissionListView({
         setActiveTab(tab);
         resetVisibleCountByTab(tab);
         setQueueReasonFilter('all');
+        setStatusFilter('all');
+        setSelectedSubmission(null);
+        setSelectedReview(null);
+        setShowRejectModal(false);
+        setShowWarningModal(false);
+        setReviewAction(null);
     }, [resetVisibleCountByTab]);
     const handleQueueReasonFilterChange = useCallback((filter: AdminSubmissionQueueReasonFilter) => {
         setQueueReasonFilter(filter);
@@ -465,17 +486,17 @@ export function SubmissionListView({
         submissionTabSwipeStartYRef.current = e.clientY;
         submissionTabSwipeEndXRef.current = null;
         submissionTabSwipeEndYRef.current = null;
-        try {
-            e.currentTarget.setPointerCapture(e.pointerId);
-        } catch {
-            // no-op
-        }
     }, []);
 
     const handleSubmissionTabPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'pointer' || submissionTabSwipePointerIdRef.current !== e.pointerId) return;
         submissionTabSwipeEndXRef.current = e.clientX;
         submissionTabSwipeEndYRef.current = e.clientY;
+        const dx = e.clientX - (submissionTabSwipeStartXRef.current ?? e.clientX);
+        const dy = e.clientY - (submissionTabSwipeStartYRef.current ?? e.clientY);
+        if (Math.abs(dx) >= SUBMISSION_TAB_SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy)) {
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* Pointer may already have ended. */ }
+        }
     }, []);
 
     const handleSubmissionTabPointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -914,62 +935,24 @@ export function SubmissionListView({
         });
     }, [activeTab, submissions, submissionQueueSafetyById]);
 
-    const hasSubmissionQueueFilters = searchQuery.trim().length > 0 || queueReasonFilter !== 'all';
-
-    // 필터링 (제보)
     const filteredSubmissions = useMemo(() => {
         if (activeTab === 'reviews') return [];
-
-        let filtered = submissions.filter(s => s.submission_type === activeTab);
-
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(s =>
-                s.restaurant_name.toLowerCase().includes(query) ||
-                s.restaurant_address?.toLowerCase().includes(query) ||
-                s.restaurant_phone?.toLowerCase().includes(query) ||
-                s.recommendation_reason?.toLowerCase().includes(query) ||
-                s.items.some(item => item.youtube_link?.toLowerCase().includes(query) || item.tzuyang_review?.toLowerCase().includes(query)) ||
-                s.profiles?.nickname?.toLowerCase().includes(query)
-            );
-        }
-        if (queueReasonFilter !== 'all') {
-            filtered = filtered.filter(s => {
-                const summary = submissionQueueSafetyById.get(s.id);
-                return summary ? adminSubmissionQueueSummaryMatchesFilter(summary, queueReasonFilter) : false;
-            });
-        }
-
-
-        return filtered;
-    }, [submissions, activeTab, searchQuery, queueReasonFilter, submissionQueueSafetyById]);
-
-    // 리뷰 필터링 및 분류 (검색어 적용)
-    const filteredReviews = useMemo(() => {
-        let filtered = reviews;
-        if (reviewSearchQuery.trim()) {
-            const query = reviewSearchQuery.toLowerCase();
-            filtered = filtered.filter(r =>
-                r.title?.toLowerCase().includes(query) ||
-                r.content?.toLowerCase().includes(query) ||
-                r.restaurants?.name?.toLowerCase().includes(query) ||
-                r.profiles?.nickname?.toLowerCase().includes(query)
-            );
-        }
-        return filtered;
-    }, [reviews, reviewSearchQuery]);
-
-    const pendingReviews = useMemo(() =>
-        filteredReviews.filter(r => !r.is_verified && (!r.admin_note || !r.admin_note.includes('거부')))
-        , [filteredReviews]);
-
-    const approvedReviews = useMemo(() =>
-        filteredReviews.filter(r => r.is_verified)
-        , [filteredReviews]);
-
-    const rejectedReviews = useMemo(() =>
-        filteredReviews.filter(r => !r.is_verified && r.admin_note?.includes('거부'))
-        , [filteredReviews]);
+        const rows = submissions.filter(submission => submission.submission_type === activeTab && (queueReasonFilter === 'all' || adminSubmissionQueueSummaryMatchesFilter(submissionQueueSafetyById.get(submission.id)!, queueReasonFilter)));
+        return selectAdminModerationRows(rows, { query: searchQuery, status: statusFilter, sort: sortOrder }, submission => ({
+            name: submission.restaurant_name,
+            status: submission.status,
+            search: [submission.restaurant_name, submission.restaurant_address, submission.restaurant_phone, submission.recommendation_reason, submission.profiles?.nickname, ...submission.items.flatMap(item => [item.youtube_link, item.tzuyang_review])],
+        }));
+    }, [submissions, activeTab, searchQuery, statusFilter, sortOrder, queueReasonFilter, submissionQueueSafetyById]);
+    const filteredReviews = useMemo(() => selectAdminModerationRows(reviews, { query: reviewSearchQuery, status: statusFilter, sort: sortOrder }, review => ({
+        name: review.restaurants?.name || review.title,
+        status: adminReviewModerationStatus(review),
+        duplicate: review.is_duplicate,
+        search: [review.title, review.content, review.restaurants?.name, review.profiles?.nickname],
+    })), [reviews, reviewSearchQuery, statusFilter, sortOrder]);
+    const pendingReviews = useMemo(() => reviews.filter(review => adminReviewModerationStatus(review) === 'pending'), [reviews]);
+    const approvedReviews = useMemo(() => reviews.filter(review => adminReviewModerationStatus(review) === 'approved'), [reviews]);
+    const rejectedReviews = useMemo(() => reviews.filter(review => adminReviewModerationStatus(review) === 'rejected'), [reviews]);
 
     // 제보 상태별 분류
     const newSubmissions = useMemo(() =>
@@ -1071,35 +1054,10 @@ export function SubmissionListView({
         rejectedReviews.length,
         reviews.length,
     ]);
-    const tabTriggerClassName = cn(
-        "h-8 gap-1.5 px-2 text-2xs xl:h-9 xl:min-w-[128px] xl:justify-center xl:px-3 xl:text-sm",
-        isMobile && "justify-center gap-1"
-    );
-    const listContainerClassName = "h-full min-h-0 overflow-hidden rounded-lg border bg-card";
-    const listBodyClassName = cn(
-        "h-full space-y-2 overflow-y-auto p-2 xl:space-y-3 xl:p-3",
-        isMobile
-            ? "pb-[calc(var(--mobile-bottom-nav-height,76px)+env(safe-area-inset-bottom)+12px)]"
-            : "pb-6"
-    );
-    const listSearchInputClassName = "h-9 pl-8 pr-8 text-sm xl:h-9 xl:text-sm";
-    const listCardBaseClassName = "cursor-pointer rounded-lg border p-3 transition-colors hover:bg-muted/40 xl:p-3.5";
-    const listTitleClassName = "truncate text-sm font-semibold xl:text-sm";
-    const listSubTextClassName = "mt-1 line-clamp-2 text-xs text-muted-foreground xl:text-sm";
-    const listMetaClassName = "mt-2 flex items-center justify-between text-2xs text-muted-foreground xl:text-xs";
-    const listActionButtonClassName = "h-8 px-2 text-xs xl:h-8 xl:px-2.5 xl:text-xs";
-    const listActionIconButtonClassName = "ml-auto h-8 w-8 p-0";
-    const listCategoryBadgeClassName = "px-1.5 py-0 text-2xs xl:text-2xs";
-    const summaryBadgeBaseClassName = "px-2 py-0 text-2xs leading-none tabular-nums xl:px-2.5 xl:text-sm";
-    const summaryBadgeWithIconClassName = cn(summaryBadgeBaseClassName, "gap-1");
-    const summaryLabelClassName = "text-2xs text-muted-foreground xl:text-sm";
-    const getTabCountBadgeVariant = (count: number) => (count > 0 ? "secondary" : "outline");
-    const getTabCountBadgeClassName = (count: number) =>
-        cn(
-            "ml-1 min-w-[20px] justify-center px-1.5 py-0 text-2xs leading-none tabular-nums xl:text-sm",
-            count > 0 ? "bg-yellow-100 text-yellow-700" : "border-border bg-muted text-muted-foreground",
-            isMobile && "ml-0 min-w-[18px] px-1"
-        );
+    const rowButtonClassName = 'block w-full min-w-0 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
+    const listBodyClassName = 'admin-cms-table-container min-h-0 flex-1 overflow-y-auto';
+    const filterClassName = 'h-9 min-w-0 rounded-md border border-input bg-background px-2 text-xs';
+    const listCategoryBadgeClassName = 'px-1.5 py-0 text-[11px]';
     const renderListSkeletonCards = (label: string) => (
         <div ref={submissionListSkeleton.ref} className={listBodyClassName} role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}>
             <Skeleton className="h-8 rounded-md motion-reduce:animate-none" aria-hidden="true" />
@@ -1119,10 +1077,7 @@ export function SubmissionListView({
         </div>
     );
 
-    const orderedReviews = useMemo(
-        () => [...pendingReviews, ...approvedReviews, ...rejectedReviews],
-        [pendingReviews, approvedReviews, rejectedReviews]
-    );
+    const orderedReviews = filteredReviews;
 
     const visibleSubmissionCount = useMemo(() => {
         if (activeTab === 'new') return visibleNewCount;
@@ -1222,7 +1177,8 @@ export function SubmissionListView({
         }
 
         setVisibleReviewCount(SUBMISSION_LIST_PAGE_SIZE);
-    }, [activeTab, searchQuery, reviewSearchQuery]);
+    }, [activeTab, searchQuery, reviewSearchQuery, statusFilter, sortOrder]);
+    useEffect(() => { listScrollRef.current?.scrollTo({ top: 0 }); }, [activeTab, searchQuery, reviewSearchQuery, statusFilter, sortOrder, queueReasonFilter]);
 
     useEffect(() => {
         const sentinel = loadMoreSentinelRef.current;
@@ -1286,8 +1242,10 @@ export function SubmissionListView({
                 return <Badge className="bg-amber-500 text-xs">부분승인</Badge>;
             case 'rejected':
                 return <Badge variant="destructive" className="text-xs">거부</Badge>;
-            default:
+            case 'pending':
                 return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />대기</Badge>;
+            default:
+                return <Badge variant="outline" className="text-xs">미확인</Badge>;
         }
     };
     const getSubmissionQueueReasonBadgeClassName = (reason: AdminSubmissionQueueReason) =>
@@ -1304,11 +1262,11 @@ export function SubmissionListView({
     ) => {
         if (!summary?.reasons.length) return null;
 
-        const reasons = placement === 'card' ? summary.reasons.slice(0, 3) : summary.reasons;
+        const reasons = placement === 'card' ? summary.reasons.slice(0, 2) : summary.reasons;
 
         return (
             <div
-                className="mt-2 flex flex-wrap gap-1"
+                className="mt-1 flex flex-wrap gap-1"
                 data-admin-submission-safety-badges={placement}
                 aria-label="제보 큐 검수 사유"
             >
@@ -1607,10 +1565,10 @@ export function SubmissionListView({
                 <div className="space-y-2 text-xs">
                     <div className="flex items-center justify-between gap-2">
                         <p className="font-semibold">
-                            승인 계약 상태: {approvalState.canApprove ? '승인 가능' : '승인 보류'}
+                            {approvalState.canApprove ? '승인 가능' : '승인 전 확인'}
                         </p>
                         <Badge variant={approvalState.canApprove ? 'default' : 'secondary'}>
-                            {approvalState.canApprove ? 'all-clear' : `${approvalState.blockers.length} blockers`}
+                            {approvalState.canApprove ? '확인 완료' : `${approvalState.blockers.length}건`}
                         </Badge>
                     </div>
                     <p className="text-muted-foreground">{approvalState.nextAction}</p>
@@ -1778,6 +1736,8 @@ export function SubmissionListView({
         setSubmissionDeleteConfirmation('');
     }, [openSubmissionDetail]);
 
+    const handleDeleteSelectedSubmission = () => { if (selectedSubmission) handleDelete(selectedSubmission); };
+
     const handleConfirmDeleteSubmission = useCallback(() => {
         if (!submissionDeleteTarget) return;
         if (submissionDeleteConfirmation !== SUBMISSION_DELETE_CONFIRMATION) {
@@ -1800,6 +1760,7 @@ export function SubmissionListView({
         setPreviewImage(null);
         setReviewAction(action);
         setReviewAdminNote(review.admin_note || '');
+        window.requestAnimationFrame(() => reviewDetailPanelRef.current?.focus({ preventScroll: true }));
     }, []);
 
     const handleConfirmReviewAction = useCallback((nextAction = reviewAction) => {
@@ -2045,26 +2006,28 @@ export function SubmissionListView({
     const renderSubmissionDetailPanel = () => (
         <section
             aria-label="제보 상세 작업 패널"
+            key={selectedSubmission?.id}
             ref={submissionDetailPanelRef}
             tabIndex={-1}
-            className="min-h-[520px] overflow-hidden rounded-lg border bg-card shadow-sm xl:flex xl:min-h-0 xl:flex-col"
+            data-admin-moderation-inspector="true"
+            className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-card", inlineInspector && "admin-cms-inspector")}
         >
             <div className="flex min-h-12 items-center justify-between gap-2 border-b px-3 py-2">
                 <div className="min-w-0">
-                    <p className="text-2xs font-semibold text-primary">제보 상세 작업</p>
-                    <h3 className="truncate text-sm font-bold">{selectedSubmission?.restaurant_name || '왼쪽 목록에서 제보를 선택하세요'}</h3>
+                    <h3 className="truncate text-base font-semibold leading-6">{selectedSubmission?.restaurant_name || '왼쪽 목록에서 제보를 선택하세요'}</h3>
                 </div>
                 {selectedSubmission && (
-                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={closeSubmissionDetail}>
-                        선택 해제
-                    </Button>
+                    <div className="flex shrink-0 gap-1">
+                        {selectedSubmission.submission_type !== 'recommend' && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" aria-label="선택한 제보 삭제" disabled={loading} onClick={handleDeleteSelectedSubmission}><Trash2 className="h-3.5 w-3.5" /></Button>}
+                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={closeSubmissionDetail}>닫기</Button>
+                    </div>
                 )}
             </div>
 
             {!selectedSubmission ? (
                 <div className="flex min-h-[360px] flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
                     <Edit className="h-8 w-8" />
-                    <p>제보 카드의 “상세 검수”를 누르면 상세, 주소 검증, 승인/거부를 이 패널에서 처리합니다.</p>
+                    <p>제보를 선택하세요.</p>
                 </div>
             ) : (
                 <>
@@ -2279,12 +2242,15 @@ export function SubmissionListView({
     const renderReviewDetailPanel = () => (
         <section
             aria-label="리뷰 상세 작업 패널"
-            className="min-h-[520px] overflow-hidden rounded-lg border bg-card shadow-sm xl:flex xl:min-h-0 xl:flex-col"
+            key={selectedReview?.id}
+            ref={reviewDetailPanelRef}
+            tabIndex={-1}
+            data-admin-moderation-inspector="true"
+            className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-card", inlineInspector && "admin-cms-inspector")}
         >
             <div className="flex min-h-12 items-center justify-between gap-2 border-b px-3 py-2">
                 <div className="min-w-0">
-                    <p className="text-2xs font-semibold text-primary">리뷰 상세 작업</p>
-                    <h3 className="truncate text-sm font-bold">{selectedReview?.restaurants?.name || '왼쪽 목록에서 리뷰를 선택하세요'}</h3>
+                    <h3 className="truncate text-base font-semibold leading-6">{selectedReview?.restaurants?.name || '왼쪽 목록에서 리뷰를 선택하세요'}</h3>
                 </div>
                 {selectedReview && (
                     <Button
@@ -2306,7 +2272,7 @@ export function SubmissionListView({
             {!selectedReview ? (
                 <div className="flex min-h-[360px] flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
                     <MessageSquare className="h-8 w-8" />
-                    <p>리뷰를 선택하면 본문, 사진, OCR, 승인/거부/삭제를 이 패널에서 처리합니다.</p>
+                    <p>리뷰를 선택하세요.</p>
                 </div>
             ) : (
                 <>
@@ -2506,508 +2472,102 @@ export function SubmissionListView({
         </section>
     );
 
+    const hasSelection = activeTab === 'reviews' ? !!selectedReview : !!selectedSubmission;
+    const resultCount = activeTab === 'reviews' ? orderedReviews.length : filteredSubmissions.length;
+    const displayedCount = activeTab === 'reviews' ? displayedReviews.length : displayedSubmissions.length;
+    const closeInspector = () => {
+        if (activeTab === 'reviews') {
+            setSelectedReview(null); setReviewAction(null); setReviewAdminNote('');
+            setReviewDeleteTarget(null); setReviewDeleteConfirmation(''); setPreviewImage(null);
+        } else closeSubmissionDetail();
+        if (inlineInspector) window.requestAnimationFrame(() => rowTriggerRef.current?.focus());
+    };
+    const searchValue = activeTab === 'reviews' ? reviewSearchQuery : searchQuery;
+    const changeSearch = (value: string) => activeTab === 'reviews' ? setReviewSearchQuery(value) : setSearchQuery(value);
+    const tabs = [
+        { id: 'new' as const, label: '신규 제보', count: newCount, icon: <Video className="h-3.5 w-3.5" /> },
+        { id: 'edit' as const, label: '수정 요청', count: editCount, icon: <Edit className="h-3.5 w-3.5" /> },
+        { id: 'recommend' as const, label: '쯔양 제보', count: recommendCount, icon: <YouTubeIcon className="h-3.5 w-3.5" /> },
+        { id: 'reviews' as const, label: '리뷰', count: reviewPendingCount, icon: <MessageSquare className="h-3.5 w-3.5" /> },
+    ];
+
     return (
         <TooltipProvider>
-            <div className="flex h-full min-h-0 flex-col">
-                {/* 탭 헤더 */}
-                <div className="mx-2 mb-3 shrink-0 border-b pb-3 sm:mx-4">
-                    <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                        {/* 왼쪽: 현재 탭 상태 카운트 */}
-                        <div className={cn("flex flex-wrap items-center gap-1.5", isMobile && "gap-1")}>
-                            {isMobile ? (
-                                <>
-                                    <Badge variant="secondary" className={summaryBadgeWithIconClassName}>
-                                        <Clock className="h-3 w-3" /> 대기 {currentTabSummary.pending}
-                                    </Badge>
-                                    <Badge variant="outline" className={summaryBadgeBaseClassName}>
-                                        전체 {currentTabSummary.total}
-                                    </Badge>
-                                    {activeTab === 'reviews' && ocrStatus && (
-                                        <>
-                                            <Badge variant="outline" className={summaryBadgeBaseClassName}>OCR 대기 {ocrStatus.pending}</Badge>
-                                            <Badge variant="destructive" className={summaryBadgeWithIconClassName}>
-                                                <AlertTriangle className="h-3 w-3" />
-                                                중복 {ocrStatus.duplicate}
-                                            </Badge>
-                                        </>
-                                    )}
-                                </>
-                            ) : (
-                                <>
-                                    <span className={summaryLabelClassName}>{currentTabSummary.label}:</span>
-                                    <Badge variant="secondary" className={summaryBadgeWithIconClassName}>
-                                        <Clock className="h-3 w-3" /> 대기 {currentTabSummary.pending}
-                                    </Badge>
-                                    <Badge className={cn(summaryBadgeWithIconClassName, "bg-green-500")}>
-                                        <CheckCircle2 className="h-3 w-3" /> 승인 {currentTabSummary.approved}
-                                    </Badge>
-                                    <Badge variant="destructive" className={summaryBadgeWithIconClassName}>
-                                        <XCircle className="h-3 w-3" /> 거부 {currentTabSummary.rejected}
-                                    </Badge>
-                                    <Badge variant="outline" className={summaryBadgeBaseClassName}>
-                                        전체 {currentTabSummary.total}
-                                    </Badge>
-                                    {activeTab === 'reviews' && ocrStatus && (
-                                        <>
-                                            <span className={cn("ml-2", summaryLabelClassName)}>OCR:</span>
-                                            <Badge variant="outline" className={summaryBadgeBaseClassName}>대기 {ocrStatus.pending}</Badge>
-                                            <Badge variant="destructive" className={summaryBadgeWithIconClassName}>
-                                                <AlertTriangle className="h-3 w-3" />
-                                                중복 {ocrStatus.duplicate}
-                                            </Badge>
-                                        </>
-                                    )}
-                                    {activeTab === 'reviews' && (
-                                        <div className="ml-1 flex items-center gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={handleRunOcr}
-                                                disabled={isOcrRunning || (ocrStatus?.pending === 0)}
-                                                className="h-8 gap-1 text-xs xl:h-9 xl:px-3 xl:text-sm"
-                                            >
-                                                {isOcrRunning ? (
-                                                    <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" />
-                                                ) : (
-                                                    <ScanSearch className="h-3 w-3" />
-                                                )}
-                                                {isOcrRunning ? '처리중...' : 'OCR 실행'}
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={handleResetAllOcr}
-                                                disabled={isOcrRunning}
-                                                className="h-8 gap-1 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 xl:h-9 xl:px-3 xl:text-sm dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30"
-                                            >
-                                                <RefreshCw className="h-3 w-3" />
-                                                전체 다시 실행
-                                            </Button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
+            <div data-admin-moderation-workspace={activeTab === 'reviews' ? 'reviews' : 'submissions'} className="flex h-full min-h-0 min-w-0 flex-col gap-2">
+                <nav className="grid shrink-0 grid-cols-4 gap-1 rounded-lg border bg-muted/20 p-1" aria-label="제보·리뷰 종류">
+                    {tabs.map(tab => <button key={tab.id} type="button" aria-pressed={activeTab === tab.id} onClick={() => setActiveTabWithReset(tab.id)} className={cn('flex min-h-9 min-w-0 flex-wrap items-center justify-center gap-1 rounded-md px-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', activeTab === tab.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted')}>
+                        <span className="hidden sm:inline-flex">{tab.icon}</span><span>{tab.label}</span><span className="tabular-nums text-muted-foreground" aria-label={`대기 ${tab.count}건`}>{tab.count}</span>
+                    </button>)}
+                </nav>
+                <div data-admin-moderation-toolbar className="admin-cms-toolbar shrink-0">
+                    <div className="relative min-w-[180px] flex-1">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input type="search" aria-label={activeTab === 'reviews' ? '리뷰 검색' : '제보 검색'} placeholder={activeTab === 'reviews' ? '맛집·리뷰·작성자 검색' : '맛집·주소·제보자 검색'} value={searchValue} onChange={event => changeSearch(event.target.value)} className="h-9 pl-8 pr-8 text-sm" />
+                        {searchValue && <button type="button" aria-label="검색 지우기" onClick={() => changeSearch('')} className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md hover:bg-muted"><X className="h-3.5 w-3.5" /></button>}
+                    </div>
+                    <select aria-label="처리 상태" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as AdminModerationFilter); resetVisibleCountByTab(activeTab); }} className={filterClassName}>
+                        <option value="all">전체 상태 ({currentTabSummary.total})</option><option value="pending">대기 ({currentTabSummary.pending})</option><option value="approved">승인 ({currentTabSummary.approved})</option><option value="rejected">거부 ({currentTabSummary.rejected})</option>
+                        {activeTab === 'reviews' ? <option value="duplicate">중복 영수증</option> : <option value="partially_approved">부분 승인</option>}
+                    </select>
+                    <select aria-label="목록 정렬" value={sortOrder} onChange={event => setSortOrder(event.target.value as AdminModerationSort)} className={filterClassName}>
+                        <option value="priority">대기 우선</option><option value="newest">최근 접수순</option><option value="oldest">오래된 접수순</option><option value="name">맛집 이름순</option>
+                    </select>
+                    {onRefresh && activeTab !== 'reviews' && <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label="목록 새로고침" onClick={onRefresh} disabled={loading}><RefreshCw className="h-3.5 w-3.5" /></Button>}
+                    {activeTab === 'reviews' && <details className="relative text-xs">
+                        <summary className="flex h-9 cursor-pointer items-center gap-1 rounded-md border px-2"><ScanSearch className="h-3.5 w-3.5" />OCR 관리</summary>
+                        <div className="absolute right-0 top-10 z-20 w-64 space-y-3 rounded-lg border bg-popover p-3 shadow-md">
+                            <p className="text-muted-foreground">대기 {ocrStatus?.pending ?? '미확인'} · 중복 {ocrStatus?.duplicate ?? '미확인'}</p>
+                            <Button size="sm" variant="outline" onClick={handleRunOcr} disabled={isOcrRunning || (ocrStatus?.pending === 0)} className="h-8 w-full text-xs">{isOcrRunning ? '처리 중' : '대기 OCR 실행'}</Button>
+                            <label className="block space-y-1"><span>전체 초기화 확인</span><Input value={ocrResetConfirmation} onChange={event => setOcrResetConfirmation(event.target.value)} placeholder={OCR_RESET_ALL_CONFIRMATION} className="h-8 text-xs" /></label>
+                            <Button size="sm" variant="outline" onClick={handleResetAllOcr} disabled={isOcrRunning || ocrResetConfirmation !== OCR_RESET_ALL_CONFIRMATION} className="h-8 w-full text-xs text-destructive">전체 다시 실행</Button>
                         </div>
-                        {/* 오른쪽: 탭 버튼들 */}
-                        <div className={cn("w-full overflow-x-auto pb-1 xl:w-auto xl:overflow-visible xl:pb-0", isMobile && "overflow-visible pb-0")}>
-                            <div
-                                className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}
-                            >
-                                <Button
-                                    variant={activeTab === 'new' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setActiveTabWithReset('new')}
-                                    className={tabTriggerClassName}
-                                >
-                                    <Video className="h-4 w-4" />
-                                    <span>{isMobile ? '신규' : '신규 제보'}</span>
-                                    <Badge
-                                        variant={getTabCountBadgeVariant(newCount)}
-                                        className={getTabCountBadgeClassName(newCount)}
-                                    >
-                                        {newCount}
-                                    </Badge>
-                                </Button>
-                                <Button
-                                    variant={activeTab === 'edit' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setActiveTabWithReset('edit')}
-                                    className={tabTriggerClassName}
-                                >
-                                    <Edit className="h-4 w-4" />
-                                    <span>{isMobile ? '수정' : '수정 요청'}</span>
-                                    <Badge
-                                        variant={getTabCountBadgeVariant(editCount)}
-                                        className={getTabCountBadgeClassName(editCount)}
-                                    >
-                                        {editCount}
-                                    </Badge>
-                                </Button>
-                                <Button
-                                    variant={activeTab === 'recommend' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setActiveTabWithReset('recommend')}
-                                    className={tabTriggerClassName}
-                                >
-                                    <YouTubeIcon className="h-4 w-4" />
-                                    <span>{isMobile ? '추천' : '쯔양 제보'}</span>
-                                    <Badge
-                                        variant={getTabCountBadgeVariant(recommendCount)}
-                                        className={getTabCountBadgeClassName(recommendCount)}
-                                    >
-                                        {recommendCount}
-                                    </Badge>
-                                </Button>
-                                <Button
-                                    variant={activeTab === 'reviews' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setActiveTabWithReset('reviews')}
-                                    className={tabTriggerClassName}
-                                >
-                                    <MessageSquare className="h-4 w-4" />
-                                    <span>{isMobile ? '리뷰' : '리뷰 검수'}</span>
-                                    <Badge
-                                        variant={getTabCountBadgeVariant(reviewPendingCount)}
-                                        className={getTabCountBadgeClassName(reviewPendingCount)}
-                                    >
-                                        {reviewPendingCount}
-                                    </Badge>
-                                </Button>
-                            </div>
-                        </div>
-
-                        {activeTab === 'reviews' && isMobile && (
-                            <div className="grid grid-cols-2 gap-1">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={handleRunOcr}
-                                    disabled={isOcrRunning || (ocrStatus?.pending === 0)}
-                                    className="h-8 justify-center gap-1 text-2xs"
-                                >
-                                    {isOcrRunning ? (
-                                        <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" />
-                                    ) : (
-                                        <ScanSearch className="h-3 w-3" />
-                                    )}
-                                    {isOcrRunning ? '처리중...' : 'OCR 실행'}
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={handleResetAllOcr}
-                                    disabled={isOcrRunning}
-                                    className={cn(
-                                        "h-8 justify-center gap-1 text-2xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30"
-                                    )}
-                                >
-                                    <RefreshCw className="h-3 w-3" />
-                                    전체 다시 실행
-                                </Button>
-                            </div>
-                        )}
-                    </div>
+                    </details>}
                 </div>
-
-                {/* 테이블 또는 리뷰 목록 */}
-                <div className="mx-2 grid min-h-0 flex-1 gap-2 pb-2 sm:mx-4 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden">
-                    <div className="min-h-0 overflow-hidden">
-                {activeTab === 'reviews' ? (
-                    <div
-                        className={listContainerClassName}
-                        style={isMobile ? { touchAction: 'pan-y' } : undefined}
-                        onPointerDown={isMobile ? handleSubmissionTabPointerDown : undefined}
-                        onPointerMove={isMobile ? handleSubmissionTabPointerMove : undefined}
-                        onPointerUp={isMobile ? handleSubmissionTabPointerEnd : undefined}
-                        onPointerCancel={isMobile ? handleSubmissionTabPointerCancel : undefined}
-                        onTouchStart={isMobile ? handleSubmissionTabTouchStart : undefined}
-                        onTouchMove={isMobile ? handleSubmissionTabTouchMove : undefined}
-                        onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
-                        onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
-                    >
-                        {reviewsLoading ? (
-                            renderListSkeletonCards('리뷰')
-                        ) : filteredReviews.length === 0 && !reviewSearchQuery ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                                <MessageSquare className="w-10 h-10 mb-3" />
-                                <p>검수할 리뷰가 없습니다.</p>
-                            </div>
-                        ) : (
-                            <div className={listBodyClassName}>
-                                <div className="relative">
-                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="text"
-                                        placeholder="맛집명, 리뷰 내용 검색..."
-                                        value={reviewSearchQuery}
-                                        onChange={(e) => setReviewSearchQuery(e.target.value)}
-                                        className={listSearchInputClassName}
-                                    />
-                                    {reviewSearchQuery && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
-                                            onClick={() => setReviewSearchQuery('')}
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </Button>
-                                    )}
-                                </div>
-
-                                {orderedReviews.length === 0 ? (
-                                    <div className="flex h-24 items-center justify-center rounded-md border text-sm text-muted-foreground">
-                                        검색 결과가 없습니다
-                                    </div>
-                                ) : (
-                                    displayedReviews.map((review) => {
-                                        const { isPending, isApproved, isRejected } = getReviewFlags(review);
-                                        return (
-                                            <Card
-                                                key={review.id}
-                                                className={cn(
-                                                    listCardBaseClassName,
-                                                    review.is_duplicate && "border-red-200 bg-red-50/80 dark:border-red-900/50 dark:bg-red-950/30",
-                                                    !review.is_duplicate && isApproved && "border-green-200 bg-green-50/80 dark:border-green-900/50 dark:bg-green-950/30",
-                                                    !review.is_duplicate && isRejected && "border-red-100 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20"
-                                                )}
-                                                onClick={() => handleReviewAction('approve', review)}
-                                            >
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className="min-w-0">
-                                                        <div className="flex items-center gap-1">
-                                                            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                                            <p className={listTitleClassName}>{review.restaurants?.name || '알 수 없음'}</p>
-                                                        </div>
-                                                        <p className={listSubTextClassName}>
-                                                            {review.content?.slice(0, 120) || '내용 없음'}
-                                                        </p>
-                                                    </div>
-                                                    <div className="shrink-0">{renderReviewStatusBadge(review)}</div>
-                                                </div>
-
-                                                <div className={listMetaClassName}>
-                                                    <span>{new Date(review.visited_at).toLocaleDateString('ko-KR')}</span>
-                                                    <span>{review.profiles?.nickname || '익명'}</span>
-                                                </div>
-
-                                                <div
-                                                    className="mt-2 flex items-center gap-1.5"
-                                                    onPointerDownCapture={(e) => e.stopPropagation()}
-                                                    onClickCapture={(e) => e.stopPropagation()}
-                                                >
-                                                    {isPending && (
-                                                        <>
-                                                            <Button
-                                                                size="sm"
-                                                                className={cn(listActionButtonClassName, "bg-green-500 hover:bg-green-600 disabled:opacity-50")}
-                                                                onClick={() => handleReviewAction('approve', review)}
-                                                                disabled={review.is_duplicate}
-                                                                title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
-                                                            >
-                                                                승인
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="destructive"
-                                                                className={listActionButtonClassName}
-                                                                onClick={() => handleReviewAction('reject', review)}
-                                                            >
-                                                                거부
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                    {isApproved && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            className={listActionButtonClassName}
-                                                            onClick={() => handleReviewAction('reject', review)}
-                                                        >
-                                                            취소
-                                                        </Button>
-                                                    )}
-                                                    {isRejected && (
-                                                        <Button
-                                                            size="sm"
-                                                            className={cn(listActionButtonClassName, "bg-green-500 hover:bg-green-600 disabled:opacity-50")}
-                                                            onClick={() => handleReviewAction('approve', review)}
-                                                            disabled={review.is_duplicate}
-                                                            title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
-                                                        >
-                                                            재승인
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className={listActionIconButtonClassName}
-                                                        onClick={() => handleDeleteReview(review)}
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </Card>
-                                        );
-                                    })
-                                )}
-                                <div ref={loadMoreSentinelRef} className="h-8" />
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className={listContainerClassName}>
-                        {loading && filteredSubmissions.length === 0 ? (
-                            renderListSkeletonCards(activeTab === 'new' ? '신규 제보' : activeTab === 'recommend' ? '쯔양 제보' : '수정 제보')
-                        ) : filteredSubmissions.length === 0 && !hasSubmissionQueueFilters ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                                <AlertCircle className="w-10 h-10 mb-3" />
-                                <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : activeTab === 'recommend' ? '쯔양 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
-                            </div>
-                        ) : (
-                            <div className={listBodyClassName}>
-                                <div className="relative">
-                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="text"
-                                        placeholder={activeTab === 'recommend' ? '맛집명, 주소, 추천 사유, 제보자...' : '맛집명, 주소, 제보자...'}
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className={listSearchInputClassName}
-                                    />
-                                    {searchQuery && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
-                                            onClick={handleClearSubmissionSearch}
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </Button>
-                                    )}
-                                </div>
-                                <div
-                                    className="flex flex-wrap gap-1"
-                                    data-admin-submission-queue-reason-filter="true"
-                                    aria-label="제보 큐 검수 사유 필터"
-                                >
-                                    {queueReasonFilterOptions.map((option) => {
-                                        const isSelected = queueReasonFilter === option.value;
-                                        const isUnavailable = option.value !== 'all' && option.count === 0 && !isSelected;
-
-                                        return (
-                                            <Button
-                                                key={option.value}
-                                                type="button"
-                                                variant={isSelected ? "default" : "outline"}
-                                                size="sm"
-                                                className="h-7 rounded-full px-2 text-2xs"
-                                                aria-pressed={isSelected}
-                                                disabled={isUnavailable}
-                                                data-admin-submission-queue-reason-filter-option={option.value}
-                                                onClick={() => handleQueueReasonFilterChange(option.value)}
-                                            >
-                                                {option.label}
-                                                <span className={cn(
-                                                    "ml-1 rounded-full px-1.5 py-0 text-2xs leading-4 tabular-nums",
-                                                    isSelected ? "bg-primary-foreground/15 text-primary-foreground" : "bg-muted text-muted-foreground"
-                                                )}>
-                                                    {option.count}
-                                                </span>
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-
-
-                                {filteredSubmissions.length === 0 ? (
-                                    <div className="flex h-24 items-center justify-center rounded-md border px-3 text-center text-sm text-muted-foreground">
-                                        {queueReasonFilter !== 'all' ? '선택한 검수 사유에 맞는 제보가 없습니다' : '검색 결과가 없습니다'}
-                                    </div>
-                                ) : (
-                                    displayedSubmissions.map((submission) => {
-                                        const isPending = submission.status === 'pending' || submission.status === 'partially_approved';
-                                        const canDeleteSubmissionCard = submission.submission_type !== 'recommend';
-                                        const queueSafetySummary = submissionQueueSafetyById.get(submission.id);
-
-                                        return (
-                                            <Card
-                                                key={submission.id}
-                                                className={listCardBaseClassName}
-                                                onClick={() => openSubmissionDetail(submission)}
-                                            >
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className="min-w-0">
-                                                        <p className={listTitleClassName}>{submission.restaurant_name}{submission.submission_type === 'recommend' && <span className="ml-1 text-xs font-normal text-primary">쯔양 제보</span>}</p>
-                                                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground xl:text-sm">
-                                                            {submission.restaurant_address || '-'}
-                                                        </p>
-                                                    </div>
-                                                    <div className="shrink-0">{getStatusBadge(submission.status)}</div>
-                                                </div>
-                                                {renderSubmissionQueueSafetyBadges(queueSafetySummary, 'card')}
-
-                                                <div className={listMetaClassName}>
-                                                    <span className="truncate pr-2">{submission.restaurant_phone || '전화번호 없음'}</span>
-                                                    <span>{submission.profiles?.nickname || '익명'}</span>
-                                                </div>
-
-                                                <div className="mt-2 flex flex-wrap gap-1">
-                                                    {submission.restaurant_categories?.slice(0, 3).map((cat, idx) => (
-                                                        <Badge key={idx} variant="outline" className={listCategoryBadgeClassName}>
-                                                            {cat}
-                                                        </Badge>
-                                                    ))}
-                                                    {!submission.restaurant_categories?.length && (
-                                                        <span className="text-2xs text-muted-foreground">카테고리 없음</span>
-                                                    )}
-                                                </div>
-
-                                                <div className="mt-2 space-y-1">
-                                                    {submission.submission_type === 'recommend' ? (
-                                                        <>
-                                                            <p className="line-clamp-2 text-xs text-muted-foreground">
-                                                                {submission.recommendation_reason || submission.items[0]?.tzuyang_review || '추천 사유 없음'}
-                                                            </p>
-                                                            {submission.items[0]?.youtube_link && (
-                                                                <p className="line-clamp-1 text-2xs text-primary">{submission.items[0].youtube_link}</p>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {submission.items.slice(0, 2).map((item) => (
-                                                                <p key={item.id} className="line-clamp-1 text-xs text-muted-foreground">
-                                                                    {item.tzuyang_review?.slice(0, 90) || '리뷰없음'}
-                                                                </p>
-                                                            ))}
-                                                            {submission.items.length > 2 && (
-                                                                <span className="text-2xs text-muted-foreground">
-                                                                    +{submission.items.length - 2}개 리뷰
-                                                                </span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                <div className="mt-2 flex items-center gap-1.5">
-                                                    {isPending && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className={listActionButtonClassName}
-                                                            onClick={(event) => {
-                                                                event.stopPropagation();
-                                                                openSubmissionDetail(submission);
-                                                            }}
-                                                        >
-                                                            <Edit className="mr-1 h-3 w-3" />
-                                                            {submission.submission_type === 'recommend' ? '추천 검수' : '상세 검수'}
-                                                        </Button>
-                                                    )}
-                                                    {canDeleteSubmissionCard && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            className={listActionIconButtonClassName}
-                                                            onClick={(e) => handleDelete(submission, e)}
-                                                            aria-label={`${submission.restaurant_name} 제보 삭제`}
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </Card>
-                                        );
-                                    })
-                                )}
-                                <div ref={loadMoreSentinelRef} className="h-8" />
-                            </div>
-                        )}
-                    </div>
-                )}
-                    </div>
-                    {activeTab === 'reviews' ? renderReviewDetailPanel() : renderSubmissionDetailPanel()}
+                {activeTab !== 'reviews' && <div className="flex shrink-0 flex-wrap gap-1" data-admin-submission-queue-reason-filter="true" aria-label="제보 큐 검수 사유 필터">
+                    {queueReasonFilterOptions.filter(option => option.value === 'all' || option.count > 0 || option.value === queueReasonFilter).map(option => <button key={option.value} type="button" aria-pressed={queueReasonFilter === option.value} data-admin-submission-queue-reason-filter-option={option.value} onClick={() => handleQueueReasonFilterChange(option.value)} className={cn('min-h-7 rounded-md border px-2 text-[11px]', queueReasonFilter === option.value ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted')}>
+                        {option.label}<span className="ml-1 tabular-nums">{option.count}</span>
+                    </button>)}
+                </div>}
+                <div className={cn('grid min-h-0 flex-1 gap-2 overflow-hidden', inlineInspector && hasSelection && 'xl:grid-cols-[minmax(0,1fr)_360px]')}>
+                    <section data-admin-moderation-list className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-card" aria-label={activeTab === 'reviews' ? '리뷰 목록' : '제보 목록'}>
+                        {(activeTab === 'reviews' ? reviewsLoading : loading && !submissions.length) ? renderListSkeletonCards(currentTabSummary.label) : <div ref={listScrollRef} className={listBodyClassName}
+                            style={isMobile && activeTab === 'reviews' ? { touchAction: 'pan-y' } : undefined}
+                            onPointerDown={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerDown : undefined}
+                            onPointerMove={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerMove : undefined}
+                            onPointerUp={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerEnd : undefined}
+                            onPointerCancel={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerCancel : undefined}
+                            onTouchStart={isMobile && activeTab === 'reviews' ? handleSubmissionTabTouchStart : undefined}
+                            onTouchMove={isMobile && activeTab === 'reviews' ? handleSubmissionTabTouchMove : undefined}
+                            onTouchEnd={isMobile && activeTab === 'reviews' ? handleSubmissionTabSwipeEnd : undefined}
+                            onTouchCancel={isMobile && activeTab === 'reviews' ? handleSubmissionTabTouchCancel : undefined}>
+                            {resultCount === 0 ? <div role="status" className="flex min-h-40 flex-col items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><p>{searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all' ? '조건에 맞는 항목이 없습니다.' : '조회된 항목이 없습니다.'}</p>{(searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all') && <Button variant="outline" size="sm" onClick={() => { changeSearch(''); setStatusFilter('all'); handleQueueReasonFilterChange('all'); }}>필터 초기화</Button>}</div> : <table className="admin-cms-table table-fixed"><thead className="sticky top-0 z-10 bg-card"><tr><th scope="col">{activeTab === 'reviews' ? '맛집 · 리뷰' : '맛집 · 주소'}</th><th scope="col" className="hidden w-28 sm:table-cell">작성자 · 접수일</th><th scope="col" className="w-24">처리 상태</th></tr></thead><tbody>
+                                {activeTab === 'reviews' ? displayedReviews.map(review => <tr key={review.id} data-admin-review-row={review.id} className={cn('cursor-pointer', selectedReview?.id === review.id && 'admin-cms-row-selected')} onClick={event => { rowTriggerRef.current = event.currentTarget.querySelector('button'); handleReviewAction('approve', review); }}>
+                                    <td><button type="button" aria-pressed={selectedReview?.id === review.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className={rowButtonClassName}>
+                                        <span className="block truncate text-sm font-medium">{review.restaurants?.name || '맛집 미확인'}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{review.content || review.title || '내용 없음'}</span><span className="mt-1 block text-[11px] text-muted-foreground sm:hidden">{review.profiles?.nickname || '익명'} · {new Date(review.created_at).toLocaleDateString('ko-KR')}</span>
+                                    </button></td>
+                                    <td className="hidden text-muted-foreground sm:table-cell"><span className="block truncate">{review.profiles?.nickname || '익명'}</span><span className="mt-1 block text-[11px] tabular-nums">{new Date(review.created_at).toLocaleDateString('ko-KR')}</span></td>
+                                    <td><span className="flex flex-col items-start gap-1">{renderReviewStatusBadge(review)}{review.is_duplicate && <span className="text-[11px] text-destructive">중복 영수증</span>}</span></td>
+                                </tr>) : displayedSubmissions.map(submission => <tr key={submission.id} data-admin-submission-row={submission.id} className={cn('cursor-pointer', selectedSubmission?.id === submission.id && 'admin-cms-row-selected')} onClick={event => { rowTriggerRef.current = event.currentTarget.querySelector('button'); openSubmissionDetail(submission); }}>
+                                    <td><button type="button" aria-pressed={selectedSubmission?.id === submission.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className={rowButtonClassName}>
+                                        <span className="block truncate text-sm font-medium">{submission.restaurant_name}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{submission.restaurant_address || '주소 없음'}</span><span className="mt-1 block text-[11px] text-muted-foreground sm:hidden">{submission.profiles?.nickname || '익명'} · {new Date(submission.created_at).toLocaleDateString('ko-KR')}</span>{renderSubmissionQueueSafetyBadges(submissionQueueSafetyById.get(submission.id), 'card')}
+                                    </button></td>
+                                    <td className="hidden text-muted-foreground sm:table-cell"><span className="block truncate">{submission.profiles?.nickname || '익명'}</span><span className="mt-1 block text-[11px] tabular-nums">{new Date(submission.created_at).toLocaleDateString('ko-KR')}</span></td>
+                                    <td>{getStatusBadge(submission.status)}</td>
+                                </tr>)}
+                            </tbody></table>}
+                            <div ref={loadMoreSentinelRef} className="h-1" />
+                            {hasMoreCards && <div className="p-2 text-center"><Button type="button" variant="outline" size="sm" disabled={isCurrentListLoading} onClick={handleLoadMoreCards}>더 보기</Button></div>}
+                        </div>}
+                        <div className="admin-cms-footer shrink-0 justify-between"><span role="status">{isCurrentListLoading ? '조회 중' : `${displayedCount} / ${resultCount}건`}</span><span>조회된 목록 기준</span></div>
+                    </section>
+                    {inlineInspector && hasSelection ? (activeTab === 'reviews' ? renderReviewDetailPanel() : renderSubmissionDetailPanel()) : null}
                 </div>
+                <Sheet open={!inlineInspector && hasSelection} onOpenChange={open => { if (!open) closeInspector(); }}>
+                    <SheetContent data-admin-moderation-drawer className="flex w-full flex-col gap-2 p-2 pt-12 sm:max-w-2xl" onCloseAutoFocus={event => { event.preventDefault(); rowTriggerRef.current?.focus(); }}>
+                        <SheetHeader className="sr-only"><SheetTitle>{activeTab === 'reviews' ? '리뷰 상세' : '제보 상세'}</SheetTitle><SheetDescription>선택한 항목의 검수와 처리</SheetDescription></SheetHeader>
+                        {!inlineInspector && hasSelection ? (activeTab === 'reviews' ? renderReviewDetailPanel() : renderSubmissionDetailPanel()) : null}
+                    </SheetContent>
+                </Sheet>
             </div>
         </TooltipProvider>
     );

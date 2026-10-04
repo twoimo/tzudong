@@ -121,6 +121,17 @@
 .admin-page-header-actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.375rem; min-width: 0; min-height: 2.5rem; max-width: 100%; margin-left: auto; }
 .admin-page-header-actions :is(button, select, input, a[data-slot="button"]) { min-height: 2rem; }
 .admin-page-header-actions select { height: 2rem; padding-block: 0.25rem; }
+.admin-cms-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; padding: 8px 12px; border-bottom: 1px solid hsl(var(--border)); }
+.admin-cms-table-container { min-width: 0; min-height: 0; overflow: auto; }
+.admin-cms-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.admin-cms-table th { height: 32px; padding: 6px 12px; border-bottom: 1px solid hsl(var(--border)); text-align: left; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.admin-cms-table td { height: 44px; padding: 8px 12px; border-bottom: 1px solid hsl(var(--border)); vertical-align: middle; }
+.admin-cms-table tbody tr { background: hsl(var(--card)); }
+.admin-cms-table tbody tr:hover { background: hsl(var(--muted) / .45); }
+.admin-cms-table tbody tr.admin-cms-row-selected, .admin-cms-row-selected { background: hsl(var(--primary) / .08); box-shadow: inset 3px 0 hsl(var(--primary)); }
+.admin-cms-inspector { min-width: 0; padding: 12px; border-left: 1px solid hsl(var(--border)); }
+.admin-cms-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; padding: 8px 12px; border-top: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 12px; }
+@media (min-width: 1024px) { .admin-cms-inspector { width: 360px; flex: 0 0 360px; } }
 .admin-page-header [data-admin-dashboard-action-bar="true"] { flex-wrap: wrap; align-items: center; justify-content: flex-end; overflow: visible; padding-bottom: 0; }
 .admin-page-header [data-admin-users-summary] { gap: 0.25rem; }
 .admin-page-header [data-admin-users-summary-metric] { padding-inline: 0; margin-right: 0.5rem; }

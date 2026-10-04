@@ -1,0 +1,75 @@
+{
+  "kind": "CMS-structure-local-delivery",
+  "reference": "https://payloadcms.com/docs/ui-components/list-and-pagination-controls",
+  "header": "16px/600/24px; shared AdminPageHeader",
+  "density": {
+    "desktopInspectorPx": 360,
+    "tableHeaderMinimumPx": 32,
+    "tableRowMinimumPx": 44
+  },
+  "components": [
+    "users",
+    "banners",
+    "submissions",
+    "reviews",
+    "knowledge-graph",
+    "operations",
+    "sentry",
+    "audit"
+  ],
+  "checks": {
+    "affectedBunTests": 74,
+    "failed": 0,
+    "graphViewportThemes": 6,
+    "graphIssues": 0,
+    "cmsUserBannerWidths": 3,
+    "cmsRecoveryCases": 4,
+    "cmsRecoveryIssues": 0,
+    "typecheckParityDiagnostics": 0,
+    "latestGraphAuditCases": 6,
+    "latestGraphAuditIssues": 0,
+    "auditFilterCases": 3,
+    "auditFilterIssues": 0,
+    "latestAffectedTests": 55,
+    "latestAssertions": 4734,
+    "operationsReadModelCases": 3,
+    "operationsDetailIssues": 0,
+    "sentryNotConfiguredCases": 3,
+    "sentryConnectedCases": 0,
+    "latestParityLogicalInputs": 3254
+  },
+  "preserved": [
+    "pending readback lock",
+    "expected user-state readback",
+    "typed confirmation",
+    "dirty-state guards",
+    "existing submission/review mutation handlers",
+    "unverified graph evidence",
+    "bounded cursors and whole graph counts"
+  ],
+  "limits": [
+    "All rendering is synthetic local loopback; no operating mutation or provider call.",
+    "Submission/review filters/counts cover retrieved data, not an unbounded operating archive.",
+    "New changes have not been deployed.",
+    "No latency or financial improvement claim.",
+    "First audit/graph report had an invalid audit fixture and incomplete error-string detection; it is retained as failed harness evidence, not working audit-list proof.",
+    "Intermediate Sentry reports used old copy selectors; final typed-state report is not-configured and does not prove Sentry ingestion or configured detail rendering."
+  ],
+  "geometry": {
+    "viewportHeightPx": 960,
+    "mobileCanvasHeightPx": {
+      "before": 480,
+      "after": 603,
+      "difference": 123,
+      "percent": 25.625,
+      "n": 1,
+      "ci95": null
+    },
+    "finalGraphHeightShare": {
+      "390": 0.7652284263959391,
+      "834": 0.8052083333333333,
+      "1423": 0.8052083333333333
+    },
+    "environment": "synthetic loopback Chromium; geometry noise ±1px"
+  }
+}
