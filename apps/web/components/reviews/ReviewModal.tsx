@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
-import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
+import { saveDraft, getDraft, prepareDraftDeletion } from "@/lib/reviewDraftDB";
 import {
     buildReviewPhotoObjectPath,
     cleanupCanonicalReviewPhotoObjects,
@@ -85,6 +85,7 @@ const compressFoodImage = async (file: File): Promise<File> => {
 function createReviewSaveOperation(currentOwner: () => string | undefined) {
     return new ReviewSaveOperation({
         currentOwner,
+        captureDraftDeletion: draft => prepareDraftDeletion(draft.ownerId, draft.restaurantId),
         newId: () => {
             const reviewId = crypto.randomUUID();
             return reviewId;
@@ -1342,14 +1343,14 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             setOcrProgress(null);
         }
     }
-    // Await already-started IndexedDB writes before deleting the submitted draft.
-    // Submit/close refs also stop queued autosave callbacks from starting a write.
+    // Use the scoped pre-write snapshot; a newer composer may already have saved
+    // another draft at this key. Submit/close refs stop queued autosaves here.
     const clearDraft = useCallback(async (): Promise<boolean> => {
         const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
         if (!user?.id || !targetRestaurantId) return false;
         try {
             await autoSaveInFlightRef.current;
-            await deleteDraft(user.id, targetRestaurantId);
+            if (!await saveOperationRef.current?.clearSavedDraft()) return false;
             setLastSavedAt(null);
             return true;
         } catch {
@@ -1422,12 +1423,20 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         submitInFlightRef.current = true;
         setIsSubmitting(true);
         try {
+            await autoSaveInFlightRef.current;
+            if (closeRequestedRef.current || saveOwnerRef.current !== user.id) return;
             const result = await saveOperationRef.current!.submit(draft);
-            if (saveOwnerRef.current !== user.id) return;
             const latest = latestSaveInputsRef.current;
             const changedDuringSave = Object.keys(submittedInputs).some(key => (
                 submittedInputs[key as keyof typeof submittedInputs] !== latest[key as keyof typeof latest]
             ));
+            if (saveOwnerRef.current !== user.id) {
+                // A known commit survives unmount/auth changes. Finish only the
+                // captured local draft cleanup; do not notify a different owner
+                // or update an unmounted form, and never remove saved photos.
+                if (result === 'saved' && !changedDuringSave) await saveOperationRef.current!.clearSavedDraft();
+                return;
+            }
             if (closeRequestedRef.current) return; // handleClose owns cancellation readback and notification.
             if (!composerOpenRef.current) {
                 if (result === 'saved' || result === 'saved-previous') {
@@ -1463,7 +1472,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             toast({ title: "등록 후 화면 갱신 실패", description: "내 리뷰에서 등록 결과를 확인해주세요.", variant: "destructive" });
         } finally {
             submitInFlightRef.current = false;
-            setIsSubmitting(false);
+            if (saveOwnerRef.current === user.id) setIsSubmitting(false);
         }
     };
 

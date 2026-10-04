@@ -12,7 +12,7 @@ import { buildReviewPhotoObjectPath, cleanupCanonicalReviewPhotoObjects, normali
 // Run the actual component handlers and Supabase adapter with offline boundaries.
 // This avoids global module mocks affecting other unit suites and never imports
 // the configured browser client, reads .env, renders React, or calls a service.
-const source = readFileSync(join(import.meta.dir, '../components/reviews/ReviewModal.tsx'), 'utf8');
+const source = readFileSync(process.env.TZUDONG_REVIEW_SUBMIT_SOURCE ?? join(import.meta.dir, '../components/reviews/ReviewModal.tsx'), 'utf8');
 function nodeText(text: string, name: string): string {
     const tree = ts.createSourceFile('fixture.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     let found: ts.Node | undefined;
@@ -41,6 +41,8 @@ function fixture() {
     let mode: 'normal' | 'denied' | 'lost' | 'lost-read-fails' = 'normal';
     let readFail = false;
     let afterInsert: (() => void) | undefined;
+    let currentOwner = (): string | undefined => 'fixture-owner';
+    let prepareDeletion: () => Promise<() => Promise<boolean>> = async () => async () => { counts.cleared++; return true; };
     const storage = {
         async upload(path: string, _file: File, options: unknown) {
             expect(options).toEqual({ cacheControl: '3600', upsert: false });
@@ -82,6 +84,7 @@ function fixture() {
     const create = evaluate(`${nodeText(source, 'createReviewSaveOperation')}\ncreateReviewSaveOperation;`, {
         ReviewSaveOperation, supabase, buildReviewPhotoObjectPath, normalizeReviewPhotoFilename, cleanupCanonicalReviewPhotoObjects,
         prepareReceiptImage: async (file: File) => file, compressFoodImage: async (file: File) => file,
+        prepareDraftDeletion: () => prepareDeletion(),
     }) as (owner: () => string) => ReviewSaveOperation;
     const fields = {
         visitedDate: '2026-10-04', visitedTime: '12:00', categories: ['한식'],
@@ -94,14 +97,16 @@ function fixture() {
     const bindings = {
         ...fields, selectedRestaurant: { id: fields.restaurantId, name: 'Fixture' }, restaurant: null,
         user: { id: 'fixture-owner' }, saveOwnerRef: { current: 'fixture-owner' },
-        saveOperationRef: { current: create(() => 'fixture-owner') },
+        saveOperationRef: { current: create(() => currentOwner()!) },
         submitInFlightRef: { current: false }, closeRequestedRef: { current: false }, composerOpenRef: { current: true },
+        autoSaveInFlightRef: { current: null },
         latestSaveInputsRef: { current: fields }, setIsSubmitting() {}, toast: (message: {title: string}) => messages.push(message),
         clearDraft: async () => { counts.cleared++; return true; }, onSuccess: () => { counts.success++; },
         consumerNotifiedRef: { current: false }, setSaveRecovery: (value: string | null) => { recoveryStates.push(value); },
         notifySavedReview: () => { counts.success++; },
         handleClose: async () => { counts.closes++; },
     };
+    currentOwner = () => bindings.saveOwnerRef.current;
     bindings.notifySavedReview = evaluate(`${nodeText(source, 'notifySavedReview')};`, {
         ...bindings, useCallback: (callback: unknown) => callback,
     }) as () => void;
@@ -115,7 +120,8 @@ function fixture() {
     const submit = evaluate(`${nodeText(source, 'handleSubmit')};`, bindings) as () => Promise<void>;
     return { counts, rows, objects, messages, recoveryStates, selected, filters, bindings, submit, close,
         setMode: (value: typeof mode) => { mode = value; }, failReads: (value: boolean) => { readFail = value; },
-        onInsert: (callback: () => void) => { afterInsert = callback; } };
+        onInsert: (callback: () => void) => { afterInsert = callback; },
+        setPrepareDeletion: (callback: typeof prepareDeletion) => { prepareDeletion = callback; } };
 }
 
 describe('actual ReviewModal submit and Supabase adapter', () => {
@@ -168,6 +174,34 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
         expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(1); expect(f.counts.success).toBe(1);
         expect(f.counts.closes).toBe(1); expect(f.counts.removes).toBe(0);
         expect(f.messages.some(item => item.title === '리뷰가 등록되었습니다')).toBe(true);
+    });
+    test.each(['unmounted', 'different-owner'])('known commit completes scoped draft cleanup after %s without callbacks or photo removal', async (state) => {
+        const f = fixture();
+        f.onInsert(() => {
+            f.bindings.saveOwnerRef.current = state === 'unmounted' ? undefined as unknown as string : 'different-owner';
+            f.bindings.composerOpenRef.current = false;
+        });
+        await f.submit();
+        expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(1);
+        expect(f.counts.success).toBe(0); expect(f.counts.closes).toBe(0);
+        expect(f.counts.removes).toBe(0); expect(f.objects.size).toBe(2);
+    });
+    test('unmount with unanswered insert never clears its draft or saved photos', async () => {
+        const f = fixture(); f.setMode('lost-read-fails');
+        f.onInsert(() => { f.bindings.saveOwnerRef.current = undefined as unknown as string; });
+        await f.submit();
+        expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(0);
+        expect(f.counts.removes).toBe(0); expect(f.counts.success).toBe(0);
+    });
+    test('unmount during draft snapshot capture cannot dispatch a review write', async () => {
+        const f = fixture();
+        f.setPrepareDeletion(async () => {
+            f.bindings.saveOwnerRef.current = undefined as unknown as string;
+            return async () => { f.counts.cleared++; return true; };
+        });
+        const submit = evaluate(`${nodeText(source, 'handleSubmit')};`, f.bindings) as () => Promise<void>;
+        await submit();
+        expect(f.rows.size).toBe(0); expect(f.counts.uploads).toBe(0); expect(f.counts.inserts).toBe(0);
     });
     test('close readback can discover earlier commit and notify consumers', async () => {
         const f = fixture(); f.setMode('lost-read-fails'); await f.submit();
@@ -246,7 +280,7 @@ function gate() {
 }
 
 describe('actual draft handlers and IndexedDB deletion boundary', () => {
-    test('awaits in-flight autosave then actual deleteDraft and suppresses late autosave', async () => {
+    test('awaits in-flight autosave then prepared cleanup and suppresses late autosave', async () => {
         const writeEntered = gate(); const writeDone = gate(); const deleteEntered = gate(); const deleteDone = gate();
         let exists = false; let writes = 0; let deletes = 0; let completed = false;
         const draftModule = readFileSync(join(import.meta.dir, '../lib/reviewDraftDB.ts'), 'utf8');
@@ -260,6 +294,7 @@ describe('actual draft handlers and IndexedDB deletion boundary', () => {
             verificationPhoto: null, foodPhotos: [], currentStep: 3, useCallback: (callback: unknown) => callback,
             submitInFlightRef: { current: false }, closeRequestedRef: { current: false },
             autoSaveInFlightRef: { current: null as Promise<void> | null },
+            saveOperationRef: { current: { clearSavedDraft: async () => { await deleteDraft('fixture-owner', 'fixture-restaurant'); return true; } } },
             setIsSaving() {}, setLastSavedAt() {}, deleteDraft,
             saveDraft: async () => { writes++; writeEntered.resolve(); await writeDone.promise; exists = true; },
         };
@@ -279,7 +314,8 @@ describe('actual draft handlers and IndexedDB deletion boundary', () => {
         const clearDraft = evaluate(`${nodeText(source, 'clearDraft')};`, {
             useCallback: (callback: unknown) => callback, user: { id: 'fixture-owner' },
             selectedRestaurant: { id: 'fixture-restaurant' }, restaurant: null,
-            autoSaveInFlightRef: { current: null }, setLastSavedAt() {}, deleteDraft: async () => { throw new Error('synthetic'); },
+            autoSaveInFlightRef: { current: null }, setLastSavedAt() {},
+            saveOperationRef: { current: { clearSavedDraft: async () => { throw new Error('synthetic'); } } },
         }) as () => Promise<boolean>;
         expect(await clearDraft()).toBe(false);
     });

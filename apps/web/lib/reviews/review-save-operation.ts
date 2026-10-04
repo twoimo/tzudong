@@ -28,6 +28,7 @@ export interface SavedReviewReadback {
 export interface ReviewSaveDependencies {
     currentOwner(): string | undefined;
     newId(): string;
+    captureDraftDeletion?(draft: ReviewSaveDraft): Promise<() => Promise<boolean>>;
     prepare(draft: ReviewSaveDraft, reviewId: string): Promise<ReviewSaveUpload[]>;
     upload(upload: ReviewSaveUpload): Promise<{ error: unknown }>;
     verifyUpload?(upload: ReviewSaveUpload): Promise<boolean>;
@@ -46,6 +47,7 @@ type Operation = {
     availableUploads: Set<ReviewSaveUpload>;
     unansweredUploads: Set<ReviewSaveUpload>;
     write: 'none' | 'rejected' | 'unknown' | 'saved';
+    draftDeletion?: () => Promise<boolean>;
 };
 
 function sameDraft(a: ReviewSaveDraft, b: ReviewSaveDraft): boolean {
@@ -94,6 +96,13 @@ export class ReviewSaveOperation {
     }
 
     requestCancel(): void { this.cancelling = true; }
+
+    async clearSavedDraft(): Promise<boolean> {
+        const op = this.operation;
+        if (op?.write !== 'saved' || !op.draftDeletion) return false;
+        try { return await op.draftDeletion(); }
+        catch { return false; }
+    }
 
     releaseSaved(): void {
         if (!this.active && this.operation?.write === 'saved') this.operation = null;
@@ -189,6 +198,13 @@ export class ReviewSaveOperation {
             this.operation = op;
         }
         const current = op;
+        // Snapshot belongs to this exact review ID, including cleanup retries.
+        // Never recapture a replacement draft after a committed/unknown write.
+        if (this.deps.captureDraftDeletion && !current.draftDeletion) {
+            try { current.draftDeletion = await this.deps.captureDraftDeletion(current.draft); }
+            catch { return 'blocked'; }
+            if (this.cancelling || !this.owns(current)) return 'cancelled';
+        }
         if (current.write !== 'unknown') {
             try {
                 if (!current.uploads.length) {
