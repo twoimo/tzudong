@@ -30,6 +30,7 @@ export interface ReviewSaveDependencies {
     newId(): string;
     prepare(draft: ReviewSaveDraft, reviewId: string): Promise<ReviewSaveUpload[]>;
     upload(upload: ReviewSaveUpload): Promise<{ error: unknown }>;
+    verifyUpload?(upload: ReviewSaveUpload): Promise<boolean>;
     insert(draft: ReviewSaveDraft, reviewId: string, uploads: ReviewSaveUpload[]): PromiseLike<{ error: unknown }>;
     read(ownerId: string, reviewId: string): PromiseLike<{ data: SavedReviewReadback | null; error: unknown }>;
     cleanup(ownerId: string, reviewId: string, uploads: ReviewSaveUpload[]): Promise<boolean>;
@@ -42,6 +43,8 @@ type Operation = {
     draft: ReviewSaveDraft;
     uploads: ReviewSaveUpload[];
     touched: Set<ReviewSaveUpload>;
+    availableUploads: Set<ReviewSaveUpload>;
+    unansweredUploads: Set<ReviewSaveUpload>;
     write: 'none' | 'rejected' | 'unknown' | 'saved';
 };
 
@@ -58,6 +61,16 @@ function sameDraft(a: ReviewSaveDraft, b: ReviewSaveDraft): boolean {
 function isDefiniteRejection(error: unknown): boolean {
     if (!error || typeof error !== 'object' || !('code' in error)) return false;
     return ['42501', '23502', '23503', '23514', '22001', '22007', '22P02'].includes(String(error.code));
+}
+
+function isDefiniteUploadRejection(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    // Storage errors are HTTP outcomes, not Postgres transaction receipts.
+    // A SQL-looking code cannot override an unknown HTTP result.
+    const status = 'statusCode' in error ? error.statusCode : 'status' in error ? error.status : undefined;
+    // Validation/auth rejection precedes a write. Duplicate, server and transport
+    // failures can follow a committed or still-running upload.
+    return ['400', '401', '403', '413', '415', '422'].includes(String(status));
 }
 
 /** One memory-only operation per mounted composer, O(current photo count).
@@ -127,12 +140,14 @@ export class ReviewSaveOperation {
         if (op.touched.size === 0) return true;
         const readback = await this.read(op);
         if (readback === 'saved') return true;
-        // An empty read after a lost response does NOT prove rollback: the
-        // original request could still commit. Keep its ID and objects intact.
-        if (readback !== 'absent' || op.write === 'unknown' || !this.owns(op)) return false;
+        // An empty row/object read does NOT prove an unanswered request ended.
+        // Even a later successful retry/metadata read cannot authorize deletion:
+        // the earlier upload could still recreate its key after that deletion.
+        if (readback !== 'absent' || op.write === 'unknown' || op.unansweredUploads.size > 0 || !this.owns(op)) return false;
         try {
             if (!await this.deps.cleanup(op.draft.ownerId, op.id, [...op.touched])) return false;
             op.touched.clear();
+            op.availableUploads.clear();
             return true;
         } catch { return false; }
     }
@@ -158,7 +173,8 @@ export class ReviewSaveOperation {
             }
             const saved = this.savedResult(op, draft);
             if (saved) return saved;
-            if (op.write !== 'unknown' && op.touched.size && !await this.cleanup(op)) return 'blocked';
+            if (op.unansweredUploads.size > 0 && !sameDraft(op.draft, draft)) return 'blocked';
+            if (op.unansweredUploads.size === 0 && op.write !== 'unknown' && op.touched.size && !await this.cleanup(op)) return 'blocked';
             const recovered = this.savedResult(op, draft);
             if (recovered) return recovered;
             if (!sameDraft(op.draft, draft)) { this.operation = null; op = null; }
@@ -168,7 +184,7 @@ export class ReviewSaveOperation {
             op = {
                 id: this.deps.newId(),
                 draft: { ...draft, categories: [...draft.categories], foodPhotos: [...draft.foodPhotos] },
-                uploads: [], touched: new Set(), write: 'none',
+                uploads: [], touched: new Set(), availableUploads: new Set(), unansweredUploads: new Set(), write: 'none',
             };
             this.operation = op;
         }
@@ -188,9 +204,23 @@ export class ReviewSaveOperation {
                 }
                 if (this.cancelling || !this.owns(current)) return 'cancelled';
                 const uploadOne = async (upload: ReviewSaveUpload) => {
+                    if (!this.owns(current) || this.cancelling) throw new Error('REVIEW_UPLOAD_CANCELLED');
+                    if (current.availableUploads.has(upload)) return;
+                    if (current.unansweredUploads.has(upload) && this.deps.verifyUpload) {
+                        let available = false;
+                        try { available = await this.deps.verifyUpload(upload); } catch { /* Unverified remains uncertain. */ }
+                        if (!this.owns(current) || this.cancelling) throw new Error('REVIEW_UPLOAD_CANCELLED');
+                        if (available) { current.availableUploads.add(upload); return; }
+                    }
                     current.touched.add(upload); // includes lost upload replies
-                    const { error } = await this.deps.upload(upload);
-                    if (error) throw new Error('REVIEW_PHOTO_UPLOAD_FAILED');
+                    try {
+                        // Retry the same prepared bytes/path with upsert:false.
+                        // Never infer rollback from an absent object or row.
+                        const { error } = await this.deps.upload(upload);
+                        if (!error) { current.availableUploads.add(upload); return; }
+                        if (!isDefiniteUploadRejection(error)) current.unansweredUploads.add(upload);
+                    } catch { current.unansweredUploads.add(upload); }
+                    throw new Error('REVIEW_PHOTO_UPLOAD_FAILED');
                 };
                 // Keep receipt-first / parallel-food upload behavior. Wait for
                 // late successful siblings before compensating partial failure.

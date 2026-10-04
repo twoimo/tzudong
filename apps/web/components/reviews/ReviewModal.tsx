@@ -114,6 +114,11 @@ function createReviewSaveOperation(currentOwner: () => string | undefined) {
         upload: ({ path, file }) => supabase.storage.from('review-photos').upload(path, file, {
             cacheControl: '3600', upsert: false,
         }),
+        verifyUpload: async ({ path, file }) => {
+            const { data, error } = await supabase.storage.from('review-photos').info(path);
+            return !error && data !== null && data.size === file.size
+                && (!file.type || data.contentType === file.type);
+        },
         insert: (draft, reviewId, uploads) => supabase.from('reviews').insert({
             id: reviewId,
             user_id: draft.ownerId,

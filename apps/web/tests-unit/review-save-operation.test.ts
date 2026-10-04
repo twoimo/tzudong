@@ -146,12 +146,12 @@ describe('bounded review save operation (offline)', () => {
         expect(await f.operation.submit({ ...f.draft, content: 'Changed' })).toBe('saved-previous');
         expect(f.rows.size).toBe(1); expect(f.counts.removes).toBe(0);
     });
-    test('partial failure waits for late sibling upload before exact owned cleanup', async () => {
+    test('explicit partial rejection waits for late sibling upload before exact owned cleanup', async () => {
         const f = fixture(); const gate = deferred(); const entered = deferred();
         f.draft.foodPhotos.push(new File(['second'], 'second.jpg'));
         f.deps.upload = async upload => {
             f.counts.uploads++;
-            if (upload.path.endsWith('fixture_1.jpg')) return { error: {} };
+            if (upload.path.endsWith('fixture_1.jpg')) return { error: { statusCode: '403' } };
             if (upload.path.endsWith('fixture_2.jpg')) { entered.resolve(); await gate.promise; }
             f.objects.add(upload.path); return { error: null };
         };
@@ -162,7 +162,7 @@ describe('bounded review save operation (offline)', () => {
     });
     test('receipt upload denial does not start food uploads or insert', async () => {
         const f = fixture();
-        f.deps.upload = async () => { f.counts.uploads++; return { error: { code: '42501' } }; };
+        f.deps.upload = async () => { f.counts.uploads++; return { error: { statusCode: '403' } }; };
         expect(await f.operation.submit(f.draft)).toBe('failed');
         expect(f.counts.uploads).toBe(1); expect(f.counts.writes).toBe(0); expect(f.objects.size).toBe(0);
     });
