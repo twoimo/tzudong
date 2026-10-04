@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { logCliError } from './privacy-safe-cli-log.mjs';
+import { validateRawFile, validateRejectedWarmupRaw } from './verify-typecheck-benchmark-report.mjs';
 
 const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = path.resolve(APP_ROOT, '..', '..');
@@ -148,11 +149,12 @@ async function samplerFailureReceipt(evidence) {
     evidenceTimeout: evidence?.timeoutDiagnostic ?? null,
   };
 }
-async function failureReceipt(error) {
+async function failureReceipt(error, failureStage) {
   const lastFailure = error?.lastFailure ?? error?.cause?.lastFailure;
   return {
     schemaVersion: 2,
     status: 'failed',
+    failureStage,
     failureCode: typeof error?.code === 'string' && /^TYPECHECK_[A-Z_]+$/.test(error.code) ? error.code : 'TYPECHECK_BENCHMARK_FAILURE',
     sampler: await samplerFailureReceipt(error?.samplerEvidence),
     lastFailure: lastFailure ? {
@@ -190,6 +192,7 @@ function runCompiler(kind, profile, rawOutput, attempt) {
       errorCode: samplerResult?.errorCode ?? null,
       summary,
       rawOutput,
+      compilerClean: compilerResult?.code === 0 && !compilerResult.signal && compilerStdoutBytes === 0 && compilerStderrBytes === 0,
       timeoutDiagnostic: evidenceStartedAt === null ? null : {
         sampler: { pid: Number.isInteger(sampler?.pid) ? sampler.pid : null, running: sampler?.exitCode === null && sampler?.signalCode === null, stdoutBytes: samplerStdoutBytes, stderrBytes: samplerStderrBytes },
         root: { pid: Number.isInteger(child?.pid) ? child.pid : null, running: child?.exitCode === null && child?.signalCode === null, stdoutBytes: compilerStdoutBytes, stderrBytes: compilerStderrBytes },
@@ -294,6 +297,85 @@ function sampleFailure(position, retry, kind, error) {
 export function mustAbortSampleRetries(error) {
   return error?.code === 'TYPECHECK_SAMPLER_EVIDENCE_TIMEOUT';
 }
+// A completed, clean compiler with a cadence-only rejection can be sampled again.
+// Setup, protocol, identity, pressure and compiler failures remain immediate failures.
+export function isRetryableWarmupFailure(error) {
+  const evidence = error?.samplerEvidence;
+  const summary = evidence?.summary;
+  return error?.code === 'TYPECHECK_SAMPLER_SUMMARY_INVALID'
+    && evidence?.compilerClean === true && evidence.code === 1 && !evidence.signal && !evidence.errorCode
+    && summary?.schemaVersion === 2 && summary.valid === false && summary.terminalObserved === true
+    && summary.requestedIntervalMs === 10 && summary.maximumAllowedGapMs === 60
+    && Number.isInteger(summary.samples) && summary.samples >= 3 && summary.samples <= 20_000
+    && Number.isSafeInteger(summary.peakRssBytes) && summary.peakRssBytes > 0
+    && finite(summary.maximumGapMs) && summary.maximumGapMs > 60
+    && Number.isInteger(summary.rootPid) && summary.rootPid > 0
+    && typeof summary.rootStartIdentity === 'string' && /^\d+$/.test(summary.rootStartIdentity)
+    && JSON.stringify(summary.invalidReasons) === '["sampling-gap-exceeded"]';
+}
+
+export async function runWarmup(kind, profile, rawDirectory, invalidRuns, recordOutcome, sample = runCompiler) {
+  for (let retry = 1; retry <= 3; retry += 1) {
+    // Keep the first attempt's historical path; never overwrite a rejected sample.
+    const rawOutput = path.join(rawDirectory, retry === 1 ? `warmup-${kind}.ndjson` : `warmup-${kind}-attempt-${retry}.ndjson`);
+    let result; let error;
+    try {
+      result = await sample(kind, profile, rawOutput, retry);
+      await validateRawOutput(rawOutput, result.samplerSummary);
+      if (result.code || result.signal || result.stdout || result.stderr || result.samplerCode || result.samplerSignal) throw Object.assign(new Error('Warm-up compiler evidence was not clean'), { code: 'TYPECHECK_COMPILER_EVIDENCE_INVALID' });
+    } catch (failure) { error = failure; }
+    const rawSha256 = await exists(rawOutput) ? await digestFile(rawOutput) : null;
+    if (!error) {
+      await recordOutcome({ phase: 'warmup', kind, retry, accepted: true, durationMs: result.durationMs, rawOutput: path.basename(rawOutput), rawSha256, summary: result.samplerSummary, failure: null });
+      return { kind, retry, durationMs: result.durationMs, rawOutput: path.basename(rawOutput), rawSha256 };
+    }
+    invalidRuns[kind] += 1;
+    await recordOutcome({ phase: 'warmup', kind, retry, accepted: false, rawOutput: path.basename(rawOutput), rawSha256, failure: sampleOutcomeFailureCode(error) });
+    let retryable = isRetryableWarmupFailure(error);
+    if (retryable) {
+      try { await validateRejectedWarmupRaw(rawOutput); } catch { retryable = false; }
+    }
+    if (!retryable || retry === 3 || invalidRuns[kind] >= 3) {
+      throw Object.assign(sampleFailure(0, retry, kind, error), { code: sampleOutcomeFailureCode(error) });
+    }
+  }
+}
+
+async function checkpointOutcomes(stage, outcomes) {
+  const destination = path.join(stage, 'attempt-outcomes.json');
+  const temporary = `${destination}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(outcomes, null, 2)}\n`, { flag: 'wx' });
+  await rename(temporary, destination);
+}
+
+export async function publishFailureEvidence(stage, destination, error, failureStage, outcomes) {
+  const receipt = await failureReceipt(error, failureStage);
+  await rm(path.join(stage, 'cache'), { recursive: true, force: true });
+  try {
+    await checkpointOutcomes(stage, outcomes);
+    const entries = await publicationEntries(stage);
+    let bytes = 0;
+    for (const entry of entries) {
+      if (entry === 'raw/') continue;
+      const raw = /^raw\/(?:warmup-(?:native|compat)(?:-attempt-[23])?|\d{2}-(?:native|compat)-attempt-[1-3])\.ndjson$/.test(entry);
+      if (!raw && !['preflight-receipts.json', 'attempt-outcomes.json', 'report.json'].includes(entry)) throw new Error('Failure evidence contains an unsupported entry');
+      const file = path.join(stage, entry);
+      const size = (await stat(file)).size;
+      if (size > (raw ? TYPECHECK_BENCHMARK_MAX_RAW_FILE_BYTES : TYPECHECK_BENCHMARK_MAX_METADATA_BYTES)) throw new Error('Failure evidence exceeds its size bound');
+      bytes += size;
+      if (raw) await validateRawFile(file, null);
+    }
+    if (bytes + Buffer.byteLength(JSON.stringify(receipt, null, 2)) + 1 > TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES) throw new Error('Failure evidence exceeds its aggregate bound');
+  } catch {
+    // Never upload unknown bytes or destroy raw staging when its shape is invalid.
+    await mkdir(destination);
+    await writeFile(path.join(destination, 'failure-receipt.json'), `${JSON.stringify({ ...receipt, rawRetention: 'unpublished-stage' }, null, 2)}\n`, { flag: 'wx' });
+    return;
+  }
+  await writeFile(path.join(stage, 'failure-receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`, { flag: 'wx' });
+  if (await exists(destination)) throw new Error('Failure publication destination already exists');
+  await rename(stage, destination);
+}
 export function samplerCloseRequiresImmediateFailure(usesWindowsGate, compilerResult) {
   return usesWindowsGate && !compilerResult;
 }
@@ -391,6 +473,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2)); const publicationDirectory = path.dirname(options.output); const publicationParent = path.dirname(publicationDirectory); const stage = path.join(publicationParent, `.${path.basename(publicationDirectory)}.stage-${randomUUID()}`);
   if (await exists(publicationDirectory) || await exists(options.output)) throw new Error('Publication directory must not already exist'); await mkdir(publicationParent, { recursive: true }); if (inside(await realpath(publicationParent), await realpath(REPO_ROOT))) throw new Error('Benchmark output resolved inside the repository'); await mkdir(stage);
   let failureStage = 'INITIALIZATION';
+  const outcomes = [];
   try {
     failureStage = 'PROVENANCE';
     const provenance = await cleanProvenance(options.releaseId);
@@ -400,19 +483,14 @@ async function main() {
     const cacheRoot = path.join(stage, 'cache');
     await mkdir(rawDirectory);
     const profiles = Object.fromEntries(await Promise.all(Object.keys(COMPILERS).map(async (kind) => { const cacheDirectory = path.join(cacheRoot, kind); const env = compilerEnvironment({ ...process.env, LC_ALL: 'C', LANG: 'C' }, cacheDirectory); await mkdir(env.TMP, { recursive: true }); return [kind, { env, cacheDirectory }]; })));
-    const outcomes = []; const warmups = []; const runs = []; const invalidRuns = { native: 0, compat: 0 };
+    const warmups = []; const runs = []; const invalidRuns = { native: 0, compat: 0 };
     for (const kind of ['native', 'compat']) {
       const stageKind = kind.toUpperCase();
       failureStage = `WARMUP_${stageKind}_RUN`;
-      const rawOutput = path.join(rawDirectory, `warmup-${kind}.ndjson`);
-      const result = await runCompiler(kind, profiles[kind], rawOutput, 0);
-      failureStage = `WARMUP_${stageKind}_RAW`;
-      await validateRawOutput(rawOutput, result.samplerSummary);
-      failureStage = `WARMUP_${stageKind}_COMPILER`;
-      if (result.code || result.signal || result.stdout || result.stderr) throw new Error(`${kind} warm-up failed`);
-      const rawSha256 = await digestFile(rawOutput);
-      outcomes.push({ phase: 'warmup', kind, durationMs: result.durationMs, rawOutput: path.basename(rawOutput), rawSha256, summary: result.samplerSummary });
-      warmups.push({ kind, durationMs: result.durationMs, rawSha256 });
+      warmups.push(await runWarmup(kind, profiles[kind], rawDirectory, invalidRuns, async (outcome) => {
+        outcomes.push(outcome);
+        await checkpointOutcomes(stage, outcomes);
+      }));
     }
     failureStage = 'SAMPLES';
     async function executeSamples(sampleCount) {
@@ -438,21 +516,23 @@ async function main() {
             lastError = error;
             outcomes.push({ phase: 'measured', position: position + 1, retry: retry + 1, kind, accepted: false, rawOutput: path.basename(rawOutput), rawSha256: await exists(rawOutput) ? await digestFile(rawOutput) : null, failure: sampleOutcomeFailureCode(error) });
           }
+          await checkpointOutcomes(stage, outcomes);
           invalidRuns[kind] += 1;
           if (mustAbortSampleRetries(lastError) || invalidRuns[kind] > 3) throw sampleFailure(position + 1, retry + 1, kind, lastError);
         }
         if (!accepted) throw sampleFailure(position + 1, 3, kind, lastError);
         runs.push(accepted);
+        await checkpointOutcomes(stage, outcomes);
       }
       return sequence;
     }
     let sequence = await executeSamples(7); let measured = profileStats(runs); const initialNoise = isNoisy(measured); if (initialNoise) { sequence = await executeSamples(9); measured = profileStats(runs); }
-    await writeFile(path.join(stage, 'attempt-outcomes.json'), `${JSON.stringify(outcomes, null, 2)}\n`, { flag: 'wx' }); const outcomeSha256 = await digestFile(path.join(stage, 'attempt-outcomes.json'));
+    const outcomeSha256 = await digestFile(path.join(stage, 'attempt-outcomes.json'));
     const decision = buildBenchmarkDecision(runs, initialNoise);
     measured = decision.measured;
     const preflightSha256 = await digestFile(path.join(stage, 'preflight-receipts.json'));
     const report = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       releaseId: options.releaseId,
       candidate: {
         tree: options.releaseId,
@@ -515,9 +595,7 @@ async function main() {
     if (await exists(publicationDirectory)) throw new Error('Publication destination appeared during staging'); await rename(stage, publicationDirectory); process.stdout.write(`${JSON.stringify({ status: report.acceptance.passed ? report.evidenceDecision.status : 'failed', output: path.basename(options.output), profiles: measured })}\n`); if (!report.acceptance.passed) process.exitCode = 1;
   } catch (error) {
     if (error instanceof Error && !error.code) error.code = `TYPECHECK_BENCHMARK_${failureStage}`;
-    await mkdir(publicationDirectory, { recursive: true });
-    await writeFile(path.join(publicationDirectory, 'failure-receipt.json'), `${JSON.stringify(await failureReceipt(error), null, 2)}\n`, { flag: 'wx' });
-    await rm(stage, { recursive: true, force: true });
+    await publishFailureEvidence(stage, publicationDirectory, error, failureStage, outcomes);
     throw error;
   }
 }
