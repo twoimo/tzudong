@@ -1,4 +1,13 @@
 import { describe, expect, mock, spyOn, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import vm from 'node:vm';
+import ts from 'typescript';
+import { OVERSEAS_REGIONS } from '../constants/overseas-regions';
+import * as overseasMatching from '../lib/overseas-region-matching';
+import * as restClient from '../lib/supabase-rest-client';
+import * as homeMapThemeFilters from '../lib/home-map-theme-filters';
+import type { Restaurant } from '../types/restaurant';
 
 type MergeInput = Array<Record<string, unknown>>;
 
@@ -47,6 +56,65 @@ const loadRestaurantDetail = async (): Promise<RestaurantDetailExports> => {
     const detailModule = (await import('../hooks/use-restaurant-detail')) as unknown as RestaurantDetailExports;
     return detailModule;
 };
+
+type HookOptions = Parameters<typeof import('../hooks/use-restaurants').useRestaurants>[0];
+type CapturedQuery = {
+    queryKey: readonly unknown[];
+    queryFn: () => Promise<Restaurant[]>;
+    enabled: boolean;
+};
+
+// Exercise the real initializer, query callback and merge logic in an isolated
+// module scope. Transport doubles cannot reach credentials, fetch or other suites.
+function regionQueryFixture(regions = OVERSEAS_REGIONS) {
+    const requests: Array<{ table: string; query: Array<[string, string | number]> }> = [];
+    const countryCalls: Array<[string, '%' | '*']> = [];
+    const rows = [
+        makeRestaurant({ id: 'second-id', approved_name: '앞 식당', road_address: '주소 A' }),
+        makeRestaurant({ id: 'first-id', approved_name: '뒤 식당', road_address: '주소 B' }),
+    ];
+    const unexpected = () => { throw new Error('UNEXPECTED_REGION_QUERY_DEPENDENCY'); };
+    const dependencies: Record<string, unknown> = {
+        '@tanstack/react-query': { useQuery: (query: CapturedQuery) => query },
+        '@/constants/overseas-regions': { OVERSEAS_REGIONS: regions },
+        '@/lib/overseas-region-matching': {
+            ...overseasMatching,
+            buildOverseasCountryAddressOrFilter: (country: string, wildcard: '%' | '*') => {
+                countryCalls.push([country, wildcard]);
+                return overseasMatching.buildOverseasCountryAddressOrFilter(country, wildcard);
+            },
+        },
+        '@/lib/performance-monitor': { perfMonitor: { startMeasure() {}, endMeasure() {}, report() {} } },
+        '@/lib/supabase-rest-client': {
+            ...restClient,
+            fetchSupabaseRows: async (table: string, query: Array<[string, string | number]>) => {
+                requests.push({ table, query });
+                return rows;
+            },
+        },
+        '@/lib/restaurant-review-counts': { buildRelatedVerifiedReviewCountMap: unexpected },
+        '@/lib/verified-review-count-rows': { fetchVerifiedReviewCountRows: unexpected },
+        '@/lib/home-map-theme-filters': homeMapThemeFilters,
+        '@/lib/home-map-youtube-kpi': {
+            enrichRestaurantsWithHomeMapYoutubeKpiMetrics: async (restaurants: Restaurant[]) => restaurants,
+        },
+        '@/lib/debug-log': { describeErrorCodeForLog: unexpected },
+    };
+    const source = readFileSync(resolve(import.meta.dir, '../hooks/use-restaurants.tsx'), 'utf8');
+    const compiled = ts.transpileModule(source, { compilerOptions: {
+        module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
+    } }).outputText;
+    const exports = {} as { useRestaurants: (options: HookOptions) => CapturedQuery };
+    vm.runInNewContext(compiled, {
+        exports,
+        process: { env: { NODE_ENV: 'test' } },
+        require: (name: string) => {
+            if (Object.hasOwn(dependencies, name)) return dependencies[name];
+            return unexpected();
+        },
+    });
+    return { useRestaurants: exports.useRestaurants, requests, countryCalls, rows };
+}
 
 function makeRestaurant(overrides: Partial<MergeFixtureRestaurant>): MergeFixtureRestaurant {
     return {
@@ -97,6 +165,107 @@ describe('buildRestaurantSelectFields', () => {
         expect(buildRestaurantSelectFields({ compact: true, includeYoutubeMetaForTheme: true })).toContain(
             'source_type',
         );
+    });
+});
+
+describe('useRestaurants region queries', () => {
+    const fields = ['road_address', 'jibun_address', 'english_address'];
+    const regionOption = (region: string) => region as NonNullable<HookOptions>['region'];
+
+    test('preserves every configured overseas query, source projection, filters and returned ID order', async () => {
+        const fixture = regionQueryFixture();
+        const bounds = { south: 1.123456, west: 2.234567, north: 3.345678, east: 4.456789 };
+        for (const [region, config] of Object.entries(OVERSEAS_REGIONS)) {
+            const priorRequests = fixture.requests.length;
+            const query = fixture.useRestaurants({
+                region: regionOption(`  ${region}  `), bounds, category: [' 한식 ', '분식', '한식'],
+                minReviews: 3, compact: true, includeVerifiedReviewCounts: false, enabled: false,
+            });
+            expect(fixture.requests).toHaveLength(priorRequests);
+            expect(fixture.countryCalls).toHaveLength(0);
+            expect(query.enabled).toBe(false);
+            expect(query.queryKey).toEqual([
+                'restaurants', [1.1235, 2.2346, 3.3457, 4.4568], ['분식', '한식'], region, 3, null,
+                false, true, false,
+            ]);
+
+            const result = await query.queryFn();
+            expect(fixture.requests).toHaveLength(priorRequests + 1);
+            expect(result.map(row => row.id)).toEqual(['second-id', 'first-id']);
+            expect(fixture.requests.at(-1)).toEqual({ table: 'restaurants', query: [
+                ['select', 'id, name:approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, source_type'],
+                ['status', 'eq.approved'], ['order', 'approved_name.asc'],
+                ['lat', 'gte.1.123456'], ['lat', 'lte.3.345678'],
+                ['lng', 'gte.2.234567'], ['lng', 'lte.4.456789'],
+                ['categories', 'ov.{"분식","한식"}'],
+                ['or', `(${config.keywords.flatMap(keyword => fields.map(field => `${field}.ilike.*${keyword}*`)).join(',')})`],
+                ['review_count', 'gte.3'],
+            ] });
+        }
+        expect(fixture.countryCalls).toHaveLength(0);
+    });
+
+    test('sanitizes overseas keywords and skips terms that become empty without changing keyword order', async () => {
+        const config = OVERSEAS_REGIONS['미국(LA)'];
+        const keywords = ['   ', '(),', '100%_Town),id.eq.fixture', 'Los Angeles', 'Los Angeles'];
+        const fixture = regionQueryFixture({ ...OVERSEAS_REGIONS, '미국(LA)': { ...config, keywords } });
+        await fixture.useRestaurants({ region: '미국(LA)', includeVerifiedReviewCounts: false }).queryFn();
+        const expectedTerms = ['100\\%\\_Town  id.eq.fixture', 'Los Angeles', 'Los Angeles'];
+        expect(fixture.requests[0].query.filter(([key]) => key === 'or')).toEqual([
+            ['or', `(${expectedTerms.flatMap(term => fields.map(field => `${field}.ilike.*${term}*`)).join(',')})`],
+        ]);
+        expect(fixture.countryCalls).toHaveLength(0);
+        expect(keywords).toEqual(['   ', '(),', '100%_Town),id.eq.fixture', 'Los Angeles', 'Los Angeles']);
+        expect(OVERSEAS_REGIONS['미국(LA)']).toBe(config);
+    });
+
+    test('keeps empty keyword lists free of an empty OR or a country fallback', async () => {
+        for (const keywords of [[], ['', '   ', '(),']]) {
+            const fixture = regionQueryFixture({
+                ...OVERSEAS_REGIONS, '미국(LA)': { ...OVERSEAS_REGIONS['미국(LA)'], keywords },
+            });
+            await fixture.useRestaurants({ region: '미국(LA)', includeVerifiedReviewCounts: false }).queryFn();
+            expect(fixture.requests[0].query.some(([key]) => key === 'or')).toBe(false);
+            expect(fixture.requests[0].query).toContainEqual(['status', 'eq.approved']);
+            expect(fixture.countryCalls).toHaveLength(0);
+        }
+    });
+
+    test('builds each country filter once inside the callback and reuses its exact result', async () => {
+        const fixture = regionQueryFixture();
+        const countries = [...new Set(Object.values(OVERSEAS_REGIONS).map(config => config.country))];
+        for (const country of countries) {
+            const previousCalls = fixture.countryCalls.length;
+            const query = fixture.useRestaurants({ region: regionOption(country), includeVerifiedReviewCounts: false });
+            expect(fixture.countryCalls).toHaveLength(previousCalls);
+            await query.queryFn();
+            expect(fixture.countryCalls.slice(previousCalls)).toEqual([[country, '*']]);
+            expect(fixture.requests.at(-1)?.query.filter(([key]) => key === 'or')).toEqual([
+                ['or', `(${overseasMatching.buildOverseasCountryAddressOrFilter(country, '*')})`],
+            ]);
+        }
+    });
+
+    test('preserves domestic island, ordinary, unknown and blank region boundaries', async () => {
+        const cases = [
+            { region: '', term: null, countryCalls: 0 },
+            { region: '   ', term: null, countryCalls: 0 },
+            { region: '울릉도', term: '울릉', countryCalls: 0 },
+            { region: '욕지도', term: '욕지', countryCalls: 0 },
+            { region: ' 서울특별시 ', term: '서울특별시', countryCalls: 1 },
+            { region: '알수없는지역', term: '알수없는지역', countryCalls: 1 },
+            { region: '서울),id.eq.fixture', term: '서울  id.eq.fixture', countryCalls: 1 },
+            { region: '(),', term: null, countryCalls: 1 },
+        ];
+        const fixture = regionQueryFixture();
+        for (const entry of cases) {
+            const previousCalls = fixture.countryCalls.length;
+            await fixture.useRestaurants({ region: regionOption(entry.region), includeVerifiedReviewCounts: false }).queryFn();
+            expect(fixture.countryCalls).toHaveLength(previousCalls + entry.countryCalls);
+            expect(fixture.requests.at(-1)?.query.filter(([key]) => key === 'or')).toEqual(entry.term ? [
+                ['or', `(road_address.ilike.*${entry.term}*,jibun_address.ilike.*${entry.term}*)`],
+            ] : []);
+        }
     });
 });
 
