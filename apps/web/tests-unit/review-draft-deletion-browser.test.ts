@@ -19,34 +19,34 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
         window.run = async () => {
             const result = {};
             await saveDraft(draft());
-            const deletedAfterUnmount = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
+            const deletedAfterUnmount = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
             result.knownCommitClearsCapturedRow = await deletedAfterUnmount() && await getDraft('fixture-owner', 'fixture-restaurant') === null;
             result.repeatedCleanupIsIdempotent = await deletedAfterUnmount();
 
             await saveDraft(draft());
-            const oldCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
+            const oldCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
             now++;
             await saveDraft(draft('fixture-owner', 'fixture-restaurant', 'Newer synthetic edited draft'));
             result.changedRowSurvives = await oldCleanup() && (await getDraft('fixture-owner', 'fixture-restaurant'))?.content === 'Newer synthetic edited draft';
 
-            const sameTextCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
+            const sameTextCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
             now++;
             await saveDraft(draft('fixture-owner', 'fixture-restaurant', 'Newer synthetic edited draft'));
             result.newerTimestampSurvives = await sameTextCleanup() && await getDraft('fixture-owner', 'fixture-restaurant') !== null;
 
-            const absentCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-new-restaurant');
+            const absentCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-new-restaurant', null);
             await saveDraft(draft('fixture-owner', 'fixture-new-restaurant'));
             result.newRowAtAbsentKeySurvives = await absentCleanup() && await getDraft('fixture-owner', 'fixture-new-restaurant') !== null;
 
             await saveDraft(draft('fixture-other-owner'));
             await saveDraft(draft('fixture-owner', 'fixture-other-restaurant'));
-            const scopedCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
+            const scopedCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
             result.scopePreserved = await scopedCleanup()
                 && await getDraft('fixture-owner', 'fixture-restaurant') === null
                 && await getDraft('fixture-other-owner', 'fixture-restaurant') !== null
                 && await getDraft('fixture-owner', 'fixture-other-restaurant') !== null;
 
-            const rejectedCleanup = await prepareDraftDeletion('invalid identifier', 'fixture-restaurant');
+            const rejectedCleanup = await prepareDraftDeletion('invalid identifier', 'fixture-restaurant', null);
             result.invalidScopeRejected = !await rejectedCleanup();
             await saveDraft({ ...draft(), verificationPhoto: new File(['synthetic'], 'fixture.jpg'), foodPhotos: [new File(['synthetic'], 'fixture.jpg')] });
             const read = await getDraft('fixture-owner', 'fixture-restaurant');
@@ -55,7 +55,7 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
             let inserts = 0, captures = 0;
             const operation = new ReviewSaveOperation({
                 currentOwner: () => 'fixture-owner', newId: () => 'fixture-review-id',
-                captureDraftDeletion: async saved => { captures++; return prepareDraftDeletion(saved.ownerId, saved.restaurantId); },
+                captureDraftDeletion: async saved => { captures++; return prepareDraftDeletion(saved.ownerId, saved.restaurantId, read); },
                 prepare: async (saved, reviewId) => [saved.verificationPhoto, ...saved.foodPhotos].map((file, index) => ({
                     file, purpose: index ? 'food' : 'verification',
                     path: buildReviewPhotoObjectPath({ ownerId: saved.ownerId, reviewId, purpose: index ? 'food' : 'verification' }, 'fixture.jpg'),
