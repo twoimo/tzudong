@@ -79,13 +79,18 @@ async function resolveCompilerInRepoTree() {
   return path.relative(resolvedRoot, resolvedEntrypoint).replaceAll('\\', '/');
 }
 
+function sameDependencyMap(left = {}, right = {}) {
+  const keys = Object.keys(left).sort();
+  return keys.length === Object.keys(right).length && keys.every(key => left[key] === right[key]);
+}
+
 function pinItems({ manifest, npmLock, runtimeNpm, runtimeNode }) {
   const native = npmLock.packages?.['node_modules/@typescript/native'] ?? {};
   const compat = npmLock.packages?.['node_modules/typescript'] ?? {};
   const root = npmLock.packages?.[''] ?? {};
   const releaseAuthorityAligned =
-    JSON.stringify(root.dependencies) === JSON.stringify(manifest.dependencies)
-    && JSON.stringify(root.devDependencies) === JSON.stringify(manifest.devDependencies);
+    sameDependencyMap(root.dependencies, manifest.dependencies)
+    && sameDependencyMap(root.devDependencies, manifest.devDependencies);
 
   return [
     {
@@ -132,19 +137,35 @@ function pinItems({ manifest, npmLock, runtimeNpm, runtimeNode }) {
   ];
 }
 
+export function directLockIdentityMatch({ name, declared, npmLock, bun }) {
+  const entry = npmLock.packages?.[`node_modules/${name}`];
+  const identity = bun.packages?.[name]?.[0];
+  if (!entry || typeof identity !== 'string') return false;
+  if (typeof declared === 'string' && declared.startsWith('file:')) {
+    const directory = declared.slice(5);
+    if (!directory || path.posix.isAbsolute(directory) || directory.split('/').includes('..') || directory.includes('\\')) return false;
+    if (directory.endsWith('.tgz')) {
+      return entry.link !== true && entry.resolved === declared && typeof entry.version === 'string'
+        && typeof entry.integrity === 'string' && /^sha512-[A-Za-z0-9+/]+={0,2}$/.test(entry.integrity)
+        && bun.packages[name][2] === entry.integrity
+        && identity === `${entry.name ?? name}@${directory}`;
+    }
+    if (entry.link !== true || entry.resolved !== directory) return false;
+    const target = npmLock.packages?.[directory];
+    return typeof target?.name === 'string' && typeof target?.version === 'string'
+      && identity === `${target.name}@${declared}`;
+  }
+  return typeof entry.version === 'string' && identity.slice(identity.lastIndexOf('@') + 1) === entry.version;
+}
+
 export function lockConflicts({ manifest, npmLock, bun }) {
   const names = [
     ...Object.keys(manifest.dependencies ?? {}),
     ...Object.keys(manifest.devDependencies ?? {}),
   ];
-  return names.filter((name) => {
-    const npmVersion = npmLock.packages?.[`node_modules/${name}`]?.version ?? null;
-    const bunIdentity = bun.packages?.[name]?.[0] ?? null;
-    const bunVersion = typeof bunIdentity === 'string'
-      ? bunIdentity.slice(bunIdentity.lastIndexOf('@') + 1)
-      : null;
-    return npmVersion === null || bunVersion === null || npmVersion !== bunVersion;
-  }).sort();
+  return names.filter(name => !directLockIdentityMatch({ name,
+    declared: manifest.dependencies?.[name] ?? manifest.devDependencies?.[name], npmLock, bun,
+  })).sort();
 }
 
 export function hasPinDrift(items, typecheckMatch, mismatchPackages) {

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "kind": "real_provider_connectivity_probe",
+  "measuredAt": "2026-10-02T14:10:51.079Z",
+  "sourceCommit": "8f9db662368c28eac02e1ecbfe7d2e6b6d0dcc8d",
+  "probeSourceSha256": "fa2c53a98f6fb344b3260c4c2fa027f88fbb315c3f8728b3b26111ed570e7f56",
+  "model": "gemini-3.7-flash",
+  "config": {
+    "temperature": 0.1,
+    "maxOutputTokens": 4096,
+    "thinkingConfig": {
+      "thinkingLevel": "MEDIUM"
+    }
+  },
+  "configuredMaxAttempts": 1,
+  "apiCallsStarted": 1,
+  "configuredBudget": {
+    "projectScope": "configured-project",
+    "requestsPerMinute": 30,
+    "concurrency": 1
+  },
+  "promptSha256": "d17018a81af17052e877d0c50e5d38f96690e17d0ebe1e2956074425e8bcba74",
+  "promptBytes": 116,
+  "status": "ok",
+  "usage": {
+    "promptTokenCount": 24,
+    "candidatesTokenCount": 5,
+    "thoughtsTokenCount": 96,
+    "totalTokenCount": 125
+  },
+  "moneySpent": null,
+  "confidenceInterval95": null,
+  "sampleCount": 1,
+  "scope": "Billing/auth/SDK/model connectivity only; no latency comparison or restaurant accuracy claim.",
+  "environment": {
+    "node": "v24.21.0",
+    "sdk": "2.26.0",
+    "transport": "real_google_gemini_api"
+  },
+  "requestElapsedMs": 3544.6486659999996,
+  "responseSha256": "4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93",
+  "responseBytes": 11,
+  "responseAccepted": true,
+  "totalElapsedMs": 3665.752292
+}

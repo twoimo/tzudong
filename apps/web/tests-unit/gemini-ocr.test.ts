@@ -10,6 +10,23 @@ import {
 } from '@/lib/ocr/gemini';
 
 describe('gemini receipt ocr helper', () => {
+  test('does not spend a provider call after caller cancellation', async () => {
+    const controller = new AbortController(); controller.abort(); let calls = 0;
+    await expect(callGeminiReceiptOcr({ apiKey: 'test', imageBase64: '', mimeType: 'image/png', prompt: 'test',
+      signal: controller.signal, generateContentImpl: async () => { calls++; return '{}'; },
+    })).rejects.toBeInstanceOf(GeminiOcrError);
+    expect(calls).toBe(0);
+  });
+
+  test('stops fallback after cancellation during a request and drops duplicate models', async () => {
+    const controller = new AbortController(); let calls = 0;
+    await expect(callGeminiReceiptOcr({ apiKey: 'test', imageBase64: '', mimeType: 'image/png', prompt: 'test',
+      env: { GEMINI_OCR_MODEL: 'first,first,second' }, signal: controller.signal,
+      generateContentImpl: async () => { calls++; controller.abort(); throw new DOMException('cancelled', 'AbortError'); },
+    })).rejects.toBeInstanceOf(GeminiOcrError);
+    expect(calls).toBe(1);
+    expect(getGeminiOcrModels({ GEMINI_OCR_MODEL: 'first,first,second' })).toEqual(['first', 'second']);
+  });
   test('defaults to gemini-3.6-flash as the authoritative OCR baseline', () => {
     expect(GEMINI_OCR_FALLBACK_MODEL).toBe('gemini-3.6-flash');
     expect(getGeminiOcrDefaultModel({} as NodeJS.ProcessEnv)).toBe('gemini-3.6-flash');

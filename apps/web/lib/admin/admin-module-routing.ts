@@ -13,6 +13,7 @@ export const ADMIN_CONSOLE_MODULE_IDS = [
   "youtube-thumbnail-generator",
   "llm",
   "pipeline",
+  "sentry",
 ] as const;
 
 export type AdminConsoleRouteModuleId = (typeof ADMIN_CONSOLE_MODULE_IDS)[number];
@@ -41,11 +42,16 @@ export function getLegacyEvaluationModuleId(
 
 type AdminRouteQueryLike = Pick<URLSearchParams, 'get'> | null | undefined;
 
+export function getRestaurantManagementView(searchParams: AdminRouteQueryLike): 'review' | 'refresh' {
+  return searchParams?.get('module') === 'restaurant-refresh-history' || searchParams?.get('restaurantView') === 'refresh' ? 'refresh' : 'review';
+}
+
 function resolveAdminModuleId(
   searchParams: AdminRouteQueryLike,
   defaultModule: AdminConsoleRouteModuleId,
 ): AdminConsoleRouteModuleId {
   const moduleId = searchParams?.get('module') ?? null;
+  if (moduleId === 'restaurant-refresh-history') return 'restaurants';
   if (isAdminConsoleRouteModuleId(moduleId)) return moduleId;
   return getLegacyEvaluationModuleId(searchParams) ?? defaultModule;
 }
@@ -58,6 +64,7 @@ export function getAdminModuleIdFromSearchParams(
 export function buildCanonicalAdminModuleHref(
   moduleId: AdminConsoleRouteModuleId,
 ): string {
+  if (moduleId === 'restaurant-refresh-history') return '/admin?module=restaurants&restaurantView=refresh';
   const params = new URLSearchParams();
   if (moduleId !== 'overview') {
     params.set('module', moduleId);
@@ -85,6 +92,7 @@ export function buildCanonicalAdminHrefFromSearchParams(
       params.set(key, value);
     }
   }
+  if (moduleId === 'restaurants' && getRestaurantManagementView(searchParams) === 'refresh') params.set('restaurantView', 'refresh');
   const nextQuery = params.toString();
   return `/admin${nextQuery ? `?${nextQuery}` : ''}`;
 }

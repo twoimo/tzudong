@@ -1,4 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 
 export interface SameVideoDuplicateWarningRow {
@@ -111,17 +110,20 @@ function classifyCandidate(target: SameVideoDuplicateWarningRow, candidate: Same
   const targetIdentity = normalizeIdentityName(resolveIdentityName(target));
   const candidateIdentity = normalizeIdentityName(resolveIdentityName(candidate));
   const sameIdentity = Boolean(targetIdentity && targetIdentity === candidateIdentity);
+  if (sameIdentity) return { rule: 'exact_identity', confidence: 1 };
   const sameAddress = Boolean(addressKey(target) && addressKey(target) === addressKey(candidate));
   const targetPhone = phoneKey(target);
   const candidatePhone = phoneKey(candidate);
   const samePhone = Boolean(targetPhone && candidatePhone && targetPhone.length >= 7 && targetPhone === candidatePhone);
+  // Every remaining rule requires a phone, address or near-coordinate match.
+  // Name edit distance cannot affect the outcome if all three gates are false.
+  const distance = !samePhone && !sameAddress ? coordDistanceMeters(target, candidate) : null;
+  if (!samePhone && !sameAddress && !(distance !== null && Number.isFinite(distance) && distance <= 20)) return null;
   const similarity = nameSimilarity(target, candidate);
-  const distance = coordDistanceMeters(target, candidate);
-
-  if (sameIdentity) return { rule: 'exact_identity', confidence: 1 };
   if (samePhone && similarity >= 0.72) return { rule: 'same_phone_similar_name', confidence: 0.98 };
   if (sameAddress && similarity >= 0.82) return { rule: 'same_address_similar_name', confidence: 0.97 };
-  if (Number.isFinite(distance) && distance <= 20 && similarity >= 0.86) return { rule: 'near_coordinate_similar_name', confidence: 0.96 };
+  const nearDistance = distance ?? coordDistanceMeters(target, candidate);
+  if (Number.isFinite(nearDistance) && nearDistance <= 20 && similarity >= 0.86) return { rule: 'near_coordinate_similar_name', confidence: 0.96 };
   return null;
 }
 
@@ -151,11 +153,11 @@ export function findSameVideoDuplicateWarningCandidates(
     .sort((left, right) => right.confidence - left.confidence || left.name.localeCompare(right.name));
 }
 
-export function formatSameVideoDuplicateWarning(candidates: SameVideoDuplicateWarningCandidate[]): string {
-  if (candidates.length === 0) return '';
+export function formatSameVideoDuplicateWarning(candidates: SameVideoDuplicateWarningCandidate[], total = candidates.length): string {
+  if (total === 0 || candidates.length === 0) return '';
   const first = candidates[0];
-  const suffix = candidates.length > 1 ? ` 외 ${candidates.length - 1}건` : '';
-  return `같은 영상에서 중복 후보 ${candidates.length}건이 있습니다: ${first.name}${suffix}. 승인/삭제/수정 전 같은 맛집인지 확인하세요.`;
+  const suffix = total > 1 ? ` 외 ${total - 1}건` : '';
+  return `같은 영상에서 중복 후보 ${total}건이 있습니다: ${first.name}${suffix}. 승인/삭제/수정 전 같은 맛집인지 확인하세요.`;
 }
 
 export async function fetchSameVideoDuplicateWarningCandidates(
@@ -164,6 +166,7 @@ export async function fetchSameVideoDuplicateWarningCandidates(
   const targetVideoId = extractVideoIdFromYoutubeLink(target.youtube_link || '');
   if (!targetVideoId) return [];
 
+  const { supabase } = await import('@/integrations/supabase/client');
   const { data, error } = await supabase
     .from('restaurants')
     .select('id, approved_name, origin_name, naver_name, google_name, phone, status, road_address, jibun_address, youtube_link, updated_by_admin_id, lat, lng')

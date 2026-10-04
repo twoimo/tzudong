@@ -1,0 +1,180 @@
+{
+  "kind": "synthetic-layout-baseline",
+  "samplesPerViewport": 1,
+  "observations": [
+    {
+      "cards": [
+        {
+          "bottom": 288,
+          "height": 174,
+          "id": "subscribers",
+          "value": "13,500,000",
+          "width": 355,
+          "x": 10,
+          "y": 114
+        },
+        {
+          "bottom": 454,
+          "height": 158,
+          "id": "views",
+          "value": "2,450,000",
+          "width": 355,
+          "x": 10,
+          "y": 296
+        },
+        {
+          "bottom": 620,
+          "height": 158,
+          "id": "likes",
+          "value": "14,000",
+          "width": 355,
+          "x": 10,
+          "y": 462
+        },
+        {
+          "bottom": 786,
+          "height": 158,
+          "id": "comments",
+          "value": "1,350",
+          "width": 355,
+          "x": 10,
+          "y": 628
+        },
+        {
+          "bottom": 968,
+          "height": 174,
+          "id": "videos",
+          "value": "5",
+          "width": 355,
+          "x": 10,
+          "y": 794
+        }
+      ],
+      "h1": [
+        "쯔양 성과 대시보드"
+      ],
+      "overflow": 0,
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleKpiCount": 4
+    },
+    {
+      "cards": [
+        {
+          "bottom": 238,
+          "height": 178,
+          "id": "subscribers",
+          "value": "13,500,000",
+          "width": 266,
+          "x": 248,
+          "y": 60
+        },
+        {
+          "bottom": 238,
+          "height": 178,
+          "id": "views",
+          "value": "2,450,000",
+          "width": 266,
+          "x": 522,
+          "y": 60
+        },
+        {
+          "bottom": 424,
+          "height": 178,
+          "id": "likes",
+          "value": "14,000",
+          "width": 266,
+          "x": 248,
+          "y": 246
+        },
+        {
+          "bottom": 424,
+          "height": 178,
+          "id": "comments",
+          "value": "1,350",
+          "width": 266,
+          "x": 522,
+          "y": 246
+        },
+        {
+          "bottom": 610,
+          "height": 178,
+          "id": "videos",
+          "value": "5",
+          "width": 266,
+          "x": 248,
+          "y": 432
+        }
+      ],
+      "h1": [
+        "쯔양 성과 대시보드"
+      ],
+      "overflow": 0,
+      "viewport": [
+        834,
+        1194
+      ],
+      "visibleKpiCount": 5
+    },
+    {
+      "cards": [
+        {
+          "bottom": 234.9375,
+          "height": 174.9375,
+          "id": "subscribers",
+          "value": "13,500,000",
+          "width": 225.796875,
+          "x": 248,
+          "y": 60
+        },
+        {
+          "bottom": 234.9375,
+          "height": 174.9375,
+          "id": "views",
+          "value": "2,450,000",
+          "width": 225.796875,
+          "x": 481.796875,
+          "y": 60
+        },
+        {
+          "bottom": 234.9375,
+          "height": 174.9375,
+          "id": "likes",
+          "value": "14,000",
+          "width": 225.796875,
+          "x": 715.59375,
+          "y": 60
+        },
+        {
+          "bottom": 234.9375,
+          "height": 174.9375,
+          "id": "comments",
+          "value": "1,350",
+          "width": 225.796875,
+          "x": 949.390625,
+          "y": 60
+        },
+        {
+          "bottom": 234.9375,
+          "height": 174.9375,
+          "id": "videos",
+          "value": "5",
+          "width": 225.8125,
+          "x": 1183.1875,
+          "y": 60
+        }
+      ],
+      "h1": [
+        "쯔양 성과 대시보드"
+      ],
+      "overflow": 0,
+      "viewport": [
+        1440,
+        1000
+      ],
+      "visibleKpiCount": 5
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { boundedLimit } from '../../utils/resource-budget.mjs';
 /**
  * 비디오를 청크 계획에 따라 mp4 세그먼트로 분할
  *
@@ -880,7 +881,8 @@ function rejectPreexistingChunkDestinations(outputRoot, chunks) {
 }
 
 async function runChunks({ chunks, sourceHandle, planHandle, binding, outputRoot, supervisor, budget, windowsExecutable }) {
-    const concurrencyLimit = path.extname(sourceHandle.path).toLowerCase() === '.mp4' ? 4 : 2;
+    const hardLimit = path.extname(sourceHandle.path).toLowerCase() === '.mp4' ? 4 : 2;
+    const concurrencyLimit = boundedLimit(process.env.PIPELINE_FFMPEG_JOBS, hardLimit, hardLimit);
     const temporaryReservations = new Map();
     const publishedReservations = new Map();
     const active = new Set();

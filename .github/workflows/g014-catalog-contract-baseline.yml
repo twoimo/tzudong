@@ -21,6 +21,13 @@ on:
       - 'backend/supabase/scripts/verify_admin_management_group_replay.py'
       - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
       - 'backend/supabase/tests/test_g014_pg17_owner_contract.py'
+      - 'backend/supabase/tests/test_service_invoker_contract.py'
+      - 'backend/supabase/scripts/transform_service_invoker_replay.py'
+      - 'backend/supabase/scripts/transform_storyboard_history_replay.py'
+      - 'backend/supabase/scripts/materialize_migration_workspace.py'
+      - 'backend/supabase/tests/test_storyboard_history.py'
+      - 'backend/supabase/applied-receipts/**'
+      - 'backend/supabase/tests/test_service_invoker_replay.py'
       - 'backend/supabase/scripts/admin_management_group_plan.py'
       - 'backend/supabase/tests/test_admin_management_group.py'
       - 'backend/supabase/tests/test_admin_management_group_replay.py'
@@ -61,6 +68,20 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           ! git symbolic-ref -q HEAD
 
+      - name: Set up the platform-aware private Docker runtime
+        uses: docker/setup-docker-action@2bf61fb9464cc67f0cbdeabed6aa0380accd1c70 # v5
+        with:
+          version: v29.8.2
+          context: tzudong-catalog-ci
+          runtime-basedir: ${{ runner.temp }}/tzudong-catalog-docker
+
+      - name: Verify the platform-aware Docker interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker image inspect --help | grep -q -- --platform
+          docker version --format '{{.Client.Version}} {{.Server.Version}}'
+
       - name: Set up the migration statement parser runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -82,6 +103,8 @@ jobs:
           backend.supabase.tests.test_admin_management_group
           backend.supabase.tests.test_admin_management_group_replay
           backend.supabase.tests.test_g014_pg17_owner_contract
+          backend.supabase.tests.test_service_invoker_contract.SourceContract
+          backend.supabase.tests.test_service_invoker_replay
           backend.supabase.tests.test_admin_user_ids_catalog_slice
           backend.supabase.tests.test_g014_diagnostic_admission
           backend.supabase.tests.test_restaurant_refresh_apply_boundary

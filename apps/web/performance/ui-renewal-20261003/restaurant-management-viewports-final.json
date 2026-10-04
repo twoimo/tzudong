@@ -1,0 +1,31 @@
+{
+  "fixture": true,
+  "sourceOnly": true,
+  "viewports": [
+    {
+      "documentWidth": 1440,
+      "emptyDetail": false,
+      "height": 1000,
+      "selected": "최신화·이력",
+      "tabHeight": 32,
+      "width": 1440
+    },
+    {
+      "documentWidth": 390,
+      "emptyDetail": false,
+      "height": 844,
+      "selected": "최신화·이력",
+      "tabHeight": 44,
+      "width": 390
+    },
+    {
+      "documentWidth": 834,
+      "emptyDetail": false,
+      "height": 1194,
+      "selected": "최신화·이력",
+      "tabHeight": 32,
+      "width": 834
+    }
+  ],
+  "imagesUseDirectTabScreenshot": true
+}

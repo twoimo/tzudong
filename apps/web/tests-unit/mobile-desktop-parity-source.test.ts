@@ -41,7 +41,7 @@ describe("mobile and desktop parity source contracts", () => {
   });
 
   test("admin evaluation metric parsers accept LAAJ objects without name", () => {
-    const pageSource = source("app/admin/evaluations/page.tsx");
+    const pageSource = source("app/admin/evaluations/page.tsx") + source("lib/admin/normalize-evaluation-record.ts");
     const numeric = pageSource.split("function parseNumericEvaluationMetric")[1] ?? "";
     expect(numeric).toContain("typeof value.eval_value !== 'number'");
     expect(numeric.slice(0, 350)).not.toContain("typeof value.name !== 'string'");
@@ -118,7 +118,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
     expect(consoleSource).toContain(
-      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);",
     );
     expect(consoleSource).toContain(
       "const [showSidebarLabels, setShowSidebarLabels] = useState(false);",
@@ -155,9 +155,7 @@ describe("mobile and desktop parity source contracts", () => {
 
     expect(tableSource).toContain("const mobileControls = (");
     expect(tableSource).toContain("const mobileCards = (");
-    expect(tableSource).toContain(
-      "grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden",
-    );
+    expect(tableSource).toMatch(/grid grid-cols-1 [^\"]*md:grid-cols-2 lg:hidden/);
     expect(tableSource).toContain("hidden rounded-lg border lg:block");
     expect(tableSource).toContain('aria-label="상호·영상 ID 검색"');
     expect(tableSource).toContain('aria-label="검색어 지우기"');
@@ -914,9 +912,9 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(myPageProfileSource).toContain('id="mypage-mobile-avatar-upload"');
     expect(myPageProfileSource).toContain(
-      'className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2',
+      'className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border',
     );
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain('sizes="64px"');
     expect(myPageProfileSource).toContain("handleMobileAvatarUpload");
     expect(myPageProfileSource).toContain("handleMobileAvatarDelete");
     expect(

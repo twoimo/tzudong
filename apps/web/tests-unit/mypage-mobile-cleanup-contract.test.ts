@@ -8,7 +8,7 @@ const source = (relativePath: string) =>
 // The single page-level surface class string, used to guard against
 // viewport-clamped rows that previously clipped the password form.
 const profilePageSurfaceClass = (profileSource: string) =>
-  profileSource.match(/className="grid min-w-0 gap-3 rounded-2xl[^"]*"/)?.[0] ??
+  profileSource.match(/className="([^"]*)"\s+data-mypage-profile-page="true"/)?.[0] ??
   "";
 
 describe("mypage mobile cleanup source contracts", () => {
@@ -125,7 +125,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-profile-identity="sidebar-match"',
     );
     expect(profileSource).toContain(
-      "flex flex-col items-center space-y-4 p-6 text-center md:hidden",
+      "grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-3 p-2 text-left md:hidden",
     );
     expect(profileSource).not.toContain(
       "flex flex-col items-center space-y-4 border-b border-border p-6 text-center md:hidden",
@@ -136,9 +136,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain(
       'data-mypage-profile-identity="standard"',
     );
-    expect(profileSource).toContain("rounded-full border-2 border-border shadow-sm");
+    expect(profileSource).toContain("rounded-full border border-border");
     expect(profileSource).not.toContain("transition-[border-color,box-shadow]");
-    expect(profileSource).toContain("grid w-full grid-cols-3 gap-2 pt-2");
+    expect(profileSource).toContain("col-span-2 grid w-full grid-cols-3 gap-2");
     expect(profileSource).toContain("useUserProfile");
     expect(profileSource).toContain("userProfile?.tier");
     expect(profileSource).toContain("도장");
@@ -163,10 +163,10 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('htmlFor="mypage-mobile-avatar-upload"');
     expect(profileSource).toContain('id="mypage-mobile-avatar-upload"');
     expect(profileSource).toContain(
-      'className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2',
+      'className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border',
     );
-    expect(profileSource).toContain('sizes="96px"');
-    expect(profileSource).toContain('width: "6rem"');
+    expect(profileSource).toContain('sizes="64px"');
+    expect(profileSource).toContain('width: "4rem"');
     expect(profileSource).toContain(
       '<User className="h-9 w-9 text-muted-foreground" />',
     );
@@ -244,7 +244,7 @@ describe("mypage mobile cleanup source contracts", () => {
     // clipped the password form inside its card. The matrix breakpoint is lg
     // because md leaves ~431px, where two tracks squeezed the tier headline.
     expect(profilePageSurfaceClass(profileSource)).toContain(
-      "rounded-2xl border border-border/70",
+      "rounded-xl border border-border",
     );
     expect(profilePageSurfaceClass(profileSource)).not.toContain(
       "md:grid-rows-2",
@@ -254,9 +254,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain("lg:grid-cols-2");
     expect(profileSource).toContain("2xl:grid-cols-3");
     expect(profileSource).not.toContain("md:grid-cols-2");
-    expect(profileSource).toContain(
-      "lg:gap-3",
-    );
+    expect(profilePageSurfaceClass(profileSource)).toContain("gap-3");
     expect(profileSource).toContain("md:order-1");
     expect(profileSource).toContain("md:order-2");
     expect(profileSource).toContain('data-mypage-quick-actions="combined"');
@@ -271,7 +269,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('data-mypage-mobile-action-row="true"');
     expect(profileSource).toContain("grid gap-2");
     expect(profileSource).toContain(
-      "group flex min-h-14 min-w-0 touch-manipulation items-center gap-3",
+      "group flex min-h-12 min-w-0 touch-manipulation items-center gap-3",
     );
     expect(profileSource).not.toContain("min-h-[5.25rem]");
     expect(profileSource).not.toContain("data-mypage-mobile-action-primary");
@@ -399,7 +397,7 @@ describe("mypage mobile cleanup source contracts", () => {
     const profileSource = source("app/mypage/profile/page.tsx");
 
     expect(profileSource).toContain(
-      'className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:rounded-3xl lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch lg:gap-3 2xl:grid-cols-3"',
+      'className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch 2xl:grid-cols-3"',
     );
     expect(profileSource).toContain('data-mypage-profile-page="true"');
 
@@ -476,7 +474,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sectionFrameSource).toContain("data-mypage-section-hero");
     expect(sectionFrameSource).toContain('data-mypage-section-hero="quiet"');
     expect(sectionFrameSource).toContain(
-      "hidden rounded-3xl border border-border/80 bg-card/95 p-5 shadow-sm md:block",
+      "hidden border-b border-border pb-4 md:block",
     );
     expect(sectionFrameSource).toContain(
       "hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:flex",
@@ -554,8 +552,8 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sidebarSource).toContain('id="mypage-sidebar-avatar-upload"');
     expect(sidebarSource).toContain('sizes="80px"');
     expect(sidebarSource).toContain("h-20 w-20");
-    expect(profileSource).toContain('sizes="96px"');
-    expect(profileSource).toContain("h-24 w-24");
+    expect(profileSource).toContain('sizes="64px"');
+    expect(profileSource).toContain("h-16 w-16");
     expect(profileSource).not.toContain("이미지 클릭하여 변경");
   });
 
@@ -567,7 +565,7 @@ describe("mypage mobile cleanup source contracts", () => {
 
     expect(sidebarSource).toContain('aria-label="프로필 사진 삭제"');
     expect(sidebarSource).toContain("rounded-full bg-destructive");
-    expect(profileSource).toContain("min-h-14 min-w-0 touch-manipulation");
+    expect(profileSource).toContain("min-h-12 min-w-0 touch-manipulation");
     expect(profileSource).toContain('data-mypage-danger-zone="true"');
     expect(profileSource).toContain(
       'data-mypage-danger-zone-layout="matrix-bottom-right"',

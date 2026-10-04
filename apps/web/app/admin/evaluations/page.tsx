@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { isEvaluationRecordStatus, isRecord, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
+import { fetchAdminEvaluationPage, isEvaluationCursorStale, type EvaluationWarnings } from '@/lib/admin/evaluation-page-client';
+import { filterEvaluationRecords } from '@/lib/admin/evaluation-query';
 import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -14,6 +17,7 @@ import { extractVideoIdFromYoutubeLink } from '../../../lib/dashboard/helpers';
 import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '../../../lib/dashboard/classifiers';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
 import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
+import { RestaurantReviewAutomation } from '@/components/admin/RestaurantReviewAutomation';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
@@ -271,23 +275,6 @@ interface StoredEvaluationPageState {
   isAlternateView?: boolean;
 }
 
-function isEvaluationRecordStatus(value: unknown): value is EvaluationRecordStatus {
-  switch (value) {
-    case 'pending':
-    case 'approved':
-    case 'rejected':
-    case 'hold':
-    case 'deleted':
-    case 'missing':
-    case 'db_conflict':
-    case 'geocoding_failed':
-    case 'address_review_geocode_recovered':
-    case 'not_selected':
-      return true;
-    default:
-      return false;
-  }
-}
 
 function sanitizeEvalFilters(value: unknown): EvalFiltersState {
   if (!isRecord(value)) {
@@ -415,9 +402,7 @@ type RestaurantRequestListRow =
     | 'review_audit_id'
     | 'updated_at'
   >>;
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+
 function parseValidatedRows<Row>(
   values: readonly unknown[],
   isRow: (value: unknown) => value is Row,
@@ -433,18 +418,6 @@ function parseValidatedRows<Row>(
   return rows;
 }
 
-
-function isNullableString(value: unknown): value is string | null {
-  return typeof value === 'string' || value === null;
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-
-function isNullableStringArray(value: unknown): value is string[] | null {
-  return value === null || isStringArray(value);
-}
 
 function isSubmissionRow(value: unknown): value is SubmissionRow {
   if (!isRecord(value)) return false;
@@ -701,9 +674,6 @@ interface RestaurantReviewCountRow {
   review_count: number | null;
 }
 
-function isNullableRecord(value: unknown): value is Record<string, unknown> | null {
-  return value === null || isRecord(value);
-}
 
 function isRestaurantLookupRow(value: unknown): value is RestaurantLookupRow {
   return isRecord(value)
@@ -791,453 +761,7 @@ function parseRestaurantRequestReviewResponse(
   return response;
 }
 
-type ParsedEvaluationResults = NonNullable<EvaluationRecord['evaluation_results']>;
-type ParsedLocationMatch = NonNullable<ParsedEvaluationResults['location_match_TF']>;
-type ParsedYoutubeMeta = NonNullable<EvaluationRecord['youtube_meta']>;
 
-function parseNumericEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['visit_authenticity'] {
-  if (!isRecord(value) || typeof value.eval_value !== 'number') {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
-  };
-}
-
-function parseBooleanEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['rb_grounding_TF'] {
-  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
-  };
-}
-
-function parseCategoryEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['category_TF'] {
-  if (
-    !isRecord(value)
-    || typeof value.eval_value !== 'boolean'
-    || (value.category_revision !== undefined && !isNullableString(value.category_revision))
-    || (value.eval_basis !== undefined && typeof value.eval_basis !== 'string')
-  ) {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-    category_revision: typeof value.category_revision === 'string' || value.category_revision === null
-      ? value.category_revision
-      : null,
-    ...(typeof value.eval_basis === 'string' ? { eval_basis: value.eval_basis } : {}),
-  };
-}
-
-function parseCategoryValidityEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['category_validity_TF'] {
-  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-  };
-}
-
-function isLocationMatchEvidenceFamily(
-  value: unknown,
-): value is NonNullable<ParsedLocationMatch['evidence_families']>[number] {
-  return value === 'provider_candidate'
-    || value === 'source_geo'
-    || value === 'cross_provider'
-    || value === 'browser_verification'
-    || value === 'llm_verification'
-    || value === 'geocode_provider';
-}
-
-function isLocationMatchPendingReason(
-  value: unknown,
-): value is NonNullable<ParsedLocationMatch['pending_reason']> {
-  return value === 'insufficient_evidence'
-    || value === 'cross_country_mismatch'
-    || value === 'ambiguous_chain'
-    || value === 'multi_candidate'
-    || value === 'timeout'
-    || value === 'rate_limited';
-}
-
-function parseLocationMatchSecondPass(
-  value: unknown,
-): NonNullable<ParsedLocationMatch['second_pass']> | null {
-  if (!isRecord(value)) return null;
-
-  const parsedSecondPass: NonNullable<ParsedLocationMatch['second_pass']> = {};
-  if (typeof value.attempted === 'boolean') parsedSecondPass.attempted = value.attempted;
-  if (isNullableString(value.provider)) parsedSecondPass.provider = value.provider;
-  if (typeof value.timed_out === 'boolean') parsedSecondPass.timed_out = value.timed_out;
-  if (typeof value.rate_limited === 'boolean') parsedSecondPass.rate_limited = value.rate_limited;
-  if (typeof value.duration_ms === 'number' || value.duration_ms === null) {
-    parsedSecondPass.duration_ms = value.duration_ms;
-  }
-  return parsedSecondPass;
-}
-function parseLocationMatchAddress(
-  value: unknown,
-): NonNullable<ParsedLocationMatch['matched_address']> | null {
-  if (!isRecord(value)) return null;
-
-  const parsedAddress: NonNullable<ParsedLocationMatch['matched_address']> = {};
-  if (isNullableString(value.roadAddress)) parsedAddress.roadAddress = value.roadAddress;
-  if (isNullableString(value.jibunAddress)) parsedAddress.jibunAddress = value.jibunAddress;
-  if (isNullableString(value.englishAddress)) parsedAddress.englishAddress = value.englishAddress;
-  if (isNullableString(value.x)) parsedAddress.x = value.x;
-  if (isNullableString(value.y)) parsedAddress.y = value.y;
-  return parsedAddress;
-}
-
-function parseLocationMatchResult(value: unknown): ParsedEvaluationResults['location_match_TF'] {
-  if (!isRecord(value)) return null;
-
-  const parsedResult: ParsedLocationMatch = {};
-  if (typeof value.name === 'string') parsedResult.name = value.name;
-  if (typeof value.eval_value === 'boolean') parsedResult.eval_value = value.eval_value;
-  if (isNullableString(value.origin_name)) parsedResult.origin_name = value.origin_name;
-  if (
-    value.match_status === 'matched'
-    || value.match_status === 'pending'
-    || value.match_status === 'failed'
-  ) {
-    parsedResult.match_status = value.match_status;
-  }
-  if (
-    value.matched_provider === 'naver'
-    || value.matched_provider === 'google'
-    || value.matched_provider === 'playwright'
-    || value.matched_provider === 'gemini'
-    || value.matched_provider === 'ncp_geocode'
-    || value.matched_provider === null
-  ) {
-    parsedResult.matched_provider = value.matched_provider;
-  }
-  if (isNullableString(value.matched_name)) parsedResult.matched_name = value.matched_name;
-  if (isNullableString(value.naver_name)) parsedResult.naver_name = value.naver_name;
-  if (isNullableString(value.google_name)) parsedResult.google_name = value.google_name;
-  if (typeof value.origin_address === 'string') parsedResult.origin_address = value.origin_address;
-  if (value.matched_address === null) {
-    parsedResult.matched_address = null;
-  } else {
-    const matchedAddress = parseLocationMatchAddress(value.matched_address);
-    if (matchedAddress) parsedResult.matched_address = matchedAddress;
-  }
-  if (value.naver_address === null) {
-    parsedResult.naver_address = null;
-  } else if (Array.isArray(value.naver_address) && value.naver_address.every(isRecord)) {
-    parsedResult.naver_address = value.naver_address;
-  }
-  if (isStringArray(value.evidence_summary)) {
-    parsedResult.evidence_summary = value.evidence_summary;
-  }
-  const evidenceFamilies = value.evidence_families;
-  if (
-    Array.isArray(evidenceFamilies)
-    && evidenceFamilies.every(isLocationMatchEvidenceFamily)
-  ) {
-    parsedResult.evidence_families = evidenceFamilies;
-  }
-  if (value.pending_reason === null) {
-    parsedResult.pending_reason = null;
-  } else if (isLocationMatchPendingReason(value.pending_reason)) {
-    parsedResult.pending_reason = value.pending_reason;
-  }
-  if (value.second_pass === null) {
-    parsedResult.second_pass = null;
-  } else {
-    const secondPass = parseLocationMatchSecondPass(value.second_pass);
-    if (secondPass) parsedResult.second_pass = secondPass;
-  }
-  if (isNullableString(value.falseMessage)) parsedResult.falseMessage = value.falseMessage;
-
-  return parsedResult;
-}
-
-function parseEvaluationResults(value: unknown): EvaluationRecord['evaluation_results'] {
-  if (!isRecord(value)) return null;
-
-  return {
-    visit_authenticity: parseNumericEvaluationMetric(value.visit_authenticity),
-    rb_inference_score: parseNumericEvaluationMetric(value.rb_inference_score),
-    rb_grounding_TF: parseBooleanEvaluationMetric(value.rb_grounding_TF),
-    review_faithfulness_score: parseNumericEvaluationMetric(value.review_faithfulness_score),
-    category_TF: parseCategoryEvaluationMetric(value.category_TF),
-    category_validity_TF: parseCategoryValidityEvaluationMetric(value.category_validity_TF),
-    location_match_TF: parseLocationMatchResult(value.location_match_TF),
-  };
-}
-
-function parseYoutubeMeta(value: unknown): EvaluationRecord['youtube_meta'] {
-  if (!isRecord(value) || !isRecord(value.ads_info)) return null;
-  if (
-    typeof value.title !== 'string'
-    || typeof value.publishedAt !== 'string'
-    || typeof value.is_shorts !== 'boolean'
-    || typeof value.duration !== 'number'
-    || typeof value.ads_info.is_ads !== 'boolean'
-    || !isNullableString(value.ads_info.what_ads)
-  ) {
-    return null;
-  }
-
-  const parsedMeta: ParsedYoutubeMeta = {
-    title: value.title,
-    publishedAt: value.publishedAt,
-    is_shorts: value.is_shorts,
-    duration: value.duration,
-    ads_info: {
-      is_ads: value.ads_info.is_ads,
-      what_ads: value.ads_info.what_ads,
-    },
-  };
-  return parsedMeta;
-}
-
-type ParsedDbErrorDetails = NonNullable<EvaluationRecord['db_error_details']>;
-type ParsedAddressConsistencyReview =
-  NonNullable<ParsedDbErrorDetails['address_consistency_review']>;
-
-function parseDbErrorDetails(value: unknown): EvaluationRecord['db_error_details'] {
-  if (!isRecord(value)) return null;
-
-  const parsedDetails: ParsedDbErrorDetails = {};
-  if (value.error_type === 'duplicate') parsedDetails.error_type = 'duplicate';
-
-  const addressReviewValue = value.address_consistency_review;
-  if (isRecord(addressReviewValue)) {
-    const addressReview: ParsedAddressConsistencyReview = {};
-    if (typeof addressReviewValue.queue === 'string') {
-      addressReview.queue = addressReviewValue.queue;
-    }
-    if (typeof addressReviewValue.reason_ko === 'string') {
-      addressReview.reason_ko = addressReviewValue.reason_ko;
-    }
-    if (typeof addressReviewValue.generated_at === 'string') {
-      addressReview.generated_at = addressReviewValue.generated_at;
-    }
-    if (typeof addressReviewValue.validation_source === 'string') {
-      addressReview.validation_source = addressReviewValue.validation_source;
-    }
-    if (isNullableRecord(addressReviewValue.geocode_top)) {
-      addressReview.geocode_top = addressReviewValue.geocode_top;
-    }
-    if (typeof addressReviewValue.ahp_score === 'number') {
-      addressReview.ahp_score = addressReviewValue.ahp_score;
-    }
-    if (typeof addressReviewValue.ahp_label === 'string') {
-      addressReview.ahp_label = addressReviewValue.ahp_label;
-    }
-    if (typeof addressReviewValue.top_failing_criterion === 'string') {
-      addressReview.top_failing_criterion = addressReviewValue.top_failing_criterion;
-    }
-    if (isStringArray(addressReviewValue.evidence_families)) {
-      addressReview.evidence_families = addressReviewValue.evidence_families;
-    }
-    if (typeof addressReviewValue.suggested_action === 'string') {
-      addressReview.suggested_action = addressReviewValue.suggested_action;
-    }
-    if (Object.keys(addressReview).length > 0) {
-      parsedDetails.address_consistency_review = addressReview;
-    }
-  }
-
-  const conflictingRestaurantValue = value.conflicting_restaurant;
-  if (
-    isRecord(conflictingRestaurantValue)
-    && typeof conflictingRestaurantValue.id === 'string'
-    && typeof conflictingRestaurantValue.name === 'string'
-    && typeof conflictingRestaurantValue.jibun_address === 'string'
-    && (
-      conflictingRestaurantValue.road_address === undefined
-      || typeof conflictingRestaurantValue.road_address === 'string'
-    )
-  ) {
-    parsedDetails.conflicting_restaurant = {
-      id: conflictingRestaurantValue.id,
-      name: conflictingRestaurantValue.name,
-      jibun_address: conflictingRestaurantValue.jibun_address,
-      ...(typeof conflictingRestaurantValue.road_address === 'string'
-        ? { road_address: conflictingRestaurantValue.road_address }
-        : {}),
-    };
-  }
-  if (typeof value.similarity_score === 'number') {
-    parsedDetails.similarity_score = value.similarity_score;
-  }
-  if (typeof value.detected_at === 'string') {
-    parsedDetails.detected_at = value.detected_at;
-  }
-
-  return Object.keys(parsedDetails).length > 0 ? parsedDetails : null;
-}
-
-function getString(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
-function getNullableString(value: unknown): string | null {
-  return isNullableString(value) ? value : null;
-}
-
-function getNullableNumber(value: unknown): number | null {
-  return typeof value === 'number' ? value : null;
-}
-
-function normalizeEvaluationRecord(value: unknown): EvaluationRecord | null {
-  if (!isRecord(value) || typeof value.id !== 'string') return null;
-
-  const status = isEvaluationRecordStatus(value.status) ? value.status : 'pending';
-  const name = getString(value.name);
-  const roadAddress = getNullableString(value.road_address);
-  const jibunAddress = getNullableString(value.jibun_address);
-  const englishAddress = getNullableString(value.english_address);
-  const addressElements = isRecord(value.address_elements) ? value.address_elements : {};
-  const originAddress = isRecord(value.origin_address) ? value.origin_address : {};
-  const youtubeLink = getString(value.youtube_link);
-  const categories = isNullableStringArray(value.categories) ? value.categories : null;
-  const youtubeLinks = isNullableStringArray(value.youtube_links)
-    ? value.youtube_links
-    : (youtubeLink ? [youtubeLink] : null);
-
-  return {
-    id: value.id,
-    name,
-    phone: getNullableString(value.phone),
-    categories,
-    lat: getNullableNumber(value.lat),
-    lng: getNullableNumber(value.lng),
-    road_address: roadAddress,
-    jibun_address: jibunAddress,
-    english_address: englishAddress,
-    address_elements: addressElements,
-    origin_address: originAddress,
-    youtube_links: youtubeLinks,
-    youtube_meta: parseYoutubeMeta(value.youtube_meta),
-    unique_id: getNullableString(value.unique_id ?? value.trace_id),
-    tzuyang_reviews: Array.isArray(value.tzuyang_reviews)
-      ? value.tzuyang_reviews.filter(isRecord)
-      : [],
-    reasoning_basis: getNullableString(value.reasoning_basis),
-    evaluation_results: parseEvaluationResults(value.evaluation_results),
-    source_type: getNullableString(value.source_type),
-    geocoding_success: value.geocoding_success === true,
-    geocoding_false_stage: getNullableNumber(value.geocoding_false_stage),
-    status,
-    is_missing: value.is_missing === true,
-    is_not_selected: value.is_not_selected === true,
-    review_count: typeof value.review_count === 'number' ? value.review_count : 0,
-    created_by: getNullableString(value.created_by),
-    updated_by_admin_id: getNullableString(value.updated_by_admin_id),
-    db_error_details: parseDbErrorDetails(value.db_error_details),
-    created_at: getString(value.created_at),
-    updated_at: getString(value.updated_at),
-    restaurant_name: typeof value.restaurant_name === 'string'
-      ? value.restaurant_name
-      : undefined,
-    youtube_link: youtubeLink,
-    restaurant_info: {
-      name,
-      phone: getNullableString(value.phone),
-      category: categories?.[0] ?? '',
-      origin_address: getString(originAddress.address) || roadAddress || jibunAddress || '',
-      origin_lat: typeof originAddress.lat === 'number'
-        ? originAddress.lat
-        : (typeof value.lat === 'number' ? value.lat : 0),
-      origin_lng: typeof originAddress.lng === 'number'
-        ? originAddress.lng
-        : (typeof value.lng === 'number' ? value.lng : 0),
-      reasoning_basis: getString(value.reasoning_basis),
-      tzuyang_review: getString(value.tzuyang_review),
-      naver_address_info: roadAddress || jibunAddress
-        ? {
-            road_address: roadAddress,
-            jibun_address: jibunAddress || '',
-            english_address: englishAddress,
-            address_elements: addressElements,
-            x: typeof value.lng === 'number' ? value.lng.toString() : '',
-            y: typeof value.lat === 'number' ? value.lat.toString() : '',
-          }
-        : null,
-    },
-    ...(isNullableString(value.geocoding_fail_reason)
-      ? { geocoding_fail_reason: value.geocoding_fail_reason }
-      : {}),
-    ...(isNullableString(value.db_error_message)
-      ? { db_error_message: value.db_error_message }
-      : {}),
-    ...(isNullableString(value.missing_message)
-      ? { missing_message: value.missing_message }
-      : {}),
-    ...(isNullableString(value.approved_name)
-      ? { approved_name: value.approved_name }
-      : {}),
-    ...(isNullableString(value.origin_name)
-      ? { origin_name: value.origin_name }
-      : {}),
-    ...(isNullableString(value.naver_name)
-      ? { naver_name: value.naver_name }
-      : {}),
-    ...(isNullableString(value.google_name)
-      ? { google_name: value.google_name }
-      : {}),
-    ...(isNullableString(value.trace_id)
-      ? { trace_id: value.trace_id }
-      : {}),
-    ...(isNullableString(value.trace_id_name_source)
-      ? { trace_id_name_source: value.trace_id_name_source }
-      : {}),
-    ...(isNullableString(value.channel_name)
-      ? { channel_name: value.channel_name }
-      : {}),
-    ...(isNullableString(value.description_map_url)
-      ? { description_map_url: value.description_map_url }
-      : {}),
-    ...(isNullableRecord(value.recollect_version)
-      ? { recollect_version: value.recollect_version }
-      : {}),
-  };
-}
-
-function withAdminEvaluationDisplayName(record: EvaluationRecord): EvaluationRecord {
-  const displayName = getAdminEvaluationDisplayName({
-    approved_name: record.approved_name,
-    restaurant_name: record.restaurant_name,
-    name: record.name,
-    origin_name: record.origin_name,
-    naver_name: record.naver_name,
-    evaluation_results: record.evaluation_results,
-  });
-
-  return {
-    ...record,
-    name: displayName,
-    restaurant_name: displayName,
-    restaurant_info: record.restaurant_info
-      ? { ...record.restaurant_info, name: displayName }
-      : record.restaurant_info,
-  };
-}
 type ApprovalRpcResult = {
   success?: boolean;
   restaurant_id?: string;
@@ -1542,7 +1066,6 @@ function AdminEvaluationPage({
   };
 
 
-
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
   const [loading, setLoading] = useState(true);
@@ -1559,6 +1082,14 @@ function AdminEvaluationPage({
     not_selected: 0,
     deleted: 0,
   });
+  const legacyEvaluationLoad = isLegacyBrowserAdminMutationEnabled();
+  const [serverFilteredTotal, setServerFilteredTotal] = useState(0);
+  const [pageWarnings, setPageWarnings] = useState<EvaluationWarnings>({});
+  const nextCursorRef = useRef<string | null>(null);
+  const pageEpochRef = useRef(0);
+  const pageAbortRef = useRef<AbortController | null>(null);
+  const reloadPagesRef = useRef<() => Promise<void>>(async () => {});
+  const pageRevisionRef = useRef<string | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
   const [evalFilters, setEvalFilters] = useState<EvalFiltersState>({});
@@ -1568,6 +1099,37 @@ function AdminEvaluationPage({
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
+
+  const detailRequestsRef = useRef(new Map<string, { promise: Promise<EvaluationRecord | null>; token: symbol; epoch: number }>());
+  const ensureEvaluationDetails = useCallback(async (record: EvaluationRecord): Promise<EvaluationRecord | null> => {
+    if (!record.read_summary) return record;
+    const existing = detailRequestsRef.current.get(record.id);
+    if (existing?.epoch === pageEpochRef.current) return existing.promise;
+    const epoch = pageEpochRef.current;
+    const token = Symbol();
+    const pending = (async () => {
+      try {
+        const revision = pageRevisionRef.current;
+        const suffix = revision ? `?revision=${encodeURIComponent(revision)}` : '';
+        const response = await fetch(`/api/admin/evaluations/${encodeURIComponent(record.id)}${suffix}`, { cache: 'no-store', signal: pageAbortRef.current?.signal });
+        if (response.status === 409) { await reloadPagesRef.current(); return null; }
+        if (!response.ok) throw new Error('EVALUATION_DETAIL_UNAVAILABLE');
+        const value: unknown = await response.json();
+        const parsed = isRecord(value) ? normalizeEvaluationRecord(value.record) : null;
+        if (!parsed || parsed.id !== record.id || parsed.read_summary || epoch !== pageEpochRef.current) return null;
+        const full = withAdminEvaluationDisplayName(parsed);
+        setAllRecords(previous => previous.map(row => row.id === full.id ? full : row));
+        return full;
+      } catch (error) {
+        if (epoch === pageEpochRef.current && !(error instanceof Error && error.name === 'AbortError')) toast({ variant: 'destructive', title: '상세 정보 로드 실패', description: '검수 상세 정보를 다시 불러와 주세요.' });
+        return null;
+      } finally {
+        if (detailRequestsRef.current.get(record.id)?.token === token) detailRequestsRef.current.delete(record.id);
+      }
+    })();
+    detailRequestsRef.current.set(record.id, { promise: pending, token, epoch });
+    return pending;
+  }, [toast]);
 
   // 승인 확인 모달 상태
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
@@ -1585,22 +1147,22 @@ function AdminEvaluationPage({
   };
 
   const getSameVideoDuplicateWarnings = useCallback((record: EvaluationRecord) => {
-    return findSameVideoDuplicateWarningCandidates(record, allRecords);
-  }, [allRecords]);
+    return legacyEvaluationLoad ? findSameVideoDuplicateWarningCandidates(record, allRecords) : (pageWarnings[record.id]?.sameVideo.candidates ?? []);
+  }, [allRecords, legacyEvaluationLoad, pageWarnings]);
 
   const notifySameVideoDuplicateWarning = useCallback((record: EvaluationRecord, actionLabel: string) => {
-    const message = formatSameVideoDuplicateWarning(getSameVideoDuplicateWarnings(record));
+    const message = legacyEvaluationLoad ? formatSameVideoDuplicateWarning(getSameVideoDuplicateWarnings(record)) : (pageWarnings[record.id]?.sameVideo.message ?? '');
     if (!message) return;
 
     toast({
       title: `같은 영상 중복 후보 확인 후 ${actionLabel}`,
       description: message,
     });
-  }, [getSameVideoDuplicateWarnings, toast]);
+  }, [getSameVideoDuplicateWarnings, toast, legacyEvaluationLoad, pageWarnings]);
 
   const getRestaurantIdentityWarnings = useCallback((record: EvaluationRecord) => {
-    return findRestaurantIdentityWarnings(record, allRecords);
-  }, [allRecords]);
+    return legacyEvaluationLoad ? findRestaurantIdentityWarnings(record, allRecords) : (pageWarnings[record.id]?.identity ?? findRestaurantIdentityWarnings(record));
+  }, [allRecords, legacyEvaluationLoad, pageWarnings]);
 
   const notifyRestaurantIdentityWarning = useCallback((record: EvaluationRecord, actionLabel: string) => {
     const warnings = getRestaurantIdentityWarnings(record);
@@ -1637,6 +1199,15 @@ function AdminEvaluationPage({
     () => (embedded ? null : buildCanonicalAdminEvaluationsHref(searchParams)),
     [embedded, searchParams],
   );
+  const evaluationPageQuery = useMemo(() => {
+    if (legacyEvaluationLoad) return '';
+    const params = new URLSearchParams({ q: searchQuery, filters: JSON.stringify(evalFilters) });
+    if (deepLinkFilter?.videoId) params.set('videoId', deepLinkFilter.videoId);
+    if (deepLinkFilter?.issue) params.set('issue', deepLinkFilter.issue);
+    if (deepLinkFilter?.reason) params.set('reason', deepLinkFilter.reason);
+    return params.toString();
+  }, [searchQuery, evalFilters, deepLinkFilter, legacyEvaluationLoad]);
+
   const clearDeepLinkFilter = useCallback(() => {
     setDeepLinkFilter(null);
     deepLinkInitializedRef.current = true;
@@ -1691,7 +1262,6 @@ function AdminEvaluationPage({
   // URL 파라미터에 따라 Deep-link 필터 초기화
   useEffect(() => {
     if (deepLinkInitializedRef.current) return;
-    if (embedded) return;
 
     const videoId = searchParams.get('video_id')?.trim() || '';
     const issue = searchParams.get('issue')?.trim() || '';
@@ -1799,144 +1369,8 @@ function AdminEvaluationPage({
     hasCheckedAuth.current = true;
   }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, toast, router]);
 
-  const filteredRecords = useMemo(() => {
-    let filtered = allRecords;
+  const filteredRecords = useMemo(() => legacyEvaluationLoad ? filterEvaluationRecords(allRecords, { searchQuery, evalFilters, deepLinkFilter }) : allRecords, [allRecords, searchQuery, evalFilters, deepLinkFilter, legacyEvaluationLoad]);
 
-    if (searchQuery.trim()) {
-      filtered = filtered.filter((record) => matchesAdminEvaluationSearch(record, searchQuery));
-    }
-
-    // 상태 필터링 (evalFilters.status)
-    if (evalFilters.status) {
-      // 'deleted' 필터 선택 시 이미 검색된 결과에서 deleted만 추출
-      if (evalFilters.status === 'deleted') {
-        filtered = filtered.filter(r => r.status === 'deleted');
-      } else {
-        filtered = filtered.filter(r => {
-          let match = false;
-
-          switch (evalFilters.status) {
-            case 'missing':
-              match = isAdminEvaluationRecordMissing(r);
-              break;
-            case 'not_selected':
-              match = isAdminEvaluationRecordNotSelected(r);
-              break;
-            case 'unconfirmed_map':
-              match = isAdminEvaluationRecordUnconfirmedMapLocation(r);
-              break;
-            case 'ready_for_approval':
-              match = isAdminEvaluationRecordReadyForApproval(r);
-              break;
-            default:
-              // 일반 상태: status 필드와 일치하는 레코드
-              match = r.status === evalFilters.status;
-              break;
-          }
-
-          return match;
-        });
-      }
-    }
-
-    // 1. Visit Authenticity 필터 (0-3점)
-    if (evalFilters.visit_authenticity) {
-      const targetScore = parseInt(evalFilters.visit_authenticity);
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.visit_authenticity?.eval_value === targetScore
-      );
-    }
-
-    // 2. RB Inference Score 필터 (0-2점)
-    if (evalFilters.rb_inference_score) {
-      const targetScore = parseInt(evalFilters.rb_inference_score);
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.rb_inference_score?.eval_value === targetScore
-      );
-    }
-
-    // 3. RB Grounding TF 필터 (T/F)
-    if (evalFilters.rb_grounding_TF) {
-      const targetValue = evalFilters.rb_grounding_TF === 'True';
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.rb_grounding_TF?.eval_value === targetValue
-      );
-    }
-
-    // 4. Review Faithfulness Score 필터 (0-1점)
-    if (evalFilters.review_faithfulness_score) {
-      const targetScore = parseFloat(evalFilters.review_faithfulness_score);
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.review_faithfulness_score?.eval_value === targetScore
-      );
-    }
-
-    // 5. 주소 정합 필터 (True/False/Failed) - 상세/테이블 표시와 같은 helper 사용
-    if (evalFilters.geocoding_success) {
-      const targetStatusByFilter: Record<string, ReturnType<typeof getAddressConsistencyStatus>[]> = {
-        true: ['true'],
-        false_match: ['false'],
-        false_geocode: ['failed'],
-        review: ['review', 'candidate'],
-      };
-      const targetStatuses = targetStatusByFilter[evalFilters.geocoding_success];
-      if (targetStatuses) {
-        filtered = filtered.filter(r => targetStatuses.includes(getAddressConsistencyStatus(r)));
-      }
-    }
-
-    // 6. Category Validity TF 필터 (T/F)
-    if (evalFilters.category_validity_TF) {
-      const targetValue = evalFilters.category_validity_TF === 'True';
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.category_validity_TF?.eval_value === targetValue
-      );
-    }
-
-    // 7. Category TF 필터 (T/F)
-    if (evalFilters.category_TF) {
-      const targetValue = evalFilters.category_TF === 'True';
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.category_TF?.eval_value === targetValue
-      );
-    }
-
-    // 8. Status 필터는 위에서 이미 처리됨
-
-    // Deep-link 필터 (video_id/issue/reason)
-    if (deepLinkFilter?.videoId) {
-      filtered = filtered.filter((record) => (
-        extractVideoIdFromYoutubeLink(record.youtube_link) === deepLinkFilter.videoId
-      ));
-    }
-
-    if (deepLinkFilter?.issue === 'notSelection') {
-      filtered = filtered.filter((record) => record.is_not_selected === true);
-
-      if (deepLinkFilter.reason) {
-        filtered = filtered.filter((record) => (
-          toNotSelectionReason({
-            is_not_selected: record.is_not_selected,
-            is_missing: record.is_missing,
-            geocoding_false_stage: record.geocoding_false_stage,
-            geocoding_success: record.geocoding_success,
-          }) === deepLinkFilter.reason
-        ));
-      }
-    } else if (deepLinkFilter?.issue === 'ruleFalse') {
-      filtered = filtered.filter((record) => {
-        const message = getLocationMatchFalseMessage(record.evaluation_results);
-        if (!message) return false;
-        return deepLinkFilter.reason ? message === deepLinkFilter.reason : true;
-      });
-    } else if (deepLinkFilter?.issue === 'laajGap') {
-      filtered = filtered.filter((record) => (
-        hasRuleMetrics(record.evaluation_results) && !hasLaajMetrics(record.evaluation_results)
-      ));
-    }
-
-    return [...filtered].sort(compareAdminEvaluationsByLatestDesc);
-  }, [allRecords, searchQuery, evalFilters, deepLinkFilter]);
 
   // filteredRecords가 정의된 후에 useEffect 위치
   useEffect(() => {
@@ -1963,7 +1397,32 @@ function AdminEvaluationPage({
   }, [filteredRecords]);
 
   // 더 많은 레코드 로드
-  const loadMoreRecords = useCallback(() => {
+  const loadMoreRecords = useCallback(async () => {
+    if (!legacyEvaluationLoad) {
+      if (loadingMoreRef.current || !nextCursorRef.current) return;
+      const epoch = pageEpochRef.current;
+      loadingMoreRef.current = true;
+      setLoadingMore(true);
+      try {
+        const page = await fetchAdminEvaluationPage(evaluationPageQuery, nextCursorRef.current, pageAbortRef.current?.signal);
+        if (epoch !== pageEpochRef.current) return;
+        const records = page.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName);
+        setAllRecords(previous => [...new Map([...previous, ...records].map(record => [record.id, record])).values()]);
+        setPageWarnings(previous => ({ ...previous, ...page.warnings }));
+        nextCursorRef.current = page.nextCursor;
+        setStats(page.stats);
+        setServerFilteredTotal(page.filteredTotal);
+        setHasMore(page.nextCursor !== null);
+        hasMoreRef.current = page.nextCursor !== null;
+      } catch (error) {
+        if (epoch !== pageEpochRef.current || (error instanceof Error && error.name === 'AbortError')) return;
+        if (isEvaluationCursorStale(error)) await reloadPagesRef.current();
+        else toast({ variant: 'destructive', title: '데이터 로드 실패', description: '다음 검수 데이터를 불러오지 못했습니다.' });
+      } finally {
+        if (epoch === pageEpochRef.current) { loadingMoreRef.current = false; setLoadingMore(false); }
+      }
+      return;
+    }
     if (loadingMoreRef.current || !hasMoreRef.current) return;
 
     loadingMoreRef.current = true;
@@ -1984,18 +1443,18 @@ function AdminEvaluationPage({
         return [...prev, ...newRecords];
       });
     }, 100);
-  }, []);
+  }, [legacyEvaluationLoad, evaluationPageQuery, toast]);
 
   // 필터링 결과가 변경될 때마다 표시할 레코드 초기화
   useEffect(() => {
-    const nextHasMore = filteredRecords.length > PAGE_SIZE;
+    const nextHasMore = legacyEvaluationLoad ? filteredRecords.length > PAGE_SIZE : nextCursorRef.current !== null;
 
-    setDisplayedRecords(filteredRecords.slice(0, PAGE_SIZE));
+    setDisplayedRecords(legacyEvaluationLoad ? filteredRecords.slice(0, PAGE_SIZE) : filteredRecords);
     setHasMore(nextHasMore);
     hasMoreRef.current = nextHasMore;
     loadingMoreRef.current = false;
     setLoadingMore(false);
-  }, [filteredRecords]);
+  }, [filteredRecords, legacyEvaluationLoad]);
 
   const visibleDisplayedRecords = useMemo(() => {
     if (displayedRecords.length > 0 || filteredRecords.length === 0) {
@@ -2057,8 +1516,39 @@ function AdminEvaluationPage({
     }
   }, [isAlternateView, currentSlideIndex, displayedRecords.length, hasMore, loadingMore, loadMoreRecords]);
 
+  useEffect(() => {
+    if (isAlternateView && displayedRecords[currentSlideIndex]?.read_summary) void ensureEvaluationDetails(displayedRecords[currentSlideIndex]);
+  }, [isAlternateView, currentSlideIndex, displayedRecords, ensureEvaluationDetails]);
+
   // 전체 데이터 로드 (한 번만)
   const loadAllRecords = useCallback(async () => {
+    if (!legacyEvaluationLoad) {
+      const epoch = ++pageEpochRef.current;
+      pageAbortRef.current?.abort();
+      pageAbortRef.current = new AbortController();
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+      setLoading(true);
+      nextCursorRef.current = null;
+      try {
+        const page = await fetchAdminEvaluationPage(evaluationPageQuery, null, pageAbortRef.current.signal);
+        if (epoch !== pageEpochRef.current) return;
+        setAllRecords(page.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName));
+        setPageWarnings(page.warnings);
+        pageRevisionRef.current = page.revision;
+        setStats(page.stats);
+        setServerFilteredTotal(page.filteredTotal);
+        nextCursorRef.current = page.nextCursor;
+        setHasMore(page.nextCursor !== null);
+        hasMoreRef.current = page.nextCursor !== null;
+      } catch (error) {
+        if (epoch !== pageEpochRef.current || (error instanceof Error && error.name === 'AbortError')) return;
+        setAllRecords([]); setDisplayedRecords([]); setHasMore(false);
+        hasMoreRef.current = false;
+        toast({ variant: 'destructive', title: '데이터 로드 실패', description: '검수 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.' });
+      } finally { if (epoch === pageEpochRef.current) setLoading(false); }
+      return;
+    }
     try {
       setLoading(true);
 
@@ -2172,12 +1662,13 @@ function AdminEvaluationPage({
     } finally {
       setLoading(false);
     }
-  }, [toast, user?.id]);
+  }, [toast, user?.id, legacyEvaluationLoad, evaluationPageQuery]);
+  useEffect(() => { reloadPagesRef.current = loadAllRecords; }, [loadAllRecords]);
 
   // 초기 데이터 로드
   useEffect(() => {
     // 이미 데이터를 로드했으면 건너뛰기 (컴포넌트 재마운트 시 중복 로드 방지)
-    if (hasLoadedData.current) {
+    if (legacyEvaluationLoad && hasLoadedData.current) {
       return;
     }
 
@@ -2185,17 +1676,20 @@ function AdminEvaluationPage({
       hasLoadedData.current = true;
       loadAllRecords();
     }
-  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, loadAllRecords]);
+  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, loadAllRecords, legacyEvaluationLoad]);
+  useEffect(() => () => { pageEpochRef.current++; pageAbortRef.current?.abort(); }, []);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
     setAllRecords(prev =>
       prev.map(r => r.id === recordId ? { ...r, ...updates } : r)
     );
+    if (!legacyEvaluationLoad) void loadAllRecords();
   };
 
   // 통계 재계산 (현재 allRecords 기준)
   const recalculateStats = useCallback(() => {
+    if (!legacyEvaluationLoad) return;
     const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
 
     const newStats: CategoryStats = {
@@ -2212,7 +1706,7 @@ function AdminEvaluationPage({
     };
 
     setStats(newStats);
-  }, [allRecords]);
+  }, [allRecords, legacyEvaluationLoad]);
 
   // allRecords가 변경될 때마다 통계 재계산
   useEffect(() => {
@@ -2223,6 +1717,9 @@ function AdminEvaluationPage({
 
   // 승인 핸들러 (오류 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    record = full;
     if (needsEvaluationRerun(record)) {
       toast({
         variant: 'destructive',
@@ -2455,18 +1952,24 @@ function AdminEvaluationPage({
     }
   };
 
-  const handleRegisterMissing = (record: EvaluationRecord) => {
-    setSelectedMissingRecord(record);
+  const handleRegisterMissing = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    setSelectedMissingRecord(full);
     setMissingFormOpen(true);
   };
 
-  const handleResolveConflict = (record: EvaluationRecord) => {
-    setSelectedConflictRecord(record);
+  const handleResolveConflict = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    setSelectedConflictRecord(full);
     setConflictPanelOpen(true);
   };
 
-  const handleEdit = (record: EvaluationRecord) => {
-    setSelectedEditRecord(record);
+  const handleEdit = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    setSelectedEditRecord(full);
     setEditModalOpen(true);
   };
 
@@ -2834,7 +2337,7 @@ function AdminEvaluationPage({
   const totalPendingCount = getAdminPendingCountsTotal(pendingCounts);
   const pendingQueueSummaryText = showSubmissionView
     ? `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
-    : `필터링: ${filteredRecords.length}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
+    : `필터링: ${legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
   const isInitialEvaluationDataLoading = !showSubmissionView && loading && allRecords.length === 0;
   const pendingQueueSummaryContent = showSubmissionView || !isInitialEvaluationDataLoading
     ? pendingQueueSummaryText
@@ -3539,6 +3042,7 @@ function AdminEvaluationPage({
   const pendingRecordActionDuplicateWarnings = pendingRecordAction
     ? getSameVideoDuplicateWarnings(pendingRecordAction.record)
     : [];
+  const pendingRecordActionDuplicateCount = legacyEvaluationLoad ? pendingRecordActionDuplicateWarnings.length : (pendingRecordAction ? pageWarnings[pendingRecordAction.record.id]?.sameVideo.count ?? 0 : 0);
   const pendingRecordActionIdentityWarnings = pendingRecordAction
     ? getRestaurantIdentityWarnings(pendingRecordAction.record)
     : [];
@@ -3546,6 +3050,8 @@ function AdminEvaluationPage({
   const embeddedModuleId: Extract<AdminConsoleRouteModuleId, 'restaurants' | 'submissions' | 'reviews'> = showSubmissionView
     ? (submissionInitialTab === 'reviews' ? 'reviews' : 'submissions')
     : 'restaurants';
+  const ModuleTitle = embedded ? 'h2' : 'h1';
+  const compactReviewHeader = embedded && embeddedModuleId === 'restaurants';
 
   return (
     <div
@@ -3563,15 +3069,15 @@ function AdminEvaluationPage({
       >
         <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className={compactReviewHeader ? 'sr-only' : 'flex items-center gap-2'}>
               <AdminEvaluationTitleIcon embedded={embedded} />
-              <h1 className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
+              <ModuleTitle className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
                 {embeddedModuleId === 'submissions'
                   ? '제보 관리'
                   : embeddedModuleId === 'reviews'
                     ? '리뷰 관리'
                     : '관리자 데이터 검수'}
-              </h1>
+              </ModuleTitle>
             </div>
             {deepLinkFilter && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -3602,7 +3108,9 @@ function AdminEvaluationPage({
               </div>
             )}
             <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
-              {pendingQueueSummaryContent}
+              {compactReviewHeader ? !isInitialEvaluationDataLoading
+                ? `전체 ${stats.total}건${stats.deleted > 0 ? ` · 삭제 ${stats.deleted}건` : ''}`
+                : '전체 집계 중' : pendingQueueSummaryContent}
             </div>
           </div>
 
@@ -3715,9 +3223,9 @@ function AdminEvaluationPage({
                     </div>
                   </div>
                 )}
-                {pendingRecordActionDuplicateWarnings.length > 0 && (
+                {pendingRecordActionDuplicateCount > 0 && (
                   <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
-                    <p className="font-semibold">같은 영상 중복 후보 {pendingRecordActionDuplicateWarnings.length}건이 있습니다.</p>
+                    <p className="font-semibold">같은 영상 중복 후보 {pendingRecordActionDuplicateCount}건이 있습니다.</p>
                     <p>복원 적용 전 같은 맛집 관계인지 확인하세요. 별도 필터 없이 현재 작업 확인 단계에서만 알려드립니다.</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {pendingRecordActionDuplicateWarnings.slice(0, 3).map((candidate) => (
@@ -3799,6 +3307,7 @@ function AdminEvaluationPage({
         ) : (
           /* 테이블 영역 (무한 스크롤) */
           <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-2">
+            <RestaurantReviewAutomation onApplied={() => { void loadAllRecords(); void invalidateRestaurantDiscoveryQueries(queryClient); }} />
             <EvaluationTable
               records={visibleDisplayedRecords}
               onApprove={handleApprove}
@@ -3819,6 +3328,7 @@ function AdminEvaluationPage({
                 }));
               }}
               onResetFilters={() => setEvalFilters({})}
+              onRequestDetails={async record => Boolean(await ensureEvaluationDetails(record))}
               onLoadMore={loadMoreRecords}
               hasMore={hasMore}
               isLoadingMore={loadingMore}
@@ -3834,7 +3344,7 @@ function AdminEvaluationPage({
             {/* 모든 데이터 로드 완료 메시지 */}
             {!hasMore && displayedRecords.length > 0 && (
               <div className="text-center py-4 text-muted-foreground text-sm">
-                모든 레코드를 불러왔습니다 ({visibleDisplayedRecords.length}개 / 전체 {filteredRecords.length}개)
+                모든 레코드를 불러왔습니다 ({visibleDisplayedRecords.length}개 / 전체 {legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}개)
               </div>
             )}
           </div>

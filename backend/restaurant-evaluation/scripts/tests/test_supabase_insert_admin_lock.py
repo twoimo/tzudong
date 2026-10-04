@@ -322,6 +322,18 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual(["고기", "찜·탕"], record["categories"])
 
+    def test_identical_rows_do_not_write_but_still_validate_review_snapshot(self):
+        existing = self.make_cas_existing()
+        stats = {"inserted":0}
+        with mock.patch.object(supabase_insert, "_run_restaurant_batch") as write:
+            supabase_insert.execute_upsert_rows(object(),[deepcopy(existing)],False,stats,{existing["trace_id"]:existing})
+        write.assert_not_called()
+        self.assertEqual(0,stats["inserted"])
+        self.assertEqual(1,stats["unchanged"])
+        incomplete = deepcopy(existing);incomplete.pop("updated_by_admin_id")
+        with self.assertRaisesRegex(RuntimeError,"conditional_write_failed"):
+            supabase_insert.execute_upsert_rows(object(),[deepcopy(existing)],False,{"inserted":0},{existing["trace_id"]:incomplete})
+
     def test_build_record_flattens_nested_categories_field(self):
         incoming = self.make_incoming(categories=[["고기", "한식"], "한식"])
 
@@ -657,6 +669,27 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual([], supabase.upsert_calls)
         self.assertEqual([], supabase.update_calls)
+
+    def test_exact_trace_match_never_queries_rebind_candidates(self):
+        incoming=self.make_incoming()
+        existing=self.make_cas_existing(**incoming)
+        stats=self.make_stats()
+        with mock.patch.object(supabase_insert,'fetch_existing_rows_by_trace_id',return_value={incoming['trace_id']:existing}), \
+             mock.patch.object(supabase_insert,'fetch_review_rebind_candidates',side_effect=AssertionError('unnecessary lookup')), \
+             mock.patch.object(supabase_insert,'apply_restaurant_batch') as write:
+            supabase_insert.process_and_upsert(FakeSupabase(),[incoming],False,stats)
+        write.assert_not_called()
+        self.assertEqual(1,stats['unchanged'])
+
+    def test_mixed_batch_looks_up_only_unknown_trace_video(self):
+        known=self.make_incoming()
+        new=self.make_incoming(trace_id='unseen-trace',youtube_link='https://youtu.be/unknown1234')
+        existing=self.make_cas_existing(**known)
+        with mock.patch.object(supabase_insert,'fetch_existing_rows_by_trace_id',return_value={known['trace_id']:existing}), \
+             mock.patch.object(supabase_insert,'fetch_review_rebind_candidates',return_value={}) as lookup, \
+             mock.patch.object(supabase_insert,'apply_restaurant_batch',return_value={'readback':[new]}):
+            supabase_insert.process_and_upsert(FakeSupabase(),[known,new],False,self.make_stats())
+        self.assertEqual([new['youtube_link']],lookup.call_args.args[1])
 
     def test_process_and_upsert_aborts_before_write_when_review_prerequisite_read_fails(self):
         supabase = FakeSupabase(

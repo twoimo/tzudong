@@ -4,9 +4,15 @@ import path from 'node:path';
 
 const root = path.resolve('tests-unit');
 const isolated = new Set([
+  'admin-evaluation-page-api.test.ts',
+  'admin-evaluation-page-server.test.ts',
+  'admin-sentry-route.test.ts',
+  'sentry-admin.test.ts',
+  'sentry-sdk-transport.test.ts',
   'admin-storyboard-generator.test.ts',
   'admin-storyboard-langgraph.test.ts',
   'admin-storyboard-caption-provenance.test.ts',
+  'admin-storyboard-local-bridge.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
   'auth-callback-session.test.ts',
   'account-deletion-reauth-validation.test.ts',
@@ -43,4 +49,8 @@ function run(filesToRun) {
 
 const generalStatus = run(generalFiles);
 if (generalStatus !== 0) process.exit(generalStatus);
-process.exit(run(isolatedFiles));
+for (const file of isolatedFiles) {
+  const status = run([file]);
+  if (status !== 0) process.exit(status);
+}
+process.exit(0);

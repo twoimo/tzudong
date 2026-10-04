@@ -1,0 +1,24 @@
+{
+  "kind": "hosted-migration-readback",
+  "project": "tzudong",
+  "recordedAt": "2026-10-02T23:54:50.837Z",
+  "name": "admin_evaluation_pagination",
+  "appliedVersion": "20261002235102",
+  "sourceSha256": "f58f8023a4484acc67c14ce0449d12dce13257b998c139120e437fe767b4d519",
+  "readback": {
+    "rows": 1659,
+    "owners": [
+      "postgres",
+      "postgres"
+    ],
+    "revision": "1",
+    "tableRows": 1659,
+    "anonDenied": true,
+    "payloadBytes": 6853981,
+    "allowlistRows": 2,
+    "fieldFidelity": true,
+    "serviceAllowed": true,
+    "authenticatedDenied": true
+  },
+  "restaurantDmlStatements": 0
+}

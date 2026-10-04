@@ -25,6 +25,7 @@ import time
 import sys
 import argparse
 import subprocess
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -39,6 +40,8 @@ if str(BACKEND_ROOT) not in sys.path:
 from utils.jsonl_utils import load_last_jsonl_record
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.privacy_log import safe_error_name
+from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock
+from utils.request_budget import ReadCoalescer, RequestPacer, retry_after_seconds
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -63,6 +66,7 @@ HEADERS_LOCAL = {
 HEADERS_NCP = {
     "X-NCP-APIGW-API-KEY-ID": NCP_KEY_ID,
     "X-NCP-APIGW-API-KEY": NCP_KEY,
+    "Accept": "application/json",
 }
 
 # 유효한 카테고리 목록
@@ -94,6 +98,30 @@ ncp_api_errors = 0
 _geocode_jibun_cache: Dict[str, Optional[str]] = {}
 _geocode_addresses_cache: Dict[str, Optional[List[Dict[str, Any]]]] = {}
 _gemini_fallback_cache: Dict[str, Dict[str, Any]] = {}
+
+_read_requests = ReadCoalescer()
+_thread_sessions = threading.local()
+_naver_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="naver-read")
+_counter_lock = threading.Lock()
+# Match the historical maximum of three requests per restaurant / 0.5s.
+# Operators may configure stricter provider limits, never CPU-derived quotas.
+_naver_pacer = RequestPacer(float(os.getenv("NAVER_REQUEST_INTERVAL_SEC", "0.167")))
+_ncp_pacer = RequestPacer(float(os.getenv("NCP_REQUEST_INTERVAL_SEC", "0.167")))
+
+def provider_get(url: str, **kwargs):
+    session = getattr(_thread_sessions, "session", None)
+    if session is None:
+        session = requests.Session()
+        _thread_sessions.session = session
+    pacer = _naver_pacer if url == LOCAL_URL else _ncp_pacer
+    pacer.wait()
+    response = session.get(url, **kwargs)
+    if response.status_code == 429:
+        delay = retry_after_seconds(response.headers.get("Retry-After"))
+        if delay is not None:
+            pacer.cooldown(delay)
+    return response
+
 
 EVIDENCE_PROVIDER_CANDIDATE = "provider_candidate"
 EVIDENCE_SOURCE_GEO = "source_geo"
@@ -522,13 +550,14 @@ def build_location_result(
 
 
 # ========= API 호출 (기존 backup 그대로) =========
-def naver_local_search_one(query: str, display: int = 5) -> List[Dict[str, Any]]:
+def _naver_local_search_uncached(query: str, display: int = 5) -> List[Dict[str, Any]]:
     """네이버 지역 검색 API"""
     global naver_api_calls, naver_api_errors
     for attempt in range(3):
         try:
-            naver_api_calls += 1
-            r = requests.get(
+            with _counter_lock:
+                naver_api_calls += 1
+            r = provider_get(
                 LOCAL_URL,
                 headers=HEADERS_LOCAL,
                 params={
@@ -558,7 +587,8 @@ def naver_local_search_one(query: str, display: int = 5) -> List[Dict[str, Any]]
                 )
             return results
         except Exception as e:
-            naver_api_errors += 1
+            with _counter_lock:
+                naver_api_errors += 1
             print(
                 f"[WARN] operation=naver_local_search_failed "
                 f"attempt={attempt + 1}/3 error={safe_error_name(e)} "
@@ -567,49 +597,33 @@ def naver_local_search_one(query: str, display: int = 5) -> List[Dict[str, Any]]
             if attempt < 2:
                 time.sleep(2**attempt)
             else:
-                return []
+                raise
+
+
+def naver_local_search_one(query: str, display: int = 5) -> List[Dict[str, Any]]:
+    key = ("naver", _norm_space(query), min(5, max(1, display)))
+    try:
+        return _read_requests.get(key, lambda: _naver_local_search_uncached(query, display))
+    except Exception:
+        return []
 
 
 def ncp_geocode_to_jibun_address(query: str) -> Optional[str]:
-    """NCP 지오코딩 → 지번주소 반환 (캐시 적용)"""
-    global ncp_api_calls, ncp_api_errors
+    """Project jibun from the same successful geocoding response."""
     cache_key = _norm_space(query)
     if cache_key in _geocode_jibun_cache:
         return _geocode_jibun_cache[cache_key]
-    for attempt in range(3):
-        try:
-            ncp_api_calls += 1
-            r = requests.get(
-                GEOCODE_URL,
-                headers=HEADERS_NCP,
-                params={"query": cache_key},
-                timeout=8,
-            )
-            r.raise_for_status()
-            j = r.json() if r.content else {}
-            addresses = j.get("addresses", [])
-            if addresses:
-                addr = addresses[0].get("jibunAddress", "")
-                if addr:
-                    result = _norm_space(addr)
-                    _geocode_jibun_cache[cache_key] = result
-                    return result
-            if attempt < 2:
-                time.sleep(1)
-        except Exception as e:
-            ncp_api_errors += 1
-            print(
-                f"[WARN] operation=ncp_geocode_jibun_failed "
-                f"attempt={attempt + 1}/3 error={safe_error_name(e)} "
-                "code=NCP_GEOCODE_JIBUN_FAILED"
-            )
-            if attempt < 2:
-                time.sleep(2**attempt)
-    _geocode_jibun_cache[cache_key] = None
-    return None
+    addresses = ncp_geocode_addresses(query)
+    result = _norm_space(addresses[0].get("jibunAddress", "")) if addresses else None
+    result = result or None
+    # An unavailable read must be retryable; successful empty results are cached
+    # by the coalescer, but failures are not.
+    if addresses is not None:
+        _geocode_jibun_cache[cache_key] = result
+    return result
 
 
-def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
+def _ncp_geocode_addresses_uncached(addr: str) -> Optional[List[Dict[str, Any]]]:
     """NCP 지오코딩 → 전체 주소 정보 반환 (캐시 적용)"""
     global ncp_api_calls, ncp_api_errors
     cache_key = _norm_space(addr)
@@ -617,8 +631,9 @@ def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
         return _geocode_addresses_cache[cache_key]
     for attempt in range(3):
         try:
-            ncp_api_calls += 1
-            r = requests.get(
+            with _counter_lock:
+                ncp_api_calls += 1
+            r = provider_get(
                 GEOCODE_URL,
                 headers=HEADERS_NCP,
                 params={"query": cache_key},
@@ -627,11 +642,13 @@ def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
             r.raise_for_status()
             j = r.json()
             arr = j.get("addresses") if isinstance(j, dict) else None
-            result = arr if isinstance(arr, list) else None
+            if not isinstance(arr, list): raise ValueError("NCP_RESPONSE_INVALID")
+            result = arr
             _geocode_addresses_cache[cache_key] = result
             return result
         except Exception as e:
-            ncp_api_errors += 1
+            with _counter_lock:
+                ncp_api_errors += 1
             print(
                 f"[WARN] operation=ncp_geocode_addresses_failed "
                 f"attempt={attempt + 1}/3 error={safe_error_name(e)} "
@@ -639,8 +656,15 @@ def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
             )
             if attempt < 2:
                 time.sleep(2**attempt)
-    _geocode_addresses_cache[cache_key] = None
-    return None
+    raise RuntimeError("NCP_GEOCODE_UNAVAILABLE")
+
+
+def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
+    try:
+        return _read_requests.get(("ncp", _norm_space(addr)),
+                                  lambda: _ncp_geocode_addresses_uncached(addr))
+    except Exception:
+        return None
 
 
 def normalize_category_values(category: Any) -> List[str]:
@@ -1027,19 +1051,17 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     region = extract_region_from_address(origin_address)
     name_addr_query = f"{name} {_norm_space(origin_address)}"
 
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        future_name = executor.submit(naver_local_search_one, name, 5)
-        future_addr = executor.submit(naver_local_search_one, name_addr_query, 3)
-        future_region = (
-            executor.submit(naver_local_search_one, f"{name} {region}", 5)
-            if region
-            else None
-        )
+    future_name = _naver_executor.submit(naver_local_search_one, name, 5)
+    future_addr = _naver_executor.submit(naver_local_search_one, name_addr_query, 3)
+    future_region = (
+        _naver_executor.submit(naver_local_search_one, f"{name} {region}", 5)
+        if region
+        else None
+    )
 
-        name_cands = future_name.result()
-        name_addr_cands = future_addr.result()
-        name_region_cands = future_region.result() if future_region else []
-
+    name_cands = future_name.result()
+    name_addr_cands = future_addr.result()
+    name_region_cands = future_region.result() if future_region else []
     geocoded_addr_norm = _norm_space(geocoded_jibun or "")
 
     # 검색 결과 합치기
@@ -1266,7 +1288,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
                 match_status="failed",
             )
         location_eval_list.append(res)
-        time.sleep(0.5)  # API rate-limit 완화
+        # Provider reservations enforce pacing across all workers.
 
     # 2. 카테고리 유효성 평가 (location_match_TF 결과에서 naver_name 활용)
     category_eval_list, evaluation_name_source = evaluate_category_validity(
@@ -1333,30 +1355,32 @@ def main():
         input_file = selection_dir / f"{video_id}.jsonl"
         output_file = output_dir / f"{video_id}.jsonl"
 
-        if not requested and output_file.exists():
-            stats["skipped"] += 1
-            if stats["skipped"] % 50 == 1:
-                print(f"이미 처리됨 (스킵 {stats['skipped']}개)")
-            continue
-
-        # 데이터 로드 (성능: 대용량 JSONL 전체 순회 방지)
-        data = load_last_jsonl_record(input_file)
-
-        if not data:
-            print("[WARN] operation=rule_evaluation_input_unreadable code=SELECTION_RECORD_UNAVAILABLE")
-            continue
-
-        # evaluation_target에 true 값이 있는 경우에만 평가 진행
-        evaluation_target = data.get("evaluation_target", {})
-        if not any(value for value in evaluation_target.values() if value is True):
-            continue
-
-        # 처리
-        result = process_one_line(data)
-
-        # 저장
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(json.dumps(result, ensure_ascii=False) + "\n")
+        receipt = output_dir / ".receipts" / f"{video_id}.json"
+        selection_receipt = selection_dir / ".receipts" / f"{video_id}.json"
+        # Lock order is selection -> rule -> LAAJ. Re-read after admission so a
+        # retired selection cannot be published from a previously loaded row.
+        with stage_lock(selection_receipt), stage_lock(receipt):
+            data = load_last_jsonl_record(input_file)
+            if not data:
+                print("[WARN] operation=rule_evaluation_input_unreadable code=SELECTION_RECORD_UNAVAILABLE")
+                continue
+            if not any(value is True for value in data.get("evaluation_target", {}).values()):
+                continue
+            input_hash = fingerprint([input_file], assets=[Path(__file__)], settings={
+                "naverInterval": _naver_pacer.interval, "ncpInterval": _ncp_pacer.interval,
+                "fallbackModel": GEMINI_MODEL, "fallbackTimeout": GEMINI_TIMEOUT_SEC,
+            })
+            if not requested and reusable(receipt, input_hash, [output_file]):
+                stats["skipped"] += 1
+                continue
+            errors_before = naver_api_errors + ncp_api_errors
+            result = process_one_line(data)
+            atomic_write(output_file, (json.dumps(result, ensure_ascii=False) + "\n").encode())
+            # Transient failed matches must be retried, not certified as complete.
+            results = result["evaluation_results"]["location_match_TF"]
+            if (naver_api_errors + ncp_api_errors == errors_before
+                    and all(row.get("match_status") != "failed" for row in results)):
+                complete(receipt, input_hash, [output_file])
 
         # 통계
         location_evals = result["evaluation_results"]["location_match_TF"]

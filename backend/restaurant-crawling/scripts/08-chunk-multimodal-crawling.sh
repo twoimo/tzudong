@@ -29,11 +29,13 @@ SPLIT_VIDEO="$SCRIPT_DIR/split_video_chunks.mjs"
 GEMINI_CHUNK_API="$SCRIPT_DIR/gemini_chunk_video_request.mjs"
 MERGE_RESULTS="$SCRIPT_DIR/merge_chunk_results.py"
 RUNTIME_DATA_DIR="$PROJECT_ROOT/restaurant-crawling/data"
+export VIDEO_CACHE_DIR="${VIDEO_CACHE_DIR:-$RUNTIME_DATA_DIR/video_cache}"
 
 echo "[$(date '+%H:%M:%S')] [INFO] SCRIPT_DIR: $SCRIPT_DIR"
 echo "[$(date '+%H:%M:%S')] [INFO] PROJECT_ROOT: $PROJECT_ROOT"
 
 # .env 파일 로드
+if [[ "${1:-}" != "--stage-worker" ]]; then
 for env_file in "$PROJECT_ROOT/.env" "$PROJECT_ROOT/../.env"; do
     if [ -f "$env_file" ]; then
         set -a; source "$env_file"; set +a
@@ -41,6 +43,7 @@ for env_file in "$PROJECT_ROOT/.env" "$PROJECT_ROOT/../.env"; do
         break
     fi
 done
+fi
 
 # Gemini 모델 설정
 export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.7-flash}"
@@ -160,10 +163,20 @@ fi
 # Windows jq.exe는 WSL 경로를 직접 읽지 못하므로 반드시 stdin으로 전달
 jq_wrapper() { "$JQ_EXE" "$@" | tr -d '\r'; }
 
-TEMP_BASE="$(cd "$SCRIPT_DIR/.." && pwd)/temp"
-mkdir -p "$TEMP_BASE"
+TEMP_PARENT="$(cd "$SCRIPT_DIR/.." && pwd)/temp"
+mkdir -p "$TEMP_PARENT"
+OWNS_TEMP_BASE=false
+if [[ "${1:-}" == "--stage-worker" && -n "${TZUDONG_CHUNK_TEMP_BASE:-}" ]]; then
+    TEMP_BASE="$TZUDONG_CHUNK_TEMP_BASE"
+else
+    TEMP_BASE=$(mktemp -d "$TEMP_PARENT/run.XXXXXXXX") || exit 1
+    export TZUDONG_CHUNK_TEMP_BASE="$TEMP_BASE"
+    OWNS_TEMP_BASE=true
+fi
 # 이전 실행에서 남은 에러 플래그 초기화
-rm -f "$TEMP_BASE/quota_exceeded.flag" "$TEMP_BASE/force_web_fallback.flag" "$TEMP_BASE/web_fallback_auth_required.flag"
+if [[ "${1:-}" != "--stage-worker" ]]; then
+    rm -f "$TEMP_BASE/quota_exceeded.flag" "$TEMP_BASE/force_web_fallback.flag" "$TEMP_BASE/web_fallback_auth_required.flag"
+fi
 
 # ================================
 # 로그 함수 (모두 stderr 출력 — stdout은 함수 반환값 전용)
@@ -358,6 +371,7 @@ CHANNEL_FILTER=""
 SINGLE_URL=""
 FORCE_MODE=false
 
+if [[ "${1:-}" != "--stage-worker" ]]; then
 while [[ $# -gt 0 ]]; do
     case $1 in
         --channel|-c) CHANNEL_FILTER="$2"; shift 2;;
@@ -366,6 +380,7 @@ while [[ $# -gt 0 ]]; do
         *)            echo "알 수 없는 옵션: $1"; exit 1;;
     esac
 done
+fi
 
 # ================================
 # 채널 유틸리티
@@ -427,6 +442,10 @@ download_video() {
     local cache_dirs=("$output_dir")
     if [ -n "$VIDEO_CACHE_DIR" ] && [ -d "$VIDEO_CACHE_DIR" ]; then
         cache_dirs=("$VIDEO_CACHE_DIR" "${cache_dirs[@]}")
+    fi
+
+    if [ -n "${PIPELINE_SHARED_VIDEO_CACHE_DIR:-}" ] && [ -d "$PIPELINE_SHARED_VIDEO_CACHE_DIR" ]; then
+        cache_dirs+=("$PIPELINE_SHARED_VIDEO_CACHE_DIR")
     fi
 
     for cache_dir in "${cache_dirs[@]}"; do
@@ -943,7 +962,7 @@ process_channel() {
             return 0
         fi
         local win_parser=$(maybe_normalize "$local_python" "$PARSER_SCRIPT")
-        mapfile -t urls < <("$local_python" "$win_parser" scan --channel "$channel" | tr -d '\r')
+        mapfile -t urls < <("$local_python" "$win_parser" scan --channel "$channel" --ignore-completed | tr -d '\r')
     fi
 
     local total=${#urls[@]}
@@ -977,6 +996,8 @@ process_channel() {
             continue
         fi
 
+        # Receipt admission is checked under the lock immediately before work.
+
         local crawling_file="$crawling_dir/${video_id}.jsonl"
         local map_file="$full_data_path/map_url_crawling/${video_id}.jsonl"
 
@@ -990,20 +1011,7 @@ process_channel() {
                 continue
             fi
 
-            if [ -f "$crawling_file" ]; then
-                local restaurants_len
-                restaurants_len=$(get_restaurants_len_from_jsonl "$crawling_file")
 
-                if [[ "$restaurants_len" =~ ^[0-9]+$ ]] && [ "$restaurants_len" -ge 0 ]; then
-                    skipped_count=$((skipped_count + 1))
-                    skip_already_processed=$((skip_already_processed + 1))
-                    log_info "[$index/$total] SKIP: already_processed(crawling) ($video_id, restaurants=$restaurants_len)"
-                    continue
-                fi
-
-                log_warning "[$index/$total] RETRY: empty_or_invalid_crawling_result ($video_id)"
-                rm -f "$crawling_file" 2>/dev/null || true
-            fi
         fi
 
         local meta_file="$meta_dir/${video_id}.jsonl"
@@ -1023,6 +1031,20 @@ process_channel() {
             continue
         fi
 
+        local receipt_file="$crawling_dir/.receipts/${video_id}.json"
+        local cache_args=(--receipt "$receipt_file" --input "$transcript_file"
+            --metadata "$meta_file" --asset "$PROMPT_FILE" --asset "$CHUNK_PLANNER"
+            --asset "$MERGE_RESULTS" --asset "$PARSER_SCRIPT" --asset "$GEMINI_CHUNK_API"
+            --asset "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh"
+            --asset "$SCRIPT_DIR/split_video_chunks.mjs" --asset "$SCRIPT_DIR/../prompts/final_merge_prompt.txt"
+            --asset "$SCRIPT_DIR/final_merge_chunk.mjs" --asset "$PROJECT_ROOT/utils/gemini-client.mjs"
+            --asset "$PROJECT_ROOT/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/utils/provider_budget.py"
+            --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"
+            --setting "$GEMINI_CHUNK_THINKING_LEVEL" --setting "$GEMINI_FINAL_MERGE_THINKING_LEVEL"
+            --output "$crawling_file")
+        local force_args=()
+        [ "$FORCE_MODE" = true ] && force_args+=(--force)
+
         if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then
             max_new="${LIVE_MAX_NEW_ITEMS:-1}"
             if [ "${live_new_count:-0}" -ge "$max_new" ]; then
@@ -1038,7 +1060,9 @@ process_channel() {
         video_start=$(date +%s)
 
         set +e
-        process_video_chunks "$channel" "$channel_name" "$video_id" "$url" "$full_data_path" "$meta_file" "$transcript_file"
+        TZUDONG_STAGE_CURRENT_MODEL="$CURRENT_MODEL" "$local_python" "$PROJECT_ROOT/bin/stage_cache.py" run "${cache_args[@]}" "${force_args[@]}" -- \
+            "$BASH" "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh" --stage-worker \
+            "$channel" "$channel_name" "$video_id" "$url" "$full_data_path" "$meta_file" "$transcript_file"
         local proc_exit=$?
         set -e
         
@@ -1049,6 +1073,10 @@ process_channel() {
             local video_elapsed=$((video_end - video_start))
             total_time=$((total_time + video_elapsed))
             log_success "[$index/$total] 완료 (${video_elapsed}s)"
+        elif [ $proc_exit -eq 10 ]; then
+            skipped_count=$((skipped_count + 1))
+            skip_already_processed=$((skip_already_processed + 1))
+            if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then live_new_count=$((live_new_count - 1)); fi
         elif [ $proc_exit -eq 42 ]; then
             log_error "할당량 초과(Quota Error) 감지. 채널 처리를 완전히 중단합니다. 다음 날 이어서 진행됩니다."
             exit 42
@@ -1076,7 +1104,8 @@ process_channel() {
         return 1
     fi
     if [ $failed_count -gt 0 ]; then
-        log_warning "일부 영상 실패($failed_count). 이미 처리된/성공한 결과는 유지하고 배치를 완료합니다."
+        log_warning "일부 영상 실패($failed_count). 완료 결과를 보존하고 실패 상태를 반환합니다."
+        return 1
     fi
     return 0
 }
@@ -1200,6 +1229,7 @@ console.log(r.text);
 
     # 임시 파일 및 상태 플래그 정리
     rm -rf "$TEMP_BASE"/chunk_* "$TEMP_BASE"/*.txt "$TEMP_BASE"/*.json "$TEMP_BASE"/*.log "$TEMP_BASE"/*.flag 2>/dev/null || true
+    if [ "$OWNS_TEMP_BASE" = true ]; then rmdir "$TEMP_BASE" 2>/dev/null || true; fi
 
     log_info ""
     log_info "============================================================"
@@ -1211,5 +1241,15 @@ console.log(r.text);
     fi
     log_info "============================================================"
 }
+
+if [[ "${1:-}" == "--stage-worker" ]]; then
+    if [[ $# -ne 8 || -z "${TZUDONG_STAGE_LOCK_RECEIPT:-}" ]]; then
+        log_error "STAGE_WORKER_LOCK_REQUIRED"
+        exit 1
+    fi
+    export CURRENT_MODEL="${TZUDONG_STAGE_CURRENT_MODEL:-$PRIMARY_MODEL}"
+    process_video_chunks "$2" "$3" "$4" "$5" "$6" "$7" "$8"
+    exit $?
+fi
 
 main

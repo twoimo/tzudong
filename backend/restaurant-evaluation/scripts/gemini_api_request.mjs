@@ -1,5 +1,5 @@
+import { createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import fs from 'fs';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
@@ -60,23 +60,18 @@ async function main() {
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
             try {
                 console.log(`DEBUG: Initializing GoogleGenerativeAI with key ${keyIndex + 1}/${apiKeys.length}...`);
-                const genAI = new GoogleGenerativeAI(apiKeys[keyIndex]);
-                console.log(`DEBUG: Getting Model=${modelName}, thinkingLevel=${thinkingLevel}...`);
-                const model = genAI.getGenerativeModel({
+                const ai = createGeminiClient(apiKeys[keyIndex]);
+                const response = await generateWithProjectBudget(ai, {
                     model: modelName,
-                    generationConfig: {
+                    contents: prompt,
+                    config: {
                         temperature: 0.1,
                         maxOutputTokens: 4096,
                         thinkingConfig: { thinkingLevel },
                     },
                 });
-
-                console.log("DEBUG: Calling generateContent...");
-                const result = await model.generateContent(prompt);
-                console.log("DEBUG: Content Generated. Getting response...");
-                const response = await result.response;
-                const text = response.text();
-                console.log("DEBUG: Got text. Writing output...");
+                logGeminiUsage(response);
+                const text = requireGeminiText(response);
 
                 fs.writeFileSync(outputFile, text);
                 console.log("DEBUG: Done.");

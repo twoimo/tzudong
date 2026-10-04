@@ -17,6 +17,7 @@ from backend.pipeline_control.adapter import (
     execute_steps,
     noop_event_sink,
 )
+from backend.pipeline_control.media_cache import owned_media_cache
 from backend.pipeline_control.graph import AdapterGraphError, STEP_SPECS
 from backend.pipeline_control.profiles import (
     ProfileError,
@@ -546,15 +547,18 @@ def process_one(
             execution_mode=execution_mode,
             compute_profile=run.profile,
         ):
-            result = execute_steps(
-                run,
-                should_stop=should_stop,
-                emit=emit,
-                live=use_live and not run.dry_run,
-                runner=runner,
-                data_sink=data_sink,
-                compute_profile=run.profile,
-            )
+            with owned_media_cache(run.id, enabled=use_live and not run.dry_run) as media_completed:
+                result = execute_steps(
+                    run,
+                    should_stop=should_stop,
+                    emit=emit,
+                    live=use_live and not run.dry_run,
+                    runner=runner,
+                    data_sink=data_sink,
+                    compute_profile=run.profile,
+                )
+                if result == 'Succeeded':
+                    media_completed()
     except (KafkaPublishError, AdapterGraphError, ProfileError) as exc:
         store.finish_failed(run.id, exc.code)
         write_run_manifest(

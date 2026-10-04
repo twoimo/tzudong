@@ -984,7 +984,7 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:rounded-3xl lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch lg:gap-3 2xl:grid-cols-3"
+      className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch 2xl:grid-cols-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="content"
@@ -1002,17 +1002,17 @@ export default function ProfilePage() {
           data-mypage-profile-hero="mobile-only"
         >
           <div
-            className="flex flex-col items-center space-y-4 p-6 text-center md:hidden"
+            className="grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-3 p-2 text-left md:hidden"
             data-mypage-profile-hero-layout="sidebar-match"
           >
-            <div className="group relative h-24 w-24 shrink-0 rounded-full">
+            <div className="group relative h-16 w-16 shrink-0 rounded-full">
               <label
                 htmlFor="mypage-mobile-avatar-upload"
                 aria-label="프로필 사진 변경"
-                className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm group-hover:ring-2 group-hover:ring-primary/30 md:pointer-events-none"
+                className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border group-hover:ring-2 group-hover:ring-primary/30 md:pointer-events-none"
                 style={{
-                  width: "6rem",
-                  height: "6rem",
+                  width: "4rem",
+                  height: "4rem",
                   aspectRatio: "1 / 1",
                   borderRadius: "9999px",
                   overflow: "hidden",
@@ -1024,7 +1024,7 @@ export default function ProfilePage() {
                     src={avatarUrl}
                     alt={displayName}
                     fill
-                    sizes="96px"
+                    sizes="64px"
                     className="rounded-full object-cover"
                   />
                 ) : (
@@ -1072,7 +1072,7 @@ export default function ProfilePage() {
             </div>
 
             <div
-              className="flex w-full flex-col items-center space-y-2"
+              className="flex min-w-0 flex-col items-start space-y-2"
               data-mypage-profile-identity="sidebar-match"
               data-mypage-mobile-nickname-controls="true"
             >
@@ -1166,7 +1166,7 @@ export default function ProfilePage() {
             </div>
 
             <div
-              className="grid w-full grid-cols-3 gap-2 pt-2"
+              className="col-span-2 grid w-full grid-cols-3 gap-2"
               data-mypage-profile-summary="true"
             >
               <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 transition-colors hover:bg-muted/60">
@@ -1220,7 +1220,7 @@ export default function ProfilePage() {
                       <Link
                         key={action.href}
                         href={action.href}
-                        className="group flex min-h-14 min-w-0 touch-manipulation items-center gap-3 rounded-2xl bg-muted/40 px-3 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="group flex min-h-12 min-w-0 touch-manipulation items-center gap-3 rounded-lg bg-muted/40 px-3 py-2 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         data-mypage-mobile-action-row="true"
                         data-mypage-action-group={section.id}
                       >

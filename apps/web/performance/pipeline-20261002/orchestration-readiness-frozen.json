@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "frozen_source_orchestration_readiness",
+  "status": "Ready",
+  "generatedAt": "2026-10-02T09:28:09Z",
+  "source": {
+    "gitHeadSha": "0297eb9210144e7035f474281b88329acc87b456",
+    "workingTreeClean": true
+  },
+  "testPlan": {
+    "moduleCount": 22,
+    "execution": {
+      "status": "Passed",
+      "exitCode": 0,
+      "testsRun": 213,
+      "durationMilliseconds": 16658
+    }
+  },
+  "blockerCodes": [],
+  "requiredArtifacts": 18,
+  "presentArtifacts": 18,
+  "specTasksCompleted": 71,
+  "specTasksTotal": 71,
+  "scope": "Crawler orchestration readiness only; does not establish full performance-goal completion."
+}

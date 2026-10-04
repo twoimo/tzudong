@@ -1,0 +1,51 @@
+{
+  "fixture": true,
+  "production": false,
+  "viewports": [
+    {
+      "associatedPanel": "tabpanel",
+      "dark": true,
+      "documentWidth": 1440,
+      "heading1Count": 1,
+      "height": 1000,
+      "menuCount": 13,
+      "removedDescriptionPresent": false,
+      "scheme": "dark",
+      "selectedTab": "최신화·이력",
+      "tabHeight": 32,
+      "width": 1440
+    },
+    {
+      "associatedPanel": "tabpanel",
+      "dark": true,
+      "documentWidth": 390,
+      "heading1Count": 1,
+      "height": 844,
+      "menuCount": 13,
+      "removedDescriptionPresent": false,
+      "scheme": "dark",
+      "selectedTab": "최신화·이력",
+      "tabHeight": 44,
+      "width": 390
+    },
+    {
+      "associatedPanel": "tabpanel",
+      "dark": true,
+      "documentWidth": 834,
+      "heading1Count": 1,
+      "height": 1194,
+      "menuCount": 13,
+      "removedDescriptionPresent": false,
+      "scheme": "dark",
+      "selectedTab": "최신화·이력",
+      "tabHeight": 32,
+      "width": 834
+    }
+  ],
+  "keyboardSwitchBothDirections": true,
+  "legacyUrlRedirectVerified": true,
+  "menuCountBefore": 14,
+  "menuCountAfter": 13,
+  "menuCountChangePercent": -7.142857142857143,
+  "baselineMenuCountScope": "previous committed sidebar definition, not a user productivity estimate"
+}

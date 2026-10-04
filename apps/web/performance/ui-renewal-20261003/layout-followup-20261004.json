@@ -1,0 +1,19 @@
+{
+  "kind": "source-layout-followup",
+  "developHead": "a1c79e429d856df795dfff2d8cf13b30d1f23007",
+  "integration": "compact transparent PNG delivery asset and shared public controls",
+  "layout": {
+    "beforeDeclaredDirectories": 35,
+    "afterDeclaredDirectories": 37,
+    "addedSourceBoundaries": [
+      "assets",
+      "assets/source-fonts"
+    ],
+    "validatorRulesChanged": false,
+    "testsPassed": 80
+  },
+  "affectedWebTestsPassed": 4,
+  "operationalDatabaseChanges": false,
+  "additionalPaidCapacity": false,
+  "deploymentVerified": false
+}

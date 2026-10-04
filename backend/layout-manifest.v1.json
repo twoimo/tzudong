@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "scope": {
     "note": "저장소가 추적하거나 현재 후보에 추가한 1단·2단 디렉터리 전체에 대해 항목 하나씩(요구사항 6.1). 소스 항목은 git ls-files --cached --others --exclude-standard 결과와 양방향 대응한다(요구사항 6.9). build_artifact·local_ephemeral 항목은 버전 관리 추적 제외를 vcsTracked=false로 기록한다(요구사항 6.8).",
-    "trackedTopLevelDirectories": [".github", "apps", "backend", "docs", "scripts"],
+    "trackedTopLevelDirectories": [".github", "apps", "assets", "backend", "docs", "scripts"],
     "excludedTopLevelDirectories": [".git", ".venv", ".hypothesis", ".cursor", ".kiro", ".local-archive"]
   },
   "entries": [
@@ -87,6 +87,24 @@
         "장시간 Supabase 배치 삽입 소유",
         "Rust_Component 원시 성능 아티팩트"
       ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "assets",
+      "depth": 1,
+      "ownership": "공개 배포 자산의 저장소 원본 입력 경계",
+      "allowedContents": ["공개 정적 자산의 원본 디렉터리"],
+      "forbiddenContents": ["애플리케이션 실행 소스", "운영 산출물", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "assets/source-fonts",
+      "depth": 2,
+      "ownership": "내용 해시로 검증하는 공개 폰트의 원본 입력",
+      "allowedContents": ["공개 정적 폰트 원본"],
+      "forbiddenContents": ["라우트 핸들러", "크롤링·추론 실행 소스", "시크릿 값 리터럴"],
       "classification": "source",
       "vcsTracked": true
     },
@@ -322,6 +340,34 @@
       "ownership": "보관 문서",
       "allowedContents": ["보관된 과거 문서"],
       "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/build-ship",
+      "depth": 2,
+      "ownership": "구현·빌드·배포 절차 문서",
+      "allowedContents": [
+        "빌드·배포 절차 및 검증 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/performance",
+      "depth": 2,
+      "ownership": "성능 측정 설계·분석 문서",
+      "allowedContents": [
+        "성능 모델·실험 절차·분석 문서"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴"
+      ],
       "classification": "source",
       "vcsTracked": true
     },

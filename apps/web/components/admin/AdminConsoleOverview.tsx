@@ -23,6 +23,7 @@ import {
   Activity,
   BarChart2,
   Bot,
+  Bug,
   CheckCircle2,
   ClipboardCheck,
   Clapperboard,
@@ -133,6 +134,7 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
+import { RestaurantManagementWorkspace } from "@/components/admin/RestaurantManagementWorkspace";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
@@ -167,6 +169,15 @@ type SidebarSection = {
 };
 
 const consoleModules: ConsoleModule[] = [
+  {
+    id: "sentry",
+    title: "오류 모니터링",
+    description: "Sentry 오류 현황",
+    href: "/admin?module=sentry",
+    icon: Bug,
+    badge: "Sentry",
+    actionLabel: "오류 확인",
+  },
   {
     id: "restaurants",
     title: "맛집 관리",
@@ -386,7 +397,6 @@ const sidebarSections: SidebarSection[] = [
       .filter((module) =>
         [
           "restaurants",
-          "restaurant-refresh-history",
           "submissions",
           "reviews",
         ].includes(module.id),
@@ -401,7 +411,7 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
-    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline"]),
+    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "sentry"]),
   },
   {
     label: "실험실",
@@ -630,7 +640,7 @@ function moveAdminSidebarItem(
 ): AdminSidebarOrderPreference {
   const normalized = normalizeAdminSidebarOrder(order);
   const sectionItems = normalized.items[section] ?? [];
-  const index = sectionItems.indexOf(itemId);
+  const index = sectionItems.findIndex(id => id === itemId);
 
   return {
     ...normalized,
@@ -687,6 +697,10 @@ function loadAdminUsersModule() {
   return import("@/components/admin/AdminUsersPanel");
 }
 
+function loadAdminSentryModule() {
+  return import("@/components/admin/AdminSentryPanel").then((module) => module.AdminSentryPanel);
+}
+
 function loadAdminStoryboardGenerator() {
   return import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
     (module) => module.AdminStoryboardGenerator,
@@ -726,9 +740,9 @@ function AdminEvaluationModuleStaticShell() {
     >
       <span className="sr-only">정적인 관리자 데이터 검수 컨트롤은 바로 표시하고, 동적인 검수 데이터만 불러오는 중입니다.</span>
       <div className="border-b border-border bg-card px-2 py-1.5">
-        <div className="flex min-h-10 items-start justify-between gap-1.5 lg:items-center">
+        <div className="flex min-h-8 items-center justify-between gap-1.5">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="sr-only">
               <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-primary" aria-hidden="true">
                 <ClipboardCheck className="h-5 w-5" strokeWidth={2.25} />
               </span>
@@ -737,7 +751,7 @@ function AdminEvaluationModuleStaticShell() {
               </h1>
             </div>
             <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
+              전체 집계 중
             </div>
           </div>
           <div className="ml-auto flex items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
@@ -871,6 +885,8 @@ const AdminUsersModule = dynamic(loadAdminUsersModule, {
   loading: () => null,
 });
 
+const AdminSentryModule = dynamic(loadAdminSentryModule, { ssr: false, loading: () => null });
+
 const AdminStoryboardGenerator = dynamic(loadAdminStoryboardGenerator, {
   ssr: false,
   loading: () => null,
@@ -923,6 +939,8 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
       return loadAdminYoutubeThumbnailGenerator();
     case "users":
       return loadAdminUsersModule();
+    case "sentry":
+      return loadAdminSentryModule();
     case "insights":
       return loadInsightsModule();
     case "pipeline":
@@ -1860,10 +1878,10 @@ function getAdminDashboardDataQualityStatus(
 function getAdminDashboardDeltaSourceLabel(
   source: AdminYouTubeChannelStats["deltaSource"],
 ) {
-  if (source === "snapshot-delta") return "수집 delta";
-  if (source === "derived-live-comparison") return "실시간-스냅샷 비교";
-  if (source === "derived-snapshot-comparison") return "스냅샷 재계산";
-  return "delta 대기";
+  if (source === "snapshot-delta") return "수집한 변화량";
+  if (source === "derived-live-comparison") return "현재·이전 비교";
+  if (source === "derived-snapshot-comparison") return "이전 기록 비교";
+  return "비교 기록 없음";
 }
 
 function getVideoEngagementTotal(video: InsightTreemapVideoRow) {
@@ -3207,30 +3225,29 @@ function AdminDashboardInfoTooltip({
   lines: string[];
 }) {
   return (
-    <UiTooltipProvider delayDuration={150}>
-      <UiTooltip>
-        <UiTooltipTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label={`${label} · 초보자 설명`}
-            data-admin-dashboard-metric-tooltip="beginner-plain"
-          >
-            <Info className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </UiTooltipTrigger>
-        <UiTooltipContent
-          side="top"
-          align="start"
-          className={adminDashboardTooltipPortalClassName}
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`${label} · 초보자 설명`}
+          data-admin-dashboard-metric-tooltip="beginner-plain"
         >
-          <AdminDashboardTooltipLinesPanel
-            lines={lines}
-            dataAttribute="metric-info"
-          />
-        </UiTooltipContent>
-      </UiTooltip>
-    </UiTooltipProvider>
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        aria-label={label}
+        className={adminDashboardTooltipPortalClassName}
+      >
+        <AdminDashboardTooltipLinesPanel
+          lines={lines}
+          dataAttribute="metric-info"
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -3896,7 +3913,7 @@ function AdminDashboardManagementSkeleton() {
         KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
       </p>
 
-      <div className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
+      <div className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
         <AdminDashboardKpiCard
           widgetId="subscribers"
           title="현재 구독자"
@@ -3951,7 +3968,7 @@ function AdminDashboardManagementSkeleton() {
           value="—"
           progress={0}
           tone="neutral"
-          className="lg:col-span-2"
+          className="col-span-2 lg:col-span-2"
           delta="—"
           deltaLabel="기간 대비"
           isLoading
@@ -4146,7 +4163,7 @@ function AdminDashboardCardTitle({
         data-admin-dashboard-card-title-row="single-line"
       >
         <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5">
-          <p className="truncate whitespace-nowrap text-2xs font-extrabold leading-none text-foreground">
+          <p className="text-sm font-semibold leading-5 text-foreground" data-admin-dashboard-card-title-text="true">
             {title}
             {metric ? (
               <span
@@ -4291,17 +4308,21 @@ function AdminDashboardKpiCard({
   const chartData = sparklineData.filter((point) =>
     Number.isFinite(point.value),
   );
+  const metricInfoLines = infoLines.filter(
+    (line) => !/^(설명|읽는 법|주의):/.test(line),
+  );
 
   return (
     <div
       className={cn(
         adminDashboardCardClass,
-        "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
+        "relative z-0 grid min-h-[96px] grid-rows-[auto_minmax(0,1fr)_auto] gap-2 overflow-visible p-2.5 sm:p-3 hover:z-20 focus-within:z-20",
         emphasisClass,
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
       )}
       data-admin-dashboard-kpi-card="recharts-sparkline"
+      data-scroll-reveal="panel"
       data-admin-dashboard-widget-card={widgetId}
       data-admin-dashboard-kpi-emphasis={emphasis}
       data-admin-dashboard-kpi-tone={tone}
@@ -4315,13 +4336,13 @@ function AdminDashboardKpiCard({
           data-admin-dashboard-kpi-title-row="single-line"
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <p className="truncate whitespace-nowrap text-2xs font-extrabold tracking-[0.04em] text-muted-foreground">
+            <p className="text-xs font-medium leading-5 text-muted-foreground">
               {title}
             </p>
             {infoLines.length > 0 ? (
               <AdminDashboardInfoTooltip
                 label={`${title} 지표 설명`}
-                lines={infoLines}
+                lines={caption ? [caption, ...metricInfoLines] : metricInfoLines}
               />
             ) : null}
           </div>
@@ -4368,13 +4389,13 @@ function AdminDashboardKpiCard({
         <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <p
-              className="whitespace-nowrap text-sm font-black leading-none tracking-[-0.035em] tabular-nums text-foreground sm:text-base"
+              className="whitespace-nowrap text-xl font-semibold leading-tight tracking-tight tabular-nums text-foreground sm:text-2xl"
               data-admin-dashboard-kpi-value-size="bounded"
             >
               {value}
             </p>
             {caption ? (
-              <p className="mt-1.5 line-clamp-2 text-2xs font-semibold leading-4 text-muted-foreground">
+              <p className="mt-1 line-clamp-1 text-2xs font-medium leading-4 text-muted-foreground" data-admin-dashboard-kpi-caption="true">
                 {caption}
               </p>
             ) : null}
@@ -4487,6 +4508,7 @@ function AdminDashboardOpsSummaryCard({
       )}
       data-admin-dashboard-ops-summary-visual="progress-bars"
       data-admin-dashboard-widget-card="ops"
+      data-scroll-reveal="panel"
       style={style}
       {...reorderProps}
     >
@@ -5970,6 +5992,9 @@ function AdminDashboardManagementPanel({
     () => normalizeAdminDashboardWidgetOrder(dashboardWidgetOrder),
     [dashboardWidgetOrder],
   );
+  const lastMetricWidgetId = orderedDashboardWidgetIds
+    .filter((widgetId) => getAdminDashboardWidgetLayoutGroup(widgetId) === 0)
+    .at(-1);
   const isDashboardWidgetOrderDefault = useMemo(
     () =>
       areAdminDashboardWidgetOrdersEqual(
@@ -6369,12 +6394,13 @@ function AdminDashboardManagementPanel({
   const getDashboardReorderCardClassName = useCallback(
     (widgetId: AdminDashboardWidgetId) =>
       cn(
+        widgetId === lastMetricWidgetId && "col-span-2 lg:col-span-2",
         isDashboardOrderEditorOpen &&
           "cursor-grab select-none ring-1 ring-primary/20 transition-[box-shadow,opacity,transform] hover:ring-primary/45 active:cursor-grabbing",
         draggedDashboardWidgetId === widgetId &&
           "scale-[0.99] opacity-70 ring-2 ring-primary/50",
       ),
-    [draggedDashboardWidgetId, isDashboardOrderEditorOpen],
+    [draggedDashboardWidgetId, isDashboardOrderEditorOpen, lastMetricWidgetId],
   );
   const getDashboardCardReorderProps = useCallback(
     (widgetId: AdminDashboardWidgetId): AdminDashboardCardReorderProps => ({
@@ -6763,7 +6789,7 @@ function AdminDashboardManagementPanel({
     period === "ALL"
       ? `전체 영상 · 현재 ${formatNumber(cumulativeVideoTotal)}`
       : hasSnapshotVideoCountComparison
-        ? `${selectedPeriodLabel} · 채널 videoCount 순증 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)} · 현재 ${formatNumber(cumulativeVideoTotal)}`
+        ? `${selectedPeriodLabel} 영상 순증 · 전체 ${formatNumber(cumulativeVideoTotal)}`
         : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
   const periodUploadVideoProgress =
     typeof periodUploadVideoValue === "number" && periodUploadVideoValue > 0
@@ -6824,8 +6850,8 @@ function AdminDashboardManagementPanel({
     : !hasSubscriberCount
       ? "채널 통계 확인 필요"
       : subscriberDelta == null
-        ? `현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
-        : `현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`;
+        ? `현재 구독자 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
+        : `${selectedPeriodLabel} 구독자 순증 ${formatSignedNumber(subscriberDelta)}`;
   const subscriberCardTitle = "현재 구독자";
   const viewCardTitle = hasPeriodGrowthComparison
     ? "기간 조회 증가"
@@ -7265,7 +7291,7 @@ function AdminDashboardManagementPanel({
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
+            쯔양 성과 대시보드
           </h1>
         </div>
         <div
@@ -7373,7 +7399,7 @@ function AdminDashboardManagementPanel({
       ) : null}
 
       <div
-        className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible"
+        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible"
         data-admin-dashboard-order-mode={
           isDashboardOrderEditorOpen ? "direct-drag" : "off"
         }
@@ -7533,6 +7559,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("impact")}
           data-admin-dashboard-widget-card="impact"
+          data-scroll-reveal="panel"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("impact") ? "true" : undefined
           }
@@ -7655,6 +7682,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("trend")}
           data-admin-dashboard-widget-card="trend"
+          data-scroll-reveal="panel"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("trend") ? "true" : undefined
           }
@@ -7785,6 +7813,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("topContent")}
           data-admin-dashboard-widget-card="topContent"
+          data-scroll-reveal="panel"
           {...getDashboardCardReorderProps("topContent")}
         >
           <AdminDashboardCardTitle
@@ -7887,6 +7916,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("engagementRate")}
           data-admin-dashboard-widget-card="engagementRate"
+          data-scroll-reveal="panel"
           {...getDashboardCardReorderProps("engagementRate")}
         >
           <AdminDashboardCardTitle
@@ -8218,8 +8248,8 @@ function AdminSidebar({
             isCollapsed &&
             "md:mx-auto md:h-8 md:min-h-8 md:w-8 md:justify-center md:gap-0 md:px-0",
           isActive
-            ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
-            : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
+            ? "border-transparent bg-primary/8 text-primary"
+            : "border-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground",
         )}
         onClick={() =>
           isDropdown ? handleMenuNavigation(item.id) : onSelectModule(item.id)
@@ -8230,8 +8260,8 @@ function AdminSidebar({
             "flex shrink-0 items-center justify-center border transition-colors motion-reduce:transition-none",
             isDropdown ? "h-6 w-6 rounded-md" : "h-6 w-6 rounded-md",
             isActive
-              ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
-              : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
+              ? "border-transparent bg-transparent text-primary"
+              : "border-transparent bg-transparent text-muted-foreground group-hover:text-foreground",
           )}
           aria-hidden="true"
         >
@@ -8255,10 +8285,10 @@ function AdminSidebar({
               "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-2xs font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
               itemStatus.urgent
                 ? isActive
-                  ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+                  ? "border-primary/20 bg-primary/10 text-primary"
                   : "border-primary/25 bg-primary/5 text-primary"
                 : isActive
-                  ? "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground/80"
+                  ? "border-primary/15 bg-primary/5 text-primary"
                   : "border-border bg-background/80 text-muted-foreground",
               !isDropdown &&
                 (!showLabels || isCollapsed) &&
@@ -9280,12 +9310,12 @@ function InlineModulePanel({
     switch (module.id) {
       case "restaurants":
         return (
-          <AdminEvaluationModule
+          <RestaurantManagementWorkspace review={<AdminEvaluationModule
             key="restaurants"
             embedded
             initialView="evaluations"
             onInitialContentReady={() => onModuleContentReady?.("restaurants")}
-          />
+          />} refresh={<AdminRestaurantRefreshHistoryModule onInitialContentReady={() => onModuleContentReady?.("restaurants")} />} />
         );
       case "restaurant-refresh-history":
         return (
@@ -9333,6 +9363,8 @@ function InlineModulePanel({
         return <InsightsModule key="admin-insights" embedded />;
       case "pipeline":
         return <AdminPipelineDashboard key="admin-pipeline" />;
+      case "sentry":
+        return <AdminSentryModule key="admin-sentry" />;
       default: {
         const exhaustiveModuleId: never = module.id;
         return exhaustiveModuleId;
@@ -10336,7 +10368,7 @@ export function AdminConsoleOverview({
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(false);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
   const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false);
@@ -10383,11 +10415,10 @@ export function AdminConsoleOverview({
       ? user.user_metadata.nickname.trim()
       : "";
   const adminAccountDisplayName =
-    profileNickname ||
-    userMetadataNickname ||
-    user?.email?.split("@")[0] ||
-    "관리자";
-  const adminAccountEmail = user?.email ?? "관리자 세션";
+    hasHydrated
+      ? (profileNickname || userMetadataNickname || user?.email?.split("@")[0] || "관리자")
+      : "관리자";
+  const adminAccountEmail = hasHydrated ? (user?.email ?? "관리자 세션") : "관리자 세션";
 
   useEffect(() => {
     setHasHydrated(true);
@@ -10395,9 +10426,10 @@ export function AdminConsoleOverview({
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY, "1");
-    setIsSidebarCollapsed(true);
-    setShowSidebarLabels(false);
+    const saved = readBrowserStorageString("local", ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY);
+    const collapsed = saved === "1" || saved === "true";
+    setIsSidebarCollapsed(collapsed);
+    setShowSidebarLabels(!collapsed);
   }, []);
 
   useEffect(() => {
@@ -10485,9 +10517,10 @@ export function AdminConsoleOverview({
     setIsSidebarCollapsed((currentCollapsed) => {
       const nextCollapsed = !currentCollapsed;
 
-      window.localStorage.setItem(
+      writeBrowserStorageString(
+        "local",
         ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
-        nextCollapsed ? "1" : "session-expanded",
+        nextCollapsed ? "1" : "0",
       );
 
       return nextCollapsed;
@@ -10866,6 +10899,7 @@ export function AdminConsoleOverview({
     <main
       className="h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
+      data-design-surface="admin"
       data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
     >
       <a
@@ -10914,7 +10948,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
-          style={{ paddingBottom: isAdminMobileViewport ? "calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.5rem)" : "1rem" }}
+          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 0.75rem)" : "1rem" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"

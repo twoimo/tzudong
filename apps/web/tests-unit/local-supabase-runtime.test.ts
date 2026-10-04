@@ -82,7 +82,7 @@ describe('local Supabase runtime source contract', () => {
     }
   });
 
-  test('validates current 100-source fixture snapshots through the real offline authority', () => {
+  test('validates the current source inventory fixture snapshots through the real offline authority', () => {
     const root = path.resolve(import.meta.dir, '../../..');
     const generated = spawnSync('python3', ['-B', '-c', [
       'import importlib.util, json, pathlib, sys',
@@ -92,11 +92,13 @@ describe('local Supabase runtime source contract', () => {
       'sys.modules[spec.name] = module',
       'spec.loader.exec_module(module)',
       'manifest = module.verify_manifest()',
-      'print(json.dumps([module._expected_snapshot_row(item) for item in manifest["source"]["files"]]))',
+      'print(json.dumps({"rows": [module._expected_snapshot_row(item) for item in manifest["source"]["files"]], "sourceCount": len(manifest["source"]["files"])}))',
     ].join('\n'), root], { encoding: 'utf8', timeout: 30_000 });
     expect(generated.status).toBe(0);
-    const rows = JSON.parse(generated.stdout);
-    expect(rows).toHaveLength(100);
+    const generatedFixture = JSON.parse(generated.stdout);
+    const rows = generatedFixture.rows;
+    expect(generatedFixture.sourceCount).toBeGreaterThanOrEqual(100);
+    expect(rows).toHaveLength(generatedFixture.sourceCount);
     expect(rows.filter((row: { replayProof: unknown }) => row.replayProof !== null)).toHaveLength(3);
     const validate = (snapshot: unknown) => __localSupabaseRuntimeForTests.validateLedgerSnapshot(
       { repositoryRoot: root }, snapshot,

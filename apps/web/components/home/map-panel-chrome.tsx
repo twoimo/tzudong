@@ -4,7 +4,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const mapPanelIconButtonClass =
-  "h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary";
+  "h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary";
 
 export function MapPanelHeader({
   title,

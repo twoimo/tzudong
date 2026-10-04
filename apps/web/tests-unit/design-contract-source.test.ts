@@ -49,7 +49,7 @@ describe('repo design contract source', () => {
     expect(appGlobalsSource).not.toContain("font-family: 'Noto Serif KR'");
     expect(appGlobalsSource).not.toContain('@apply bg-background text-foreground font-serif tracking-tight;');
     expect(appGlobalsSource).toContain('@import "../styles/light-root-tokens.css";');
-    expect(appSource('styles/light-root-tokens.css')).toContain('--primary: 0 74% 42%');
+    expect(appSource('styles/light-root-tokens.css')).toContain('--primary: 352 74% 42%');
     expect(appGlobalsSource).toContain('--shadow-primary');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');
     expect(adminConsoleSource).toContain('shadow-primary');

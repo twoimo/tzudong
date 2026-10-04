@@ -52,13 +52,15 @@ describe('map view google helpers', () => {
         expect(calls).toEqual(['resize', 'pan:37.5,127', 'zoom:14']);
     });
 
-    test('shows missing key before generic Google load errors and names InvalidKeyMapError', () => {
+    test('keeps missing-key precedence and removes internal diagnostics from the public error panel', () => {
         const mapViewSource = source('components/map/MapView.tsx');
         const statusPanelSource = source('components/map/map-view-status-panels.tsx');
 
         expect(mapViewSource.indexOf('if (!apiKey)')).toBeLessThan(
             mapViewSource.indexOf('if (loadError || hasGoogleRuntimeError)'),
         );
-        expect(statusPanelSource).toContain('InvalidKeyMapError');
+        expect(statusPanelSource).not.toContain('InvalidKeyMapError');
+        expect(statusPanelSource).not.toContain('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY');
+        expect(statusPanelSource).not.toContain('error.message');
     });
 });

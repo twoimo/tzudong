@@ -1,0 +1,72 @@
+{
+  "kind": "synthetic-information-density-comparison",
+  "environment": "local Next 16.3.8 / Chromium / same 25-row fixture",
+  "rows": [
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "beforeKpiHeightPx": 854,
+      "afterKpiHeightPx": 362,
+      "absoluteChangePx": -492,
+      "relativeChangePercent": -57.61124121779859,
+      "beforeVisibleKpis": 4,
+      "afterVisibleKpis": 5,
+      "chartWidthPx": 321,
+      "horizontalOverflowPx": 0,
+      "confidenceInterval95": null,
+      "samples": 1
+    },
+    {
+      "viewport": [
+        834,
+        1194
+      ],
+      "beforeKpiHeightPx": 550,
+      "afterKpiHeightPx": 449,
+      "absoluteChangePx": -101,
+      "relativeChangePercent": -18.36363636363636,
+      "beforeVisibleKpis": 5,
+      "afterVisibleKpis": 5,
+      "chartWidthPx": 534,
+      "horizontalOverflowPx": 0,
+      "confidenceInterval95": null,
+      "samples": 1
+    },
+    {
+      "viewport": [
+        1440,
+        1000
+      ],
+      "beforeKpiHeightPx": 174.9375,
+      "afterKpiHeightPx": 150.78125,
+      "absoluteChangePx": -24.15625,
+      "relativeChangePercent": -13.808503036798857,
+      "beforeVisibleKpis": 5,
+      "afterVisibleKpis": 5,
+      "chartWidthPx": 319,
+      "horizontalOverflowPx": 0,
+      "confidenceInterval95": null,
+      "samples": 1
+    }
+  ],
+  "dataValuesPreserved": true,
+  "popoverTapAndEscapeVerified": true,
+  "infoButtonSizeBeforePx": 20,
+  "infoButtonSizeAfterPx": 24,
+  "confidenceIntervalNotEstimatedReason": "one fixed layout observation per viewport; no population performance claim",
+  "verification": {
+    "webTestsPassed": 2661,
+    "webTestsSkipped": 9,
+    "webTestsFailed": 0,
+    "targetedTestsPassed": 56,
+    "typescriptParityPassed": true,
+    "eslintPassed": true,
+    "productionBuildPassed": true,
+    "staticPages": 47,
+    "cssOwnershipPassed": true
+  },
+  "fullProjectAcceptance": false,
+  "productionDeploymentVerified": false
+}

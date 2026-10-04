@@ -338,7 +338,7 @@ describe('storyboard local RAG layer', () => {
       'utf8',
     );
     const generatorSource = readFileSync(
-      new URL('../components/admin/storyboard/AdminStoryboardGenerator.tsx', import.meta.url),
+      new URL('../components/admin/storyboard/LegacyStoryboardReference.tsx', import.meta.url),
       'utf8',
     );
 
@@ -346,18 +346,14 @@ describe('storyboard local RAG layer', () => {
     expect(telemetrySource).toContain('X-Storyboard-Response-Bytes');
     expect(telemetrySource).toContain('STORYBOARD_ROUTE_STATUS_CACHE_CONTROL');
     expect(telemetrySource).toContain('readBoundedJsonRequest(request, maximumBytes)');
-    expect(statusRoute).toContain("buildStoryboardRouteFreshness('storyboard_status'");
-    expect(statusRoute).toContain('STORYBOARD_ROUTE_STATUS_CACHE_CONTROL');
-    expect(statusRoute).toContain("Vary: 'Cookie, Authorization'");
-    expect(chatRoute).toContain('STORYBOARD_ROUTE_SSE_HEADERS');
-    expect(chatRoute).toMatch(/readStoryboardRouteJson\(\s*request,\s*telemetry,\s*MAX_STORYBOARD_CHAT_REQUEST_BYTES,\s*\)/);
-    expect(chatRoute).toContain('route-payload');
-    expect(chatRoute).toContain("send('patch', publicResult)");
-    expect(chatRoute).toContain('duplicateResultOmitted: true');
-    expect(chatRoute).not.toContain("send('done', publicResult)");
-    expect(imageRoute).toContain('STORYBOARD_ROUTE_PRIVATE_NO_STORE_CACHE_CONTROL');
-    expect(imageRoute).toContain("buildStoryboardRouteFreshness('storyboard_image_provider_status'");
-    expect(imageRoute).toMatch(/readStoryboardRouteJson\(\s*request,\s*telemetry,\s*MAX_STORYBOARD_IMAGE_GENERATION_REQUEST_BYTES,\s*\)/);
+    for (const retired of [statusRoute, chatRoute, imageRoute]) {
+      expect(retired).toContain('retiredStoryboardApi');
+      expect(retired).not.toContain('generateContent');
+    }
+    const retiredHandler = readFileSync(new URL('../lib/admin/storyboard/retired-api.ts', import.meta.url), 'utf8');
+    expect(retiredHandler).toContain('requireAdmin');
+    expect(retiredHandler).toContain('410');
+    expect(retiredHandler).toContain('no-store');
     expect(documentsRoute).toMatch(/readStoryboardRouteJson\(\s*request,\s*telemetry,\s*MAX_STORYBOARD_RAG_DOCUMENTS_REQUEST_BYTES,\s*\)/);
     expect(searchRoute).toMatch(/readStoryboardRouteJson\(\s*request,\s*telemetry,\s*MAX_STORYBOARD_RAG_SEARCH_REQUEST_BYTES,\s*\)/);
     expect(generatorSource).toContain('stripStoryboardGeneratedImagesForTransport(result)');

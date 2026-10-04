@@ -4,7 +4,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 import {
   MAX_STORYBOARD_DOCUMENT_BYTES, MAX_STORYBOARD_IMAGE_BYTES, STORYBOARD_WORKFLOW,
-  StoryboardProductionError, assertStoryboardProviderPolicy, isStoryboardUserImportProviderId, parseStoryboardDraft,
+  StoryboardProductionError, assertGeminiStoryboardExecutionPolicy, isStoryboardUserImportProviderId, parseStoryboardDraft,
   storyboardDraftSceneSchema, storyboardDraftSchema, storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema, storyboardProvenanceSchema,
   type StoryboardProductionAsset, type StoryboardProductionDocument, type StoryboardProductionProvenance,
@@ -184,6 +184,16 @@ export function validateLocalStoryboardProvenance(
   if (!result.success) throw new StoryboardProductionError('invalid_provenance');
   const proof = result.data;
   const provider = request.providers[modality];
+  if (provider.id === 'gemini-api') {
+    if (proof.providerId !== 'gemini-api' || proof.verification !== 'official-api' || proof.model !== provider.model
+      || proof.modelEvidence !== 'response' || !proof.responseModel
+      || (proof.responseModel !== provider.model && !new RegExp(`^${provider.model.replaceAll('.', '\\.')}-(?:\\d{3}|\\d{2}-\\d{2})$`).test(proof.responseModel))) {
+      throw new StoryboardProductionError('model_identity_mismatch');
+    }
+    const registered = models.find((model) => model.id === provider.model && model.owned_by === 'gemini-api');
+    if (!registered || !registered.capabilities.includes(modality === 'text' ? 'chat' : 'image')) throw new StoryboardProductionError('model_capability_mismatch');
+    return proof;
+  }
   if (provider.id !== 'local-mlx' || proof.providerId !== 'local-mlx' || proof.verification !== 'local-worker'
     || proof.model !== provider.model || (proof.responseModel !== null && proof.responseModel !== provider.model)
     || proof.modelEvidence === 'unverified'
@@ -263,7 +273,7 @@ export class StoryboardProductionStore {
   }
   async create(ownerId: string, value: unknown) {
     const request = input(storyboardProductionRequestSchema, value);
-    assertStoryboardProviderPolicy(request.providers);
+    assertGeminiStoryboardExecutionPolicy(request.providers);
     if ([request.providers.text, request.providers.image].some((provider) => ['openai-api', 'xai-api'].includes(provider.id))) {
       throw new StoryboardProductionError('provider_not_configured');
     }

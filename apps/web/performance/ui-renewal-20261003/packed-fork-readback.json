@@ -1,0 +1,47 @@
+{
+  "kind": "packed-private-fork-install-verification",
+  "runtime": "Node 24.21.0 / npm 11.6.2 / Bun 1.4.0",
+  "sourceFilesMatched": 11,
+  "archiveBytes": 7678,
+  "archiveSha256": "a8e09d78473d099cd03ab4bc57ad255325b88b720e6167d6e9346b1fbbb1b0a8",
+  "archiveIntegrity": "sha512-H76SaSdwLNrhOcIvDe+ud/+8P8JpOWAQvGLoaiIjcDKa1MLM3IbPwub8OMmtrNZP+w70EI+PGK2KJ86UIsBgjw==",
+  "dependencyGraphProblems": [],
+  "sbomFormat": "CycloneDX",
+  "audit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "pinContractStatus": "passed",
+  "boundaryChecks": 19,
+  "privateDockerAdmissionChecks": 20,
+  "limits": [
+    "Local source and installation verification only.",
+    "Docker 29.8.2 source-only replay still requires hosted CI execution.",
+    "Windows benchmark previously rejected a 141.397ms gap against the unchanged 60ms bound; no passing benchmark inferred.",
+    "The latest full unit run had one startup-sensitive legacy process-tree fixture failure; isolated 25 checks passed."
+  ],
+  "canonicalUnit": {
+    "pass": 2652,
+    "skip": 9,
+    "fail": 0,
+    "lanes": [
+      "2509 pass",
+      "1 skip",
+      "0 fail",
+      "Ran 2510 tests across 343 files. [133.97s]",
+      "143 pass",
+      "8 skip",
+      "0 fail",
+      "Ran 151 tests across 9 files. [6.31s]"
+    ],
+    "rawLogSha256": "056136a3f58c457bbecf4bef6de95c2c32c54c02acb27e11592654fee162d971"
+  },
+  "pythonReleaseChecks": {
+    "pass": 27,
+    "fail": 0
+  }
+}

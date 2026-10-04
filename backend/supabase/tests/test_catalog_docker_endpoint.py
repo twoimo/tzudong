@@ -30,6 +30,24 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(endpoint.validate_endpoint('colima',self.uri),self.uri)
     def test_legacy_allowlist_unchanged(self):
         for uri in endpoint.LEGACY:self.assertEqual(endpoint.validate_endpoint('default',uri),uri)
+    def test_exact_private_ci_socket_and_scope(self):
+        ci_root=Path(self.enterContext(tempfile.TemporaryDirectory(dir='/tmp',prefix='ci-'))).resolve()
+        base=ci_root/'tzudong-catalog-docker'
+        run=base/'run-a1b2c3d4';run.mkdir(parents=True)
+        sock=self.enterContext(socket.socket(socket.AF_UNIX));path=run/'docker.sock'
+        sock.bind(str(path));path.chmod(0o600)
+        uri='unix://'+str(path)
+        with patch.object(endpoint.platform,'system',return_value='Linux'),patch.dict(os.environ,{'GITHUB_ACTIONS':'true','RUNNER_TEMP':str(ci_root)}):
+            self.assertEqual(endpoint.validate_endpoint('tzudong-catalog-ci',uri),uri)
+            for bad in (uri+'/',uri.replace('run-a1b2c3d4','run-other'),'tcp://127.0.0.1:2375'):
+                with self.subTest(uri=bad),self.assertRaises(ValueError):endpoint.validate_endpoint('tzudong-catalog-ci',bad)
+            run.chmod(0o777)
+            with self.assertRaises(ValueError):endpoint.validate_endpoint('tzudong-catalog-ci',uri)
+            run.chmod(0o700)
+            path.unlink();path.symlink_to(self.path)
+            with self.assertRaises(ValueError):endpoint.validate_endpoint('tzudong-catalog-ci',uri)
+        with patch.object(endpoint.platform,'system',return_value='Linux'),patch.dict(os.environ,{'GITHUB_ACTIONS':'false','RUNNER_TEMP':str(ci_root)}),self.assertRaises(ValueError):
+            endpoint.validate_endpoint('tzudong-catalog-ci',uri)
     def test_remote_other_profile_traversal_suffix_and_context_denied(self):
         for uri in ('tcp://127.0.0.1:2375','ssh://localhost','unix:///tmp/docker.sock',self.uri+'/',self.uri+'\n',self.uri.replace('/default/','/other/'),self.uri.replace('/default/','/default/../default/')):
             with self.subTest(uri=uri),self.assertRaises(ValueError):endpoint.validate_endpoint('colima',uri)

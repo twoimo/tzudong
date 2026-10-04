@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bundleAnalyzer from '@next/bundle-analyzer';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import { resolveConfiguredSupabaseOrigin } from './lib/profile-avatar-url.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -305,4 +306,17 @@ const nextConfig = {
     },
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    sentryUrl: process.env.SENTRY_URL || 'https://sentry.io/',
+    telemetry: false,
+    silent: !process.env.CI,
+    sourcemaps: {
+        disable: !(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT),
+        deleteSourcemapsAfterUpload: true,
+    },
+    release: { create: Boolean(process.env.SENTRY_AUTH_TOKEN), finalize: Boolean(process.env.SENTRY_AUTH_TOKEN) },
+    webpack: { treeshake: { removeDebugLogging: true, removeTracing: true } },
+});

@@ -50,10 +50,11 @@
     "storyboard:image-proof": "python3 scripts/codex-imagegen-storyboard-provider.py --prove --proof-file .omx/artifacts/gpt-image-2-provenance/latest-verified.json --output-dir .omx/artifacts/gpt-image-2-provenance/latest-proof",
     "thumbnail:release-certify": "node scripts/thumbnail-release-readback-certification.mjs",
     "storyboard:quality-loop": "node scripts/storyboard-quality-loop.mjs",
-    "storyboard:local-bridge": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/storyboard-local-bridge.ts",
+    "storyboard:local-bridge": "bun scripts/storyboard-local-bridge.ts",
     "storyboard:eight-real-smoke": "bun scripts/storyboard-eight-real-provider-smoke.ts",
     "storyboard:rag-ollama-pull": "node scripts/storyboard-rag-ollama-pull.mjs",
-    "image:readiness": "bun scripts/check-anycap-gpt-image-readiness.ts"
+    "image:readiness": "bun scripts/check-anycap-gpt-image-readiness.ts",
+    "storyboard:gemini-worker": "bun scripts/storyboard-gemini-worker.ts"
   },
   "dependencies": {
     "@emnapi/core": "^1.11.3",
@@ -88,6 +89,7 @@
     "@radix-ui/react-toggle": "^1.1.18",
     "@radix-ui/react-toggle-group": "^1.1.19",
     "@radix-ui/react-tooltip": "^1.2.16",
+    "@sentry/nextjs": "11.4.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.110.2",
     "@tanstack/react-query": "^5.101.4",
@@ -105,7 +107,7 @@
     "input-otp": "^1.5.0",
     "lucide-react": "^1.33.0",
     "maplibre-gl": "^6.10.0",
-    "next": "16.3.5",
+    "next": "16.3.8",
     "openai": "^7.4.0",
     "react": "^19.2.8",
     "react-day-picker": "^10.0.1",
@@ -124,7 +126,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "16.3.5",
+    "@next/bundle-analyzer": "16.3.8",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/postcss": "^4.3.3",
@@ -138,9 +140,10 @@
     "@typescript/native": "npm:typescript@7.0.2",
     "@typescript/old": "npm:typescript@6.0.2",
     "baseline-browser-mapping": "2.11.14",
+    "braces": "file:vendor/tzudong-braces-3.0.3-tzudong.1.tgz",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.5",
+    "eslint-config-next": "16.3.8",
     "postcss": "^8.5.26",
     "supabase": "^2.115.0",
     "tailwindcss": "^4.3.3",
@@ -150,13 +153,14 @@
   "overrides": {
     "baseline-browser-mapping": "2.11.14",
     "browserslist": "4.28.8",
-    "brace-expansion": "5.0.9",
+    "brace-expansion": "5.0.12",
     "nanoid": "3.3.18",
     "minimatch@3.1.5": {
-      "brace-expansion": "2.1.4"
+      "brace-expansion": "2.1.7"
     },
     "postcss": "$postcss",
-    "sharp": "$sharp"
+    "sharp": "$sharp",
+    "braces": "$braces"
   },
   "patchedDependencies": {
     "minimatch@3.1.5": "patches/minimatch@3.1.5.patch"

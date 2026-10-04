@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { directLockIdentityMatch } from "../scripts/verify-pin-contract.mjs";
 
 const root = resolve(import.meta.dir, "..");
 const source = (file: string) => readFileSync(resolve(root, file), "utf8");
@@ -60,6 +61,11 @@ describe("TypeScript 7 dual-toolchain manifest contract", () => {
     expect(bunLock.workspaces[""].devDependencies).toEqual(manifest.devDependencies);
 
     for (const name of [...Object.keys(manifest.dependencies), ...Object.keys(manifest.devDependencies)]) {
+      const declared = manifest.dependencies[name] ?? manifest.devDependencies[name];
+      if (declared.startsWith('file:')) {
+        expect(directLockIdentityMatch({name,declared,npmLock,bun:bunLock}), `${name} local lock identity parity`).toBe(true);
+        continue;
+      }
       const npmVersion = npmLock.packages[`node_modules/${name}`]?.version;
       const bunIdentity = bunLock.packages[name]?.[0];
       expect(npmVersion, `${name} missing from npm lock`).toBeString();

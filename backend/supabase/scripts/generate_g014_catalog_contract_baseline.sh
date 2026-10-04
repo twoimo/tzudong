@@ -481,9 +481,16 @@ evidence_scope_file="$staging_dir/evidence-scope.txt"
 printf '%s\n' "$reconstruction_purpose" >"$evidence_scope_file"
 migration_order_predecessor='20260417_prevent_active_restaurant_identity_duplicates.sql'
 migration_order_successor='20260417_harden_submission_identity_duplicate_checks.sql'
+# Hosted had restored helper grants before its registry migration. Reconstruct
+# that prerequisite from the immutable corrective source, exactly once, before
+# verifying the registry; do not weaken or rewrite any applied SQL.
+service_identity_predecessor='20261003095444_restore_service_identity_helpers.sql'
+service_identity_successor='20261003065736_g014_current_service_rpc_registry.sql'
 declare -A migration_order_override_counts=(
   ["$migration_order_predecessor"]=0
   ["$migration_order_successor"]=0
+  ["$service_identity_predecessor"]=0
+  ["$service_identity_successor"]=0
 )
 declare -A backend_migrations_by_name=()
 declare -A app_migrations_by_name=()
@@ -569,7 +576,7 @@ while IFS= read -r -d '' name; do
     fi
   fi
 done < <(printf '%s\0' "${!all_migration_names[@]}" | LC_ALL=C sort -z)
-for name in "$migration_order_predecessor" "$migration_order_successor"; do
+for name in "$migration_order_predecessor" "$migration_order_successor" "$service_identity_predecessor" "$service_identity_successor"; do
   ((migration_order_override_counts[$name] == 1)) || {
     printf 'migration-order override source must be present exactly once: %s\n' "$name" >&2; exit 1;
   }
@@ -582,10 +589,14 @@ effective_migrations=()
 for migration in "${applied_migrations[@]}"; do
   name=${migration##*/}
   case "$name" in
-    "$migration_order_predecessor")
+    "$migration_order_predecessor"|"$service_identity_predecessor")
       ;;
     "$migration_order_successor")
       effective_migrations+=("${applied_migrations_by_name[$migration_order_predecessor]}")
+      effective_migrations+=("$migration")
+      ;;
+    "$service_identity_successor")
+      effective_migrations+=("${applied_migrations_by_name[$service_identity_predecessor]}")
       effective_migrations+=("$migration")
       ;;
     *)
@@ -1349,6 +1360,41 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
+      storyboard_replay="$work_dir/${migration##*/}.owner-replay.sql"
+      python3 "$script_dir/transform_storyboard_history_replay.py" \
+        --source "$migration" --bundle "$g026_bundle" --output "$storyboard_replay"
+      g026_chain_apply 'storyboard-history-replay-transformer' "$script_dir/transform_storyboard_history_replay.py"
+      g026_chain_apply 'storyboard-history-replay-window' "$storyboard_replay"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$storyboard_replay"
+      ;;
+    20261003113923_g014_service_invoker_contract.sql|20261003172126_restaurant_review_manual_invoker_contract.sql|20261003220841_admin_evaluation_page_invoker_contract.sql)
+      invoker_replay="$work_dir/${migration##*/}.owner-replay.sql"
+      python3 "$script_dir/transform_service_invoker_replay.py" \
+        --source "$migration" --bundle "$g026_bundle" --output "$invoker_replay"
+      g026_chain_apply 'service-invoker-owner-replay-transformer' "$script_dir/transform_service_invoker_replay.py"
+      g026_chain_apply 'service-invoker-owner-replay-window' "$invoker_replay"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$invoker_replay"
+      ;;
+    20261003065736_g014_current_service_rpc_registry.sql)
+      # Bounded catalog metadata only: diagnose a source-replay prerequisite
+      # without printing function bodies, request data, or credentials. Keep
+      # the applied migration and its fail-closed prerequisite check immutable.
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At -c "
+        WITH required(signature) AS (VALUES
+          ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)'),
+          ('public.extract_youtube_video_id(text)'),
+          ('public.normalize_restaurant_identity_name(text)'),
+          ('public.record_app_web_vitals(text,text,text,text,smallint)'),
+          ('public.record_app_web_vitals_bounded(text,text,text,text,smallint)'),
+          ('public.resolve_restaurant_identity_name(text,text,text,text)')
+        ) SELECT jsonb_agg(jsonb_build_object('signature',required.signature,
+          'present',p.oid IS NOT NULL,'owner',pg_get_userbyid(p.proowner),
+          'serviceAllowed',has_function_privilege('service_role',p.oid,'EXECUTE'))
+          ORDER BY required.signature)
+        FROM required LEFT JOIN pg_proc p ON p.oid=to_regprocedure(required.signature);"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
+      ;;
     20260906064252_g014_pg17_workflow_owner_contract.sql)
       owner_verification="$staging_dir/g014-owner-pg15-verification.sql"
       python3 "$script_dir/verify_g014_pg17_owner_replay.py" --source "$migration" --output "$owner_verification"

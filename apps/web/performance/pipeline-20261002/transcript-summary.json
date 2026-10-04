@@ -1,0 +1,971 @@
+{
+  "kind": "controlled_transcript_replay_comparison",
+  "formalPerformanceClaim": "not_established",
+  "confidenceMethod": "10000 paired percentile bootstrap draws; seed 20261002",
+  "sourcePreserved": true,
+  "corpusAudit": {
+    "files": 1125,
+    "baselineTruthyLatest": 1125,
+    "candidateReusable": 1118,
+    "rejected": 7
+  },
+  "settings": {
+    "pairedRuns": 7,
+    "providerDelayMs": 2,
+    "actualNetworkRequests": 0,
+    "suppliedWaitDelayMs": 0,
+    "modulesAndWriterBroker": "warm",
+    "cpuScope": "Node process only; Python broker CPU excluded"
+  },
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
+  "limitations": [
+    "Synthetic provider responses; not supplier latency or cost.",
+    "Cold writer startup and production waits excluded.",
+    "Different valid-result rates invalidate speed comparisons for empty/truncated cache."
+  ],
+  "scenarios": {
+    "concurrent": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 3.234707999999955,
+          "afterMs": 4.503791999999976,
+          "absoluteReductionMs": -1.2690840000000208,
+          "reductionPercent": -39.2333403818842,
+          "reduction95CI": [
+            -50.26468890184823,
+            -28.897507904883767
+          ],
+          "experimentalNoiseBudgetMs": 0.5613320000002204,
+          "mediansMs": [
+            3.234707999999955,
+            4.503791999999976
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 3.3392499999999927,
+          "afterMs": 4.765582999999879,
+          "absoluteReductionMs": -1.426332999999886,
+          "reductionPercent": -42.714172344085924,
+          "reduction95CI": [
+            -49.98778869684601,
+            -24.015888204316084
+          ],
+          "experimentalNoiseBudgetMs": 0.5613320000002204,
+          "mediansMs": [
+            3.234707999999955,
+            4.503791999999976
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 3.6316249999999854,
+          "afterMs": 4.851666999999907,
+          "absoluteReductionMs": -1.2200419999999212,
+          "reductionPercent": -33.594933397581684,
+          "reduction95CI": [
+            -47.0053333995855,
+            -30.67268784635344
+          ],
+          "experimentalNoiseBudgetMs": 0.5613320000002204,
+          "mediansMs": [
+            3.234707999999955,
+            4.503791999999976
+          ]
+        }
+      },
+      "cpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 0.891,
+        "afterMs": 1.588,
+        "absoluteReductionMs": -0.6970000000000001,
+        "reductionPercent": -78.2267115600449,
+        "reduction95CI": [
+          -495.18072289156623,
+          -31.76352705410821
+        ],
+        "experimentalNoiseBudgetMs": 0.6899999999999997,
+        "mediansMs": [
+          0.747,
+          1.315
+        ]
+      },
+      "quality": {
+        "baseline": {
+          "validLatest": 7,
+          "expectedLatest": 7
+        },
+        "candidate": {
+          "validLatest": 7,
+          "expectedLatest": 7
+        }
+      },
+      "providerCalls": {
+        "before": 2,
+        "after": 1,
+        "absoluteChange": -1,
+        "changePercent": -50.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          -1,
+          -1
+        ],
+        "change95CI": [
+          -50.0,
+          -50.0
+        ]
+      },
+      "outputRows": {
+        "before": 2,
+        "after": 1,
+        "absoluteChange": -1,
+        "changePercent": -50.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          -1,
+          -1
+        ],
+        "change95CI": [
+          -50.0,
+          -50.0
+        ]
+      },
+      "outputBytes": {
+        "before": 574,
+        "after": 287,
+        "absoluteChange": -287,
+        "changePercent": -50.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          -287,
+          -287
+        ],
+        "change95CI": [
+          -50.0,
+          -50.0
+        ]
+      },
+      "validBeforeAfterSpeedComparison": true,
+      "deterministicOutputsMatch": true
+    },
+    "duplicate-urls": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 71.38304199999993,
+          "afterMs": 16.238749999999982,
+          "absoluteReductionMs": 55.14429199999995,
+          "reductionPercent": 77.25124967355693,
+          "reduction95CI": [
+            75.97386065814563,
+            77.62881011658642
+          ],
+          "experimentalNoiseBudgetMs": 5.7673359999998866,
+          "mediansMs": [
+            71.38304199999993,
+            16.238749999999982
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 72.8661249999999,
+          "afterMs": 16.559666000000107,
+          "absoluteReductionMs": 56.30645899999979,
+          "reductionPercent": 77.27384844466461,
+          "reduction95CI": [
+            76.65703711534191,
+            80.92200707344668
+          ],
+          "experimentalNoiseBudgetMs": 5.7673359999998866,
+          "mediansMs": [
+            71.38304199999993,
+            16.238749999999982
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 86.79983300000004,
+          "afterMs": 16.66291699999988,
+          "absoluteReductionMs": 70.13691600000016,
+          "reductionPercent": 80.8030540796088,
+          "reduction95CI": [
+            76.75543188770568,
+            80.92200707344668
+          ],
+          "experimentalNoiseBudgetMs": 5.7673359999998866,
+          "mediansMs": [
+            71.38304199999993,
+            16.238749999999982
+          ]
+        }
+      },
+      "cpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 9.702,
+        "afterMs": 3.11,
+        "absoluteReductionMs": 6.5920000000000005,
+        "reductionPercent": 67.94475365903938,
+        "reduction95CI": [
+          59.45335710041593,
+          69.38775510204081
+        ],
+        "experimentalNoiseBudgetMs": 1.3020000000000032,
+        "mediansMs": [
+          8.415,
+          2.97
+        ]
+      },
+      "quality": {
+        "baseline": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        },
+        "candidate": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        }
+      },
+      "providerCalls": {
+        "before": 25,
+        "after": 5,
+        "absoluteChange": -20,
+        "changePercent": -80.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          -20,
+          -20
+        ],
+        "change95CI": [
+          -80.0,
+          -80.0
+        ]
+      },
+      "outputRows": {
+        "before": 25,
+        "after": 5,
+        "absoluteChange": -20,
+        "changePercent": -80.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          -20,
+          -20
+        ],
+        "change95CI": [
+          -80.0,
+          -80.0
+        ]
+      },
+      "outputBytes": {
+        "before": 7175,
+        "after": 1435,
+        "absoluteChange": -5740,
+        "changePercent": -80.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          -5740,
+          -5740
+        ],
+        "change95CI": [
+          -80.0,
+          -80.0
+        ]
+      },
+      "validBeforeAfterSpeedComparison": true,
+      "deterministicOutputsMatch": true
+    },
+    "duration-change": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 14.681250000000091,
+          "afterMs": 16.3107500000001,
+          "absoluteReductionMs": -1.6295000000000073,
+          "reductionPercent": -11.099191145168131,
+          "reduction95CI": [
+            -12.941335845940216,
+            -6.505461047252958
+          ],
+          "experimentalNoiseBudgetMs": 0.4232500000002801,
+          "mediansMs": [
+            14.681250000000091,
+            16.3107500000001
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 14.952167000000145,
+          "afterMs": 16.68395899999996,
+          "absoluteReductionMs": -1.731791999999814,
+          "reductionPercent": -11.582214136585002,
+          "reduction95CI": [
+            -12.941335845940216,
+            -9.262082757951395
+          ],
+          "experimentalNoiseBudgetMs": 0.4232500000002801,
+          "mediansMs": [
+            14.681250000000091,
+            16.3107500000001
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 15.209790999999996,
+          "afterMs": 17.15320799999995,
+          "absoluteReductionMs": -1.943416999999954,
+          "reductionPercent": -12.77740765800106,
+          "reduction95CI": [
+            -12.941335845940216,
+            -11.582214136585002
+          ],
+          "experimentalNoiseBudgetMs": 0.4232500000002801,
+          "mediansMs": [
+            14.681250000000091,
+            16.3107500000001
+          ]
+        }
+      },
+      "cpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 2.258,
+        "afterMs": 3.141,
+        "absoluteReductionMs": -0.883,
+        "reductionPercent": -39.10540301151462,
+        "reduction95CI": [
+          -75.11071744906998,
+          -4.820985466146754
+        ],
+        "experimentalNoiseBudgetMs": 0.9620000000000006,
+        "mediansMs": [
+          2.114,
+          2.957
+        ]
+      },
+      "quality": {
+        "baseline": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        },
+        "candidate": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        }
+      },
+      "providerCalls": {
+        "before": 5,
+        "after": 5,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "outputRows": {
+        "before": 10,
+        "after": 10,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "outputBytes": {
+        "before": 2615,
+        "after": 2615,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "validBeforeAfterSpeedComparison": true,
+      "deterministicOutputsMatch": true
+    },
+    "empty-cache": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 0.3841660000000502,
+          "afterMs": 15.84004200000004,
+          "absoluteReductionMs": -15.45587599999999,
+          "reductionPercent": -4023.2285001790815,
+          "reduction95CI": [
+            -4506.543333842804,
+            -3725.330187425104
+          ],
+          "experimentalNoiseBudgetMs": 0.2381639999998697,
+          "mediansMs": [
+            0.3841660000000502,
+            15.84004200000004
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 0.4140830000001188,
+          "afterMs": 16.24000000000001,
+          "absoluteReductionMs": -15.82591699999989,
+          "reductionPercent": -3821.9190355545506,
+          "reduction95CI": [
+            -4350.487613684093,
+            -2347.5103305004286
+          ],
+          "experimentalNoiseBudgetMs": 0.2381639999998697,
+          "mediansMs": [
+            0.3841660000000502,
+            15.84004200000004
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 0.6618750000000091,
+          "afterMs": 17.08083300000021,
+          "absoluteReductionMs": -16.418958000000202,
+          "reductionPercent": -2480.6735410764836,
+          "reduction95CI": [
+            -4096.331828167066,
+            -2347.5103305004286
+          ],
+          "experimentalNoiseBudgetMs": 0.2381639999998697,
+          "mediansMs": [
+            0.3841660000000502,
+            15.84004200000004
+          ]
+        }
+      },
+      "cpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 0.398,
+        "afterMs": 2.973,
+        "absoluteReductionMs": -2.5749999999999997,
+        "reductionPercent": -646.9849246231155,
+        "reduction95CI": [
+          -1014.5604395604398,
+          -391.02803738317743
+        ],
+        "experimentalNoiseBudgetMs": 0.4139999999999997,
+        "mediansMs": [
+          0.364,
+          2.627
+        ]
+      },
+      "quality": {
+        "baseline": {
+          "validLatest": 0,
+          "expectedLatest": 35
+        },
+        "candidate": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        }
+      },
+      "providerCalls": {
+        "before": 0,
+        "after": 5,
+        "absoluteChange": 5,
+        "changePercent": null,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          5,
+          5
+        ],
+        "change95CI": null
+      },
+      "outputRows": {
+        "before": 5,
+        "after": 10,
+        "absoluteChange": 5,
+        "changePercent": 100.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          5,
+          5
+        ],
+        "change95CI": [
+          100.0,
+          100.0
+        ]
+      },
+      "outputBytes": {
+        "before": 940,
+        "after": 2375,
+        "absoluteChange": 1435,
+        "changePercent": 152.6595744680851,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          1435,
+          1435
+        ],
+        "change95CI": [
+          152.6595744680851,
+          152.6595744680851
+        ]
+      },
+      "validBeforeAfterSpeedComparison": false,
+      "deterministicOutputsMatch": false
+    },
+    "new": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 14.584499999999935,
+          "afterMs": 15.883707999999956,
+          "absoluteReductionMs": -1.2992080000000215,
+          "reductionPercent": -8.90814220576659,
+          "reduction95CI": [
+            -11.693883937204497,
+            -4.32076289682064
+          ],
+          "experimentalNoiseBudgetMs": 0.9362479999999778,
+          "mediansMs": [
+            14.584499999999935,
+            15.883707999999956
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 14.836292000000071,
+          "afterMs": 15.904084000000012,
+          "absoluteReductionMs": -1.0677919999999403,
+          "reductionPercent": -7.19716220198372,
+          "reduction95CI": [
+            -9.71628449280968,
+            31.01263580692629
+          ],
+          "experimentalNoiseBudgetMs": 0.9362479999999778,
+          "mediansMs": [
+            14.584499999999935,
+            15.883707999999956
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 24.135459000000026,
+          "afterMs": 16.650417000000004,
+          "absoluteReductionMs": 7.485042000000021,
+          "reductionPercent": 31.01263580692629,
+          "reduction95CI": [
+            -8.123011030474125,
+            31.01263580692629
+          ],
+          "experimentalNoiseBudgetMs": 0.9362479999999778,
+          "mediansMs": [
+            14.584499999999935,
+            15.883707999999956
+          ]
+        }
+      },
+      "cpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 2.244,
+        "afterMs": 2.811,
+        "absoluteReductionMs": -0.5669999999999997,
+        "reductionPercent": -25.267379679144362,
+        "reduction95CI": [
+          -35.26422764227641,
+          69.93898061737258
+        ],
+        "experimentalNoiseBudgetMs": 0.33000000000000007,
+        "mediansMs": [
+          2.08,
+          2.659
+        ]
+      },
+      "quality": {
+        "baseline": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        },
+        "candidate": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        }
+      },
+      "providerCalls": {
+        "before": 5,
+        "after": 5,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "outputRows": {
+        "before": 5,
+        "after": 5,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "outputBytes": {
+        "before": 1435,
+        "after": 1435,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "validBeforeAfterSpeedComparison": true,
+      "deterministicOutputsMatch": true
+    },
+    "truncated-cache": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 14.378332999999884,
+          "afterMs": 15.239667000000054,
+          "absoluteReductionMs": -0.8613340000001699,
+          "reductionPercent": -5.990499733176136,
+          "reduction95CI": [
+            -9.292937636230402,
+            -1.1241969760971804
+          ],
+          "experimentalNoiseBudgetMs": 1.1471679999995104,
+          "mediansMs": [
+            14.378332999999884,
+            15.239667000000054
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 14.860791999999947,
+          "afterMs": 15.754791000000068,
+          "absoluteReductionMs": -0.8939990000001217,
+          "reductionPercent": -6.015823382765362,
+          "reduction95CI": [
+            -10.304590715002915,
+            -2.865528043276311
+          ],
+          "experimentalNoiseBudgetMs": 1.1471679999995104,
+          "mediansMs": [
+            14.378332999999884,
+            15.239667000000054
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 14.88495799999987,
+          "afterMs": 16.41879199999994,
+          "absoluteReductionMs": -1.5338340000000699,
+          "reductionPercent": -10.304590715002915,
+          "reduction95CI": [
+            -10.304590715002915,
+            -6.015823382765362
+          ],
+          "experimentalNoiseBudgetMs": 1.1471679999995104,
+          "mediansMs": [
+            14.378332999999884,
+            15.239667000000054
+          ]
+        }
+      },
+      "cpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 2.093,
+        "afterMs": 3.056,
+        "absoluteReductionMs": -0.9630000000000001,
+        "reductionPercent": -46.01051122790254,
+        "reduction95CI": [
+          -77.98485730926032,
+          -16.2446249402771
+        ],
+        "experimentalNoiseBudgetMs": 0.8300000000000001,
+        "mediansMs": [
+          1.715,
+          2.433
+        ]
+      },
+      "quality": {
+        "baseline": {
+          "validLatest": 0,
+          "expectedLatest": 35
+        },
+        "candidate": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        }
+      },
+      "providerCalls": {
+        "before": 5,
+        "after": 5,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "outputRows": {
+        "before": 5,
+        "after": 10,
+        "absoluteChange": 5,
+        "changePercent": 100.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          5,
+          5
+        ],
+        "change95CI": [
+          100.0,
+          100.0
+        ]
+      },
+      "outputBytes": {
+        "before": 1510,
+        "after": 1515,
+        "absoluteChange": 5,
+        "changePercent": 0.3311258278145601,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          5,
+          5
+        ],
+        "change95CI": [
+          0.3311258278145601,
+          0.3311258278145601
+        ]
+      },
+      "validBeforeAfterSpeedComparison": false,
+      "deterministicOutputsMatch": false
+    },
+    "unchanged": {
+      "wall": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 0.3457920000000172,
+          "afterMs": 1.000333000000012,
+          "absoluteReductionMs": -0.6545409999999947,
+          "reductionPercent": -189.287490745871,
+          "reduction95CI": [
+            -298.1629610581431,
+            -148.58907417753966
+          ],
+          "experimentalNoiseBudgetMs": 0.16575000000000273,
+          "mediansMs": [
+            0.3457920000000172,
+            1.000333000000012
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 0.4546659999999747,
+          "afterMs": 1.3006669999999758,
+          "absoluteReductionMs": -0.8460010000000011,
+          "reductionPercent": -186.0708740042247,
+          "reduction95CI": [
+            -371.55023829351757,
+            -92.97158310966698
+          ],
+          "experimentalNoiseBudgetMs": 0.16575000000000273,
+          "mediansMs": [
+            0.3457920000000172,
+            1.000333000000012
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 0.585708000000011,
+          "afterMs": 1.6305830000000014,
+          "absoluteReductionMs": -1.0448749999999905,
+          "reductionPercent": -178.39520716807192,
+          "reduction95CI": [
+            -327.6939016393191,
+            -92.97158310966698
+          ],
+          "experimentalNoiseBudgetMs": 0.16575000000000273,
+          "mediansMs": [
+            0.3457920000000172,
+            1.000333000000012
+          ]
+        }
+      },
+      "cpu": {
+        "samples": 7,
+        "statistic": "p75",
+        "beforeMs": 0.429,
+        "afterMs": 0.99,
+        "absoluteReductionMs": -0.5609999999999999,
+        "reductionPercent": -130.7692307692308,
+        "reduction95CI": [
+          -256.23188405797106,
+          -17.999999999999993
+        ],
+        "experimentalNoiseBudgetMs": 0.2879999999999999,
+        "mediansMs": [
+          0.345,
+          0.767
+        ]
+      },
+      "quality": {
+        "baseline": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        },
+        "candidate": {
+          "validLatest": 35,
+          "expectedLatest": 35
+        }
+      },
+      "providerCalls": {
+        "before": 0,
+        "after": 0,
+        "absoluteChange": 0,
+        "changePercent": null,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": null
+      },
+      "outputRows": {
+        "before": 5,
+        "after": 5,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "outputBytes": {
+        "before": 1145,
+        "after": 1145,
+        "absoluteChange": 0,
+        "changePercent": 0.0,
+        "samples": 7,
+        "fixedCounts": true,
+        "confidenceScope": "Fixed controlled fixture counts; not provider cost or population savings.",
+        "absoluteChange95CI": [
+          0,
+          0
+        ],
+        "change95CI": [
+          0.0,
+          0.0
+        ]
+      },
+      "validBeforeAfterSpeedComparison": true,
+      "deterministicOutputsMatch": true
+    }
+  }
+}
