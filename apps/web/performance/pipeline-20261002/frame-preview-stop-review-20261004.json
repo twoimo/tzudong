@@ -1,0 +1,46 @@
+{
+  "scope": "frame admission, hidden caption history, dry-run payload parity, metadata recipe admission and stop above capacity",
+  "tests": {
+    "frame_candidate_and_batch": 15,
+    "real_ffmpeg_byte_and_receipt": 1,
+    "caption_file_selection": 1,
+    "insert_protection_and_preview": 28,
+    "metadata_checkpoint": 7,
+    "isolated_pg_stop_and_policy": 86
+  },
+  "real_provider_calls": 0,
+  "hosted_mutations": 0,
+  "caption_fixture": {
+    "files_created": 5,
+    "active_files": 2,
+    "hidden_files_in_caption_input": 0
+  },
+  "dry_run": {
+    "unchanged_skipped": 1,
+    "changed_selected": 1,
+    "write_requests": 0,
+    "matches_apply": true
+  },
+  "stop_capacity": {
+    "restaurants_added": 50001,
+    "run_preview_rejected": true,
+    "stop_readback_disabled": true
+  },
+  "source_hashes": {
+    "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js": "6160b5868039613ee45fe6967dfbfab8ce4033010254a00876daee657585f705",
+    "backend/restaurant-crawling/scripts/06-frame-caption.py": "869b121e9792c889ba91674c3f841d27c9769408b24d8bf04c2b4d335a8095cc",
+    "backend/restaurant-crawling/scripts/02-collect-meta.py": "767f4b0fd7a2161e644d10cd1bacfc25b50473c2ce9f6513800bfde8b17b2341",
+    "backend/restaurant-evaluation/scripts/13-supabase-insert.py": "60bd5e22cb4cb29a93b8601939f3c372320c426444578e0072ca0b8c39d20c83",
+    "backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271"
+  },
+  "limits": [
+    "Caption inference was not run; this checks actual file-selection functions",
+    "Frame receipt admission hashes cached media and probes local tools; scan overhead is not measured",
+    "No real provider or whole-pipeline latency/cost claim",
+    "Manual guard migration is unapplied hosted"
+  ],
+  "metadata_recipe_failure": {
+    "checkpoint_published": false,
+    "old_metadata_preserved": true
+  }
+}

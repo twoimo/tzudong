@@ -64,6 +64,7 @@ KST = timezone(timedelta(hours=9))
 # 로그 디렉토리
 LOG_DIR = get_backend_log_dir(BACKEND_ROOT, "restaurant-crawling")
 OPENAI_AD_ANALYSIS_DISABLED_REASON: Optional[str] = None
+OPENAI_AD_ANALYSIS_FAILURE_COUNT = 0
 
 
 def extract_video_id(url: str) -> Optional[str]:
@@ -460,8 +461,10 @@ def analyze_ad_content(
 ) -> Optional[List[str]]:
     """광고/협찬 주체를 GPT-4o-mini로 분석"""
     global OPENAI_AD_ANALYSIS_DISABLED_REASON
+    global OPENAI_AD_ANALYSIS_FAILURE_COUNT
 
     if OPENAI_AD_ANALYSIS_DISABLED_REASON:
+        OPENAI_AD_ANALYSIS_FAILURE_COUNT += 1
         return None
 
     text_preview = text[:100]
@@ -509,6 +512,7 @@ def analyze_ad_content(
         return parsed if parsed else None
 
     except Exception as error:
+        OPENAI_AD_ANALYSIS_FAILURE_COUNT += 1
         error_name = safe_error_name(error)
         if error_name == "AuthenticationError" or getattr(error, "status_code", None) == 401:
             OPENAI_AD_ANALYSIS_DISABLED_REASON = "invalid_api_key"
@@ -829,6 +833,7 @@ def _collect_channel_meta(
 
         # 1. 배치의 현재 메타데이터 가져오기
         current_metas = get_video_meta_batch(youtube, batch_ids, channel_name)
+        recipe_completed = set()
 
         for vid in batch_ids:
             if vid not in current_metas:
@@ -836,6 +841,8 @@ def _collect_channel_meta(
 
             current_meta = current_metas[vid]
             previous_meta = get_latest_meta(channel_path, vid)
+            prior_checkpoint = checked_cache.get(vid)
+            recipe_changed = not isinstance(prior_checkpoint,dict) or prior_checkpoint.get('recipe') != recipe
 
             # 2. 변경 사항 감지 -> List[str] (viral 포함)
             recollect_vars = detect_changes(
@@ -890,18 +897,20 @@ def _collect_channel_meta(
             # 하지만 new_video는 is_changed에 포함되지 않으므로(recollect_vars=["new_video"]),
             # new_video인 경우 위에서 schedule_reason="new_video"로 처리됨.
 
-            if not (is_changed or is_scheduled):
+            if not (is_changed or is_scheduled or recipe_changed):
                 # 수집 안 함. 하지만 썸네일 백필 체크
                 prev_id = previous_meta.get("recollect_id", 0)
                 if not check_thumbnail_exists(channel_path, vid, prev_id):
                     save_thumbnail_file(
                         channel_path, vid, prev_id, current_meta.get("thumbnail_url")
                     )
+                recipe_completed.add(vid)
                 continue
 
             # [수정] 변경사항 없이 스케줄링에 의한 수집인 경우, 하루 1회만 허용
-            if not is_changed and is_scheduled and already_collected_today:
+            if not is_changed and is_scheduled and already_collected_today and not recipe_changed:
                 logger.debug("op=video_skip_collected_today")
+                recipe_completed.add(vid)
                 continue
 
             # 5. 수집 확정 -> ID 계산
@@ -927,11 +936,15 @@ def _collect_channel_meta(
             what_ads = None
             if is_ads:
                 # 이전 데이터 재사용 확인
-                if previous_meta and previous_meta.get("ads_info", {}).get("what_ads"):
+                if previous_meta and not recipe_changed and previous_meta.get('description') == description and previous_meta.get("ads_info", {}).get("what_ads"):
                     what_ads = previous_meta["ads_info"]["what_ads"]
                 elif openai_client:
                     # 신규 분석
+                    failures_before=OPENAI_AD_ANALYSIS_FAILURE_COUNT
                     what_ads = analyze_ad_content(openai_client, description, logger)
+                    if OPENAI_AD_ANALYSIS_FAILURE_COUNT != failures_before:
+                        # Provider failures are not completed recipe execution.
+                        continue
 
             current_meta["ads_info"] = {"is_ads": is_ads, "what_ads": what_ads}
 
@@ -942,13 +955,14 @@ def _collect_channel_meta(
 
             output_file = meta_dir / f"{vid}.jsonl"
             append_metadata(output_file, current_meta)
+            recipe_completed.add(vid)
             logger.info("op=metadata_updated")
             success_count += 1
 
         # 배치 처리 후 캐시 업데이트 (처리된 모든 비디오)
         for vid in batch_ids:
             # A failed or incomplete provider read is eligible on restart.
-            if vid not in current_metas:
+            if vid not in current_metas or vid not in recipe_completed:
                 continue
             saved = get_latest_meta(channel_path, vid)
             if saved is not None:

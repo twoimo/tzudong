@@ -702,10 +702,6 @@ def execute_upsert_rows(
     if not rows:
         return
 
-    if dry_run:
-        stats["inserted"] += len(rows)
-        return
-
     existing_map = existing_map or {}
     operations: list[dict[str, Any]] = []
     payloads: list[dict[str, Any]] = []
@@ -731,7 +727,7 @@ def execute_upsert_rows(
                 }
             )
         payloads.append(payload)
-    if operations:
+    if operations and not dry_run:
         _run_restaurant_batch(operations, payloads)
     stats["inserted"] += len(payloads)
 

@@ -15,6 +15,37 @@ class Logger:
         return lambda *args, **kwargs: None
 
 class MetadataCheckpointTests(unittest.TestCase):
+    def test_changed_ad_recipe_runs_before_certifying_an_unchanged_unscheduled_video(self):
+        row={**ROW,'description':'광고 fixture','ads_info':{'is_ads':True,'what_ads':['old fixture']}}
+        self.file.write_text(json.dumps(row)+'\n')
+        day=collect_meta.datetime.now(collect_meta.KST).date().isoformat()
+        collect_meta.save_checked_cache(self.channel,{VID:collect_meta.checkpoint(day,'old-recipe',row)})
+        client=object()
+        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:dict(row)}),patch.object(collect_meta,'detect_changes',return_value=[]), \
+             patch.object(collect_meta,'get_schedule_frequency',return_value=None),patch.object(collect_meta,'save_thumbnail_file'), \
+             patch.object(collect_meta,'analyze_ad_content',return_value=['new fixture']) as analyze:
+            collect_meta.collect_channel_meta('fixture',None,client,Logger())
+        analyze.assert_called_once()
+        saved=collect_meta.get_latest_meta(self.channel,VID)
+        self.assertEqual(saved['ads_info']['what_ads'],['new fixture'])
+        cache=collect_meta.load_checked_cache(self.channel)[VID]
+        self.assertEqual(cache['outputHash'],collect_meta.canonical_digest(saved))
+        with patch.object(collect_meta,'get_video_meta_batch') as supplier:
+            collect_meta.collect_channel_meta('fixture',None,client,Logger())
+        supplier.assert_not_called()
+
+    def test_failed_ad_recipe_does_not_publish_a_checkpoint_or_replace_old_metadata(self):
+        row={**ROW,'description':'광고 fixture'};self.file.write_text(json.dumps(row)+'\n');before=self.file.read_bytes()
+        def failed(*args):
+            collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT+=1
+            return None
+        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:dict(row)}),patch.object(collect_meta,'detect_changes',return_value=[]), \
+             patch.object(collect_meta,'get_schedule_frequency',return_value=None),patch.object(collect_meta,'save_thumbnail_file'), \
+             patch.object(collect_meta,'analyze_ad_content',side_effect=failed):
+            collect_meta.collect_channel_meta('fixture',None,object(),Logger())
+        self.assertEqual(self.file.read_bytes(),before)
+        self.assertNotIn(VID,collect_meta.load_checked_cache(self.channel))
+
     def setUp(self):
         self.tmp = TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

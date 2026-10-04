@@ -334,6 +334,22 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"conditional_write_failed"):
             supabase_insert.execute_upsert_rows(object(),[deepcopy(existing)],False,{"inserted":0},{existing["trace_id"]:incomplete})
 
+    def test_dry_run_and_apply_skip_the_same_unchanged_rows_before_counting_quota(self):
+        existing=self.make_cas_existing();unchanged=deepcopy(existing);changed=deepcopy(existing)
+        changed.update(trace_id='new-fixture-trace',origin_name='new fixture')
+        selections=[]
+        for dry in [True,False]:
+            stats={'inserted':0}
+            with mock.patch.object(supabase_insert,'_run_restaurant_batch') as write:
+                supabase_insert.execute_upsert_rows(object(),[unchanged,changed],dry,stats,{existing['trace_id']:existing})
+            self.assertEqual(stats['unchanged'],1);self.assertEqual(stats['inserted'],1)
+            if dry:write.assert_not_called()
+            else:selections.extend(write.call_args.args[1])
+        self.assertEqual(selections,[changed])
+        incomplete=deepcopy(existing);incomplete.pop('updated_by_admin_id')
+        with self.assertRaisesRegex(RuntimeError,'conditional_write_failed'):
+            supabase_insert.execute_upsert_rows(object(),[unchanged],True,{'inserted':0},{existing['trace_id']:incomplete})
+
     def test_build_record_flattens_nested_categories_field(self):
         incoming = self.make_incoming(categories=[["고기", "한식"], "한식"])
 

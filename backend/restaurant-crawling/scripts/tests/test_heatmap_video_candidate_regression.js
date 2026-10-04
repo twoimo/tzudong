@@ -10,6 +10,43 @@ const __dirname = path.dirname(__filename);
 const MODULE_PATH = path.resolve(__dirname, '../04-extract-frames-with-heatmap.js');
 const DATA_ROOT = path.resolve(__dirname, '../../data');
 
+test('batch admission validates receipts instead of trusting legacy completion or populated folders', async () => {
+    const root=makeTempDir('frame-admission-');
+    const cacheDir=path.join(root,'cache'),framesDir=path.join(root,'frames'),tools=path.join(root,'tools');
+    for(const dir of [cacheDir,framesDir,tools])fs.mkdirSync(dir);
+    const ffmpeg=path.join(tools,'ffmpeg'),ffprobe=path.join(tools,'ffprobe');
+    fs.writeFileSync(ffmpeg,'#!/bin/sh\necho "ffmpeg version fixture"\n');fs.chmodSync(ffmpeg,0o700);
+    fs.writeFileSync(ffprobe,'#!/bin/sh\ncase "$*" in *-version*) echo "ffprobe version fixture";; *stream=codec_type*) echo video;; *show_entries*) echo 400;; *) echo \'{"streams":[{"codec_type":"video"}]}\';; esac\n');fs.chmodSync(ffprobe,0o700);
+    const previous={FFMPEG_CMD:process.env.FFMPEG_CMD,FFPROBE_CMD:process.env.FFPROBE_CMD};
+    const channel=`receipt-admission-${Date.now()}`,channelDir=path.join(DATA_ROOT,channel),videoId='Abc123Def45';
+    fs.mkdirSync(path.join(channelDir,'meta'),{recursive:true});fs.mkdirSync(path.join(channelDir,'heatmap'));
+    fs.writeFileSync(path.join(channelDir,'meta',videoId+'.jsonl'),JSON.stringify({recollect_id:0,duration:400,published_at:'2020-01-01',recollect_vars:['daily_collection']})+'\n');
+    fs.writeFileSync(path.join(channelDir,'heatmap',videoId+'.jsonl'),JSON.stringify({recollect_id:0,most_replayed_markers:[{startMillis:0,endMillis:2000,peakMillis:1000}]})+'\n');
+    const video=path.join(cacheDir,videoId+'.mp4');fs.writeFileSync(video,'synthetic media');
+    const directory=path.join(framesDir,videoId,'0','1_0_2','jpg','360p_1.0fps');fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(path.join(directory,'frame_1.jpg'),'synthetic frame');
+    const {shouldCollect,frameSourceContext}=await loadModule({VIDEO_CACHE_DIR:cacheDir,FRAMES_ROOT_DIR:framesDir});
+    process.env.FFMPEG_CMD=ffmpeg;process.env.FFPROBE_CMD=ffprobe;
+    const params={quality:'360p',fps:1,buffer:0,ext:'jpg',force:false};
+    try {
+        assert.equal(await shouldCollect(channel,videoId,params),true);
+        const context=await frameSourceContext(video);
+        const {frameInputFingerprint,publishFrames}=await import('../../../utils/frame-receipt.mjs');
+        // Duration is only used to derive segment bounds, not stored in the input recipe.
+        const recipe={...context};delete recipe.duration;
+        const actual=frameInputFingerprint({...recipe,startTime:0,endTime:2,fps:1,quality:'360p',extension:'jpg',encodingArgs:['-q:v','2'],schemaVersion:1});
+        const staged=fs.mkdtempSync(path.join(directory,'.staged-'));fs.writeFileSync(path.join(staged,'frame_1.jpg'),'verified frame');
+        await publishFrames(directory,staged,'jpg',actual);fs.rmSync(staged,{recursive:true});
+        assert.equal(await shouldCollect(channel,videoId,params),false);
+        fs.writeFileSync(path.join(directory,'frame_1.jpg'),'corrupt frame');assert.equal(await shouldCollect(channel,videoId,params),true);
+        fs.writeFileSync(path.join(directory,'frame_1.jpg'),'verified frame');assert.equal(await shouldCollect(channel,videoId,params),false);
+        fs.writeFileSync(video,'different media');assert.equal(await shouldCollect(channel,videoId,params),true);
+        fs.writeFileSync(video,'synthetic media');fs.appendFileSync(ffmpeg,'# changed tool\n');assert.equal(await shouldCollect(channel,videoId,params),true);
+    } finally {
+        for(const [key,value] of Object.entries(previous))if(value===undefined)delete process.env[key];else process.env[key]=value;
+        fs.rmSync(channelDir,{recursive:true,force:true});fs.rmSync(root,{recursive:true,force:true});
+    }
+});
+
 async function loadModule(envOverrides = {}) {
     const previousEnv = new Map();
     for (const [key, value] of Object.entries(envOverrides)) {

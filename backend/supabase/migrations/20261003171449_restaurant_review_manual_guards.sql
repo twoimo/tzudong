@@ -61,13 +61,15 @@ BEGIN
   IF action NOT IN ('run','stop') OR action IS NULL THEN RAISE EXCEPTION 'REVIEW_AUTOMATION_ACTION_INVALID'; END IF;
   SELECT * INTO policy FROM pipeline_control.restaurant_review_policy WHERE singleton;
   IF NOT policy.enabled THEN RAISE EXCEPTION 'REVIEW_AUTOMATION_STALE'; END IF;
-  IF (SELECT count(*) FROM (SELECT 1 FROM public.restaurants LIMIT 50001) bounded)>50000
+  IF action='run' AND (SELECT count(*) FROM (SELECT 1 FROM public.restaurants LIMIT 50001) bounded)>50000
     THEN RAISE EXCEPTION 'REVIEW_AUTOMATION_CAPACITY_EXCEEDED'; END IF;
   SELECT greatest(0,policy.daily_limit-coalesce(sum(approved),0)) INTO remaining FROM pipeline_control.restaurant_review_runs
     WHERE started_at>=date_trunc('day',now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul';
   SELECT count(*) FILTER(WHERE state='queued'),count(*) FILTER(WHERE state='running'),
     md5(coalesce(string_agg(id::text||':'||state,',' ORDER BY id),''))
     INTO queued,running,queue_digest FROM pipeline_control.restaurant_review_items WHERE state IN ('queued','running');
+  counts:='{}'::jsonb;
+  IF action='run' THEN
   SELECT coalesce(jsonb_object_agg(decision,total),'{}'::jsonb) INTO counts FROM (
     SELECT decision,count(*) total FROM (
       SELECT split_part(pipeline_control.restaurant_review_decision(to_jsonb(candidate)),':',1) decision
@@ -78,6 +80,7 @@ BEGIN
       ORDER BY candidate.created_at,candidate.id LIMIT policy.batch_size
     ) bounded GROUP BY decision
   ) grouped;
+  END IF;
   IF counts ? 'approve' THEN counts:=jsonb_set(counts,'{approve}',to_jsonb(least((counts->>'approve')::integer,remaining))); END IF;
   RETURN jsonb_build_object('action',action,'version',policy.version::text,'counts',counts,
     'batchSize',policy.batch_size,'dailyLimit',policy.daily_limit,'remainingApprovals',remaining,

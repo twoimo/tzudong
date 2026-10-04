@@ -24,7 +24,9 @@ def main(argv=None):
     parser=argparse.ArgumentParser()
     parser.add_argument('--benchmark',action='store_true')
     parser.add_argument('--manual-guards',action='store_true')
+    parser.add_argument('--stop-capacity',action='store_true')
     args=parser.parse_args(argv)
+    if args.stop_capacity and not args.manual_guards:parser.error('--stop-capacity requires --manual-guards')
     params = dict(host=os.environ.get('TZUDONG_TEST_PG_SOCKET', str(Path.home()/'.codex/runtime-cache/tzudong-postgresql-17.6/socket')),
                   port=int(os.environ.get('TZUDONG_TEST_PG_PORT', '18797')), user='postgres')
     database = 'review_auto_' + uuid.uuid4().hex
@@ -246,12 +248,21 @@ def main(argv=None):
             # At the end of a 48-minute run, the 60-minute lease remains valid.
             checks['long_run_completion_stays_valid']=worker('complete',valid_claim['id'],valid_token,{'evaluation_results':row['evaluation_results']})['state']=='succeeded'
             checks['worker_keeps_lock_timeout']=scalar("SELECT proconfig @> ARRAY['lock_timeout=2s'] FROM pg_proc WHERE oid='public.restaurant_review_automation_worker(text,uuid,uuid,jsonb)'::regprocedure")
+            if args.stop_capacity:
+                cursor.execute('RESET ROLE')
+                cursor.execute("INSERT INTO public.restaurants(origin_name,status) SELECT 'synthetic held row','hold' FROM generate_series(1,50001)")
+                cursor.execute('SET ROLE service_role')
+                checks['run_preview_capacity_denied']=denied('SELECT public.restaurant_review_automation_manual(%s,\'preview-run\',\'\',\'\',NULL)',(actor,))
+                stop_preview=manual('preview-stop')
+                checks['stop_preview_above_capacity_has_no_classification']=stop_preview['counts']=={}
+                stopped=manual('stop',stop_preview)
+                checks['stop_apply_above_capacity_readback']=stopped['policy']['enabled'] is False and stopped['queue']['running']==0 and stopped['queue']['queued']==0
         result=dict(kind='synthetic-restaurant-review-automation',postgresVersion=version,hostedMutation=False,
                     migrationSha256=hashlib.sha256(MIGRATION.read_bytes()).hexdigest(),assertions=checks,passed=sum(checks.values()),total=len(checks),success=all(checks.values()))
         if args.manual_guards:
             result['manualMigrationSha256']=hashlib.sha256(MANUAL_MIGRATION.read_bytes()).hexdigest()
             result['claimMigrationSha256']=hashlib.sha256(CLAIM_MIGRATION.read_bytes()).hexdigest()
-        output=ROOT/'apps/web/performance/ui-renewal-20261003'/('restaurant-automation-claim-local.json' if args.manual_guards else 'restaurant-automation-local.json')
+        output=ROOT/'apps/web/performance/ui-renewal-20261003'/('restaurant-automation-stop-capacity-local-20261004.json' if args.stop_capacity else 'restaurant-automation-claim-local.json' if args.manual_guards else 'restaurant-automation-local.json')
         output.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps(result,ensure_ascii=False))
         if not result['success']: return 1
