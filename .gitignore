@@ -6,6 +6,7 @@ venv/
 backend/bun.lock
 
 # ── 빌드 / 출력 / Build & Output ─────────────────────────
+/.build/
 .next/
 .next-stale-*/
 .turbo/
