@@ -550,13 +550,14 @@ if [ -n "$VIDEO_ID_FILTER" ]; then
 else
 SCAN_CACHE_ARGS=(--receipt "$LAAJ_RESULTS_DIR/.receipts/{id}.json"
     --input "$RULE_RESULTS_DIR/{id}.jsonl" --input "$TRANSCRIPT_DIR/{id}.jsonl"
+    --input "$RULE_RESULTS_DIR/.receipts/{id}.json"
     --metadata "$META_DIR/{id}.jsonl" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
     --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
     --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
     --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
     --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
     --setting "$AGY_MODEL_LABEL" --output "$LAAJ_RESULTS_DIR/{id}.jsonl")
-PENDING_IDS=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" scan --scan-dir "$RULE_RESULTS_DIR" "${SCAN_CACHE_ARGS[@]}") || exit 1
+PENDING_IDS=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" scan --scan-dir "$RULE_RESULTS_DIR" --scan-additional-dir "$LAAJ_RESULTS_DIR" "${SCAN_CACHE_ARGS[@]}") || exit 1
 VIDEO_IDS=()
 if [ -n "$PENDING_IDS" ]; then mapfile -t VIDEO_IDS <<< "$PENDING_IDS"; fi
 fi
@@ -606,12 +607,17 @@ for i in "${!VIDEO_IDS[@]}"; do
     META_FILE="$META_DIR/${VIDEO_ID}.jsonl"
     RECEIPT_FILE="$LAAJ_RESULTS_DIR/.receipts/${VIDEO_ID}.json"
     CACHE_ARGS=(--receipt "$RECEIPT_FILE" --input "$RULE_FILE" --input "$TRANSCRIPT_FILE"
+        --input "$RULE_RESULTS_DIR/.receipts/${VIDEO_ID}.json"
         --metadata "$META_FILE" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
         --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
         --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
         --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
         --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
         --setting "$AGY_MODEL_LABEL" --output "$OUTPUT_FILE")
+    if ! "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" certified --receipt "$RULE_RESULTS_DIR/.receipts/${VIDEO_ID}.json" --output "$RULE_FILE"; then
+        log_error "RULE_RESULT_UNCERTIFIED"
+        exit 1
+    fi
     # Existing output alone cannot certify the current inputs/model/prompt.
     if "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" check "${CACHE_ARGS[@]}"; then
         SKIPPED_EXISTS=$((SKIPPED_EXISTS + 1))

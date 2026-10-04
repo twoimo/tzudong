@@ -3,6 +3,19 @@ import type { ErrorEvent } from '@sentry/nextjs';
 import { sanitizeSentryEvent, sentryPrivacyOptions, validSentryDsn } from '../lib/monitoring/sentry-privacy';
 
 describe('Sentry event privacy', () => {
+  test('preserves validated opaque IDs containing phone-like digits while still removing actual personal data', () => {
+    const eventId='a01012345678'+'a'.repeat(20);
+    const release='b01012345678'+'b'.repeat(28);
+    const safe=sanitizeSentryEvent({type:undefined,event_id:eventId,release,
+      user:{email:'private@example.test'},message:'010-1234-5678',
+      exception:{values:[{type:'TypeError',value:'private@example.test'}]}});
+    expect(safe?.event_id).toBe(eventId);
+    expect(safe?.release).toBe(release);
+    expect(safe?.user).toBeUndefined();
+    expect(safe?.message).toBeUndefined();
+    expect(safe?.exception?.values?.[0].value).toBe('TypeError captured');
+    expect(sanitizeSentryEvent({type:undefined,event_id:'private@example.test',release:'private@example.test'})?.event_id).toBeUndefined();
+  });
   test('retains error type and repository frame while dropping request, OCR, identity and provider diagnostics', () => {
     const event: ErrorEvent = {
       type: undefined, event_id: 'a'.repeat(32), level: 'error', timestamp: 1,

@@ -45,7 +45,7 @@ export const productionProjectSchema = z.object({
 }).strict();
 export const productionJobSchema = z.object({
   id: productionUuid, status: z.enum(['queued', 'claimed', 'succeeded', 'failed', 'cancelled']),
-  stage: z.enum(['queued', 'text', 'images', 'complete', 'failed', 'cancelled']),
+  stage: z.enum(['queued', 'text', 'images', 'complete', 'failed', 'cancelled', 'uncertain']),
   sceneNo: z.number().int().min(1).max(12).nullable(), errorCode: workerFailureSchema.nullable(),
   attempts: z.number().int().min(0).max(3), lastHeartbeat: timestamp.nullable(),
 }).strict();

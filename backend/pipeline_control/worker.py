@@ -541,6 +541,7 @@ def process_one(
         collected.append(event)
         noop_event_sink(event)
 
+    success_recorded = False
     try:
         with _bound_pipeline_execution_environment(
             data_sink=data_sink,
@@ -558,7 +559,17 @@ def process_one(
                     compute_profile=run.profile,
                 )
                 if result == 'Succeeded':
-                    media_completed()
+                    if execution_mode == "live":
+                        store.finish_succeeded(run.id)
+                    else:
+                        store.finish_dry_run(run.id)
+                    success_recorded = True
+                    try:
+                        media_completed()
+                    except (OSError, ValueError, AdapterGraphError):
+                        # Settled provider/DB work stays successful. Purge is
+                        # recoverable local cleanup, never a reason to replay it.
+                        print("operation=media_cache_cleanup_deferred")
     except (KafkaPublishError, AdapterGraphError, ProfileError) as exc:
         store.finish_failed(run.id, exc.code)
         write_run_manifest(
@@ -585,7 +596,7 @@ def process_one(
             job_id_scope=job_id_scope,
         )
         return "Failed"
-    if result == "Succeeded":
+    if result == "Succeeded" and not success_recorded:
         if execution_mode == "live":
             store.finish_succeeded(run.id)
         else:

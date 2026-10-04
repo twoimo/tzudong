@@ -1369,6 +1369,19 @@ for migration in "${effective_migrations[@]}"; do
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$storyboard_replay"
       ;;
     20261003113923_g014_service_invoker_contract.sql|20261003172126_restaurant_review_manual_invoker_contract.sql|20261003220841_admin_evaluation_page_invoker_contract.sql)
+      if [[ ${migration##*/} == '20261003113923_g014_service_invoker_contract.sql' ]]; then
+        # The immutable contract requires the older storyboard functions to
+        # already be service-role invokers. Apply the exact additive bridge
+        # before that assertion in this isolated source-only replay.
+        storyboard_dependency="$backend_migrations_dir/20261003182338_storyboard_service_role_bridge.sql"
+        storyboard_dependency_replay="$work_dir/storyboard-before-service-invoker.owner-replay.sql"
+        python3 "$script_dir/transform_storyboard_history_replay.py" \
+          --source "$storyboard_dependency" --bundle "$g026_bundle" --output "$storyboard_dependency_replay"
+        g026_chain_apply 'storyboard-invoker-prerequisite-canonical' "$storyboard_dependency"
+        g026_chain_apply 'storyboard-invoker-prerequisite-transformer' "$script_dir/transform_storyboard_history_replay.py"
+        g026_chain_apply 'storyboard-invoker-prerequisite-window' "$storyboard_dependency_replay"
+        compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$storyboard_dependency_replay"
+      fi
       invoker_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_service_invoker_replay.py" \
         --source "$migration" --bundle "$g026_bundle" --output "$invoker_replay"

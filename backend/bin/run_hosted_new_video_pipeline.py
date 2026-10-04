@@ -105,8 +105,9 @@ def _review_reserved_slot() -> ReviewReservation:
         if status!=0 or not receipt.is_file() or receipt.stat().st_size>2048:return ReviewReservation(1, False)
         try:
             result=json.loads(receipt.read_text(encoding='utf-8'))
-            if result.get('recheckAttempted') is False:return ReviewReservation(0, True)
             if result.get('recheckAttempted') is True:return ReviewReservation(1, True)
+            if result.get('recheckAttempted') is False and type(result.get('recheckOutstanding')) is bool:
+                return ReviewReservation(int(result['recheckOutstanding']), True)
         except (OSError,ValueError,AttributeError):pass
         # Uncertain work reserves one slot; never spend it again on a new video.
         return ReviewReservation(1, False)

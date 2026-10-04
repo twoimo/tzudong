@@ -6,6 +6,16 @@ const envFor = (name: string): NodeJS.ProcessEnv => ({ SENTRY_ORG: 'test-org', S
 const issueFor = (project: string) => ({ id: '123', shortId: 'TEST-1', project: { slug: project }, status: 'unresolved', level: 'error', count: '12', lastSeen: '2026-10-04T02:00:00Z', metadata: { type: 'TypeError' }, title: 'private@example.test', culprit: 'Bearer private', permalink: 'https://evil.example.test/?token=private', userCount: 42 });
 
 describe('Sentry read-only bounded feed', () => {
+  test('supports an explicit numeric project ID while verifying both returned ID and slug', async () => {
+    const env={...envFor('numeric-project'),SENTRY_PROJECT_ID:'456'};
+    const fetcher=mock(async(input:Parameters<typeof fetch>[0])=>{
+      expect(new URL(String(input)).searchParams.get('project')).toBe('456');
+      return Response.json([{...issueFor('numeric-project'),project:{id:'456',slug:'numeric-project'}}]);
+    });
+    expect((await getAdminSentryIssues('unresolved',null,{env,fetcher})).state).toBe('connected');
+    const wrong=await getAdminSentryIssues('resolved',null,{env,fetcher:async()=>Response.json([{...issueFor('numeric-project'),status:'resolved',project:{id:'999',slug:'numeric-project'}}])});
+    expect(wrong.state).toBe('unavailable');
+  });
   test('missing configuration makes zero provider calls', async () => {
     const fetcher = mock(async () => new Response('[]'));
     expect((await getAdminSentryIssues('unresolved', null, { env: {}, fetcher })).state).toBe('not_configured');

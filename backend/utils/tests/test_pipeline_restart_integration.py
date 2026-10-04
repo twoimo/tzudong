@@ -43,6 +43,17 @@ RULE = {
 }
 
 
+def certified_rule(evaluation, crawling, video, value=None):
+    from backend.utils.stage_cache import complete
+    rule=evaluation/'evaluation/rule_results'/(video+'.jsonl')
+    rule.parent.mkdir(parents=True,exist_ok=True)
+    rule.write_text(json.dumps(RULE if value is None else value)+'\n')
+    complete(rule.parent/'.receipts'/(video+'.json'),'fixture',[rule])
+    transcript=crawling/'transcript'/(video+'.jsonl')
+    transcript.parent.mkdir(parents=True,exist_ok=True)
+    transcript.write_text('{"transcript":[{"start":0,"text":"fixture"}]}\n')
+
+
 class TransformRestartTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -160,10 +171,50 @@ class TransformRestartTests(unittest.TestCase):
 
 
 class LaajRestartTests(unittest.TestCase):
+    def test_omitted_rule_or_transcript_retires_stale_laaj_without_losing_bytes(self):
+        from backend.utils.stage_cache import complete
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);crawling=root/'crawl';evaluation=root/'eval'
+            valid=['ready','excluded','no-transcript','no-receipt','damaged-rule','no-rule']
+            original={}
+            for video in valid:
+                certified_rule(evaluation,crawling,video)
+                output=evaluation/'evaluation/laaj_results'/(video+'.jsonl')
+                output.parent.mkdir(parents=True,exist_ok=True)
+                output.write_text('{"stale":true}\n')
+                receipt=output.parent/'.receipts'/(video+'.json')
+                complete(receipt,'old',[output])
+                original[video]=(output.read_bytes(),receipt.read_bytes())
+            certified_rule(evaluation,crawling,'excluded',{**RULE,'evaluation_target':{'fixture':False}})
+            (crawling/'transcript/no-transcript.jsonl').unlink()
+            (evaluation/'evaluation/rule_results/.receipts/no-receipt.json').unlink()
+            (evaluation/'evaluation/rule_results/damaged-rule.jsonl').write_text('{"damaged":true}\n')
+            (evaluation/'evaluation/rule_results/no-rule.jsonl').unlink()
+            self.assertEqual(['ready'],laaj.prepare_items(valid,evaluation,crawling,1))
+            for video in valid[1:]:
+                output=evaluation/'evaluation/laaj_results'/(video+'.jsonl')
+                receipt=output.parent/'.receipts'/(video+'.json')
+                self.assertFalse(output.exists());self.assertFalse(receipt.exists())
+                for path,data in zip((output,receipt),original[video]):
+                    archives=list((path.parent/'.superseded').glob(path.name+'.*'))
+                    self.assertEqual([data],[item.read_bytes() for item in archives])
+            self.assertTrue((evaluation/'evaluation/laaj_results/ready.jsonl').exists())
+
+    def test_rule_changed_after_admission_never_starts_a_provider(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);certified_rule(root,root,'fixture')
+            self.assertEqual(['fixture'],laaj.prepare_items(['fixture'],root,root))
+            (root/'evaluation/rule_results/.receipts/fixture.json').unlink()
+            args=SimpleNamespace(script=root/'never.sh',channel='fixture',crawling_path=root,evaluation_path=root,process_timeout=2)
+            with patch.object(laaj.subprocess,'Popen') as provider:
+                self.assertEqual((0,{}),laaj.run_video('fixture',args))
+            provider.assert_not_called()
+
     @unittest.skipIf(os.name=='nt','POSIX descriptor inheritance proof')
     def test_killed_coordinator_does_not_release_a_live_child_video_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);script=root/'worker.sh';worker=root/'worker.py'
+            certified_rule(root,root,'same')
             worker.write_text('''import json,os,sys,time
 from pathlib import Path
 sys.path.insert(0,sys.argv[2])
@@ -222,12 +273,13 @@ complete(receipt,'fixture',[output])
             crawling,evaluation=root/'crawl',root/'evaluation'
             rule=evaluation/'evaluation/rule_results';rule.mkdir(parents=True)
             transcript=crawling/'transcript';transcript.mkdir(parents=True)
-            (rule/'abcdefghijk.jsonl').write_text(json.dumps(RULE)+'\n')
+            certified_rule(evaluation,crawling,'abcdefghijk')
             (transcript/'abcdefghijk.jsonl').write_text('{"transcript":[{"start":0,"text":"fixture"}]}\n')
             env={**os.environ,'PATH':f'{tools}:/opt/homebrew/bin:/usr/bin:/bin','TZUDONG_PIPELINE_ISOLATED':'1',
                  'GEMINI_API_KEY':'fixture-unusable','FX_CALLS':str(calls),'FX_RESPONSE':str(response)}
             env.pop('GEMINI_MAX_INFLIGHT',None);env.pop('LAAJ_CHILD',None)
-            command=['/opt/homebrew/bin/bash',str(root/'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh'),
+            bash='/opt/homebrew/bin/bash' if Path('/opt/homebrew/bin/bash').is_file() else shutil.which('bash')
+            command=[bash,str(root/'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh'),
                      '--channel','tzuyang','--crawling-path',str(crawling),'--evaluation-path',str(evaluation)]
             first=subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             second=subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -294,7 +346,7 @@ complete(receipt,'fixture',[output])
             for video in ['excluded','first','second','third']:
                 value=copy.deepcopy(RULE)
                 if video=='excluded':value['evaluation_target']={'fixture':False}
-                (rule/(video+'.jsonl')).write_text(json.dumps(value)+'\n')
+                certified_rule(evaluation,crawling,video,value)
                 (transcript/(video+'.jsonl')).write_text('{"transcript":[{"start":0,"text":"fixture"}]}\n')
             args=SimpleNamespace(script=root/'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh',
                 channel='tzuyang',crawling_path=crawling,evaluation_path=evaluation,process_timeout=20,jobs=3)
@@ -370,12 +422,14 @@ complete(receipt,'fixture',[output])
     def test_successful_exit_without_a_valid_output_receipt_is_failure(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);script=root/'child.sh';script.write_text('exit 0\n')
+            certified_rule(root,root,'fixture')
             args=SimpleNamespace(script=script,channel='fixture',crawling_path=root,evaluation_path=root,process_timeout=2)
             self.assertEqual(1,laaj.run_video('fixture',args)[0])
 
     def test_timeout_releases_lock_and_does_not_mark_success(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);script=root/'child.sh';script.write_text('sleep 10\n')
+            certified_rule(root,root,'fixture')
             args=SimpleNamespace(script=script,channel='fixture',crawling_path=root,evaluation_path=root,process_timeout=.05)
             before=time.monotonic()
             self.assertEqual(1,laaj.run_video('fixture',args)[0])

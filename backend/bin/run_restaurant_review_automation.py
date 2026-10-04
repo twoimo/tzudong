@@ -241,10 +241,17 @@ def run_once(rpc, *, recheck_limit=0, crawling_root=None, evaluator=evaluate, re
     if recheck_limit not in (0,1): raise ValueError('review_recheck_limit_invalid')
     summary=rpc('restaurant_review_automation_tick',{'request_id':request_id or str(uuid.uuid4())})
     summary['recheckAttempted']=False
+    summary['recheckOutstanding']=False
     if summary.get('disabled') or recheck_limit==0: return summary
     token=str(uuid.uuid4())
     item=rpc('restaurant_review_automation_worker',{'action':'claim','item_id':None,'token':token,'result':{}})
-    if not item or item.get('disabled'): return summary
+    if not item or item.get('disabled'):
+        state=rpc('restaurant_review_automation_status',{})
+        queue=state.get('queue') if isinstance(state,dict) else None
+        if not isinstance(queue,dict) or any(type(queue.get(key)) is not int or queue[key]<0 for key in ['queued','running']):
+            raise WorkerFailure('result_invalid')
+        summary['recheckOutstanding']=bool(queue['queued'] or queue['running'])
+        return summary
     summary['recheckAttempted']=True
     args={'item_id':item['id'],'token':token}
     try:
@@ -282,7 +289,7 @@ def main(argv=None):
             return json.loads(payload)
     try:
         summary=run_once(rpc,recheck_limit=args.recheck_limit,crawling_root=args.crawling_root,request_id=args.request_id)
-        receipt={key:value for key,value in summary.items() if key in ['id','disabled','scanned','approved','held','protected','recheck','recheckAttempted']}
+        receipt={key:value for key,value in summary.items() if key in ['id','disabled','scanned','approved','held','protected','recheck','recheckAttempted','recheckOutstanding']}
         if args.receipt_file:
             with args.receipt_file.open('w',encoding='utf-8') as output:json.dump(receipt,output)
             args.receipt_file.chmod(0o600)

@@ -50,7 +50,13 @@ export function sanitizeSentryEvent(event: ErrorEvent, hint?: EventHint): ErrorE
       ...(event.environment && ['production', 'preview', 'development', 'test'].includes(event.environment) ? { environment: event.environment } : {}),
       ...(values?.length ? { exception: { values } } : { message: 'Application error' }),
     };
-    assertPrivacySafe(safe, { maxEntries: 1000 });
+    // These SDK/Git identifiers already passed exact hex validation. Random
+    // digit runs inside them can resemble phone numbers; inspect event content
+    // separately without weakening the shared privacy scanner.
+    const content = { ...safe };
+    delete content.event_id;
+    delete content.release;
+    assertPrivacySafe(content, { maxEntries: 1000 });
     return safe;
   } catch {
     return null;
@@ -59,7 +65,7 @@ export function sanitizeSentryEvent(event: ErrorEvent, hint?: EventHint): ErrorE
 
 /** Keep Next's request-error hook; do not add raw process logs/exit handlers or session aggregation. */
 export function sentryErrorOnlyIntegrations<T extends { name: string }>(integrations: T[]): T[] {
-  const excluded = new Set(['BrowserSession', 'BrowserTracing', 'OnUncaughtException', 'OnUnhandledRejection']);
+  const excluded = new Set(['BrowserSession', 'ProcessSession', 'BrowserTracing', 'OnUncaughtException', 'OnUnhandledRejection']);
   return integrations.filter((integration) => !excluded.has(integration.name));
 }
 

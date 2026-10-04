@@ -33,6 +33,7 @@ export function RestaurantReviewAutomation({ onApplied }: { onApplied: () => voi
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState<EvaluationRecord | null>(null);
   const requestId = useRef<string | null>(null);
+  const inFlight = useRef(false);
   const lastRun = useRef<string | null | undefined>(undefined);
   const applied = useRef(onApplied);
   useEffect(() => { applied.current = onApplied; }, [onApplied]);
@@ -58,6 +59,7 @@ export function RestaurantReviewAutomation({ onApplied }: { onApplied: () => voi
     return () => { controller.abort(); clearInterval(interval); document.removeEventListener('visibilitychange', refresh); };
   }, [load]);
   async function send(body: Record<string, unknown>) {
+    inFlight.current = true;
     setBusy(true); setError('');
     try {
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -70,11 +72,11 @@ export function RestaurantReviewAutomation({ onApplied }: { onApplied: () => voi
       }
       else { const next = parseReviewAutomationSnapshot(value); lastRun.current = next.policy.last_run_at; setSnapshot(next); setPreview(null); if (body.action === 'run') requestId.current = null; applied.current(); }
     } catch (cause) {
+      await load();
       setError(cause instanceof Error && cause.message === 'stale' ? '검수 데이터가 바뀌었습니다. 미리보기를 다시 확인하세요.' : '결과를 확인하지 못했습니다. 상태를 새로고침한 뒤 확인하세요.');
       // The run id survives an uncertain response. Subsequent attempts read the
       // same durable run, rather than creating a second mutation.
-      void load();
-    } finally { setBusy(false); }
+    } finally { inFlight.current = false; setBusy(false); }
   }
   const policy = snapshot?.policy;
   const recent = snapshot?.runs[0];
@@ -115,10 +117,11 @@ export function RestaurantReviewAutomation({ onApplied }: { onApplied: () => voi
       {snapshot && snapshot.items.length > 0 && <ul className="grid gap-1 sm:grid-cols-2">{snapshot.items.slice(0,6).map(item => <li key={item.id} className="flex min-w-0 items-center gap-2 rounded border border-border px-2 py-1.5"><button type="button" className="min-h-9 max-w-28 shrink-0 truncate text-primary underline-offset-2 hover:underline" onClick={() => { void inspect(item.restaurant_id); }}>{item.restaurant_name || '검수 항목'}</button><span className="truncate">{item.state === 'failed' && item.reason === 'evaluation_failed' ? '재검수 실패' : REASONS[item.reason] ?? '추가 확인 필요'}</span><span className="ml-auto shrink-0 text-muted-foreground">{STATES[item.state] ?? '확인 필요'}</span></li>)}</ul>}
       {snapshot && snapshot.runs.length > 0 && <ol className="space-y-1 text-muted-foreground">{snapshot.runs.slice(0,3).map(run => <li key={run.id}>{new Date(run.started_at).toLocaleString('ko-KR')} · 처리 {run.scanned} · 승인 {run.approved} · 보류 {run.held} · 재검수 {run.recheck} · 보호 {run.protected}</li>)}</ol>}
     </div>}
-    <AlertDialog open={Boolean(preview)} onOpenChange={open => { if (!open && !busy) setPreview(null); }}>
+    <AlertDialog open={Boolean(preview)} onOpenChange={open => { if (!open && !inFlight.current) { setPreview(null); requestId.current = null; } }}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{preview?.action === 'stop' ? '자동 운영을 중지할까요?' : preview?.action === 'run' ? '지금 검수할까요?' : '자동 승인을 시작할까요?'}</AlertDialogTitle><AlertDialogDescription>{preview?.action === 'stop'
         ? `재검수 대기 ${preview.queue?.queued ?? 0}건과 실행 ${preview.queue?.running ?? 0}건을 취소합니다. 이미 승인된 결과는 유지합니다.`
         : <>승인 {preview?.counts.approve ?? 0} · 재검수 {preview?.counts.recheck ?? 0} · 보류 {preview?.counts.hold ?? 0} · 보호 {preview?.counts.protected ?? 0}. {preview?.action === 'run' ? `하루 남은 승인 ${preview.remainingApprovals ?? 0}건.` : `회당 ${preview?.batchSize}건 · 하루 승인 ${preview?.dailyLimit}건. 새 입력도 자동 처리합니다.`}</>}
+        {error && <span className="mt-2 block text-destructive" role="alert">{error}</span>}
       </AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={busy}>취소</AlertDialogCancel><AlertDialogAction disabled={busy} onClick={event => {
         event.preventDefault();
         if (!preview) return;

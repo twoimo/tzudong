@@ -65,13 +65,28 @@ class StoryboardHistoryTests(unittest.TestCase):
             destination=Path(temp)/'fresh'
             report=prepare(ROOT,{'migrations':[]},destination)
             self.assertEqual((destination/'supabase/migrations'/registry).read_bytes(),dependency+b'\n'+canonical)
-            self.assertEqual(len(report['dependencyAdapters']),1)
+            self.assertEqual(len(report['dependencyAdapters']),2)
             self.assertEqual((ROOT/'backend/supabase/migrations'/registry).read_bytes(),canonical)
         with tempfile.TemporaryDirectory() as temp:
             destination=Path(temp)/'already_applied'
-            report=prepare(ROOT,{'migrations':[{'version':registry[:14],'name':Path(registry).stem[15:]}]},destination)
+            invoker='20261003113923_g014_service_invoker_contract.sql'
+            report=prepare(ROOT,{'migrations':[{'version':name[:14], 'name':Path(name).stem[15:]} for name in [registry,invoker]]},destination)
             self.assertEqual(report['dependencyAdapters'],[])
             self.assertEqual((destination/'supabase/migrations'/registry).read_bytes(),canonical)
+
+    def test_storyboard_invoker_prerequisite_is_adapted_before_immutable_contract(self):
+        invoker='20261003113923_g014_service_invoker_contract.sql'
+        bridge='20261003182338_storyboard_service_role_bridge.sql'
+        canonical=(ROOT/'backend/supabase/migrations'/invoker).read_bytes()
+        predecessor=(ROOT/'backend/supabase/migrations'/bridge).read_bytes()
+        with tempfile.TemporaryDirectory() as temp:
+            destination=Path(temp)/'fresh'
+            report=prepare(ROOT,{'migrations':[]},destination)
+            self.assertEqual((destination/'supabase/migrations'/invoker).read_bytes(),predecessor+b'\n'+canonical)
+            adapter=next(item for item in report['dependencyAdapters'] if item['target']==invoker)
+            self.assertEqual(adapter['predecessor'],bridge)
+            self.assertEqual(adapter['predecessorSha256'],hashlib.sha256(predecessor).hexdigest())
+            self.assertEqual((ROOT/'backend/supabase/migrations'/invoker).read_bytes(),canonical)
 
     def test_unverified_receipts_and_duplicate_history_fail_before_files(self):
         for change in ('hash','name','count','duplicate'):

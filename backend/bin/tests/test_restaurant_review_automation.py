@@ -9,6 +9,19 @@ from backend.bin import run_hosted_new_video_pipeline as runner
 
 
 class ReviewWorkerTests(unittest.TestCase):
+    def test_null_claim_distinguishes_active_rechecks_from_an_empty_queue(self):
+        for queued,running in [(0,1),(1,0),(0,0)]:
+            calls=[]
+            def rpc(name,body):
+                calls.append(name)
+                if name=='restaurant_review_automation_tick':return {}
+                if name=='restaurant_review_automation_worker':return None
+                return {'queue':{'queued':queued,'running':running}}
+            summary=worker.run_once(rpc,recheck_limit=1,evaluator=lambda *args:self.fail('provider called'))
+            self.assertFalse(summary['recheckAttempted'])
+            self.assertEqual(summary['recheckOutstanding'],bool(queued or running))
+            self.assertEqual(calls[-1],'restaurant_review_automation_status')
+
     @staticmethod
     def complete_metrics():
         return {**{key:{'eval_value':1,'eval_basis':'synthetic'} for key in ['visit_authenticity','rb_inference_score','review_faithfulness_score']},
@@ -163,10 +176,19 @@ class ReviewWorkerTests(unittest.TestCase):
 
     def test_no_recheck_preserves_all_three_new_video_slots(self):
         def completed(command,**kwargs):
-            receipt=Path(command[command.index('--receipt-file')+1]);receipt.write_text('{"recheckAttempted":false}')
+            receipt=Path(command[command.index('--receipt-file')+1]);receipt.write_text('{"recheckAttempted":false,"recheckOutstanding":false}')
             return 0
         with patch.object(runner,'_run',side_effect=completed):self.assertEqual(runner._review_reserved_slot(),runner.ReviewReservation(0,True))
         with patch.object(runner,'_run',return_value=1):self.assertEqual(runner._review_reserved_slot(),runner.ReviewReservation(1,False))
+
+    def test_active_recheck_reserves_one_slot_and_an_incomplete_receipt_fails_closed(self):
+        for outstanding,expected in [(True,runner.ReviewReservation(1,True)),(None,runner.ReviewReservation(1,False))]:
+            def completed(command,**kwargs):
+                receipt={'recheckAttempted':False}
+                if outstanding is not None:receipt['recheckOutstanding']=outstanding
+                Path(command[command.index('--receipt-file')+1]).write_text(json.dumps(receipt))
+                return 0
+            with patch.object(runner,'_run',side_effect=completed):self.assertEqual(runner._review_reserved_slot(),expected)
 
     def test_confirmed_reservation_allows_one_followup(self):
         import contextlib,io

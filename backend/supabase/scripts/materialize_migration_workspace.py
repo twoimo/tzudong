@@ -41,6 +41,15 @@ def prepare(root: Path, ledger: dict, destination: Path) -> dict:
             'canonicalSha256':hashlib.sha256(original).hexdigest(),
             'predecessorSha256':hashlib.sha256(plan[restoration]).hexdigest(),
             'workspaceSha256':hashlib.sha256(plan[registry]).hexdigest()})
+    invoker='20261003113923_g014_service_invoker_contract.sql'
+    storyboard_bridge='20261003182338_storyboard_service_role_bridge.sql'
+    if invoker[:14] not in by_version:
+        original=plan[invoker]
+        plan[invoker]=plan[storyboard_bridge]+b'\n'+original
+        dependencies.append({'target':invoker,'predecessor':storyboard_bridge,
+            'canonicalSha256':hashlib.sha256(original).hexdigest(),
+            'predecessorSha256':hashlib.sha256(plan[storyboard_bridge]).hexdigest(),
+            'workspaceSha256':hashlib.sha256(plan[invoker]).hexdigest()})
     manifest=json.loads((root/RECEIPTS/'manifest.json').read_text())
     aliases=[]
     for item in manifest['receipts']:

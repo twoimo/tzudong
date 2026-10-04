@@ -14,13 +14,15 @@ let inFlightRequests = 0;
 function configuration(env: NodeJS.ProcessEnv) {
   const org = env.SENTRY_ORG?.trim();
   const project = env.SENTRY_PROJECT?.trim();
+  const projectId = env.SENTRY_PROJECT_ID?.trim();
   const token = env.SENTRY_ISSUES_READ_TOKEN?.trim();
   const origin = env.SENTRY_URL?.trim() || 'https://sentry.io';
   if (!org || !project || !token || !origins.has(origin)
     || !/^[a-z0-9][a-z0-9_-]{0,99}$/.test(org)
     || !/^[a-z0-9][a-z0-9_-]{0,99}$/.test(project)
+    || (projectId !== undefined && projectId !== '' && !/^\d{1,24}$/.test(projectId))
     || token.length > 1024 || /\s/.test(token)) return null;
-  return { org, project, token, origin };
+  return { org, project, projectId: projectId || null, token, origin };
 }
 
 export function validSentryCursor(cursor: string | null): boolean {
@@ -54,11 +56,11 @@ async function readBody(response: Response): Promise<unknown> {
   } finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
 }
 
-function normalizeIssue(value: unknown, org: string, project: string, origin: string): AdminSentryIssue | null {
+function normalizeIssue(value: unknown, org: string, project: string, origin: string, projectId: string | null): AdminSentryIssue | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
-  const issueProject = row.project as { slug?: unknown } | undefined;
-  if (issueProject?.slug !== project || typeof row.id !== 'string' || !/^\d{1,24}$/.test(row.id)) return null;
+  const issueProject = row.project as { slug?: unknown; id?: unknown } | undefined;
+  if (issueProject?.slug !== project || (projectId && issueProject.id !== projectId) || typeof row.id !== 'string' || !/^\d{1,24}$/.test(row.id)) return null;
   if (!['unresolved', 'resolved', 'ignored'].includes(String(row.status))) return null;
   const metadata = row.metadata as { type?: unknown } | undefined;
   const count = typeof row.count === 'string' && /^\d{1,15}$/.test(row.count) ? Number(row.count) : row.count;
@@ -106,7 +108,7 @@ export async function getAdminSentryIssues(
     if (inFlightRequests >= 4) return { ...base, state: 'unavailable' };
     inFlightRequests += 1;
     const url = new URL(`/api/0/organizations/${config.org}/issues/`, config.origin);
-    url.searchParams.set('project', config.project);
+    url.searchParams.set('project', config.projectId ?? config.project);
     url.searchParams.set('query', `is:${status} issue.category:error`);
     url.searchParams.set('sort', 'date');
     url.searchParams.set('limit', String(SENTRY_PAGE_SIZE));
@@ -131,7 +133,7 @@ export async function getAdminSentryIssues(
       }
       const rows = await readBody(response);
       if (!Array.isArray(rows) || rows.length > SENTRY_PAGE_SIZE) return { ...base, state: 'unavailable' };
-      const issues = rows.map((row) => normalizeIssue(row, config.org, config.project, config.origin));
+      const issues = rows.map((row) => normalizeIssue(row, config.org, config.project, config.origin, config.projectId));
       if (issues.some((row) => !row || row.status !== status) || new Set(issues.map((row) => row?.id)).size !== rows.length) return { ...base, state: 'unavailable' };
       return {
         ...base, state: 'connected',

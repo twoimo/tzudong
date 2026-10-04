@@ -13,6 +13,18 @@ CLI=ROOT/'backend/bin/stage_cache.py'
 
 
 class StageExecutionTests(unittest.TestCase):
+    def test_scan_includes_a_retained_output_when_its_producer_input_is_missing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);inputs=root/'inputs';outputs=root/'outputs'
+            inputs.mkdir();outputs.mkdir()
+            (outputs/'orphan.jsonl').write_text('{"old":true}\n')
+            command=[sys.executable,str(CLI),'scan','--scan-dir',str(inputs),
+                     '--scan-additional-dir',str(outputs),'--receipt',str(root/'receipts/{id}.json'),
+                     '--input',str(inputs/'{id}.jsonl'),'--output',str(outputs/'{id}.jsonl')]
+            result=subprocess.run(command,capture_output=True,text=True,timeout=10)
+            self.assertEqual(result.returncode,0)
+            self.assertEqual(result.stdout.splitlines(),['orphan'])
+
     def setUp(self):
         self.directory=tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)

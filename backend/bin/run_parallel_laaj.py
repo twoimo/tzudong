@@ -13,27 +13,51 @@ import threading
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from backend.utils.jsonl_utils import load_last_jsonl_record
-from backend.utils.stage_cache import reusable, stage_lock
+from backend.utils.stage_cache import certified, retire_outputs, reusable, stage_lock
 from backend.utils.provider_budget import budget_path
 
 FALLBACK_LOCK_STATE = threading.local()
 
 
 def eligible(video, evaluation, crawling):
-    rule = load_last_jsonl_record(evaluation / 'evaluation' / 'rule_results' / (video + '.jsonl'))
+    output = evaluation / 'evaluation' / 'rule_results' / (video + '.jsonl')
+    if not certified(output.parent / '.receipts' / (video + '.json'), [output]):
+        return False
+    rule = load_last_jsonl_record(output)
     transcript = load_last_jsonl_record(crawling / 'transcript' / (video + '.jsonl'))
     return bool(rule and any(value is True for value in rule.get('evaluation_target', {}).values())
                 and transcript and transcript.get('transcript'))
 
 
-def select_items(ids, evaluation, crawling, max_items=None):
-    """The live limit counts eligible videos, as in the sequential path."""
+def validated_items(ids, max_items=None):
     ids = list(dict.fromkeys(ids))
     if any(not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', item) for item in ids):
         raise ValueError('LAAJ_ID_INVALID')
     if max_items is not None and max_items < 0:
         raise ValueError('LAAJ_LIMIT_INVALID')
+    return ids
+
+
+def select_items(ids, evaluation, crawling, max_items=None):
+    """The live limit counts eligible videos, as in the sequential path."""
+    ids = validated_items(ids, max_items)
     selected = [video for video in ids if eligible(video, evaluation, crawling)]
+    return selected if max_items is None else selected[:max_items]
+
+
+def prepare_items(ids, evaluation, crawling, max_items=None):
+    """Retire omitted results under the producer lock order before admission."""
+    ids = validated_items(ids, max_items)
+    selected = []
+    for video in ids:
+        selection = evaluation / 'evaluation/selection/.receipts' / (video + '.json')
+        rule = evaluation / 'evaluation/rule_results/.receipts' / (video + '.json')
+        receipt = evaluation / 'evaluation/laaj_results/.receipts' / (video + '.json')
+        with stage_lock(selection), stage_lock(rule), stage_lock(receipt):
+            if not eligible(video, evaluation, crawling):
+                retire_outputs([receipt.parent.parent / (video + '.jsonl'), receipt])
+            else:
+                selected.append(video)
     return selected if max_items is None else selected[:max_items]
 
 
@@ -62,8 +86,13 @@ def run_video(video, args, *, fallback=False):
         env.update({'GEMINI_MAX_INFLIGHT': '1', 'USE_OAUTH': 'true'})
     command = [os.environ.get('LAAJ_BASH', 'bash'), str(args.script), '--channel', args.channel,
                '--crawling-path', str(args.crawling_path), '--evaluation-path', str(args.evaluation_path), '--video-id', video]
-    with stage_lock(receipt) as descriptor:
-        descriptors=(descriptor,)
+    selection = args.evaluation_path / 'evaluation/selection/.receipts' / (video + '.json')
+    rule = args.evaluation_path / 'evaluation/rule_results/.receipts' / (video + '.json')
+    with stage_lock(selection) as selection_fd, stage_lock(rule) as rule_fd, stage_lock(receipt) as descriptor:
+        if not eligible(video, args.evaluation_path, args.crawling_path):
+            retire_outputs([output, receipt])
+            return 0, {}
+        descriptors=(selection_fd, rule_fd, descriptor)
         if fallback and getattr(FALLBACK_LOCK_STATE,'descriptor',None) is not None:
             descriptors+=(FALLBACK_LOCK_STATE.descriptor,)
         inherited = {'pass_fds': descriptors} if os.name != 'nt' else {}
@@ -166,10 +195,11 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.jobs <= 8: raise ValueError('LAAJ_JOBS_INVALID')
     if not 0 < args.process_timeout <= 3600: raise ValueError('LAAJ_TIMEOUT_INVALID')
-    ids = select_items([line.strip() for line in sys.stdin if line.strip()], args.evaluation_path, args.crawling_path, args.max_items)
+    candidates = [line.strip() for line in sys.stdin if line.strip()]
     if args.action == 'eligible-count':
-        print(len(ids))
+        print(len(select_items(candidates, args.evaluation_path, args.crawling_path, args.max_items)))
         return 0
+    ids = prepare_items(candidates, args.evaluation_path, args.crawling_path, args.max_items)
     result = run_jobs(ids, args)
     print(json.dumps(result,sort_keys=True))
     return 1 if result['failures'] else 0

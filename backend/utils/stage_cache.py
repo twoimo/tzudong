@@ -94,6 +94,24 @@ def complete(receipt: Path, expected: str, outputs: list[Path]) -> None:
                                     sort_keys=True).encode() + b"\n")
 
 
+def certified(receipt: Path, outputs: list[Path]) -> bool:
+    """A consumer must not use a producer's uncertified output."""
+    try:
+        expected = json.loads(receipt.read_bytes()).get('inputHash')
+        return isinstance(expected, str) and bool(expected) and reusable(receipt, expected, outputs)
+    except (OSError, ValueError, TypeError, AttributeError):
+        return False
+
+
+def retire_outputs(paths: list[Path]) -> None:
+    """Remove obsolete active inputs while preserving their exact bytes."""
+    for path in paths:
+        if path.is_file():
+            archive = path.parent / '.superseded' / (path.name + '.' + digest_bytes(path.read_bytes()))
+            archive.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(path, archive)
+
+
 @contextmanager
 def stage_lock(receipt: Path) -> Iterator[int]:
     """Single writer; POSIX callers may pass the descriptor to a live child."""
@@ -145,7 +163,7 @@ def run_stage(receipt: Path, inputs: list[Path], outputs: list[Path], command: l
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("check", "complete", "fingerprint", "scan", "run"))
+    parser.add_argument("action", choices=("check", "certified", "complete", "fingerprint", "scan", "run"))
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--input", type=Path, action="append", default=[])
     parser.add_argument("--metadata", type=Path, action="append", default=[])
@@ -154,11 +172,14 @@ def main() -> int:
     parser.add_argument("--setting", action="append", default=[])
     parser.add_argument("--expected", default=None)
     parser.add_argument("--scan-dir", type=Path)
+    parser.add_argument("--scan-additional-dir", type=Path, action="append", default=[])
     parser.add_argument("--force", action='store_true')
     argv=sys.argv[1:]
     separator=argv.index('--') if '--' in argv else len(argv)
     args = parser.parse_args(argv[:separator])
     try:
+        if args.action == 'certified':
+            return 0 if certified(args.receipt, args.output) else 1
         if args.action == 'run':
             return run_stage(args.receipt,args.input,args.output,argv[separator+1:],
                              metadata=args.metadata,assets=args.asset,settings=args.setting,force=args.force)
@@ -167,8 +188,9 @@ def main() -> int:
                 return 1
             asset_digests = [input_digest(path) for path in args.asset]
             import re
-            for source in sorted(args.scan_dir.glob("*.jsonl")):
-                item = source.stem
+            items = sorted({source.stem for directory in [args.scan_dir, *args.scan_additional_dir]
+                            for source in directory.glob('*.jsonl')})
+            for item in items:
                 if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", item):
                     return 1
                 substitute = lambda path: Path(str(path).replace("{id}", item))

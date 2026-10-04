@@ -40,7 +40,7 @@ if str(BACKEND_ROOT) not in sys.path:
 from utils.jsonl_utils import load_last_jsonl_record
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.privacy_log import safe_error_name
-from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock
+from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock, retire_outputs
 from utils.request_budget import ReadCoalescer, RequestPacer, retry_after_seconds
 
 # 한국 시간대
@@ -1328,7 +1328,7 @@ def main():
 
     if not selection_dir.exists():
         print("[ERROR] operation=rule_evaluation_input_unavailable code=SELECTION_DIRECTORY_MISSING")
-        return
+        return 1
 
     # video_id 수집
     video_ids = set()
@@ -1349,6 +1349,7 @@ def main():
         "total_restaurants": 0,
         "success_restaurants": 0,
         "fail_restaurants": 0,
+        "pending_results": 0,
     }
 
     for video_id in sorted(video_ids):
@@ -1375,12 +1376,21 @@ def main():
                 continue
             errors_before = naver_api_errors + ncp_api_errors
             result = process_one_line(data)
-            atomic_write(output_file, (json.dumps(result, ensure_ascii=False) + "\n").encode())
             # Transient failed matches must be retried, not certified as complete.
             results = result["evaluation_results"]["location_match_TF"]
+            encoded = (json.dumps(result, ensure_ascii=False) + "\n").encode()
+            pending_file = output_dir / '.pending' / output_file.name
             if (naver_api_errors + ncp_api_errors == errors_before
                     and all(row.get("match_status") != "failed" for row in results)):
+                atomic_write(output_file, encoded)
                 complete(receipt, input_hash, [output_file])
+                retire_outputs([pending_file])
+            else:
+                stats['pending_results'] += 1
+                laaj_receipt = evaluation_path / 'evaluation/laaj_results/.receipts' / receipt.name
+                with stage_lock(laaj_receipt):
+                    retire_outputs([output_file, receipt, laaj_receipt.parent.parent / output_file.name, laaj_receipt])
+                    atomic_write(pending_file, encoded)
 
         # 통계
         location_evals = result["evaluation_results"]["location_match_TF"]
@@ -1396,7 +1406,7 @@ def main():
             print(f"[OK] {stats['processed']}개 처리 완료...")
 
     print(f"\n{'='*50}")
-    print(f"[OK] Rule 평가 완료!")
+    print(f"[{'WARN' if stats['pending_results'] else 'OK'}] Rule 평가 완료!")
     print(f"   총 비디오: {stats['total']}개")
     print(f"   처리됨: {stats['processed']}개")
     print(f"   건너뜀: {stats['skipped']}개")
@@ -1408,7 +1418,8 @@ def main():
     cache_total = len(_geocode_jibun_cache) + len(_geocode_addresses_cache)
     print(f"   Geocode 캐시 항목: {cache_total}개")
     print(f"{'='*50}")
+    return 1 if stats['pending_results'] else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

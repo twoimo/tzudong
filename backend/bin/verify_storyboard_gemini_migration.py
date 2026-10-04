@@ -239,9 +239,39 @@ try:
             assert c.fetchone()[0]['job']['id']==retried['job']['id']
             raw['assertions']['explicit_operator_retry_creates_one_fresh_job']=True
             raw['migrations'].append({'file':uncertainty.name,'sha256':hashlib.sha256(uncertainty.read_bytes()).hexdigest()})
+            phase='compatible_claim_after_incompatible_queue'
+            c.execute("INSERT INTO public.admin_storyboard_production_workers(owner_id,token_sha256,models) VALUES (%s,%s,%s::jsonb) RETURNING id",(owner,'3'*64,json.dumps(models)))
+            capability_worker=str(c.fetchone()[0])
+            incompatible={**request,'providers':{**request['providers'],'image':{'id':'gemini-api','model':'gemini-3-pro-image'}}}
+            for _ in range(65):
+                queued={**incompatible,'requestId':str(uuid.uuid4())}
+                c.execute("SELECT public.storyboard_production_admin(%s,'create',NULL,NULL,%s::jsonb)",(owner,json.dumps(queued)))
+                c.fetchone()
+            compatible={**request,'requestId':str(uuid.uuid4())}
+            c.execute("SELECT public.storyboard_production_admin(%s,'create',NULL,NULL,%s::jsonb)",(owner,json.dumps(compatible)))
+            compatible_project=c.fetchone()[0]['project']['id']
+            c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(capability_worker,))
+            assert c.fetchone()[0]['job'] is None
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE status='queued'")
+            queue_before=c.fetchone()[0]
+            c.execute("SELECT proowner,proacl,prosecdef,proconfig,provolatile,proparallel FROM pg_proc WHERE oid='public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)'::regprocedure")
+            metadata_before=c.fetchone()
+            capability=ROOT/'backend/supabase/migrations/20261004023841_storyboard_claim_capability_order.sql'
+            c.execute(capability.read_text())
+            c.execute("SELECT proowner,proacl,prosecdef,proconfig,provolatile,proparallel FROM pg_proc WHERE oid='public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)'::regprocedure")
+            assert c.fetchone()==metadata_before
+            c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(capability_worker,))
+            compatible_claim=c.fetchone()[0]['job']
+            assert compatible_claim and compatible_claim['projectId']==compatible_project
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE status='queued'")
+            assert c.fetchone()[0]==queue_before-1
+            raw['assertions']['compatible_job_after_65_incompatible_jobs_is_claimed']=True
+            raw['assertions']['capability_filter_preserves_rpc_metadata_and_incompatible_jobs']=True
+            raw['migrations'].append({'file':capability.name,'sha256':hashlib.sha256(capability.read_bytes()).hexdigest()})
+            raw['claimAdmission']={'incompatibleAhead':65,'compatibleJobs':1,'beforeClaimed':0,'afterClaimed':1,'realProviderCalls':0}
             raw['passed'] = True
             raw['limitations'] = ['Synthetic fixture database only.', 'Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only.']
-    out = ROOT / 'apps/web/performance/ui-renewal-20261003' / f'storyboard-current-{args.chain}-verification.json'
+    out = ROOT / 'apps/web/performance/ui-renewal-20261003' / f'storyboard-claim-capability-{args.chain}-20261004.json'
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(raw, indent=2) + '\n')
     print(json.dumps({'passed': True, 'assertions': list(raw['assertions']), 'operationalDatabaseChanges': False}))

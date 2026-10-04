@@ -27,12 +27,33 @@ async function leases() {
     return Number(stdout.trim());
 }
 const responseBody = {candidates:[{content:{role:'model',parts:[{text:'{"ok":true}'}]}}],usageMetadata:{promptTokenCount:3,candidatesTokenCount:5,totalTokenCount:8}};
+test('release debt recovers in the same live process before admitting a new provider call', async () => {
+    const originalPython=process.env.RUN_DAILY_PYTHON || (await execute('python3',['-c','import sys;print(sys.executable)'])).stdout.trim();
+    const wrapper=path.join(directory,'release-wrapper');const flag=path.join(directory,'release-failed');
+    const previousPython=process.env.RUN_DAILY_PYTHON,previousFlag=process.env.FX_RELEASE_FAILURE;
+    fs.writeFileSync(wrapper,`#!${originalPython}\nimport os,sys,subprocess\nfrom pathlib import Path\nif '--lease' in sys.argv and Path(os.environ['FX_RELEASE_FAILURE']).exists():raise SystemExit(1)\nraise SystemExit(subprocess.run([${JSON.stringify(originalPython)},*sys.argv[1:]],env=os.environ).returncode)\n`,{mode:0o700});
+    process.env.RUN_DAILY_PYTHON=wrapper;process.env.FX_RELEASE_FAILURE=flag;
+    let calls=0;
+    try {
+        fs.writeFileSync(flag,'fixture');
+        assert.equal(await withProjectBudget(async()=>{calls++;return 'settled';}),'settled');
+        assert.equal(await leases(),1);
+        await assert.rejects(withProjectBudget(async()=>{calls++;return 'must-not-start';}),/PROVIDER_BUDGET_UNAVAILABLE/);
+        assert.equal(calls,1);
+        fs.unlinkSync(flag);
+        assert.equal(await withProjectBudget(async()=>{calls++;return 'next';},{acquireTimeoutMs:1000}),'next');
+        assert.equal(calls,2);assert.equal(await leases(),0);
+    } finally {
+        if(previousPython===undefined)delete process.env.RUN_DAILY_PYTHON;else process.env.RUN_DAILY_PYTHON=previousPython;
+        if(previousFlag===undefined)delete process.env.FX_RELEASE_FAILURE;else process.env.FX_RELEASE_FAILURE=previousFlag;
+    }
+});
 async function removeFixtureLeases(budgetPath) {
     await execute(process.env.RUN_DAILY_PYTHON || 'python3', ['-c',
         'import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute("DELETE FROM leases"); c.commit(); c.close()', budgetPath]);
 }
 
-test('successful paid result survives a real lease-release storage failure', async () => {
+test('successful result releases the captured acquisition scope even if the caller changes its environment', async () => {
     const originalPath=process.env.GEMINI_BUDGET_PATH;let calls=0;
     const expected={text:'settled-result',usageMetadata:{totalTokenCount:8}};
     try {
@@ -47,7 +68,7 @@ test('successful paid result survives a real lease-release storage failure', asy
     assert.equal(await leases(),0);
 });
 
-test('provider error identity survives cooldown and release storage failures', async () => {
+test('provider error identity survives caller environment changes during cooldown and release', async () => {
     const originalPath=process.env.GEMINI_BUDGET_PATH;
     const expected=Object.assign(new Error('synthetic-provider-failure'),{headers:{'retry-after':'1'}});
     try {
