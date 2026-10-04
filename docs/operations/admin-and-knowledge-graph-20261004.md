@@ -165,3 +165,15 @@ Mac M5 Max/18CPU/128GiB/macOS26.6.2/Python3.14.8의 component 실험이다. base
 운영 보조도 상태·정렬·목록 선택·상세 및 모바일 Sheet로 통일했다. 소스 조회 함수는 유지한다. 합성390/834/1423의 read-model 목록·상세 선택3조건이 통과했다. 오류 모니터링의 소스는 같은 CMS 구조지만 실제 region/DSN/읽기 연결은 미설정이다. 최종3조건은 모두 not-configured로 분류했다. 이전 중간 보고서가 바뀐 문구를 인식하지 못한 상태는 보존하며 Sentry 연결/오류 목록 성공 근거로 사용하지 않는다. typed data-admin-sentry-state와 audit unavailable marker로 검증기를 보완했다.
 
 CMS 관련 통합 native/compat parity는3254 logical inputs/진단0이다. Sentry route와 실제 feed 검사를 임의의 한 Bun 프로세스에 합치면 module mock 때문에6개가 실패했다. 저장소 run-unit-tests.mjs가 두 파일을 원래 분리하도록 지정함을 확인했고 실제 feed의 지정된 독립 실행8개는 통과했다. 서비스 로직을 바꾸어 mock 오염을 숨기지 않았으며 이 임의 합친 실행은 whole-suite green 증빙이 아니다.
+
+
+## 운영 receipt archive와 fresh chain 경계
+
+이미 적용된115554 final verifier와123034 identity correction의 원래 SQL bytes/version/name을 그대로 운영 receipt archive에 보관하고 자동 fresh migration 목록에서 분리했다. 실제78행 readback의 statement/array SHA에 바인딩했으며, historical ledger나 다른 applied source는 변경하지 않았다. PG15 source catalog 검증은 fresh chain 이후 별도의 read-only dispatcher로 실행한다. hosted 실행 표시·가짜 applied alias·gate 완화는 없다. 신규 deferred 판단 재분류는 추가 migration이며 현재 source/test만 준비했고 운영에는 적용하지 않았다.
+
+전체 canonical source replay1회는 exit0/122.977초/PG15.8/Node24.21.0/Python3.14.8이었다. artifact55개 manifest·checksum 검증이 통과하고 catalog1917행 및 tuple SQL은 기존 결과와 byte 동일하다. 시작HEAD3d91e75f, metadata와 종료HEAD7c7e1eed로 다른 웹 커밋이 진행됐으며 관련194입력은 시작·종료 byte 동일하다(집합SHA5b4326bd74a843731136c9c7cf7edc2d52bed73276331c6a3976aa3e3c61913e). 해당 동작을 전체 commit3d91 또는 독립2회 재생으로 바꾸어 표시하지 않는다. 운영·provider 호출0, task 자원 잔존0, 다른 컨테이너·볼륨·네트워크 보존이다. canonical retained proof는 catalog-replay-20261005/observation.json·related-source-binding.json·validation.json·artifact-map이다. 운영78행 증빙은 그대로 별도로 유지한다.
+
+
+7c7e1eed의 production source와 같은 분리된 설치 환경에서 Next16.3.8/React19.3/Node24.21 production build와48개 static page 생성이 통과했다. TS/TSX/CSS/MJS/JSON 대조에서 production source 차이는0이며, performance 증빙·테스트1개·task tsconfig preview include의 차이는 별도였다. route CSS raw는home193609/general372392/admin383123/deferred193609bytes이며 ceiling 안이다. 추가된 task build include2개만 제거했다. refresh-history의 후속 응답 불확실 보호 변경은 이 build 범위에 없으며 별도로 검증한다.
+
+PR7c7e1eed의 Admin CI 실패를 같은103개 cohort에서 재현했다(102pass/1fail). 이전 배너 grid/aria-current 문자열 기대값이 새360px inspector/aria-pressed와 맞지 않았고 실제 browser CMS/keyboard는 이미 확인했다. 선택 의미·읽기 잠금·키보드 upload 기대를 유지하며 해당 기존 assertion2곳을 정합했다. 실패한13개 parity cohort의 재실행은13pass/0fail이다. 새 PR head의 전체 CI 완료는 별도로 읽어야 한다.

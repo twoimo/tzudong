@@ -223,11 +223,11 @@ describe("mobile and desktop parity source contracts", () => {
     const bannerSource = source("app/admin/banners/page.tsx");
 
     expect(bannerSource).toContain(
-      "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
+      "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(bannerSource).toContain('role="list" aria-label="배너 목록"');
     expect(bannerSource).toContain(
-      'aria-current={isSelected ? "true" : undefined}',
+      'aria-pressed={isSelected}',
     );
     expect(bannerSource).toContain("데스크톱 배너");
     expect(bannerSource).toContain("모바일 팝업");
