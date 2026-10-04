@@ -13,6 +13,7 @@ const isolated = new Set([
   'db-conflict-checker.test.ts',
   'require-admin-fail-closed.test.ts',
   'shorten-target-allowlist.test.ts',
+  'local-loopback-mutation-origin.test.ts',
 ]);
 
 const files = readdirSync(root, { recursive: true, withFileTypes: true })

@@ -31,7 +31,23 @@ function expectedOrigin(request: Request, env: NodeJS.ProcessEnv) {
   if (!production) {
     const requestOrigin = parseCanonicalOrigin(new URL(request.url).origin, false);
     const requestHost = requestOrigin ? new URL(requestOrigin).hostname : '';
-    if (requestOrigin && LOOPBACK_HOSTS.has(requestHost)) return requestOrigin;
+    if (requestOrigin && LOOPBACK_HOSTS.has(requestHost)) {
+      // NextURL normalizes loopback IPs to localhost. Recover only the explicit
+      // local origin whose host matches the actual request; forwarded headers
+      // and production origins never acquire an alias exception.
+      const localConfigured = configured ? parseCanonicalOrigin(configured, false) : null;
+      if (localConfigured) {
+        const target = new URL(localConfigured);
+        const normalized = new URL(requestOrigin);
+        if (
+          LOOPBACK_HOSTS.has(target.hostname)
+          && target.protocol === normalized.protocol
+          && target.port === normalized.port
+          && request.headers.get('host')?.trim() === target.host
+        ) return localConfigured;
+      }
+      return requestOrigin;
+    }
   }
   if (configured) return parseCanonicalOrigin(configured, production);
   if (production) return null;
