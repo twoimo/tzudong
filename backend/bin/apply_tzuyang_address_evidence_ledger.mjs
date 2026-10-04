@@ -576,7 +576,7 @@ function buildPayload(row, nowIso, adminUserId, receipt) {
 
 async function loadRuntimeEnv() {
   const { default: dotenv } = await import('dotenv');
-  dotenv.config({ path: path.join(BACKEND_ROOT, '.env'), override: false });
+  dotenv.config({ path: path.join(BACKEND_ROOT, '.env'), override: false, quiet: true });
 }
 
 async function createDatabaseClient() {

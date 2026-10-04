@@ -562,7 +562,7 @@ export async function main(argv = process.argv.slice(2)) {
       } catch {
         throw new Error('DOTENV_RUNTIME_UNAVAILABLE');
       }
-      dotenv.config({ path: path.join(BACKEND_ROOT, '.env'), override: false });
+      dotenv.config({ path: path.join(BACKEND_ROOT, '.env'), override: false, quiet: true });
     }
     let anchors = null;
     let anchorFailure = null;
