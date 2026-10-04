@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, truncate, writeFile } from "node
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { benchmarkInstallerMatches, buildBenchmarkDecision, isRetryableWarmupFailure, publishFailureEvidence, runWarmup, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
-import { validateBenchmarkReportDocument, verifyPublishedBenchmarkDirectory } from "../scripts/verify-typecheck-benchmark-report.mjs";
+import { validateBenchmarkReportDocument, validateRejectedWarmupRaw, verifyPublishedBenchmarkDirectory } from "../scripts/verify-typecheck-benchmark-report.mjs";
 
 const root = resolve(import.meta.dir, "..");
 const read = (file: string) => readFileSync(resolve(root, file), "utf8");
@@ -202,6 +202,34 @@ function cadenceFailure(rawOutput: string) {
     }),
   };
 }
+
+test("rejected warm-up rows must match the exact summary that authorized recovery", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-bindings-"));
+  const output = join(directory, "warmup-native.ndjson");
+  try {
+    const failure = cadenceFailure(output);
+    await writeFile(output, failure.contents, { flag: "wx" });
+    const summary = failure.error.samplerEvidence.summary;
+    await validateRejectedWarmupRaw(output, summary);
+    for (const patch of [
+      { samples: summary.samples + 1 }, { peakRssBytes: summary.peakRssBytes + 1 },
+      { maximumGapMs: summary.maximumGapMs + 1 }, { rootPid: summary.rootPid + 1 },
+      { rootStartIdentity: String(BigInt(summary.rootStartIdentity) + 1n) },
+      { output: "warmup-compat.ndjson" },
+    ]) await expect(validateRejectedWarmupRaw(output, { ...summary, ...patch })).rejects.toThrow();
+    await expect(validateRejectedWarmupRaw(output, null)).rejects.toThrow();
+    let calls = 0;
+    await expect(runWarmup("native", {}, directory, { native: 0, compat: 0 }, async () => {}, async (_kind: string, _profile: unknown, file: string) => {
+      calls++;
+      const mismatch = cadenceFailure(file);
+      mismatch.error.samplerEvidence.summary.samples += 1;
+      // This setup file already exists; preserve its bytes for the readback.
+      throw mismatch.error;
+    })).rejects.toThrow();
+    expect(calls).toBe(1);
+    expect(await readFile(output, "utf8")).toBe(failure.contents);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 async function warmupSample(rawOutput: string, reject: boolean) {
   if (reject) {

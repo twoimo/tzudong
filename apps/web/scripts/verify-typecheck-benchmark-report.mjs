@@ -167,14 +167,20 @@ function validSamplerSummary(summary, rawOutput) {
   return exactKeys(summary, ['schemaVersion', 'rootPid', 'rootStartIdentity', 'requestedIntervalMs', 'maximumAllowedGapMs', 'samples', 'peakRssBytes', 'maximumGapMs', 'terminalObserved', 'valid', 'invalidReasons', 'output']) && summary.schemaVersion === 2 && Number.isInteger(summary.rootPid) && summary.rootPid > 0 && typeof summary.rootStartIdentity === 'string' && /^\d+$/.test(summary.rootStartIdentity) && summary.requestedIntervalMs === 10 && summary.maximumAllowedGapMs === 60 && Number.isInteger(summary.samples) && summary.samples >= 3 && summary.samples <= TYPECHECK_BENCHMARK_MAX_RAW_ROWS && Number.isSafeInteger(summary.peakRssBytes) && summary.peakRssBytes > 0 && finite(summary.maximumGapMs) && summary.maximumGapMs >= 0 && summary.maximumGapMs <= 60 && summary.terminalObserved === true && summary.valid === true && Array.isArray(summary.invalidReasons) && summary.invalidReasons.length === 0 && summary.output === rawOutput;
 }
 function warmupName(kind, retry) { return retry === 1 ? `warmup-${kind}.ndjson` : `warmup-${kind}-attempt-${retry}.ndjson`; }
+function validRejectedSamplerSummary(summary, rawOutput) {
+  return record(summary) && summary.valid === false
+    && exactJson(summary.invalidReasons, ['sampling-gap-exceeded'])
+    && finite(summary.maximumGapMs) && summary.maximumGapMs > 60
+    && validSamplerSummary({ ...summary, valid: true, invalidReasons: [], maximumGapMs: 60 }, rawOutput);
+}
 function validOutcomeShape(outcome, schemaVersion) {
   if (!record(outcome) || !['warmup', 'measured'].includes(outcome.phase) || !['native', 'compat'].includes(outcome.kind) || typeof outcome.rawOutput !== 'string' || !(outcome.rawSha256 === null || sha(outcome.rawSha256, 64))) return false;
   if (outcome.phase === 'warmup' && schemaVersion === 4) return exactKeys(outcome, ['phase', 'kind', 'durationMs', 'rawOutput', 'rawSha256', 'summary']) && finite(outcome.durationMs) && outcome.durationMs > 0 && outcome.rawOutput === `warmup-${outcome.kind}.ndjson` && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput);
   const hasSummary = Object.hasOwn(outcome, 'summary');
-  const expectedKeys = ['phase', ...(outcome.phase === 'measured' ? ['position'] : []), 'retry', 'kind', 'accepted', 'rawOutput', 'rawSha256', 'failure', ...(hasSummary ? ['durationMs', 'summary'] : [])];
+  const expectedKeys = ['phase', ...(outcome.phase === 'measured' ? ['position'] : []), 'retry', 'kind', 'accepted', 'rawOutput', 'rawSha256', 'failure', ...(hasSummary ? (outcome.phase === 'warmup' && outcome.accepted === false ? ['summary'] : ['durationMs', 'summary']) : [])];
   if (!exactKeys(outcome, expectedKeys) || (outcome.phase === 'measured' && (!Number.isInteger(outcome.position) || outcome.position < 1 || outcome.position > 18)) || ![1, 2, 3].includes(outcome.retry) || ![true, false].includes(outcome.accepted) || outcome.rawOutput !== (outcome.phase === 'warmup' ? warmupName(outcome.kind, outcome.retry) : `${String(outcome.position).padStart(2, '0')}-${outcome.kind}-attempt-${outcome.retry}.ndjson`)) return false;
   if (outcome.accepted === true) return outcome.failure === null && sha(outcome.rawSha256, 64) && hasSummary && finite(outcome.durationMs) && outcome.durationMs > 0 && validSamplerSummary(outcome.summary, outcome.rawOutput);
-  if (outcome.phase === 'warmup') return outcome.failure === 'TYPECHECK_SAMPLER_SUMMARY_INVALID' && sha(outcome.rawSha256, 64) && !hasSummary;
+  if (outcome.phase === 'warmup') return outcome.failure === 'TYPECHECK_SAMPLER_SUMMARY_INVALID' && sha(outcome.rawSha256, 64) && hasSummary && validRejectedSamplerSummary(outcome.summary, outcome.rawOutput);
   if (typeof outcome.failure !== 'string' || !OUTCOME_FAILURE_CODES.has(outcome.failure)) return false;
   return hasSummary ? outcome.failure === 'TYPECHECK_COMPILER_EVIDENCE_INVALID' && finite(outcome.durationMs) && outcome.durationMs > 0 && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput) : true;
 }
@@ -236,24 +242,28 @@ export async function validateRawFile(file, summary) {
   if (rows.length !== summary.samples || peak !== summary.peakRssBytes || maximumGap !== summary.maximumGapMs) throw new Error('Benchmark raw aggregates do not match the sampler summary');
 }
 
-export async function validateRejectedWarmupRaw(file) {
+export async function validateRejectedWarmupRaw(file, summary) {
+  if (!validRejectedSamplerSummary(summary, path.basename(file))) throw new Error('Rejected warm-up summary is invalid');
   await validateRawFile(file, null);
   const rows = (await readFile(file, 'utf8')).trimEnd().split('\n').filter(Boolean).map((line) => JSON.parse(line));
   let previous = null; let gapSeen = false;
   if (rows.length < 3) throw new Error('Rejected warm-up cadence evidence is missing');
-  const rootIdentity = rows[0].rootIdentity;
+  const rootIdentity = summary.rootStartIdentity;
+  let peak = 0; let maximumGap = 0;
   const identities = new Map();
   for (const row of rows) {
     const gap = previous === null ? 0 : row.monotonicMs - previous;
     if (gap > 60) gapSeen = true;
-    if (!rootIdentity || row.rootIdentity !== rootIdentity || row.observedGapMs !== gap || gap < 0 || row.hostPressurePercent > 80 || !row.processes.some((process) => process.startIdentity === rootIdentity) || !exactJson(row.errors, gap > 60 ? ['sampling-gap-exceeded'] : [])) throw new Error('Rejected warm-up is not a cadence-only failure');
+    if (!rootIdentity || row.rootIdentity !== rootIdentity || row.observedGapMs !== gap || gap < 0 || row.hostPressurePercent > 80 || !row.processes.some((process) => process.pid === summary.rootPid && process.startIdentity === rootIdentity) || !exactJson(row.errors, gap > 60 ? ['sampling-gap-exceeded'] : [])) throw new Error('Rejected warm-up is not a cadence-only failure');
     for (const process of row.processes) {
       if (identities.has(process.pid) && identities.get(process.pid) !== process.startIdentity) throw new Error('Rejected warm-up process identity changed');
       identities.set(process.pid, process.startIdentity);
     }
     previous = row.monotonicMs;
+    peak = Math.max(peak, row.includedRssBytes); maximumGap = Math.max(maximumGap, gap);
   }
   if (!gapSeen) throw new Error('Rejected warm-up cadence failure was not observed');
+  if (rows.length !== summary.samples || peak !== summary.peakRssBytes || maximumGap !== summary.maximumGapMs) throw new Error('Rejected warm-up raw aggregates do not match the sampler summary');
 }
 
 export async function verifyPublishedBenchmarkDirectory(options) {
@@ -305,8 +315,8 @@ export async function verifyPublishedBenchmarkDirectory(options) {
       const rawPath = path.join(directory, 'raw', attempt.rawOutput);
       if (await digestFile(rawPath) !== attempt.rawSha256) throw new Error('Benchmark raw attempt hash is invalid');
       const outcome = outcomes.find((candidate) => candidate.rawOutput === attempt.rawOutput);
-      await validateRawFile(rawPath, outcome?.summary ?? null);
-      if (outcome.phase === 'warmup' && outcome.accepted === false) await validateRejectedWarmupRaw(rawPath);
+      if (outcome.phase === 'warmup' && outcome.accepted === false) await validateRejectedWarmupRaw(rawPath, outcome.summary);
+      else await validateRawFile(rawPath, outcome?.summary ?? null);
     }
   }
   const attemptByName = new Map(rawEvidence.attempts.map((attempt) => [attempt.rawOutput, attempt.rawSha256]));

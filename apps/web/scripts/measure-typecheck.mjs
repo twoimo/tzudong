@@ -305,6 +305,8 @@ export function isRetryableWarmupFailure(error) {
   return error?.code === 'TYPECHECK_SAMPLER_SUMMARY_INVALID'
     && evidence?.compilerClean === true && evidence.code === 1 && !evidence.signal && !evidence.errorCode
     && summary?.schemaVersion === 2 && summary.valid === false && summary.terminalObserved === true
+    && Object.keys(summary).sort().join(',') === 'invalidReasons,maximumAllowedGapMs,maximumGapMs,output,peakRssBytes,requestedIntervalMs,rootPid,rootStartIdentity,samples,schemaVersion,terminalObserved,valid'
+    && typeof summary.output === 'string'
     && summary.requestedIntervalMs === 10 && summary.maximumAllowedGapMs === 60
     && Number.isInteger(summary.samples) && summary.samples >= 3 && summary.samples <= 20_000
     && Number.isSafeInteger(summary.peakRssBytes) && summary.peakRssBytes > 0
@@ -330,10 +332,13 @@ export async function runWarmup(kind, profile, rawDirectory, invalidRuns, record
       return { kind, retry, durationMs: result.durationMs, rawOutput: path.basename(rawOutput), rawSha256 };
     }
     invalidRuns[kind] += 1;
-    await recordOutcome({ phase: 'warmup', kind, retry, accepted: false, rawOutput: path.basename(rawOutput), rawSha256, failure: sampleOutcomeFailureCode(error) });
     let retryable = isRetryableWarmupFailure(error);
+    const summary = retryable ? { ...error.samplerEvidence.summary,
+      invalidReasons: [...error.samplerEvidence.summary.invalidReasons],
+      output: path.basename(error.samplerEvidence.summary.output) } : null;
+    await recordOutcome({ phase: 'warmup', kind, retry, accepted: false, rawOutput: path.basename(rawOutput), rawSha256, failure: sampleOutcomeFailureCode(error), summary });
     if (retryable) {
-      try { await validateRejectedWarmupRaw(rawOutput); } catch { retryable = false; }
+      try { await validateRejectedWarmupRaw(rawOutput, summary); } catch { retryable = false; }
     }
     if (!retryable || retry === 3 || invalidRuns[kind] >= 3) {
       throw Object.assign(sampleFailure(0, retry, kind, error), { code: sampleOutcomeFailureCode(error) });
