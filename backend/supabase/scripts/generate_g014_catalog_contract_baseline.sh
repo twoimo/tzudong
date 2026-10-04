@@ -1776,6 +1776,8 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
+    g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
+    g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \
     postgres-image-00000000000001-auth-schema.sql pre-20260214-overlap-classification.jsonl \
     reconstruction-compatibility-exclusions.jsonl reconstruction-compatibility-relocations.jsonl reconstruction-source-members.tsv \
     storage-container-migration-files.tsv storage-inventory-files.tsv storage-migration-inventory-source-map.tsv storage-migration-ledger.tsv \

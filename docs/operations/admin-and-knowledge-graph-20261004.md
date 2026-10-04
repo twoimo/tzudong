@@ -128,3 +128,16 @@ CI의 layout/naming 검사는 새 backend/knowledge_graph 패키지의 소유 �
 service_role의 운영 read RPC는 요청50건/반환50건/전체1659건/hasMore=true를 반환했다. JSON text188983bytes, n=1이다. 실제 전후 지연·전송량 비교 실험이 아니므로 개선율·95% CI·금액 절감을 추정하지 않는다. anon/authenticated EXECUTE는 모두false다. 운영 status의 판단 엔진은Gemini3.8Flash/restaurant-review-v1/승인 전 판단 필수/claim당 최대1회로 확인했다.
 
 `rollout-preflight/hosted-*-readback*.json`과 SHA가 실제 receipt다. PG15 replay adapter의 verified-existing/legacy-contract-preserved는 현재 소스의 로컬 읽기 검증이며 운영 DDL 또는 최종 assertions 실행 receipt로 재사용하지 않는다. 운영 배포는 아직 수행하지 않았고, 병행PR3114와의 소스 결합 후 보호된 develop→data→main 승격·live SHA/readback이 남는다.
+
+
+## 2026-10-05 다이어그램 중심 화면·결합 소스 검증
+
+후속 요청에 따라 기본 화면은 공통 헤더와 다이어그램만 남겼다. 통계/실행 목록/환경/설명 accordion은 기본에서0개이며, 실행 관리는 상단 버튼, 단계 근거는 노드 선택의 패널로 옮겼다. 실행 확인/적용/readback 함수는 유지했다. SVG의 percent-height/ResizeObserver 순환 때문에 처음 높이가 작게 측정되는 문제는 캔버스에 절대 배치한 host로 수정했다.
+
+1423px에서 다이어그램 높이는205→865px(+660px/+322.0%), 작업 패널 내 높이 비율은32.2→92.8%(+60.6%p)다. 390px에서는291→578px(+287px/+98.6%), 비율40.0→82.5%(+42.5%p)다. 기본 노출 문자271→129(−142/−52.4%). viewport별 n=1의 합성 DOM 관측이며95% CI는 추정하지 않는다. 처리시간·금액 개선으로 해석하지 않는다.
+
+390/834/1423 렌더3건과 상태4건이 통과했다. 노드8/간선8, 잘림0, pageError0, 실제 server-bound POST0, 합성 확인/적용2건이다. consoleError14건은 합성 Realtime handshake10건과 의도된 HTTP/차단4건으로 분리해 기록했다. Enter/Space/방향키와 Escape 후 포커스 복귀를 검증했다. 관련26개 검사245assertions가 통과했다.
+
+PR3114의 develop 변경을 결합한 source9e5a6b6의 분리된 설치 환경에서 전체 web2965pass/9skip/0fail(16 Bun batches), Next16.3.8/React19.3 build 및 CSS 경계, native/compat parity(진단0), layout/supply-chain49개, clean source의 orchestration22모듈213개 검증이 통과했다. 이후 다이어그램 변경의 관련26개 및 새 Gemini SDK2.24에서 Node25개가 통과했다. 기존18792/18793/18794 미리보기와 사용자 작업은 보존했으며 설치/화면 검증은 별도 체크아웃과18810/18811/18812 합성 환경에서 수행했다.
+
+CI generate 실패는 타입 생성 단계 이전의 catalog artifact 비교였다. 새 PG15 검증 SQL/receipt4개가 artifact-manifest에서 빠졌음을 확인해 생성 목록에 등록했다. 비교기의 파일 집합/순서/SHA/양쪽 증빙 검사는 그대로다. 회귀21개가 누락/변조/체크섬 재작성 후 불일치 거부를 검증했다. 전체 CI replay의 최종 통과는 새 PR head에서 확인해야 하며, 운영 배포 완료로 표시하지 않는다.

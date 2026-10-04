@@ -3,13 +3,15 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useEffect, useRef, useState } from "react";
-import { RefreshCw, ChevronRight, Plus, Workflow } from "lucide-react";
+import { RefreshCw, ChevronRight, SlidersHorizontal, Workflow } from "lucide-react";
 import { PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION } from "@/lib/admin/pipeline-control";
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput, type PipelineActionPreview } from "@/lib/admin/pipeline-action-preview";
 import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, PIPELINE_FLOW_DOCUMENT, PIPELINE_JOB_LABELS, type PipelineStageId } from "@/lib/admin/pipeline-flow-view-model";
 import { isRecord } from "@/lib/admin/normalize-evaluation-record";
 import { PipelineFlowDiagram, formatPipelineDuration, COMPACT_STAGE_LABELS } from "./PipelineFlowDiagram";
+import styles from "./PipelineFlowDiagram.module.css";
 
 const ACTIVE_JOB_STATUSES = new Set(["Queued", "Fetching", "Inserting"]);
 const ACTION_LABELS = { enqueue: "수집 실행", pause: "일시 정지", resume: "다시 시작", cancel: "실행 취소" };
@@ -52,7 +54,6 @@ export function AdminPipelineDashboard() {
   const [selected, setSelected] = useState<PipelineStageId>("collect");
   const [detailOpen, setDetailOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
-  const controlsPanel = useRef<HTMLDetailsElement>(null);
   const selectStage = (id: PipelineStageId) => { setSelected(id); setDetailOpen(true); };
   const selectedStage = stages.find(stage => stage.id === selected)!;
   const [enqueueTarget, setEnqueueTarget] = useState("tzuyang");
@@ -105,46 +106,26 @@ export function AdminPipelineDashboard() {
   const controlsReady = snapshot?.source === "job_api" && !snapshot.partial && !busy && !preview;
   const gauges = snapshot?.gauges ?? {};
   const failureCount = reliable && snapshot.source === "job_api" ? snapshot.failures.length : null;
-  const metrics = [
-    ["진행·대기", reliable && jobs.every(job => job.status !== "Unknown") ? jobs.filter(job => ACTIVE_JOB_STATUSES.has(job.status)).length : "—"],
-    ["정지", reliable && jobs.every(job => job.status !== "Unknown") ? jobs.filter(job => job.status === "Paused").length : "—"],
-    ["최근 실패", failureCount ?? "—"],
-    ["대상", reliable && snapshot.source === "job_api" ? snapshot.targets.length : "—"],
-  ];
-  return <section data-admin-pipeline-dashboard="true" className="flex min-w-0 flex-col gap-2">
-    <AdminPageHeader title="크롤러 파이프라인" titleAs="h2" icon={Workflow}
-      data-admin-module-header="compact" data-admin-module-header-module="pipeline"
-      summary={<span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">{source}</span>}
-      actions={<>
-        <button type="button" aria-label="새로고침" title="새로고침" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border disabled:opacity-50" disabled={query.isFetching || manifestQuery.isFetching} onClick={() => void refresh()}><RefreshCw size={13} className={query.isFetching || manifestQuery.isFetching ? "animate-spin" : ""} /></button>
-        <button type="button" data-pipeline-open-controls aria-expanded={controlsOpen || !!preview} aria-controls="pipeline-control-panel" className={`${buttonClass} bg-primary text-primary-foreground`} onClick={() => { setControlsOpen(true); requestAnimationFrame(() => controlsPanel.current?.scrollIntoView({ block: "nearest" })); }}><Plus size={13} />새 실행</button>
-      </>}
-    />
-    {query.isError ? <p role="status" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs">실행 상태를 불러올 수 없습니다.</p> : query.isPending ? <p role="status" className="text-xs text-muted-foreground">실행 상태 조회 중</p> : snapshot?.partial ? <p role="status" className="text-xs text-muted-foreground">일부 상태 미확인 · 실행 제어 잠김</p> : null}
-    <div className="grid grid-cols-4 divide-x divide-border rounded-lg border border-border bg-card">{metrics.map(([label, value]) => <div key={label} className="px-2.5 py-1.5"><div className="text-[11px] text-muted-foreground">{label}</div><div className="text-lg font-semibold leading-6 tabular-nums">{value}</div></div>)}</div>
-    <section className="min-w-0 rounded-lg border border-border bg-card" aria-labelledby="pipeline-flow-title" data-pipeline-flow-document={PIPELINE_FLOW_DOCUMENT}>
-      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-border px-3 py-2"><h3 id="pipeline-flow-title" className="text-sm font-semibold">데이터 흐름</h3><span className="text-[11px] text-muted-foreground">{manifestLabel} · 조회 {formatCheckedAt(manifest?.checkedAt)}</span></div>
-      <div className="px-2"><PipelineFlowDiagram stages={stages} selected={selected} onSelect={selectStage} /></div>
-      <section data-pipeline-stage-detail={selected} aria-labelledby="pipeline-stage-title" className="min-w-0 border-t border-border px-3 py-2">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <h3 id="pipeline-stage-title" className="text-xs font-semibold">{selectedStage.label}</h3>
-          <span className="text-[11px] text-muted-foreground">{COMPACT_STAGE_LABELS[selectedStage.state]}</span>
-          {selectedStage.state !== "manual" ? <span className="text-[11px] tabular-nums text-muted-foreground">{formatPipelineDuration(selectedStage.durationSeconds)}</span> : null}
-          <div className="ml-auto flex items-center gap-2">
-            {selectedStage.id === "review" ? <Link href="/admin?module=restaurants" className="inline-flex items-center gap-0.5 text-xs font-medium">맛집 검수<ChevronRight size={12} /></Link> : null}
-            <button type="button" data-pipeline-toggle-detail aria-expanded={detailOpen} aria-controls="pipeline-stage-body" className="min-h-7 text-xs text-muted-foreground" onClick={() => setDetailOpen(value => !value)}>{detailOpen ? "접기" : "상세"}</button>
-          </div>
-        </div>
-        <div id="pipeline-stage-body" hidden={!detailOpen} className="pt-2">
-          <div className="grid gap-1.5 text-xs sm:grid-cols-2"><p><span className="mr-2 text-muted-foreground">입력</span>{selectedStage.input}</p><p><span className="mr-2 text-muted-foreground">출력</span>{selectedStage.output}</p></div>
-          <p data-pipeline-explanation className="mt-1.5 text-xs leading-5 text-muted-foreground">{selectedStage.contract}</p>
-          <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">세부 기록·근거</summary>
-            {selectedStage.details.length ? <ul className="mt-2 divide-y divide-border rounded-md border border-border">{selectedStage.details.map(detail => <li key={detail.name} className="flex flex-wrap justify-between gap-x-3 gap-y-1 px-2 py-1.5"><span className="break-words">{detail.name}</span><span>{detail.event ? ({ completed: "완료", failed: "실패", optional_skipped: "선택 생략", downstream_skipped: "선행 단계로 생략" })[detail.event.status] : "미확인"} · {formatPipelineDuration(detail.event?.durationSeconds ?? null)}</span></li>)}</ul> : null}
-            <p className="mt-2 break-all">{selectedStage.source}</p><p>backend/ARCHITECTURE.md · backend/DATA_CONTRACTS.md</p><p className="break-all">{PIPELINE_FLOW_DOCUMENT}</p>
-          </details>
-        </div>
-      </section>
-    </section>
+  const statusLabel = query.isError ? "실행 조회 실패" : query.isPending ? "실행 조회 중" : snapshot?.partial ? "일부 미확인" : source;
+  const changeControlsOpen = (open: boolean) => {
+    if (inFlight.current) return;
+    setControlsOpen(open);
+    if (!open) { setPreview(null); setConfirmationText(""); setLiveConfirmationText(""); setShowGrafana(false); }
+  };
+  return <section data-admin-pipeline-dashboard="true" className={styles.workspace}>
+    <Sheet open={controlsOpen} onOpenChange={changeControlsOpen}>
+      <AdminPageHeader title="크롤러 파이프라인" titleAs="h2" icon={Workflow}
+        data-admin-module-header="compact" data-admin-module-header-module="pipeline"
+        summary={<span role="status" className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">{statusLabel}</span>}
+        actions={<>
+          <button type="button" aria-label="새로고침" title="새로고침" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border disabled:opacity-50" disabled={query.isFetching || manifestQuery.isFetching} onClick={() => void refresh()}><RefreshCw size={13} className={query.isFetching || manifestQuery.isFetching ? "animate-spin" : ""} /></button>
+          <SheetTrigger asChild><button type="button" data-pipeline-open-controls className={buttonClass}><SlidersHorizontal size={13} />실행 관리</button></SheetTrigger>
+        </>}
+      />
+      <SheetContent data-pipeline-controls-drawer className="w-full overflow-y-auto p-4 sm:max-w-xl" onEscapeKeyDown={event => { if (busy) event.preventDefault(); }} onInteractOutside={event => { if (busy) event.preventDefault(); }}>
+        <SheetHeader className="pr-8 text-left"><SheetTitle className="text-base">실행 관리</SheetTitle><SheetDescription>{source} · {snapshot ? formatCheckedAt(new Date(query.dataUpdatedAt).toISOString()) : "조회 미확인"}</SheetDescription></SheetHeader>
+        <div className="mt-4 space-y-3">
+          {query.isError ? <p role="status" className="rounded-md border border-destructive/30 p-3 text-xs">실행 상태를 불러올 수 없습니다.</p> : query.isPending ? <p role="status" className="text-xs text-muted-foreground">실행 상태 조회 중</p> : snapshot?.partial ? <p role="status" className="text-xs text-muted-foreground">일부 상태 미확인 · 실행 제어 잠김</p> : null}
     <section className="min-w-0 rounded-lg border border-border bg-card" aria-labelledby="pipeline-jobs-title">
       <div className="flex flex-wrap items-center justify-between gap-1 border-b border-border px-3 py-2"><h3 id="pipeline-jobs-title" className="text-sm font-semibold">{snapshot?.source === "github_actions" ? "최근 실행" : "현재 실행"}</h3><span className="text-[11px] text-muted-foreground">{snapshot ? formatCheckedAt(new Date(query.dataUpdatedAt).toISOString()) : "조회 미확인"}</span></div>
       <ul data-admin-pipeline-jobs="true" className="divide-y divide-border">
@@ -156,8 +137,9 @@ export function AdminPipelineDashboard() {
       {!jobs.length ? <p className="px-3 py-3 text-xs text-muted-foreground">{!snapshot ? "실행 목록 미확인" : snapshot.partial ? "유효한 실행 목록을 확인하지 못했습니다." : snapshot.source === "github_actions" ? "최근 실행 기록 없음" : "현재 등록된 실행 없음"}</p> : null}
       <details data-admin-pipeline-failures="true" className="border-t border-border px-3 py-2 text-xs"><summary className="cursor-pointer font-medium">최근 실패 {failureCount === null ? "미확인" : `${failureCount}건`}</summary>{failureCount === null ? <p className="pt-2 text-muted-foreground">실패 목록을 확인할 수 없습니다.</p> : failureCount === 0 ? <p className="pt-2 text-muted-foreground">조회 범위에 실패 기록이 없습니다.</p> : <ul className="mt-2 space-y-2">{snapshot?.failures.map(job => <li key={job.id} className="break-all">{job.target} · {job.id}<span className="ml-2 text-muted-foreground">{modeLabel(job.dry_run)}</span></li>)}</ul>}</details>
     </section>
-    <details ref={controlsPanel} id="pipeline-control-panel" className="rounded-lg border border-border bg-card px-3 py-2" open={controlsOpen || !!preview} onToggle={event => setControlsOpen(event.currentTarget.open)}>
-      <summary className="cursor-pointer text-sm font-semibold">실행 제어</summary>
+
+          <section aria-labelledby="pipeline-new-run-title" className="rounded-lg border border-border bg-card px-3 py-2">
+            <h3 id="pipeline-new-run-title" className="text-sm font-semibold">새 실행</h3>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="space-y-1 text-xs"><span>수집 대상</span><input className={inputClass} value={enqueueTarget} maxLength={128} disabled={!!preview || busy} onChange={event => setEnqueueTarget(event.target.value)} list="pipeline-target-options" /><datalist id="pipeline-target-options">{snapshot?.targets.map(target => <option key={target.id} value={target.id} />)}</datalist></label>
         <label className="space-y-1 text-xs"><span>실행 환경</span><select className={inputClass} value={enqueueProfile} disabled={!!preview || busy} onChange={event => setEnqueueProfile(event.target.value as "heavy_local" | "lite_gha")}><option value="heavy_local">로컬 · 미디어 처리 포함</option><option value="lite_gha">GitHub Actions · 경량 처리</option></select></label>
@@ -170,8 +152,9 @@ export function AdminPipelineDashboard() {
         {preview.action === "enqueue" && !preview.dryRun ? <label className="block space-y-1 text-xs"><span>실제 수집 확인 ({PIPELINE_LIVE_ENQUEUE_CONFIRMATION})</span><input className={inputClass} value={liveConfirmationText} onChange={event => setLiveConfirmationText(event.target.value)} autoComplete="off" /></label> : null}
         <div className="flex gap-2"><button type="button" data-pipeline-apply disabled={busy || confirmationText !== PIPELINE_CONTROL_CONFIRMATION_TEXT || (preview.action === "enqueue" && !preview.dryRun && liveConfirmationText !== PIPELINE_LIVE_ENQUEUE_CONFIRMATION)} onClick={() => void apply()} className={`${buttonClass} bg-primary text-primary-foreground`}>확인 후 적용</button><button type="button" disabled={busy} className={buttonClass} onClick={() => setPreview(null)}>닫기</button></div>
       </div> : null}
-    </details>
-    {message ? <p role="status" className="rounded-md border border-border px-3 py-2 text-xs">{message}</p> : null}
+
+          </section>
+          {message ? <p role="status" className="rounded-md border border-border px-3 py-2 text-xs">{message}</p> : null}
     <details className="rounded-lg border border-border bg-card px-3 py-2 text-xs"><summary className="cursor-pointer font-medium">기록·환경 정보</summary><p data-pipeline-explanation className="mt-2 text-[11px] leading-5 text-muted-foreground">단계는 마지막 배치 기록이며 현재 실행과 연결되지 않습니다. 완료 기록은 실제 저장·검수 승인을 뜻하지 않습니다. 실패 목록은 최근 최대 20건입니다.{manifest?.invalidEvents ? " 일부 기록 형식 미확인." : ""}</p><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px] text-muted-foreground">
       <span data-admin-pipeline-hardware="true">장비: {snapshot?.hardware ?? "미확인"}</span><span data-admin-pipeline-data-env="true">데이터 환경: {snapshot?.environment ?? "미확인"}</span>
       <span data-admin-pipeline-compute-profile="true">처리 설정: {jobs[0]?.profile ?? "미확인"}</span><span data-admin-pipeline-data-sink="true">저장 환경: {snapshot?.environment ?? "미확인"}</span><span data-admin-pipeline-active-step="true">처리 단계: {jobs[0]?.adapter_index ?? "미확인"}</span>
@@ -180,5 +163,30 @@ export function AdminPipelineDashboard() {
     {grafanaAllowed ? <button type="button" aria-expanded={showGrafana} onClick={() => setShowGrafana(value => !value)} className={`${buttonClass} mt-2`}>{showGrafana ? "자원 차트 닫기" : "로컬 자원 차트 열기"}</button> : null}
     {grafanaAllowed && showGrafana ? <iframe data-admin-pipeline-grafana="true" title="pipeline frozen counters" src={`${LOOPBACK_GRAFANA_DASHBOARD_PREFIX}?orgId=1`} className="h-64 w-full border border-border" /> : null}
     </details>
+
+        </div>
+      </SheetContent>
+    </Sheet>
+    <div className={styles.canvas} data-pipeline-canvas data-pipeline-flow-document={PIPELINE_FLOW_DOCUMENT}>
+      <span className={styles.recordLabel} role="status">마지막 배치 · {manifestLabel}</span>
+      <PipelineFlowDiagram stages={stages} selected={selected} onSelect={selectStage} />
+    </div>
+    <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+      <SheetContent data-pipeline-stage-detail={selected} className="w-full overflow-y-auto p-4 sm:max-w-lg" onOpenAutoFocus={event => { event.preventDefault(); document.getElementById("pipeline-stage-title")?.focus(); }} onCloseAutoFocus={event => { event.preventDefault(); document.querySelector<SVGGElement>(`[data-pipeline-stage="${selected}"]`)?.focus(); }}>
+        <SheetHeader className="pr-8 text-left"><SheetTitle id="pipeline-stage-title" tabIndex={-1} className="text-base outline-none">{selectedStage.label}</SheetTitle><SheetDescription>{COMPACT_STAGE_LABELS[selectedStage.state]}{selectedStage.state !== "manual" ? ` · ${formatPipelineDuration(selectedStage.durationSeconds)}` : ""}</SheetDescription></SheetHeader>
+        <div id="pipeline-stage-body" className="mt-4 space-y-3">
+          <p className="text-xs text-muted-foreground">마지막 배치 기록 · {manifestLabel} · {formatCheckedAt(manifest?.checkedAt)}</p>
+          <div className="grid gap-1.5 text-xs sm:grid-cols-2"><p><span className="mr-2 text-muted-foreground">입력</span>{selectedStage.input}</p><p><span className="mr-2 text-muted-foreground">출력</span>{selectedStage.output}</p></div>
+          <p data-pipeline-explanation className="mt-1.5 text-xs leading-5 text-muted-foreground">{selectedStage.contract}</p>
+          <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">세부 기록·근거</summary>
+            {selectedStage.details.length ? <ul className="mt-2 divide-y divide-border rounded-md border border-border">{selectedStage.details.map(detail => <li key={detail.name} className="flex flex-wrap justify-between gap-x-3 gap-y-1 px-2 py-1.5"><span className="break-words">{detail.name}</span><span>{detail.event ? ({ completed: "완료", failed: "실패", optional_skipped: "선택 생략", downstream_skipped: "선행 단계로 생략" })[detail.event.status] : "미확인"} · {formatPipelineDuration(detail.event?.durationSeconds ?? null)}</span></li>)}</ul> : null}
+            <p className="mt-2 break-all">{selectedStage.source}</p><p>backend/ARCHITECTURE.md · backend/DATA_CONTRACTS.md</p><p className="break-all">{PIPELINE_FLOW_DOCUMENT}</p>
+          </details>
+
+          <p className="text-xs leading-5 text-muted-foreground">현재 실행과 별도인 기록입니다. 완료 기록은 실제 저장·검수 승인을 뜻하지 않습니다.</p>
+          {selectedStage.id === "review" ? <Link href="/admin?module=restaurants" className={buttonClass}>맛집 검수<ChevronRight size={12} /></Link> : null}
+        </div>
+      </SheetContent>
+    </Sheet>
   </section>;
 }
