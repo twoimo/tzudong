@@ -87,3 +87,13 @@ UI는 실제 judgmentEngine metadata가 있을 때만 Gemini 검수 상태를 �
 ## 전체 DB 재생 후속 증빙
 
 깨끗한 관련 source commit에서 G014 전체 canonical 로컬 replay를 완료했다. 격리 Docker 설정은 사용자 자격 증명/플러그인 경로를 복사하지 않고 설치된 Compose v2 호환 CLI를 사용한다. Docker plugin2.39.4와 standalone5.6.0의 차이를 확인했고 현재 전체 실행은 standalone5.6.0이다. 관련50개 검사, source/schema/권한 재생과 산출물 checksum 검증이 통과했다. 기존 컨테이너·설정·데이터를 정리하거나 운영 DB를 호출하지 않았다. `apps/web/performance/catalog-replay-20261004/local-replay-summary.json`이 source commit, 실제 server version, catalog row 수와 원시 산출물을 연결한다. 이는 격리 source 재생이며 운영 현재 catalog·마이그레이션 이력·배포/readback을 대체하지 않는다.
+
+## 운영 버전 혼합 경로 보완
+
+운영 migration ledger는62개, 최신20261003113923이고 새 Gemini 판단 SQL은 미적용이다. 실제 정책은 enabled=false·version1·회당50/하루50·마지막 실행 null로 읽었다. 새 API의 start/run과 새 worker는 mutation 이전에 실제 status.judgmentEngine의 provider/model/promptVersion/requiredForApproval/maxCallsPerClaim을 확인한다. 부재·불일치에서는 tick·claim·provider 호출0으로 중단한다. 읽기와 중지는 유지하며 legacy UI의 실행/설정은 비활성화한다. 관련 API/DTO15개·worker28개 검사가 통과했다. 신·구 버전 조합에서 기존 SQL의 추천 없는 승인을 호출하지 않는다.
+
+운영 Vercel의 정확한 프로젝트·GitHub twoimo/tzudong·root apps/web·Node24.x를 공식 connector와CLI56.5.0으로 확인했다. 현재 production alias의 READY deployment에서 rollback SHA `ca235e250957c4360ad713ffd29e118c11cc5b7c`를 새로 읽었다. 이 상태와 소스 재생은 운영 배포/readback과 구분한다.
+
+원시 DB 재생 SQL 두 파일의 원본 trailing whitespace는 byte/hash 보존을 위해 유지했다. 해당 원시 산출물의 whitespace 진단을 소스 오류와 혼동하지 않았으며 실제 신규 코드의 diff 검사와50개 원시 checksum 검증은 통과했다.
+
+후속 admission UI는 390/1423px67개 assertion·가로 넘침10개 관측0·예상 밖 오류0을 확인했다. 이전70개 보고서는 원시 SHA 그대로 유지한다. 새 API/DTO15개·worker28개·native/compat 진단0·최종 Next build·CSS 경계가 통과했다. 마지막 전체 suite2,756/skip9 이후 변경은 해당 경로만 재검사했으며 전체 숫자를 추정해 늘리지 않았다.

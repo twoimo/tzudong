@@ -274,6 +274,19 @@ confidence나 자유 서술, 개인정보를 추천에 넣지 마세요.
 
 def run_once(rpc, *, recheck_limit=0, crawling_root=None, evaluator=evaluate, request_id=None):
     if recheck_limit not in (0,1): raise ValueError('review_recheck_limit_invalid')
+    # Older tick implementations approve immediately. Admit the deployed read
+    # contract before any tick/claim/save, including a --recheck-limit 0 run.
+    try:
+        snapshot=rpc('restaurant_review_automation_status',{})
+    except Exception:
+        raise WorkerFailure('gemini_engine_unavailable') from None
+    engine=snapshot.get('judgmentEngine') if isinstance(snapshot,dict) else None
+    if (not isinstance(engine,dict) or engine.get('provider')!='gemini'
+        or engine.get('model')!='gemini-3.8-flash'
+        or engine.get('promptVersion')!='restaurant-review-v1'
+        or engine.get('requiredForApproval') is not True
+        or type(engine.get('maxCallsPerClaim')) is not int or engine['maxCallsPerClaim']!=1):
+        raise WorkerFailure('gemini_engine_unavailable')
     summary=rpc('restaurant_review_automation_tick',{'request_id':request_id or str(uuid.uuid4())})
     summary['recheckAttempted']=False
     summary['recheckOutstanding']=False
@@ -341,6 +354,9 @@ def main(argv=None):
             args.receipt_file.chmod(0o600)
         print(json.dumps(receipt))
         return 0
+    except WorkerFailure as error:
+        code='REVIEW_AUTOMATION_GEMINI_ENGINE_UNAVAILABLE' if error.code=='gemini_engine_unavailable' else 'REVIEW_AUTOMATION_RESULT_UNCONFIRMED'
+        print(code,file=sys.stderr); return 1
     except Exception:
         print('REVIEW_AUTOMATION_RESULT_UNCONFIRMED',file=sys.stderr); return 1
 

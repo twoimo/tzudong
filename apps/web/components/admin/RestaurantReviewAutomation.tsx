@@ -70,7 +70,13 @@ export function RestaurantReviewAutomation({ onApplied, controlsTarget }: { onAp
     setBusy(true); setError('');
     try {
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!response.ok) throw new Error(response.status === 409 ? 'stale' : 'failed');
+      if (!response.ok) {
+        if (response.status === 503) {
+          const result: unknown = await response.json().catch(() => null);
+          if (result && typeof result === 'object' && 'error' in result && result.error === 'AUTOMATION_GEMINI_JUDGMENT_REQUIRED') throw new Error('gemini-required');
+        }
+        throw new Error(response.status === 409 ? 'stale' : 'failed');
+      }
       const value = await response.json();
       if (String(body.action).startsWith('preview')) {
         const next = parseReviewAutomationPreview(value);
@@ -80,7 +86,7 @@ export function RestaurantReviewAutomation({ onApplied, controlsTarget }: { onAp
       else { const next = parseReviewAutomationSnapshot(value); lastRun.current = next.policy.last_run_at; setSnapshot(next); setPreview(null); if (body.action === 'run') requestId.current = null; applied.current(); }
     } catch (cause) {
       await load();
-      setError(cause instanceof Error && cause.message === 'stale' ? '검수 데이터가 바뀌었습니다. 미리보기를 다시 확인하세요.' : '결과를 확인하지 못했습니다. 상태를 새로고침한 뒤 확인하세요.');
+      setError(cause instanceof Error && cause.message === 'gemini-required' ? 'Gemini 검수 연결을 확인한 뒤 실행하세요.' : cause instanceof Error && cause.message === 'stale' ? '검수 데이터가 바뀌었습니다. 미리보기를 다시 확인하세요.' : '결과를 확인하지 못했습니다. 상태를 새로고침한 뒤 확인하세요.');
       // The run id survives an uncertain response. Subsequent attempts read the
       // same durable run, rather than creating a second mutation.
     } finally { inFlight.current = false; setBusy(false); }
@@ -103,15 +109,15 @@ export function RestaurantReviewAutomation({ onApplied, controlsTarget }: { onAp
       <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
         <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
         <span className="text-xs font-medium">자동 운영</span>
-        <span className="text-xs text-muted-foreground" role="status">{policy ? policy.enabled ? snapshot?.judgmentEngine ? 'Gemini 검수 켜짐' : '켜짐 · 판단 연결 미확인' : '중지됨' : '상태 확인 중'}</span>
+        <span className="text-xs text-muted-foreground" role="status">{policy ? snapshot?.judgmentEngine ? policy.enabled ? 'Gemini 검수 켜짐' : '중지됨' : `${policy.enabled ? '켜짐' : '중지됨'} · 판단 연결 미확인` : '상태 확인 중'}</span>
       </span>
       {!controlsTarget && recent && <span className="text-xs tabular-nums">최근 승인 {recent.approved} · 보류 {recent.held} · 재검수 {recent.recheck} · 보호 {recent.protected}</span>}
       <div className="ml-auto flex shrink-0 items-center gap-1">
         <Button variant="ghost" size="sm" disabled={busy} onClick={() => { void load(); }} aria-label="자동 운영 상태 새로고침"><RefreshCw className="h-4 w-4" /></Button>
         {policy?.enabled ? <>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => { void send({ action: 'preview-run' }); }}>지금 실행</Button>
+          <Button variant="outline" size="sm" disabled={busy || !snapshot?.judgmentEngine} onClick={() => { void send({ action: 'preview-run' }); }}>지금 실행</Button>
           <Button variant="outline" size="sm" disabled={busy} onClick={() => { void send({ action: 'preview-stop' }); }}><Pause className="mr-1 h-3.5 w-3.5" />중지</Button>
-        </> : <Button size="sm" disabled={busy || !policy} onClick={() => { setExpanded(true); }}><Play className="mr-1 h-3.5 w-3.5" />설정</Button>}
+        </> : <Button size="sm" disabled={busy || !policy || !snapshot?.judgmentEngine} onClick={() => { setExpanded(true); }}><Play className="mr-1 h-3.5 w-3.5" />설정</Button>}
         <Button variant="ghost" size="sm" onClick={() => setExpanded(value => !value)} aria-expanded={expanded}>이력·정책</Button>
       </div>
     </div>;
@@ -125,7 +131,7 @@ export function RestaurantReviewAutomation({ onApplied, controlsTarget }: { onAp
       <div className="flex flex-wrap items-end gap-3">
         <label className="space-y-1">회당 처리 (1–200)<Input type="number" min={1} max={200} value={batch} disabled={busy || policy?.enabled} onChange={event => setBatch(Number(event.target.value))} className="h-11 w-28 sm:h-8" /></label>
         <label className="space-y-1">하루 승인 (1–200)<Input type="number" min={1} max={200} value={daily} disabled={busy || policy?.enabled} onChange={event => setDaily(Number(event.target.value))} className="h-11 w-28 sm:h-8" /></label>
-        {!policy?.enabled && <Button size="sm" disabled={busy || !policy || !Number.isInteger(batch) || batch < 1 || batch > 200 || !Number.isInteger(daily) || daily < 1 || daily > 200} onClick={() => { void send({ action: 'preview', batchSize: batch, dailyLimit: daily }); }}>후보 미리보기</Button>}
+        {!policy?.enabled && <Button size="sm" disabled={busy || !policy || !snapshot?.judgmentEngine || !Number.isInteger(batch) || batch < 1 || batch > 200 || !Number.isInteger(daily) || daily < 1 || daily > 200} onClick={() => { void send({ action: 'preview', batchSize: batch, dailyLimit: daily }); }}>후보 미리보기</Button>}
         {policy?.enabled && <span>적용 정책: 회당 {policy.batch_size}건 · 하루 승인 {policy.daily_limit}건</span>}
       </div>
       {snapshot && <p>재검수 대기 {snapshot.queue.queued} · 실행 {snapshot.queue.running} · 확인 필요 {snapshot.queue.failed}</p>}

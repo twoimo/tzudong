@@ -15,6 +15,78 @@ from backend.bin import review_rule_evaluation
 
 
 class ReviewWorkerTests(unittest.TestCase):
+    @staticmethod
+    def judgment_status():
+        return {'judgmentEngine':{'provider':'gemini','model':'gemini-3.8-flash','promptVersion':'restaurant-review-v1',
+                                 'requiredForApproval':True,'maxCallsPerClaim':1}}
+
+    def test_missing_foreign_stale_or_malformed_engine_blocks_every_mutation(self):
+        valid=self.judgment_status()['judgmentEngine']
+        engines=[None,{},[],{**valid,'provider':'foreign'},{**valid,'model':'gemini-3.7-flash'},
+                 {**valid,'promptVersion':'restaurant-review-v0'},{**valid,'requiredForApproval':False},
+                 {**valid,'requiredForApproval':1},{**valid,'maxCallsPerClaim':2},
+                 {**valid,'maxCallsPerClaim':True},{**valid,'maxCallsPerClaim':1.0}]
+        engines.extend({key:value for key,value in valid.items() if key!=missing} for missing in valid)
+        snapshots=[None,[],{},*({'policy':{'enabled':enabled},'judgmentEngine':engine} for enabled in [True,False] for engine in engines)]
+        for limit in [0,1]:
+            for snapshot in snapshots:
+                with self.subTest(limit=limit,snapshot=snapshot):
+                    calls=[]
+                    def rpc(name,body):
+                        calls.append((name,body))
+                        self.assertEqual(name,'restaurant_review_automation_status','mutation before engine admission')
+                        return snapshot
+                    with self.assertRaises(worker.WorkerFailure) as raised:
+                        worker.run_once(rpc,recheck_limit=limit,evaluator=lambda *a,**k:self.fail('provider called'))
+                    self.assertEqual(raised.exception.code,'gemini_engine_unavailable')
+                    self.assertEqual(calls,[('restaurant_review_automation_status',{})])
+
+    def test_uncertain_engine_read_is_fixed_and_never_retried(self):
+        calls=[]
+        def rpc(name,body):
+            calls.append(name)
+            raise TimeoutError('private database diagnostics')
+        with self.assertRaises(worker.WorkerFailure) as raised:
+            worker.run_once(rpc,recheck_limit=1,evaluator=lambda *a,**k:self.fail('provider called'))
+        self.assertEqual(str(raised.exception),'gemini_engine_unavailable')
+        self.assertEqual(calls,['restaurant_review_automation_status'])
+
+    def test_new_engine_preserves_request_identity_and_zero_or_one_paid_slot(self):
+        request_id='b1b5cbb1-2922-46fb-bd1a-6477a6fd806d'
+        for limit in [0,1]:
+            calls=[];generations=[]
+            def rpc(name,body):
+                calls.append((name,body))
+                if name=='restaurant_review_automation_status':return self.judgment_status()
+                if name=='restaurant_review_automation_tick':return {'id':request_id,'approved':0}
+                if body['action']=='claim':return {'id':'fixture','restaurant':{},'decisionContext':{'inputSha256':'a'*64}}
+                if body['action']=='complete':return {'state':'applied'}
+                self.fail('unexpected RPC')
+            def evaluate(*args,**kwargs):
+                generations.append(kwargs['decision_context']);return {'gemini_decision':{}}
+            result=worker.run_once(rpc,recheck_limit=limit,evaluator=evaluate,request_id=request_id)
+            self.assertEqual(calls[0],('restaurant_review_automation_status',{}))
+            self.assertEqual(calls[1],('restaurant_review_automation_tick',{'request_id':request_id}))
+            self.assertEqual(result['recheckAttempted'],bool(limit))
+            self.assertEqual(len(generations),limit)
+            self.assertEqual(len(calls),2 if limit==0 else 5)
+            if limit:
+                self.assertEqual(calls[2][1]['action'],'claim')
+                self.assertEqual(calls[3][1]['action'],'complete')
+                self.assertEqual(calls[2][1]['token'],calls[3][1]['token'])
+                self.assertEqual(calls[4][0],'restaurant_review_automation_tick')
+                self.assertNotEqual(calls[4][1]['request_id'],request_id)
+
+    def test_cli_engine_admission_failure_exposes_only_fixed_code(self):
+        import contextlib,io
+        stderr=io.StringIO()
+        credentials=SimpleNamespace(url='https://aqlcofblfxdrjhhdmarw.supabase.co',service_role_key='synthetic')
+        with patch.object(worker,'resolve_privileged_supabase_rest_credentials',return_value=credentials), \
+             patch.object(worker,'run_once',side_effect=worker.WorkerFailure('gemini_engine_unavailable')), \
+             patch.object(worker,'urlopen',side_effect=AssertionError('unexpected network')),contextlib.redirect_stderr(stderr):
+            self.assertEqual(worker.main(['--recheck-limit','1']),1)
+        self.assertEqual(stderr.getvalue(),'REVIEW_AUTOMATION_GEMINI_ENGINE_UNAVAILABLE\n')
+
     def test_foreign_location_fallback_never_spends_a_second_gemini_call(self):
         # Do not read operator .env/key files while loading the actual shared
         # rule module. Its fallback must be blocked even with synthetic keys.
@@ -79,7 +151,7 @@ class ReviewWorkerTests(unittest.TestCase):
                 calls.append(name)
                 if name=='restaurant_review_automation_tick':return {}
                 if name=='restaurant_review_automation_worker':return None
-                return {'queue':{'queued':queued,'running':running}}
+                return {**self.judgment_status(),'queue':{'queued':queued,'running':running}}
             summary=worker.run_once(rpc,recheck_limit=1,evaluator=lambda *args:self.fail('provider called'))
             self.assertFalse(summary['recheckAttempted'])
             self.assertEqual(summary['recheckOutstanding'],bool(queued or running))
@@ -113,15 +185,18 @@ class ReviewWorkerTests(unittest.TestCase):
 
     def test_disabled_does_not_claim_or_call_provider(self):
         calls=[]
-        def rpc(name,body): calls.append(name); return {'disabled':True}
+        def rpc(name,body):
+            calls.append(name)
+            return self.judgment_status() if name=='restaurant_review_automation_status' else {'disabled':True}
         def fail(*args): self.fail('provider called')
         worker.run_once(rpc,recheck_limit=1,evaluator=fail)
-        self.assertEqual(calls,['restaurant_review_automation_tick'])
+        self.assertEqual(calls,['restaurant_review_automation_status','restaurant_review_automation_tick'])
 
     def test_provider_failure_is_minimized_and_not_retried(self):
         calls=[]; generations=[]
         def rpc(name,body):
             calls.append(body)
+            if name=='restaurant_review_automation_status':return self.judgment_status()
             if body.get('action')=='claim': return {'id':'fixture-item','restaurant':{'trace_id':'fixture'}}
             return {}
         def evaluate(*args,**kwargs): generations.append(1); raise RuntimeError('untrusted provider diagnostics')
@@ -134,6 +209,7 @@ class ReviewWorkerTests(unittest.TestCase):
         calls=[]; generations=[]
         def rpc(name,body):
             calls.append(body)
+            if name=='restaurant_review_automation_status':return self.judgment_status()
             if body.get('action')=='claim': return {'id':'fixture-item','restaurant':{}}
             if body.get('action')=='complete': raise TimeoutError()
             return {}
@@ -141,13 +217,14 @@ class ReviewWorkerTests(unittest.TestCase):
         with self.assertRaises(worker.WorkerFailure) as raised:worker.run_once(rpc,recheck_limit=1,evaluator=evaluate)
         self.assertEqual(raised.exception.code,'result_unconfirmed')
         self.assertEqual(len(generations),1)
-        self.assertEqual([x.get('action') for x in calls],[None,'claim','complete','read'])
+        self.assertEqual([x.get('action') for x in calls],[None,None,'claim','complete','read'])
 
     def test_lost_completion_ack_uses_only_readback(self):
         for state in ['applied','succeeded','cancelled','failed']:
             calls=[];generations=[]
             def rpc(name,body):
                 calls.append(body)
+                if name=='restaurant_review_automation_status':return self.judgment_status()
                 if body.get('action')=='claim':return {'id':'fixture','restaurant':{},'decisionContext':{'inputSha256':'a'*64}}
                 if body.get('action')=='complete':raise TimeoutError('private diagnostics')
                 if body.get('action')=='read':return {'state':state}
@@ -156,16 +233,17 @@ class ReviewWorkerTests(unittest.TestCase):
                 generations.append(kwargs['decision_context']);return {'evaluation_results':{}}
             worker.run_once(rpc,recheck_limit=1,evaluator=evaluate)
             self.assertEqual(generations,[{'inputSha256':'a'*64}])
-            self.assertEqual([c.get('action') for c in calls],[None,'claim','complete','read',None])
+            self.assertEqual([c.get('action') for c in calls],[None,None,'claim','complete','read',None])
 
     def test_uncertain_provider_is_failed_once_without_retry(self):
         calls=[]
         def rpc(name,body):
             calls.append(body)
+            if name=='restaurant_review_automation_status':return self.judgment_status()
             return {'id':'fixture','restaurant':{}} if body.get('action')=='claim' else {}
         def uncertain(*args,**kwargs):raise worker.WorkerFailure('gemini_result_uncertain')
         worker.run_once(rpc,recheck_limit=1,evaluator=uncertain)
-        self.assertEqual([c.get('action') for c in calls],[None,'claim','fail'])
+        self.assertEqual([c.get('action') for c in calls],[None,None,'claim','fail'])
         self.assertEqual(calls[-1]['result'],{'code':'gemini_result_uncertain'})
 
     def test_partial_completion_receipt_requires_readback_before_followup(self):
@@ -173,6 +251,7 @@ class ReviewWorkerTests(unittest.TestCase):
             calls=[]
             def rpc(name,body):
                 calls.append(body)
+                if name=='restaurant_review_automation_status':return self.judgment_status()
                 if body.get('action')=='claim':return {'id':'fixture','restaurant':{}}
                 if body.get('action')=='read':
                     if isinstance(readback,Exception):raise readback
@@ -181,7 +260,7 @@ class ReviewWorkerTests(unittest.TestCase):
             with self.assertRaises(worker.WorkerFailure) as raised:
                 worker.run_once(rpc,recheck_limit=1,evaluator=lambda *a,**k:{})
             self.assertEqual(raised.exception.code,'result_unconfirmed')
-            self.assertEqual([c.get('action') for c in calls],[None,'claim','complete','read'])
+            self.assertEqual([c.get('action') for c in calls],[None,None,'claim','complete','read'])
 
     def test_missing_original_never_launches_command(self):
         with tempfile.TemporaryDirectory() as folder:

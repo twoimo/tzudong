@@ -4,6 +4,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { isRecord } from '@/lib/admin/normalize-evaluation-record';
+import { isReviewJudgmentEngine } from '@/lib/admin/restaurant-review-automation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,9 +63,17 @@ export async function POST(request: Request) {
     }
     if (action === 'run' || action === 'stop') {
       if (action === 'run' && (typeof body.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.requestId))) return respond({ error: 'INVALID_REQUEST' }, 400);
+      if (action === 'run') {
+        const state = await rpc('restaurant_review_automation_status');
+        if (state.error) return errorResponse(state.error);
+        if (!isRecord(state.data) || !isReviewJudgmentEngine(state.data.judgmentEngine)) return respond({ error: 'AUTOMATION_GEMINI_JUDGMENT_REQUIRED' }, 503);
+      }
       const applied = await rpc('restaurant_review_automation_manual', { actor: auth.userId, action, expected_version: body.version, preview_hash: body.previewHash, request_id: action === 'run' ? body.requestId : null });
       return applied.error ? errorResponse(applied.error) : respond(applied.data);
     }
+    const state = await rpc('restaurant_review_automation_status');
+    if (state.error) return errorResponse(state.error);
+    if (!isRecord(state.data) || !isReviewJudgmentEngine(state.data.judgmentEngine)) return respond({ error: 'AUTOMATION_GEMINI_JUDGMENT_REQUIRED' }, 503);
     const applied = await rpc('restaurant_review_automation_configure', {
       actor: auth.userId, action, expected_version: body.version, preview_hash: body.previewHash ?? '', batch_size: batch, daily_limit: daily,
     });

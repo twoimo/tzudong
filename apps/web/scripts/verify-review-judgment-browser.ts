@@ -29,7 +29,10 @@ const sourcePaths = ['components/admin/RestaurantReviewAutomation.tsx', 'lib/adm
 const sources = () => sourcePaths.map(path => ({ path, sha256: hash(readFileSync(resolve(root, path))) }));
 const sourceStart = sources();
 const sourceHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-const output = resolve(root, 'performance/ui-renewal-20261003/review-judgment-browser-20261004.json');
+const admissionOnly = process.argv.includes('--admission');
+const previousReport = resolve(root, 'performance/ui-renewal-20261003/review-judgment-browser-20261004.json');
+const previousReportSha256 = admissionOnly ? hash(readFileSync(previousReport)) : null;
+const output = resolve(root, `performance/ui-renewal-20261003/review-judgment-browser-${admissionOnly ? 'admission-' : ''}20261004.json`);
 const stamp = '2026-10-04T09:00:00Z', uuid = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, '0')}`;
 const labels = ['합성 차단 이력', '합성 한도 이력', '합성 보류 이력'];
 const outcomes = ['blocked', 'deferred', 'hold'] as const, outcomeLabels = ['적용 차단', '한도 대기', '보류'];
@@ -144,15 +147,43 @@ try {
     await expect(automation.getByRole('status')).toHaveText('켜짐 · 판단 연결 미확인');
     check('legacy-does-not-claim-gemini-active', !(await automation.innerText()).includes('Gemini 검수 켜짐'));
     await measure(automation);
+    if (admissionOnly) {
+      await expect(automation.getByRole('button', { name: '지금 실행', exact: true })).toBeDisabled();
+      check('legacy-enabled-run-disabled', true);
+      await expect(automation.getByRole('button', { name: '중지', exact: true })).toBeEnabled();
+      check('legacy-enabled-stop-available', true);
+      phase = 'legacy-stop-preview';
+      await automation.getByRole('button', { name: '중지', exact: true }).click();
+      const stopPreview = page.getByRole('alertdialog');
+      await expect(stopPreview.getByRole('heading', { name: '자동 운영을 중지할까요?', exact: true })).toBeVisible();
+      check('legacy-stop-preview-works-without-engine', snapshot.policy.enabled && !snapshot.judgmentEngine);
+      await measure(stopPreview);
+      await stopPreview.getByRole('button', { name: '취소', exact: true }).click();
+      await expect(stopPreview).toHaveCount(0);
+      phase = 'legacy-stopped';
+      snapshot = { ...legacy(), policy: { ...legacy().policy, enabled: false } };
+      await automation.getByRole('button', { name: '자동 운영 상태 새로고침' }).click();
+      await expect(automation.getByRole('status')).toHaveText('중지됨 · 판단 연결 미확인');
+      await expect(automation.getByRole('button', { name: '설정', exact: true })).toBeDisabled();
+      check('legacy-stopped-settings-disabled', true);
+      await automation.getByRole('button', { name: '이력·정책', exact: true }).click();
+      await expect(details.getByRole('button', { name: '후보 미리보기', exact: true })).toBeDisabled();
+      check('legacy-stopped-preview-disabled', true);
+      check('legacy-cannot-send-start-or-run', events.every(event => event.action !== 'start' && event.action !== 'run'));
+      await measure(details);
+      await automation.getByRole('button', { name: '이력·정책', exact: true }).click();
+    }
     phase = 'engine'; snapshot = enabled();
     await automation.getByRole('button', { name: '자동 운영 상태 새로고침' }).click();
     await expect(automation.getByRole('status')).toHaveText('Gemini 검수 켜짐');
     check('verified-engine-status-rendered', true);
+    await expect(automation.getByRole('button', { name: '지금 실행', exact: true })).toBeEnabled();
+    check('verified-engine-run-enabled', true);
     await automation.getByRole('button', { name: '이력·정책', exact: true }).click();
     await expect(details.getByText('최근 승인 0 · 보류 1 · 재검수 0 · 보호 0', { exact: true })).toBeVisible();
     check('actual-approved-count-remains-zero', true);
     await measure(details);
-    for (let index = 0; index < outcomes.length; index++) {
+    for (let index = 0; index < (admissionOnly ? 0 : outcomes.length); index++) {
       phase = `detail-${outcomes[index]}`;
       const row = details.locator('li').filter({ hasText: labels[index] });
       await expect(row).toContainText(`Gemini 권장 승인 · 처리 ${outcomeLabels[index]}`);
@@ -221,6 +252,7 @@ try {
   check('no-local-network-failures', networkFailures === 0);
   check('no-unexpected-mutations', unexpectedMutationsBlocked === 0);
   check('source-stable-during-run', JSON.stringify(sourceStart) === JSON.stringify(sources()));
+  if (admissionOnly) check('previous-70-assertion-report-preserved', hash(readFileSync(previousReport)) === previousReportSha256);
 } catch (error) {
   failureCode = assertions.at(-1)?.passed === false ? assertions.at(-1)!.name : `${phase}:${error instanceof Error ? error.name : 'UNKNOWN_ERROR'}`;
 } finally {
@@ -230,7 +262,7 @@ try {
     counts: { schemaValidationCount, getAutomationCount, detailGetCount, readPostCount, runAttemptCount, externalBlocked, unexpectedMutationsBlocked,
       pageErrorCount, consoleErrorCount, expectedConsoleErrors, unexpectedConsoleErrors, networkFailures, forwardedMutations: 0, forwardedExternalRequests: 0, realProviderCalls: 0 },
     events, assertions, overflows,
-    scope: { syntheticRenderAndInteractionOnly: true, providerAccuracyEvaluated: false, deployedApiEvaluated: false, databaseMutationEvaluated: false, evaluationDetailFixtureUnmodified: true },
+    scope: { admissionOnly, previousReportSha256, syntheticRenderAndInteractionOnly: true, providerAccuracyEvaluated: false, deployedApiEvaluated: false, databaseMutationEvaluated: false, evaluationDetailFixtureUnmodified: true },
   };
   const body = JSON.stringify(report, null, 2) + '\n'; writeFileSync(output, body); writeFileSync(output + '.sha256', hash(body) + '\n');
   console.log(JSON.stringify({ passed: report.passed, failureCode, assertions: assertions.length, output }));

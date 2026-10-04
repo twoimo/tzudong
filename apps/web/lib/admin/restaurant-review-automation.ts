@@ -30,7 +30,7 @@ export function isReviewGeminiDecision(value: unknown): value is ReviewGeminiDec
     : codes.some(code => !positive.includes(code as typeof positive[number]));
 }
 
-function isJudgmentEngine(value: unknown): value is ReviewJudgmentEngine {
+export function isReviewJudgmentEngine(value: unknown): value is ReviewJudgmentEngine {
   return isRecord(value) && value.provider === 'gemini' && value.model === 'gemini-3.8-flash'
     && value.promptVersion === 'restaurant-review-v1' && value.requiredForApproval === true && value.maxCallsPerClaim === 1;
 }
@@ -44,7 +44,7 @@ export function parseReviewAutomationSnapshot(value: unknown): ReviewAutomationS
     || !value.items.every(item => isRecord(item) && id(item.id) && id(item.restaurant_id) && (item.restaurant_name === undefined || (typeof item.restaurant_name === 'string' && item.restaurant_name.length <= 160)) && typeof item.reason === 'string' && /^[a-z_]{1,64}$/.test(item.reason)
       && ['applied','queued','running','succeeded','failed','cancelled'].includes(String(item.state))
       && (item.geminiDecision == null || isReviewGeminiDecision(item.geminiDecision)))
-    || (value.judgmentEngine !== undefined && !isJudgmentEngine(value.judgmentEngine))) throw new Error('AUTOMATION_RESPONSE_INVALID');
+    || (value.judgmentEngine !== undefined && !isReviewJudgmentEngine(value.judgmentEngine))) throw new Error('AUTOMATION_RESPONSE_INVALID');
   return value as ReviewAutomationSnapshot;
 }
 
