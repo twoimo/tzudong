@@ -174,9 +174,30 @@ def membership_evidence(value, tab):
     if not valid or not isinstance(value.get("evidenceSha256"), str) or not SHA256.fullmatch(value["evidenceSha256"]):
         raise AnalysisError("MEMBERSHIP_EVIDENCE_REQUIRED")
     timestamp(value.get("observedAt"))
+    if "complete" in value and type(value["complete"]) is not bool:
+        raise AnalysisError("MEMBERSHIP_EVIDENCE_INVALID")
     if value.get("complete") is False:
         raise AnalysisError("MEMBERSHIP_EVIDENCE_PARTIAL")
-    return {key: value[key] for key in ("sourceUrl", "observedAt", "evidenceSha256")}
+    return {key: value[key] for key in ("sourceUrl", "observedAt", "evidenceSha256", "complete") if key in value}
+
+
+def admitted_membership(source):
+    """Recheck normalized provenance before using a saved paid result."""
+    tab = "streams" if isinstance(source, dict) and str(source.get("sourceUrl", "")).endswith("/streams") else "videos"
+    membership_evidence(source, tab)
+    if tab == "streams" and source.get("liveStatus") != "was_live":
+        raise AnalysisError("STREAM_LIVE_STATUS_INVALID")
+    if "liveStatus" in source and source["liveStatus"] not in ("not_live", "was_live"):
+        raise AnalysisError("STREAM_LIVE_STATUS_INVALID")
+    return tab
+
+
+def admitted_row(row):
+    tab = admitted_membership(row.get("membership"))
+    if row.get("kind", "completed_stream" if tab == "streams" else "video") != ("completed_stream" if tab == "streams" else "video"):
+        raise AnalysisError("MEMBERSHIP_EVIDENCE_INVALID")
+    if "liveStatus" in row and row["liveStatus"] not in ("not_live", "was_live"):
+        raise AnalysisError("STREAM_LIVE_STATUS_INVALID")
 
 
 def load_inventory(path: Path) -> tuple[list[dict], dict]:
@@ -190,8 +211,14 @@ def load_inventory(path: Path) -> tuple[list[dict], dict]:
         if not isinstance(row, dict) or not isinstance(row.get("videoId"), str) or not VIDEO_ID.fullmatch(row["videoId"]):
             raise AnalysisError("INVENTORY_INVALID")
         membership = row.get("membership")
-        if isinstance(membership, dict) and membership.get("shorts") is not None:
-            membership_evidence(membership["shorts"], "shorts")
+        if not isinstance(membership, dict):
+            raise AnalysisError("MEMBERSHIP_EVIDENCE_REQUIRED")
+        # Validate every supplied tab before shorts/live exclusion or duplicate
+        # merging can hide partial or malformed membership evidence.
+        for tab in ("videos", "streams", "shorts"):
+            if membership.get(tab) is not None:
+                membership_evidence(membership[tab], tab)
+        if membership.get("shorts") is not None:
             shorts.add(row["videoId"])
     stream_sources, live_statuses, excluded_live = {}, {}, {}
     for row in document["videos"]:
@@ -508,6 +535,7 @@ def validate_saved_evidence(evidence, row, config):
 
 
 def cached_state(state: Path, row, config):
+    admitted_row(row)
     directory, receipt_path, evidence_path = paths(state, row, config)
     expected = identity(row, config)
     if directory.is_symlink():
@@ -524,6 +552,7 @@ def cached_state(state: Path, row, config):
             raise AnalysisError("RECEIPT_CORRUPT")
         if receipt["state"] != "succeeded":
             return "readback_required"
+        admitted_membership(receipt.get("membershipEvidence"))
         if existing == receipt_path:
             matching = receipt
     if matching:
@@ -680,11 +709,13 @@ def readback(rows, state, config):
     result = {"phase": "readback", "recovered": 0, "unresolved": 0}
     for row in rows:
         try:
+            admitted_row(row)
             with file_lock(state / "locks" / ("video-" + row["videoId"] + ".lock")):
                 _, receipt_path, evidence_path = paths(state, row, config)
                 if not receipt_path.exists():
                     continue
                 receipt = checked_document(receipt_path)
+                admitted_membership(receipt.get("membershipEvidence"))
                 if receipt.get("state") == "succeeded":
                     if cached_state(state, row, config) != "reusable":
                         raise AnalysisError("READBACK_REQUIRED")

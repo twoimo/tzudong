@@ -11,8 +11,21 @@ const METRICS = ['visit_authenticity', 'rb_inference_score', 'rb_grounding_TF', 
 const fail = code => { throw Object.assign(new Error(code), { code }); };
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 
+function canonicalResponseModel(modelVersion) {
+  if (typeof modelVersion !== 'string') return null;
+  const version = modelVersion.replace(/^models\//, '');
+  if (version === MODEL) return MODEL;
+  // Gemini Model resource IDs permit {baseModelId}-{version}, e.g. -001.
+  // Accept only this fixed stable model's three-digit service revisions, never
+  // preview/latest/experimental aliases, dated labels, or another model family.
+  const prefix = `${MODEL}-`;
+  const revision = version.startsWith(prefix) ? version.slice(prefix.length) : '';
+  return revision.length === 3 && /^[0-9]{3}$/.test(revision) ? MODEL : null;
+}
+
 export function parseDecision(response, inputSha256, prompt) {
-  if (response?.modelVersion !== MODEL || response?.candidates?.length !== 1 || response.candidates[0]?.finishReason !== 'STOP')
+  const modelVersion = canonicalResponseModel(response?.modelVersion);
+  if (!modelVersion || response?.candidates?.length !== 1 || response.candidates[0]?.finishReason !== 'STOP')
     fail('gemini_decision_incomplete');
   let value;
   try { value = JSON.parse(requireGeminiText(response)); } catch { fail('gemini_decision_invalid'); }
@@ -29,7 +42,7 @@ export function parseDecision(response, inputSha256, prompt) {
   if (rec.decision !== 'approve' && !rec.evidenceCodes.some(code => !APPROVAL_CODES.includes(code)))
     fail('gemini_decision_invalid');
   return { evaluation: value.evaluation, gemini_decision: {
-    schemaVersion: 1, model: MODEL, modelVersion: response.modelVersion, promptVersion: PROMPT_VERSION,
+    schemaVersion: 1, model: MODEL, modelVersion, promptVersion: PROMPT_VERSION,
     inputSha256, promptSha256: createHash('sha256').update(prompt).digest('hex'),
     recommendation: rec.decision, evidenceCodes: rec.evidenceCodes,
   }};

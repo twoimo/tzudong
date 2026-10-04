@@ -392,6 +392,73 @@ class LongformAnalysisTests(unittest.TestCase):
         self.assertIsNone(usage["inputTokens"])
         self.assertFalse(usage["costVerified"])
 
+    def test_membership_completion_is_optional_but_strictly_boolean_when_present(self):
+        for complete in (None, True):
+            row = self.source_row()
+            if complete is not None:
+                row["membership"]["videos"]["complete"] = complete
+            rows, _ = module.load_inventory(self.inventory([row]))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual("complete" in rows[0]["membership"], complete is True)
+        for tab in ("videos", "streams", "shorts"):
+            for complete in (False, "false", "true", 0, 1, None, [], {}):
+                with self.subTest(tab=tab, complete=complete):
+                    row = self.stream_row() if tab == "streams" else self.source_row()
+                    row["membership"][tab] = {**self.membership(tab), "complete": complete}
+                    code = "MEMBERSHIP_EVIDENCE_PARTIAL" if complete is False else "MEMBERSHIP_EVIDENCE_INVALID"
+                    with self.offline_execution(), self.assertRaisesRegex(module.AnalysisError, code):
+                        module.load_inventory(self.inventory([row]))
+        # An exclusion must not hide uncertain evidence in another supplied tab.
+        for row in (self.source_row(), self.stream_row(status="is_live")):
+            row["membership"]["shorts"] = self.membership("shorts")
+            row["membership"]["videos"] = {**self.membership(), "complete": "false"}
+            with self.assertRaisesRegex(module.AnalysisError, "MEMBERSHIP_EVIDENCE_INVALID"):
+                module.load_inventory(self.inventory([row]))
+
+    def test_full_completion_requires_literal_true_full_range_and_no_limitations(self):
+        coverage = self.analysis()["coverage"]
+        invalid = [{**coverage, "complete": value} for value in (False, "true", "false", 0, 1, None, [], {})]
+        invalid += [{**coverage, "startSeconds": 1}, {**coverage, "endSeconds": 59},
+                    {**coverage, "limitations": ["media unavailable"]}]
+        for candidate in invalid:
+            with self.subTest(coverage=candidate), self.assertRaisesRegex(module.AnalysisError, "ANALYSIS_PARTIAL"):
+                module.validate_analysis({**self.analysis(), "coverage": candidate}, self.row)
+
+    def test_uncertain_current_membership_cannot_reuse_or_readback_a_valid_cache(self):
+        with self.execution(lambda argv, **kw: subprocess.CompletedProcess(argv, 0, self.report(), b"")):
+            module.execute([self.row], self.info, self.state, self.config, self.limits)
+        before = {path: path.read_bytes() for path in self.state.rglob("*.json")}
+        candidates = [{**self.row, "membership": {**self.row["membership"], "complete": value}}
+                      for value in (False, "false", "true", 0, 1, None)]
+        candidates += [{**self.row, "membership": self.membership("shorts")},
+                       {**self.row, "membership": {**self.membership("streams"), "liveStatus": "is_live"}},
+                       {**self.row, "liveStatus": "is_upcoming"}]
+        with self.offline_execution():
+            for row in candidates:
+                self.assertEqual(module.make_plan([row], self.info, self.state, self.config)["cache"]["corrupt"], 1)
+                result = module.execute([row], self.info, self.state, self.config, self.limits)
+                self.assertEqual((result["attempted"], result["reused"], result["blocked"]), (0, 0, 1))
+                self.assertEqual(module.readback([row], self.state, self.config)["unresolved"], 1)
+        self.assertEqual({path: path.read_bytes() for path in self.state.rglob("*.json")}, before)
+
+    def test_uncertain_saved_membership_blocks_reuse_and_completion_readback(self):
+        with self.execution(lambda argv, **kw: subprocess.CompletedProcess(argv, 0, self.report(), b"")):
+            module.execute([self.row], self.info, self.state, self.config, self.limits)
+        _, receipt_path, _ = module.paths(self.state, self.row, self.config)
+        receipt = module.checked_document(receipt_path)
+        candidates = [{**self.membership(), "complete": value} for value in (False, "false", "true", 0, 1, None)]
+        candidates += [None, self.membership("shorts"), {**self.membership("streams"), "liveStatus": "post_live"}]
+        with self.offline_execution():
+            for membership in candidates:
+                for state in ("succeeded", "running"):
+                    value = {**receipt, "state": state, "membershipEvidence": membership}
+                    module.atomic_document(receipt_path, value)
+                    before = receipt_path.read_bytes()
+                    result = module.execute([self.row], self.info, self.state, self.config, self.limits)
+                    self.assertEqual((result["attempted"], result["reused"], result["blocked"]), (0, 0, 1))
+                    self.assertEqual(module.readback([self.row], self.state, self.config)["unresolved"], 1)
+                    self.assertEqual(receipt_path.read_bytes(), before)
+
     def test_fresh_provenance_does_not_repeat_unchanged_video_analysis(self):
         with self.execution(lambda argv, **kw: subprocess.CompletedProcess(argv, 0, self.report(), b"")) as called:
             module.execute([self.row], self.info, self.state, self.config, self.limits)

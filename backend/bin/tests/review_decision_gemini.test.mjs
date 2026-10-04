@@ -18,12 +18,17 @@ function envelope(decision = 'approve') {
     evidenceCodes: decision === 'approve' ? APPROVAL_CODES : ['insufficient_evidence'] } };
 }
 const response = value => ({ modelVersion: MODEL, candidates: [{ finishReason: 'STOP' }], text: JSON.stringify(value) });
+const acceptedModelVersions = [MODEL, `models/${MODEL}`, `${MODEL}-001`, `models/${MODEL}-001`, `${MODEL}-123`, `models/${MODEL}-999`];
 
 test('all three recommendations have only bounded structured provenance', () => {
-  for (const decision of ['approve', 'hold', 'recheck']) {
-    const result = parseDecision(response(envelope(decision)), sha, 'untrusted synthetic input');
+  for (const decision of ['approve', 'hold', 'recheck']) for (const modelVersion of acceptedModelVersions) {
+    const value = envelope(decision);
+    const result = parseDecision({ ...response(value), modelVersion }, sha, 'untrusted synthetic input');
     assert.equal(result.gemini_decision.recommendation, decision);
+    assert.equal(result.gemini_decision.model, MODEL);
     assert.equal(result.gemini_decision.modelVersion, MODEL);
+    assert.deepEqual(result.evaluation, value.evaluation);
+    assert.deepEqual(result.gemini_decision.evidenceCodes, value.recommendation.evidenceCodes);
     assert.match(result.gemini_decision.promptSha256, /^[a-f0-9]{64}$/);
     assert.equal(Object.keys(result.gemini_decision).length, 8);
     assert(!JSON.stringify(result.gemini_decision).includes('untrusted'));
@@ -31,10 +36,18 @@ test('all three recommendations have only bounded structured provenance', () => 
 });
 
 test('incomplete, ambiguous and alternate-model output cannot authorize approval', () => {
-  for (const patch of [{ modelVersion: 'gemini-3.7-flash' }, { modelVersion: undefined },
-    { candidates: [] }, { candidates: [{ finishReason: 'MAX_TOKENS' }] },
+  for (const modelVersion of [undefined, null, 38, {}, [MODEL], '', 'gemini-3.7-flash', 'gemini-3.8-pro',
+    'models/gemini-3.7-flash-001', 'models/gemini-3.8-pro-001', `${MODEL}-lite`, `${MODEL}-tts-001`,
+    'gemini-flash-latest', `${MODEL}-latest`, `${MODEL}-preview`, `${MODEL}-exp`, `${MODEL}-10-05`,
+    `${MODEL}-preview-10-05`, `${MODEL}-1`, `${MODEL}-01`, `${MODEL}-0001`, `${MODEL}-001-extra`,
+    `models/models/${MODEL}`, `publishers/google/models/${MODEL}`, `Models/${MODEL}`, MODEL.toUpperCase(),
+    ` ${MODEL}`, `${MODEL} `, `${MODEL}\n`, `${MODEL}-001\n`, `${MODEL}-00\n`, `${MODEL}\0`, `${MODEL}?v=001`]) {
+    assert.throws(() => parseDecision({ ...response(envelope()), modelVersion }, sha, 'fixture'), { code: 'gemini_decision_incomplete' });
+  }
+  for (const modelVersion of acceptedModelVersions) for (const patch of [
+    { candidates: [] }, { candidates: [{ finishReason: 'MAX_TOKENS' }] }, { candidates: [{ finishReason: 'SAFETY' }] },
     { candidates: [{ finishReason: 'STOP' }, { finishReason: 'STOP' }] }]) {
-    assert.throws(() => parseDecision({ ...response(envelope()), ...patch }, sha, 'fixture'), { code: 'gemini_decision_incomplete' });
+    assert.throws(() => parseDecision({ ...response(envelope()), modelVersion, ...patch }, sha, 'fixture'), { code: 'gemini_decision_incomplete' });
   }
 });
 
@@ -48,9 +61,9 @@ test('malformed recommendation, unsupported prose and input substitution are rej
     value => { value.recommendation.decision = 'hold'; },
     value => { delete value.evaluation.category_TF; },
     value => { value.diagnostics = 'private'; }];
-  for (const mutate of cases) {
+  for (const modelVersion of acceptedModelVersions) for (const mutate of cases) {
     const value = envelope(); mutate(value);
-    assert.throws(() => parseDecision(response(value), sha, 'fixture'), { code: 'gemini_decision_invalid' });
+    assert.throws(() => parseDecision({ ...response(value), modelVersion }, sha, 'fixture'), { code: 'gemini_decision_invalid' });
   }
   assert.throws(() => parseDecision({ ...response(envelope()), text: '{broken' }, sha, 'fixture'), { code: 'gemini_decision_invalid' });
 });
@@ -106,12 +119,14 @@ test('installed SDK uses the existing project lease and emits exactly one reques
       assert.equal(leases(), 1);
       const body = JSON.parse(options.body);
       assert.equal(body.generationConfig.responseMimeType, 'application/json');
-      return new Response(JSON.stringify({ modelVersion: MODEL, candidates: [{ finishReason: 'STOP', content: {
+      return new Response(JSON.stringify({ modelVersion: `models/${MODEL}-001`, candidates: [{ finishReason: 'STOP', content: {
         role: 'model', parts: [{ text: JSON.stringify(envelope()) }],
       } }], usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 8, totalTokenCount: 13 } }), { status: 200, headers: { 'content-type': 'application/json' } });
     };
     const result = await judge('fixture', sha, { key: 'synthetic-fixture-key' });
     assert.equal(result.gemini_decision.recommendation, 'approve');
+    assert.equal(result.gemini_decision.model, MODEL);
+    assert.equal(result.gemini_decision.modelVersion, MODEL);
     assert.equal(calls, 1); assert.equal(leases(), 0);
     globalThis.fetch = async () => { calls++; assert.equal(leases(), 1); throw new Error('uncertain transport'); };
     await assert.rejects(judge('fixture', sha, { key: 'synthetic-fixture-key' }), { code: 'gemini_result_uncertain' });

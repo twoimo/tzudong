@@ -28,6 +28,7 @@ import unicodedata
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
+from urllib.parse import parse_qs, urlparse
 
 import sys
 import hashlib
@@ -751,6 +752,36 @@ def merge_rule_results_into_laaj(rule_data: dict, laaj_data: dict) -> dict:
     return merged
 
 
+def pipeline_owned_row(row: dict, channel: str) -> bool:
+    """Only unreviewed rows positively attributed to this channel are writable."""
+    return (row.get("channel_name") == channel
+        and row.get("source_type") in ("geminiCLI", "map_url_crawling")
+        and row.get("status") in (None, "", "pending")
+        and all(row.get(field) in (None, "") for field in
+            ("updated_by_admin_id", "created_by", "approved_name")))
+
+
+def ownership_video(link):
+    """Recognize YouTube aliases without treating an unrelated host as YouTube."""
+    if not isinstance(link, str) or not link.strip(): return None
+    try:
+        parsed = urlparse(link)
+        if parsed.scheme not in ("https", "http"): return None
+        if parsed.hostname in ("youtu.be", "www.youtu.be"):
+            video = parsed.path.strip("/")
+        elif parsed.hostname in ("youtube.com", "www.youtube.com", "m.youtube.com"):
+            if parsed.path == "/watch":
+                values = parse_qs(parsed.query).get("v", [])
+                video = values[0] if len(values) == 1 else ""
+            else:
+                match = re.fullmatch(r"/(?:shorts|embed|live)/([A-Za-z0-9_-]+)", parsed.path)
+                video = match.group(1) if match else ""
+        else: return None
+        return video if re.fullmatch(r"[A-Za-z0-9_-]{11}", video) else None
+    except ValueError:
+        return None
+
+
 def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
     output = evaluation_path / "evaluation" / "transforms.jsonl"
     receipt_path = output.parent / ".receipts" / "transform.json"
@@ -836,9 +867,23 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
         previous_owned = {
             trace for group in ledger["groups"].values()
             for trace in group.get("records", [])
-            if isinstance(trace, str)
+            if isinstance(trace, str) and trace in records
+            and pipeline_owned_row(records[trace], channel)
         }
-        claimed, superseded = set(), {}
+        # A missing/corrupt receipt supplies no ownership. Bootstrap only rows
+        # whose channel, source family and video are positively present in this
+        # invocation. A partial input directory never claims absent videos (or
+        # absent source families). A valid ledger still retires removed groups.
+        legacy_by_video = {}
+        protected = set()
+        for trace, row in records.items():
+            if not pipeline_owned_row(row, channel):
+                protected.add(trace)
+                continue
+            video = ownership_video(row.get("youtube_link"))
+            if video:
+                legacy_by_video.setdefault((video, row["source_type"]), set()).add(trace)
+        claimed, superseded = set(protected), {}
         for kind,video,inputs in groups:
             identity = kind+":"+video
             key = keys[identity]
@@ -853,6 +898,13 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
                 rule = load_last_jsonl_record(inputs[0])
                 if not isinstance(rule,dict): raise ValueError("transform_rule_invalid")
                 payload = merge_rule_results_into_laaj(rule,payload)
+            source_type = "map_url_crawling" if kind == "map_url_crawling" else "geminiCLI"
+            scoped_legacy = legacy_by_video.get(
+                (ownership_video(payload.get("youtube_link")), source_type), ())
+            # notSelection is a subset of a video's Gemini rows. It alone
+            # cannot establish ownership of the selected restaurants.
+            previous_owned.update(trace for trace in scoped_legacy
+                if kind != "notSelection" or records[trace].get("is_notSelected") is True)
             transformed = (transform_map_url_crawling_object(payload,channel,meta)
                 if kind == "map_url_crawling" else transform_json_object(payload,kind,channel,meta,video))
             candidates = [record["trace_id"] for record in transformed]

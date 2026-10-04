@@ -69,6 +69,28 @@ describe('pipeline execution read model', () => {
     expect(canControlPipelineJob(result.source, result.jobs[0], 'pause')).toBe(false);
     expect(pipelineJobsForDisplay(parsePipelineStatus(status({ source: 'future', jobs: [{ ...job, status: 'Succeeded', dry_run: false }] })), undefined)[0]).toMatchObject({ status: 'Unknown', hasError: false, dry_run: undefined, adapter_index: null });
   });
+  test('unknown target states retain the target but make otherwise valid API snapshots partial', () => {
+    for (const targetStatus of ['NewStatus', 'Unknown', '', 'idle', 'constructor', '__proto__', null, undefined, 0, false, {}]) {
+      const result = parsePipelineStatus(status({ targets: [{ id: 'tzuyang', status: targetStatus }, { id: 'other', status: 'Idle' }] }));
+      expect(result).toMatchObject({ source: 'job_api', partial: true, targets: [{ id: 'tzuyang', status: 'Unknown' }, { id: 'other', status: 'Idle' }] });
+      expect(result.jobs).toEqual(parsePipelineStatus(status()).jobs);
+    }
+  });
+  test('known target states recover a fresh snapshot without changing earlier uncertainty or clearing job errors', () => {
+    const input = status({ targets: [{ id: 'tzuyang', status: 'FutureStatus' }] });
+    const uncertain = parsePipelineStatus(input);
+    for (const targetStatus of ['Idle', 'Queued', 'Fetching', 'Inserting', 'Paused', 'Cancelled', 'Failed', 'Succeeded']) {
+      input.targets[0].status = targetStatus;
+      const recovered = parsePipelineStatus(input);
+      expect(recovered).toMatchObject({ partial: false, targets: [{ id: 'tzuyang', status: targetStatus }] });
+      expect(uncertain).toMatchObject({ partial: true, targets: [{ id: 'tzuyang', status: 'Unknown' }] });
+    }
+    input.targets[0].status = 'Unknown';
+    expect(parsePipelineStatus(input).partial).toBe(true);
+    input.targets[0].status = 'Idle';
+    expect(parsePipelineStatus(input).partial).toBe(false);
+    expect(parsePipelineStatus({ ...input, jobs: [{ ...job, status: 'FutureStatus' }] }).partial).toBe(true);
+  });
   test('valid zero gauges survive; negative, nonfinite and extra properties do not', () => {
     const result = parsePipelineStatus(status({ gauges: { tzudong_pipeline_kafka_lag: 0, tzudong_pipeline_es_rows_per_sec: -1, tzudong_pipeline_process_rss_bytes: Infinity, arbitrary: 44 }, hardware: 'private@example.test', dataEnv: 'secret-path' }));
     expect(result.gauges).toEqual({ tzudong_pipeline_kafka_lag: 0 });

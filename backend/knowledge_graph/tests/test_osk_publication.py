@@ -91,6 +91,7 @@ def fixture_bundle(root):
                 "usage": a.report_usage("- **Gemini tokens:** 42"), "reportSha256": "c" * 64,
                 "provider": "gemini_via_claude_video", "processing": "static_full_video"}
     receipt = {"identity": evidence["identity"], "state": "succeeded", "model": config.model,
+               "membershipEvidence": row["membership"],
                "modelEvidenceSha256": config.model_evidence_hash, "reservedInputTokens": 1000,
                "callsAttempted": 1, "usage": evidence["usage"], "evidenceSha256": a.digest(evidence),
                "callAccounting": "watch_invocation_interactions_post_upper_bound"}

@@ -75,6 +75,142 @@ class TransformRestartTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             return transform.run_transform('tzuyang', self.crawling, self.evaluation)
 
+    def legacy_rows(self, payload=RULE):
+        return transform.transform_json_object(copy.deepcopy(payload), 'results', 'tzuyang')
+
+    def write_output(self, rows):
+        self.output.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+
+    def read_output(self):
+        return [json.loads(line) for line in self.output.read_text().splitlines()]
+
+    def test_first_receipt_retires_changed_trace_and_deleted_restaurant(self):
+        old = copy.deepcopy(RULE)
+        old['restaurants'].append({**old['restaurants'][0], 'origin_name':'removed'})
+        legacy = self.legacy_rows(old)
+        changed = copy.deepcopy(RULE)
+        changed['restaurants'][0]['youtuber_review'] = 'new review'
+        changed['evaluation_results']['category_validity_TF'][0]['eval_value'] = False
+        self.write_rule(changed)
+        for invalid in (None, b'{truncated', b'{"schemaVersion":1}', b'[]'):
+            with self.subTest(receipt=invalid):
+                self.write_output(legacy)
+                self.receipt.unlink(missing_ok=True)
+                if invalid is not None:
+                    self.receipt.parent.mkdir(parents=True, exist_ok=True)
+                    self.receipt.write_bytes(invalid)
+                result = self.run_transform()
+                self.assertEqual(2, result['removed'])
+                self.assertEqual(self.legacy_rows(changed), self.read_output())
+                self.assertEqual(1, self.run_transform()['reused'])
+        history = [json.loads(line) for path in (self.output.parent/'.history').glob('*.jsonl')
+                   for line in path.read_text().splitlines()]
+        for row in legacy: self.assertIn(row, history)
+
+    def test_first_receipt_empty_video_retires_all_its_rows(self):
+        self.write_output(self.legacy_rows())
+        self.write_rule({**RULE, 'restaurants':[], 'evaluation_target':{}, 'evaluation_results':{}})
+        self.assertEqual(1, self.run_transform()['removed'])
+        self.assertEqual([], self.read_output())
+        self.assertEqual(0, json.loads(self.receipt.read_text())['recordCount'])
+
+    def test_partial_input_preserves_other_video_channel_family_and_admin_rows(self):
+        old = self.legacy_rows()[0]
+        preserved = [
+            {**old, 'trace_id':'other-video', 'youtube_link':'https://youtu.be/lmnopqrstuv'},
+            {**old, 'trace_id':'other-channel', 'channel_name':'other'},
+            {**old, 'trace_id':'map-family', 'source_type':'map_url_crawling'},
+            {**old, 'trace_id':'admin', 'updated_by_admin_id':'fixture-admin'},
+            {**old, 'trace_id':'approved', 'status':'approved'},
+            {**old, 'trace_id':'deleted', 'status':'deleted'},
+            {**old, 'trace_id':'manual', 'created_by':'fixture-user'},
+            {**old, 'trace_id':'approved-name', 'approved_name':'reviewed name'},
+            {**old, 'trace_id':'foreign-host', 'youtube_link':'https://example.com/watch?v=abcdefghijk'},
+            {'trace_id':'unattributed', 'name':'legacy'},
+        ]
+        self.write_output([old, *preserved])
+        self.write_rule({**RULE, 'restaurants':[], 'evaluation_target':{}, 'evaluation_results':{}})
+        self.assertEqual(1, self.run_transform()['removed'])
+        self.assertEqual(preserved, self.read_output())
+        # No receipt + no inputs is not evidence that every legacy video was deleted.
+        self.receipt.unlink(); self.source.unlink()
+        self.assertEqual(0, self.run_transform()['removed'])
+        self.assertEqual(preserved, self.read_output())
+
+    def test_full_input_bootstraps_each_video_and_recognizes_link_aliases(self):
+        old = self.legacy_rows()[0]
+        second = {**RULE, 'youtube_link':'https://youtu.be/lmnopqrstuv'}
+        second_old = self.legacy_rows(second)[0]
+        self.write_output([{**old, 'youtube_link':'https://youtu.be/abcdefghijk?feature=share'}, second_old])
+        empty = {'restaurants':[], 'evaluation_target':{}, 'evaluation_results':{}}
+        self.write_rule({**RULE, **empty})
+        (self.rule/'second.jsonl').write_text(json.dumps({**second, **empty})+'\n')
+        self.assertEqual(2, self.run_transform()['removed'])
+        self.assertEqual([], self.read_output())
+
+    def test_not_selection_only_input_does_not_claim_selected_legacy_rows(self):
+        selected = self.legacy_rows()[0]
+        unselected = {**selected, 'trace_id':'old-unselected', 'is_notSelected':True}
+        self.write_output([selected, unselected])
+        self.source.unlink()
+        folder = self.output.parent/'notSelection'; folder.mkdir()
+        (folder/'video.jsonl').write_text(json.dumps({**RULE, 'restaurants':[]})+'\n')
+        self.assertEqual(1, self.run_transform()['removed'])
+        self.assertEqual([selected], self.read_output())
+
+    def test_admin_same_trace_is_preserved_and_never_claimed_for_later_removal(self):
+        self.run_transform()
+        reviewed = {**self.read_output()[0], 'status':'approved', 'approved_name':'reviewed'}
+        self.write_output([reviewed])
+        self.run_transform()
+        self.assertEqual([reviewed], self.read_output())
+        self.assertEqual([], json.loads(self.receipt.read_text())['groups']['results:video']['records'])
+        self.source.unlink()
+        self.run_transform()
+        self.assertEqual([reviewed], self.read_output())
+
+    def test_legacy_same_trace_still_receives_latest_evaluation(self):
+        self.write_output(self.legacy_rows())
+        changed = copy.deepcopy(RULE)
+        changed['evaluation_results']['category_validity_TF'][0]['eval_value'] = False
+        self.write_rule(changed)
+        result = self.run_transform()
+        self.assertEqual((0, 1, 0), (result['new'], result['updated'], result['removed']))
+        self.assertEqual(self.legacy_rows(changed), self.read_output())
+
+    def test_bootstrap_recovers_after_output_replace_but_receipt_write_failure(self):
+        legacy = self.legacy_rows()
+        self.write_output(legacy)
+        changed = copy.deepcopy(RULE)
+        changed['restaurants'][0]['youtuber_review'] = 'new review'
+        self.write_rule(changed)
+        write = transform.atomic_write
+        def fail_receipt(path, content):
+            if path == self.receipt: raise OSError('fixture_receipt_failure')
+            return write(path, content)
+        with patch.object(transform, 'atomic_write', fail_receipt):
+            with self.assertRaisesRegex(OSError, 'fixture_receipt_failure'): self.run_transform()
+        self.assertFalse(self.receipt.exists())
+        self.assertEqual(self.legacy_rows(changed), self.read_output())
+        self.run_transform()
+        self.assertEqual(self.legacy_rows(changed), self.read_output())
+        self.assertEqual(1, self.run_transform()['reused'])
+        self.assertEqual([], list(self.output.parent.glob('.transform-*')))
+        history = [json.loads(line) for path in (self.output.parent/'.history').glob('*.jsonl')
+                   for line in path.read_text().splitlines()]
+        self.assertIn(legacy[0], history)
+
+    def test_two_cold_writers_bootstrap_once_without_duplicate_or_stale_rows(self):
+        self.write_output(self.legacy_rows())
+        changed = copy.deepcopy(RULE)
+        changed['restaurants'][0]['youtuber_review'] = 'new review'
+        self.write_rule(changed)
+        with redirect_stdout(io.StringIO()), ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _: transform.run_transform('tzuyang', self.crawling, self.evaluation), range(2)))
+        self.assertEqual(1, sum(result['removed'] for result in results))
+        self.assertEqual(1, sum(result['reused'] for result in results))
+        self.assertEqual(self.legacy_rows(changed), self.read_output())
+
     def test_damaged_output_is_rebuilt_and_exact_damaged_bytes_are_preserved(self):
         self.run_transform()
         expected = self.output.read_bytes()

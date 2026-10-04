@@ -44,9 +44,27 @@ describe('bounded Tzudong knowledge graph reads', () => {
       { ...fixture, coverage: { ...fixture.coverage, analyzedCount: 241 } } ]) expect(isKnowledgeSnapshot(value)).toBe(false);
   });
   test('limits outbound evidence to the exact typed public video and timestamp', () => {
-    const node = { ...fixture.nodes[0], evidence: [{ videoId: 'ABCDEFGHIJK', startSeconds: 12.5, endSeconds: 15, url: 'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=12s', status: 'unverified' }] };
+    const node = { ...fixture.nodes[0], evidence: [{ videoId: 'ABCDEFGHIJK', startSeconds: 12.5, endSeconds: 15, url: 'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=12.5s', status: 'unverified' }] };
     expect(isKnowledgeNode(node)).toBe(true);
-    for (const url of ['https://www.youtube.com.evil.test/watch?v=ABCDEFGHIJK&t=12s', 'javascript:alert(1)', 'https://www.youtube.com/watch?v=other&t=12s', 'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=999s'])
+    for (const url of ['https://www.youtube.com.evil.test/watch?v=ABCDEFGHIJK&t=12.5s', 'javascript:alert(1)', 'https://www.youtube.com/watch?v=other&t=12.5s', 'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=999s',
+      'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=12s', 'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=12.50s',
+      'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=12.5s&feature=share', 'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=12.5s#extra'])
       expect(isKnowledgeNode({ ...node, evidence: [{ ...node.evidence[0], url }] })).toBe(false);
+  });
+  test('admits backend canonical zero, fractional, rounded and exponent timestamps throughout the read contract', () => {
+    // Produced by osk_projection._evidence's Python :g formatter, including exact half-even ties.
+    const cases: Array<[number, string]> = [[0, ''], [-0, ''], [12, '12'], [12.5, '12.5'], [12.345678, '12.3457'],
+      [100000.5, '100000'], [100001.5, '100002'], [999999.5, '1e+06'], [1e9, '1e+09'],
+      [0.0001, '0.0001'], [0.00001, '1e-05'], [0.00009999999, '0.0001'], [0.001953125, '0.00195312'], [Number.MIN_VALUE, '4.94066e-324']];
+    for (const [startSeconds, timestamp] of cases) {
+      const evidence = { videoId: 'ABCDEFGHIJK', startSeconds, endSeconds: null, status: 'unverified' as const,
+        url: `https://www.youtube.com/watch?v=ABCDEFGHIJK${timestamp ? `&t=${timestamp}s` : ''}` };
+      const source: KnowledgeSnapshot = { ...fixture, nodes: [{ ...fixture.nodes[0], evidence: [evidence] }], edges: [] };
+      expect(isKnowledgeSnapshot(source)).toBe(true);
+      expect(isKnowledgeGraphPage(queryKnowledgeGraph(source, new URLSearchParams()))).toBe(true);
+    }
+    const zero = { ...fixture.nodes[0], evidence: [{ videoId: 'ABCDEFGHIJK', startSeconds: 0, endSeconds: null, status: 'unverified', url: 'https://www.youtube.com/watch?v=ABCDEFGHIJK&t=0s' }] };
+    expect(isKnowledgeNode(zero)).toBe(false);
+    for (const startSeconds of [-1, Infinity, NaN, 1_000_000_001]) expect(isKnowledgeNode({ ...zero, evidence: [{ ...zero.evidence[0], startSeconds }] })).toBe(false);
   });
 });

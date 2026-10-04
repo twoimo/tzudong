@@ -86,7 +86,12 @@ export function parsePipelineStatus(value: unknown): PipelineStatusView {
     return [{ id: item.id, target: item.target, profile: item.profile === 'heavy_local' || item.profile === 'lite_gha' ? item.profile : 'unknown', status, dry_run: typeof item.dry_run === 'boolean' ? item.dry_run : undefined, adapter_index: count(item.adapter_index) ? item.adapter_index : null, hasError: Boolean(item.error_code) } satisfies PipelineJobView];
   });
   const jobs = parseJobs(value.jobs), failures = source === 'github_actions' ? [] : parseJobs(value.failures);
-  const targets = value.targets.flatMap(item => { if (!isRecord(item) || !token(item.id)) { partial = true; return []; } return [{ id: item.id, status: typeof item.status === 'string' && (item.status === 'Idle' || Object.hasOwn(PIPELINE_JOB_LABELS, item.status)) ? item.status : 'Unknown' }]; });
+  const targets = value.targets.flatMap(item => {
+    if (!isRecord(item) || !token(item.id)) { partial = true; return []; }
+    const status = typeof item.status === 'string' && (item.status === 'Idle' || Object.hasOwn(PIPELINE_JOB_LABELS, item.status)) ? item.status : 'Unknown';
+    if (status === 'Unknown') partial = true;
+    return [{ id: item.id, status }];
+  });
   const gauges: Partial<Record<PipelineGaugeKey, number>> = {};
   if (isRecord(value.gauges)) for (const key of PIPELINE_GAUGE_KEYS) { const n = value.gauges[key]; if (typeof n === 'number' && Number.isFinite(n) && n >= 0) gauges[key] = n; }
   return { source, partial: partial || source === 'unknown', jobs, failures, targets, gauges,

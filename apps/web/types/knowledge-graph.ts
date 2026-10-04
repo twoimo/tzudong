@@ -26,16 +26,42 @@ const nullableCount = (value: unknown) => value === null || count(value);
 const identifier = (value: unknown): value is string => typeof value === 'string' && /^[a-zA-Z0-9_.:-]{1,160}$/.test(value);
 const date = (value: unknown): value is string => typeof value === 'string' && value.length <= 64 && Number.isFinite(Date.parse(value));
 
+// osk_projection._evidence uses Python's :g: six significant digits, half-even
+// rounding and a two-digit exponent. Preserve that wire format exactly.
+function evidenceTimestamp(value: number): string {
+  const bits = new DataView(new ArrayBuffer(8));
+  bits.setFloat64(0, value);
+  const encoded = bits.getBigUint64(0), binaryExponent = Number((encoded >> 52n) & 2047n);
+  let numerator = encoded & ((1n << 52n) - 1n), denominator = 1n;
+  if (binaryExponent) numerator += 1n << 52n;
+  const binaryShift = (binaryExponent || 1) - 1023 - 52;
+  if (binaryShift >= 0) numerator <<= BigInt(binaryShift); else denominator <<= BigInt(-binaryShift);
+  let exponent = Number(value.toExponential().split('e')[1]);
+  const decimalShift = 5 - exponent;
+  if (decimalShift >= 0) numerator *= 10n ** BigInt(decimalShift); else denominator *= 10n ** BigInt(-decimalShift);
+  let rounded = numerator / denominator;
+  const twiceRemainder = 2n * (numerator % denominator);
+  if (twiceRemainder > denominator || (twiceRemainder === denominator && rounded % 2n === 1n)) rounded++;
+  if (rounded >= 1000000n) { rounded /= 10n; exponent++; }
+  const digits = rounded.toString().replace(/0+$/, '');
+  if (exponent < -4 || exponent >= 6) {
+    return `${digits[0]}${digits.length > 1 ? `.${digits.slice(1)}` : ''}e${exponent < 0 ? '-' : '+'}${String(Math.abs(exponent)).padStart(2, '0')}`;
+  }
+  const point = exponent + 1;
+  if (point <= 0) return `0.${'0'.repeat(-point)}${digits}`;
+  return point >= digits.length ? digits + '0'.repeat(point - digits.length) : `${digits.slice(0, point)}.${digits.slice(point)}`;
+}
+
 export function isKnowledgeNode(value: unknown): value is KnowledgeNode {
   if (!object(value) || !identifier(value.id) || typeof value.label !== 'string' || !value.label.trim() || value.label.length > 512
     || !KNOWLEDGE_KINDS.includes(value.kind as KnowledgeKind) || typeof value.summary !== 'string' || value.summary.length > 4000
     || !Array.isArray(value.evidence) || value.evidence.length > 64) return false;
   return value.evidence.every(item => {
     if (!object(item) || typeof item.videoId !== 'string' || !/^[a-zA-Z0-9_-]{11}$/.test(item.videoId)
-      || typeof item.startSeconds !== 'number' || !Number.isFinite(item.startSeconds) || item.startSeconds < 0
-      || (item.endSeconds !== null && (typeof item.endSeconds !== 'number' || !Number.isFinite(item.endSeconds) || item.endSeconds < item.startSeconds))
+      || typeof item.startSeconds !== 'number' || !Number.isFinite(item.startSeconds) || item.startSeconds < 0 || item.startSeconds > 1_000_000_000
+      || (item.endSeconds !== null && (typeof item.endSeconds !== 'number' || !Number.isFinite(item.endSeconds) || item.endSeconds < item.startSeconds || item.endSeconds > 1_000_000_000))
       || !['verified', 'unverified'].includes(String(item.status)) || typeof item.url !== 'string') return false;
-    return item.url === `https://www.youtube.com/watch?v=${item.videoId}&t=${Math.floor(item.startSeconds)}s`;
+    return item.url === `https://www.youtube.com/watch?v=${item.videoId}${item.startSeconds ? `&t=${evidenceTimestamp(item.startSeconds)}s` : ''}`;
   });
 }
 function isEdge(value: unknown): value is KnowledgeEdge {
