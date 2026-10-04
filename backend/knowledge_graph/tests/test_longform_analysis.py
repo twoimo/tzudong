@@ -75,10 +75,36 @@ class LongformAnalysisTests(unittest.TestCase):
 
     @contextlib.contextmanager
     def execution(self, runner):
+        def invoke(**kwargs):
+            observation = {"operation": "count", "httpOutcome": "http_success", "responseId": None,
+                           "requestSha256": "e" * 64, "usage": module.adapter.usage(None), "countedInputTokens": 10}
+            kwargs["observe"](observation)
+            observation = {**observation, "operation": "generate", "httpOutcome": "transport_uncertain"}
+            kwargs["observe"](observation)
+            argv = [module.sys.executable, "-I", "synthetic-adapter", "--question", kwargs["prompt"]]
+            for _ in range(2):
+                lease = kwargs["budget"].acquire(0, timeout=60)
+                kwargs["budget"].release(lease)
+            try:
+                completed = runner(argv, env={"GEMINI_API_KEY": kwargs["key"], "WATCH_GEMINI_MODEL": kwargs["model"]})
+            except subprocess.TimeoutExpired:
+                raise module.adapter.AdapterError("WATCH_TRANSPORT_UNCERTAIN") from None
+            if completed.returncode:
+                raise module.adapter.AdapterError("WATCH_TRANSPORT_UNCERTAIN")
+            observation.update(httpOutcome="http_success", responseId="v1_fixture_original", usage=module.adapter.usage(
+                module.report_usage(completed.stdout)["rawUsageFields"]))
+            kwargs["observe"](observation)
+            text = completed.stdout.decode()
+            if f"- **Engine:** {kwargs['model']} (" not in text:
+                raise module.adapter.AdapterError("WATCH_RESPONSE_MODEL_MISMATCH")
+            if "## Answer (from Gemini)" not in text:
+                raise module.adapter.AdapterError("WATCH_RESPONSE_INVALID")
+            answer = text.split("## Answer (from Gemini)", 1)[1].split("\n\n", 2)[-1].strip()
+            return {"text": answer, "observation": observation, "responseSha256": module.hashlib.sha256(completed.stdout).hexdigest()}
         with patch.dict(module.os.environ, {"GEMINI_CREDITS_API_KEY": "fixture-funded-key", "GEMINI_API_KEY": "fixture-other-key"}), \
                 patch.object(module, "project_budget", return_value=self.budget), \
                 patch.object(module, "verify_checkout", return_value=self.config.checkout / "skills/watch/scripts/watch.py"), \
-                patch.object(module.subprocess, "run", side_effect=runner) as mocked:
+                patch.object(module.adapter, "invoke", side_effect=invoke) as mocked:
             yield mocked
 
     @contextlib.contextmanager
@@ -191,12 +217,8 @@ class LongformAnalysisTests(unittest.TestCase):
         with self.assertRaisesRegex(module.AnalysisError, "OFFICIAL_SOURCE"):
             module.load_model_evidence(path, "gemini-3.8-flash", self.root, 30)
 
-    def test_real_watch_argv_and_funded_environment_are_used_without_shell(self):
+    def test_adapter_keeps_explicit_model_and_funded_environment(self):
         def runner(argv, **kwargs):
-            self.assertEqual(argv[:3], [module.sys.executable, "-I", str(self.config.checkout / "skills/watch/scripts/watch.py")])
-            self.assertIn("https://www.youtube.com/watch?v=ABCDEFGHIJK", argv)
-            for flag, value in [("--engine", "gemini"), ("--start", "0"), ("--end", "60")]:
-                self.assertEqual(argv[argv.index(flag) + 1], value)
             self.assertIn("untrusted", argv[argv.index("--question") + 1])
             self.assertNotIn("shell", kwargs)
             self.assertEqual(kwargs["env"]["WATCH_GEMINI_MODEL"], "gemini-3.8-flash")
@@ -206,9 +228,13 @@ class LongformAnalysisTests(unittest.TestCase):
             result = module.execute([self.row], self.info, self.state, self.config, self.limits)
             again = module.execute([self.row], self.info, self.state, self.config, self.limits)
         self.assertEqual(called.call_count, 1)
+        self.assertEqual(called.call_args.kwargs["model"], self.config.model)
+        self.assertEqual(called.call_args.kwargs["checkout"], self.config.checkout)
+        self.assertEqual(called.call_args.kwargs["key"], "fixture-funded-key")
+        self.assertEqual((called.call_args.kwargs["start"], called.call_args.kwargs["end"]), (0, 60))
         self.assertEqual(result["succeeded"], 1)
         self.assertEqual(again["reused"], 1)
-        self.assertEqual(self.budget.released, ["fixture-lease"])
+        self.assertEqual(self.budget.released, ["fixture-lease", "fixture-lease"])
         _, receipt, _ = module.paths(self.state, self.row, self.config)
         payload = module.checked_document(receipt)
         self.assertEqual(payload["usage"]["totalTokens"], 42)
@@ -225,8 +251,8 @@ class LongformAnalysisTests(unittest.TestCase):
             changed = module.AnalysisConfig("gemini-3.7-flash", 1000, 100, "c" * 64, self.config.checkout, 30)
             module.execute([self.row], self.info, self.state, changed, self.limits)
         self.assertEqual(called.call_count, 1)
-        _, receipt, _ = module.paths(self.state, self.row, self.config)
-        self.assertEqual(module.checked_document(receipt)["code"], "WATCH_TIMEOUT_UNCERTAIN")
+        _, receipt, _ = module.paths(self.state, module.segment_rows(self.row, self.config)[0], self.config)
+        self.assertEqual(module.checked_document(receipt)["code"], "WATCH_TRANSPORT_UNCERTAIN")
         self.assertNotIn("private", receipt.read_text())
         self.assertEqual(module.readback([self.row], self.state, self.config)["unresolved"], 1)
 
@@ -241,7 +267,7 @@ class LongformAnalysisTests(unittest.TestCase):
                 self.assertEqual(result["code"], "BOUNDED_EXECUTION_COMPLETED")
                 self.assertEqual((result["reused"], result["attempted"], result["succeeded"]), (1, 0, 0))
         self.assertEqual({path: path.read_bytes() for path in self.state.rglob("*.json")}, before)
-        self.assertEqual(self.budget.acquired, 1)
+        self.assertEqual(self.budget.acquired, 2)
 
     def test_new_video_still_requires_funded_key_before_reservation_or_watch(self):
         with self.offline_execution(), self.assertRaisesRegex(module.AnalysisError, "FUNDED_GEMINI_ENV_REQUIRED"):
@@ -277,7 +303,7 @@ class LongformAnalysisTests(unittest.TestCase):
                 self.assertEqual(result["succeeded"], 0)
                 self.assertEqual(called.call_count, 1)
                 if kind == "partial":
-                    _, receipt, _ = module.paths(self.state, self.row, self.config)
+                    _, receipt, _ = module.paths(self.state, module.segment_rows(self.row, self.config)[0], self.config)
                     self.assertEqual(module.checked_document(receipt)["usage"]["rawUsageFields"], {"total_tokens": 42})
 
     def test_invalid_timestamps_and_unverified_facts_are_distinct(self):
@@ -481,7 +507,7 @@ class LongformAnalysisTests(unittest.TestCase):
             for row, config in changes:
                 self.assertEqual(module.cached_state(self.state, row, config), "new")
                 with self.assertRaisesRegex(module.AnalysisError, "FUNDED_GEMINI_ENV_REQUIRED"):
-                    module.execute([row], self.info, self.state, config, self.limits)
+                    module.execute([row], self.info, self.state, config, {**self.limits, "maxCalls": 4})
             with patch.object(module, "PROMPT", module.PROMPT + "\nDifferent analysis request."):
                 self.assertEqual(module.cached_state(self.state, self.row, self.config), "new")
 
@@ -498,7 +524,7 @@ class LongformAnalysisTests(unittest.TestCase):
                 self.assertEqual((result["attempted"], result["reused"]), (0, 0))
 
     def test_exhausted_budget_does_not_mask_unresolved_previous_call(self):
-        limits = {"maxVideos": 1, "maxCalls": 1, "maxInputTokens": 1000}
+        limits = {"maxVideos": 1, "maxCalls": 2, "maxInputTokens": 1000}
         with self.execution(lambda argv, **kw: subprocess.CompletedProcess(argv, 1, b"", b"")) as called:
             first = module.execute([self.row], self.info, self.state, self.config, limits)
             second = module.execute([self.row], self.info, self.state, self.config, limits)
