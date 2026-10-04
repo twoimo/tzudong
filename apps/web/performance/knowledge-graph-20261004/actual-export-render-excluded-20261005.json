@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "excludedExperiments": [
+    {
+      "file": "actual-export-render-height-selector-invalid-20261005.json",
+      "reason": "The SVG selector required role=img, while the graph did not expose that role; height0 was a harness measurement error. Node/edge/search/focus checks passed but this run is excluded from graph-height evidence."
+    },
+    {
+      "retainedFailure": "render_interaction_failed tool output",
+      "reason": "An immediate post-close check failed before a durable receipt was written. Later targeted readback confirmed selected focus and empty error buffer. Product attribution remains unproven. The final run waits for the observed focus condition before asserting."
+    }
+  ],
+  "acceptedFile": "actual-export-render-20261005.json",
+  "operatingDeploymentProven": false
+}

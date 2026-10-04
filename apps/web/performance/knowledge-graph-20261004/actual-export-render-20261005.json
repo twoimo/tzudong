@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "environment": "isolated Next dev UI with synthetic auth; actual local OSK projection supplied through production file reader; operating API and deployment unverified",
+  "widths": [
+    {
+      "width": 390,
+      "overflow": false,
+      "nodes": 21,
+      "edges": 79,
+      "graphHeight": 842
+    },
+    {
+      "width": 834,
+      "overflow": false,
+      "nodes": 21,
+      "edges": 79,
+      "graphHeight": 842
+    },
+    {
+      "width": 1423,
+      "overflow": false,
+      "nodes": 21,
+      "edges": 79,
+      "graphHeight": 842
+    }
+  ],
+  "graphReads": 4,
+  "errors": 0,
+  "focusReturned": true,
+  "wholeGraphSearch": true,
+  "selectedDetail": true,
+  "externalBlocked": 0,
+  "mutationBlocked": 0,
+  "actualMutations": 0,
+  "providerCalls": 0,
+  "renderedComponentSha256": "0d5c7e05faf0b782905b3964f551469d30d14c7ad0a950e3044ed7f487df3533",
+  "independentVideoVerificationCount": 0
+}
