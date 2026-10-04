@@ -99,6 +99,17 @@ describe('bounded nightly unit failure source coordinates', () => {
       expect(safe.status).toBe(0);
       expect(safe.stdout).toBe(`NIGHTLY_UNIT_DIAGNOSTIC=${r.stdout.trim()}\n`);
       expect(safe.stdout + safe.stderr).not.toContain(canary);
+      const passing = JSON.parse(r.stdout); passing.test_count = 1; passing.failure_count = 0; passing.sites = [];
+      for (const [payloads, code, accepted] of [
+        [[passing], 1, false], [[passing, passing], 0, true],
+        [[passing, JSON.parse(r.stdout)], 37, true], [[JSON.parse(r.stdout), passing], 1, false],
+        [[passing, passing], 37, false], [[passing, JSON.parse(r.stdout)], 0, false],
+      ] as const) {
+        writeFileSync(log, payloads.map(value => `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(value)}\n`).join(''));
+        const checked = spawnSync('python3', [script, '--log', log, '--exit-code', String(code)], { encoding: 'utf8' });
+        expect(checked.status).toBe(accepted ? 0 : 1);
+        if (!accepted) expect(checked.stdout).toBe('');
+      }
       const legacy = JSON.parse(r.stdout); legacy.schema = 'nightly-unit-failure-sites-v1'; delete legacy.omitted_site_count;
       writeFileSync(log, `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(legacy)}\n`);
       expect(spawnSync('python3', [script, '--log', log]).status).toBe(0);

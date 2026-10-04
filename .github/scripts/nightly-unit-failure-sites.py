@@ -135,7 +135,7 @@ def derive(data: dict, root: Path) -> dict:
 def main() -> int:
     root = Path(__file__).resolve().parents[2] / "apps/web"
     try:
-        if len(sys.argv) == 3 and sys.argv[1] == "--log":
+        if len(sys.argv) in {3, 5} and sys.argv[1] == "--log":
             # Canonical local Nightly requires POSIX custody. Never substitute
             # a following open or pretend that Windows mode bits prove ACLs.
             if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "getuid"):
@@ -153,8 +153,20 @@ def main() -> int:
             if not 1 <= len(records) <= 2:
                 fail()
             files = inventory(root)
-            for record in records:
-                print(PREFIX + json.dumps(validate(json.loads(record), files), separators=(",", ":")))
+            payloads = [validate(json.loads(record), files) for record in records]
+            # General failure stops the runner; isolated tests run only after
+            # general success. A partial success cannot describe a full run.
+            if (len(payloads) == 1 and payloads[0]["failure_count"] == 0) or (len(payloads) == 2 and payloads[0]["failure_count"] != 0):
+                fail()
+            if len(sys.argv) == 5:
+                code = sys.argv[4]
+                if sys.argv[3] != "--exit-code" or not code.isascii() or not code.isdigit() or not 0 <= int(code) <= 255:
+                    fail()
+                complete_success = len(payloads) == 2 and all(p["failure_count"] == 0 for p in payloads)
+                if (int(code) == 0) != complete_success:
+                    fail()
+            for payload in payloads:
+                print(PREFIX + json.dumps(payload, separators=(",", ":")))
         elif len(sys.argv) == 2 and sys.argv[1] == "--run-linux":
             if not hasattr(os, "memfd_create"):
                 fail()
