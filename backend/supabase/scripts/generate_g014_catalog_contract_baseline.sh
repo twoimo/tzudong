@@ -80,6 +80,20 @@ g026_behavior_receipt="$staging_dir/g026-behavior-receipt.json"
 docker_endpoint=''
 
 compose() {
+  # The isolated DOCKER_CONFIG intentionally carries no user credentials or
+  # cliPluginsExtraDirs. macOS/Homebrew may install Compose only there, so use
+  # its existing standalone v2-compatible executable without copying config.
+  local catalog_compose_cli catalog_compose_version
+  catalog_compose_cli=$(command -v docker-compose || true)
+  if [[ -n "$catalog_compose_cli" ]]; then
+    catalog_compose_version=$(env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config" \
+      DOCKER_HOST="$docker_endpoint" "$catalog_compose_cli" version --short 2>/dev/null || true)
+    if [[ "$catalog_compose_version" =~ ^v?([2-9]|[1-9][0-9])\. ]]; then
+      env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config" DOCKER_HOST="$docker_endpoint" \
+        "$catalog_compose_cli" --project-name "$project" --env-file "$env_file" -f "$compose_file" "$@"
+      return
+    fi
+  fi
   env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config" \
     DOCKER_HOST="$docker_endpoint" \
     docker compose --project-name "$project" --env-file "$env_file" -f "$compose_file" "$@"

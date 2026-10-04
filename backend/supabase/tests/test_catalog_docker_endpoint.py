@@ -1,6 +1,8 @@
 """Local endpoint admission; only temporary private sockets, no Docker mutations."""
 from pathlib import Path
+import json
 import os
+import shlex
 import socket
 import stat
 import subprocess
@@ -98,11 +100,32 @@ class GeneratorWiringTests(unittest.TestCase):
         s=(ROOT/'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh').read_text()
         self.assertIn("'backend/supabase/scripts/catalog_docker_endpoint.py'",s)
         self.assertIn('docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py")',s)
-        self.assertEqual(s.count('env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config"'),2)
+        self.assertEqual(s.count('env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config"'),4)
         self.assertIn('db_amd64_manifest_digest=\'sha256:caae3d066f437332d593011e3e7ecf78ab005ce9b89378efd53f97f0410563ad\'',s)
         self.assertIn('db_image=\'supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b\'',s)
         self.assertIn('image inspect --platform linux/amd64',s)
         self.assertNotIn('docker context use',s)
+    def test_existing_compose_cli_keeps_config_endpoint_and_arguments_isolated(self):
+        source=(ROOT/'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh').read_text()
+        start=source.index('compose() {')
+        function=source[start:source.index('\n}\n',start)+3]
+        with tempfile.TemporaryDirectory(prefix='catalog compose ') as directory:
+            base=Path(directory);bin_dir=base/'bin';bin_dir.mkdir();config=base/'isolated config';config.mkdir()
+            for version,expected_prefix in [('2.39.4',[]),('5.6.0',[]),('1.29.2',['compose'])]:
+                script=f'#!{sys.executable}\nimport os,sys,json\nif sys.argv[1:]==["version","--short"]: print({version!r})\nelse: print(json.dumps({{"args":sys.argv[1:],"config":os.environ.get("DOCKER_CONFIG"),"endpoint":os.environ.get("DOCKER_HOST"),"privateMarkerPresent":"CATALOG_TEST_PRIVATE_MARKER" in os.environ}}))\n'
+                for name in ('docker-compose','docker'):
+                    path=bin_dir/name;path.write_text(script);path.chmod(0o700)
+                env=dict(os.environ,PATH=str(bin_dir)+os.pathsep+os.environ.get('PATH',''),CATALOG_TEST_PRIVATE_MARKER='private-fixture')
+                setup='\n'.join(f'{key}={shlex.quote(value)}' for key,value in {
+                    'docker_config':str(config),'docker_endpoint':'unix:///tmp/fixture.sock','project':'fixture-project',
+                    'env_file':str(base/'isolated env'),'compose_file':str(base/'isolated compose.yml')}.items())
+                result=subprocess.run(['bash','-c',setup+'\n'+function+'\ncompose config'],env=env,capture_output=True,text=True)
+                self.assertEqual(result.returncode,0,result.stderr)
+                observed=json.loads(result.stdout)
+                self.assertEqual(observed['args'],expected_prefix+['--project-name','fixture-project','--env-file',str(base/'isolated env'),'-f',str(base/'isolated compose.yml'),'config'])
+                self.assertEqual(observed['config'],str(config));self.assertEqual(observed['endpoint'],'unix:///tmp/fixture.sock')
+                self.assertFalse(observed['privateMarkerPresent'])
+                self.assertEqual(list(config.iterdir()),[])
     def test_ci_paths_and_executable_test_lists_cover_new_boundaries(self):
         s=(ROOT/'.github/workflows/g014-catalog-contract-baseline.yml').read_text()
         paths=s.split('  workflow_dispatch:',1)[0]
