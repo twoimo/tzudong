@@ -6,7 +6,7 @@ import type {
     DashboardVideoDetailResponse,
     DashboardVideoSummary,
 } from '@/types/dashboard';
-import { extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
+import { classifyDashboardVideoId, extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
 import {
     getDashboardRestaurantRowsPage,
     getRestaurantRows,
@@ -35,10 +35,8 @@ type RestaurantsFilter = {
 };
 
 function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaurantItem {
-    const normalizedName =
-        row.name?.trim() ||
-        extractVideoIdFromYoutubeLink(row.youtube_link) ||
-        '미승인 맛집';
+    const videoId = extractVideoIdFromYoutubeLink(row.youtube_link);
+    const normalizedName = row.name?.trim() || videoId || '미승인 맛집';
 
     return {
         id: row.id,
@@ -48,7 +46,7 @@ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaura
         lat: row.lat,
         lng: row.lng,
         youtubeLink: row.youtube_link,
-        videoId: extractVideoIdFromYoutubeLink(row.youtube_link),
+        videoId,
         sourceType: row.source_type,
         status: row.status,
         geocodingSuccess: row.geocoding_success,
@@ -415,11 +413,24 @@ export function buildDashboardRestaurantsFromRows(
     return buildDashboardRestaurantsPageFromRows(paged, sortedRows.length, normalizedFilter, now);
 }
 
+export function selectDashboardRowsForVideoId(
+    rows: readonly DashboardRestaurantRow[],
+    videoId: string,
+): DashboardRestaurantRow[] {
+    const classified = classifyDashboardVideoId(videoId);
+    if (classified.status !== 'ok') return [];
+
+    return rows.filter((row) => extractVideoIdFromYoutubeLink(row.youtube_link) === classified.videoId);
+}
+
 export async function getDashboardVideoDetail(
     videoId: string,
 ): Promise<DashboardVideoDetailResponse | null> {
+    const classified = classifyDashboardVideoId(videoId);
+    if (classified.status !== 'ok') return null;
+
     const rows = await getRestaurantRows(false, 'anon');
-    const targetRows = rows.filter((row) => extractVideoIdFromYoutubeLink(row.youtube_link) === videoId);
+    const targetRows = selectDashboardRowsForVideoId(rows, classified.videoId);
 
     if (targetRows.length === 0) return null;
 
@@ -431,9 +442,9 @@ export async function getDashboardVideoDetail(
     return {
         asOf: new Date().toISOString(),
         video: {
-            videoId,
+            videoId: classified.videoId,
             youtubeLink: first.youtube_link,
-            title: meta.title || videoId,
+            title: meta.title || classified.videoId,
             publishedAt: meta.publishedAt,
             restaurantCount: restaurants.length,
         },

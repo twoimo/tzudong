@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { canonicalizeYoutubeLink, classifyDashboardVideoId, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import {
   getYoutubeThumbnailCandidates,
   resolveYoutubeThumbnailCeiling,
@@ -14,6 +14,42 @@ const source = (relativePath: string) =>
   readFileSync(resolve(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('YouTube link helpers', () => {
+  test('uses the same complete 6-to-128-character token in extraction and routing', () => {
+    const prefixes = [
+      'https://www.youtube.com/watch?v=',
+      'https://www.youtube.com/watch?feature=share&v=',
+      'https://youtu.be/',
+      'https://www.youtube.com/shorts/',
+      'https://www.youtube.com/embed/',
+      'https://www.youtube.com/live/',
+    ];
+    for (const prefix of prefixes) {
+      for (const length of [5, 6, 11, 128, 129, 4096]) {
+        const id = 'a'.repeat(length);
+        const valid = length >= 6 && length <= 128;
+        for (const suffix of ['', '?t=10', '&t=10', '#fragment']) {
+          const link = `${prefix}${id}${suffix}`;
+          expect(extractVideoIdFromYoutubeLink(link)).toBe(valid ? id : null);
+          expect(extractVideoIdFromYoutubeLink(link)).toBe(valid ? id : null);
+        }
+        expect(classifyDashboardVideoId(id).status).toBe(valid ? 'ok' : 'invalid');
+      }
+    }
+  });
+
+  test('classifies blank, padded, mixed-alphabet and unsafe ids without relaxing the route bound', () => {
+    for (const value of [null, undefined, '', '   ']) {
+      expect(extractVideoIdFromYoutubeLink(value)).toBeNull();
+      expect(classifyDashboardVideoId(value)).toEqual({ status: 'required' });
+    }
+    expect(classifyDashboardVideoId('  Ab_12-  ')).toEqual({ status: 'ok', videoId: 'Ab_12-' });
+    for (const value of ['abc', 'abc def', '../path', '<script>', 'a'.repeat(129)]) {
+      expect(classifyDashboardVideoId(value)).toEqual({ status: 'invalid', length: value.length });
+    }
+    expect(extractVideoIdFromYoutubeLink('https://youtu.be/Ab_12-')).toBe('Ab_12-');
+    expect(extractVideoIdFromYoutubeLink('https://example.com/watch?v=abc123DEF45')).toBe('abc123DEF45');
+  });
+
   test('extracts a video id from supported YouTube URLs', () => {
     expect(extractVideoIdFromYoutubeLink('https://www.youtube.com/watch?v=abc123DEF45&t=10')).toBe('abc123DEF45');
     expect(extractVideoIdFromYoutubeLink('https://youtu.be/abc123DEF45?feature=share')).toBe('abc123DEF45');
