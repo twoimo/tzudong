@@ -1355,24 +1355,21 @@ def main():
         input_file = selection_dir / f"{video_id}.jsonl"
         output_file = output_dir / f"{video_id}.jsonl"
 
-        # 데이터 로드 (성능: 대용량 JSONL 전체 순회 방지)
-        data = load_last_jsonl_record(input_file)
-
-        if not data:
-            print("[WARN] operation=rule_evaluation_input_unreadable code=SELECTION_RECORD_UNAVAILABLE")
-            continue
-
-        # evaluation_target에 true 값이 있는 경우에만 평가 진행
-        evaluation_target = data.get("evaluation_target", {})
-        if not any(value for value in evaluation_target.values() if value is True):
-            continue
-
         receipt = output_dir / ".receipts" / f"{video_id}.json"
-        input_hash = fingerprint([input_file], assets=[Path(__file__)], settings={
-            "naverInterval": _naver_pacer.interval, "ncpInterval": _ncp_pacer.interval,
-            "fallbackModel": GEMINI_MODEL, "fallbackTimeout": GEMINI_TIMEOUT_SEC,
-        })
-        with stage_lock(receipt):
+        selection_receipt = selection_dir / ".receipts" / f"{video_id}.json"
+        # Lock order is selection -> rule -> LAAJ. Re-read after admission so a
+        # retired selection cannot be published from a previously loaded row.
+        with stage_lock(selection_receipt), stage_lock(receipt):
+            data = load_last_jsonl_record(input_file)
+            if not data:
+                print("[WARN] operation=rule_evaluation_input_unreadable code=SELECTION_RECORD_UNAVAILABLE")
+                continue
+            if not any(value is True for value in data.get("evaluation_target", {}).values()):
+                continue
+            input_hash = fingerprint([input_file], assets=[Path(__file__)], settings={
+                "naverInterval": _naver_pacer.interval, "ncpInterval": _ncp_pacer.interval,
+                "fallbackModel": GEMINI_MODEL, "fallbackTimeout": GEMINI_TIMEOUT_SEC,
+            })
             if not requested and reusable(receipt, input_hash, [output_file]):
                 stats["skipped"] += 1
                 continue

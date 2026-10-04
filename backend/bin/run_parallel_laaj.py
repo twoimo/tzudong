@@ -16,6 +16,8 @@ from backend.utils.jsonl_utils import load_last_jsonl_record
 from backend.utils.stage_cache import reusable, stage_lock
 from backend.utils.provider_budget import budget_path
 
+FALLBACK_LOCK_STATE = threading.local()
+
 
 def eligible(video, evaluation, crawling):
     rule = load_last_jsonl_record(evaluation / 'evaluation' / 'rule_results' / (video + '.jsonl'))
@@ -58,10 +60,14 @@ def run_video(video, args, *, fallback=False):
            'LAAJ_SKIP_HEALTH_CHECK': '0' if fallback else '1'}
     if fallback:
         env.update({'GEMINI_MAX_INFLIGHT': '1', 'USE_OAUTH': 'true'})
-    command = ['bash', str(args.script), '--channel', args.channel,
+    command = [os.environ.get('LAAJ_BASH', 'bash'), str(args.script), '--channel', args.channel,
                '--crawling-path', str(args.crawling_path), '--evaluation-path', str(args.evaluation_path), '--video-id', video]
-    with stage_lock(receipt):
-        process = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt')
+    with stage_lock(receipt) as descriptor:
+        descriptors=(descriptor,)
+        if fallback and getattr(FALLBACK_LOCK_STATE,'descriptor',None) is not None:
+            descriptors+=(FALLBACK_LOCK_STATE.descriptor,)
+        inherited = {'pass_fds': descriptors} if os.name != 'nt' else {}
+        process = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt', **inherited)
         captured = []
         reader = threading.Thread(target=lambda: captured.append(parse_usage(process.stdout)), daemon=True)
         reader.start()
@@ -101,34 +107,47 @@ def run_jobs(ids, args, runner=run_video):
         else: failures += code != 0
         for key, value in counts.items(): usage[key] = usage.get(key, 0) + value
 
-    iterator = iter(ids)
-    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        pending = {}
-        def refill():
-            nonlocal peak_pending
-            while len(pending) < args.jobs:
-                video = next(iterator, None)
-                if video is None: break
-                pending[pool.submit(runner, video, args)] = video
-            peak_pending = max(peak_pending, len(pending))
-        refill()
-        while pending:
-            completed, _ = wait(pending, return_when=FIRST_COMPLETED)
-            for future in completed:
-                video = pending.pop(future)
-                try: consume(video, future.result())
-                except (OSError, ValueError): failures += 1
+    iterator = iter([] if getattr(args,'oauth_only',False) else ids)
+    if getattr(args,'oauth_only',False): deferred.extend(ids)
+    if args.jobs==1:
+        for video in iterator:
+            result=runner(video,args)
+            consume(video,result)
+            peak_pending=1
+            if result[0]==75:
+                deferred.extend(iterator)
+                break
+    else:
+        with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+            pending = {}
+            def refill():
+                nonlocal peak_pending
+                while len(pending) < args.jobs:
+                    video = next(iterator, None)
+                    if video is None: break
+                    pending[pool.submit(runner, video, args)] = video
+                peak_pending = max(peak_pending, len(pending))
             refill()
+            while pending:
+                completed, _ = wait(pending, return_when=FIRST_COMPLETED)
+                for future in completed:
+                    video = pending.pop(future)
+                    try: consume(video, future.result())
+                    except (OSError, ValueError): failures += 1
+                refill()
     # API exhaustion and invalid responses must not multiply OAuth concurrency.
     # Cross-run fallback serialization shares a lock within the runtime.
     fallback_receipt = Path(os.getenv('LAAJ_FALLBACK_LOCK_PATH',
         str(budget_path().parent / 'laaj-fallback.json')))
     if deferred:
-        with stage_lock(fallback_receipt):
-            for video in deferred:
-                code, counts = runner(video, args, fallback=True)
-                failures += code != 0
-                for key, value in counts.items(): usage[key] = usage.get(key, 0) + value
+        with stage_lock(fallback_receipt) as descriptor:
+            FALLBACK_LOCK_STATE.descriptor=descriptor
+            try:
+                for video in deferred:
+                    code, counts = runner(video, args, fallback=True)
+                    failures += code != 0
+                    for key, value in counts.items(): usage[key] = usage.get(key, 0) + value
+            finally: FALLBACK_LOCK_STATE.descriptor=None
     return {'operation':'parallel_laaj_complete','items':len(ids),'failures':failures,'jobs':args.jobs,
             'fallbackItems':len(deferred),'peakPendingJobs':peak_pending,'knownTokenUsage':usage}
 
@@ -143,6 +162,7 @@ def main():
     parser.add_argument('--script', type=Path, required=True)
     parser.add_argument('--max-items', type=int)
     parser.add_argument('--process-timeout', type=float, default=1800)
+    parser.add_argument('--oauth-only', action='store_true')
     args = parser.parse_args()
     if not 1 <= args.jobs <= 8: raise ValueError('LAAJ_JOBS_INVALID')
     if not 0 < args.process_timeout <= 3600: raise ValueError('LAAJ_TIMEOUT_INVALID')

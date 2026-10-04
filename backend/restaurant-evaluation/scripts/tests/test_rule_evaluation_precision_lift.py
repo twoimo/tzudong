@@ -1,6 +1,12 @@
 import importlib.util
 import unittest
 from pathlib import Path
+import tempfile
+import json
+import sys
+import io
+from contextlib import contextmanager,redirect_stdout
+from unittest.mock import patch
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -13,6 +19,19 @@ spec.loader.exec_module(rule_eval)
 
 
 class RuleEvaluationPrecisionLiftTests(unittest.TestCase):
+    def test_retired_selection_is_reread_after_lock_before_provider_work(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);selection=root/'evaluation/selection';selection.mkdir(parents=True)
+            source=selection/'ABCDEFGHIJK.jsonl';source.write_text(json.dumps({'evaluation_target':{'fixture':True},'restaurants':[{'origin_name':'fixture'}]})+'\n')
+            @contextmanager
+            def admission(receipt):
+                if receipt.parent.parent.name=='rule_results':source.unlink()
+                yield
+            with patch.object(sys,'argv',['rule','--channel','tzuyang','--evaluation-path',str(root)]),patch.object(rule_eval,'stage_lock',admission),patch.object(rule_eval,'process_one_line') as process,redirect_stdout(io.StringIO()):
+                rule_eval.main()
+            process.assert_not_called()
+            self.assertFalse((root/'evaluation/rule_results/ABCDEFGHIJK.jsonl').exists())
+
     def test_build_location_result_requires_two_independent_families(self):
         result = rule_eval.build_location_result(
             origin_name="식당A",

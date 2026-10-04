@@ -95,8 +95,8 @@ def complete(receipt: Path, expected: str, outputs: list[Path]) -> None:
 
 
 @contextmanager
-def stage_lock(receipt: Path) -> Iterator[None]:
-    """Single writer across processes; OS releases the lock after a crash."""
+def stage_lock(receipt: Path) -> Iterator[int]:
+    """Single writer; POSIX callers may pass the descriptor to a live child."""
     receipt.parent.mkdir(parents=True, exist_ok=True)
     with receipt.with_suffix(receipt.suffix + ".lock").open("a+b") as handle:
         if os.name == "nt":
@@ -106,7 +106,7 @@ def stage_lock(receipt: Path) -> Iterator[None]:
             handle.seek(0)
             msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
             try:
-                yield
+                yield handle.fileno()
             finally:
                 handle.seek(0)
                 msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
@@ -114,7 +114,7 @@ def stage_lock(receipt: Path) -> Iterator[None]:
             import fcntl
             fcntl.flock(handle, fcntl.LOCK_EX)
             try:
-                yield
+                yield handle.fileno()
             finally:
                 fcntl.flock(handle, fcntl.LOCK_UN)
 

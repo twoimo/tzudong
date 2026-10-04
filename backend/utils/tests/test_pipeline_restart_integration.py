@@ -160,6 +160,97 @@ class TransformRestartTests(unittest.TestCase):
 
 
 class LaajRestartTests(unittest.TestCase):
+    @unittest.skipIf(os.name=='nt','POSIX descriptor inheritance proof')
+    def test_killed_coordinator_does_not_release_a_live_child_video_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);script=root/'worker.sh';worker=root/'worker.py'
+            worker.write_text('''import json,os,sys,time
+from pathlib import Path
+sys.path.insert(0,sys.argv[2])
+from backend.utils.stage_cache import complete,reusable
+r=Path(sys.argv[1]);receipt=r/'evaluation/laaj_results/.receipts/same.json';output=receipt.parent.parent/'same.jsonl'
+if reusable(receipt,'fixture',[output]):raise SystemExit(0)
+with (r/'calls').open('a') as f:f.write('work\\n')
+(r/'child.pid').write_text(str(os.getpid()))
+deadline=time.monotonic()+8
+while not (r/'release').exists():
+ if time.monotonic()>deadline:raise SystemExit(1)
+ time.sleep(.01)
+output.parent.mkdir(parents=True,exist_ok=True);output.write_text('{"result":1}\\n')
+complete(receipt,'fixture',[output])
+''')
+            script.write_text(f'exec "{sys.executable}" "{worker}" "{root}" "{ROOT}"\n')
+            code="from types import SimpleNamespace;from pathlib import Path;from backend.bin.run_parallel_laaj import run_video;import sys;root=Path(sys.argv[1]);args=SimpleNamespace(script=root/'worker.sh',channel='fixture',crawling_path=root,evaluation_path=root,process_timeout=10);raise SystemExit(run_video('same',args)[0])"
+            command=[sys.executable,'-c',code,str(root)]
+            first=subprocess.Popen(command,cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            second=None;child_pid=None
+            try:
+                deadline=time.monotonic()+5
+                while not (root/'child.pid').exists() and time.monotonic()<deadline:time.sleep(.01)
+                self.assertTrue((root/'child.pid').exists());child_pid=int((root/'child.pid').read_text())
+                first.kill();first.wait(timeout=5)
+                second=subprocess.Popen(command,cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+                with self.assertRaises(subprocess.TimeoutExpired):second.wait(timeout=.15)
+                (root/'release').touch();self.assertEqual(second.wait(timeout=5),0)
+                self.assertEqual((root/'calls').read_text().splitlines(),['work'])
+            finally:
+                for process in [first,second]:
+                    if process and process.poll() is None:process.kill();process.wait()
+                if child_pid:
+                    try:os.killpg(child_pid,15)
+                    except ProcessLookupError:pass
+
+    def test_default_sequential_shell_overlaps_execute_one_provider_request(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for relative in [
+                'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh','backend/restaurant-evaluation/scripts/parse_laaj_evaluation.py',
+                'backend/restaurant-evaluation/scripts/gemini_api_request.mjs','backend/restaurant-evaluation/prompts/evaluation_prompt.txt',
+                'backend/bin/stage_cache.py','backend/bin/run_parallel_laaj.py','backend/utils/stage_cache.py','backend/utils/jsonl_utils.py',
+                'backend/utils/provider_budget.py','backend/utils/provider-budget.mjs','backend/utils/gemini-client.mjs']:
+                target=root/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/relative,target)
+            (root/'backend/bin/run_agy_prompt.py').write_text('raise SystemExit(1)\n')
+            tools=root/'tools';tools.mkdir();(tools/'python').symlink_to(sys.executable)
+            metrics={key:[{'name':'fixture','eval_value':True if key.endswith('TF') else 1,'eval_basis':'fixture'}]
+                     for key in ['visit_authenticity','rb_inference_score','rb_grounding_TF','review_faithfulness_score','category_TF']}
+            response=root/'response.json';response.write_text(json.dumps(metrics));calls=root/'calls'
+            provider=tools/'node';provider.write_text(f'#!{sys.executable}\n'+
+                'import os,sys,time\nfrom pathlib import Path\n'+
+                'with Path(os.environ["FX_CALLS"]).open("a") as f:f.write("request\\n")\n'+
+                'time.sleep(.2)\nPath(sys.argv[3]).write_text(Path(os.environ["FX_RESPONSE"]).read_text())\n')
+            provider.chmod(0o700)
+            crawling,evaluation=root/'crawl',root/'evaluation'
+            rule=evaluation/'evaluation/rule_results';rule.mkdir(parents=True)
+            transcript=crawling/'transcript';transcript.mkdir(parents=True)
+            (rule/'abcdefghijk.jsonl').write_text(json.dumps(RULE)+'\n')
+            (transcript/'abcdefghijk.jsonl').write_text('{"transcript":[{"start":0,"text":"fixture"}]}\n')
+            env={**os.environ,'PATH':f'{tools}:/opt/homebrew/bin:/usr/bin:/bin','TZUDONG_PIPELINE_ISOLATED':'1',
+                 'GEMINI_API_KEY':'fixture-unusable','FX_CALLS':str(calls),'FX_RESPONSE':str(response)}
+            env.pop('GEMINI_MAX_INFLIGHT',None);env.pop('LAAJ_CHILD',None)
+            command=['/opt/homebrew/bin/bash',str(root/'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh'),
+                     '--channel','tzuyang','--crawling-path',str(crawling),'--evaluation-path',str(evaluation)]
+            first=subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            second=subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            try:
+                first.communicate(timeout=20);second.communicate(timeout=20)
+                self.assertEqual(first.returncode,0);self.assertEqual(second.returncode,0)
+            finally:
+                for process in [first,second]:
+                    if process.poll() is None:process.kill();process.wait()
+            self.assertEqual(calls.read_text().splitlines(),['request'])
+            self.assertEqual(len((evaluation/'evaluation/laaj_results/abcdefghijk.jsonl').read_text().splitlines()),1)
+
+    def test_jobs_one_preserves_sticky_fallback_and_oauth_only_never_admits_api(self):
+        calls=[]
+        def runner(video,args,*,fallback=False):
+            calls.append((video,fallback));return (0 if fallback else 75),{}
+        with tempfile.TemporaryDirectory() as directory,patch.dict(os.environ,{'LAAJ_FALLBACK_LOCK_PATH':str(Path(directory)/'fallback.json')}):
+            result=laaj.run_jobs(['one','two','three'],SimpleNamespace(jobs=1),runner)
+            self.assertEqual(calls,[('one',False),('one',True),('two',True),('three',True)])
+            self.assertEqual(result['failures'],0)
+            calls.clear();laaj.run_jobs(['one','two'],SimpleNamespace(jobs=3,oauth_only=True),runner)
+            self.assertEqual(calls,[('one',True),('two',True)])
+
     def test_real_shell_quota_failure_drains_api_then_uses_sequential_oauth(self):
         settings=Path.home()/'.gemini/settings.json'
         before=hashlib.sha256(settings.read_bytes()).hexdigest() if settings.is_file() else None

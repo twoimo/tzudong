@@ -187,8 +187,7 @@ log_cli_error_tail() {
     local label="$1"
     local file="$2"
     if [ -f "$file" ] && [ -s "$file" ]; then
-        log_warning "$label stderr/output tail:"
-        sed -n '1,80p' "$file" >&2
+        log_warning "$label: LAAJ_PROVIDER_DIAGNOSTIC_SUPPRESSED"
     fi
 }
 
@@ -393,7 +392,10 @@ LAAJ_RESULTS_DIR="$FULL_EVALUATION_PATH/evaluation/laaj_results"
 ERRORS_DIR="$FULL_EVALUATION_PATH/evaluation/errors"
 TRANSCRIPT_DIR="$FULL_CRAWLING_PATH/transcript"
 META_DIR="$FULL_CRAWLING_PATH/meta"
-TEMP_DIR="$SCRIPT_DIR/../temp"
+TEMP_BASE="$SCRIPT_DIR/../temp"
+mkdir -p "$TEMP_BASE"
+TEMP_DIR=$(mktemp -d "$TEMP_BASE/laaj-run.XXXXXX")
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 mkdir -p "$LAAJ_RESULTS_DIR" "$ERRORS_DIR" "$TEMP_DIR"
 
@@ -574,20 +576,18 @@ TOTAL_GEMINI_TIME=0
 
 
 
-if [ "${LAAJ_CHILD:-0}" != "1" ] && [ "$FORCE_CLI_FALLBACK" = false ]; then
+if [ "${LAAJ_CHILD:-0}" = "0" ]; then
     LAAJ_JOBS="${GEMINI_MAX_INFLIGHT:-1}"
     if ! [[ "$LAAJ_JOBS" =~ ^[1-8]$ ]]; then log_error "LAAJ_JOBS_INVALID"; exit 1; fi
-    if [ "$LAAJ_JOBS" -gt 1 ] && [ "$TOTAL" -gt 0 ]; then
+    if [ "$TOTAL" -gt 0 ]; then
         PARALLEL_ARGS=(--jobs "$LAAJ_JOBS" --channel "$CHANNEL" --crawling-path "$FULL_CRAWLING_PATH"
             --evaluation-path "$FULL_EVALUATION_PATH" --script "$SCRIPT_DIR/11-laaj-evaluation.sh")
         if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then PARALLEL_ARGS+=(--max-items "${LIVE_MAX_NEW_ITEMS:-1}"); fi
-        ELIGIBLE_COUNT=$(printf '%s\n' "${VIDEO_IDS[@]}" | "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" eligible-count "${PARALLEL_ARGS[@]}") || exit 1
-        if [ "$ELIGIBLE_COUNT" -gt 0 ]; then ensure_health_check; fi
-        # OAuth/browser fallbacks stay sequential unless the Node API preflight succeeds.
-        if [ "$FORCE_CLI_FALLBACK" = false ] && [ "$ELIGIBLE_COUNT" -gt 0 ]; then
-            printf '%s\n' "${VIDEO_IDS[@]}" | "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" run "${PARALLEL_ARGS[@]}"
-            exit $?
-        fi
+        if [ "$FORCE_CLI_FALLBACK" = true ]; then PARALLEL_ARGS+=(--oauth-only); fi
+        # Default sequential and OAuth work use the same video lock as API pools.
+        # Admission happens inside that lock before a provider call or receipt check.
+        printf '%s\n' "${VIDEO_IDS[@]}" | LAAJ_BASH="$BASH" "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" run "${PARALLEL_ARGS[@]}"
+        exit $?
     fi
 fi
 
@@ -797,7 +797,7 @@ $TRANSCRIPT
         else
             log_warning "Antigravity CLI 호출 실패 - Gemini CLI OAuth fallback 확인"
             if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
-                cat "$TEMP_STDERR" >&2
+                log_warning "LAAJ_PROVIDER_DIAGNOSTIC_SUPPRESSED"
             fi
             if is_quota_error "$TEMP_STDERR" || is_quota_error "$TEMP_RESPONSE"; then
                 log_warning "Antigravity CLI 할당량 소진 감지 -> Gemini CLI OAuth($CURRENT_MODEL)로 전환"
