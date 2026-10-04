@@ -1444,18 +1444,23 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 // A known commit survives unmount/auth changes. Finish only the
                 // captured local draft cleanup; do not notify a different owner
                 // or update an unmounted form, and never remove saved photos.
-                if (result === 'saved' && !changedDuringSave) await saveOperationRef.current!.clearSavedDraft();
+                if (result === 'saved' || result === 'saved-previous') await saveOperationRef.current!.clearSavedDraft();
                 return;
             }
             if (closeRequestedRef.current) return; // handleClose owns cancellation readback and notification.
             if (!composerOpenRef.current) {
                 if (result === 'saved' || result === 'saved-previous') {
-                    if (result === 'saved' && !changedDuringSave) await clearDraft();
+                    await clearDraft();
                     notifySavedReview();
                 }
                 return;
             }
             if (result === 'saved-previous' || (result === 'saved' && changedDuringSave)) {
+                if (!await clearDraft()) {
+                    setSaveRecovery('draft-cleanup');
+                    toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
+                    return;
+                }
                 setSaveRecovery('edit');
                 toast({ title: "이전 내용으로 등록되었습니다", description: "등록 후 변경한 내용은 유지했습니다. 저장된 리뷰는 내 리뷰에서 확인하고 수정해주세요." });
                 return;
@@ -1495,15 +1500,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             return;
         }
         if (cancellation.status === 'saved') {
-            const latest = latestSaveInputsRef.current;
-            const saved = cancellation.draft;
-            const time = latest.visitedTime.split(':').length === 2 ? `${latest.visitedTime}:00` : latest.visitedTime;
-            const unchanged = saved.ownerId === saveOwnerRef.current && saved.restaurantId === latest.restaurantId
-                && saved.visitedAt === `${latest.visitedDate}T${time}` && saved.content === latest.content.trim()
-                && saved.categories.length === latest.categories.length && saved.categories.every((value, i) => value === latest.categories[i])
-                && saved.verificationPhoto === latest.verificationPhoto
-                && saved.foodPhotos.length === latest.foodPhotos.length && saved.foodPhotos.every((photo, i) => photo === latest.foodPhotos[i]);
-            if (unchanged && !consumerNotifiedRef.current && !await clearDraft()) {
+            if (!await clearDraft()) {
                 closeRequestedRef.current = false;
                 setSaveRecovery('draft-cleanup');
                 toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
