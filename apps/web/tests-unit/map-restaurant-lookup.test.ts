@@ -68,4 +68,43 @@ describe('map restaurant lookup helpers', () => {
 
         expect(findMatchingRestaurantInList(selectedRestaurant, [visibleRestaurant])).toEqual(visibleRestaurant);
     });
+
+    test('keeps the earliest candidate when several rows could match', () => {
+        const earlierByName = makeRestaurant({
+            id: 'earlier-name',
+            name: '같은 식당',
+            lat: 37.5665,
+            lng: 126.978,
+        });
+        const laterById = makeRestaurant({ id: 'target-id', name: '다른 식당' });
+        const target = makeRestaurant({
+            id: 'target-id',
+            name: '같은 식당',
+            lat: 37.5665,
+            lng: 126.978,
+        });
+
+        expect(findMatchingRestaurantInList(target, [earlierByName, laterById])).toEqual(earlierByName);
+        expect(findMatchingRestaurantInList(target, [laterById, earlierByName])).toEqual(laterById);
+    });
+
+    test('returns null for empty, missing, and non-matching input', () => {
+        const target = makeRestaurant({ id: 'missing', name: '없음', lat: 1, lng: 2 });
+        expect(findMatchingRestaurantInList(null, [target])).toBeNull();
+        expect(findMatchingRestaurantInList(undefined, [target])).toBeNull();
+        expect(findMatchingRestaurantInList(target, [])).toBeNull();
+        expect(findMatchingRestaurantInList(target, null)).toBeNull();
+        expect(findMatchingRestaurantInList(target, undefined)).toBeNull();
+        expect(findMatchingRestaurantInList(
+            makeRestaurant({ id: "'; drop table restaurants;--" }),
+            [target],
+        )).toBeNull();
+        expect(findMatchingRestaurantInList(
+            makeRestaurant({
+                id: 'wrapped',
+                mergedRestaurants: [],
+            }),
+            [makeRestaurant({ id: 'wrapped' })],
+        )?.id).toBe('wrapped');
+    });
 });

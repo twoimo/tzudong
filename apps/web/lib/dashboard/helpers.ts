@@ -1,22 +1,56 @@
 import type { Json } from '@/integrations/supabase/types';
 
+const YOUTUBE_VIDEO_ID_PATTERNS = [
+    /[?&]v=([A-Za-z0-9_-]{6,})/,
+    /youtu\.be\/([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/live\/([A-Za-z0-9_-]{6,})/,
+] as const;
+
+const DASHBOARD_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,128}$/;
+const VIDEO_ID_CACHE_LIMIT = 4096;
+const videoIdByLink = new Map<string, string | null>();
+
+function rememberVideoId(link: string, videoId: string | null): string | null {
+    if (videoIdByLink.size >= VIDEO_ID_CACHE_LIMIT) {
+        videoIdByLink.clear();
+    }
+    videoIdByLink.set(link, videoId);
+    return videoId;
+}
+
 export function extractVideoIdFromYoutubeLink(link: string | null | undefined): string | null {
-    if (!link) return null;
+    if (typeof link !== 'string' || link.length === 0) return null;
 
-    const patterns = [
-        /[?&]v=([A-Za-z0-9_-]{6,})/,
-        /youtu\.be\/([A-Za-z0-9_-]{6,})/,
-        /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
-        /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
-        /youtube\.com\/live\/([A-Za-z0-9_-]{6,})/,
-    ];
+    const cached = videoIdByLink.get(link);
+    if (cached !== undefined) return cached;
 
-    for (const pattern of patterns) {
-        const match = link.match(pattern);
-        if (match?.[1]) return match[1];
+    let videoId: string | null = null;
+    for (const pattern of YOUTUBE_VIDEO_ID_PATTERNS) {
+        const match = pattern.exec(link);
+        if (match?.[1]) {
+            videoId = match[1];
+            break;
+        }
     }
 
-    return null;
+    return rememberVideoId(link, videoId);
+}
+
+export function classifyDashboardVideoId(videoId: string | null | undefined):
+    | { status: 'required' }
+    | { status: 'invalid'; length: number }
+    | { status: 'ok'; videoId: string } {
+    if (typeof videoId !== 'string') return { status: 'required' };
+
+    const trimmed = videoId.trim();
+    if (trimmed.length === 0) return { status: 'required' };
+    if (!DASHBOARD_VIDEO_ID_PATTERN.test(trimmed)) {
+        return { status: 'invalid', length: trimmed.length };
+    }
+
+    return { status: 'ok', videoId: trimmed };
 }
 
 export function canonicalizeYoutubeLink(link: string | null | undefined): string | null {

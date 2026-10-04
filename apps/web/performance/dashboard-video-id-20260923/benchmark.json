@@ -1,0 +1,153 @@
+{
+  "measuredAt": "2026-09-23",
+  "machine": "local",
+  "workload": {
+    "links": 4000,
+    "repeatPasses": 6,
+    "extractCalls": 24000,
+    "samples": 11,
+    "warmup": 2
+  },
+  "budgets": {
+    "absoluteMs": 16,
+    "relativeMin": 1.3,
+    "noiseMadOverMedian": 0.15
+  },
+  "identity": {
+    "extractMismatches": 0,
+    "scanIdMismatch": false
+  },
+  "extract": {
+    "before": {
+      "medianMs": 1.455,
+      "madMs": 0.091,
+      "samplesMs": [
+        1.232,
+        1.491,
+        1.681,
+        1.367,
+        1.689,
+        1.455,
+        1.414,
+        1.298,
+        1.206,
+        1.481,
+        1.546
+      ]
+    },
+    "hoistedRegex": {
+      "medianMs": 0.814,
+      "madMs": 0.087,
+      "samplesMs": [
+        0.901,
+        1.482,
+        0.804,
+        1.165,
+        0.814,
+        0.79,
+        0.971,
+        0.618,
+        0.863,
+        0.602,
+        0.772
+      ]
+    },
+    "cached": {
+      "medianMs": 0.227,
+      "madMs": 0.016,
+      "samplesMs": [
+        0.227,
+        0.276,
+        0.25,
+        0.211,
+        0.289,
+        0.238,
+        0.223,
+        0.213,
+        0.27,
+        0.211,
+        0.208
+      ]
+    },
+    "cachedRatio": 6.41,
+    "hoistedRatio": 1.79,
+    "combinedMadOverMedian": 0.133
+  },
+  "videoLookup": {
+    "before": {
+      "medianMs": 1.416,
+      "madMs": 0.077,
+      "samplesMs": [
+        1.465,
+        1.333,
+        1.398,
+        1.49,
+        1.493,
+        1.564,
+        1.503,
+        1.309,
+        1.222,
+        1.402,
+        1.416
+      ]
+    },
+    "after": {
+      "medianMs": 0.001,
+      "madMs": 0,
+      "samplesMs": [
+        0.002,
+        0.001,
+        0.001,
+        0.003,
+        0.001,
+        0.001,
+        0.001,
+        0.001,
+        0.003,
+        0.001,
+        0.001
+      ]
+    },
+    "ratio": 1416,
+    "combinedMadOverMedian": 0.054,
+    "coldSinglePass": {
+      "before": {
+        "medianMs": 0.176,
+        "madMs": 0.023,
+        "samplesMs": [
+          0.723,
+          0.173,
+          0.143,
+          0.144,
+          0.176,
+          0.153,
+          0.627,
+          0.157,
+          0.18,
+          0.187,
+          0.225
+        ]
+      },
+      "after": {
+        "medianMs": 0.23,
+        "madMs": 0.04,
+        "samplesMs": [
+          0.351,
+          0.211,
+          0.364,
+          0.191,
+          0.189,
+          0.222,
+          0.27,
+          0.278,
+          0.26,
+          0.23,
+          0.179
+        ]
+      },
+      "ratio": 0.77
+    },
+    "note": "Warm samples reuse one row array, so the WeakMap is built during warmup. Cold samples copy the array every call and include index construction. The warm ratio is a repeat-lookup figure and sits near the timer floor."
+  },
+  "accepted": true
+}

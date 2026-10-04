@@ -97,7 +97,6 @@ import {
 } from "@/lib/expanded-cluster-restaurant-snapshot";
 import {
     buildRestaurantLookup,
-    findMatchingRestaurantInList,
 } from "@/lib/map-restaurant-lookup";
 import {
     buildPostSearchSwipeCandidates,

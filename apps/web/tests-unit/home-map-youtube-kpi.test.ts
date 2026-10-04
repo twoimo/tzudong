@@ -36,6 +36,24 @@ describe('home map youtube KPI enrichment', () => {
         ])).toEqual(['abcdefghijk', 'lmnopqrstuv', 'wxyzABCDE12']);
     });
 
+    test('ignores empty links and re-reads a link after it changes', () => {
+        expect(collectHomeMapYoutubeVideoIds(null)).toEqual([]);
+        expect(collectHomeMapYoutubeVideoIds([])).toEqual([]);
+        const row = restaurant('blank', {
+            youtube_link: '   ',
+            mergedYoutubeLinks: ['', 'https://youtu.be/abcdefghijk'],
+            mergedRestaurants: [
+                { youtube_link: null } as Restaurant,
+            ],
+        });
+        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['abcdefghijk']);
+        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['abcdefghijk']);
+        row.youtube_link = 'https://www.youtube.com/watch?v=zzzzzzzzzzz';
+        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['zzzzzzzzzzz', 'abcdefghijk']);
+        expect(chunkHomeMapYoutubeVideoIds([], 0)).toEqual([]);
+        expect(chunkHomeMapYoutubeVideoIds(['abcdefghijk'], Number.NaN)).toEqual([['abcdefghijk']]);
+    });
+
 
     test('chunks video ids so home KPI requests stay under the bounded POST limit', () => {
         const videoIds = Array.from({ length: 250 }, (_, index) => `id${String(index).padStart(4, '0')}`);
