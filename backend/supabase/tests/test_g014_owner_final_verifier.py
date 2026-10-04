@@ -21,7 +21,7 @@ from backend.supabase.scripts.materialize_migration_workspace import _history_mi
 
 BIN = Path('/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6-icu78/installed/bin')
 CLI = '/Users/twoimo/.codex/runtime-cache/tzudong-supabase-cli-2.119.0/node_modules/.bin/supabase'
-SOURCE = plan.ROOT / 'backend/supabase/migrations' / plan.VERIFIER
+SOURCE = plan.ROOT / plan.OPERATIONAL_RECEIPTS / plan.VERIFIER
 ORIGINAL = plan.ROOT / 'backend/supabase/migrations' / plan.ORIGINAL
 
 
@@ -54,7 +54,7 @@ class SourceContract(unittest.TestCase):
             self.assertFalse(report['hostedPostChainAdmissionVerified'])
             self.assertFalse(report['ledgerReceiptsSynthesized'])
             self.assertEqual((directory / '2-original-recovery' / plan.ORIGINAL).read_bytes(), ORIGINAL.read_bytes())
-            self.assertEqual((directory / '3-identity-correction' / plan.CORRECTION).read_bytes(), (plan.ROOT / 'backend/supabase/migrations' / plan.CORRECTION).read_bytes())
+            self.assertEqual((directory / '3-identity-correction' / plan.CORRECTION).read_bytes(), (plan.ROOT / plan.OPERATIONAL_RECEIPTS / plan.CORRECTION).read_bytes())
             self.assertEqual((directory / '4-final-verifier' / plan.VERIFIER).read_bytes(), SOURCE.read_bytes())
             self.assertEqual(len(list(directory.glob('**/*.sql'))), 5)
             preflight = (directory / 'before-recovery-read-only.sql').read_text()

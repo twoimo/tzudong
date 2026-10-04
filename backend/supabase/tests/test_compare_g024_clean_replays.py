@@ -37,6 +37,7 @@ GENERATOR_ARTIFACTS = (
     "g014-owner-pg15-verification.sql", "g014-owner-pg15-receipt.json",
     "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
     "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",
+    "operational-archive-binding.json",
     "postgres-image-00000000000001-auth-schema.sql",
     "pre-20260214-overlap-classification.jsonl",
     "reconstruction-compatibility-exclusions.jsonl",
@@ -49,6 +50,7 @@ GENERATOR_ARTIFACTS = (
 NEW_REPLAY_ARTIFACTS = (
     "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
     "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",
+    "operational-archive-binding.json",
 )
 
 
@@ -176,13 +178,13 @@ class CompareG024CleanReplaysTest(unittest.TestCase):
         self.assertEqual(left_output.read_bytes(), right_output.read_bytes())
 
     def test_actual_generator_manifest_repairs_unlisted_replay_outputs(self):
-        # Reproduce the CI failure: all four files exist, but the old manifest
+        # Reproduce the CI failure: new files exist, but the old manifest
         # and its internally correct SHA256SUMS omit them.
         manifest = self.right / module.ARTIFACT_MANIFEST
         names = manifest.read_text().splitlines()
         manifest.write_text("\n".join(name for name in names if name not in NEW_REPLAY_ARTIFACTS) + "\n")
         write_sums(self.right)
-        with self.assertRaisesRegex(module.ComparisonError, "root entries do not exactly match"):
+        with self.assertRaisesRegex(module.ComparisonError, "omits required comparison invariants"):
             module.load_candidate(self.right)
         for directory in (self.left, self.right):
             emit_generator_manifest(directory)
@@ -191,6 +193,20 @@ class CompareG024CleanReplaysTest(unittest.TestCase):
             self.assertTrue(set(NEW_REPLAY_ARTIFACTS) <= set(listed))
         result = module.compare(self.left, self.right, self.root / "repaired.json")
         self.assertEqual(result["verdict"], "passed")
+
+    def test_operational_binding_cannot_be_omitted_from_both_self_consistent_candidates(self):
+        # Removing the payload, manifest entry and checksum from BOTH sides
+        # must not turn missing custody evidence into an equal replay verdict.
+        name = "operational-archive-binding.json"
+        for directory in (self.left, self.right):
+            (directory / name).unlink()
+            manifest = directory / module.ARTIFACT_MANIFEST
+            manifest.write_text("\n".join(entry for entry in manifest.read_text().splitlines() if entry != name) + "\n")
+            write_sums(directory)
+        output = self.root / "omitted.json"
+        with self.assertRaisesRegex(module.ComparisonError, "omits required comparison invariants"):
+            module.compare(self.left, self.right, output)
+        self.assertFalse(output.exists())
 
     def test_each_new_replay_artifact_is_required_by_manifest_and_hash_bound(self):
         for name in NEW_REPLAY_ARTIFACTS:

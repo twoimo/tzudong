@@ -160,7 +160,7 @@ class LocalReplayContractTests(unittest.TestCase):
         from backend.supabase.tests.test_local_migration_contract import local_migrate
         calls = []
         class Executor:
-            def capture(self, sql):
+            def capture(self, sql, *, role='supabase_admin'):
                 calls.append(sql)
                 return b'{"applied":true}'
             def run(self, sql):
@@ -195,9 +195,10 @@ class LocalReplayContractTests(unittest.TestCase):
         from backend.supabase.tests.test_local_migration_contract import local_migrate
         rows = [local_migrate._expected_snapshot_row(item) for item in local_migrate.build_manifest()['source']['files']]
         self.assertEqual(len(rows), len(local_migrate.migration_files()))
-        self.assertEqual(sum(row['status'] == 'applied' for row in rows), len(rows) - 5)
-        self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 3)
-        self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 2)
+        self.assertEqual(sum(row['status'] == 'applied' for row in rows), len(rows) - 3)
+        self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 2)
+        self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 1)
+        self.assertFalse(any('/applied-receipts/' in row['path'] for row in rows))
         local_migrate._validate_ledger_snapshot(rows)
         recovery_index = next(
             index for index, row in enumerate(rows)

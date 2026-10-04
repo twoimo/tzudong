@@ -62,6 +62,9 @@ on:
       - 'backend/supabase/scripts/g014_owner_recovery_plan.py'
       - 'backend/supabase/scripts/verify_g014_owner_final_replay.py'
       - 'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
+      - 'backend/supabase/applied-receipts/owner-recovery-20261004/**'
+      - 'backend/supabase/scripts/operational_sql_receipts.py'
+      - 'backend/supabase/tests/test_operational_sql_receipts.py'
       - 'backend/supabase/scripts/g016_onboarding_identity_correction.py'
       - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
       - 'backend/supabase/scripts/local_replay_contract.py'
@@ -454,6 +457,7 @@ jobs:
           backend.supabase.tests.test_g014_owner_final_verifier.SourceContract
           backend.supabase.tests.test_g014_owner_final_replay.SourceContract
           backend.supabase.tests.test_local_replay_contract
+          backend.supabase.tests.test_operational_sql_receipts.SourceContract
 
       - name: Verify Supabase advisor, Auth hardening, and hosted DB access source
         run: |

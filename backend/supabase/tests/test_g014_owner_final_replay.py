@@ -10,7 +10,7 @@ from backend.supabase.scripts import verify_g014_owner_final_replay as replay
 from backend.supabase.tests import test_g014_pg17_owner_contract as legacy_fixture
 
 ROOT = Path(__file__).resolve().parents[3]
-SOURCE_PATH = 'backend/supabase/migrations/20261004115554_g014_pg17_owner_final_verifier.sql'
+SOURCE_PATH = 'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql'
 SOURCE = ROOT / SOURCE_PATH
 PREDECESSOR = legacy_fixture.MIGRATION
 

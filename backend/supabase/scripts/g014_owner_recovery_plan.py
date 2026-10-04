@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from backend.supabase.scripts.materialize_migration_workspace import FORWARD_FILES, ROOT
+from backend.supabase.scripts.operational_sql_receipts import ARCHIVE as OPERATIONAL_RECEIPTS, source_bytes
 
 ORIGINAL = '20260906064252_g014_pg17_workflow_owner_contract.sql'
 ORIGINAL_SHA256 = '8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483'
@@ -213,8 +214,8 @@ def prepare(destination: Path) -> dict:
     if destination.exists():
         raise ValueError('g014_owner_plan_destination_exists')
     original = (ROOT / 'backend/supabase/migrations' / ORIGINAL).read_bytes()
-    final = (ROOT / 'backend/supabase/migrations' / VERIFIER).read_bytes()
-    correction = (ROOT / 'backend/supabase/migrations' / CORRECTION).read_bytes()
+    final = source_bytes(VERIFIER, root=ROOT)
+    correction = source_bytes(CORRECTION, root=ROOT)
     from backend.supabase.scripts.g016_onboarding_identity_correction import source
     if correction != source().encode():
         raise ValueError('g014_owner_plan_correction_unready')
@@ -231,15 +232,17 @@ def prepare(destination: Path) -> dict:
         (directory / name).write_bytes(body)
     plan = {'kind': 'separate-pg17-owner-recovery-plan', 'databaseMutations': False,
             'requiresRecordedForwardVersions': [name[:14] for name in FORWARD_FILES],
-            'phases': [{'stage': 2, 'file': ORIGINAL, 'sourceSha256': ORIGINAL_SHA256, 'expectedLedgerCountBefore': 75,
+            'phases': [{'stage': 2, 'file': ORIGINAL, 'sourcePath': 'backend/supabase/migrations/' + ORIGINAL, 'sourceSha256': ORIGINAL_SHA256, 'expectedLedgerCountBefore': 75,
                         'expectedCliLedgerReceipt': {'statement_count': 1, 'statements_sha256': ORIGINAL_CLI_STATEMENT_SHA256,
                                                      'statements_array_sha256': ORIGINAL_CLI_ARRAY_SHA256}},
-                       {'stage': 3, 'file': CORRECTION, 'sourceSha256': hashlib.sha256(correction).hexdigest(), 'expectedLedgerCountBefore': 76},
-                       {'stage': 4, 'file': VERIFIER, 'sourceSha256': hashlib.sha256(final).hexdigest(), 'expectedLedgerCountBefore': 77,
+                       {'stage': 3, 'file': CORRECTION, 'sourcePath': (OPERATIONAL_RECEIPTS / CORRECTION).as_posix(), 'sourceSha256': hashlib.sha256(correction).hexdigest(), 'expectedLedgerCountBefore': 76},
+                       {'stage': 4, 'file': VERIFIER, 'sourcePath': (OPERATIONAL_RECEIPTS / VERIFIER).as_posix(), 'sourceSha256': hashlib.sha256(final).hexdigest(), 'expectedLedgerCountBefore': 77,
                         'requiredRecordedCorrectionVersion': CORRECTION[:14]}],
             'hostedPostChainAdmissionVerified': False, 'ledgerReceiptsSynthesized': False,
             'requiresPostChainLedgerHashReadback': True,
-            'note': 'Separate source versions. Original recovery is already applied in hosted state and must not be replayed. Build only the next phase from its fresh exact ledger; never reuse the base62/base75 pack or glob phases together. Final verifier timestamp precedes the correction, so explicitly selected --include-all is required.'}
+            'operationalArchiveManifest': (OPERATIONAL_RECEIPTS / 'manifest.json').as_posix(),
+            'automaticFreshReplay': False,
+            'note': 'Historical, separately admitted stages; all are already recorded by hosted ledger 78. The two archived operations retain their exact identity and bytes, outside the automatic fresh migration chain. These original gates reject the completed snapshot. Do not replay them or repair history. PG15 catalog verification is a separate read-only disposition, never hosted execution.'}
     (destination / 'owner-recovery-plan.json').write_text(json.dumps(plan, indent=2) + '\n')
     return plan
 
