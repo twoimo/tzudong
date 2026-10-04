@@ -1,0 +1,72 @@
+{
+  "kind": "admin-query-and-model-capability-rendered-fixture",
+  "passed": true,
+  "node": "v24.21.0",
+  "browser": "154.0.8037.97",
+  "origin": "http://127.0.0.1:18794",
+  "synthetic": true,
+  "debounceMs": 250,
+  "trials": [
+    {
+      "trial": 0,
+      "keystrokes": 8,
+      "requests": 1,
+      "finalQueryMatches": true
+    },
+    {
+      "trial": 1,
+      "keystrokes": 8,
+      "requests": 1,
+      "finalQueryMatches": true
+    },
+    {
+      "trial": 2,
+      "keystrokes": 8,
+      "requests": 1,
+      "finalQueryMatches": true
+    },
+    {
+      "trial": 3,
+      "keystrokes": 8,
+      "requests": 1,
+      "finalQueryMatches": true
+    },
+    {
+      "trial": 4,
+      "keystrokes": 8,
+      "requests": 1,
+      "finalQueryMatches": true
+    },
+    {
+      "trial": 5,
+      "keystrokes": 8,
+      "requests": 1,
+      "finalQueryMatches": true
+    },
+    {
+      "trial": 6,
+      "keystrokes": 8,
+      "requests": 1,
+      "finalQueryMatches": true
+    }
+  ],
+  "models": {
+    "remoteZeroBytesAccepted": true,
+    "unsupportedProDisabled": true,
+    "selectedUnavailableModelPreserved": true,
+    "offlineCreationDisabled": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "pageErrors": 0,
+  "sources": [
+    {
+      "path": "app/admin/evaluations/page.tsx",
+      "sha256": "2bf4440d6a9fa59ef7a5b3f371aed384641c8be4fcc1093d4babac90ceaa29a5"
+    },
+    {
+      "path": "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "sha256": "298f1ca2d05a79424b90e7760e14a9a77c211bef44922e5d2a7b418fb1da7c2d"
+    }
+  ]
+}

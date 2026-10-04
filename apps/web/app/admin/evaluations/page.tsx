@@ -1092,6 +1092,11 @@ function AdminEvaluationPage({
   const pageRevisionRef = useRef<string | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
+  const [serverSearchQuery, setServerSearchQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setServerSearchQuery(searchQuery), 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [evalFilters, setEvalFilters] = useState<EvalFiltersState>({});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
@@ -1201,12 +1206,12 @@ function AdminEvaluationPage({
   );
   const evaluationPageQuery = useMemo(() => {
     if (legacyEvaluationLoad) return '';
-    const params = new URLSearchParams({ q: searchQuery, filters: JSON.stringify(evalFilters) });
+    const params = new URLSearchParams({ q: serverSearchQuery, filters: JSON.stringify(evalFilters) });
     if (deepLinkFilter?.videoId) params.set('videoId', deepLinkFilter.videoId);
     if (deepLinkFilter?.issue) params.set('issue', deepLinkFilter.issue);
     if (deepLinkFilter?.reason) params.set('reason', deepLinkFilter.reason);
     return params.toString();
-  }, [searchQuery, evalFilters, deepLinkFilter, legacyEvaluationLoad]);
+  }, [serverSearchQuery, evalFilters, deepLinkFilter, legacyEvaluationLoad]);
 
   const clearDeepLinkFilter = useCallback(() => {
     setDeepLinkFilter(null);
@@ -1291,7 +1296,10 @@ function AdminEvaluationPage({
       if (!savedState) return;
 
       if (savedState.selectedStatuses) setSelectedStatuses(savedState.selectedStatuses);
-      if (savedState.searchQuery !== undefined) setSearchQuery(savedState.searchQuery);
+      if (savedState.searchQuery !== undefined) {
+        setSearchQuery(savedState.searchQuery);
+        setServerSearchQuery(savedState.searchQuery);
+      }
       if (savedState.evalFilters) setEvalFilters(savedState.evalFilters);
       if (savedState.isAlternateView !== undefined) setIsAlternateView(savedState.isAlternateView);
     } catch {

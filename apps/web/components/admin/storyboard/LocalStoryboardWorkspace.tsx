@@ -159,7 +159,7 @@ function privateAssetUrl(projectId: string, assetId: string, path: string): stri
   return `${API}/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}?variant=${encodeURIComponent(basename)}`;
 }
 
-function ProviderField({ kind, value, externalAI, onChange }: {
+function ProviderField({ kind, value, externalAI, models, onChange }: {
   kind: "text" | "image"; value: StoryboardProvider; externalAI: boolean; models: Model[];
   onChange: (provider: StoryboardProvider) => void;
 }) {
@@ -169,7 +169,7 @@ function ProviderField({ kind, value, externalAI, onChange }: {
     <label className="block text-sm font-medium" htmlFor={`local-${kind}-model`}>{label} 모델</label>
     <select id={`local-${kind}-model`} className={inputClass} value={value.model} required
       onChange={(event) => onChange({ id: "gemini-api", model: event.target.value })}>
-      {choices.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
+      {choices.map((model) => <option key={model.id} value={model.id} disabled={!models.some(available => available.id === model.id)}>{model.label}{models.some(available => available.id === model.id) ? '' : ' · 사용 불가'}</option>)}
     </select>
   </fieldset>;
 }
@@ -230,19 +230,23 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
   }, []);
   const modelsFor = (capability: "chat" | "image") => {
     const models = new Map<string, Model>();
-    for (const worker of catalog.workers) for (const model of worker.models) {
-      if (model.bytes_on_disk > 0 && model.capabilities.includes(capability)) models.set(model.id, model);
+    for (const worker of catalog.workers.filter(worker => worker.online)) for (const model of worker.models) {
+      if (model.owned_by === 'gemini-api' && model.capabilities.includes(capability)
+        && isAllowedStoryboardGeminiModel(model.id, capability === 'chat' ? 'text' : 'image')) models.set(model.id, model);
     }
     return [...models.values()];
   };
   const textModels = modelsFor("chat");
   const imageModels = modelsFor("image");
+  const selectedModelsAvailable = textModels.some(model => model.id === textProvider.model)
+    && imageModels.some(model => model.id === imageProvider.model);
 
   async function create(event: FormEvent) {
     event.preventDefault();
     if (createController.current) return;
     setCreateError(null);
     if (!externalAI) { setCreateError('Gemini API 사용을 선택하세요.'); return; }
+    if (!selectedModelsAvailable) { setCreateError('선택한 모델을 사용할 수 없습니다.'); return; }
     const [imageWidth, imageHeight] = dimensions.split("x").map(Number);
     const fields = { workflow: STORYBOARD_WORKFLOW, prompt, sceneCount, providers: { externalAI, text: textProvider, image: imageProvider },
       retrieval: "none", sources: [], imageWidth, imageHeight };
@@ -328,7 +332,7 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
               <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />
             </div>
-            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || !externalAI}>
+            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || !externalAI || !selectedModelsAvailable}>
               {creating ? "저장 요청 중…" : "프로젝트 만들기"}
             </button>
           </fieldset>
