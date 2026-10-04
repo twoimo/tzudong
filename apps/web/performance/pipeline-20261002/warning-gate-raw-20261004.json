@@ -1,0 +1,122 @@
+{
+  "environment": "synthetic rows, Bun 1.4.0, local CPU only",
+  "rows": 1000,
+  "targets": 50,
+  "samples": 7,
+  "beforeSourceSha256": "a65d5c04115fcba5a4f8f795902bf7a365e5d9717cbfb2809a611169d7ffab64",
+  "afterSourceSha256": "7904013149561b7fc7662cb5d05e56213147b45148e86242c82064a5529cbcb1",
+  "observations": [
+    {
+      "repeat": 0,
+      "implementation": "before",
+      "wallMs": 105.68629200000001,
+      "cpuMs": 162.863,
+      "nameDistanceCalls": 41768,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 0,
+      "implementation": "after",
+      "wallMs": 47.296875,
+      "cpuMs": 75.63,
+      "nameDistanceCalls": 1110,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 1,
+      "implementation": "after",
+      "wallMs": 40.088167,
+      "cpuMs": 43.83,
+      "nameDistanceCalls": 1110,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 1,
+      "implementation": "before",
+      "wallMs": 93.613125,
+      "cpuMs": 96.733,
+      "nameDistanceCalls": 41768,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 2,
+      "implementation": "before",
+      "wallMs": 99.69741699999997,
+      "cpuMs": 102.507,
+      "nameDistanceCalls": 41768,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 2,
+      "implementation": "after",
+      "wallMs": 38.617208000000005,
+      "cpuMs": 42.129,
+      "nameDistanceCalls": 1110,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 3,
+      "implementation": "after",
+      "wallMs": 46.465374999999995,
+      "cpuMs": 53.647,
+      "nameDistanceCalls": 1110,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 3,
+      "implementation": "before",
+      "wallMs": 102.37008299999997,
+      "cpuMs": 136.206,
+      "nameDistanceCalls": 41768,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 4,
+      "implementation": "before",
+      "wallMs": 101.2439579999999,
+      "cpuMs": 102.675,
+      "nameDistanceCalls": 41768,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 4,
+      "implementation": "after",
+      "wallMs": 42.02662499999997,
+      "cpuMs": 43.427,
+      "nameDistanceCalls": 1110,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 5,
+      "implementation": "after",
+      "wallMs": 41.813416000000075,
+      "cpuMs": 43.963,
+      "nameDistanceCalls": 1110,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 5,
+      "implementation": "before",
+      "wallMs": 82.69875000000002,
+      "cpuMs": 89.4,
+      "nameDistanceCalls": 41768,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 6,
+      "implementation": "before",
+      "wallMs": 99.33058300000005,
+      "cpuMs": 103.052,
+      "nameDistanceCalls": 41768,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    },
+    {
+      "repeat": 6,
+      "implementation": "after",
+      "wallMs": 37.057458,
+      "cpuMs": 39.841,
+      "nameDistanceCalls": 1110,
+      "outputSha256": "099d58996c6432ae255db9a3fe9e54aaa96271aea72ac8cf1f5da9bd29cfb416"
+    }
+  ]
+}

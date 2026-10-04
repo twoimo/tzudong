@@ -110,17 +110,20 @@ function classifyCandidate(target: SameVideoDuplicateWarningRow, candidate: Same
   const targetIdentity = normalizeIdentityName(resolveIdentityName(target));
   const candidateIdentity = normalizeIdentityName(resolveIdentityName(candidate));
   const sameIdentity = Boolean(targetIdentity && targetIdentity === candidateIdentity);
+  if (sameIdentity) return { rule: 'exact_identity', confidence: 1 };
   const sameAddress = Boolean(addressKey(target) && addressKey(target) === addressKey(candidate));
   const targetPhone = phoneKey(target);
   const candidatePhone = phoneKey(candidate);
   const samePhone = Boolean(targetPhone && candidatePhone && targetPhone.length >= 7 && targetPhone === candidatePhone);
+  // Every remaining rule requires a phone, address or near-coordinate match.
+  // Name edit distance cannot affect the outcome if all three gates are false.
+  const distance = !samePhone && !sameAddress ? coordDistanceMeters(target, candidate) : null;
+  if (!samePhone && !sameAddress && !(distance !== null && Number.isFinite(distance) && distance <= 20)) return null;
   const similarity = nameSimilarity(target, candidate);
-  const distance = coordDistanceMeters(target, candidate);
-
-  if (sameIdentity) return { rule: 'exact_identity', confidence: 1 };
   if (samePhone && similarity >= 0.72) return { rule: 'same_phone_similar_name', confidence: 0.98 };
   if (sameAddress && similarity >= 0.82) return { rule: 'same_address_similar_name', confidence: 0.97 };
-  if (Number.isFinite(distance) && distance <= 20 && similarity >= 0.86) return { rule: 'near_coordinate_similar_name', confidence: 0.96 };
+  const nearDistance = distance ?? coordDistanceMeters(target, candidate);
+  if (Number.isFinite(nearDistance) && nearDistance <= 20 && similarity >= 0.86) return { rule: 'near_coordinate_similar_name', confidence: 0.96 };
   return null;
 }
 

@@ -247,6 +247,25 @@ class PostgreSQLContract(unittest.TestCase):
             self.cursor.execute(source)
         self.cursor.execute('ROLLBACK');self.assertEqual(self.state(),after)
 
+    def test_page_read_extension_preserves_existing_invoker_contract(self):
+        self.apply()
+        manual='public.restaurant_review_automation_manual(uuid,text,text,text,uuid)'
+        page='public.admin_evaluation_page(jsonb,integer,uuid,text)'
+        for signature in [manual,page]:
+            config="search_path=''"+(" SET lock_timeout='2s'" if signature==manual else '')
+            self.cursor.execute('CREATE FUNCTION '+signature+" RETURNS boolean LANGUAGE sql SECURITY INVOKER SET "+config+" AS 'SELECT true'; REVOKE ALL ON FUNCTION "+signature+' FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION '+signature+' TO service_role;')
+            self.cursor.execute("INSERT INTO privacy_retention.g014_public_rpc_allowlist VALUES(%s,'service_role')",(signature,))
+        self.cursor.execute((MIGRATIONS/'20261003172126_restaurant_review_manual_invoker_contract.sql').read_text())
+        before=self.state()
+        source=(MIGRATIONS/'20261003220841_admin_evaluation_page_invoker_contract.sql').read_text()
+        self.cursor.execute(source.replace('COMMIT;','ROLLBACK;'));self.assertEqual(self.state(),before)
+        self.cursor.execute(source);self.install_loop();self.check()
+        after=self.state()
+        self.assertEqual([dict(row,prosrc='') for _,row in before],[dict(row,prosrc='') for _,row in after])
+        self.cursor.execute('BEGIN; GRANT EXECUTE ON FUNCTION '+page+' TO authenticated')
+        with self.assertRaisesRegex(self.psycopg2.Error,'SECURITY INVOKER contract mismatch'):self.check()
+        self.cursor.execute('ROLLBACK');self.check()
+
 
 if __name__ == '__main__':
     unittest.main()

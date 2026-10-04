@@ -1368,7 +1368,7 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply 'storyboard-history-replay-window' "$storyboard_replay"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$storyboard_replay"
       ;;
-    20261003113923_g014_service_invoker_contract.sql|20261003172126_restaurant_review_manual_invoker_contract.sql)
+    20261003113923_g014_service_invoker_contract.sql|20261003172126_restaurant_review_manual_invoker_contract.sql|20261003220841_admin_evaluation_page_invoker_contract.sql)
       invoker_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_service_invoker_replay.py" \
         --source "$migration" --bundle "$g026_bundle" --output "$invoker_replay"
