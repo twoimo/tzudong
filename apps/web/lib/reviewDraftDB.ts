@@ -347,7 +347,7 @@ async function enforceUserDraftLimit(
     }
 }
 
-export async function saveDraft(draft: ReviewDraftSaveInput): Promise<void> {
+export async function saveDraft(draft: ReviewDraftSaveInput): Promise<ReviewDraft | null> {
     const persistedDraft = createPersistedDraft(draft, Date.now());
     if (!persistedDraft) {
         throw new Error('임시 저장 데이터가 유효하지 않습니다.');
@@ -359,7 +359,9 @@ export async function saveDraft(draft: ReviewDraftSaveInput): Promise<void> {
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         await transaction.store.put(persistedDraft);
         await enforceUserDraftLimit(transaction.store, persistedDraft.userId);
+        const committed = await transaction.store.get([persistedDraft.userId, persistedDraft.restaurantId]);
         await transaction.done;
+        return committed ? toPublicDraft(committed) : null;
     } catch {
         console.error('Draft 저장 실패:');
         throw new Error('임시 저장에 실패했습니다.');
@@ -405,20 +407,33 @@ export async function deleteDraft(userId: string, restaurantId: string): Promise
     }
 }
 
-// Capture the existing bounded text row before a review write. The returned
+// Capture only the bounded text revision this composer saved or restored. The returned
 // cleanup may finish after the composer unmounts, but cannot delete a newer
 // draft from another composer. Compare and delete share one IDB transaction.
 // This adds no persisted fields, media, operation IDs, or retention policy.
-export async function prepareDraftDeletion(userId: string, restaurantId: string): Promise<() => Promise<boolean>> {
+export async function prepareDraftDeletion(
+    userId: string,
+    restaurantId: string,
+    revision: ReviewDraft | null,
+): Promise<() => Promise<boolean>> {
     if (!isValidIdentifier(userId) || !isValidIdentifier(restaurantId)) return async () => false;
+    // A row at this key is not proof of ownership: another composer may have
+    // saved it even before capture. Missing/out-of-scope authority is a no-op.
+    if (!revision || revision.userId !== userId || revision.restaurantId !== restaurantId) return async () => true;
+    const savedAt = parseCanonicalTimestamp(revision.savedAt);
+    const owned = savedAt === null ? null : createPersistedDraft(revision, savedAt);
+    if (!owned) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
+    if (owned.expiresAt <= Date.now()) return async () => true;
+    if (!readPersistedReviewDraft(owned)) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
+    const expected = JSON.stringify(owned);
     const key: DraftKey = [userId, restaurantId];
-    let snapshot: PersistedReviewDraft | null;
     let db: IDBPDatabase<ReviewDraftDB> | undefined;
     try {
         db = await initDB();
         const stored = await db.get(STORE_NAME, key);
-        snapshot = stored === undefined ? null : readPersistedReviewDraft(stored);
+        const snapshot = stored === undefined ? null : readPersistedReviewDraft(stored);
         if (stored !== undefined && !snapshot) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
+        if (JSON.stringify(snapshot) !== expected) return async () => true;
     } catch {
         // No deletion authority was captured. The operation must retry this
         // read before it dispatches uploads/insert, rather than retaining a
@@ -427,7 +442,6 @@ export async function prepareDraftDeletion(userId: string, restaurantId: string)
     } finally {
         db?.close();
     }
-    const expected = JSON.stringify(snapshot);
     return async () => {
         let cleanupDb: IDBPDatabase<ReviewDraftDB> | undefined;
         try {

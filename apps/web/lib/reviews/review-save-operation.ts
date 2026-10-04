@@ -187,6 +187,12 @@ export class ReviewSaveOperation {
             const recovered = this.savedResult(op, draft);
             if (recovered) return recovered;
             if (!sameDraft(op.draft, draft)) { this.operation = null; op = null; }
+            else if (op.write !== 'unknown' && op.unansweredUploads.size === 0 && op.touched.size === 0) {
+                // A fully compensated dispatch has no unresolved remote work.
+                // The same composer may since have autosaved a new timestamp.
+                // Refresh only its owned revision for this next dispatch interval.
+                op.draftDeletion = undefined;
+            }
         }
         if (this.cancelling) return 'cancelled';
         if (!op) {
@@ -198,7 +204,7 @@ export class ReviewSaveOperation {
             this.operation = op;
         }
         const current = op;
-        // Snapshot belongs to this exact review ID, including cleanup retries.
+        // Snapshot belongs to this dispatch interval, including cleanup retries.
         // Never recapture a replacement draft after a committed/unknown write.
         if (this.deps.captureDraftDeletion && !current.draftDeletion) {
             try { current.draftDeletion = await this.deps.captureDraftDeletion(current.draft); }
