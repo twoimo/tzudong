@@ -58,7 +58,7 @@ function run(filesToRun) {
   if (localDiagnostic) {
     const xml = result.output[3]?.toString('utf8');
     const diagnostic = spawnSync('python3', [path.resolve('../../.github/scripts/nightly-unit-failure-sites.py')], {
-      input: JSON.stringify({ xml, files: filesToRun }),
+      input: JSON.stringify({ xml, files: filesToRun, exit_code: result.status }),
       encoding: 'utf8', maxBuffer: 64 * 1024,
       stdio: ['pipe', 'pipe', 'ignore'], shell: false,
     });

@@ -41,6 +41,17 @@ describe('bounded nightly unit failure source coordinates', () => {
     expect(r.stdout).not.toContain('private-file');
   });
 
+  test('rejects both exit/report mismatches before emitting a clean-looking diagnostic', () => {
+    const passing = `<testsuites tests="1" failures="0" skipped="0"><testsuite><testcase file="${file}" line="10"/></testsuite></testsuites>`;
+    for (const [report, exit_code, accepted] of [[passing, 0, true], [xml(), 1, true], [passing, 37, false], [xml(), 0, false], [passing, -9, false], [passing, null, false]] as const) {
+      const r = spawnSync('python3', [script], {
+        input: JSON.stringify({ xml: report, files: [file], exit_code }), encoding: 'utf8',
+      });
+      expect(r.status).toBe(accepted ? 0 : 1);
+      if (!accepted) { expect(r.stdout).toBe(''); expect(r.stderr.trim()).toBe('unit_diagnostic_unavailable'); }
+    }
+  });
+
   test('keeps every failure count and explicitly reports omitted sites above 64', () => {
     const cases = Array.from({ length: 65 }, () => `<testcase file="${file}" line="10"><failure message="${canary}"/></testcase>`).join('');
     const r = derive(`<testsuites tests="65" failures="65" skipped="0"><testsuite>${cases}</testsuite></testsuites>`);

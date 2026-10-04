@@ -78,7 +78,7 @@ def validate(payload: object, files: dict[str, int]) -> dict:
 
 
 def derive(data: dict, root: Path) -> dict:
-    if set(data) != {"xml", "files"} or not isinstance(data["xml"], str) or not isinstance(data["files"], list):
+    if set(data) not in ({"xml", "files"}, {"xml", "files", "exit_code"}) or not isinstance(data["xml"], str) or not isinstance(data["files"], list):
         fail()
     available = inventory(root)
     admitted = {}
@@ -122,9 +122,14 @@ def derive(data: dict, root: Path) -> dict:
         fail()
     if int(report.get("skipped", "-1")) != skipped:
         fail()
-    return validate({"schema": "nightly-unit-failure-sites-v2", "test_count": total,
+    payload = validate({"schema": "nightly-unit-failure-sites-v2", "test_count": total,
                      "failure_count": failed, "skip_count": skipped, "sites": sites[:MAX_SITES],
                      "omitted_site_count": max(0, failed - MAX_SITES)}, admitted)
+    if "exit_code" in data:
+        code = data["exit_code"]
+        if type(code) is not int or not -127 <= code <= 255 or (code == 0) != (failed == 0):
+            fail()
+    return payload
 
 
 def main() -> int:
@@ -174,10 +179,8 @@ def main() -> int:
                     fail()
                 os.lseek(fd, 0, os.SEEK_SET)
                 report = os.read(fd, MAX_INPUT + 1).decode("utf-8")
-                payload = derive({"xml": report, "files": data["files"]}, root)
+                payload = derive({"xml": report, "files": data["files"], "exit_code": result.returncode}, root)
                 print(json.dumps(payload, separators=(",", ":")))
-                if result.returncode == 0 and payload["failure_count"] != 0:
-                    fail()
                 return result.returncode if result.returncode >= 0 else 1
             finally:
                 os.close(fd)
