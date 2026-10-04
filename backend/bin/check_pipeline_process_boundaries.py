@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class BoundedResult(unittest.TestResult):
     def __init__(self) -> None:
         super().__init__()
-        self.outcomes: list[dict[str, str]] = []
+        self.outcomes: list[dict[str, object]] = []
 
     def _exc_info_to_string(self, err, test):
         return err[0].__name__
@@ -62,7 +62,7 @@ def main() -> int:
     os.chdir(ROOT)
     result = BoundedResult()
     started = time.monotonic()
-    with open(os.devnull, "w") as sink, contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+    with open(os.devnull, "w", encoding="utf-8") as sink, contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
         unittest.defaultTestLoader.loadTestsFromName("backend.pipeline.test_nodes_unittest").run(result)
     print(json.dumps({
         "schemaVersion": 1,
