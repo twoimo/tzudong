@@ -177,11 +177,11 @@ class LocalReplayContractTests(unittest.TestCase):
             self.assertNotIn(b'INSERT INTO _tzudong_local', sql)
             self.assertNotIn(b'GRANT privacy_workflow_owner', sql)
 
-    def test_full_snapshot_requires_all_99_exact_sources_and_distinct_terminal_states(self):
+    def test_full_snapshot_requires_all_100_exact_sources_and_distinct_terminal_states(self):
         from backend.supabase.tests.test_local_migration_contract import local_migrate
         rows = [local_migrate._expected_snapshot_row(item) for item in local_migrate.build_manifest()['source']['files']]
-        self.assertEqual(len(rows), 99)
-        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 96)
+        self.assertEqual(len(rows), 100)
+        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 97)
         self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 2)
         self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 1)
         local_migrate._validate_ledger_snapshot(rows)
