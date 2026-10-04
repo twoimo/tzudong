@@ -352,7 +352,8 @@ export async function buildLiveValidationPayload(
 }
 
 async function main() {
-  await import('dotenv/config');
+  const { config } = await import('dotenv');
+  config({ quiet: true });
   const args = parseArgs(process.argv.slice(2));
   const inputPath = path.join(args.reportDir, 'same-origin-known-coordinate-candidates.jsonl');
   const candidates = parseCanonicalCandidateRows(await fs.readFile(inputPath));
