@@ -77,7 +77,7 @@ const DialogContent = React.forwardRef<
         // sheet-based modals do; callers can still override it through props.
         aria-modal="true"
         className={cn(
-          "fixed left-[50%] top-[50%] z-[100] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-xl",
+          "fixed left-[50%] top-[50%] z-[100] grid w-[calc(100vw-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-xl",
           className,
         )}
         onPointerDownOutside={handlePointerDownOutside}
