@@ -695,22 +695,26 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     const config = OVERSEAS_REGIONS[normalizedRegion as keyof typeof OVERSEAS_REGIONS];
                     const conditions: string[] = [];
                     config.keywords.forEach((keyword: string) => {
-                        conditions.push(`road_address.ilike.*${keyword}*`);
-                        conditions.push(`jibun_address.ilike.*${keyword}*`);
-                        conditions.push(`english_address.ilike.*${keyword}*`);
+                        const term = sanitizePostgrestOrTerm(keyword);
+                        if (!term) return;
+                        conditions.push(`road_address.ilike.*${term}*`);
+                        conditions.push(`jibun_address.ilike.*${term}*`);
+                        conditions.push(`english_address.ilike.*${term}*`);
                     });
 
                     if (conditions.length > 0) {
                         query.push(['or', `(${conditions.join(',')})`]);
                     }
-                } else if (buildOverseasCountryAddressOrFilter(normalizedRegion, '*')) {
-                    query.push(['or', `(${buildOverseasCountryAddressOrFilter(normalizedRegion, '*')})`]);
                 } else {
-                    // address_elements의 SIDO에서 지역 필터링
-                    // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
-                    const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
-                    if (regionTerm) {
-                        query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
+                    const overseasAddressFilter = buildOverseasCountryAddressOrFilter(normalizedRegion, '*');
+                    if (overseasAddressFilter) {
+                        query.push(['or', `(${overseasAddressFilter})`]);
+                    } else {
+                        // 도로명 주소나 지번 주소에 국내 지역명이 포함되어 있는지 확인
+                        const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
+                        if (regionTerm) {
+                            query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
+                        }
                     }
                 }
             }
