@@ -1356,8 +1356,6 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     // Use the scoped pre-write snapshot; a newer composer may already have saved
     // another draft at this key. Submit/close refs stop queued autosaves here.
     const clearDraft = useCallback(async (): Promise<boolean> => {
-        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!user?.id || !targetRestaurantId) return false;
         try {
             await autoSaveInFlightRef.current;
             if (!await saveOperationRef.current?.clearSavedDraft()) return false;
@@ -1366,7 +1364,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         } catch {
             return false;
         }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
+    }, []);
 
     const notifySavedReview = useCallback(() => {
         if (consumerNotifiedRef.current) return;

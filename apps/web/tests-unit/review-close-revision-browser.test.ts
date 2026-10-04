@@ -120,12 +120,13 @@ async function bundle(sourceRoot: string) {
                 result[kind + 'ScopeFence'] = composer.current.draftScopeRef.current.revision === null;
                 composer.close();
             }
-            for (const kind of ['no-autosave', 'newer-autosave', 'cleanup-retry', 'unmount-changed']) {
+            for (const kind of ['no-autosave', 'newer-autosave', 'cleanup-retry', 'unmount-changed', 'selection-cleared']) {
                 const restaurant = id(); const composer = mount('close-' + kind, restaurant);
                 await composer.current.autoSave(); const savedA = await db.getDraft(owner, restaurant);
                 const before = {...counts}; const wait = barrier(); heldInsert = wait;
                 const pending = composer.current.handleSubmit(); await wait.entered;
-                flushSync(() => composer.current.setContent('Changed synthetic B input while committed A reply is held.'));
+                if (kind === 'selection-cleared') composer.render(null);
+                else flushSync(() => composer.current.setContent('Changed synthetic B input while committed A reply is held.'));
                 if (kind === 'cleanup-retry') failDeletion = true;
                 if (kind === 'unmount-changed') composer.close();
                 wait.release(); await pending; heldInsert = null;
@@ -133,6 +134,11 @@ async function bundle(sourceRoot: string) {
                 if (kind === 'unmount-changed') {
                     result.unmountChangedClearsOnlyA = await db.getDraft(owner, restaurant) === null && counts.success === before.success && counts.removes === before.removes && counts.inserts === before.inserts + 1;
                     continue;
+                }
+                if (kind === 'selection-cleared') {
+                    await composer.current.handleClose();
+                    result.clearedSelectionStillClosesAndClearsOnlyA = await db.getDraft(owner, restaurant) === null && counts.closes === before.closes + 1 && counts.inserts === before.inserts + 1 && counts.removes === before.removes;
+                    composer.close(); continue;
                 }
                 if (kind === 'newer-autosave') {
                     now++; await composer.current.autoSave();
@@ -202,7 +208,7 @@ async function bundle(sourceRoot: string) {
             const report = await page.evaluate(async () => (window as unknown as { run(): Promise<{ result: Record<string, boolean>; cases: number }> }).run());
             reports.push({ phase: entry.phase, ...report, externalRequests, pageErrors });
             expect(externalRequests).toBe(0); expect(pageErrors).toBe(0);
-            expect(report.cases).toBe(11);
+            expect(report.cases).toBe(12);
             if (entry.phase === 'baseline') {
                 expect(report.result.preCaptureBPreserved).toBe(true);
                 expect(report.result.uploadRetryClearsOwnRevision).toBe(true);
@@ -210,6 +216,7 @@ async function bundle(sourceRoot: string) {
                 expect(report.result.changedBeforeAutosaveDoesNotRestoreCommittedA).toBe(false);
                 expect(report.result.unmountChangedClearsOnlyA).toBe(false);
                 expect(report.result.changedCleanupFailureBlocksAndRetries).toBe(false);
+                expect(report.result.clearedSelectionStillClosesAndClearsOnlyA).toBe(false);
             } else for (const passed of Object.values(report.result)) expect(passed).toBe(true);
             await context.close();
         }

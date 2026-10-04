@@ -131,6 +131,16 @@ function fixture() {
 }
 
 describe('actual ReviewModal submit and Supabase adapter', () => {
+    test('saved cleanup owns its revision even after the current restaurant selection is cleared', async () => {
+        const f = fixture(); await f.submit();
+        const clear = evaluate(`${nodeText(source, 'clearDraft')};`, {
+            ...f.bindings, selectedRestaurant: null, restaurant: null,
+            setLastSavedAt() {}, useCallback: (callback: unknown) => callback,
+        }) as () => Promise<boolean>;
+        expect(await clear()).toBe(true);
+        expect(f.rows.size).toBe(1); expect(f.counts.inserts).toBe(1);
+        expect(f.counts.removes).toBe(0); expect(f.objects.size).toBe(2);
+    });
     test('known success writes pending review with canonical owner/review-bound photos', async () => {
         const f = fixture(); await f.submit();
         expect(f.rows.size).toBe(1); expect(f.objects.size).toBe(2);
