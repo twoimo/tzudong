@@ -173,10 +173,7 @@ export default function ReviewsPage() {
           .range(pageParam, pageParam + PAGE_SIZE - 1) // 페이지당 15개
           .returns<ReviewData[]>();
 
-        if (reviewsError) {
-          console.error("리뷰 조회 실패:");
-          return { reviews: [], nextCursor: null };
-        }
+        if (reviewsError) throw new Error("MY_REVIEWS_READ_FAILED");
 
         if (!reviewsData || reviewsData.length === 0) {
           return { reviews: [], nextCursor: null };
@@ -186,13 +183,14 @@ export default function ReviewsPage() {
         const restaurantIds = [
           ...new Set(reviewsData.map((r) => r.restaurant_id)),
         ];
-        const { data: restaurantsData } = await supabase
+        const { data: restaurantsData, error: restaurantsError } = await supabase
           .from("restaurants")
           .select(
             "id, name:approved_name, approved_name, road_address, jibun_address, status",
           ) // [수정] approved_name을 name으로 사용
           .in("id", restaurantIds)
           .returns<RestaurantData[]>();
+        if (restaurantsError) throw new Error("MY_REVIEWS_READ_FAILED");
 
         const restaurantsMap = new Map<string, RestaurantData>(
           (restaurantsData || []).map((restaurant) => [
@@ -209,7 +207,7 @@ export default function ReviewsPage() {
               .filter(Boolean),
           ),
         ];
-        const { data: approvedRestaurantRows } =
+        const { data: approvedRestaurantRows, error: approvedRestaurantsError } =
           reviewedRestaurantNames.length > 0
             ? await supabase
                 .from("restaurants")
@@ -219,7 +217,8 @@ export default function ReviewsPage() {
                 .eq("status", "approved")
                 .in("approved_name", reviewedRestaurantNames)
                 .returns<RestaurantData[]>()
-            : { data: [] };
+            : { data: [], error: null };
+        if (approvedRestaurantsError) throw new Error("MY_REVIEWS_READ_FAILED");
         const approvedRestaurants = approvedRestaurantRows || [];
 
         // 리뷰 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
@@ -262,9 +261,9 @@ export default function ReviewsPage() {
         const nextCursor =
           reviewsData.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null;
         return { reviews, nextCursor };
-      } catch (error) {
-        console.error("리뷰 데이터 조회 중 오류:");
-        return { reviews: [], nextCursor: null };
+      } catch {
+        // Keep a failed read distinct from a successful empty page, without provider details.
+        throw new Error("MY_REVIEWS_READ_FAILED");
       }
     },
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
@@ -397,12 +396,18 @@ export default function ReviewsPage() {
     return <MyPageSectionSkeleton label="리뷰를 불러오는 중…" />;
   }
 
-  if (isError) {
+  if (isError && allReviews.length === 0) {
     return (
-      <MyPageErrorState
-        title="리뷰를 불러오지 못했습니다"
-        description="작성한 리뷰 목록을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
+      <div className="space-y-3">
+        <MyPageErrorState
+          title="리뷰를 불러오지 못했습니다"
+          description="작성한 리뷰 목록을 다시 불러오려면 잠시 후 재시도해주세요."
+        />
+        <Button variant="outline" onClick={() => void refetch()}>
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+          다시 불러오기
+        </Button>
+      </div>
     );
   }
 
@@ -431,6 +436,18 @@ export default function ReviewsPage() {
       }
       data-section="reviews"
     >
+      {isError && (
+        <div className="mb-3 space-y-2" role="status">
+          <MyPageErrorState
+            title="리뷰 갱신에 실패했습니다"
+            description="이전에 불러온 리뷰를 표시하고 있습니다. 다시 시도해주세요."
+          />
+          <Button variant="outline" onClick={() => void refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+            다시 불러오기
+          </Button>
+        </div>
+      )}
       {filteredReviews.length === 0 ? (
         <MyPageEmptyState
           icon={MessageSquare}

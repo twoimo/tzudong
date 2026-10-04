@@ -6,6 +6,7 @@ import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
 import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn } from "@/lib/supabase-rest-client";
 import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
+import { fetchVerifiedReviewCountRows } from "@/lib/verified-review-count-rows";
 import {
     applyHomeMapThemeFilter,
     isHomeMapThemeFilterId,
@@ -356,11 +357,7 @@ async function fetchRelatedRestaurantCandidates(names: string[]): Promise<Review
 async function fetchVerifiedReviewRows(restaurantIds: string[]): Promise<ReviewCountRow[]> {
     if (restaurantIds.length === 0) return [];
 
-    return fetchChunkedInOrder(restaurantIds, (idChunk) => fetchSupabaseRows<ReviewCountRow>('reviews', [
-        ['select', 'restaurant_id'],
-        ['restaurant_id', postgrestIn(idChunk)],
-        ['is_verified', 'eq.true'],
-    ]));
+    return fetchChunkedInOrder(restaurantIds, (idChunk) => fetchVerifiedReviewCountRows(idChunk));
 }
 
 export async function buildRelatedVerifiedReviewCounts(restaurants: RestaurantWithOptionalName[]): Promise<Map<string, number>> {

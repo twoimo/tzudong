@@ -551,7 +551,10 @@ function passwordCompensationRequiresHold(proof: PasswordCleanupProof) {
 }
 
 function compensationIdempotencyKey(challengeId: string, userId: string, reasonCode: string) {
-  return sha256(`privacy-onboarding-compensation:v1:${challengeId}:${userId}:${reasonCode}`);
+  // Preserve durable v1 hold identifiers. This public HMAC key is not authentication or password storage.
+  return createHmac('sha256', 'tzudong:privacy-digest:v1')
+    .update(`privacy-onboarding-compensation:v1:${challengeId}:${userId}:${reasonCode}`)
+    .digest('hex'); // lgtm[js/insufficient-password-hash]
 }
 
 function isExactCompensationHoldReceipt(

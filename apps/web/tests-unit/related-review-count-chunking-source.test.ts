@@ -22,4 +22,11 @@ describe('관련 리뷰 카운트 청크 조회', () => {
         expect(hookSource).toContain('fetchChunkedInOrder(names,');
         expect(hookSource).toContain('fetchChunkedInOrder(restaurantIds,');
     });
+
+    test('each review ID chunk reads all pages before the unchanged count aggregation', () => {
+        expect(hookSource).toContain('fetchChunkedInOrder(restaurantIds, (idChunk) => fetchVerifiedReviewCountRows(idChunk))');
+        expect(hookSource).toContain('const reviewRows = await fetchVerifiedReviewRows(relatedRestaurantIds)');
+        expect(hookSource).toContain('return buildRelatedVerifiedReviewCountMap(');
+        expect(hookSource).not.toContain("fetchSupabaseRows<ReviewCountRow>('reviews'");
+    });
 });
