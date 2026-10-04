@@ -1,15 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { useRestaurantManagementHeader } from "@/components/admin/RestaurantManagementWorkspace";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
 import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import {
-  History,
   ListChecks,
   RefreshCw,
   Search,
   ShieldCheck,
   Store,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -181,189 +185,93 @@ type StatusSummaryItem = {
 };
 
 function ManagementStatusSummary({ items }: { items: StatusSummaryItem[] }) {
-  return (
-    <div className="w-full overflow-x-auto scrollbar-hide [scrollbar-width:none] lg:w-auto lg:flex-none lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-      <div className="flex min-w-max items-center gap-1.5">
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className="inline-flex shrink-0 items-center justify-between gap-2 rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs whitespace-nowrap"
-          >
-            <span className="font-medium text-muted-foreground">
-              {item.label}
-            </span>
-            <span className={cn("font-semibold", item.tone)}>{item.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground" data-admin-module-summary="true">
+    {items.map(item => <span key={item.label}>{item.label} <strong className={cn("font-medium tabular-nums", item.tone)}>{item.value}</strong></span>)}
+  </div>;
+}
+
+function canDecideRefreshCandidate(candidate: RefreshCandidateRow | null) {
+  return candidate?.candidate_status === "needs_review";
+}
+
+function isRefreshDraftDirty(candidate: RefreshCandidateRow | null, decision: CandidateDecision, apply: boolean, notes: string) {
+  return Boolean(candidate) && (decision !== "approved" || apply || notes.length > 0);
+}
+
+type PendingRefreshReadback = {
+  candidateId: string;
+  restaurantId: string;
+  expectedStatus: CandidateDecision | "applied";
+  previousDecidedAt: string | null;
+  previousAppliedAt: string | null;
+};
+
+function createPendingRefreshReadback(candidate: RefreshCandidateRow, decision: CandidateDecision, apply: boolean): PendingRefreshReadback {
+  return {
+    candidateId: candidate.id,
+    restaurantId: candidate.restaurant_id,
+    expectedStatus: decision === "approved" && apply ? "applied" : decision,
+    previousDecidedAt: candidate.decided_at,
+    previousAppliedAt: candidate.applied_at,
+  };
+}
+
+function evaluateRefreshReadback(pending: PendingRefreshReadback, candidates: RefreshCandidateRow[]): "confirmed" | "pending" | "conflict" {
+  const actual = candidates.find(candidate => candidate.id === pending.candidateId);
+  if (!actual) return "pending";
+  if (actual.restaurant_id !== pending.restaurantId) return "conflict";
+  if (actual.candidate_status === "needs_review") return "pending";
+  if (actual.candidate_status !== pending.expectedStatus) return "conflict";
+  const hasNewDecision = typeof actual.decided_at === "string" && Number.isFinite(Date.parse(actual.decided_at)) && actual.decided_at !== pending.previousDecidedAt;
+  if (!hasNewDecision) return "pending";
+  if (pending.expectedStatus === "applied") {
+    const hasNewApply = typeof actual.applied_at === "string" && Number.isFinite(Date.parse(actual.applied_at)) && actual.applied_at !== pending.previousAppliedAt;
+    // Recrawl can still be pending or failed after a committed apply; do not claim recrawl completion.
+    return hasNewApply && ["pending", "completed", "failed"].includes(actual.readback_state?.status) ? "confirmed" : "pending";
+  }
+  return actual.applied_at === null && actual.readback_state?.status === "not_required" ? "confirmed" : "pending";
 }
 
 function RefreshCandidateListSkeleton() {
-  const { ref: skeletonRef, count: skeletonCount } = useFilledSkeletonCount(92, 5);
-  return (
-    <div
-      ref={skeletonRef}
-      className="h-full min-h-0 flex-1 space-y-2 p-2 xl:divide-y xl:divide-border xl:space-y-0 xl:p-0"
-      role="status"
-      aria-busy="true"
-      aria-label="맛집 최신화 이력 로딩 중"
-    >
-      <span className="sr-only">맛집 최신화 후보 목록을 불러오는 중입니다.</span>
-      {Array.from({ length: skeletonCount }).map((_, rowIndex) => (
-        <div
-          key={rowIndex}
-          className="grid gap-3 rounded-lg border border-border/70 bg-background/80 px-3 py-3 shadow-sm xl:rounded-none xl:border-x-0 xl:border-t-0 xl:bg-transparent xl:shadow-none xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center"
-          aria-hidden="true"
-        >
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-48 max-w-full rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-28 rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-10 rounded-lg motion-reduce:animate-none" />
-          <Skeleton className="h-7 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="h-7 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="h-8 rounded-lg motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
+  const { ref: skeletonRef, count: skeletonCount } = useFilledSkeletonCount(64, 5);
+  return <div ref={skeletonRef} className="h-full min-h-0 divide-y" role="status" aria-busy="true" aria-label="맛집 최신화 이력 로딩 중">
+    <span className="sr-only">맛집 최신화 후보 목록을 불러오는 중입니다.</span>
+    {Array.from({ length: skeletonCount }).map((_, index) => <div key={index} className="flex items-center gap-3 px-3 py-3" aria-hidden="true">
+      <div className="min-w-0 flex-1 space-y-2"><Skeleton className="h-4 w-36 motion-reduce:animate-none" /><Skeleton className="h-3 w-48 max-w-full motion-reduce:animate-none" /></div><Skeleton className="h-5 w-16 rounded-full motion-reduce:animate-none" />
+    </div>)}
+  </div>;
 }
 
 type RefreshCandidateListProps = {
   candidates: RefreshCandidateRow[];
   isLoading: boolean;
   selectedCandidateId: string | null;
-  onOpenReview: (candidate: RefreshCandidateRow) => void;
+  disabled: boolean;
+  hasFilters: boolean;
+  onOpenReview: (candidate: RefreshCandidateRow, trigger: HTMLButtonElement) => void;
 };
 
-function RefreshCandidateList({
-  candidates,
-  isLoading,
-  selectedCandidateId,
-  onOpenReview,
-}: RefreshCandidateListProps) {
-  return (
-    <div className="flex min-h-[360px] flex-col overflow-hidden rounded-xl bg-card shadow-sm md:border md:border-border lg:min-h-0">
-      <div className="flex flex-col gap-2 border-b border-border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            <History className="h-4 w-4 text-primary" />
-            변경 후보 및 결정 이력
-          </h2>
-        </div>
-      </div>
-
-      <div className="hidden grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] gap-3 border-b border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-muted-foreground xl:grid">
-        <span>맛집</span>
-        <span>현재 → 후보</span>
-        <span>검토 포인트</span>
-        <span>상태/일시</span>
-        <span>조치</span>
-      </div>
-
-      <div
-        className="min-h-0 flex-1 overflow-y-auto scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        data-admin-restaurant-refresh-list="management-like"
-      >
-        {isLoading ? (
-          <RefreshCandidateListSkeleton />
-        ) : candidates.length === 0 ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">
-            최신화 이력이 없습니다.
-          </div>
-        ) : (
-          candidates.map((candidate) => (
-            <article
-              key={candidate.id}
-              className={cn(
-                "mx-2 my-2 grid gap-3 rounded-lg border border-border/70 bg-background/80 px-3 py-3 shadow-sm last:mb-2 xl:mx-0 xl:my-0 xl:rounded-none xl:border-x-0 xl:border-t-0 xl:border-b xl:bg-transparent xl:shadow-none xl:last:mb-0 xl:last:border-b-0 xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center",
-                selectedCandidateId === candidate.id && "bg-primary/5",
-              )}
-            >
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold text-foreground">
-                  {candidate.restaurant_name}
-                </h3>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                  {candidate.restaurant_address || "주소 없음"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  현재 전화: {candidate.current_phone || "—"}
-                </p>
-              </div>
-              <div className="break-words text-xs leading-5 text-muted-foreground">
-                <p>
-                  <span className="font-medium text-foreground">상호</span>{" "}
-                  {snapshotText(candidate.previous_snapshot, "name")} →{" "}
-                  {snapshotText(candidate.candidate_snapshot, "name")}
-                </p>
-                <p>
-                  <span className="font-medium text-foreground">전화</span>{" "}
-                  {snapshotText(candidate.previous_snapshot, "phone")} →{" "}
-                  {snapshotText(candidate.candidate_snapshot, "phone")}
-                </p>
-                <p>
-                  <span className="font-medium text-foreground">주소</span>{" "}
-                  {snapshotText(candidate.previous_snapshot, "road_address")} →{" "}
-                  {snapshotText(candidate.candidate_snapshot, "road_address")}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-1">
-                  {candidate.detected_change_types.map((type) => (
-                    <Badge key={type} variant="secondary" className="text-xs">
-                      {changeTypeLabel(type)}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-                  {reviewChecklistForCandidate(candidate)[0]}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "w-fit",
-                    statusTone[candidate.candidate_status],
-                  )}
-                >
-                  {statusLabels[candidate.candidate_status]}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "w-fit",
-                    readbackTone(candidate.readback_state),
-                  )}
-                >
-                  {readbackLabel(candidate.readback_state)}
-                </Badge>
-                <p className="text-xs text-muted-foreground">
-                  기록 {formatDate(candidate.created_at)}
-                </p>
-              </div>
-              <Button
-                variant={
-                  selectedCandidateId === candidate.id ? "secondary" : "outline"
-                }
-                size="sm"
-                className="h-8 w-full gap-1.5 text-xs xl:w-auto"
-                disabled={candidate.candidate_status !== "needs_review"}
-                onClick={() => onOpenReview(candidate)}
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                상세 검토
-              </Button>
-            </article>
-          ))
-        )}
-      </div>
-    </div>
-  );
+function RefreshCandidateList({ candidates, isLoading, selectedCandidateId, disabled, hasFilters, onOpenReview }: RefreshCandidateListProps) {
+  return <div className="admin-cms-table-container min-h-0 flex-1" data-admin-restaurant-refresh-list="management-like">
+    {isLoading ? <RefreshCandidateListSkeleton /> : candidates.length === 0 ? <p className="p-6 text-center text-sm text-muted-foreground" role="status">{hasFilters ? "조건에 맞는 최신화 이력이 없습니다." : "최신화 이력이 없습니다."}</p> : <>
+      <ul className="divide-y md:hidden" aria-label="최신화 후보 및 결정 이력">{candidates.map(candidate => <li key={candidate.id}>
+        <button type="button" className={cn("w-full min-w-0 px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary", selectedCandidateId === candidate.id && "admin-cms-row-selected")} aria-pressed={selectedCandidateId === candidate.id} aria-label={`${candidate.restaurant_name} 상세 보기`} disabled={disabled} onClick={event => onOpenReview(candidate, event.currentTarget)}>
+          <span className="flex items-start justify-between gap-2"><span className="min-w-0 truncate text-sm font-medium">{candidate.restaurant_name}</span><Badge variant="outline" className={cn("shrink-0 text-2xs", statusTone[candidate.candidate_status])}>{statusLabels[candidate.candidate_status]}</Badge></span>
+          <span className="mt-1 block truncate text-xs text-muted-foreground">{candidate.restaurant_address || "주소 없음"}</span>
+          <span className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><span>{candidate.detected_change_types.map(changeTypeLabel).join(" · ") || "정보 변경"}</span><span className="ml-auto">{readbackLabel(candidate.readback_state)}</span></span>
+        </button>
+      </li>)}</ul>
+      <table className="admin-cms-table hidden table-fixed md:table"><caption className="sr-only">최신화 후보 및 결정 이력</caption>
+        <thead className="sticky top-0 z-10 bg-muted"><tr><th scope="col" className="w-[40%]">맛집</th><th scope="col" className="w-[20%]">변경 항목</th><th scope="col" className="w-[20%]">상태</th><th scope="col" className="w-[20%]">적용 확인</th></tr></thead>
+        <tbody>{candidates.map(candidate => <tr key={candidate.id} className={cn(selectedCandidateId === candidate.id && "admin-cms-row-selected")} data-selected={selectedCandidateId === candidate.id}>
+          <td><button type="button" className="block w-full min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-pressed={selectedCandidateId === candidate.id} aria-label={`${candidate.restaurant_name} 상세 보기`} disabled={disabled} onClick={event => onOpenReview(candidate, event.currentTarget)}><span className="block truncate text-sm font-medium">{candidate.restaurant_name}</span><span className="block truncate text-xs text-muted-foreground">{candidate.restaurant_address || "주소 없음"}</span></button></td>
+          <td><span className="text-xs">{candidate.detected_change_types.map(changeTypeLabel).join(" · ") || "정보 변경"}</span></td>
+          <td><Badge variant="outline" className={cn("whitespace-nowrap text-2xs", statusTone[candidate.candidate_status])}>{statusLabels[candidate.candidate_status]}</Badge></td>
+          <td><span className={cn("text-xs", candidate.readback_state.status === "failed" && "text-destructive")}>{readbackLabel(candidate.readback_state)}</span></td>
+        </tr>)}</tbody>
+      </table>
+    </>}
+  </div>;
 }
 
 type RefreshCandidateDetailPanelProps = {
@@ -376,6 +284,11 @@ type RefreshCandidateDetailPanelProps = {
   canApplySelectedCandidate: boolean;
   selectedCandidateIsClosure: boolean;
   onClose: () => void;
+  canSave: boolean;
+  selectionLocked: boolean;
+  narrow: boolean;
+  notice: ReactNode;
+  onRefresh: () => void;
   onDecisionChange: (decision: CandidateDecision) => void;
   onApplyApprovedChange: (checked: boolean) => void;
   onOperatorNotesChange: (notes: string) => void;
@@ -396,21 +309,24 @@ function RefreshCandidateDetailPanel({
   onApplyApprovedChange,
   onOperatorNotesChange,
   onSubmitDecision,
+  canSave, selectionLocked, narrow, notice, onRefresh,
 }: RefreshCandidateDetailPanelProps) {
+  const readOnly = !canDecideRefreshCandidate(selectedCandidate);
   return (
     <aside
-      className="flex min-h-[360px] flex-col overflow-hidden rounded-xl bg-card shadow-sm md:border md:border-border lg:min-h-0"
+      className={cn("admin-cms-inspector !p-0 flex h-full min-h-0 flex-col overflow-hidden bg-card", narrow && "!w-full !flex-auto")}
       aria-label="맛집 최신화 상세 검토"
       data-admin-restaurant-refresh-detail="management-like"
     >
+      {notice}
       {selectedCandidate ? (
         <>
           <div className="flex items-start justify-between gap-2 border-b border-border bg-muted/20 px-3 py-2">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                운영자 결정 기록
+                운영자 결정 기록{readOnly && " · 읽기 전용"}
               </p>
-              <h3 className="mt-0.5 truncate text-base font-bold text-foreground">
+              <h3 id="refresh-detail-heading" tabIndex={-1} className="mt-0.5 truncate text-base font-semibold outline-none">
                 {selectedCandidate.restaurant_name}
               </h3>
             </div>
@@ -419,13 +335,14 @@ function RefreshCandidateDetailPanel({
               size="sm"
               className="h-8 shrink-0 px-2 text-xs"
               onClick={onClose}
-              disabled={isSavingDecision}
+              disabled={isSavingDecision || selectionLocked}
             >
-              닫기
+              <X className="h-4 w-4" aria-hidden="true" />{narrow ? "목록으로" : "닫기"}
             </Button>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-hide p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+            <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={statusTone[selectedCandidate.candidate_status]}>{statusLabels[selectedCandidate.candidate_status]}</Badge><span className="text-xs text-muted-foreground">{formatDate(selectedCandidate.decided_at ?? selectedCandidate.created_at)}</span><Button type="button" variant="ghost" size="sm" className="ml-auto h-8 px-2" onClick={onRefresh} disabled={isSavingDecision} aria-label="선택한 최신화 이력 새로고침"><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /></Button></div>
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5">
                 <p className="font-semibold text-foreground">현재 스냅샷</p>
@@ -518,6 +435,7 @@ function RefreshCandidateDetailPanel({
               </p>
             </div>
 
+            {!readOnly && <fieldset disabled={!canSave} className="space-y-3">
             <label className="block text-xs font-medium text-foreground">
               결정
               <select
@@ -567,17 +485,19 @@ function RefreshCandidateDetailPanel({
               placeholder="근거 URL, 전화번호 확인, 폐업/상호변경 판단 메모"
               aria-label="최신화 후보 운영자 메모"
             />
+            </fieldset>}
+            {readOnly && <dl className="grid gap-2 border-t pt-3 text-xs"><div><dt className="text-muted-foreground">기록일</dt><dd>{formatDate(selectedCandidate.created_at)}</dd></div><div><dt className="text-muted-foreground">결정일</dt><dd>{formatDate(selectedCandidate.decided_at)}</dd></div><div><dt className="text-muted-foreground">적용일</dt><dd>{formatDate(selectedCandidate.applied_at)}</dd></div></dl>}
           </div>
 
-          <div className="border-t border-border bg-card p-3">
-            <Button
+          <div className="shrink-0 border-t border-border bg-card p-3">
+            {readOnly ? <p className="text-xs text-muted-foreground">결정이 끝난 기록은 읽기 전용입니다.</p> : <Button
               onClick={onSubmitDecision}
-              disabled={isSavingDecision}
+              disabled={!canSave}
               className="w-full gap-2"
             >
               <ShieldCheck className="h-4 w-4" />
               {isSavingDecision ? "저장 중…" : "결정 저장"}
-            </Button>
+            </Button>}
           </div>
         </>
       ) : (
@@ -602,6 +522,24 @@ export function AdminRestaurantRefreshHistoryPanel({
     RefreshCandidateStatus | "all"
   >("all");
   const [query, setQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [isNarrow, setIsNarrow] = useState(false);
+  const managementHeader = useRestaurantManagementHeader();
+  const rowTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const readGeneration = useRef(0);
+  const saveInFlight = useRef(false);
+  const pendingReadbackRef = useRef<PendingRefreshReadback | null>(null);
+  const [pendingReadback, setPendingReadback] = useState<PendingRefreshReadback | null>(null);
+  const [readbackConflict, setReadbackConflict] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState<{ candidate: RefreshCandidateRow | null; trigger?: HTMLButtonElement } | null>(null);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1279px)");
+    const update = () => setIsNarrow(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const [isLoading, setIsLoading] = useState(true);
   const initialLoadPending = useInitialLoadPending(!isLoading);
   useLayoutEffect(() => {
@@ -618,12 +556,18 @@ export function AdminRestaurantRefreshHistoryPanel({
   const [decisionMessage, setDecisionMessage] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
+    if (saveInFlight.current) return;
+    const pendingAtReadStart = pendingReadbackRef.current;
+    const generation = ++readGeneration.current;
     setIsLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (query.trim()) params.set("search", query.trim());
+      // The mutation can move a candidate outside the current status/search filter.
+      if (!pendingAtReadStart) {
+        if (statusFilter !== "all") params.set("status", statusFilter);
+        if (query.trim()) params.set("search", query.trim());
+      }
       const response = await fetch(
         `/api/admin/restaurant-refresh-history?${params.toString()}`,
         {
@@ -631,31 +575,80 @@ export function AdminRestaurantRefreshHistoryPanel({
         },
       );
       const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error || "최신화 이력을 불러오지 못했습니다.");
+      if (!response.ok || !payload || !Array.isArray(payload.candidates) || !payload.summary) {
+        throw new Error("refresh_history_unavailable");
       }
-      setData(payload as RefreshHistoryResponse);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "최신화 이력을 불러오지 못했습니다.",
-      );
+      if (generation !== readGeneration.current) return;
+      const nextData = payload as RefreshHistoryResponse;
+      setData(nextData);
+      setSelectedCandidate(current => current ? nextData.candidates.find(candidate => candidate.id === current.id) ?? current : null);
+      if (pendingAtReadStart && pendingReadbackRef.current === pendingAtReadStart) {
+        const readback = evaluateRefreshReadback(pendingAtReadStart, nextData.candidates);
+        if (readback === "conflict") setReadbackConflict(true);
+        if (readback === "confirmed") {
+          setReadbackConflict(false);
+          pendingReadbackRef.current = null;
+          setPendingReadback(null);
+          setOperatorNotes("");
+          setDecision("approved");
+          setApplyApprovedChange(false);
+          setDecisionMessage(pendingAtReadStart.expectedStatus === "applied"
+            ? "최신 이력에서 적용된 상태를 확인했습니다. 재점검 결과는 적용 확인 상태를 확인하세요."
+            : "최신 이력에서 요청한 결정 상태를 확인했습니다.");
+          setSearchInput("");
+          setQuery("");
+          setStatusFilter("all");
+        }
+      }
+    } catch {
+      if (generation === readGeneration.current) setError("최신화 이력을 불러오지 못했습니다. 다시 시도해 주세요.");
     } finally {
-      setIsLoading(false);
+      if (generation === readGeneration.current) setIsLoading(false);
     }
   }, [query, statusFilter]);
 
-  const openReview = useCallback((candidate: RefreshCandidateRow) => {
+  const restoreListFocus = useCallback(() => {
+    if (rowTriggerRef.current?.isConnected) rowTriggerRef.current.focus();
+    else document.getElementById("refresh-history-search")?.focus();
+  }, []);
+
+  const applySelection = (candidate: RefreshCandidateRow | null, trigger?: HTMLButtonElement) => {
+    if (saveInFlight.current || pendingReadbackRef.current) return;
+    if (trigger) rowTriggerRef.current = trigger;
     setSelectedCandidate(candidate);
     setDecision("approved");
     setApplyApprovedChange(false);
     setOperatorNotes("");
     setDecisionMessage(null);
-  }, []);
+    setPendingSelection(null);
+    requestAnimationFrame(() => candidate ? document.getElementById("refresh-detail-heading")?.focus() : restoreListFocus());
+  };
+
+  const requestSelection = (candidate: RefreshCandidateRow | null, trigger?: HTMLButtonElement) => {
+    if (saveInFlight.current || pendingReadbackRef.current) return;
+    if (candidate && candidate.id === selectedCandidate?.id) {
+      document.getElementById("refresh-detail-heading")?.focus();
+      return;
+    }
+    if (isRefreshDraftDirty(selectedCandidate, decision, applyApprovedChange, operatorNotes)) {
+      setPendingSelection({ candidate, trigger });
+      requestAnimationFrame(() => document.getElementById("refresh-unsaved-changes")?.focus());
+    } else applySelection(candidate, trigger);
+  };
+
+  const canSave = Boolean(canDecideRefreshCandidate(selectedCandidate)
+    && data?.candidates.some(candidate => candidate.id === selectedCandidate?.id && canDecideRefreshCandidate(candidate))
+    && !isSavingDecision && !isLoading && !error && !pendingReadback);
 
   const submitDecision = useCallback(async () => {
-    if (!selectedCandidate) return;
+    if (!selectedCandidate || !canDecideRefreshCandidate(selectedCandidate) || !canSave || saveInFlight.current || pendingReadbackRef.current || (applyApprovedChange && isClosureCandidate(selectedCandidate))) return;
+    const expectedReadback = createPendingRefreshReadback(selectedCandidate, decision, applyApprovedChange);
+    saveInFlight.current = true;
+    readGeneration.current += 1;
+    pendingReadbackRef.current = expectedReadback;
+    setPendingReadback(expectedReadback);
+    setReadbackConflict(false);
+    setPendingSelection(null);
     setIsSavingDecision(true);
     setDecisionMessage(null);
     try {
@@ -672,11 +665,12 @@ export function AdminRestaurantRefreshHistoryPanel({
         }),
       });
       const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(
-          payload?.error || "최신화 후보 결정을 저장하지 못했습니다.",
-        );
+      const expectedStatus = expectedReadback.expectedStatus;
+      if (!response.ok || payload?.ok !== true || payload?.candidate_status !== expectedStatus) {
+        throw new Error("refresh_decision_unconfirmed");
       }
+      pendingReadbackRef.current = null;
+      setPendingReadback(null);
       setDecisionMessage(
         decision === "approved" && applyApprovedChange
           ? "결정과 변경을 저장했습니다. 적용 결과를 확인하세요."
@@ -685,35 +679,36 @@ export function AdminRestaurantRefreshHistoryPanel({
       setSelectedCandidate(null);
       setOperatorNotes("");
       setApplyApprovedChange(false);
-      void loadHistory();
-    } catch (saveError) {
-      setDecisionMessage(
-        saveError instanceof Error
-          ? saveError.message
-          : "최신화 후보 결정을 저장하지 못했습니다.",
-      );
+      setPendingSelection(null);
+      requestAnimationFrame(restoreListFocus);
+    } catch {
+      readGeneration.current += 1;
+      setDecisionMessage("결정 결과를 확인하지 못했습니다. 최신 이력을 확인하기 전에는 다시 저장하거나 다른 후보로 이동할 수 없습니다.");
     } finally {
+      saveInFlight.current = false;
       setIsSavingDecision(false);
     }
-  }, [
-    applyApprovedChange,
-    decision,
-    loadHistory,
-    operatorNotes,
-    selectedCandidate,
-  ]);
+    if (!pendingReadbackRef.current) void loadHistory();
+  }, [applyApprovedChange, canSave, decision, loadHistory, operatorNotes, restoreListFocus, selectedCandidate]);
 
   useEffect(() => {
     void loadHistory();
   }, [loadHistory]);
 
-  const filteredCandidates = useMemo(() => data?.candidates ?? [], [data]);
+  const filteredCandidates = useMemo(() => [...(data?.candidates ?? [])].sort((a, b) => {
+    if (sortOrder === "name") return a.restaurant_name.localeCompare(b.restaurant_name, "ko");
+    if (sortOrder === "review" && a.candidate_status !== b.candidate_status) {
+      if (a.candidate_status === "needs_review") return -1;
+      if (b.candidate_status === "needs_review") return 1;
+    }
+    return b.created_at.localeCompare(a.created_at);
+  }), [data, sortOrder]);
   const selectedCandidateIsClosure = isClosureCandidate(selectedCandidate);
   const selectedCandidateChecklist = selectedCandidate
     ? reviewChecklistForCandidate(selectedCandidate)
     : [];
   const canApplySelectedCandidate =
-    decision === "approved" && !selectedCandidateIsClosure;
+    canSave && decision === "approved" && !selectedCandidateIsClosure;
   const summary = data?.summary;
 
   const statusSummaryItems: StatusSummaryItem[] = [
@@ -744,132 +739,83 @@ export function AdminRestaurantRefreshHistoryPanel({
     },
   ];
 
-  return (
-    <section
-      aria-labelledby="admin-restaurant-refresh-history-title"
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
-      data-admin-restaurant-refresh-history="true"
-      data-admin-restaurant-refresh-management-structure="header-list-detail"
-      data-admin-embedded-module-shell="true"
-      data-admin-embedded-module-id="restaurant-refresh-history"
-    >
-      <div
-        className="shrink-0 border-b border-border bg-card px-2 py-1.5"
-        aria-label="맛집 최신화 필터 및 상태 도구"
-        data-admin-module-header="compact"
-        data-admin-module-header-module="restaurant-refresh-history"
-      >
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <Store className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-              <h2
-                id="admin-restaurant-refresh-history-title"
-                className="whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent"
-              >
-                맛집 최신화 기록관리
-              </h2>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm" data-admin-module-summary="true">
-              필터링: {filteredCandidates.length}개 | 검토 필요{" "}
-              {summary?.needs_review ?? 0}개 | 최근 점검{" "}
-              {formatDate(summary?.last_checked_at)}
-            </p>
-          </div>
+  const detail = <RefreshCandidateDetailPanel
+    selectedCandidate={selectedCandidate}
+    checklist={selectedCandidateChecklist}
+    decision={decision}
+    applyApprovedChange={applyApprovedChange}
+    operatorNotes={operatorNotes}
+    isSavingDecision={isSavingDecision}
+    canApplySelectedCandidate={canApplySelectedCandidate}
+    selectedCandidateIsClosure={selectedCandidateIsClosure}
+    canSave={canSave}
+    selectionLocked={Boolean(pendingReadback)}
+    narrow={isNarrow}
+    onClose={() => requestSelection(null)}
+    onRefresh={() => void loadHistory()}
+    notice={<>
+      {pendingReadback && !isSavingDecision && <div role="alert" className="shrink-0 space-y-2 border-b bg-amber-50 p-3 text-xs text-amber-950 dark:bg-amber-950 dark:text-amber-100">
+        <p>{readbackConflict ? "요청한 결정과 다른 상태가 확인되었습니다. 충돌을 확인해야 하며 다시 저장할 수 없습니다." : "저장 결과 확인이 필요합니다. 같은 후보의 결정·적용 상태가 확인될 때까지 저장과 후보 이동을 잠급니다."}</p>
+        <Button type="button" size="sm" variant="outline" disabled={isLoading} onClick={() => void loadHistory()}>{isLoading ? "확인 중…" : "결정 상태 다시 확인"}</Button>
+      </div>}
+      {pendingSelection && <div id="refresh-unsaved-changes" tabIndex={-1} role="alert" className="shrink-0 space-y-2 border-b bg-amber-50 p-3 text-xs text-amber-950 outline-none dark:bg-amber-950 dark:text-amber-100">
+        <p>저장하지 않은 결정이나 메모가 있습니다.</p>
+        <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => { setPendingSelection(null); document.getElementById("refresh-detail-heading")?.focus(); }}>계속 검토</Button><Button size="sm" variant="outline" onClick={() => applySelection(pendingSelection.candidate, pendingSelection.trigger)}>변경 버리고 이동</Button></div>
+      </div>}
+      {decisionMessage && selectedCandidate && <p role="status" className="shrink-0 border-b bg-muted p-3 text-xs">{decisionMessage}</p>}
+      {error && selectedCandidate && <p role="alert" className="shrink-0 border-b bg-destructive/10 p-3 text-xs text-destructive">{error}</p>}
+      {selectedCandidate && !isLoading && !error && !data?.candidates.some(candidate => candidate.id === selectedCandidate.id) && <p role="status" className="shrink-0 border-b bg-muted p-3 text-xs">선택한 후보가 현재 조회 조건에 없습니다. 필터를 초기화하고 새로고침하면 검토를 계속할 수 있습니다.</p>}
+    </>}
+    onDecisionChange={nextDecision => {
+      setDecision(nextDecision);
+      if (nextDecision !== "approved" || selectedCandidateIsClosure) setApplyApprovedChange(false);
+    }}
+    onApplyApprovedChange={setApplyApprovedChange}
+    onOperatorNotesChange={setOperatorNotes}
+    onSubmitDecision={submitDecision}
+  />;
 
-          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center lg:justify-end" data-admin-module-actions="top-right">
-            <ManagementStatusSummary items={statusSummaryItems} />
-            <div className="flex w-full flex-col gap-1.5 sm:flex-row lg:w-auto">
-              <label className="relative block min-w-0 flex-1 lg:w-60">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void loadHistory();
-                  }}
-                  className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-2 text-xs outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="맛집명/전화번호"
-                  aria-label="맛집 최신화 이력 검색"
-                />
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(
-                    event.target.value as RefreshCandidateStatus | "all",
-                  )
-                }
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
-                aria-label="최신화 후보 상태 필터"
-              >
-                <option value="all">전체 상태</option>
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <Button
-                onClick={loadHistory}
-                disabled={isLoading}
-                size="sm"
-                className="h-8 w-full gap-1.5 px-2 text-xs sm:w-auto"
-              >
-                <RefreshCw
-                  className={cn("h-3.5 w-3.5", isLoading && "animate-spin")}
-                />
-                새로고침
-              </Button>
-            </div>
-          </div>
+  return <section
+    aria-labelledby="admin-restaurant-refresh-history-title"
+    className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
+    data-admin-restaurant-refresh-history="true"
+    data-admin-restaurant-refresh-management-structure="header-list-detail"
+    data-admin-embedded-module-shell="true"
+    data-admin-embedded-module-id="restaurant-refresh-history"
+  >
+    {managementHeader ? <>
+      <h2 id="admin-restaurant-refresh-history-title" className="sr-only">맛집 최신화 이력</h2>
+      {managementHeader.count && createPortal(<ManagementStatusSummary items={statusSummaryItems} />, managementHeader.count)}
+    </> : <AdminPageHeader title="맛집 최신화 이력" titleId="admin-restaurant-refresh-history-title" titleAs="h2" icon={Store} summary={<ManagementStatusSummary items={statusSummaryItems} />} data-admin-module-header="compact" data-admin-module-header-module="restaurant-refresh-history" />}
+    {decisionMessage && !selectedCandidate && <p role="status" className="shrink-0 border-b bg-primary/10 px-3 py-2 text-xs">{decisionMessage}</p>}
+    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]" data-admin-module-content="bounded">
+      <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <div className="admin-cms-toolbar shrink-0" data-admin-module-actions="top-right" aria-label="최신화 이력 검색 및 필터">
+          <form className="flex w-full min-w-0 flex-none items-center gap-2 sm:w-auto sm:min-w-48 sm:flex-1" onSubmit={event => { event.preventDefault(); if (pendingReadbackRef.current) return; if (searchInput === query) void loadHistory(); else setQuery(searchInput); }}>
+            <label className="relative block min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <input id="refresh-history-search" disabled={Boolean(pendingReadback)} value={searchInput} onChange={event => setSearchInput(event.target.value)} className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="맛집명 · 전화번호 검색" aria-label="맛집 최신화 이력 검색" />
+            </label>
+            <Button type="submit" variant="outline" size="sm" className="h-8 px-2" disabled={isLoading || isSavingDecision || Boolean(pendingReadback)}>검색</Button>
+          </form>
+          <select value={statusFilter} onChange={event => setStatusFilter(event.target.value as RefreshCandidateStatus | "all")} disabled={isSavingDecision || Boolean(pendingReadback)} className="h-8 min-w-0 rounded-md border border-input bg-background px-2 text-xs focus-visible:ring-2 focus-visible:ring-ring" aria-label="최신화 후보 상태 필터">
+            <option value="all">전체 상태</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+          <select value={sortOrder} onChange={event => setSortOrder(event.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-xs focus-visible:ring-2 focus-visible:ring-ring" aria-label="최신화 이력 정렬"><option value="newest">최신순</option><option value="review">검토 필요 우선</option><option value="name">맛집명순</option></select>
+          {(query || statusFilter !== "all") && <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" disabled={isSavingDecision || Boolean(pendingReadback)} onClick={() => { setSearchInput(""); setQuery(""); setStatusFilter("all"); }}>필터 초기화</Button>}
+          <Button type="button" variant="ghost" size="sm" onClick={() => void loadHistory()} disabled={isLoading || isSavingDecision} className="h-8 w-8 shrink-0 p-0" aria-label="최신화 이력 새로고침"><RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden="true" /></Button>
         </div>
+        {error && <div role="alert" className="flex shrink-0 items-center justify-between gap-2 border-b bg-destructive/10 px-3 py-2 text-xs text-destructive"><span>{error}{data && " 이전 목록을 표시하고 있습니다."}</span><Button variant="outline" size="sm" disabled={isLoading} onClick={() => void loadHistory()}>다시 시도</Button></div>}
+        <RefreshCandidateList candidates={filteredCandidates} isLoading={isLoading && !data} selectedCandidateId={selectedCandidate?.id ?? null} disabled={isSavingDecision || Boolean(pendingReadback)} hasFilters={Boolean(query || statusFilter !== "all")} onOpenReview={requestSelection} />
+        <div className="admin-cms-footer flex shrink-0 flex-wrap items-center justify-between gap-1 text-muted-foreground"><span aria-live="polite">{isLoading ? "불러오는 중…" : `${filteredCandidates.length}건 · 최근 최대 100건`}</span><span>최근 점검 {formatDate(summary?.last_checked_at)}</span></div>
       </div>
-
-      <div className={cn("flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide p-2 [scrollbar-width:none] lg:grid lg:overflow-hidden [&::-webkit-scrollbar]:hidden", selectedCandidate ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]" : "lg:grid-cols-1")} data-admin-module-content="bounded">
-        {error || decisionMessage ? (
-          <div className="space-y-2 lg:col-span-2">
-            {error ? (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {error}
-              </div>
-            ) : null}
-            {decisionMessage ? (
-              <div className="rounded-lg border border-primary/20 bg-primary/10 p-2 text-xs text-primary">
-                {decisionMessage}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        <RefreshCandidateList
-          candidates={filteredCandidates}
-          isLoading={isLoading}
-          selectedCandidateId={selectedCandidate?.id ?? null}
-          onOpenReview={openReview}
-        />
-
-        {selectedCandidate && <RefreshCandidateDetailPanel
-          selectedCandidate={selectedCandidate}
-          checklist={selectedCandidateChecklist}
-          decision={decision}
-          applyApprovedChange={applyApprovedChange}
-          operatorNotes={operatorNotes}
-          isSavingDecision={isSavingDecision}
-          canApplySelectedCandidate={canApplySelectedCandidate}
-          selectedCandidateIsClosure={selectedCandidateIsClosure}
-          onClose={() => setSelectedCandidate(null)}
-          onDecisionChange={(nextDecision) => {
-            setDecision(nextDecision);
-            if (nextDecision !== "approved" || selectedCandidateIsClosure) {
-              setApplyApprovedChange(false);
-            }
-          }}
-          onApplyApprovedChange={setApplyApprovedChange}
-          onOperatorNotesChange={setOperatorNotes}
-          onSubmitDecision={submitDecision}
-        />}
-      </div>
-    </section>
-  );
+      {!isNarrow && detail}
+    </div>
+    <Sheet open={isNarrow && Boolean(selectedCandidate)} onOpenChange={open => { if (!open) requestSelection(null); }}>
+      <SheetContent className="flex h-dvh w-full max-w-none flex-col gap-0 overflow-hidden p-0 sm:w-[min(640px,100vw)] sm:max-w-none [&>button:last-child]:hidden" onOpenAutoFocus={event => { event.preventDefault(); document.getElementById("refresh-detail-heading")?.focus(); }} onCloseAutoFocus={event => { event.preventDefault(); restoreListFocus(); }}>
+        <SheetTitle className="sr-only">최신화 이력 상세</SheetTitle><SheetDescription className="sr-only">변경 내용과 결정 기록을 확인합니다.</SheetDescription>
+        {detail}
+      </SheetContent>
+    </Sheet>
+  </section>;
 }

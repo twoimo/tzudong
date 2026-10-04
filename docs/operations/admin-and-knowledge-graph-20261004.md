@@ -177,3 +177,10 @@ CMS 관련 통합 native/compat parity는3254 logical inputs/진단0이다. Sent
 7c7e1eed의 production source와 같은 분리된 설치 환경에서 Next16.3.8/React19.3/Node24.21 production build와48개 static page 생성이 통과했다. TS/TSX/CSS/MJS/JSON 대조에서 production source 차이는0이며, performance 증빙·테스트1개·task tsconfig preview include의 차이는 별도였다. route CSS raw는home193609/general372392/admin383123/deferred193609bytes이며 ceiling 안이다. 추가된 task build include2개만 제거했다. refresh-history의 후속 응답 불확실 보호 변경은 이 build 범위에 없으며 별도로 검증한다.
 
 PR7c7e1eed의 Admin CI 실패를 같은103개 cohort에서 재현했다(102pass/1fail). 이전 배너 grid/aria-current 문자열 기대값이 새360px inspector/aria-pressed와 맞지 않았고 실제 browser CMS/keyboard는 이미 확인했다. 선택 의미·읽기 잠금·키보드 upload 기대를 유지하며 해당 기존 assertion2곳을 정합했다. 실패한13개 parity cohort의 재실행은13pass/0fail이다. 새 PR head의 전체 CI 완료는 별도로 읽어야 한다.
+
+
+최신화·이력은 공통 CMS 목록/360px inspector/모바일 Sheet를 적용하고 완료·반려·승인·대체 항목의 읽기 상세를 열었다. 미저장 메모·결정·적용 선택은 후보 전환/닫기/Escape에서 보호한다. 루트 검토에서 응답 유실 후 이전 GET 상태로 POST를 다시 보낼 수 있음을 찾아, 동일 후보·맛집·기대 상태·새 결정/적용 시각을 fresh GET에서 확인할 때까지 전송·선택·닫기를 잠그도록 보완했다. cached GET/ID 존재/불완전한 applied 정보/다른 결정은 해제 근거가 아니다. recrawl 대기·실패 의미와 폐업 자동 적용 차단은 유지한다.
+
+이 변경은 agent 관련28tests/284assertions 및 root refresh+responsive30tests/823assertions가 통과했다(겹침은 합산하지 않는다). 390/834/1423 가로 넘침0, keyboard/Sheet와 세 합성 POST 실패/readback을 검증했다. 실제 browser mutation/provider/운영 호출0이다. GET은 메모·결정 주체를 반환하지 않으므로 동일 상태의 작성자까지 입증하지 않으며, 잠금은 컴포넌트 수명 동안이다. 전체 새로고침/부모 unmount를 넘는 복구라고 표시하지 않는다. 로그인 fixture의 기존 MyPage hydration 오류1건은 별도 기록했고 관리자 후속 화면에서 새 오류는 없었다.
+
+스토리보드 프로젝트 전환/신규/사이드바/링크/뒤로가기·편집 닫기는 미저장·불확실 저장을 확인하고 저장 중 전환을 막는다. 보낸 장면 내용과 증가한 revision을 확인하여 저장을 확정하고 늦은 readback 뒤 새 편집을 버리지 않는다. 신규 browser 회귀8개/기존 단위5개/기존 Playwright3개가 통과했다. Gemini 모델·worker·API·billing은 바꾸지 않았다. 취소한 popstate의 URL 복구는 앞으로가기 stack을 축약할 수 있으며 실제 제공자 성능 증거는 아니다.
