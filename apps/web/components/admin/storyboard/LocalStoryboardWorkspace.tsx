@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { StoryboardProjectLibrary } from "./StoryboardProjectLibrary";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { z } from "zod";
@@ -194,6 +195,7 @@ function ProviderField({ kind, value, externalAI, models, onChange }: {
 
 export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLegacy?: () => void; archive?: ReactNode } = {}) {
   const [showSetup, setShowSetup] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [catalog, setCatalog] = useState<Catalog>({ ok: true, projects: [], workers: [] });
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(true);
@@ -285,7 +287,8 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
       if (!parsed.success) throw new UiError("invalid_response");
       if (!controller.signal.aborted) { setCatalog(parsed.data); setCatalogError(null); }
     }).catch((error: unknown) => {
-      if (!controller.signal.aborted) setCatalogError(failure(error));
+      if (!controller.signal.aborted) setCatalogError(error instanceof UiError && error.code === "unauthorized"
+        ? failure(error) : "프로젝트 목록을 불러오지 못했습니다. 목록을 다시 불러와 확인하세요.");
     }).finally(() => { if (!controller.signal.aborted) setCatalogBusy(false); });
     return () => controller.abort();
   }, [catalogTick]);
@@ -296,7 +299,7 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
     if (id) url.searchParams.set(PROJECT_QUERY, id); else url.searchParams.delete(PROJECT_QUERY);
     window.history.pushState(window.history.state, "", url);
     acceptedLocation.current = { href: window.location.href, state: window.history.state };
-    setProjectId(id); setShowSetup(false);
+    setProjectId(id); setShowSetup(false); setShowLibrary(false);
   }, [mayLeave, projectId]);
   const updateSummary = useCallback((project: Project) => {
     const item = { id: project.id, revision: project.revision, status: project.status,
@@ -355,19 +358,34 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
     className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-3 pb-24 text-foreground sm:p-4 sm:pb-6">
     <AdminPageHeader title="스토리보드" titleId="local-storyboard-title" titleAs="h2" icon={Clapperboard}
       className="admin-storyboard-page-header"
-      actions={<div className={`grid w-full min-w-0 items-center gap-2 sm:w-auto ${projectId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
+      actions={<div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
-        <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-56`} value={projectId ?? ""}
+        <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-48`} value={projectId ?? ""}
           onChange={(event) => selectProject(event.target.value || null)}>
           <option value="">저장된 프로젝트 선택</option>
           {catalog.projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
+        {projectId && <button type="button" className={buttonClass} aria-expanded={showLibrary} aria-controls="local-storyboard-project-library"
+          onClick={() => setShowLibrary((value) => !value)}>프로젝트 목록</button>}
         <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
         {projectId && <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>}
       </div>}
     />
     {departureNotice && <p role="alert" className="mb-3 text-sm text-destructive">{departureNotice}</p>}
+    {catalogError && projectId && !showLibrary && <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
+      <span>{catalogError}</span>
+      <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick((value) => value + 1)}>목록 다시 불러오기</button>
+    </div>}
     {archive}
+    <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]" : ""}`}>
+      <div className="min-w-0" hidden={!!projectId && !showLibrary}>
+        <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
+          busy={catalogBusy} error={catalogError} onRefresh={() => setCatalogTick((value) => value + 1)} onSelect={selectProject}
+          onStart={() => {
+            selectProject(null);
+            requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
+          }} />
+      </div>
     <div className={`grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "w-full" : ""}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
@@ -432,6 +450,7 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
         {showSetup && onOpenLegacy && <button type="button" className="min-h-11 text-sm text-muted-foreground underline underline-offset-4" onClick={() => { if (mayLeave()) onOpenLegacy(); }}>이전 작업 공간 열기</button>}
       </aside>}
       {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} onProject={updateSummary} onDepartureChange={onDepartureChange} />}
+    </div>
     </div>
   </section>;
 }
