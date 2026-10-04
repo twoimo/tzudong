@@ -13,6 +13,7 @@ const isolated = new Set([
   'db-conflict-checker.test.ts',
   'require-admin-fail-closed.test.ts',
   'shorten-target-allowlist.test.ts',
+  'local-loopback-mutation-origin.test.ts',
 ]);
 
 const files = readdirSync(root, { recursive: true, withFileTypes: true })
@@ -28,15 +29,44 @@ if (isolatedFiles.length !== isolated.size || generalFiles.length === 0) {
 }
 
 function run(filesToRun) {
-  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000'], {
+  const localDiagnostic = process.env.NIGHTLY_MODE === 'local';
+  if (localDiagnostic && process.platform === 'linux') {
+    // Linux libuv extra pipes are sockets and cannot be reopened through
+    // /dev/fd. A memfd is an anonymous RAM file inherited only by this Bun.
+    const result = spawnSync('python3', [path.resolve('../../.github/scripts/nightly-unit-failure-sites.py'), '--run-linux'], {
+      input: JSON.stringify({ files: filesToRun }), encoding: 'utf8',
+      env: process.env, stdio: ['pipe', 'pipe', 'ignore'],
+      maxBuffer: 64 * 1024, shell: false,
+    });
+    if (result.stdout?.trim()) console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${result.stdout.trim()}`);
+    return typeof result.status === 'number' ? result.status : 1;
+  }
+  const reportArgs = localDiagnostic ? ['--reporter', 'junit', '--reporter-outfile', '/dev/fd/3'] : [];
+  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000', ...reportArgs], {
     cwd: process.cwd(),
     env: process.env,
-    stdio: 'inherit',
+    // The extra fd is a private pipe: raw JUnit/console diagnostics never land
+    // in the nightly log or an artifact. Ordinary developer output is unchanged.
+    stdio: localDiagnostic ? ['inherit', 'ignore', 'ignore', 'pipe'] : 'inherit',
+    maxBuffer: 32 * 1024 * 1024,
     shell: false,
   });
   if (result.error) {
     console.error(`[unit-tests] runner failed: ${result.error.code ?? result.error.name}`);
     return 1;
+  }
+  if (localDiagnostic) {
+    const xml = result.output[3]?.toString('utf8');
+    const diagnostic = spawnSync('python3', [path.resolve('../../.github/scripts/nightly-unit-failure-sites.py')], {
+      input: JSON.stringify({ xml, files: filesToRun, exit_code: result.status }),
+      encoding: 'utf8', maxBuffer: 64 * 1024,
+      stdio: ['pipe', 'pipe', 'ignore'], shell: false,
+    });
+    if (diagnostic.status !== 0) {
+      console.error('[unit-tests] bounded diagnostic unavailable');
+      return 1;
+    }
+    console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${diagnostic.stdout.trim()}`);
   }
   return typeof result.status === 'number' ? result.status : 1;
 }

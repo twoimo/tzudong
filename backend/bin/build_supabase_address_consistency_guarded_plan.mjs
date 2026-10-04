@@ -438,7 +438,8 @@ export function buildGuardedPlan(rows, { generatedAt = new Date().toISOString(),
 }
 
 async function main() {
-  await import('dotenv/config');
+  const { config } = await import('dotenv');
+  config({ quiet: true });
   const args = parseArgs(process.argv.slice(2));
   await fs.mkdir(args.out, { recursive: true });
   const rows = await loadRows();

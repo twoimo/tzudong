@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 
 const SUPABASE_URL = 'https://project-ref.supabase.co';
 const SUPABASE_KEY = 'anon-test-key';
@@ -31,6 +31,7 @@ const {
   fetchSupabaseRows,
   postgrestArrayOverlap,
   postgrestIn,
+  supabaseRestFailureCode,
   supabaseRestRpcClient,
 } = await import('../lib/supabase-rest-client.ts?unit-contract-valid');
 
@@ -93,9 +94,9 @@ describe('Supabase REST client', () => {
     }
 
     fetchImplementation = async () => new Response('RLS denied', { status: 403 });
-    await expect(fetchSupabaseRows('restaurants', [])).rejects.toThrow(
-      'Supabase REST restaurants failed: 403 RLS denied',
-    );
+    await expect(fetchSupabaseRows('restaurants', [])).rejects.toMatchObject({
+      message: 'supabase_rest_rows_failed:403',
+    });
   });
 
   test('passes through successful JSON without runtime row-shape validation', async () => {
@@ -160,28 +161,171 @@ describe('Supabase REST client', () => {
     });
 
     fetchImplementation = async () => new Response(null, { status: 200 });
-    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toThrow(
-      'Supabase REST restaurants count missing content-range.',
-    );
+    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toMatchObject({
+      message: 'supabase_rest_count_missing',
+    });
 
     fetchImplementation = async () => new Response('denied', { status: 403 });
-    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toThrow(
-      'Supabase REST restaurants count failed: 403 denied',
-    );
+    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toMatchObject({
+      message: 'supabase_rest_count_failed:403',
+    });
   });
 
-  test('rejects requests when either public Supabase setting is missing at module initialization', async () => {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  test('rejects missing or blank public settings for every operation before fetch', async () => {
     try {
-      const missingConfigClient = await import('../lib/supabase-rest-client.ts?unit-contract-missing');
-      await expect(missingConfigClient.fetchSupabaseRows('restaurants', [])).rejects.toThrow(
-        'Supabase REST client requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
-      );
+      for (const missing of ['url', 'key'] as const) {
+        for (const blank of [undefined, '', '   ']) {
+          process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = SUPABASE_KEY;
+          const name = missing === 'url' ? 'NEXT_PUBLIC_SUPABASE_URL' : 'NEXT_PUBLIC_SUPABASE_ANON_KEY';
+          if (blank === undefined) delete process.env[name];
+          else process.env[name] = blank;
+
+          for (const request of [
+            () => fetchSupabaseRows('restaurants', []),
+            () => fetchSupabaseExactCount('restaurants', []),
+            () => supabaseRestRpcClient.rpc('bounded_rpc', {}),
+          ]) {
+            await expect(request()).rejects.toMatchObject({ message: 'supabase_rest_config_missing' });
+          }
+        }
+      }
       expect(requests).toHaveLength(0);
     } finally {
       process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = SUPABASE_KEY;
+    }
+  });
+
+  test('bounds failure codes to the operation and a valid integer HTTP status', () => {
+    for (const kind of ['rows', 'count', 'rpc'] as const) {
+      for (const status of [100, 200, 403, 500, 599]) {
+        expect(supabaseRestFailureCode(kind, status)).toBe(`supabase_rest_${kind}_failed:${status}`);
+      }
+      for (const status of [-1, 0, 99, 600, 200.5, Number.NaN, Infinity, -Infinity]) {
+        expect(supabaseRestFailureCode(kind, status)).toBe(`supabase_rest_${kind}_failed:0`);
+      }
+    }
+  });
+
+  test('bounds transport rejections for rows, counts and RPC without changing rejection semantics', async () => {
+    const failure = new Error('untrusted-error');
+    failure.name = 'untrusted-name';
+    for (const rejected of [failure, 'untrusted-value', undefined]) {
+      fetchImplementation = async () => { throw rejected; };
+      for (const table of ['restaurants', 'announcements', 'ad_banners']) {
+        await expect(fetchSupabaseRows(table, [])).rejects.toMatchObject({
+          name: 'Error', message: 'supabase_rest_rows_failed:0',
+        });
+      }
+      await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toMatchObject({
+        name: 'Error', message: 'supabase_rest_count_failed:0',
+      });
+      await expect(supabaseRestRpcClient.rpc('bounded_rpc', {})).rejects.toMatchObject({
+        name: 'Error', message: 'supabase_rest_rpc_failed:0',
+      });
+    }
+  });
+
+  test('bounds malformed or unreadable row JSON and preserves the RPC null fallback', async () => {
+    fetchImplementation = async () => new Response('not-json', { status: 200 });
+    await expect(fetchSupabaseRows('restaurants', [])).rejects.toMatchObject({
+      name: 'Error', message: 'supabase_rest_rows_failed:0',
+    });
+    await expect(supabaseRestRpcClient.rpc('nullable_rpc', {})).resolves.toEqual({
+      data: null, error: null,
+    });
+
+    const response = new Response('[]', { status: 200 });
+    const json = spyOn(response, 'json').mockRejectedValue(new Error('untrusted-error'));
+    fetchImplementation = async () => response;
+    try {
+      await expect(fetchSupabaseRows('restaurants', [])).rejects.toMatchObject({
+        name: 'Error', message: 'supabase_rest_rows_failed:0',
+      });
+      await expect(supabaseRestRpcClient.rpc('nullable_rpc', {})).resolves.toEqual({
+        data: null, error: null,
+      });
+    } finally {
+      json.mockRestore();
+    }
+  });
+
+  test('bounds RPC argument serialization failures before fetch', async () => {
+    const args: Record<string, unknown> = {};
+    args.self = args;
+    await expect(supabaseRestRpcClient.rpc('bounded_rpc', args)).rejects.toMatchObject({
+      name: 'Error', message: 'supabase_rest_rpc_failed:0',
+    });
+    expect(requests).toHaveLength(0);
+  });
+
+  test('rejects malformed and non-HTTP config URLs with a fixed code before fetch', async () => {
+    try {
+      for (const url of ['not-a-url', 'https://', 'ftp://example.test', 'data:text/plain,local']) {
+        process.env.NEXT_PUBLIC_SUPABASE_URL = url;
+        for (const request of [
+          () => fetchSupabaseRows('restaurants', []),
+          () => fetchSupabaseExactCount('restaurants', []),
+          () => supabaseRestRpcClient.rpc('bounded_rpc', {}),
+        ]) {
+          await expect(request()).rejects.toMatchObject({
+            name: 'Error', message: 'supabase_rest_config_invalid',
+          });
+        }
+      }
+      expect(requests).toHaveLength(0);
+    } finally {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
+    }
+  });
+
+  test('keeps HTTP failures exact and rejects other public announcement/banner failures', async () => {
+    for (const status of [400, 404, 429, 500, 503]) {
+      fetchImplementation = async () => new Response('untrusted-response', { status });
+      for (const table of ['restaurants', 'announcements', 'ad_banners', 'untrusted-table']) {
+        await expect(fetchSupabaseRows(table, [])).rejects.toMatchObject({
+          message: `supabase_rest_rows_failed:${status}`,
+        });
+        await expect(fetchSupabaseExactCount(table, [])).rejects.toMatchObject({
+          message: `supabase_rest_count_failed:${status}`,
+        });
+      }
+    }
+  });
+
+  test('discards failed response streams without reading them even when cancellation rejects', async () => {
+    for (const cancelRejects of [false, true]) {
+      for (const kind of ['rows', 'count', 'rpc', 'public-rows'] as const) {
+        const response = new Response('untrusted-response', { status: 403 });
+        const cancel = spyOn(response.body!, 'cancel');
+        const text = spyOn(response, 'text');
+        const json = spyOn(response, 'json');
+        if (cancelRejects) cancel.mockRejectedValue(new Error('discard-test'));
+        fetchImplementation = async () => response;
+
+        try {
+          if (kind === 'rpc') {
+            await expect(supabaseRestRpcClient.rpc('bounded_rpc', {})).resolves.toEqual({
+              data: null, error: { status: 403 },
+            });
+          } else if (kind === 'public-rows') {
+            await expect(fetchSupabaseRows('announcements', [])).resolves.toEqual([]);
+          } else {
+            const request = kind === 'rows' ? fetchSupabaseRows : fetchSupabaseExactCount;
+            await expect(request('untrusted-table', [])).rejects.toMatchObject({
+              message: `supabase_rest_${kind}_failed:403`,
+            });
+          }
+          expect(cancel).toHaveBeenCalledTimes(1);
+          expect(text).not.toHaveBeenCalled();
+          expect(json).not.toHaveBeenCalled();
+        } finally {
+          cancel.mockRestore();
+          text.mockRestore();
+          json.mockRestore();
+        }
+      }
     }
   });
 });

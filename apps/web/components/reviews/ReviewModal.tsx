@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
-import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
+import { saveDraft, getDraft, prepareDraftDeletion, type ReviewDraft } from "@/lib/reviewDraftDB";
 import {
     buildReviewPhotoObjectPath,
+    cleanupCanonicalReviewPhotoObjects,
     normalizeReviewPhotoFilename,
 } from "@/lib/review-photo-url";
+import { ReviewSaveOperation, type ReviewSaveDraft, type ReviewSaveUpload } from "@/lib/reviews/review-save-operation";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
@@ -79,6 +81,76 @@ const compressFoodImage = async (file: File): Promise<File> => {
         return file;
     }
 };
+// The controller retains exactly one operation in memory; draft persistence stays unchanged.
+function createReviewSaveOperation(
+    currentOwner: () => string | undefined,
+    currentDraftRevision: () => ReviewDraft | null,
+) {
+    return new ReviewSaveOperation({
+        currentOwner,
+        captureDraftDeletion: draft => prepareDraftDeletion(draft.ownerId, draft.restaurantId, currentDraftRevision()),
+        newId: () => {
+            const reviewId = crypto.randomUUID();
+            return reviewId;
+        },
+        prepare: async (draft, reviewId) => {
+            const [receipt, ...food] = await Promise.all([
+                prepareReceiptImage(draft.verificationPhoto),
+                ...draft.foodPhotos.map(compressFoodImage),
+            ]);
+            const uploadTimestamp = Date.now();
+            const verificationPhotoPath = buildReviewPhotoObjectPath(
+                { ownerId: draft.ownerId, reviewId, purpose: 'verification' },
+                `${uploadTimestamp}_verification_${normalizeReviewPhotoFilename(receipt.name, '.jpg') ?? 'receipt.jpg'}`,
+            );
+            if (!verificationPhotoPath) throw new Error('REVIEW_VERIFICATION_UPLOAD_FAILED');
+            const uploads: ReviewSaveUpload[] = [{ path: verificationPhotoPath, purpose: 'verification', file: receipt }];
+            food.forEach((file, i) => {
+                const path = buildReviewPhotoObjectPath(
+                    { ownerId: draft.ownerId, reviewId, purpose: 'food' },
+                    `${uploadTimestamp}_food_${i}_${normalizeReviewPhotoFilename(file.name) ?? 'food.webp'}`,
+                );
+                if (!path) throw new Error('REVIEW_PHOTO_UPLOAD_FAILED');
+                uploads.push({ path, purpose: 'food', file });
+            });
+            return uploads;
+        },
+        upload: ({ path, file }) => supabase.storage.from('review-photos').upload(path, file, {
+            cacheControl: '3600', upsert: false,
+        }),
+        verifyUpload: async ({ path, file }) => {
+            const { data, error } = await supabase.storage.from('review-photos').info(path);
+            return !error && data !== null && data.size === file.size
+                && (!file.type || data.contentType === file.type);
+        },
+        insert: (draft, reviewId, uploads) => supabase.from('reviews').insert({
+            id: reviewId,
+            user_id: draft.ownerId,
+            restaurant_id: draft.restaurantId,
+            title: draft.title,
+            content: draft.content,
+            visited_at: draft.visitedAt,
+            verification_photo: uploads.find(upload => upload.purpose === 'verification')!.path,
+            food_photos: uploads.filter(upload => upload.purpose === 'food').map(upload => upload.path),
+            categories: draft.categories,
+            is_verified: false,
+        }),
+        read: (ownerId, reviewId) => supabase.from('reviews')
+            .select('id, user_id, restaurant_id, verification_photo, food_photos')
+            .eq('id', reviewId).eq('user_id', ownerId).maybeSingle(),
+        cleanup: async (ownerId, reviewId, uploads) => {
+            const results = await Promise.all((['verification', 'food'] as const).map(purpose => (
+                cleanupCanonicalReviewPhotoObjects(
+                    uploads.filter(upload => upload.purpose === purpose).map(upload => upload.path),
+                    { ownerId, reviewId, purpose },
+                    supabase.storage.from('review-photos'),
+                )
+            )));
+            return results.every(result => result.success);
+        },
+    });
+}
+
 import {
     Dialog,
     DialogContent,
@@ -349,7 +421,14 @@ function ObjectUrlPreviewImage({ src, alt, className }: { src: string | null; al
     );
 }
 
-export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false, presentation = 'auto' }: ReviewModalProps) {
+export function ReviewModal(props: ReviewModalProps) {
+    const { user } = useAuth();
+    // Owner transitions discard the previous composer's inputs and controller.
+    // This is a memory boundary, not durable idempotency across remounts.
+    return <ReviewComposer key={user?.id ?? 'signed-out'} {...props} />;
+}
+
+function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false, presentation = 'auto' }: ReviewModalProps) {
     const { user } = useAuth();
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [visitedDate, setVisitedDate] = useState("");
@@ -360,6 +439,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [saveRecovery, setSaveRecovery] = useState<'edit' | 'draft-cleanup' | null>(null);
+    const autoSaveInFlightRef = useRef<Promise<void> | null>(null);
+    const consumerNotifiedRef = useRef(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
     // OCR 분석 상태
@@ -378,6 +460,42 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [isSearching, setIsSearching] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<{ id: string; name: string } | null>(restaurant);
     const reviewTargetRestaurant = selectedRestaurant || restaurant;
+    // One bounded text revision, obtained only from our committed save or load.
+    // Scope object identity also fences asynchronous completions across A -> B -> A.
+    const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null as ReviewDraft | null });
+    const saveOwnerRef = useRef(user?.id);
+    const saveOperationRef = useRef<ReviewSaveOperation | null>(null);
+    const submitInFlightRef = useRef(false);
+    const closeRequestedRef = useRef(false);
+    const composerOpenRef = useRef(isOpen);
+    const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id });
+    useLayoutEffect(() => {
+        if (draftScopeRef.current.ownerId !== user?.id || draftScopeRef.current.restaurantId !== reviewTargetRestaurant?.id || !isOpen) {
+            draftScopeRef.current = { ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null };
+        }
+        saveOwnerRef.current = user?.id;
+        composerOpenRef.current = isOpen;
+        latestSaveInputsRef.current = { visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id };
+        saveOperationRef.current ??= createReviewSaveOperation(() => saveOwnerRef.current, () => draftScopeRef.current.revision);
+    }, [user?.id, isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, reviewTargetRestaurant?.id]);
+
+    useLayoutEffect(() => {
+        const operation = saveOperationRef.current!;
+        if (isOpen) {
+            closeRequestedRef.current = false;
+            consumerNotifiedRef.current = false;
+        } else void operation.cancel();
+        return () => {
+            composerOpenRef.current = false;
+            saveOwnerRef.current = undefined;
+            draftScopeRef.current = { ...draftScopeRef.current, revision: null };
+            // A dispatched insert cannot be safely aborted. The controller waits
+            // for it and preserves objects whenever its outcome stays unknown.
+            operation.requestCancel();
+            void operation.cancel();
+        };
+    }, [isOpen, user?.id]);
+
 
     // 드래그 앤 드롭을 위한 ref들
     const verificationDropRef = useRef<HTMLDivElement>(null);
@@ -1235,6 +1353,28 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             setOcrProgress(null);
         }
     }
+    // Use the scoped pre-write snapshot; a newer composer may already have saved
+    // another draft at this key. Submit/close refs stop queued autosaves here.
+    const clearDraft = useCallback(async (): Promise<boolean> => {
+        try {
+            await autoSaveInFlightRef.current;
+            if (!await saveOperationRef.current?.clearSavedDraft()) return false;
+            setLastSavedAt(null);
+            return true;
+        } catch {
+            return false;
+        }
+    }, []);
+
+    const notifySavedReview = useCallback(() => {
+        if (consumerNotifiedRef.current) return;
+        consumerNotifiedRef.current = true;
+        try { onSuccess?.(); }
+        catch {
+            toast({ title: "등록 후 화면 갱신 실패", description: "내 리뷰에서 등록 결과를 확인해주세요.", variant: "destructive" });
+        }
+    }, [onSuccess]);
+
     const handleSubmit = async () => {
         const targetRestaurant = selectedRestaurant || restaurant;
         // 필수 항목 검증
@@ -1275,143 +1415,102 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             return;
         }
 
+        if (submitInFlightRef.current || closeRequestedRef.current) return;
+        const submittedInputs = latestSaveInputsRef.current;
+        const timeWithSeconds = visitedTime.split(':').length === 2 ? `${visitedTime}:00` : visitedTime;
+        const visitedAt = `${visitedDate}T${timeWithSeconds}`;
+        if (Number.isNaN(new Date(visitedAt).getTime())) {
+            toast({ title: "방문 일시 확인", description: "올바른 방문 날짜와 시간을 입력해주세요.", variant: "destructive" });
+            return;
+        }
+        const draft: ReviewSaveDraft = {
+            ownerId: user.id, restaurantId: targetRestaurant.id,
+            title: `${targetRestaurant.name} 방문 후기`, content: content.trim(), visitedAt,
+            categories, verificationPhoto, foodPhotos,
+        };
+        submitInFlightRef.current = true;
         setIsSubmitting(true);
-
         try {
-            // 1. 이미지 준비 (영수증은 원본 유지, 음식 사진은 WebP 압축)
-            const [preparedVerificationPhoto, ...compressedFoodPhotos] = await Promise.all([
-                prepareReceiptImage(verificationPhoto),  // 원본 유지 (OCR 후 서버에서 압축)
-                ...foodPhotos.map((photo: File) => compressFoodImage(photo))  // 스토리지 최적화 WebP
-            ]);
-
-            // 2. 사진 객체 키는 소유자·리뷰·용도에 결합된 canonical 레이아웃만 사용한다.
-            //    리뷰 id를 먼저 확정해 업로드 경로와 저장 행이 같은 값을 쓰도록 한다.
-            const reviewId = crypto.randomUUID();
-            const uploadTimestamp = Date.now();
-            const verificationPhotoPath = buildReviewPhotoObjectPath(
-                { ownerId: user.id, reviewId, purpose: 'verification' },
-                `${uploadTimestamp}_verification_${
-                    normalizeReviewPhotoFilename(preparedVerificationPhoto.name, '.jpg') ?? 'receipt.jpg'
-                }`,
-            );
-            if (!verificationPhotoPath) {
-                throw new Error('REVIEW_VERIFICATION_UPLOAD_FAILED');
+            await autoSaveInFlightRef.current;
+            if (closeRequestedRef.current || saveOwnerRef.current !== user.id) return;
+            const result = await saveOperationRef.current!.submit(draft);
+            const latest = latestSaveInputsRef.current;
+            const changedDuringSave = Object.keys(submittedInputs).some(key => (
+                submittedInputs[key as keyof typeof submittedInputs] !== latest[key as keyof typeof latest]
+            ));
+            if (saveOwnerRef.current !== user.id) {
+                // A known commit survives unmount/auth changes. Finish only the
+                // captured local draft cleanup; do not notify a different owner
+                // or update an unmounted form, and never remove saved photos.
+                if (result === 'saved' || result === 'saved-previous') await saveOperationRef.current!.clearSavedDraft();
+                return;
             }
-
-            const { error: verificationUploadError } = await supabase.storage
-                .from('review-photos')
-                .upload(verificationPhotoPath, preparedVerificationPhoto, {
-                    cacheControl: '3600',
-                    upsert: false
+            if (closeRequestedRef.current) return; // handleClose owns cancellation readback and notification.
+            if (!composerOpenRef.current) {
+                if (result === 'saved' || result === 'saved-previous') {
+                    await clearDraft();
+                    notifySavedReview();
+                }
+                return;
+            }
+            if (result === 'saved-previous' || (result === 'saved' && changedDuringSave)) {
+                if (!await clearDraft()) {
+                    setSaveRecovery('draft-cleanup');
+                    toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
+                    return;
+                }
+                setSaveRecovery('edit');
+                toast({ title: "이전 내용으로 등록되었습니다", description: "등록 후 변경한 내용은 유지했습니다. 저장된 리뷰는 내 리뷰에서 확인하고 수정해주세요." });
+                return;
+            }
+            if (result === 'saved') {
+                if (!await clearDraft()) {
+                    setSaveRecovery('draft-cleanup');
+                    toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
+                    return;
+                }
+                toast({ title: "리뷰 등록 완료! 🎉", description: "소중한 리뷰가 등록되었습니다. 관리자 승인 후 스탬프가 지급됩니다." });
+                notifySavedReview();
+                await handleClose();
+            } else if (result !== 'cancelled') {
+                toast({
+                    title: result === 'blocked' ? "저장 상태 확인 필요" : "리뷰 등록 실패",
+                    description: result === 'blocked'
+                        ? "저장 결과 또는 사진 정리를 확인하지 못했습니다. 이 창에서 다시 시도해주세요."
+                        : "리뷰를 저장하지 못했습니다. 입력한 내용을 유지했으니 다시 시도해주세요.",
+                    variant: "destructive",
                 });
-
-            if (verificationUploadError) {
-                throw new Error('REVIEW_VERIFICATION_UPLOAD_FAILED');
             }
-
-            // 3. 음식 사진 병렬 업로드 (성능 최적화)
-            const foodPhotoUploadPromises = compressedFoodPhotos.map(async (compressedPhoto, i) => {
-                const photoPath = buildReviewPhotoObjectPath(
-                    { ownerId: user.id, reviewId, purpose: 'food' },
-                    `${uploadTimestamp}_food_${i}_${
-                        normalizeReviewPhotoFilename(compressedPhoto.name) ?? 'food.webp'
-                    }`,
-                );
-                if (!photoPath) {
-                    throw new Error('REVIEW_PHOTO_UPLOAD_FAILED');
-                }
-
-                const { error: foodUploadError } = await supabase.storage
-                    .from('review-photos')
-                    .upload(photoPath, compressedPhoto, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (foodUploadError) {
-                    throw new Error('REVIEW_PHOTO_UPLOAD_FAILED');
-                }
-
-                return photoPath;
-            });
-
-            const uploadedFoodPhotoPaths = await Promise.all(foodPhotoUploadPromises);
-
-            // 4. 리뷰 레코드 생성
-            // 시간 형식 처리 및 검증
-            let visitedAtDateTime: string;
-            try {
-                // 시간이 HH:MM 형식인 경우 초 추가
-                const timeParts = visitedTime.split(':');
-                const timeWithSeconds = timeParts.length === 2
-                    ? `${visitedTime}:00`
-                    : visitedTime;
-
-                // ISO 8601 형식으로 조합
-                visitedAtDateTime = `${visitedDate}T${timeWithSeconds}`;
-
-                // 유효성 검증
-                const testDate = new Date(visitedAtDateTime);
-                if (isNaN(testDate.getTime())) {
-                    throw new Error("유효하지 않은 날짜/시간 형식입니다");
-                }
-            } catch {
-                throw new Error(`날짜/시간 형식 오류: ${visitedDate} ${visitedTime}`);
-            }
-
-            // 타입 안전성을 위한 검증
-            if (categories.length === 0) {
-                throw new Error("카테고리를 선택해주세요");
-            }
-
-            const { error: insertError } = await supabase
-                .from('reviews')
-                .insert({
-                    id: reviewId,
-                    user_id: user.id,
-                    restaurant_id: targetRestaurant.id,
-                    title: `${targetRestaurant.name} 방문 후기`,
-                    content: content.trim(),
-                    visited_at: visitedAtDateTime,
-                    verification_photo: verificationPhotoPath,
-                    food_photos: uploadedFoodPhotoPaths,
-                    categories,
-                    is_verified: false,
-                });
-
-            if (insertError) {
-                throw new Error('REVIEW_CREATE_FAILED');
-            }
-
-            // 임시 저장 데이터 삭제
-            clearDraft();
-
-            toast({
-                title: "리뷰 등록 완료! 🎉",
-                description: "소중한 리뷰가 등록되었습니다. 관리자 승인 후 스탬프가 지급됩니다.",
-            });
-
-            // 성공 시 초안 삭제
-
-
-            if (onSuccess) {
-                onSuccess();
-            }
-            handleClose();
-        } catch (error) {
-            console.error('리뷰 제출 오류:');
-            const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다";
-            toast({
-                title: "리뷰 등록 실패",
-                description: errorMessage,
-                variant: "destructive",
-            });
+        } catch {
+            toast({ title: "등록 후 화면 갱신 실패", description: "내 리뷰에서 등록 결과를 확인해주세요.", variant: "destructive" });
         } finally {
-            setIsSubmitting(false);
+            submitInFlightRef.current = false;
+            if (saveOwnerRef.current === user.id) setIsSubmitting(false);
         }
     };
 
-    const handleClose = useCallback(() => {
+    const handleClose = useCallback(async () => {
+        closeRequestedRef.current = true;
+        const cancellation = await saveOperationRef.current!.cancel();
+        if (cancellation.status === 'blocked') {
+            closeRequestedRef.current = false;
+            toast({ title: "저장 상태 확인 필요", description: "저장 결과 또는 사진 정리를 확인하지 못했습니다. 이 창에서 다시 시도해주세요.", variant: "destructive" });
+            return;
+        }
+        if (cancellation.status === 'saved') {
+            if (!await clearDraft()) {
+                closeRequestedRef.current = false;
+                setSaveRecovery('draft-cleanup');
+                toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
+                return;
+            }
+            if (!consumerNotifiedRef.current) {
+                toast({ title: "리뷰가 등록되었습니다", description: "닫기 전에 저장이 완료되어 등록된 리뷰는 유지됩니다." });
+            }
+            notifySavedReview();
+            saveOperationRef.current!.releaseSaved();
+        }
+        setSaveRecovery(null);
         ocrAbortControllerRef.current?.abort();
         ocrAbortControllerRef.current = null;
         setVisitedDate("");
@@ -1428,7 +1527,18 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         setAiFilledFields(new Set());
         setCurrentStep(1);
         onClose();
-    }, [onClose, replaceVerificationPhoto]);
+    }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview]);
+
+    const saveRecoveryNotice = saveRecovery ? (
+        <div role="status" className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+            <p>{saveRecovery === 'edit'
+                ? "리뷰가 이미 등록되었습니다. 현재 변경한 입력은 이 창에 유지됩니다. 등록된 리뷰를 열어 수정해주세요."
+                : "리뷰는 등록되었지만 임시 저장 정리가 남아 있습니다. 다시 시도하면 정리만 확인하며 중복 등록하지 않습니다."}</p>
+            <a className="mt-2 inline-block underline underline-offset-4" href="/mypage/reviews" target="_blank" rel="noopener noreferrer">
+                등록된 리뷰 확인 (새 탭)
+            </a>
+        </div>
+    ) : null;
 
     // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
     const isFormValid = useMemo(() => {
@@ -1480,9 +1590,16 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
         if (!user?.id || !targetRestaurantId) return;
 
+        const scope = draftScopeRef.current;
+        if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current
+            || submitInFlightRef.current || closeRequestedRef.current) return;
+        const previousRevision = scope.revision;
         try {
             const draft = await getDraft(user.id, targetRestaurantId);
+            if (draftScopeRef.current !== scope || scope.revision !== previousRevision || !composerOpenRef.current
+                || saveOwnerRef.current !== user.id || submitInFlightRef.current || closeRequestedRef.current) return;
             if (draft) {
+                scope.revision = draft;
                 setVisitedDate(draft.visitedDate);
                 setVisitedTime(draft.visitedTime);
                 setCategories(draft.categories as Category[]);
@@ -1509,7 +1626,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     // 자동 저장 (IndexedDB)
     const autoSave = useCallback(async () => {
         const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!user?.id || !targetRestaurantId) return;
+        if (!user?.id || !targetRestaurantId || submitInFlightRef.current || closeRequestedRef.current) return;
 
         // 내용이 하나라도 있을 때만 저장 (빈 문자열이라도 저장 - 지운 경우 대응)
         // 모든 필드가 초기값인 경우에만 저장 스킵
@@ -1518,43 +1635,36 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             return;
         }
 
-        try {
-            setIsSaving(true);
-            await saveDraft({
-                userId: user.id,
-                restaurantId: targetRestaurantId,
-                visitedDate,
-                visitedTime,
-                categories,
-                content,
-                verificationPhoto,
-                foodPhotos,
-                currentStep,
-            });
-            setLastSavedAt(new Date());
-        } catch (error) {
-            console.error('자동 저장 실패:');
-        } finally {
-            setIsSaving(false);
-        }
+        const scope = draftScopeRef.current;
+        if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current) return;
+        const previousSave = autoSaveInFlightRef.current;
+        const pendingSave = (async () => {
+            await previousSave;
+            if (submitInFlightRef.current || closeRequestedRef.current || draftScopeRef.current !== scope
+                || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
+            try {
+                setIsSaving(true);
+                const committed = await saveDraft({
+                    userId: user.id, restaurantId: targetRestaurantId,
+                    visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep,
+                });
+                if (draftScopeRef.current !== scope || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
+                scope.revision = committed;
+                setLastSavedAt(committed ? new Date(committed.savedAt) : null);
+            } catch {
+                console.error('자동 저장 실패:');
+            } finally {
+                if (draftScopeRef.current === scope && composerOpenRef.current) setIsSaving(false);
+            }
+        })();
+        autoSaveInFlightRef.current = pendingSave;
+        await pendingSave;
+        if (autoSaveInFlightRef.current === pendingSave) autoSaveInFlightRef.current = null;
     }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep]);
-
-    // 임시 저장 데이터 삭제 (IndexedDB)
-    const clearDraft = useCallback(async () => {
-        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!user?.id || !targetRestaurantId) return;
-
-        try {
-            await deleteDraft(user.id, targetRestaurantId);
-            setLastSavedAt(null);
-        } catch (error) {
-            console.error('임시 저장 데이터 삭제 실패:');
-        }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
 
     // 디바운스된 자동 저장 (500ms)
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || isSubmitting) return;
         const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
         if (!targetRestaurantId) return;
 
@@ -1563,7 +1673,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [isOpen, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep, autoSave]);
+    }, [isOpen, isSubmitting, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep, autoSave]);
 
     // SWR을 사용한 쿼터 조회 (자동 캐싱 및 중복 요청 제거)
     const { data: quota, mutate: mutateQuota } = useSWR(
@@ -1843,7 +1953,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 맛집 방문 후기를 공유해주세요
                             </p>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-full hover:bg-muted">
+                        <Button variant="ghost" size="icon" onClick={handleClose} className="h-9 w-9 rounded-full hover:bg-muted">
                             <XIcon className="h-5 w-5" />
                         </Button>
                     </div>
@@ -2277,12 +2387,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             )}
                         </div>
                     </div>
+                    {saveRecoveryNotice}
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
+                        <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
                             취소
                         </Button>
-                        <Button onClick={handleSubmit} disabled={!isFormValid || isSubmitting} className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none">
-                            {isSubmitting ? "등록 중..." : "리뷰 등록"}
+                        <Button onClick={handleSubmit} disabled={!isFormValid || isSubmitting || saveRecovery === 'edit'} className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none">
+                            {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
                         </Button>
                     </div>
                 </div>
@@ -2820,6 +2931,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 )}
                             </div>
 
+                            {saveRecoveryNotice}
                             <div className="flex gap-2">
                                 {currentStep === 1 ? (
                                     <Button
@@ -2856,10 +2968,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     <Button
                                         type="button"
                                         onClick={handleSubmit}
-                                        disabled={!isFormValid || isSubmitting}
+                                        disabled={!isFormValid || isSubmitting || saveRecovery === 'edit'}
                                         className={`${mobileSheetStyles.primaryAction} flex-1`}
                                     >
-                                        {isSubmitting ? "등록 중..." : "리뷰 등록"}
+                                        {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
                                     </Button>
                                 )}
                             </div>
@@ -3400,6 +3512,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 </div>
                             </div>
 
+                            {saveRecoveryNotice}
                             <div className="flex gap-2">
                                 <Button
                                     variant="outline"
@@ -3411,10 +3524,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={!isFormValid || isSubmitting}
+                                    disabled={!isFormValid || isSubmitting || saveRecovery === 'edit'}
                                     className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none"
                                 >
-                                    {isSubmitting ? "등록 중..." : "리뷰 등록"}
+                                    {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
                                 </Button>
                             </div>
                         </div>

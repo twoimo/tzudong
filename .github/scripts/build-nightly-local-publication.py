@@ -17,7 +17,7 @@ import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_MIGRATE_PATH = REPOSITORY_ROOT / "backend" / "supabase" / "scripts" / "local-migrate.py"
 PUBLICATION_VERIFIER_PATH = REPOSITORY_ROOT / ".github" / "scripts" / "verify-nightly-local-publication.py"
-EXPECTED_LEDGER_UNITS = 99
+EXPECTED_LEDGER_UNITS = 100
 HEX64 = re.compile(r"[a-f0-9]{64}")
 LOCAL_PROJECT = re.compile(r"tzudong-local-[a-f0-9]{12}")
 SUMMARY_FIELDS = {
@@ -320,6 +320,16 @@ def write_owner_only_bytes(path: Path, body: bytes, label: str) -> None:
         raise SystemExit(f"{label} write failed") from error
 
 
+def project_runtime_diagnostics(payload: dict, name: str, expected_fields: set) -> dict:
+    if name in {"local-closure-rescan.json", "local-closure-smoke.json"} and "unresolvedFunctions" in payload:
+        # The scanner retains this diagnostic array even on success. It is not
+        # part of the public receipt; unresolved or unknown data fail closed.
+        if set(payload) != expected_fields | {"unresolvedFunctions"} or payload["unresolvedFunctions"] != []:
+            fail(f"safe publication runtime diagnostics mismatch: {name}")
+        return {key: value for key, value in payload.items() if key != "unresolvedFunctions"}
+    return payload
+
+
 def copy_safe_evidence(
     state_root: Path,
     browser_source: Path,
@@ -367,6 +377,7 @@ def copy_safe_evidence(
     for source, name, validator in evidence:
         payload = load_json(source, name, max_bytes=256 * 1024)
         expected_fields = verifier.EXPECTED_FIELDS[name]
+        payload = project_runtime_diagnostics(payload, name, expected_fields)
         marker_key, marker_value = verifier.EXPECTED_MARKERS[name]
         if set(payload) != expected_fields or payload.get(marker_key) != marker_value:
             fail(f"safe publication evidence schema mismatch: {name}")

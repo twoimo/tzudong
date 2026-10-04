@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 puppeteer.use(StealthPlugin());
 
 const __filename = fileURLToPath(import.meta.url);

@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /** Read-only live validation for the full address consistency review queue. */
-import 'dotenv/config';
+import { config } from 'dotenv';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { logSafeError } from '../utils/privacy-log.mjs';
+
+config({ quiet: true });
 
 const LOCAL_URL = 'https://openapi.naver.com/v1/search/local.json';
 const GEOCODE_URL = 'https://maps.apigw.ntruss.com/map-geocode/v2/geocode';
