@@ -129,6 +129,22 @@ class ReviewWorkerTests(unittest.TestCase):
             (root/'ABCDEFGHIJK.jsonl').write_text('{"youtube_link":"https://youtu.be/ZZZZZZZZZZZ","channel_name":"tzuyang"}\n')
             with self.assertRaises(worker.WorkerFailure):worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,run_command=lambda *args,**kw:self.fail('command called'))
 
+    def test_cached_transcript_segments_are_validated_before_commands_or_paid_work(self):
+        invalid=[[],[{}],[{'start':True,'text':'fixture'}],[{'start':-1,'text':'fixture'}],[{'start':float('nan'),'text':'fixture'}],
+                 [{'start':10**400,'text':'fixture'}],[{'start':0,'text':'  '}],[{'start':0,'text':'\ufeff'}],
+                 [{'start':0,'text':'fixture','duration':True}],[{'start':0,'text':'fixture','duration':-1}],[{'start':0,'text':'fixture','duration':float('inf')}]]
+        for segments in invalid:
+            with self.subTest(segments=segments),tempfile.TemporaryDirectory() as folder:
+                root=Path(folder)/'tzuyang/transcript';root.mkdir(parents=True)
+                record={'youtube_link':'https://youtu.be/ABCDEFGHIJK','channel_name':'tzuyang','transcript':segments}
+                path=root/'ABCDEFGHIJK.jsonl';path.write_text(json.dumps(record)+'\n');before=path.read_bytes()
+                with self.assertRaises(worker.WorkerFailure) as raised:
+                    worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,run_command=lambda *a,**k:self.fail('command called'))
+                self.assertEqual(raised.exception.code,'source_unavailable');self.assertEqual(path.read_bytes(),before)
+        for duration in [None,0,1.25]:
+            record={'transcript':[{'start':0,'text':'fixture','duration':duration}]}
+            self.assertIs(worker.validate_transcript(record),record)
+
     def test_shared_daily_budget_and_dry_run(self):
         import contextlib,io
         for dry in [False,True]:

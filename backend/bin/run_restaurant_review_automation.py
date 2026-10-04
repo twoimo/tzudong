@@ -58,6 +58,22 @@ def last_record(path):
     return last
 
 
+def validate_transcript(record):
+    segments=record.get('transcript')
+    if not isinstance(segments,list) or not segments: raise WorkerFailure('source_unavailable')
+    def finite_nonnegative(value):
+        try:return type(value) in (int,float) and math.isfinite(value) and value>=0
+        except OverflowError:return False
+    for segment in segments:
+        if not isinstance(segment,dict) or not finite_nonnegative(segment.get('start')):
+            raise WorkerFailure('source_unavailable')
+        if not isinstance(segment.get('text'),str) or not segment['text'].strip().strip('\ufeff').strip():
+            raise WorkerFailure('source_unavailable')
+        if segment.get('duration') is not None and not finite_nonnegative(segment['duration']):
+            raise WorkerFailure('source_unavailable')
+    return record
+
+
 def cached_source_record(path, directory, original, video_id, channel):
     latest=last_record(path)
     references=original.get('recollect_version') or {}
@@ -84,7 +100,7 @@ def cached_source_record(path, directory, original, video_id, channel):
             return record.get('recollect_id',0)==references[directory]
         return True
     identity(latest)
-    if matches(latest):return latest
+    if matches(latest):return validate_transcript(latest) if directory=='transcript' else latest
     selected=None
     with path.open(encoding='utf-8') as stream:
         for line in stream:
@@ -92,7 +108,7 @@ def cached_source_record(path, directory, original, video_id, channel):
             record=json.loads(line);identity(record)
             if matches(record):selected=record
     if selected is None:raise WorkerFailure('source_unavailable')
-    return selected
+    return validate_transcript(selected) if directory=='transcript' else selected
 
 
 def result_fields(records, original):
@@ -205,7 +221,7 @@ def evaluate(original, crawling_root, run_command=subprocess.run):
             restaurants.append({**{key:value for key,value in source.items() if key!='origin_name'},'name':match.get('naver_name') or match.get('google_name') or name})
         if len(restaurants)!=1: raise WorkerFailure('source_unavailable')
         transcript=last_record(crawl/'transcript'/(video_id+'.jsonl')).get('transcript')
-        if not isinstance(transcript,list) or not transcript: raise WorkerFailure('source_unavailable')
+        validate_transcript({'transcript':transcript})
         template=(ROOT/'backend/restaurant-evaluation/prompts/evaluation_prompt.txt').read_text(encoding='utf-8')
         prompt=template.replace('{restaurant_data}',json.dumps({'youtube_link':rule.get('youtube_link'),'restaurants':restaurants},ensure_ascii=False))
         prompt+='\n<참고: YouTube 자막>\n'+json.dumps(transcript,ensure_ascii=False)+'\n</참고: YouTube 자막>'

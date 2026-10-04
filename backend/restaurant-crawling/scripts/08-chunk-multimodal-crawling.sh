@@ -1036,6 +1036,7 @@ process_channel() {
             --metadata "$meta_file" --asset "$PROMPT_FILE" --asset "$CHUNK_PLANNER"
             --asset "$MERGE_RESULTS" --asset "$PARSER_SCRIPT" --asset "$GEMINI_CHUNK_API"
             --asset "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh"
+            --asset "$SCRIPT_DIR/split_video_chunks.mjs" --asset "$SCRIPT_DIR/../prompts/final_merge_prompt.txt"
             --asset "$SCRIPT_DIR/final_merge_chunk.mjs" --asset "$PROJECT_ROOT/utils/gemini-client.mjs"
             --asset "$PROJECT_ROOT/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/utils/provider_budget.py"
             --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"

@@ -68,6 +68,9 @@ time.sleep(0.15)
         copy.parent.mkdir(parents=True)
         assets=self.root/'asset.txt';assets.write_text('synthetic asset')
         (copy.parent/'final_merge_chunk.mjs').write_text('synthetic asset')
+        splitter=copy.parent/'split_video_chunks.mjs';splitter.write_text('synthetic splitter')
+        final_prompt=copy.parent.parent/'prompts/final_merge_prompt.txt';final_prompt.parent.mkdir(parents=True)
+        final_prompt.write_text('synthetic merge prompt')
         data=self.root/'data'
         for directory in ('meta','transcript','crawling'):(data/directory).mkdir(parents=True)
         video='ABCDEFGHIJK'
@@ -105,6 +108,11 @@ main() { process_channel tzuyang; }
                 self.assertEqual(second.returncode,0,second_error.decode()[-500:])
         self.assertEqual(self.calls.read_text().splitlines(),['work'])
         self.assertTrue((data/'crawling/.receipts'/f'{video}.json').is_file())
+        for index,asset in enumerate([splitter,final_prompt],2):
+            asset.write_text(asset.read_text()+' changed')
+            completed=subprocess.run(command,env=env,capture_output=True,timeout=15)
+            self.assertEqual(completed.returncode,0,completed.stderr.decode()[-500:])
+            self.assertEqual(len(self.calls.read_text().splitlines()),index)
 
 
 if __name__=='__main__':unittest.main()
