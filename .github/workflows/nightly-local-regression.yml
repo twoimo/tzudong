@@ -919,6 +919,10 @@ jobs:
             --provenance-file "../../${LOCAL_STATE#"$GITHUB_WORKSPACE/"}/stack.env.provenance.json" \
             > nightly-unit-run.log 2>&1
           exit_code=$?
+          # Only validated public source coordinates reach workflow logs.
+          if ! python3 ../../.github/scripts/nightly-unit-failure-sites.py --log nightly-unit-run.log 2>/dev/null; then
+            echo '[nightly] bounded unit source diagnostic unavailable'
+          fi
           [[ "$exit_code" =~ ^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$ ]] || exit 2
           printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT" || exit 2
           exit "$exit_code"

@@ -496,6 +496,122 @@ complete_lifecycle_stage
         with self.assertRaisesRegex(SystemExit, "classification mismatch"):
             verifier.verify_e2e_failure_evidence(payload, 1)
 
+    def test_accepts_optional_numeric_e2e_source_locations_and_legacy_entries(self) -> None:
+        # Legacy payload acceptance is also exercised through the file verifier above.
+        legacy = self._e2e_failure_evidence()
+        verifier.verify_e2e_failure_evidence(legacy, 1)
+        for location in (
+            {"line": 1, "column": 1},
+            {"line": 693, "column": 43},
+            {"line": 100_000, "column": 10_000},
+        ):
+            with self.subTest(location=location):
+                payload = copy.deepcopy(legacy)
+                payload["failures"][0]["source_location"] = location
+                verifier.verify_e2e_failure_evidence(payload, 1)
+                with tempfile.TemporaryDirectory() as raw:
+                    evidence_path = Path(raw) / "nightly-e2e-failure-evidence.json"
+                    evidence_path.write_text(json.dumps(payload), encoding="utf-8")
+                    evidence_path.chmod(0o600)
+                    self.assertEqual(
+                        verifier.verify_e2e_failure_evidence_file(evidence_path, 1), payload,
+                    )
+
+    def test_rejects_malformed_or_private_e2e_source_locations(self) -> None:
+        locations = [
+            None, [], {}, True, "PRIVATE_LOCATION_MARKER",
+            {"line": 693}, {"column": 43},
+            {"line": 100_001, "column": 43},
+            {"line": 693, "column": 10_001},
+        ]
+        for field in ("line", "column"):
+            for value in (0, -1, 1.5, 1.0, "43", True, False, None, [], {}, float("inf"), float("nan")):
+                locations.append({"line": 693, "column": 43, field: value})
+        for field, value in (
+            ("file", "/PRIVATE_EXTERNAL_ROOT/local-supabase-admin.spec.ts"),
+            ("spec_id", "PW-ADMIN"),
+            ("title", "PRIVATE_TITLE_MARKER"),
+            ("message", "PRIVATE_PROVIDER_MESSAGE"),
+            ("stack", "PRIVATE_STACK_MARKER"),
+            ("body", "PRIVATE_REQUEST_BODY"),
+            ("headers", {"authorization": "Bearer PRIVATE_SECRET_CANARY"}),
+            ("cookie", "PRIVATE_COOKIE_CANARY"),
+            ("url", "https://provider.invalid/PRIVATE_URL_MARKER"),
+        ):
+            locations.append({"line": 693, "column": 43, field: value})
+        for index, location in enumerate(locations):
+            with self.subTest(case=index):
+                payload = self._e2e_failure_evidence()
+                payload["failures"][0]["source_location"] = location
+                with self.assertRaisesRegex(SystemExit, "source location mismatch") as caught:
+                    verifier.verify_e2e_failure_evidence(payload, 1)
+                self.assertNotIn("PRIVATE_", str(caught.exception))
+
+    def test_e2e_location_does_not_allow_unknown_fields_or_relax_failure_gates(self) -> None:
+        located = self._e2e_failure_evidence()
+        located["failures"][0]["source_location"] = {"line": 693, "column": 43}
+        for target in ("payload", "failure"):
+            for field in ("file", "title", "message", "stack", "body", "headers", "cookie", "url", "line", "column"):
+                with self.subTest(target=target, field=field):
+                    payload = copy.deepcopy(located)
+                    entry = payload if target == "payload" else payload["failures"][0]
+                    entry[field] = "PRIVATE_SECRET_CANARY"
+                    with self.assertRaises(SystemExit) as caught:
+                        verifier.verify_e2e_failure_evidence(payload, 1)
+                    self.assertNotIn("PRIVATE_", str(caught.exception))
+
+        mutations = [
+            ("command_exit_code", 0), ("outcome", "success"), ("test_count", 3),
+            ("failure_count", 0), ("report_error_count", 1),
+        ]
+        for field, value in mutations:
+            with self.subTest(field=field):
+                payload = copy.deepcopy(located)
+                payload[field] = value
+                with self.assertRaises(SystemExit):
+                    verifier.verify_e2e_failure_evidence(payload, 1)
+        for field, value in (
+            ("spec_id", "PW-UNTRUSTED"), ("test_index", 128),
+            ("attempt_count", 0), ("attempt_count", 3), ("attempt_count", 9),
+            ("result_error_count", 0), ("result_error_count", 65),
+            ("classification", "runner_error"),
+        ):
+            with self.subTest(field=field, value=value):
+                payload = copy.deepcopy(located)
+                payload["failures"][0][field] = value
+                with self.assertRaises(SystemExit):
+                    verifier.verify_e2e_failure_evidence(payload, 1)
+
+        for counts, key, value in (
+            ("test_status_counts", "unexpected", 0),
+            ("result_status_counts", "failed", 0),
+            ("failure_class_counts", "failed", 0),
+            ("failure_class_counts", "runner_error", 1),
+        ):
+            payload = copy.deepcopy(located)
+            payload[counts][key] = value
+            with self.assertRaises(SystemExit):
+                verifier.verify_e2e_failure_evidence(payload, 1)
+        with self.assertRaises(SystemExit):
+            verifier.verify_e2e_failure_evidence(located, 0)
+
+    def test_e2e_source_locations_require_an_actual_error_bearing_failure(self) -> None:
+        for classification, result_status in (("no_result", None), ("unexpected_pass", "passed")):
+            payload = self._e2e_failure_evidence()
+            failure = payload["failures"][0]
+            failure["classification"] = classification
+            failure["attempt_count"] = 0 if result_status is None else 1
+            failure["result_error_count"] = 0
+            payload["result_status_counts"]["failed"] = 0
+            if result_status is not None:
+                payload["result_status_counts"][result_status] += 1
+            payload["failure_class_counts"]["failed"] = 0
+            payload["failure_class_counts"][classification] = 1
+            verifier.verify_e2e_failure_evidence(payload, 1)
+            failure["source_location"] = {"line": 693, "column": 43}
+            with self.assertRaisesRegex(SystemExit, "source location mismatch"):
+                verifier.verify_e2e_failure_evidence(payload, 1)
+
     def test_accepts_only_fixed_runner_stage_evidence(self) -> None:
         payload = self._e2e_runner_stage_evidence()
         verifier.verify_e2e_failure_evidence(payload, 1)

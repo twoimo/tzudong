@@ -313,6 +313,12 @@ E2E_FAILURE_CLASS_KEYS = {
 }
 E2E_TEST_FAILURE_CLASSES = E2E_FAILURE_CLASS_KEYS - {"runner_error"}
 E2E_SPEC_IDS = {"PW-SMOKE", "PW-NAV", "PW-TITLE", "PW-MAP", "PW-ADMIN"}
+# Shared one-based diagnostic bounds with nightly-playwright-failure-evidence.mjs.
+E2E_MAX_SOURCE_LINE = 100_000
+E2E_MAX_SOURCE_COLUMN = 10_000
+E2E_FAILURE_FIELDS = {
+    "spec_id", "test_index", "classification", "attempt_count", "result_error_count",
+}
 E2E_RUNNER_STAGE_FIELDS = {
     "schema", "source", "command_exit_code", "outcome", "stage", "failure_class",
 }
@@ -437,10 +443,9 @@ def verify_e2e_failure_evidence(
     for failure in failures:
         if (
             not isinstance(failure, dict)
-            or set(failure) != {
-                "spec_id", "test_index", "classification",
-                "attempt_count", "result_error_count",
-            }
+            or set(failure) not in (
+                E2E_FAILURE_FIELDS, E2E_FAILURE_FIELDS | {"source_location"},
+            )
             or failure.get("spec_id") not in E2E_SPEC_IDS
             or not _bounded_count(failure.get("test_index"), 127)
             or failure.get("classification") not in E2E_TEST_FAILURE_CLASSES
@@ -448,6 +453,20 @@ def verify_e2e_failure_evidence(
             or not _bounded_count(failure.get("result_error_count"), 64)
         ):
             fail("nightly E2E failure evidence entry mismatch")
+        if "source_location" in failure:
+            location = failure["source_location"]
+            if (
+                not isinstance(location, dict)
+                or set(location) != {"line", "column"}
+                or not _bounded_count(location.get("line"), E2E_MAX_SOURCE_LINE)
+                or location["line"] == 0
+                or not _bounded_count(location.get("column"), E2E_MAX_SOURCE_COLUMN)
+                or location["column"] == 0
+                or failure["classification"] not in {"failed", "interrupted", "timed_out"}
+                or failure["attempt_count"] == 0
+                or failure["result_error_count"] == 0
+            ):
+                fail("nightly E2E failure evidence source location mismatch")
         identity = (failure["spec_id"], failure["test_index"])
         if identity in identities:
             fail("nightly E2E failure evidence identity mismatch")

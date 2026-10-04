@@ -28,15 +28,33 @@ if (isolatedFiles.length !== isolated.size || generalFiles.length === 0) {
 }
 
 function run(filesToRun) {
-  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000'], {
+  const localDiagnostic = process.env.NIGHTLY_MODE === 'local';
+  const reportArgs = localDiagnostic ? ['--reporter', 'junit', '--reporter-outfile', '/dev/fd/3'] : [];
+  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000', ...reportArgs], {
     cwd: process.cwd(),
     env: process.env,
-    stdio: 'inherit',
+    // The extra fd is a private pipe: raw JUnit/console diagnostics never land
+    // in the nightly log or an artifact. Ordinary developer output is unchanged.
+    stdio: localDiagnostic ? ['inherit', 'ignore', 'ignore', 'pipe'] : 'inherit',
+    maxBuffer: 32 * 1024 * 1024,
     shell: false,
   });
   if (result.error) {
     console.error(`[unit-tests] runner failed: ${result.error.code ?? result.error.name}`);
     return 1;
+  }
+  if (localDiagnostic) {
+    const xml = result.output[3]?.toString('utf8');
+    const diagnostic = spawnSync('python3', [path.resolve('../../.github/scripts/nightly-unit-failure-sites.py')], {
+      input: JSON.stringify({ xml, files: filesToRun }),
+      encoding: 'utf8', maxBuffer: 64 * 1024,
+      stdio: ['pipe', 'pipe', 'ignore'], shell: false,
+    });
+    if (diagnostic.status !== 0) {
+      console.error('[unit-tests] bounded diagnostic unavailable');
+      return 1;
+    }
+    console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${diagnostic.stdout.trim()}`);
   }
   return typeof result.status === 'number' ? result.status : 1;
 }

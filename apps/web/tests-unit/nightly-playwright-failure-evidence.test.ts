@@ -96,7 +96,208 @@ function privateFailureReport() {
   };
 }
 
+const adminSourceFile = resolve(import.meta.dir, "../tests/local-supabase-admin.spec.ts");
+const adminErrorLocation = { file: adminSourceFile, line: 693, column: 43 };
+
+function adminFailureReport(location: unknown = adminErrorLocation) {
+  // Pinned JSON reporter shape: a raw `error` and formatted `errors`, both with
+  // location metadata. Synthetic 27-test/three-attempt fixture, not a run receipt.
+  const privateError = {
+    location,
+    message: "PRIVATE_PROVIDER_MESSAGE_MARKER",
+    stack: `PRIVATE_STACK_MARKER\n    at assertion (${adminSourceFile}:693:43)`,
+    snippet: "PRIVATE_SOURCE_SNIPPET_MARKER",
+    cause: { message: "PRIVATE_CAUSE_MARKER" },
+    request: {
+      url: "https://provider.invalid/PRIVATE_URL_MARKER",
+      body: "PRIVATE_REQUEST_BODY_MARKER",
+      headers: {
+        authorization: "Bearer PRIVATE_SECRET_CANARY_NOT_A_CREDENTIAL",
+        cookie: "PRIVATE_COOKIE_CANARY",
+      },
+    },
+  };
+  return {
+    config: { rootDir: "/PRIVATE_EXTERNAL_ROOT_MARKER" },
+    errors: [],
+    stats: { expected: 26, flaky: 0, skipped: 0, unexpected: 1 },
+    suites: [{
+      file: "smoke.spec.ts",
+      specs: Array.from({ length: 23 }, () => ({
+        file: "smoke.spec.ts",
+        tests: [testResult("expected", [result("passed")])],
+      })),
+    }, {
+      file: "local-supabase-admin.spec.ts",
+      specs: Array.from({ length: 4 }, (_, index) => ({
+        file: "local-supabase-admin.spec.ts",
+        title: "PRIVATE_ADMIN_TITLE_MARKER",
+        line: 682,
+        column: 3,
+        tests: [{
+          projectName: "chromium",
+          status: index === 3 ? "unexpected" : "expected",
+          results: index === 3 ? [0, 1, 2].map((retry) => ({
+            ...result("failed", [{ location, message: privateError.message }]),
+            error: privateError,
+            retry,
+          })) : [{ ...result("passed"), error: undefined, retry: 0 }],
+        }],
+      })),
+    }],
+  };
+}
+
+function adminFailureResults(report: ReturnType<typeof adminFailureReport>) {
+  return report.suites[1].specs[3].tests[0].results as Array<ReturnType<typeof result> & {
+    error?: { location: unknown; [key: string]: unknown };
+    retry: number;
+  }>;
+}
+
 describe("nightly Playwright failure evidence", () => {
+  test("extracts final-attempt same-spec error coordinates without private reporter data", () => {
+    const report = adminFailureReport();
+    const attempts = adminFailureResults(report);
+    attempts[0].error = { ...attempts[0].error!, location: { ...adminErrorLocation, line: 685 } };
+    const evidence = buildNightlyPlaywrightFailureEvidence(report, 1);
+    expect(evidence.failures).toEqual([{
+      spec_id: "PW-ADMIN",
+      test_index: 3,
+      classification: "failed",
+      attempt_count: 3,
+      result_error_count: 3,
+      source_location: { line: 693, column: 43 },
+    }]);
+    expect(evidence).toMatchObject({
+      outcome: "failure",
+      test_count: 27,
+      failure_count: 1,
+      test_status_counts: { expected: 26, unexpected: 1 },
+      result_status_counts: { failed: 3, passed: 26 },
+      failure_class_counts: { failed: 1, runner_error: 0 },
+    });
+    const serialized = JSON.stringify(evidence);
+    for (const forbidden of [
+      "PRIVATE_", "provider", "message", "stack", "snippet", "cause", "title",
+      "request", "body", "headers", "authorization", "cookie", "http", "file",
+      "rootDir", adminSourceFile, "local-supabase-admin.spec.ts",
+    ]) expect(serialized).not.toContain(forbidden);
+  });
+
+  test("accepts only exact curated source aliases and bounded one-based coordinates", () => {
+    for (const file of [adminSourceFile, "local-supabase-admin.spec.ts", "tests/local-supabase-admin.spec.ts"]) {
+      for (const [line, column] of [[1, 1], [693, 43], [100_000, 10_000]]) {
+        const report = adminFailureReport({ file, line, column });
+        // JSON's formatted first error also has location metadata.
+        adminFailureResults(report).at(-1)!.error = undefined;
+        expect(buildNightlyPlaywrightFailureEvidence(report, 1).failures[0].source_location)
+          .toEqual({ line, column });
+      }
+    }
+  });
+
+  test("drops foreign paths even with a matching basename or forged report root", () => {
+    const legacy = buildNightlyPlaywrightFailureEvidence(adminFailureReport(null), 1);
+    for (const file of [
+      "/PRIVATE_EXTERNAL_ROOT_MARKER/local-supabase-admin.spec.ts",
+      "/other/checkout/apps/web/tests/local-supabase-admin.spec.ts",
+      resolve(import.meta.dir, "../tests/navigation.spec.ts"),
+      resolve(import.meta.dir, "../tests/nightly/nightly-test.ts"),
+      "navigation.spec.ts", "helpers/local-supabase-admin.spec.ts",
+      "../tests/local-supabase-admin.spec.ts", "tests/../tests/local-supabase-admin.spec.ts",
+      "tests//local-supabase-admin.spec.ts", "./local-supabase-admin.spec.ts",
+      `file://${adminSourceFile}`, `https://provider.invalid${adminSourceFile}`,
+      `${adminSourceFile}?PRIVATE_SECRET_CANARY`, `${adminSourceFile}\u0000`,
+      adminSourceFile.replaceAll("/", "\\"), "", null, 1,
+    ]) {
+      expect(buildNightlyPlaywrightFailureEvidence(
+        adminFailureReport({ ...adminErrorLocation, file }), 1,
+      )).toEqual(legacy);
+    }
+  });
+
+  test("omits malformed and out-of-range location metadata without changing failure gates", () => {
+    const legacy = buildNightlyPlaywrightFailureEvidence(adminFailureReport(null), 1);
+    const invalidLocations: unknown[] = [
+      null, [], {}, "PRIVATE_LOCATION_MARKER", true,
+      { line: 693, column: 43 }, { file: adminSourceFile, line: 693 },
+      { ...adminErrorLocation, url: "https://provider.invalid/PRIVATE_SECRET_CANARY" },
+    ];
+    for (const field of ["line", "column"]) {
+      for (const value of [0, -1, 1.5, "43", true, false, null, undefined, NaN, Infinity, {}, []]) {
+        invalidLocations.push({ ...adminErrorLocation, [field]: value });
+      }
+    }
+    invalidLocations.push(
+      { ...adminErrorLocation, line: 100_001 },
+      { ...adminErrorLocation, column: 10_001 },
+    );
+    for (const location of invalidLocations) {
+      expect(buildNightlyPlaywrightFailureEvidence(adminFailureReport(location), 1)).toEqual(legacy);
+    }
+  });
+
+  test("never borrows declaration, stack, earlier retry, or secondary error coordinates", () => {
+    const report = adminFailureReport();
+    const last = adminFailureResults(report).at(-1)!;
+    const formattedLocation = { ...adminErrorLocation, line: 736 };
+    last.errors = [{ location: formattedLocation }];
+    last.error = { ...last.error!, location: null };
+    expect(buildNightlyPlaywrightFailureEvidence(report, 1).failures[0])
+      .not.toHaveProperty("source_location");
+
+    // A plausible source coordinate in a raw stack or reporter errorLocation is
+    // not TestError.location; the declaration's line is not the assertion's line.
+    last.error = { ...last.error!, location: undefined };
+    last.errors = [{ message: "PRIVATE_NO_LOCATION" }, { location: formattedLocation }];
+    Object.assign(last, { errorLocation: adminErrorLocation });
+    expect(buildNightlyPlaywrightFailureEvidence(report, 1).failures[0])
+      .not.toHaveProperty("source_location");
+
+    last.errors = [];
+    last.error = { ...last.error!, location: adminErrorLocation };
+    expect(buildNightlyPlaywrightFailureEvidence(report, 1).failures[0])
+      .not.toHaveProperty("source_location");
+    last.errors = [{ location: adminErrorLocation }];
+    last.status = "passed";
+    expect(buildNightlyPlaywrightFailureEvidence(report, 1).failures[0]).toMatchObject({
+      classification: "unexpected_pass",
+    });
+    expect(buildNightlyPlaywrightFailureEvidence(report, 1).failures[0])
+      .not.toHaveProperty("source_location");
+  });
+
+  test("retains exit, status, spec, and result-count rejection with valid locations", () => {
+    expect(() => buildNightlyPlaywrightFailureEvidence(adminFailureReport(), 0))
+      .toThrow("exit and failure counts disagree");
+    const counts = adminFailureReport();
+    counts.stats.unexpected = 0;
+    expect(() => buildNightlyPlaywrightFailureEvidence(counts, 1)).toThrow("status count mismatch");
+    const foreign = adminFailureReport();
+    foreign.suites[1].specs[3].file = "navigation.spec.ts";
+    expect(() => buildNightlyPlaywrightFailureEvidence(foreign, 1)).toThrow("spec identity mismatch");
+    const attempts = adminFailureReport();
+    const results = adminFailureResults(attempts);
+    results.push(...Array.from({ length: 6 }, () => results[0]));
+    expect(() => buildNightlyPlaywrightFailureEvidence(attempts, 1)).toThrow("test contract mismatch");
+  });
+
+  test("round-trips located and legacy sanitizer output through the strict Python verifier", () => {
+    const verifier = resolve(import.meta.dir, "../../../.github/scripts/verify-nightly-local-publication.py");
+    for (const report of [adminFailureReport(), privateFailureReport()]) {
+      const evidence = buildNightlyPlaywrightFailureEvidence(report, 1);
+      const verified = spawnSync("python3", ["-B", "-c", [
+        "import json, runpy, sys",
+        "verify = runpy.run_path(sys.argv[1])['verify_e2e_failure_evidence']",
+        "verify(json.load(sys.stdin), 1)",
+      ].join("\n"), verifier], { input: JSON.stringify(evidence), encoding: "utf8" });
+      expect(verified.status).toBe(0);
+      expect(verified.stdout).toBe("");
+      expect(verified.stderr).toBe("");
+    }
+  });
+
   test("reduces private JSON to curated IDs and fixed classifications", () => {
     const evidence = buildNightlyPlaywrightFailureEvidence(privateFailureReport(), 1);
     expect(evidence).toEqual({
