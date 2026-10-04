@@ -1,0 +1,43 @@
+name: Pipeline Process Boundaries
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/pipeline-process-boundaries.yml'
+      - 'backend/bin/check_pipeline_process_boundaries.py'
+      - 'backend/pipeline/**'
+      - 'backend/utils/privacy_log.py'
+  push:
+    branches: [develop, data, main]
+    paths:
+      - '.github/workflows/pipeline-process-boundaries.yml'
+      - 'backend/bin/check_pipeline_process_boundaries.py'
+      - 'backend/pipeline/**'
+      - 'backend/utils/privacy_log.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boundaries:
+    name: Process boundaries (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12.13'
+      - name: Verify owned process cleanup and stage isolation
+        env:
+          PYTHON_DOTENV_DISABLED: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python backend/bin/check_pipeline_process_boundaries.py
