@@ -97,3 +97,5 @@ UI는 실제 judgmentEngine metadata가 있을 때만 Gemini 검수 상태를 �
 원시 DB 재생 SQL 두 파일의 원본 trailing whitespace는 byte/hash 보존을 위해 유지했다. 해당 원시 산출물의 whitespace 진단을 소스 오류와 혼동하지 않았으며 실제 신규 코드의 diff 검사와50개 원시 checksum 검증은 통과했다.
 
 후속 admission UI는 390/1423px67개 assertion·가로 넘침10개 관측0·예상 밖 오류0을 확인했다. 이전70개 보고서는 원시 SHA 그대로 유지한다. 새 API/DTO15개·worker28개·native/compat 진단0·최종 Next build·CSS 경계가 통과했다. 마지막 전체 suite2,756/skip9 이후 변경은 해당 경로만 재검사했으며 전체 숫자를 추정해 늘리지 않았다.
+
+CI의 layout/naming 검사는 새 backend/knowledge_graph 패키지의 소유 경계 등록 누락으로 실패했다. 실제 소유·허용/금지 내용과 source classification을 layout manifest에 추가하고 트리 개수를38로 갱신했다. 관련76개 검사와 재생 원장을 다시 확인한다. 기능 변경이나 사용자 파일 이동은 없다.

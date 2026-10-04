@@ -213,6 +213,15 @@
       "vcsTracked": true
     },
     {
+      "path": "backend/knowledge_graph",
+      "depth": 2,
+      "ownership": "Backend_Runtime 롱폼 분석·OSK 지식 그래프 처리",
+      "allowedContents": ["검증된 영상 입력·완료 영수증", "Scope 전용 projection·publication 모듈", "격리 fixture 테스트·운영 안내"],
+      "forbiddenContents": ["HTTP Route Handler의 장시간 실행", "다른 Scope의 개인 기억·원료 전사", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "backend/pipeline_control",
       "depth": 2,
       "ownership": "Backend_Runtime 파이썬 제어 평면 모듈(유일한 임포트 가능 패키지)",
