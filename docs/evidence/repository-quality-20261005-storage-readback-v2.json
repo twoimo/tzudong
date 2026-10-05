@@ -1,0 +1,36 @@
+{
+  "verifiedAt": "2026-10-05T00:45:13.863841+00:00",
+  "snapshotCommit": "0b118e9776fc84d7b031ccbbce0accd5163b80c7",
+  "independentRemoteRef": "0b118e9776fc84d7b031ccbbce0accd5163b80c7",
+  "artifactRoot": "apps/web/performance/repository-quality-20261004",
+  "artifactMap": "artifact-map-execution-20261005-v1.json",
+  "artifactMapSha256": "a1f21380d737ab52c52e853ee12ba2b275c4400a1552245387a8488c07c5b83d",
+  "mappedArtifacts": 1770,
+  "mappedBytes": 122826138,
+  "mapBlobVerifiedSeparately": true,
+  "wholeFrozenFileSetAndEveryGitBlobMatched": true,
+  "verifier": "docs/evidence/scripts/verify-evidence-git-blobs-v1.py",
+  "canonicalScorerAndValidatorExit": 0,
+  "canonicalAdmission": 0,
+  "warmEndpointGuardPassed": false,
+  "privacySemanticReview": "apps/web/performance/repository-quality-20261004/privacy-pre-freeze-semantic-review-v1.json",
+  "gitWhitespaceCheck": {
+    "exitCode": 2,
+    "warningFiles": 42,
+    "warningSuffixes": [
+      ".diff",
+      ".log",
+      ".md",
+      ".patch",
+      ".sql",
+      ".txt"
+    ],
+    "rawAndFrozenBytesPreservedNotNormalized": true,
+    "passed": false,
+    "failureReportedAndRawSnapshotNotNormalized": true
+  },
+  "overallGoalComplete": false,
+  "physicalPhoneHumanHoldAndAdequateFieldCohortPending": true,
+  "noMainProdPromotionOfEvidenceCommit": true,
+  "previousReceiptBooleanLabelCorrectedOnly": true
+}
