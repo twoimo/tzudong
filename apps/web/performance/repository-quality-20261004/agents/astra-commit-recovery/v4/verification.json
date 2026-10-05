@@ -1,0 +1,19 @@
+{
+  "version": 4,
+  "source_set_sha256": "1c346b60c9a35e5afc77ede4e4a3c56980bcc16aa7b49e1fb9589b3020d93398",
+  "source_read_only": true,
+  "all_five_source_files_unchanged_through_tests": true,
+  "v1_v2_v3_preserved": true,
+  "prior_file_count": 55,
+  "tests": {
+    "pass": 4,
+    "fail": 0,
+    "assertions": 120,
+    "runner": "bun 1.4.0 (34cbb9a40)"
+  },
+  "remaining_P1": 0,
+  "remaining_P2": 0,
+  "capture_contract": "Initial get or invalid stored snapshot rejects with fixed REVIEW_DRAFT_CAPTURE_FAILED; controller returns blocked before uploads/insert; capture retries on same operation until valid, then remains frozen.",
+  "cleanup_contract": "true means original snapshot cleanup complete, including a valid replacement preserved without delete; cleanup IO/invalid current row remains false.",
+  "limits": "Only prior reproduced capture-recovery and B-preservation cases. Actual source handlers/controller/helper/validator, synthetic offline transports. No browser, React rendering, authStorage, phone, remote writes, full suite, lint or parity; parent owns final unit/lint/parity."
+}

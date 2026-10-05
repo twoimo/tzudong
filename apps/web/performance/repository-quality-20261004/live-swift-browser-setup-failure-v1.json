@@ -1,0 +1,8 @@
+{
+  "failure": "previous_deployment_receipt_read",
+  "expectedSource": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "actualReceiptSource": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "browserChecksRun": 0,
+  "sourceProtectionAssertionNotRelaxed": true,
+  "physicalDeviceUsed": false
+}

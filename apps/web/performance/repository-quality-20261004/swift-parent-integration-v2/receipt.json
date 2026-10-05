@@ -1,0 +1,20 @@
+{
+  "base": "32f5336fa9af166b04fe191ff3a7e1294196e893",
+  "checks": [
+    {
+      "kind": "describe",
+      "exitCode": 0
+    },
+    {
+      "kind": "build",
+      "exitCode": 0
+    }
+  ],
+  "isSymlink": true,
+  "target": "03-2-visual-ocr.swift",
+  "aliasEqualsOriginal": true,
+  "originalSHA256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+  "executedOCR": false,
+  "globalGitConfigChanged": false,
+  "priorFailurePreserved": true
+}

@@ -1,0 +1,90 @@
+{
+  "baseline": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "branch": "codex/node-dependency-quality-20261004",
+  "source_stable": true,
+  "changed_files": [
+    "apps/web/bun.lock",
+    "apps/web/components/map/NaverMapView.tsx",
+    "apps/web/lib/cluster-marker.ts",
+    "apps/web/lib/clustering.ts",
+    "apps/web/lib/naver-map-cluster-visuals.ts",
+    "apps/web/lib/naver-map-render-plan.ts",
+    "apps/web/package-lock.json",
+    "apps/web/package.json",
+    "apps/web/tests-unit/dependency-install-compatibility.test.ts",
+    "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+    "apps/web/tests-unit/supercluster-runtime-compatibility.test.ts",
+    "backend/bin/apply_tzuyang_address_evidence_ledger.mjs",
+    "backend/bin/build_google_maps_browser_review_queue.mjs",
+    "backend/bin/build_supabase_address_consistency_guarded_plan.mjs",
+    "backend/bin/build_tzuyang_address_evidence_ledger.mjs",
+    "backend/bin/tests/node-dependency-compatibility.test.mjs",
+    "backend/bin/validate_supabase_review_queue_live.mjs",
+    "backend/bin/validate_supabase_same_origin_candidates.mjs",
+    "backend/package-lock.json",
+    "backend/package.json",
+    "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+    "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+    "backend/restaurant-crawling/scripts/url-extractor.js"
+  ],
+  "file_count": 23,
+  "pr_integrated": [
+    3066,
+    3065,
+    2855,
+    3064,
+    3062,
+    3061,
+    2924
+  ],
+  "pr_resolved_intent_satisfied_or_superseded": [
+    2902
+  ],
+  "commits_created": 0,
+  "remote_mutations": 0,
+  "web_audit_all": {
+    "exit_code": 1,
+    "high": 7,
+    "critical": 0,
+    "unique_advisories": [
+      "GHSA-vfj7-8cjw-p6xm"
+    ]
+  },
+  "web_audit_production": {
+    "exit_code": 0,
+    "vulnerabilities": 0
+  },
+  "backend_audit_all": {
+    "exit_code": 0,
+    "vulnerabilities": 0
+  },
+  "web_full_unit": {
+    "pass": 2804,
+    "skip": 9,
+    "fail": 0
+  },
+  "web_focused_unit": {
+    "pass": 109,
+    "fail": 0
+  },
+  "backend_related_unit": {
+    "pass": 80,
+    "skip": 8,
+    "fail": 0
+  },
+  "web_native_compat_parity": "passed",
+  "web_lint": "passed",
+  "web_production_build": "passed",
+  "web_offline_production_browser": {
+    "pass": 3,
+    "fail": 0
+  },
+  "npm_frozen": "passed web and backend (backend ignore-scripts lifecycle limitation)",
+  "bun_frozen": "passed",
+  "remaining": [
+    "Published braces fix absent; full web Security audit remains blocked",
+    "Backend media/browser lifecycle downloads unverified; native npm install used --ignore-scripts",
+    "Parent serial source delivery and actual Naver SDK A/B",
+    "Parent commit/push/PR/promotion/deployment"
+  ]
+}

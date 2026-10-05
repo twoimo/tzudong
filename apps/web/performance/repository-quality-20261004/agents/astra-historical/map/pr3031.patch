@@ -1,0 +1,1359 @@
+diff --git a/README.md b/README.md
+index a4ad3b6b..e09d1c4e 100644
+--- a/README.md
++++ b/README.md
+@@ -181,6 +181,20 @@ The copy is gone. The snapshot now keeps those ids and drops the rest, and a loo
+ 
+ Against a frozen copy of the previous full sort, 200 / 1,000 / 4,000 candidates at limit 5 return identical targets (0 mismatches). Related-id sets per call drop from 205 / 1,005 / 4,005 to 5. Rank objects drop from the full candidate count to at most 5. Median wall-clock ratios were 1.85x / 2.24x / 3.57x, but combined MAD / median was 0.22–0.46 against a 0.15 relative noise budget, so the time ratio is not claimed. Samples stay under the 16 ms frame budget. Retained evidence: [benchmark.json](apps/web/performance/visible-marker-review-bubbles-20260922/benchmark.json). Local measurement does not establish hosted or production behaviour.
+ 
++### Dashboard video id reuse (2026-09-23)
++
++`extractVideoIdFromYoutubeLink` used to compile five regular expressions on every call, and dashboard summary, search, and video detail each parsed the same `youtube_link` again. The patterns now live once per process, and a 4,096-entry map remembers the id for that exact string. A link that is not a string returns null instead of throwing. Public video detail still answers `{ error: 'Video not found.' }` with status 404 for an id that cannot match the extractor (`[A-Za-z0-9_-]{6,128}`); the raw id is not written to the log, only `invalid-shape` and the length. The same cached restaurant array then keeps a `WeakMap` from video id to rows, so a later detail request on that array does not scan every row.
++
++On this machine, 4,000 links × 6 passes (24,000 extractions) moved from a 1.455 ms median to 0.227 ms (6.41x). Combined MAD / median is 0.133 against a 0.15 noise budget, both sides stay under the 16 ms frame budget, and id mismatches are 0. Hoisting the expressions without the map was 1.79x, but that pair's noise exceeded 0.15, so the accepted claim is the cached result. Six repeated lookups on one 4,000-row array moved from 1.416 ms to 0.001 ms after the map existed; that after-time is on the timer floor, so 1416x is only the repeat-hit figure. A cold single pass that rebuilds the map was 0.176 ms versus 0.230 ms (0.77x) and its noise exceeded 0.15, so the first lookup is not claimed as faster. A merged restaurant that is alone skips the date-sort copy. Retained evidence: [benchmark.json](apps/web/performance/dashboard-video-id-20260923/benchmark.json) with the [repro script](apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs). Local measurement does not establish hosted or production behaviour.
++
++### Map selection id matching (2026-09-23)
++
++`findMatchingRestaurantInList` checked merged ids with `Array.includes` for every candidate and every child id. It now uses one set per search and still returns the earliest candidate, including a name-and-coordinate match that appears before an id match. Empty and missing lists return null. On 4,000 candidates with 8 target ids and 4 child ids each, the median moved from 0.260 ms to 0.171 ms (1.52x) with the same matched id, but combined MAD / median was 0.217 against the 0.15 noise budget, so the time ratio is not claimed. Both medians stay under the 16 ms frame budget. Retained evidence: [benchmark.json](apps/web/performance/map-restaurant-lookup-20260923/benchmark.json) with the [repro script](apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs). Local measurement does not establish hosted or production behaviour.
++
++### Dashboard updated-at sort (2026-09-23)
++
++Dashboard restaurant paging and the summary checksum sorted every row by parsing `updated_at` inside the comparator, so a 4,000-row sort parsed the same strings about `n log n` times. Each row is now parsed once, then the numeric timestamps are sorted. Tie order stays the input order, and an empty page stays empty. On this machine the median moved from 4.423 ms to 0.533 ms (8.30x). Combined MAD / median is 0.142 against the 0.15 noise budget, both sides stay under the 16 ms frame budget, and the ordered ids match with 0 mismatches. Retained evidence: [benchmark.json](apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json) with the [repro script](apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs). Local measurement does not establish hosted or production behaviour.
++
+ ### Deployment and release path (verified 2026-09-21)
+ 
+ `apps/web/scripts/vercel-ignore-build.mjs` is the build gate: preview builds run only for `develop`, every other branch preview is skipped, and a `main` production build additionally requires `TZUDONG_APPROVED_PRODUCTION_SHA` to equal the commit being deployed. Branch-specific preview URLs therefore do not appear for feature branches by design; a CLI deployment of the branch head (`vercel deploy` from `apps/web`, project `tzudong`) is what produces a reviewable preview.
+diff --git a/apps/web/app/api/dashboard/restaurants/route.ts b/apps/web/app/api/dashboard/restaurants/route.ts
+index dd1f77af..4a535694 100644
+--- a/apps/web/app/api/dashboard/restaurants/route.ts
++++ b/apps/web/app/api/dashboard/restaurants/route.ts
+@@ -39,7 +39,10 @@ export async function GET(request: NextRequest) {
+ 
+         return NextResponse.json(data);
+     } catch (error) {
+-        console.error('[dashboard/restaurants] failed:');
++        console.error(
++            '[dashboard/restaurants] failed',
++            error instanceof Error && error.name ? error.name : 'non-error',
++        );
+         return NextResponse.json(
+             { error: 'Failed to build dashboard restaurants.' },
+             { status: 500 },
+diff --git a/apps/web/app/api/dashboard/summary/route.ts b/apps/web/app/api/dashboard/summary/route.ts
+index c5357245..b72edc4b 100644
+--- a/apps/web/app/api/dashboard/summary/route.ts
++++ b/apps/web/app/api/dashboard/summary/route.ts
+@@ -22,7 +22,10 @@ export async function GET() {
+             },
+         });
+     } catch (error) {
+-        console.error('[dashboard/summary] failed:');
++        console.error(
++            '[dashboard/summary] failed',
++            error instanceof Error && error.name ? error.name : 'non-error',
++        );
+         return NextResponse.json(
+             { error: 'Failed to build dashboard summary.' },
+             { status: 500 },
+diff --git a/apps/web/app/api/dashboard/video/[videoId]/route.ts b/apps/web/app/api/dashboard/video/[videoId]/route.ts
+index 87e385dc..3e6ff7c4 100644
+--- a/apps/web/app/api/dashboard/video/[videoId]/route.ts
++++ b/apps/web/app/api/dashboard/video/[videoId]/route.ts
+@@ -1,4 +1,5 @@
+ import { NextResponse } from 'next/server';
++import { classifyDashboardVideoId } from '@/lib/dashboard/helpers';
+ import { getDashboardVideoDetail } from '@/lib/dashboard/summary';
+ 
+ export const runtime = 'nodejs';
+@@ -12,15 +13,27 @@ type Context = {
+ export async function GET(_request: Request, context: Context) {
+     try {
+         const { videoId } = await context.params;
+-        const safeVideoId = videoId?.trim();
++        const classified = classifyDashboardVideoId(videoId);
+ 
+-        if (!safeVideoId) {
++        if (classified.status === 'required') {
+             return NextResponse.json(
+                 { error: 'videoId is required.' },
+                 { status: 400 },
+             );
+         }
+ 
++        if (classified.status === 'invalid') {
++            console.error('[dashboard/video] rejected-video-id', {
++                reason: 'invalid-shape',
++                length: classified.length,
++            });
++            return NextResponse.json(
++                { error: 'Video not found.' },
++                { status: 404 },
++            );
++        }
++
++        const safeVideoId = classified.videoId;
+         const data = await getDashboardVideoDetail(safeVideoId);
+         if (!data) {
+             return NextResponse.json(
+@@ -31,7 +44,10 @@ export async function GET(_request: Request, context: Context) {
+ 
+         return NextResponse.json(data);
+     } catch (error) {
+-        console.error('[dashboard/video] failed:');
++        console.error(
++            '[dashboard/video] failed',
++            error instanceof Error && error.name ? error.name : 'non-error',
++        );
+         return NextResponse.json(
+             { error: 'Failed to build dashboard video detail.' },
+             { status: 500 },
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index c8a92604..5d5e2905 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -93,7 +93,6 @@ import {
+ } from "@/lib/expanded-cluster-restaurant-snapshot";
+ import {
+     buildRestaurantLookup,
+-    findMatchingRestaurantInList,
+ } from "@/lib/map-restaurant-lookup";
+ import {
+     buildPostSearchSwipeCandidates,
+diff --git a/apps/web/hooks/use-restaurants.tsx b/apps/web/hooks/use-restaurants.tsx
+index 440d8488..af7c869e 100644
+--- a/apps/web/hooks/use-restaurants.tsx
++++ b/apps/web/hooks/use-restaurants.tsx
+@@ -551,8 +551,10 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
+             groupRestaurants.flatMap(r => r.categories || [])
+         ));
+ 
+-        // 최신 영상 순으로 정렬
+-        const sortedByDate = [...groupRestaurants].sort((a, b) => {
++        // 최신 영상 순으로 정렬. 단독 행은 복사와 정렬을 생략한다.
++        const sortedByDate = groupRestaurants.length === 1
++            ? groupRestaurants
++            : [...groupRestaurants].sort((a, b) => {
+             const dateA = (a.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+             const dateB = (b.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+             return dateB.localeCompare(dateA);
+diff --git a/apps/web/lib/dashboard/helpers.ts b/apps/web/lib/dashboard/helpers.ts
+index 1d48e51f..bd73e7cb 100644
+--- a/apps/web/lib/dashboard/helpers.ts
++++ b/apps/web/lib/dashboard/helpers.ts
+@@ -1,22 +1,56 @@
+ import type { Json } from '@/integrations/supabase/types';
+ 
++const YOUTUBE_VIDEO_ID_PATTERNS = [
++    /[?&]v=([A-Za-z0-9_-]{6,})/,
++    /youtu\.be\/([A-Za-z0-9_-]{6,})/,
++    /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
++    /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
++    /youtube\.com\/live\/([A-Za-z0-9_-]{6,})/,
++] as const;
++
++const DASHBOARD_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,128}$/;
++const VIDEO_ID_CACHE_LIMIT = 4096;
++const videoIdByLink = new Map<string, string | null>();
++
++function rememberVideoId(link: string, videoId: string | null): string | null {
++    if (videoIdByLink.size >= VIDEO_ID_CACHE_LIMIT) {
++        videoIdByLink.clear();
++    }
++    videoIdByLink.set(link, videoId);
++    return videoId;
++}
++
+ export function extractVideoIdFromYoutubeLink(link: string | null | undefined): string | null {
+-    if (!link) return null;
+-
+-    const patterns = [
+-        /[?&]v=([A-Za-z0-9_-]{6,})/,
+-        /youtu\.be\/([A-Za-z0-9_-]{6,})/,
+-        /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
+-        /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
+-        /youtube\.com\/live\/([A-Za-z0-9_-]{6,})/,
+-    ];
+-
+-    for (const pattern of patterns) {
+-        const match = link.match(pattern);
+-        if (match?.[1]) return match[1];
++    if (typeof link !== 'string' || link.length === 0) return null;
++
++    const cached = videoIdByLink.get(link);
++    if (cached !== undefined) return cached;
++
++    let videoId: string | null = null;
++    for (const pattern of YOUTUBE_VIDEO_ID_PATTERNS) {
++        const match = pattern.exec(link);
++        if (match?.[1]) {
++            videoId = match[1];
++            break;
++        }
+     }
+ 
+-    return null;
++    return rememberVideoId(link, videoId);
++}
++
++export function classifyDashboardVideoId(videoId: string | null | undefined):
++    | { status: 'required' }
++    | { status: 'invalid'; length: number }
++    | { status: 'ok'; videoId: string } {
++    if (typeof videoId !== 'string') return { status: 'required' };
++
++    const trimmed = videoId.trim();
++    if (trimmed.length === 0) return { status: 'required' };
++    if (!DASHBOARD_VIDEO_ID_PATTERN.test(trimmed)) {
++        return { status: 'invalid', length: trimmed.length };
++    }
++
++    return { status: 'ok', videoId: trimmed };
+ }
+ 
+ export function canonicalizeYoutubeLink(link: string | null | undefined): string | null {
+diff --git a/apps/web/lib/dashboard/summary.ts b/apps/web/lib/dashboard/summary.ts
+index d53e53e7..d7920e99 100644
+--- a/apps/web/lib/dashboard/summary.ts
++++ b/apps/web/lib/dashboard/summary.ts
+@@ -6,7 +6,7 @@ import type {
+     DashboardVideoDetailResponse,
+     DashboardVideoSummary,
+ } from '@/types/dashboard';
+-import { extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
++import { classifyDashboardVideoId, extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
+ import {
+     getDashboardRestaurantRowsPage,
+     getRestaurantRows,
+@@ -35,10 +35,8 @@ type RestaurantsFilter = {
+ };
+ 
+ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaurantItem {
+-    const normalizedName =
+-        row.name?.trim() ||
+-        extractVideoIdFromYoutubeLink(row.youtube_link) ||
+-        '미승인 맛집';
++    const videoId = extractVideoIdFromYoutubeLink(row.youtube_link);
++    const normalizedName = row.name?.trim() || videoId || '미승인 맛집';
+ 
+     return {
+         id: row.id,
+@@ -48,7 +46,7 @@ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaura
+         lat: row.lat,
+         lng: row.lng,
+         youtubeLink: row.youtube_link,
+-        videoId: extractVideoIdFromYoutubeLink(row.youtube_link),
++        videoId,
+         sourceType: row.source_type,
+         status: row.status,
+         geocodingSuccess: row.geocoding_success,
+@@ -59,19 +57,21 @@ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaura
+ }
+ 
+ function sortByUpdatedDesc<T extends { updatedAt: string | null }>(items: T[]): T[] {
+-    return [...items].sort((a, b) => {
+-        const aMs = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+-        const bMs = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+-        return bMs - aMs;
+-    });
++    return items
++        .map((item) => ({ item, ms: item.updatedAt ? new Date(item.updatedAt).getTime() : 0 }))
++        .sort((left, right) => right.ms - left.ms)
++        .map((entry) => entry.item);
++}
++
++function updatedAtMs(value: string | null | undefined): number {
++    return value ? new Date(value).getTime() : 0;
+ }
+ 
+ function sortRowsByUpdatedDesc(rows: DashboardRestaurantRow[]): DashboardRestaurantRow[] {
+-    return [...rows].sort((a, b) => {
+-        const aMs = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+-        const bMs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+-        return bMs - aMs;
+-    });
++    return rows
++        .map((row) => ({ row, ms: updatedAtMs(row.updated_at) }))
++        .sort((left, right) => right.ms - left.ms)
++        .map((entry) => entry.row);
+ }
+ 
+ function buildDashboardSummaryChecksum(rows: DashboardRestaurantRow[]): string {
+@@ -257,6 +257,7 @@ export function buildDashboardSummaryFromRows(
+ 
+     let withCoordinates = 0;
+     let latestUpdatedAt: string | null = null;
++    let latestUpdatedMs = Number.NEGATIVE_INFINITY;
+ 
+     for (const row of rows) {
+         if (typeof row.lat === 'number' && typeof row.lng === 'number') {
+@@ -272,7 +273,9 @@ export function buildDashboardSummaryFromRows(
+         if (videoId) videoIds.add(videoId);
+ 
+         if (row.updated_at) {
+-            if (!latestUpdatedAt || new Date(row.updated_at).getTime() > new Date(latestUpdatedAt).getTime()) {
++            const updatedMs = updatedAtMs(row.updated_at);
++            if (latestUpdatedAt === null || updatedMs > latestUpdatedMs) {
++                latestUpdatedMs = updatedMs;
+                 latestUpdatedAt = row.updated_at;
+             }
+         }
+@@ -415,11 +418,42 @@ export function buildDashboardRestaurantsFromRows(
+     return buildDashboardRestaurantsPageFromRows(paged, sortedRows.length, normalizedFilter, now);
+ }
+ 
++const rowsByVideoId = new WeakMap<readonly DashboardRestaurantRow[], Map<string, DashboardRestaurantRow[]>>();
++
++export function selectDashboardRowsForVideoId(
++    rows: readonly DashboardRestaurantRow[],
++    videoId: string,
++): DashboardRestaurantRow[] {
++    const classified = classifyDashboardVideoId(videoId);
++    if (classified.status !== 'ok') return [];
++
++    let index = rowsByVideoId.get(rows);
++    if (!index) {
++        index = new Map();
++        for (const row of rows) {
++            const id = extractVideoIdFromYoutubeLink(row.youtube_link);
++            if (!id) continue;
++            const bucket = index.get(id);
++            if (bucket) {
++                bucket.push(row);
++            } else {
++                index.set(id, [row]);
++            }
++        }
++        rowsByVideoId.set(rows, index);
++    }
++
++    return index.get(classified.videoId) ?? [];
++}
++
+ export async function getDashboardVideoDetail(
+     videoId: string,
+ ): Promise<DashboardVideoDetailResponse | null> {
++    const classified = classifyDashboardVideoId(videoId);
++    if (classified.status !== 'ok') return null;
++
+     const rows = await getRestaurantRows(false, 'anon');
+-    const targetRows = rows.filter((row) => extractVideoIdFromYoutubeLink(row.youtube_link) === videoId);
++    const targetRows = selectDashboardRowsForVideoId(rows, classified.videoId);
+ 
+     if (targetRows.length === 0) return null;
+ 
+diff --git a/apps/web/lib/home-map-youtube-kpi.ts b/apps/web/lib/home-map-youtube-kpi.ts
+index cfd56ea6..deb8d0f4 100644
+--- a/apps/web/lib/home-map-youtube-kpi.ts
++++ b/apps/web/lib/home-map-youtube-kpi.ts
+@@ -27,7 +27,9 @@ function collectRestaurantYoutubeLinks(restaurant: Restaurant): string[] {
+     ].filter((link): link is string => typeof link === 'string' && link.trim().length > 0);
+ }
+ 
+-export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[]): string[] {
++export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[] | null | undefined): string[] {
++    if (!restaurants || restaurants.length === 0) return [];
++
+     const videoIds = new Set<string>();
+ 
+     for (const restaurant of restaurants) {
+diff --git a/apps/web/lib/map-restaurant-lookup.ts b/apps/web/lib/map-restaurant-lookup.ts
+index 010f127d..1b2ac10e 100644
+--- a/apps/web/lib/map-restaurant-lookup.ts
++++ b/apps/web/lib/map-restaurant-lookup.ts
+@@ -39,25 +39,35 @@ export const buildRestaurantLookup = (restaurants: Restaurant[]): RestaurantLook
+ };
+ 
+ export const findMatchingRestaurantInList = (
+-    target: Restaurant,
+-    candidates: Restaurant[],
++    target: Restaurant | null | undefined,
++    candidates: Restaurant[] | null | undefined,
+ ): Restaurant | null => {
+-    if (target.mergedRestaurants && target.mergedRestaurants.length > 0) {
+-        const mergedIds = target.mergedRestaurants.map((restaurant) => restaurant.id);
+-        return (
+-            candidates.find((candidate) =>
+-                mergedIds.includes(candidate.id) ||
+-                candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.includes(mergedRestaurant.id)) ||
++    if (!target || !candidates || candidates.length === 0) return null;
++
++    const mergedRestaurants = target.mergedRestaurants;
++    if (mergedRestaurants && mergedRestaurants.length > 0) {
++        const mergedIds = new Set(mergedRestaurants.map((restaurant) => restaurant.id));
++        for (const candidate of candidates) {
++            if (
++                mergedIds.has(candidate.id) ||
++                candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.has(mergedRestaurant.id)) ||
+                 hasSameNameAndCoordinate(candidate, target)
+-            ) ?? null
+-        );
++            ) {
++                return candidate;
++            }
++        }
++        return null;
+     }
+ 
+-    return (
+-        candidates.find((candidate) =>
+-            candidate.id === target.id ||
+-            candidate.mergedRestaurants?.some((mergedRestaurant) => mergedRestaurant.id === target.id) ||
++    const targetId = target.id;
++    for (const candidate of candidates) {
++        if (
++            candidate.id === targetId ||
++            candidate.mergedRestaurants?.some((mergedRestaurant) => mergedRestaurant.id === targetId) ||
+             hasSameNameAndCoordinate(candidate, target)
+-        ) ?? null
+-    );
++        ) {
++            return candidate;
++        }
++    }
++    return null;
+ };
+diff --git a/apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs b/apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs
+new file mode 100644
+index 00000000..f523be9d
+--- /dev/null
++++ b/apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs
+@@ -0,0 +1,70 @@
++// 대시보드 갱신시각 정렬: 비교마다 Date를 파싱하는 방식과 행당 한 번 파싱하는 방식.
++// 실행: bun apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs
++import { writeFileSync } from 'node:fs';
++import { performance } from 'node:perf_hooks';
++
++const ROWS = 4000;
++const SAMPLES = 21;
++const WARMUP = 3;
++const rows = Array.from({ length: ROWS }, (_, index) => ({
++    id: `row-${index}`,
++    updated_at: new Date(1_700_000_000_000 + ((index * 17) % ROWS) * 1000).toISOString(),
++}));
++
++function median(values) {
++    const sorted = [...values].sort((a, b) => a - b);
++    const middle = Math.floor(sorted.length / 2);
++    return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
++}
++
++function mad(values, center) {
++    return median(values.map((value) => Math.abs(value - center)));
++}
++
++function sample(fn) {
++    for (let index = 0; index < WARMUP; index += 1) fn();
++    const samples = [];
++    for (let index = 0; index < SAMPLES; index += 1) {
++        const started = performance.now();
++        fn();
++        samples.push(performance.now() - started);
++    }
++    const center = median(samples);
++    return {
++        medianMs: Number(center.toFixed(3)),
++        madMs: Number(mad(samples, center).toFixed(3)),
++    };
++}
++
++const sortInComparator = () => [...rows].sort((a, b) => {
++    const aMs = a.updated_at ? new Date(a.updated_at).getTime() : 0;
++    const bMs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
++    return bMs - aMs;
++});
++const sortOnce = () => rows
++    .map((row) => ({ row, ms: row.updated_at ? new Date(row.updated_at).getTime() : 0 }))
++    .sort((left, right) => right.ms - left.ms)
++    .map((entry) => entry.row);
++
++const before = sample(sortInComparator);
++const after = sample(sortOnce);
++const oldOrder = sortInComparator().map((row) => row.id);
++const newOrder = sortOnce().map((row) => row.id);
++const mismatch = oldOrder.some((id, index) => id !== newOrder[index]);
++const ratio = before.medianMs / after.medianMs;
++const noise = (before.madMs / before.medianMs) + (after.madMs / after.medianMs);
++const report = {
++    measuredAt: '2026-09-23',
++    machine: 'local',
++    workload: { rows: ROWS, samples: SAMPLES, warmup: WARMUP },
++    budgets: { absoluteMs: 16, relativeMin: 1.3, noiseMadOverMedian: 0.15 },
++    identity: { mismatch },
++    before,
++    after,
++    ratio: Number(ratio.toFixed(2)),
++    combinedMadOverMedian: Number(noise.toFixed(3)),
++    accepted: !mismatch && after.medianMs < 16 && ratio >= 1.3 && noise <= 0.15,
++};
++writeFileSync(new URL('./benchmark.json', import.meta.url), `${JSON.stringify(report, null, 2)}\n`);
++console.log(JSON.stringify(report, null, 2));
++if (!report.accepted) process.exitCode = 2;
+diff --git a/apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json b/apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json
+new file mode 100644
+index 00000000..d0e7cfb4
+--- /dev/null
++++ b/apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json
+@@ -0,0 +1,28 @@
++{
++  "measuredAt": "2026-09-23",
++  "machine": "local",
++  "workload": {
++    "rows": 4000,
++    "samples": 21,
++    "warmup": 3
++  },
++  "budgets": {
++    "absoluteMs": 16,
++    "relativeMin": 1.3,
++    "noiseMadOverMedian": 0.15
++  },
++  "identity": {
++    "mismatch": false
++  },
++  "before": {
++    "medianMs": 4.423,
++    "madMs": 0.379
++  },
++  "after": {
++    "medianMs": 0.533,
++    "madMs": 0.03
++  },
++  "ratio": 8.3,
++  "combinedMadOverMedian": 0.142,
++  "accepted": true
++}
+diff --git a/apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs b/apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs
+new file mode 100644
+index 00000000..52630746
+--- /dev/null
++++ b/apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs
+@@ -0,0 +1,194 @@
++// 대시보드 영상 ID 추출·재조회 비교.
++// 실행: bun apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs
++import { writeFileSync } from 'node:fs';
++import { performance } from 'node:perf_hooks';
++
++import { extractVideoIdFromYoutubeLink } from '../../lib/dashboard/helpers.ts';
++import { selectDashboardRowsForVideoId } from '../../lib/dashboard/summary.ts';
++
++const LINKS = 4000;
++const REPEAT_PASSES = 6;
++const SAMPLES = 11;
++const WARMUP = 2;
++
++const links = Array.from({ length: LINKS }, (_, index) => {
++    const id = `vid${String(index).padStart(8, '0')}`;
++    return `https://www.youtube.com/watch?v=${id}&t=10`;
++});
++
++function extractVideoIdOld(link) {
++    if (typeof link !== 'string' || link.length === 0) return null;
++    const patterns = [
++        /[?&]v=([A-Za-z0-9_-]{6,})/,
++        /youtu\.be\/([A-Za-z0-9_-]{6,})/,
++        /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
++        /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
++        /youtube\.com\/live\/([A-Za-z0-9_-]{6,})/,
++    ];
++    for (const pattern of patterns) {
++        const match = pattern.exec(link);
++        if (match?.[1]) return match[1];
++    }
++    return null;
++}
++
++function extractVideoIdHoisted(link) {
++    if (typeof link !== 'string' || link.length === 0) return null;
++    for (const pattern of HOISTED_PATTERNS) {
++        const match = pattern.exec(link);
++        if (match?.[1]) return match[1];
++    }
++    return null;
++}
++
++const HOISTED_PATTERNS = [
++    /[?&]v=([A-Za-z0-9_-]{6,})/,
++    /youtu\.be\/([A-Za-z0-9_-]{6,})/,
++    /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
++    /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
++    /youtube\.com\/live\/([A-Za-z0-9_-]{6,})/,
++];
++
++function scanOld(rows, videoId) {
++    const matches = [];
++    for (const row of rows) {
++        if (extractVideoIdOld(row.youtube_link) === videoId) matches.push(row);
++    }
++    return matches;
++}
++
++const rows = links.map((link, index) => ({
++    id: `row-${index}`,
++    youtube_link: link,
++}));
++const targetId = 'vid00002000';
++
++function median(values) {
++    const sorted = [...values].sort((a, b) => a - b);
++    const middle = Math.floor(sorted.length / 2);
++    return sorted.length % 2 === 1
++        ? sorted[middle]
++        : (sorted[middle - 1] + sorted[middle]) / 2;
++}
++
++function mad(values, center) {
++    return median(values.map((value) => Math.abs(value - center)));
++}
++
++function sample(fn) {
++    for (let i = 0; i < WARMUP; i += 1) fn();
++    const samples = [];
++    for (let i = 0; i < SAMPLES; i += 1) {
++        const started = performance.now();
++        fn();
++        samples.push(performance.now() - started);
++    }
++    const center = median(samples);
++    return {
++        medianMs: Number(center.toFixed(3)),
++        madMs: Number(mad(samples, center).toFixed(3)),
++        samplesMs: samples.map((value) => Number(value.toFixed(3))),
++    };
++}
++
++let mismatch = 0;
++for (const link of links) {
++    if (extractVideoIdOld(link) !== extractVideoIdFromYoutubeLink(link)) mismatch += 1;
++}
++
++const oldExtract = sample(() => {
++    for (let pass = 0; pass < REPEAT_PASSES; pass += 1) {
++        for (const link of links) extractVideoIdOld(link);
++    }
++});
++const hoistedExtract = sample(() => {
++    for (let pass = 0; pass < REPEAT_PASSES; pass += 1) {
++        for (const link of links) extractVideoIdHoisted(link);
++    }
++});
++const cachedExtract = sample(() => {
++    for (let pass = 0; pass < REPEAT_PASSES; pass += 1) {
++        for (const link of links) extractVideoIdFromYoutubeLink(link);
++    }
++});
++
++const oldScan = sample(() => {
++    for (let pass = 0; pass < REPEAT_PASSES; pass += 1) scanOld(rows, targetId);
++});
++const indexed = sample(() => {
++    for (let pass = 0; pass < REPEAT_PASSES; pass += 1) {
++        selectDashboardRowsForVideoId(rows, targetId);
++    }
++});
++const coldScan = sample(() => {
++    scanOld(rows, targetId);
++});
++const coldIndex = sample(() => {
++    selectDashboardRowsForVideoId(rows.map((row) => ({ ...row })), targetId);
++});
++
++const oldIds = scanOld(rows, targetId).map((row) => row.id);
++const newIds = selectDashboardRowsForVideoId(rows, targetId).map((row) => row.id);
++const idMismatch = oldIds.length !== newIds.length
++    || oldIds.some((id, index) => id !== newIds[index]);
++
++const extractRatio = oldExtract.medianMs / cachedExtract.medianMs;
++const hoistRatio = oldExtract.medianMs / hoistedExtract.medianMs;
++const scanRatio = oldScan.medianMs / indexed.medianMs;
++const extractNoise = (oldExtract.madMs / oldExtract.medianMs) + (cachedExtract.madMs / cachedExtract.medianMs);
++const scanNoise = (oldScan.madMs / oldScan.medianMs) + (indexed.madMs / indexed.medianMs);
++
++const report = {
++    measuredAt: '2026-09-23',
++    machine: 'local',
++    workload: {
++        links: LINKS,
++        repeatPasses: REPEAT_PASSES,
++        extractCalls: LINKS * REPEAT_PASSES,
++        samples: SAMPLES,
++        warmup: WARMUP,
++    },
++    budgets: {
++        absoluteMs: 16,
++        relativeMin: 1.3,
++        noiseMadOverMedian: 0.15,
++    },
++    identity: {
++        extractMismatches: mismatch,
++        scanIdMismatch: idMismatch,
++    },
++    extract: {
++        before: oldExtract,
++        hoistedRegex: hoistedExtract,
++        cached: cachedExtract,
++        cachedRatio: Number(extractRatio.toFixed(2)),
++        hoistedRatio: Number(hoistRatio.toFixed(2)),
++        combinedMadOverMedian: Number(extractNoise.toFixed(3)),
++    },
++    videoLookup: {
++        before: oldScan,
++        after: indexed,
++        ratio: Number(scanRatio.toFixed(2)),
++        combinedMadOverMedian: Number(scanNoise.toFixed(3)),
++        coldSinglePass: {
++            before: coldScan,
++            after: coldIndex,
++            ratio: Number((coldScan.medianMs / coldIndex.medianMs).toFixed(2)),
++        },
++        note: 'Warm samples reuse one row array, so the WeakMap is built during warmup. Cold samples copy the array every call and include index construction. The warm ratio is a repeat-lookup figure and sits near the timer floor.',
++    },
++};
++
++const accepted = mismatch === 0
++    && !idMismatch
++    && cachedExtract.medianMs < 16
++    && indexed.medianMs < 16
++    && extractRatio >= 1.3
++    && scanRatio >= 1.3
++    && extractNoise <= 0.15
++    && scanNoise <= 0.15;
++
++report.accepted = accepted;
++writeFileSync(new URL('./benchmark.json', import.meta.url), `${JSON.stringify(report, null, 2)}\n`);
++console.log(JSON.stringify(report, null, 2));
++if (!accepted) process.exitCode = 2;
+diff --git a/apps/web/performance/dashboard-video-id-20260923/benchmark.json b/apps/web/performance/dashboard-video-id-20260923/benchmark.json
+new file mode 100644
+index 00000000..aa34e002
+--- /dev/null
++++ b/apps/web/performance/dashboard-video-id-20260923/benchmark.json
+@@ -0,0 +1,153 @@
++{
++  "measuredAt": "2026-09-23",
++  "machine": "local",
++  "workload": {
++    "links": 4000,
++    "repeatPasses": 6,
++    "extractCalls": 24000,
++    "samples": 11,
++    "warmup": 2
++  },
++  "budgets": {
++    "absoluteMs": 16,
++    "relativeMin": 1.3,
++    "noiseMadOverMedian": 0.15
++  },
++  "identity": {
++    "extractMismatches": 0,
++    "scanIdMismatch": false
++  },
++  "extract": {
++    "before": {
++      "medianMs": 1.455,
++      "madMs": 0.091,
++      "samplesMs": [
++        1.232,
++        1.491,
++        1.681,
++        1.367,
++        1.689,
++        1.455,
++        1.414,
++        1.298,
++        1.206,
++        1.481,
++        1.546
++      ]
++    },
++    "hoistedRegex": {
++      "medianMs": 0.814,
++      "madMs": 0.087,
++      "samplesMs": [
++        0.901,
++        1.482,
++        0.804,
++        1.165,
++        0.814,
++        0.79,
++        0.971,
++        0.618,
++        0.863,
++        0.602,
++        0.772
++      ]
++    },
++    "cached": {
++      "medianMs": 0.227,
++      "madMs": 0.016,
++      "samplesMs": [
++        0.227,
++        0.276,
++        0.25,
++        0.211,
++        0.289,
++        0.238,
++        0.223,
++        0.213,
++        0.27,
++        0.211,
++        0.208
++      ]
++    },
++    "cachedRatio": 6.41,
++    "hoistedRatio": 1.79,
++    "combinedMadOverMedian": 0.133
++  },
++  "videoLookup": {
++    "before": {
++      "medianMs": 1.416,
++      "madMs": 0.077,
++      "samplesMs": [
++        1.465,
++        1.333,
++        1.398,
++        1.49,
++        1.493,
++        1.564,
++        1.503,
++        1.309,
++        1.222,
++        1.402,
++        1.416
++      ]
++    },
++    "after": {
++      "medianMs": 0.001,
++      "madMs": 0,
++      "samplesMs": [
++        0.002,
++        0.001,
++        0.001,
++        0.003,
++        0.001,
++        0.001,
++        0.001,
++        0.001,
++        0.003,
++        0.001,
++        0.001
++      ]
++    },
++    "ratio": 1416,
++    "combinedMadOverMedian": 0.054,
++    "coldSinglePass": {
++      "before": {
++        "medianMs": 0.176,
++        "madMs": 0.023,
++        "samplesMs": [
++          0.723,
++          0.173,
++          0.143,
++          0.144,
++          0.176,
++          0.153,
++          0.627,
++          0.157,
++          0.18,
++          0.187,
++          0.225
++        ]
++      },
++      "after": {
++        "medianMs": 0.23,
++        "madMs": 0.04,
++        "samplesMs": [
++          0.351,
++          0.211,
++          0.364,
++          0.191,
++          0.189,
++          0.222,
++          0.27,
++          0.278,
++          0.26,
++          0.23,
++          0.179
++        ]
++      },
++      "ratio": 0.77
++    },
++    "note": "Warm samples reuse one row array, so the WeakMap is built during warmup. Cold samples copy the array every call and include index construction. The warm ratio is a repeat-lookup figure and sits near the timer floor."
++  },
++  "accepted": true
++}
+diff --git a/apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs b/apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs
+new file mode 100644
+index 00000000..463151fb
+--- /dev/null
++++ b/apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs
+@@ -0,0 +1,101 @@
++// 지도 선택 매칭: 병합 ID includes 스캔과 Set 조회의 비교.
++// 실행: bun apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs
++import { writeFileSync } from 'node:fs';
++import { performance } from 'node:perf_hooks';
++
++import { findMatchingRestaurantInList } from '../../lib/map-restaurant-lookup.ts';
++
++const CANDIDATES = 4000;
++const MERGED_PER_TARGET = 8;
++const CHILDREN = 4;
++const SAMPLES = 31;
++const WARMUP = 2;
++
++function hasSameNameAndCoordinate(left, right) {
++    return left.name === right.name
++        && Math.abs((left.lat || 0) - (right.lat || 0)) < 0.0001
++        && Math.abs((left.lng || 0) - (right.lng || 0)) < 0.0001;
++}
++
++function findOld(target, candidates) {
++    const mergedIds = target.mergedRestaurants.map((restaurant) => restaurant.id);
++    return candidates.find((candidate) =>
++        mergedIds.includes(candidate.id)
++        || candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.includes(mergedRestaurant.id))
++        || hasSameNameAndCoordinate(candidate, target)
++    ) ?? null;
++}
++
++const candidates = Array.from({ length: CANDIDATES }, (_, index) => ({
++    id: `restaurant-${index}`,
++    name: `식당-${index}`,
++    lat: 37 + index / 10000,
++    lng: 127 + index / 10000,
++    mergedRestaurants: Array.from({ length: CHILDREN }, (__, child) => ({
++        id: `child-${index}-${child}`,
++    })),
++}));
++const target = {
++    id: 'search-target',
++    name: '없는 이름',
++    lat: 1,
++    lng: 1,
++    mergedRestaurants: [
++        ...Array.from({ length: MERGED_PER_TARGET - 1 }, (_, index) => ({ id: `absent-${index}` })),
++        { id: 'child-3999-3' },
++    ],
++};
++
++function median(values) {
++    const sorted = [...values].sort((a, b) => a - b);
++    const middle = Math.floor(sorted.length / 2);
++    return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
++}
++
++function mad(values, center) {
++    return median(values.map((value) => Math.abs(value - center)));
++}
++
++function sample(fn) {
++    for (let index = 0; index < WARMUP; index += 1) fn();
++    const samples = [];
++    for (let index = 0; index < SAMPLES; index += 1) {
++        const started = performance.now();
++        fn();
++        samples.push(performance.now() - started);
++    }
++    const center = median(samples);
++    return {
++        medianMs: Number(center.toFixed(3)),
++        madMs: Number(mad(samples, center).toFixed(3)),
++        samplesMs: samples.map((value) => Number(value.toFixed(3))),
++    };
++}
++
++const before = sample(() => findOld(target, candidates));
++const after = sample(() => findMatchingRestaurantInList(target, candidates));
++const oldMatch = findOld(target, candidates)?.id ?? null;
++const newMatch = findMatchingRestaurantInList(target, candidates)?.id ?? null;
++const ratio = before.medianMs / after.medianMs;
++const noise = (before.madMs / before.medianMs) + (after.madMs / after.medianMs);
++const report = {
++    measuredAt: '2026-09-23',
++    machine: 'local',
++    workload: {
++        candidates: CANDIDATES,
++        mergedIds: MERGED_PER_TARGET,
++        childrenPerCandidate: CHILDREN,
++        samples: SAMPLES,
++        warmup: WARMUP,
++    },
++    budgets: { absoluteMs: 16, relativeMin: 1.3, noiseMadOverMedian: 0.15 },
++    identity: { oldId: oldMatch, newId: newMatch, mismatch: oldMatch !== newMatch },
++    before,
++    after,
++    ratio: Number(ratio.toFixed(2)),
++    combinedMadOverMedian: Number(noise.toFixed(3)),
++    accepted: oldMatch === newMatch && oldMatch === 'restaurant-3999' && after.medianMs < 16 && ratio >= 1.3 && noise <= 0.15,
++};
++writeFileSync(new URL('./benchmark.json', import.meta.url), `${JSON.stringify(report, null, 2)}\n`);
++console.log(JSON.stringify(report, null, 2));
++if (!report.accepted) process.exitCode = 2;
+diff --git a/apps/web/performance/map-restaurant-lookup-20260923/benchmark.json b/apps/web/performance/map-restaurant-lookup-20260923/benchmark.json
+new file mode 100644
+index 00000000..62c4565f
+--- /dev/null
++++ b/apps/web/performance/map-restaurant-lookup-20260923/benchmark.json
+@@ -0,0 +1,98 @@
++{
++  "measuredAt": "2026-09-23",
++  "machine": "local",
++  "workload": {
++    "candidates": 4000,
++    "mergedIds": 8,
++    "childrenPerCandidate": 4,
++    "samples": 31,
++    "warmup": 2
++  },
++  "budgets": {
++    "absoluteMs": 16,
++    "relativeMin": 1.3,
++    "noiseMadOverMedian": 0.15
++  },
++  "identity": {
++    "oldId": "restaurant-3999",
++    "newId": "restaurant-3999",
++    "mismatch": false
++  },
++  "before": {
++    "medianMs": 0.26,
++    "madMs": 0.032,
++    "samplesMs": [
++      0.274,
++      0.395,
++      0.314,
++      0.313,
++      0.296,
++      0.302,
++      0.355,
++      0.271,
++      0.242,
++      0.264,
++      0.239,
++      0.273,
++      0.266,
++      0.367,
++      0.218,
++      0.256,
++      0.218,
++      0.21,
++      0.247,
++      0.226,
++      0.277,
++      0.263,
++      0.228,
++      0.223,
++      0.212,
++      0.209,
++      0.264,
++      0.208,
++      0.26,
++      0.241,
++      0.232
++    ]
++  },
++  "after": {
++    "medianMs": 0.171,
++    "madMs": 0.016,
++    "samplesMs": [
++      0.32,
++      0.281,
++      1.304,
++      0.237,
++      0.184,
++      0.171,
++      0.202,
++      0.172,
++      0.18,
++      0.188,
++      0.167,
++      0.166,
++      0.178,
++      0.17,
++      0.18,
++      0.18,
++      0.176,
++      0.144,
++      0.155,
++      0.138,
++      0.145,
++      0.138,
++      0.14,
++      0.132,
++      0.163,
++      0.157,
++      0.15,
++      0.199,
++      0.181,
++      0.169,
++      0.153
++    ]
++  },
++  "ratio": 1.52,
++  "combinedMadOverMedian": 0.217,
++  "accepted": false
++}
+diff --git a/apps/web/tests-unit/dashboard-aggregation.test.ts b/apps/web/tests-unit/dashboard-aggregation.test.ts
+index 7e239ac4..715f02d6 100644
+--- a/apps/web/tests-unit/dashboard-aggregation.test.ts
++++ b/apps/web/tests-unit/dashboard-aggregation.test.ts
+@@ -1,7 +1,7 @@
+ import { describe, expect, test } from 'bun:test';
+ 
+ import type { DashboardRestaurantRow } from '../lib/dashboard/supabase';
+-import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows } from '../lib/dashboard/summary';
++import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows, selectDashboardRowsForVideoId } from '../lib/dashboard/summary';
+ import { buildDashboardFunnelFromRows, buildDashboardFailuresFromRows } from '../lib/dashboard/evaluation';
+ import { buildDashboardQualityFromRows } from '../lib/dashboard/quality';
+ 
+@@ -103,6 +103,20 @@ describe('dashboard aggregations', () => {
+         expect(result.freshness?.checksum).toMatch(/^[a-f0-9]{24}$/);
+     });
+ 
++    test('keeps equal updated times in input order when paging restaurants', () => {
++        const rows = [
++            makeRow({ id: 'tie-a', name: '앞', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
++            makeRow({ id: 'newer', name: '최신', lat: 37, lng: 127, updated_at: '2026-03-01T00:00:00.000Z' }),
++            makeRow({ id: 'tie-b', name: '뒤', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
++            makeRow({ id: 'blank', name: '', lat: 37, lng: 127, youtube_link: null, updated_at: '2026-01-01T00:00:00.000Z' }),
++        ];
++
++        const page = buildDashboardRestaurantsFromRows(rows, { onlyWithCoordinates: true, limit: 10 }, new Date('2026-04-01T00:00:00.000Z'));
++        expect(page.items.map((item) => item.id)).toEqual(['newer', 'tie-a', 'tie-b', 'blank']);
++        expect(page.items[3]?.name).toBe('미승인 맛집');
++        expect(buildDashboardRestaurantsFromRows([], { onlyWithCoordinates: true }, new Date('2026-04-01T00:00:00.000Z')).items).toEqual([]);
++    });
++
+     test('buildDashboardRestaurantsFromRows filters raw rows before paging and normalization', () => {
+         const rows: DashboardRestaurantRow[] = [
+             makeRow({
+@@ -347,4 +361,45 @@ describe('dashboard aggregations', () => {
+         expect(result.reviewFaithfulness.min).toBe(0.8);
+         expect(result.reviewFaithfulness.max).toBe(0.8);
+     });
++
++    test('selectDashboardRowsForVideoId keeps encounter order and rejects unsafe ids', () => {
++        const rows = [
++            makeRow({ id: 'first', youtube_link: 'https://youtu.be/vidAAA111' }),
++            makeRow({ id: 'other', youtube_link: 'https://www.youtube.com/watch?v=vidBBB222' }),
++            makeRow({ id: 'second', youtube_link: 'https://www.youtube.com/shorts/vidAAA111' }),
++            makeRow({ id: 'blank-name', name: '   ', youtube_link: 'https://youtu.be/vidAAA111' }),
++        ];
++
++        const selected = selectDashboardRowsForVideoId(rows, ' vidAAA111 ');
++        expect(selected.map((row) => row.id)).toEqual(['first', 'second', 'blank-name']);
++        expect(selectDashboardRowsForVideoId(rows, ' vidAAA111 ').map((row) => row.id)).toEqual([
++            'first',
++            'second',
++            'blank-name',
++        ]);
++        expect(selectDashboardRowsForVideoId(rows, 'missing999')).toEqual([]);
++        expect(selectDashboardRowsForVideoId([], 'vidAAA111')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '   ')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, "' OR 1=1 --")).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '<script>alert(1)</script>')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '../etc/passwd')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, 'a'.repeat(129))).toEqual([]);
++
++        const named = buildDashboardRestaurantsFromRows(
++            [makeRow({ id: 'unnamed', name: '', youtube_link: 'https://youtu.be/vidAAA111' })],
++            { onlyWithCoordinates: false },
++            new Date('2026-02-10T00:00:00.000Z'),
++        );
++        expect(named.items[0]?.name).toBe('vidAAA111');
++        expect(named.items[0]?.videoId).toBe('vidAAA111');
++
++        const emptyName = buildDashboardRestaurantsFromRows(
++            [makeRow({ id: 'empty', name: '   ', youtube_link: null })],
++            { onlyWithCoordinates: false },
++            new Date('2026-02-10T00:00:00.000Z'),
++        );
++        expect(emptyName.items[0]?.name).toBe('미승인 맛집');
++        expect(emptyName.total).toBe(1);
++    });
+ });
+diff --git a/apps/web/tests-unit/dashboard-public-visibility-source.test.ts b/apps/web/tests-unit/dashboard-public-visibility-source.test.ts
+index 6520889a..6488bf0c 100644
+--- a/apps/web/tests-unit/dashboard-public-visibility-source.test.ts
++++ b/apps/web/tests-unit/dashboard-public-visibility-source.test.ts
+@@ -45,6 +45,9 @@ describe('dashboard public Supabase visibility contracts', () => {
+     expect(summaryRouteSource).toContain('getDashboardSummary(false)');
+     expect(restaurantsRouteSource).toContain('getDashboardRestaurants({');
+     expect(videoRouteSource).toContain('getDashboardVideoDetail(safeVideoId)');
++    expect(videoRouteSource).toContain('classifyDashboardVideoId(videoId)');
++    expect(videoRouteSource).toContain("reason: 'invalid-shape'");
++    expect(videoRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+     expect(summaryRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+     expect(restaurantsRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+     expect(videoRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+diff --git a/apps/web/tests-unit/home-map-youtube-kpi.test.ts b/apps/web/tests-unit/home-map-youtube-kpi.test.ts
+index 5435d339..1a37f2e6 100644
+--- a/apps/web/tests-unit/home-map-youtube-kpi.test.ts
++++ b/apps/web/tests-unit/home-map-youtube-kpi.test.ts
+@@ -36,6 +36,24 @@ describe('home map youtube KPI enrichment', () => {
+         ])).toEqual(['abcdefghijk', 'lmnopqrstuv', 'wxyzABCDE12']);
+     });
+ 
++    test('ignores empty links and re-reads a link after it changes', () => {
++        expect(collectHomeMapYoutubeVideoIds(null)).toEqual([]);
++        expect(collectHomeMapYoutubeVideoIds([])).toEqual([]);
++        const row = restaurant('blank', {
++            youtube_link: '   ',
++            mergedYoutubeLinks: ['', 'https://youtu.be/abcdefghijk'],
++            mergedRestaurants: [
++                { youtube_link: null } as Restaurant,
++            ],
++        });
++        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['abcdefghijk']);
++        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['abcdefghijk']);
++        row.youtube_link = 'https://www.youtube.com/watch?v=zzzzzzzzzzz';
++        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['zzzzzzzzzzz', 'abcdefghijk']);
++        expect(chunkHomeMapYoutubeVideoIds([], 0)).toEqual([]);
++        expect(chunkHomeMapYoutubeVideoIds(['abcdefghijk'], Number.NaN)).toEqual([['abcdefghijk']]);
++    });
++
+ 
+     test('chunks video ids so home KPI requests stay under the bounded POST limit', () => {
+         const videoIds = Array.from({ length: 250 }, (_, index) => `id${String(index).padStart(4, '0')}`);
+diff --git a/apps/web/tests-unit/map-restaurant-lookup.test.ts b/apps/web/tests-unit/map-restaurant-lookup.test.ts
+index 4fb9d439..737377ae 100644
+--- a/apps/web/tests-unit/map-restaurant-lookup.test.ts
++++ b/apps/web/tests-unit/map-restaurant-lookup.test.ts
+@@ -68,4 +68,43 @@ describe('map restaurant lookup helpers', () => {
+ 
+         expect(findMatchingRestaurantInList(selectedRestaurant, [visibleRestaurant])).toEqual(visibleRestaurant);
+     });
++
++    test('keeps the earliest candidate when several rows could match', () => {
++        const earlierByName = makeRestaurant({
++            id: 'earlier-name',
++            name: '같은 식당',
++            lat: 37.5665,
++            lng: 126.978,
++        });
++        const laterById = makeRestaurant({ id: 'target-id', name: '다른 식당' });
++        const target = makeRestaurant({
++            id: 'target-id',
++            name: '같은 식당',
++            lat: 37.5665,
++            lng: 126.978,
++        });
++
++        expect(findMatchingRestaurantInList(target, [earlierByName, laterById])).toEqual(earlierByName);
++        expect(findMatchingRestaurantInList(target, [laterById, earlierByName])).toEqual(laterById);
++    });
++
++    test('returns null for empty, missing, and non-matching input', () => {
++        const target = makeRestaurant({ id: 'missing', name: '없음', lat: 1, lng: 2 });
++        expect(findMatchingRestaurantInList(null, [target])).toBeNull();
++        expect(findMatchingRestaurantInList(undefined, [target])).toBeNull();
++        expect(findMatchingRestaurantInList(target, [])).toBeNull();
++        expect(findMatchingRestaurantInList(target, null)).toBeNull();
++        expect(findMatchingRestaurantInList(target, undefined)).toBeNull();
++        expect(findMatchingRestaurantInList(
++            makeRestaurant({ id: "'; drop table restaurants;--" }),
++            [target],
++        )).toBeNull();
++        expect(findMatchingRestaurantInList(
++            makeRestaurant({
++                id: 'wrapped',
++                mergedRestaurants: [],
++            }),
++            [makeRestaurant({ id: 'wrapped' })],
++        )?.id).toBe('wrapped');
++    });
+ });
+diff --git a/apps/web/tests-unit/use-restaurants-merge.test.ts b/apps/web/tests-unit/use-restaurants-merge.test.ts
+index f9880272..83fc5a21 100644
+--- a/apps/web/tests-unit/use-restaurants-merge.test.ts
++++ b/apps/web/tests-unit/use-restaurants-merge.test.ts
+@@ -356,6 +356,37 @@ describe('mergeRestaurants', () => {
+         expect(detail?.mergedTzuyangReviews).toEqual([]);
+     });
+ 
++    test('keeps a singleton restaurant without merging unrelated rows', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        const only = makeRestaurant({
++            id: 'solo',
++            approved_name: '혼자식당',
++            categories: ['한식', '한식', '분식'],
++            youtube_link: 'https://youtu.be/soloVideo1',
++            tzuyang_review: '혼밥',
++            youtube_meta: { publishedAt: '2026-04-01T00:00:00Z', title: 'solo' },
++            review_count: 4,
++            lat: 0,
++            lng: 127,
++        });
++
++        const [merged] = mergeRestaurants([only]) as Array<Record<string, unknown>>;
++        expect(merged.id).toBe('solo');
++        expect(merged.name).toBe('혼자식당');
++        expect(merged.categories).toEqual(['한식', '분식']);
++        expect(merged.youtube_link).toBe('https://youtu.be/soloVideo1');
++        expect(merged.mergedYoutubeLinks).toEqual(['https://youtu.be/soloVideo1']);
++        expect(merged.tzuyang_review).toBe('혼밥');
++        expect(merged.mergedTzuyangReviews).toEqual(['혼밥']);
++        expect(merged.review_count).toBe(4);
++        expect(merged.lat).toBe(0);
++        expect(merged.lng).toBe(127);
++        expect(merged.mergedRestaurants).toEqual([only]);
++
++        const empty = mergeRestaurants([]);
++        expect(empty).toEqual([]);
++    });
++
+     test('mergeRestaurants exposes merge performance counters when available', async () => {
+         const { mergeRestaurants, ...maybePerfHelpers } = await import('../hooks/use-restaurants') as Record<string, unknown>;
+ 
+diff --git a/apps/web/tests-unit/youtube-link-helpers.test.ts b/apps/web/tests-unit/youtube-link-helpers.test.ts
+index d9e98b2c..290b4a3a 100644
+--- a/apps/web/tests-unit/youtube-link-helpers.test.ts
++++ b/apps/web/tests-unit/youtube-link-helpers.test.ts
+@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
+ import { readFileSync } from 'node:fs';
+ import { resolve } from 'node:path';
+ 
+-import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
++import { canonicalizeYoutubeLink, classifyDashboardVideoId, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+ import {
+   getYoutubeThumbnailCandidates,
+   getYoutubeThumbnailUrl,
+@@ -13,6 +13,38 @@ const source = (relativePath: string) =>
+   readFileSync(resolve(import.meta.dir, '..', relativePath), 'utf8');
+ 
+ describe('YouTube link helpers', () => {
++  test('returns null for empty, non-string, and non-YouTube input', () => {
++    expect(extractVideoIdFromYoutubeLink(null)).toBeNull();
++    expect(extractVideoIdFromYoutubeLink(undefined)).toBeNull();
++    expect(extractVideoIdFromYoutubeLink('')).toBeNull();
++    expect(extractVideoIdFromYoutubeLink('   ')).toBeNull();
++    expect(extractVideoIdFromYoutubeLink('https://example.com/watch?v=abc123DEF45')).toBe('abc123DEF45');
++    expect(extractVideoIdFromYoutubeLink('not a url')).toBeNull();
++    expect(extractVideoIdFromYoutubeLink("' OR 1=1 --")).toBeNull();
++    expect(extractVideoIdFromYoutubeLink('<script>alert(1)</script>')).toBeNull();
++    expect(extractVideoIdFromYoutubeLink('https://youtu.be/short')).toBeNull();
++  });
++
++  test('reuses the same id for a repeated link', () => {
++    const link = 'https://www.youtube.com/embed/abc123DEF45?start=12';
++    expect(extractVideoIdFromYoutubeLink(link)).toBe('abc123DEF45');
++    expect(extractVideoIdFromYoutubeLink(link)).toBe('abc123DEF45');
++  });
++
++  test('classifies dashboard video ids before a row scan', () => {
++    expect(classifyDashboardVideoId(null)).toEqual({ status: 'required' });
++    expect(classifyDashboardVideoId(undefined)).toEqual({ status: 'required' });
++    expect(classifyDashboardVideoId('')).toEqual({ status: 'required' });
++    expect(classifyDashboardVideoId('   ')).toEqual({ status: 'required' });
++    expect(classifyDashboardVideoId('abc')).toEqual({ status: 'invalid', length: 3 });
++    expect(classifyDashboardVideoId('abc def')).toEqual({ status: 'invalid', length: 7 });
++    expect(classifyDashboardVideoId("' OR 1=1 --")).toMatchObject({ status: 'invalid' });
++    expect(classifyDashboardVideoId('<script>alert(1)</script>')).toMatchObject({ status: 'invalid' });
++    expect(classifyDashboardVideoId(`/${'a'.repeat(200)}`)).toMatchObject({ status: 'invalid' });
++    expect(classifyDashboardVideoId('a'.repeat(129))).toEqual({ status: 'invalid', length: 129 });
++    expect(classifyDashboardVideoId('  abc123DEF45  ')).toEqual({ status: 'ok', videoId: 'abc123DEF45' });
++  });
++
+   test('extracts a video id from supported YouTube URLs', () => {
+     expect(extractVideoIdFromYoutubeLink('https://www.youtube.com/watch?v=abc123DEF45&t=10')).toBe('abc123DEF45');
+     expect(extractVideoIdFromYoutubeLink('https://youtu.be/abc123DEF45?feature=share')).toBe('abc123DEF45');

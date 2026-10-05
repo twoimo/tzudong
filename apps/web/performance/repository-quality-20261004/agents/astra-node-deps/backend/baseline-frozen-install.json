@@ -1,0 +1,25 @@
+{
+  "label": "baseline-frozen-install",
+  "command": [
+    "npm",
+    "ci",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund",
+    "--json"
+  ],
+  "exitCode": 0,
+  "seconds": 3.408,
+  "node": "v24.21.0",
+  "npm": "11.6.2",
+  "lockBefore": "bb77dec146a3eda4faaacea489a629f3120148cd3e5608a127909a7a12fce75e",
+  "lockAfter": "bb77dec146a3eda4faaacea489a629f3120148cd3e5608a127909a7a12fce75e",
+  "stdoutBytes": 40772,
+  "stderrBytes": 781,
+  "summary": {
+    "added": 209,
+    "removed": 0,
+    "changed": 0,
+    "audited": 0
+  }
+}

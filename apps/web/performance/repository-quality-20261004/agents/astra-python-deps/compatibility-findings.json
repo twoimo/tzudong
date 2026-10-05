@@ -1,0 +1,24 @@
+{
+  "scrapling_playwright": {
+    "url": "https://pypi.org/pypi/playwright/1.62.0/json",
+    "version": "1.62.0",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "pyee<14,>=13",
+      "greenlet<4.0.0,>=3.1.1"
+    ],
+    "yanked": false,
+    "reason": "scrapling[fetchers]==0.4.15 requires playwright>=1.62.0; existing 1.59.0 creates observed resolver failure."
+  },
+  "undeclared_direct_tqdm": {
+    "url": "https://pypi.org/pypi/tqdm/4.70.1/json",
+    "version": "4.70.1",
+    "requires_python": ">=3.8",
+    "yanked": false,
+    "reason": "Actual transcript-context caller import fails in pristine baseline because tqdm is imported at line 27 but undeclared."
+  },
+  "combined_baseline": "langchain==1.3.9 requires langgraph>=1.2.4; baseline pipeline pin==1.2.1 is incompatible. The requested 1.2.12 pin resolves the observed conflict.",
+  "combined_langchain_core": "Crawler alone resolves langchain-core==1.6.6; combined pipeline+crawler pins 1.6.5. Both were tested with real crawler SDKs. No 1.6.6 pin was introduced into source.",
+  "openai_contract": "Version 3.16.1 official README supports chat.completions.create and documents HTTPX2 default transport. Actual OpenAI success/401/429 and actual LangChain chain were exercised through SDK-native mocked HTTP transport; production model/provider/temperature/response handling source unchanged.",
+  "psycopg2": "2.9.13 requires Python >=3.10; repository selected Python 3.11/3.12 satisfy it. Actual native import, Json adapter, pool get/put and fake-connection commit/rollback passed. No DB connections or writes."
+}

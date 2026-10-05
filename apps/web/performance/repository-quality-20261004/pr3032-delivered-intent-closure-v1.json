@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-05T00:11:47.195051+00:00",
+  "before": {
+    "headRefOid": "76afb0634b6710581aa296a9644929313e24b36f",
+    "number": 3032,
+    "state": "OPEN"
+  },
+  "closureExit": 0,
+  "after": {
+    "closedAt": "2026-10-05T00:11:46Z",
+    "headRefOid": "76afb0634b6710581aa296a9644929313e24b36f",
+    "number": 3032,
+    "state": "CLOSED"
+  },
+  "deliveredMain": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+  "implementedRemainingIntent": "PR3135/3136/3137 overseas keyword sanitation and single country filter computation",
+  "preexistingEquivalent": "REST fixed-code/discarded-body failure contract, singleton merge, dialog sizing",
+  "minorLogKeyAndUnusedCatchBindingNotCopied": "existing fixed log and empty fallback are safety-equivalent, not a feature omission",
+  "evidence": [
+    "agents/astra-remaining-pr-intents-20261005/intent-matrix.json",
+    "overseas-query-parent-checks-v1.json",
+    "overseas-query-interactions-v1/raw.json",
+    "live-overseas-query-production-v1/raw.json"
+  ],
+  "branchDeleted": false,
+  "noPerformanceGainClaim": true
+}

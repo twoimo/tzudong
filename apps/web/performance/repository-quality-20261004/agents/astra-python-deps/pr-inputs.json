@@ -1,0 +1,159 @@
+{
+  "captured_at": "2026-10-04T09:58:01.198330+00:00",
+  "baseline": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "prs": [
+    {
+      "number": 3063,
+      "url": "https://github.com/twoimo/tzudong/pull/3063",
+      "state": "open",
+      "merged": false,
+      "base": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "head": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+      "files": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "patch": "@@ -1,3 +1,3 @@\n langgraph==1.2.1\n-langchain-core==1.6.0\n+langchain-core==1.6.5\n pydantic==2.13.4",
+          "head_content": "langgraph==1.2.1\nlangchain-core==1.6.5\npydantic==2.13.4\n",
+          "head_blob_sha": "5cb098346e70b572078eab787ce237169b0311c2",
+          "baseline_content": "langgraph==1.2.1\nlangchain-core==1.6.0\npydantic==2.13.4\n"
+        }
+      ]
+    },
+    {
+      "number": 3060,
+      "url": "https://github.com/twoimo/tzudong/pull/3060",
+      "state": "open",
+      "merged": false,
+      "base": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "head": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+      "files": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "patch": "@@ -1,3 +1,3 @@\n-langgraph==1.2.1\n+langgraph==1.2.12\n langchain-core==1.6.0\n pydantic==2.13.4",
+          "head_content": "langgraph==1.2.12\nlangchain-core==1.6.0\npydantic==2.13.4\n",
+          "head_blob_sha": "3133fc3346ac0e719d7f64ad9200249a3eebeb3b",
+          "baseline_content": "langgraph==1.2.1\nlangchain-core==1.6.0\npydantic==2.13.4\n"
+        }
+      ]
+    },
+    {
+      "number": 2889,
+      "url": "https://github.com/twoimo/tzudong/pull/2889",
+      "state": "open",
+      "merged": false,
+      "base": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "head": "e817c475ee9c38478deab156a36848eba4e8dffc",
+      "files": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "patch": "@@ -1,3 +1,3 @@\n langgraph==1.2.1\n langchain-core==1.6.0\n-pydantic==2.13.4\n+pydantic==2.13.5",
+          "head_content": "langgraph==1.2.1\nlangchain-core==1.6.0\npydantic==2.13.5\n",
+          "head_blob_sha": "ad84e8f44ebe815bdee79135ee4fd861587fc712",
+          "baseline_content": "langgraph==1.2.1\nlangchain-core==1.6.0\npydantic==2.13.4\n"
+        }
+      ]
+    },
+    {
+      "number": 2971,
+      "url": "https://github.com/twoimo/tzudong/pull/2971",
+      "state": "open",
+      "merged": false,
+      "base": "fd96ed917e91c07ff6d913af949512f7a1a1c014",
+      "head": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+      "files": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "patch": "@@ -2,7 +2,7 @@ google-api-python-client==2.196.0\n python-dotenv==1.2.3\n yt-dlp[default]==2026.7.4\n pyyaml==6.0.3\n-openai==3.3.1\n+openai==3.16.1\n requests==2.34.2\n langchain==1.3.9\n langchain-community==0.4.2",
+          "head_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.16.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n",
+          "head_blob_sha": "e9368f492b72c7506f276a56ae71a6c1233cdeed",
+          "baseline_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n"
+        }
+      ]
+    },
+    {
+      "number": 2896,
+      "url": "https://github.com/twoimo/tzudong/pull/2896",
+      "state": "open",
+      "merged": false,
+      "base": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "head": "833ddd699e73f95bf84b2b80975fea1783998333",
+      "files": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "patch": "@@ -1,4 +1,4 @@\n-google-api-python-client==2.196.0\n+google-api-python-client==2.200.0\n python-dotenv==1.2.3\n yt-dlp[default]==2026.7.4\n pyyaml==6.0.3",
+          "head_content": "google-api-python-client==2.200.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n",
+          "head_blob_sha": "0642acd7ca0d315d82d2f087586a674b124482df",
+          "baseline_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n"
+        }
+      ]
+    },
+    {
+      "number": 2894,
+      "url": "https://github.com/twoimo/tzudong/pull/2894",
+      "state": "open",
+      "merged": false,
+      "base": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "head": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+      "files": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "patch": "@@ -9,6 +9,6 @@ langchain-community==0.4.2\n langchain-ollama==1.1.0\n langchain-openai==1.6.0\n supabase==2.30.0\n-curl_cffi==0.15.0\n+curl_cffi==0.16.3\n scrapling[fetchers]==0.4.8\n playwright==1.59.0",
+          "head_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.16.3\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n",
+          "head_blob_sha": "03f304e58d4b060e27370fa642a3d429a0acbe92",
+          "baseline_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n"
+        }
+      ]
+    },
+    {
+      "number": 2888,
+      "url": "https://github.com/twoimo/tzudong/pull/2888",
+      "state": "open",
+      "merged": false,
+      "base": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "head": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+      "files": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "patch": "@@ -10,5 +10,5 @@ langchain-ollama==1.1.0\n langchain-openai==1.6.0\n supabase==2.30.0\n curl_cffi==0.15.0\n-scrapling[fetchers]==0.4.8\n+scrapling[fetchers]==0.4.15\n playwright==1.59.0",
+          "head_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.15\nplaywright==1.59.0\n",
+          "head_blob_sha": "5cd4f670f626bb9d3e6d8f8b3e2e5ef91a48ebdc",
+          "baseline_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n"
+        }
+      ]
+    },
+    {
+      "number": 2850,
+      "url": "https://github.com/twoimo/tzudong/pull/2850",
+      "state": "open",
+      "merged": false,
+      "base": "f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f",
+      "head": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+      "files": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "patch": "@@ -1,6 +1,6 @@\n google-api-python-client==2.196.0\n python-dotenv==1.2.3\n-yt-dlp[default]==2026.7.4\n+yt-dlp[default]==2026.8.19\n pyyaml==6.0.3\n openai==3.3.1\n requests==2.34.2",
+          "head_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.8.19\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n",
+          "head_blob_sha": "03ca6f78917f53a1ef790a567351a2192d2dcb67",
+          "baseline_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n"
+        }
+      ]
+    },
+    {
+      "number": 2906,
+      "url": "https://github.com/twoimo/tzudong/pull/2906",
+      "state": "open",
+      "merged": false,
+      "base": "e5bfd74eda0050c93b9370187d5e4be84bed24e6",
+      "head": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+      "files": [
+        {
+          "path": "backend/pipeline-control/requirements.txt",
+          "patch": "@@ -1,5 +1,5 @@\n kafka-python==3.0.11\n-psycopg2-binary==2.9.11\n+psycopg2-binary==2.9.13\n opentelemetry-api==1.44.0\n opentelemetry-sdk==1.44.0\n opentelemetry-exporter-otlp-proto-http==1.44.0",
+          "head_content": "kafka-python==3.0.11\npsycopg2-binary==2.9.13\nopentelemetry-api==1.44.0\nopentelemetry-sdk==1.44.0\nopentelemetry-exporter-otlp-proto-http==1.44.0\n",
+          "head_blob_sha": "261350685ec082b46522123205b14f69e832aa9b",
+          "baseline_content": "kafka-python==3.0.11\npsycopg2-binary==2.9.11\nopentelemetry-api==1.44.0\nopentelemetry-sdk==1.44.0\nopentelemetry-exporter-otlp-proto-http==1.44.0\n"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,842 @@
+[
+  {
+    "path": ".kiro/specs/admin-console-sidebar-refactor/tasks.md",
+    "historical_blob": "f4ac125e9b9f445281c9126b57cd937c54cca22d",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/admin/banners/page.tsx",
+    "historical_blob": "5b9abdef49711f32155b7677427b407f7e59ca20",
+    "authority_blob": "e1259f314590992177cad7a3cf13625ac0b8a38c",
+    "active_owner_committed_blob": "9e191c2be5a71126d4d0ffe516c1fefa205cd1eb",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/admin/evaluations/page.tsx",
+    "historical_blob": "e1f2d530de806fb498738dfa1653b34931eaa022",
+    "authority_blob": "f4061ba585fe0f71e376f2eb44fd0281166ddb7c",
+    "active_owner_committed_blob": "691b84fee7854115ea967759fd478e0e062b6cc5",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/admin/layout.tsx",
+    "historical_blob": "52a571b46f465b1497f47fd80904a4ecd6712531",
+    "authority_blob": "0b50ce0ad9cf5ae8c620ddd02206782a437456fe",
+    "active_owner_committed_blob": "fd234a6ef76483602ca00935af503a90a38f863a",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/api/admin/preferences/sidebar-order/route.ts",
+    "historical_blob": "d904eb6448d26a21487d32b899cd159b92a27349",
+    "authority_blob": "6696433af4fe73ffe413029d75a96acc7595adfa",
+    "active_owner_committed_blob": "6696433af4fe73ffe413029d75a96acc7595adfa",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/api/admin/system-status/route.ts",
+    "historical_blob": "c8d6f223234bd469bc92dce7a92b4e99fd8ba55b",
+    "authority_blob": "6ab49fa469066a5146f0a588cd30485bacf3d9fa",
+    "active_owner_committed_blob": "6ab49fa469066a5146f0a588cd30485bacf3d9fa",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/api/admin/users/route.ts",
+    "historical_blob": "d29bba12808ea491c76c6ac3f30355394274d3a7",
+    "authority_blob": "77b25e615305f91970768550b0a0adcb2e5d31ba",
+    "active_owner_committed_blob": "77b25e615305f91970768550b0a0adcb2e5d31ba",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/globals.css",
+    "historical_blob": "dc0492cbea6c715db72f61b8c4cc5da26d8d2cba",
+    "authority_blob": "5c964f5a7e3f04f01f978d9dbafce8c808e9f0be",
+    "active_owner_committed_blob": "db30f808de716b3eba2eed1deac53615d6054acb",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminConsoleOverview.tsx",
+    "historical_blob": "3fc9cdd8b248565b81f3be0f91a1e42937745c63",
+    "authority_blob": "f16afde6d9e5a005b084b05a7b73c43845f3b91c",
+    "active_owner_committed_blob": "4270ec2a88c10f72bc8396ef57e2f6c1107dbe7d",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+    "historical_blob": "a40e12a484f5caa64118becebde3c3e22627b89f",
+    "authority_blob": "23d7d48bc0294308308687f1db0d35e5a56416ff",
+    "active_owner_committed_blob": "e79ff53d2df50d3c24879c89bffd82f5335d48c4",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+    "historical_blob": "0f1e83df55d28086f1513efa4b266db4e0cd255f",
+    "authority_blob": "167e5a9afe224228d5cc729a6d6cf02f72597843",
+    "active_owner_committed_blob": "b2076683ee40774f36a827da41d9ed8e4ce09a48",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+    "historical_blob": "a2d8af740ee6bfe3256d77b9f4178aeb5bfbfffd",
+    "authority_blob": "7356a24ae31578f63fd2d46f0c8d702340867f45",
+    "active_owner_committed_blob": "f02947727bc8bd7b932fd7d9ce0e49a346c9fb6a",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+    "historical_blob": "c5f7895f5f34b8aec01a26d21be7ee4ffd75e34b",
+    "authority_blob": "11f25ea916147bf6f084a9ba110515543386000a",
+    "active_owner_committed_blob": "da6193f9a0a5e73105e37787775a632062a7c809",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminAuditEventsPanel.tsx",
+    "historical_blob": "797d5705ced78b2ea371ac945aeeb5bab907359d",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminConsoleModuleCompleteness.tsx",
+    "historical_blob": "d8a308400a04533b768cc23e32dbe7379fe2eff3",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminConsoleModuleGrid.tsx",
+    "historical_blob": "5e3be16bf834a868dcad48e3289a4e2fbfbcc5e3",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminConsoleModuleSkeleton.tsx",
+    "historical_blob": "fa786897c871ba54cb25998d880666953cecf44d",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminConsoleOverviewVisualizations.tsx",
+    "historical_blob": "d2f8e6db18b0790776a86d3320c395e824dff731",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminConsoleSidebarOrderEditor.tsx",
+    "historical_blob": "7347b6d7e64ca168e393a336264df2492226a522",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminInsightsVisualizations.tsx",
+    "historical_blob": "fbf3623bee843ebfe680f13392ab6aae32c77c45",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/AdminOpsAssistPanel.tsx",
+    "historical_blob": "01e965bc8003fe694b46ddffc4acb95121e60871",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/RiskyWorkProcedureSteps.tsx",
+    "historical_blob": "f98511fd9873e631c8a909ee7af871a18a364ccc",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/console/module-panel-registry.tsx",
+    "historical_blob": "436b266d3a8bf03c331695e1307b6f59b23be9e1",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+    "historical_blob": "698d940ba161c093ebcad99ee2aabfd78dfd0533",
+    "authority_blob": "d3605db7cb9392ceccf6a3da83f4bf5c3f061e11",
+    "active_owner_committed_blob": "70e63c46d1755045b3f442361b274cf843a5b088",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/viz/ActivityHeatmap.tsx",
+    "historical_blob": "937405116ec453d810b1caf50a35b62c603aff1c",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/BulletBar.tsx",
+    "historical_blob": "e87ebd673c069538676fa196533739a49271d8d6",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/CompactSparklineRow.tsx",
+    "historical_blob": "c3b2efe31657531fc2c97de8b28ad6b323c3b75b",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/ConsoleCardMetaRow.tsx",
+    "historical_blob": "13923b2096ef1150d3e176368612a7288c380270",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/ConsoleVizCard.tsx",
+    "historical_blob": "bb7994b88f7609909fbf1ed51374a9cc6006863f",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/ConsoleVizSummary.tsx",
+    "historical_blob": "cb3f9d32e41e7577b25a9fe610f2c6fd659678ff",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/KpiSparklineCard.tsx",
+    "historical_blob": "ce35f1bdeed1f86b6b7cb1575e8eb53b3da3f893",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/RangeBandArea.tsx",
+    "historical_blob": "b20d25a720c7b57282271c293f728e804b1df1cf",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/SemicircleGaugeArc.tsx",
+    "historical_blob": "fd157fc4e15daf37d7a5a97690aded85018e12f0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/StageFunnel.tsx",
+    "historical_blob": "7774fe98ef87fa58ce5c75b7ffe3829cf481b1d4",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/ToneStackedBar.tsx",
+    "historical_blob": "42206ae12cecee6a2f3535dc4b0c33aabe7db247",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/TreemapTile.tsx",
+    "historical_blob": "de15ab94585a144e8afe1bf58f6da28ca6a687ee",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/WaterfallDeltaStep.tsx",
+    "historical_blob": "450c2e5249b87c8ad34acd567035b082980df01c",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/console-viz-forms.tsx",
+    "historical_blob": "6ed648ee7f5bee00d7a99e882f4c1bc2b2490221",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/use-viz-value-hint.ts",
+    "historical_blob": "91dcd6adf67cd88a951e1806a09923ba95911894",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/viz-form-props.ts",
+    "historical_blob": "b46fa52529dbf97635e9a0e0b043295ec4369ad5",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/viz/viz-paint.ts",
+    "historical_blob": "f111797acbafcd7032579d80665de8906ac3fe8e",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/hooks/use-console-tone-scale.ts",
+    "historical_blob": "96c619c18d62b1084dfb53df69607f1a9e7e9b71",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/admin-api-status.ts",
+    "historical_blob": "ee0bc70754b6ac1cbbe68e6af5ddc40223b10038",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/admin-audit-events.ts",
+    "historical_blob": "de7fc320315894c00eb8671d1f0cba9487afbd14",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/admin-client-error.ts",
+    "historical_blob": "d8cbec9719d6cd5c67bcb52b9adba0c6761f8a19",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/admin-json.ts",
+    "historical_blob": "8311adf19cf95a0ee0415b12ae5758f466734425",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/admin-theme-prelude.ts",
+    "historical_blob": "d8c1cf25abc3fe9e29c8595b91fe19cc80b7ccc9",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/admin-user-display.ts",
+    "historical_blob": "b399c703f471077da7ea5ae680013e6d34a102fe",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/console-module-state.ts",
+    "historical_blob": "070f4427a1aca3f8f9860d68139cec0fdaf07129",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/console-tone-scale.ts",
+    "historical_blob": "b050e591969e3cc71fa1dcc2ec2cf5bcb8d94ce6",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/console-viz-state.ts",
+    "historical_blob": "950d27bcbb895ff9ee593fb36e848112dd6c64db",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/risky-work-procedure.ts",
+    "historical_blob": "df10552322e8a55774bffd5f741cb8c3dbc36cbf",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/sidebar-order-session.ts",
+    "historical_blob": "70c73be7efeeacd6028ec595155210b28bb0cfa2",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-evidence-guard.test.ts",
+    "historical_blob": "18a2074396ce884c4b0826b5b4d4bd3a7607cfdf",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-guardrail-source.test.ts",
+    "historical_blob": "6b55b61d98bb075ad135d4a051141f89bd74bb54",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-menu-registry.test.ts",
+    "historical_blob": "46e5062aba02117d021034791f76fdfd3898dcd0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-module-grid.test.ts",
+    "historical_blob": "4adcf8761148bf55f7d60b862ffefc4c4da45dcf",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-module-panel-source.test.ts",
+    "historical_blob": "2e28318194f01d1b7b16cb3182d51337d3212aea",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-module-state.test.ts",
+    "historical_blob": "c51f7a1167343bd5929c919a7daf35f3c0b8cc04",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-theme-prelude-source.test.ts",
+    "historical_blob": "e3ac04b1b258b78008ed2c3e9f1058a68286fd72",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+    "historical_blob": "d692dbef40be306f58846992204a51a5a2391093",
+    "authority_blob": "9e057d3c477541b37570624d4f2bfdc85eba1d8a",
+    "active_owner_committed_blob": "c825ac1385a0c649f0d2ceeee7b2a88485c422dc",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-viz-source.test.ts",
+    "historical_blob": "148100df5028a7efab666ee50a88bc7a51b0b645",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-viz-state.test.ts",
+    "historical_blob": "ee644e0e3577e19cd3f00770f36bc9d6a9edd88a",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+    "historical_blob": "eafbbec4673ea96ddb6257faa49ca110c7f6555a",
+    "authority_blob": "7fd4e29da2b6110e3ee7eaf725ceea1bd2450ad9",
+    "active_owner_committed_blob": "6049b6560982a9fbff83fe8de9f3d7e8845c74cd",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-map-overlays-ia-contract.test.ts",
+    "historical_blob": "e326146a52d35257368fd76a75fbb0915ce0d787",
+    "authority_blob": "2a25de13ff22de19bd18b9d27d20445d73a5bdb3",
+    "active_owner_committed_blob": "2a25de13ff22de19bd18b9d27d20445d73a5bdb3",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-pipeline-control.test.ts",
+    "historical_blob": "9b4f40e0d3656c580bbb2e65373cb9e314a1cae8",
+    "authority_blob": "71a95b16f2ac81675595fea12e4b18a82467cdf7",
+    "active_owner_committed_blob": "3e0e2f957d613936b241b8d073841c51b20a3b11",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+    "historical_blob": "0ef9cc7062e07f0f12bd703c6044271bdb577e68",
+    "authority_blob": "50b34f8254c2f5388243e4c2c255fb90d71a5fd2",
+    "active_owner_committed_blob": "a0aca98fcd39cc85481289a63784e55be6646554",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-storyboard-canvas-shell.test.ts",
+    "historical_blob": "efa42e4aeee81c9dcdad81825331d3d06f134647",
+    "authority_blob": "8c15837ee22af4ce750c1485bef853d1aa892831",
+    "active_owner_committed_blob": "ca2675451839261e676910ae265aa1c337e7e920",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-storyboard-generator.test.ts",
+    "historical_blob": "8fd95e6bc008bcdc8e6935785b4e20fe6fae8e9a",
+    "authority_blob": "17635c1cc385f74ab9948ea4b8147f12e17366e6",
+    "active_owner_committed_blob": "74ccef1c15acb6108e26a7932b0e602da5ced680",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-user-management-source.test.ts",
+    "historical_blob": "67afd90449f74b756d533be6802e5a00ee477461",
+    "authority_blob": "683af53780ce4fd35c54411b32da8584ecb4f9d6",
+    "active_owner_committed_blob": "e90902d179d4af6a3e1fbcf319e9359739569675",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/design-contract-source.test.ts",
+    "historical_blob": "affeae19520c8b71c00b8fc6545486e9ffc599cf",
+    "authority_blob": "e717b5765af301d5a59c3ac169c85ff976d681b5",
+    "active_owner_committed_blob": "51fcdb1f0f130764dac7912994d94a0fc4b4deda",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/frontend-unused-route-compatibility.test.ts",
+    "historical_blob": "864d6800817d51e6aa8e6e4f02559d9244cfccd1",
+    "authority_blob": "a11c2567bfab089225568e9db640fd6689fa890f",
+    "active_owner_committed_blob": "a11c2567bfab089225568e9db640fd6689fa890f",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+    "historical_blob": "ae6c4f2b673410eb3cc0fe715d9ff7e2903b4134",
+    "authority_blob": "827d34fff5d3a57ca1453262ae103078f7f25aa4",
+    "active_owner_committed_blob": "404343a0b21fa11433c5cdb9eccdab12b57b7aa9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+    "historical_blob": "6055f4400e2c455f29169f5db4f3bf2bf1e10229",
+    "authority_blob": "d2920aa5112b3524f8545e1cb30b5587b3f5aa80",
+    "active_owner_committed_blob": "2c773d4f1920f9e25fcf868b27f756e2d711d411",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/preference-trend-request-security.test.ts",
+    "historical_blob": "39febcb67f1472f3d1e0d2304316919658db2115",
+    "authority_blob": "078632decb94f69d69ef44d1b0d7f58eb931c48f",
+    "active_owner_committed_blob": "078632decb94f69d69ef44d1b0d7f58eb931c48f",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/privacy-incident-workflow.test.ts",
+    "historical_blob": "80a3d08f00609f665f0c994bbbd277a643f6b8fe",
+    "authority_blob": "10ca2b3e885624bfad6cfe19962ec60caa95858a",
+    "active_owner_committed_blob": "10ca2b3e885624bfad6cfe19962ec60caa95858a",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-console-keyboard.spec.ts",
+    "historical_blob": "80cfc6cb8811676acf80a5db43502827bed61e05",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-console-module-grid.spec.ts",
+    "historical_blob": "d934ea603f44006474947479225fda32d2800e87",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-console-module-hydration.spec.ts",
+    "historical_blob": "3722cf4e5028aaa83d7614f5707975ff5637178b",
+    "authority_blob": "eb44328c5a512be71fba9902586f02fa0cba8f5c",
+    "active_owner_committed_blob": "eb44328c5a512be71fba9902586f02fa0cba8f5c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-console-responsive.spec.ts",
+    "historical_blob": "01efb994426bbe7ad12d2aa39203e784a6988915",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-console-sidebar-ia.spec.ts",
+    "historical_blob": "2f66114f0707fda2f43e730ddd345ff15d20f65e",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-console-tone-parity.spec.ts",
+    "historical_blob": "540315d0a7bc6ae3512d977bc10dabd771990996",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/helpers/admin-console-e2e.ts",
+    "historical_blob": "b36f66702cd2c0480325b7a6bd9fedc99eb53388",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/helpers/evidence-guard.ts",
+    "historical_blob": "f1727e451123c38f21fb8faf4d04e32adb76e5f0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  }
+]

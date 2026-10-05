@@ -1,0 +1,32 @@
+{
+  "job_id": 103781384164,
+  "retrieved": true,
+  "advisories": [
+    "GHSA-2883-xcg3-v3hh",
+    "GHSA-2jg2-4ch7-h545",
+    "GHSA-2xp9-vwfh-vxw4",
+    "GHSA-g89c-p67h-r497",
+    "GHSA-jrc7-96c5-q579",
+    "GHSA-p293-qw3h-jr36",
+    "GHSA-rgj7-g3m4-5g8c"
+  ],
+  "npm_package_ranges": [
+    {
+      "package_range": "js-yaml  4.0.0 - 4.3.1",
+      "severity": "high"
+    },
+    {
+      "package_range": "maplibre-gl  <=6.4.0",
+      "severity": "critical"
+    },
+    {
+      "package_range": "sharp  <0.35.4",
+      "severity": "high"
+    }
+  ],
+  "pip_vulnerabilities": [],
+  "audit_finding_count": [
+    "4 vulnerabilities (2 high, 2 critical)"
+  ],
+  "network_error": false
+}

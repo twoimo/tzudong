@@ -1,0 +1,7 @@
+{
+  "status": "failed_before_receipt",
+  "error": "subprocess_exit_assertion",
+  "priorOutputsExist": true,
+  "errorDetailLost": true,
+  "sourceOrInputNotRelaxed": true
+}

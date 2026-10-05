@@ -1,0 +1,20 @@
+{
+  "captured_at": "2026-10-04T11:56:48.702248+00:00",
+  "user_reported_review_thread": "PRRT_kwDOQGRyNc6oxx7W",
+  "review_thread_independently_retrieved": false,
+  "parent_owned_planned_changes": [
+    ".github/workflows/web-admin-ci.yml: Admin lane node-dependency-compatibility.test.mjs using installed backend dependencies and trigger paths",
+    "backend supply-chain tests: Next 16.3.6 expectation",
+    "LocalFunction ledger100",
+    "nightly runbook"
+  ],
+  "historical_agent_ci_ownership": ".github/workflows/security-audit.yml: only the two exact historical action pin lines",
+  "delivery_method": "Apply/review the three-file source-changes.patch; do not restore baseline files or copy whole workflow files over concurrent parent work",
+  "parent_additions_must_be_preserved": true,
+  "source_changes_after_steering": false,
+  "current_checkout_changed_paths": [
+    ".github/workflows/security-audit.yml",
+    "README.ko.md",
+    "README.md"
+  ]
+}

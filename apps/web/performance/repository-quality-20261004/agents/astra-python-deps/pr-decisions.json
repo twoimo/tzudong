@@ -1,0 +1,218 @@
+{
+  "baseline": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "already_applied": 0,
+  "surviving_updates": 9,
+  "discarded_or_remotely_closed": 0,
+  "decisions": [
+    {
+      "number": 3063,
+      "url": "https://github.com/twoimo/tzudong/pull/3063",
+      "head": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+      "path": "backend/pipeline/requirements.txt",
+      "package": "langchain-core",
+      "baseline_version": "1.6.0",
+      "selected_version": "1.6.5",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration",
+        "Investigate three unchanged baseline process cleanup failures; full pipeline test gate remains non-green."
+      ]
+    },
+    {
+      "number": 3060,
+      "url": "https://github.com/twoimo/tzudong/pull/3060",
+      "head": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+      "path": "backend/pipeline/requirements.txt",
+      "package": "langgraph",
+      "baseline_version": "1.2.1",
+      "selected_version": "1.2.12",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration",
+        "Investigate three unchanged baseline process cleanup failures; full pipeline test gate remains non-green."
+      ]
+    },
+    {
+      "number": 2889,
+      "url": "https://github.com/twoimo/tzudong/pull/2889",
+      "head": "e817c475ee9c38478deab156a36848eba4e8dffc",
+      "path": "backend/pipeline/requirements.txt",
+      "package": "pydantic",
+      "baseline_version": "2.13.4",
+      "selected_version": "2.13.5",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration",
+        "Investigate three unchanged baseline process cleanup failures; full pipeline test gate remains non-green."
+      ]
+    },
+    {
+      "number": 2971,
+      "url": "https://github.com/twoimo/tzudong/pull/2971",
+      "head": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+      "path": "backend/restaurant-crawling/scripts/requirements.txt",
+      "package": "openai",
+      "baseline_version": "3.3.1",
+      "selected_version": "3.16.1",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration"
+      ]
+    },
+    {
+      "number": 2896,
+      "url": "https://github.com/twoimo/tzudong/pull/2896",
+      "head": "833ddd699e73f95bf84b2b80975fea1783998333",
+      "path": "backend/restaurant-crawling/scripts/requirements.txt",
+      "package": "google-api-python-client",
+      "baseline_version": "2.196.0",
+      "selected_version": "2.200.0",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration"
+      ]
+    },
+    {
+      "number": 2894,
+      "url": "https://github.com/twoimo/tzudong/pull/2894",
+      "head": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+      "path": "backend/restaurant-crawling/scripts/requirements.txt",
+      "package": "curl_cffi",
+      "baseline_version": "0.15.0",
+      "selected_version": "0.16.3",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration"
+      ]
+    },
+    {
+      "number": 2888,
+      "url": "https://github.com/twoimo/tzudong/pull/2888",
+      "head": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+      "path": "backend/restaurant-crawling/scripts/requirements.txt",
+      "package": "scrapling[fetchers]",
+      "baseline_version": "0.4.8",
+      "selected_version": "0.4.15",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": "playwright==1.62.0 required by scrapling fetchers",
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration"
+      ]
+    },
+    {
+      "number": 2850,
+      "url": "https://github.com/twoimo/tzudong/pull/2850",
+      "head": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+      "path": "backend/restaurant-crawling/scripts/requirements.txt",
+      "package": "yt-dlp[default]",
+      "baseline_version": "2026.7.4",
+      "selected_version": "2026.8.19",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration"
+      ]
+    },
+    {
+      "number": 2906,
+      "url": "https://github.com/twoimo/tzudong/pull/2906",
+      "head": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+      "path": "backend/pipeline-control/requirements.txt",
+      "package": "psycopg2-binary",
+      "baseline_version": "2.9.11",
+      "selected_version": "2.9.13",
+      "already_applied_at_baseline": false,
+      "applied_once": true,
+      "decision": "locally_integrated_pending_parent_promotion",
+      "evidence": {
+        "actual_pr_diff_and_head": "pr-inputs.json",
+        "final_manifest": "final-source-state.json",
+        "tests": "test-results.json",
+        "resolver_and_audit": "verification.json"
+      },
+      "additional_requirement": null,
+      "remaining_work": [
+        "parent source review and commit/push/protected promotion",
+        "parent remote PR disposition after integration"
+      ]
+    }
+  ]
+}

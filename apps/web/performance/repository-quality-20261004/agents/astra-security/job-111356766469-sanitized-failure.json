@@ -1,0 +1,17 @@
+{
+  "job_id": 111356766469,
+  "retrieved": true,
+  "test_failures": [
+    {
+      "test": "test_manifest_is_reproducible_from_current_candidate_blobs",
+      "class": "backend.utils.tests.test_platform_modernization_reconciliation.PlatformModernizationReconciliationTests.test_manifest_is_reproducible_from_current_candidate_blobs"
+    }
+  ],
+  "source_frames": [
+    {
+      "path": "backend/utils/tests/test_platform_modernization_reconciliation.py",
+      "line": 221
+    }
+  ],
+  "bounded_codes": []
+}

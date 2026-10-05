@@ -1,0 +1,11 @@
+{
+  "recordedAt": "2026-10-05T00:39:47.728145+00:00",
+  "artifactRoot": "apps/web/performance/repository-quality-20261004",
+  "artifactMap": "artifact-map-execution-20261005-v1.json",
+  "artifactMapSha256": "a1f21380d737ab52c52e853ee12ba2b275c4400a1552245387a8488c07c5b83d",
+  "sourceMain": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+  "sourceTree": "485efd73556420c7f604db4afdd126a33bf45644",
+  "scope": "current execution evidence snapshot; entire long goal remains incomplete",
+  "pinOutsideArtifactRoot": true,
+  "report": "REPORT-20261005-v2.md"
+}

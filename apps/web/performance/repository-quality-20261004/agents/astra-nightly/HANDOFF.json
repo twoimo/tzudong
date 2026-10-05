@@ -1,0 +1,74 @@
+{
+  "captured_at": "2026-10-04T09:15:18.361178+00:00",
+  "status": "scoped_implementation_ready_for_parent_review_builder_scope_extension_required",
+  "worktree": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+  "branch": "codex/nightly-quality-20261004",
+  "base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "session": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verified_before_implementation": true
+  },
+  "changed_paths": [
+    "backend/supabase/scripts/local-migrate.py",
+    ".github/scripts/verify-nightly-local-publication.py",
+    "backend/supabase/tests/test_local_publication_verifier.py",
+    "backend/supabase/tests/test_local_seed_receipt_contract.py",
+    "backend/supabase/tests/test_local_replay_contract.py"
+  ],
+  "latest_per_suite_aggregate": {
+    "unique_tests": 88,
+    "passed": 86,
+    "failed_cases": 2,
+    "skipped": 0,
+    "composition": "publication 38/40; seed receipt 21/21 on final rerun; replay+migration 27/27 from related suite; no passing suite repeated without changes."
+  },
+  "reproduced_errors": [
+    "100 != 99",
+    "receipt_ledger_state"
+  ],
+  "source_count_pin": {
+    "canonical": 100,
+    "local_migrate": 100,
+    "publication_verifier": 100,
+    "publication_builder_unmodified": 99
+  },
+  "remaining_source_blocker": {
+    "path": ".github/scripts/build-nightly-local-publication.py",
+    "line": 20,
+    "proposed_change": "EXPECTED_LEDGER_UNITS = 99 -> 100",
+    "review_patch": "proposed-builder-scope-extension.patch",
+    "authority_gap": "User source write scope lists local-migrate.py, verify-nightly-local-publication.py and focused tests/workflow, but excludes this builder. It was not modified or monkeypatched to force a pass.",
+    "failed_cases": [
+      "test_builder_omits_private_rows_and_preserves_full_replay_proofs",
+      "test_publication_uses_the_current_100_unit_manifest"
+    ]
+  },
+  "remaining_operational_prerequisites": [
+    "Parent approval or parent application of the one-line builder pin correction, then rerun the full publication-verifier module.",
+    "Parent review before any commit/push.",
+    "After protected develop -> data -> main promotion, a new canonical all-suite nightly and genuine readback are required to close issue #2843; this local fix does not prove the remaining runtime lanes or publication work."
+  ],
+  "preserved": {
+    "canonical_migration_chain_sha256": "97bece6f9e28a7f231477aeaba9631e549ee8a25c63ab6ea6492629de95dd27f",
+    "migration_bytes_unchanged": true,
+    "workflow_unchanged": true,
+    "layout_and_manifest_worker_files": [
+      ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+      "backend/bin/tests/test_check_layout_manifest_unittest.py",
+      "backend/layout-manifest.v1.json",
+      "backend/utils/tests/test_layout_naming_source_recovery.py"
+    ],
+    "runtime_custody_and_full_replay_verification_unchanged": true
+  },
+  "actions_not_performed": [
+    "DB provisioning or hosted/local database writes",
+    "Docker volume/settings/process changes",
+    "Operator secret creation or substitution",
+    "Real publication/receipt creation",
+    "Commit/push/workflow dispatch",
+    "Web/auth/review or layout/dependency source changes"
+  ],
+  "fixture_boundary": "Tests use existing temporary synthetic inputs, not publication evidence. The comparator test now isolates only runtime binding and environment digest, while validating actual tracked source hashes and rejecting changed environment/ledger evidence."
+}

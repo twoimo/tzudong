@@ -1,0 +1,23 @@
+{
+  "status": "verified",
+  "sourceSHA": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "run": 37238858201,
+  "runSuccess": true,
+  "uploadedCurrentMainCategories": [
+    "/language:actions",
+    "/language:go",
+    "/language:javascript-typescript",
+    "/language:python",
+    "/language:rust",
+    "/language:swift"
+  ],
+  "allSixUploaded": true,
+  "errorsInCurrentMainAnalyses": 0,
+  "previousHarnessAssertionCorrection": "Setup Upload Results environment omits language; category and actual run jobs provide language binding. Earlier metadata is retained unchanged.",
+  "savedConfigIncludesSwift": true,
+  "preservedQueryRunnerThreat": {
+    "query_suite": "default",
+    "runner_type": "standard",
+    "threat_model": "remote"
+  }
+}

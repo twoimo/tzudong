@@ -1,0 +1,402 @@
+{
+  "captured_at": "2026-10-04T08:37:43.639953+00:00",
+  "issue": 2843,
+  "comments_count": 37,
+  "comments_pages": 1,
+  "incident_records": [
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843",
+      "created_at": "2026-08-28T02:17:01Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33135404626",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5459617300",
+      "created_at": "2026-08-29T01:50:40Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33227425512",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5464877010",
+      "created_at": "2026-08-29T21:04:55Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33275104626",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5471345261",
+      "created_at": "2026-08-30T21:24:07Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33336297679",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5485908349",
+      "created_at": "2026-08-31T22:59:15Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33448646429",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5500522407",
+      "created_at": "2026-09-01T21:14:07Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33559843289",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5516486528",
+      "created_at": "2026-09-02T21:12:54Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33683784021",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5532226643",
+      "created_at": "2026-09-03T21:14:35Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33806798468",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5546356357",
+      "created_at": "2026-09-04T20:56:37Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33918669720",
+      "commit_sha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5554617816",
+      "created_at": "2026-09-05T20:36:20Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/33990571514",
+      "commit_sha": "eddef9a456ce0225c27cc203b9c434624234ee3f",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5562034309",
+      "created_at": "2026-09-06T20:41:08Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34058713580",
+      "commit_sha": "535ff5e27c2e7c27f385e862a824a58d0cc30b92",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5575896818",
+      "created_at": "2026-09-07T21:43:09Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34164088883",
+      "commit_sha": "535ff5e27c2e7c27f385e862a824a58d0cc30b92",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5592024129",
+      "created_at": "2026-09-08T21:20:12Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34279929596",
+      "commit_sha": "535ff5e27c2e7c27f385e862a824a58d0cc30b92",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5608773312",
+      "created_at": "2026-09-09T21:08:30Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34404859540",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5625460078",
+      "created_at": "2026-09-10T21:08:19Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34530133882",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5640702686",
+      "created_at": "2026-09-11T21:12:59Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34647956256",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5648616175",
+      "created_at": "2026-09-12T20:51:46Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34718146017",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5656141483",
+      "created_at": "2026-09-13T21:06:19Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34782599330",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5671399728",
+      "created_at": "2026-09-14T22:00:24Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/34901581074",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5688487946",
+      "created_at": "2026-09-15T21:42:09Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35026761955",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5704896095",
+      "created_at": "2026-09-16T21:36:23Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35152977158",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5721606781",
+      "created_at": "2026-09-17T21:40:05Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35277623859",
+      "commit_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5736234089",
+      "created_at": "2026-09-18T21:11:01Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35395123271",
+      "commit_sha": "95c827077f4fbb74cc6bf2522c8b235cd337198c",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5745255233",
+      "created_at": "2026-09-19T20:58:16Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35468824004",
+      "commit_sha": "95c827077f4fbb74cc6bf2522c8b235cd337198c",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5752640407",
+      "created_at": "2026-09-20T21:02:58Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35537261663",
+      "commit_sha": "95c827077f4fbb74cc6bf2522c8b235cd337198c",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5768195499",
+      "created_at": "2026-09-21T22:08:13Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35660995006",
+      "commit_sha": "e97e5ba2d7e9e0df4b85e51de429a6f78f1b33f4",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5784551784",
+      "created_at": "2026-09-22T21:35:04Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35787426346",
+      "commit_sha": "febabd53244d531723bf553bf32f01e790059976",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5803418781",
+      "created_at": "2026-09-23T21:41:08Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/35923863268",
+      "commit_sha": "febabd53244d531723bf553bf32f01e790059976",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5822734897",
+      "created_at": "2026-09-24T21:42:48Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36063096576",
+      "commit_sha": "255309357342dc8963b00cf2767379c21ef5fdf0",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5840102247",
+      "created_at": "2026-09-25T21:45:54Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36193204458",
+      "commit_sha": "255309357342dc8963b00cf2767379c21ef5fdf0",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5850014541",
+      "created_at": "2026-09-26T21:24:35Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36272770661",
+      "commit_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5860007836",
+      "created_at": "2026-09-27T21:31:47Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36352017018",
+      "commit_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5880611787",
+      "created_at": "2026-09-28T23:27:47Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36497992086",
+      "commit_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5900348255",
+      "created_at": "2026-09-29T22:31:44Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36639998596",
+      "commit_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5920839686",
+      "created_at": "2026-09-30T22:29:47Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36785794910",
+      "commit_sha": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5942243365",
+      "created_at": "2026-10-01T22:51:04Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/36937395804",
+      "commit_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5962463953",
+      "created_at": "2026-10-02T22:27:56Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/37072559593",
+      "commit_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    },
+    {
+      "url": "https://github.com/twoimo/tzudong/issues/2843#issuecomment-5973741769",
+      "created_at": "2026-10-03T21:39:32Z",
+      "run_url": "https://github.com/twoimo/tzudong/actions/runs/37155813334",
+      "commit_sha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+      "unit_outcome": "skipped",
+      "e2e_outcome": "skipped",
+      "cleanup_outcome": "success"
+    }
+  ],
+  "latest_five_workflow_runs": [
+    {
+      "id": 37155813334,
+      "name": "Nightly · main",
+      "head_sha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-03T21:38:30Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/37155813334"
+    },
+    {
+      "id": 37072559593,
+      "name": "Nightly · main",
+      "head_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-02T22:27:10Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/37072559593"
+    },
+    {
+      "id": 36937395804,
+      "name": "Nightly · main",
+      "head_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-01T22:50:01Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/36937395804"
+    },
+    {
+      "id": 36785794910,
+      "name": "Nightly · main",
+      "head_sha": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-09-30T22:28:43Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/36785794910"
+    },
+    {
+      "id": 36639998596,
+      "name": "Nightly · main",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-09-29T22:30:43Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/36639998596"
+    }
+  ]
+}

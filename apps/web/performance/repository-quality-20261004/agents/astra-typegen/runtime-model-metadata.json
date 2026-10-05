@@ -1,0 +1,84 @@
+{
+  "node": {
+    "path": "/opt/homebrew/opt/node@24/bin/node",
+    "realpath": "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+    "version": "v24.21.0"
+  },
+  "bun": {
+    "path": "/Users/twoimo/.bun/bin/bun",
+    "version": "1.4.0"
+  },
+  "packages": {
+    "@typescript/native": {
+      "name": "typescript",
+      "version": "7.0.2",
+      "manifest": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules/@typescript/native/package.json",
+      "manifest_sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+    },
+    "@typescript/old": {
+      "name": "typescript",
+      "version": "6.0.2",
+      "manifest": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules/@typescript/old/package.json",
+      "manifest_sha256": "bb6ee7e709ae60426e30b8d393df4d939ee61407794b4f053ce6338d6eaa8c63"
+    },
+    "typescript": {
+      "name": "@typescript/typescript6",
+      "version": "6.0.2",
+      "manifest": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules/typescript/package.json",
+      "manifest_sha256": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+    },
+    "typescript-eslint": {
+      "name": "typescript-eslint",
+      "version": "8.63.0",
+      "manifest": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules/typescript-eslint/package.json",
+      "manifest_sha256": "bcaa4b73507ada8ee7500fae979838e0d83f447e30527bb6051adb02c9f8fffd"
+    },
+    "supabase": {
+      "name": "supabase",
+      "version": "2.115.0",
+      "manifest": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules/supabase/package.json",
+      "manifest_sha256": "bb800893c95c85e1ff4a0fbc4c2b8757ae2d5346141c2c8dadb8922f0405b664"
+    },
+    "@supabase/cli-darwin-arm64": {
+      "name": "@supabase/cli-darwin-arm64",
+      "version": "2.115.0",
+      "manifest": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules/@supabase/cli-darwin-arm64/package.json",
+      "manifest_sha256": "3cf2085a2be279354e487065171033d88b7e29753a946e94dd6e92b84f8f90df"
+    }
+  },
+  "toolchain_verifier": {
+    "exit_code": 1,
+    "fixed_codes": [
+      "TOOLCHAIN_RECEIPT_PATH_INVALID"
+    ],
+    "source_modules_realpath": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules"
+  },
+  "models": [
+    {
+      "session": {
+        "id": "01a106b8-3422-7be2-9aa8-61cbf79aa098",
+        "model_provider": "openai",
+        "cli_version": "0.160.0"
+      },
+      "latest_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "turn_id": "01a106b8-3461-79d1-8786-48cd13ef12a7"
+      },
+      "evidence": "persisted_session_metadata_not_wire_capture"
+    },
+    {
+      "session": {
+        "id": "01a106b8-3422-7be2-9aa8-61cbf79aa098",
+        "model_provider": "openai",
+        "cli_version": "0.160.0"
+      },
+      "latest_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "turn_id": "01a106bb-fc13-7f00-ac6b-d299730019f2"
+      },
+      "evidence": "persisted_session_metadata_not_wire_capture"
+    }
+  ]
+}

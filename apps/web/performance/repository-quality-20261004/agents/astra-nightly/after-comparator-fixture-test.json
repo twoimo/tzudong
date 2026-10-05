@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-10-04T09:12:24.536564+00:00",
+  "test": "backend.supabase.tests.test_local_seed_receipt_contract.LocalSeedReceiptContractTests.test_two_reset_comparator_compares_ordered_ledger_and_digests",
+  "tests_run": 1,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "elapsed_seconds": 26.865,
+  "events": [],
+  "runtime_env_fixture": "Only binding and environment digest mocked; no operator secrets or real runtime state. Tracked source hashes and receipt comparator execute unchanged."
+}

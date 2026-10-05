@@ -1,0 +1,461 @@
+{
+  "captured_at": "2026-10-04T08:36:37.767164+00:00",
+  "patch_equivalence": [
+    {
+      "number": 3031,
+      "head_sha": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+      "compared_to": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "equivalent_patches": 0,
+      "unique_patches": 4
+    },
+    {
+      "number": 3032,
+      "head_sha": "76afb0634b6710581aa296a9644929313e24b36f",
+      "compared_to": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "equivalent_patches": 0,
+      "unique_patches": 2
+    },
+    {
+      "number": 2908,
+      "head_sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+      "compared_to": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "equivalent_patches": 30,
+      "unique_patches": 2,
+      "unique_commits": [
+        {
+          "sha": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+          "title": "feat(admin): adopt semiotic KPI dashboard, trend momentum, and evaluation review",
+          "paths": [
+            ".github/scripts/build-nightly-local-publication.py",
+            ".github/scripts/verify-nightly-local-publication.py",
+            ".nvmrc",
+            "apps/web/app/admin/banners/page.tsx",
+            "apps/web/app/admin/evaluations/page.tsx",
+            "apps/web/app/admin/loading.tsx",
+            "apps/web/app/admin/page.tsx",
+            "apps/web/app/admin/privacy-incidents/page.tsx",
+            "apps/web/app/api/admin/restaurants/[restaurantId]/local-edit/route.ts",
+            "apps/web/app/api/admin/youtube-kpis/route.ts",
+            "apps/web/app/app-globals.css",
+            "apps/web/app/app-runtime-shell.tsx",
+            "apps/web/app/auth/reset-password/loading.tsx",
+            "apps/web/app/auth/reset-password/page.tsx",
+            "apps/web/app/feed/loading.tsx",
+            "apps/web/app/feed/page.tsx",
+            "apps/web/app/global-map/loading.tsx",
+            "apps/web/app/global-map/page.tsx",
+            "apps/web/app/home-client-effects.tsx",
+            "apps/web/app/home-client-loader.tsx",
+            "apps/web/app/home-client.tsx",
+            "apps/web/app/home-runtime-shell.tsx",
+            "apps/web/app/home-supabase-actions.ts",
+            "apps/web/app/insights/insights-client.tsx",
+            "apps/web/app/leaderboard/loading.tsx",
+            "apps/web/app/leaderboard/page.tsx",
+            "apps/web/app/mypage/bookmarks/page.tsx",
+            "apps/web/app/mypage/loading.tsx",
+            "apps/web/app/mypage/my-page-data-region.tsx",
+            "apps/web/app/mypage/mypage-layout-content.tsx",
+            "apps/web/app/mypage/reviews/page.tsx",
+            "apps/web/app/mypage/route-presentation.ts",
+            "apps/web/app/mypage/submissions/edit/page.tsx",
+            "apps/web/app/mypage/submissions/new/page.tsx",
+            "apps/web/app/mypage/submissions/recommend/page.tsx",
+            "apps/web/app/stamp/loading.tsx",
+            "apps/web/app/stamp/page.tsx",
+            "apps/web/app/user/[userId]/loading.tsx",
+            "apps/web/bun.lock",
+            "apps/web/components/admin/AdminConsoleOverview.tsx",
+            "apps/web/components/admin/AdminDataPending.tsx",
+            "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+            "apps/web/components/admin/AdminOverviewDashboard.tsx",
+            "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+            "apps/web/components/admin/AdminReviewPanel.tsx",
+            "apps/web/components/admin/AdminUsersPanel.tsx",
+            "apps/web/components/admin/DashboardDataTable.tsx",
+            "apps/web/components/admin/EditRestaurantModal.tsx",
+            "apps/web/components/admin/EvaluationTableNew.tsx",
+            "apps/web/components/admin/SemioticKpiSparkline.tsx",
+            "apps/web/components/admin/SubmissionListView.tsx",
+            "apps/web/components/admin/TrendProposalQueue.tsx",
+            "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+            "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+            "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx",
+            "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+            "apps/web/components/auth/ResetPasswordProgressiveSkeleton.tsx",
+            "apps/web/components/feed/FeedContent.tsx",
+            "apps/web/components/feed/FeedReadCount.tsx",
+            "apps/web/components/filters/CategoryFilter.tsx",
+            "apps/web/components/home/DesktopLeftPanelMapHome.tsx",
+            "apps/web/components/home/LocalWorkspaceBanner.tsx",
+            "apps/web/components/home/MobileControlOverlay.tsx",
+            "apps/web/components/home/home-control-panel.tsx",
+            "apps/web/components/home/home-desktop-control-panel.tsx",
+            "apps/web/components/home/home-map-container.tsx",
+            "apps/web/components/home/use-overseas-country-counts.ts",
+            "apps/web/components/layout/MainLayout.tsx",
+            "apps/web/components/layout/NavigationPrefetcher.tsx",
+            "apps/web/components/layout/OverlayLayout.tsx",
+            "apps/web/components/map/OverseasMap.tsx",
+            "apps/web/components/profile/UserProfilePanel.tsx",
+            "apps/web/components/profile/UserProfileProgressiveSkeleton.tsx",
+            "apps/web/components/region/RegionSelector.tsx",
+            "apps/web/components/search/RestaurantSearch.tsx",
+            "apps/web/components/ui/button.tsx",
+            "apps/web/components/ui/card.tsx",
+            "apps/web/components/ui/data-pending.tsx",
+            "apps/web/components/ui/skeleton.tsx",
+            "apps/web/constants/overseas-regions.ts",
+            "apps/web/hooks/leaderboard-read-result.ts",
+            "apps/web/hooks/use-announcements.tsx",
+            "apps/web/hooks/use-banner-announcements.tsx",
+            "apps/web/hooks/useLeaderboard.ts",
+            "apps/web/lib/admin/dashboard-visualization-data.ts",
+            "apps/web/lib/admin/local-catalog-edit-client.ts",
+            "apps/web/lib/admin/local-catalog-edit.ts",
+            "apps/web/lib/admin/local-catalog-evaluation-readback.ts",
+            "apps/web/lib/admin/youtube-kpi-snapshots.ts",
+            "apps/web/lib/announcement-localization.ts",
+            "apps/web/lib/home-detail-route-state.ts",
+            "apps/web/lib/home-map-theme-filters.ts",
+            "apps/web/lib/home-map-youtube-kpi.ts",
+            "apps/web/lib/map-query-helpers.ts",
+            "apps/web/lib/overseas-region-matching.ts",
+            "apps/web/lib/popular-restaurants.ts",
+            "apps/web/lib/privacy/sanitize.ts",
+            "apps/web/lib/restaurant-discovery-cache.ts",
+            "apps/web/lib/restaurant-popularity.ts",
+            "apps/web/lib/security/local-development-boundary.ts",
+            "apps/web/lib/security/same-origin-mutation.ts",
+            "apps/web/package-lock.json",
+            "apps/web/package.json",
+            "apps/web/performance/admin-console-20260908/README.md",
+            "apps/web/performance/admin-console-20260908/artifact-map.json",
+            "apps/web/performance/admin-console-20260908/frozen-after/AdminConsoleOverview.tsx.txt",
+            "apps/web/performance/admin-console-20260908/frozen-after/DashboardDataTable.tsx.txt",
+            "apps/web/performance/admin-console-20260908/frozen-after/dashboard-visualization-data.ts.txt",
+            "apps/web/performance/admin-console-20260908/frozen-before/AdminConsoleOverview.tsx.txt",
+            "apps/web/performance/admin-console-20260908/kpi-behavior-readback.json",
+            "apps/web/performance/admin-console-20260908/layout-readback.json",
+            "apps/web/performance/admin-console-20260908/measure-table-render.tsx",
+            "apps/web/performance/admin-console-20260908/table-render-raw.json",
+            "apps/web/performance/admin-console-20260908/table-render-scored.json",
+            "apps/web/performance/admin-console-20260908/verification.json",
+            "apps/web/performance/merge-scaling-20260908/count-cache-artifact-map.json",
+            "apps/web/performance/merge-scaling-20260908/count-cache-functional-readback.json",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/README.md",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/artifact-map.json",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/baseline.source",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/candidate.source",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/freeze.json",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/measure.mjs",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/raw.json",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/runtime-tests.source",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/score.mjs",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/scored.json",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/treemap.source",
+            "apps/web/performance/youtube-kpi-read-scheduling-20260908/verification.json",
+            "apps/web/public/fonts/suit/LICENSE",
+            "apps/web/public/fonts/suit/README.md",
+            "apps/web/public/fonts/suit/SUIT-Variable.woff2",
+            "apps/web/scripts/dev-prewarm.mjs",
+            "apps/web/scripts/local-supabase-runtime.mjs",
+            "apps/web/scripts/run-local-dev.mjs",
+            "apps/web/scripts/run-nightly-regression.mjs",
+            "apps/web/scripts/sanitize-evaluation-evidence.ts",
+            "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+            "apps/web/tests-unit/admin-evaluation-pending-layout.test.tsx",
+            "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+            "apps/web/tests-unit/admin-owned-pending-render.test.tsx",
+            "apps/web/tests-unit/announcement-localization.test.ts",
+            "apps/web/tests-unit/auth-profile-localized-pending.test.tsx",
+            "apps/web/tests-unit/category-count-state.test.tsx",
+            "apps/web/tests-unit/dashboard-data-table.test.tsx",
+            "apps/web/tests-unit/dashboard-visualization-data.test.ts",
+            "apps/web/tests-unit/home-detail-route-state.test.ts",
+            "apps/web/tests-unit/home-initial-layout-render.test.tsx",
+            "apps/web/tests-unit/home-map-theme-filters.test.ts",
+            "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+            "apps/web/tests-unit/home-root-lazy-boundary.test.ts",
+            "apps/web/tests-unit/local-catalog-edit-client.test.ts",
+            "apps/web/tests-unit/local-catalog-edit.test.ts",
+            "apps/web/tests-unit/local-catalog-evaluation-readback.test.ts",
+            "apps/web/tests-unit/local-dev-runtime-inheritance.test.ts",
+            "apps/web/tests-unit/local-supabase-runtime.test.ts",
+            "apps/web/tests-unit/local-youtube-kpi-refresh.test.ts",
+            "apps/web/tests-unit/map-query-helpers.test.ts",
+            "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+            "apps/web/tests-unit/mypage-mobile-cleanup-contract.test.ts",
+            "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+            "apps/web/tests-unit/overseas-region-matching.test.ts",
+            "apps/web/tests-unit/privacy-sanitize.test.ts",
+            "apps/web/tests-unit/public-feed-leaderboard-state.test.tsx",
+            "apps/web/tests-unit/public-route-data-layout.test.tsx",
+            "apps/web/tests-unit/restaurant-discovery-cache.test.ts",
+            "apps/web/tests-unit/restaurant-popularity.test.ts",
+            "apps/web/tests-unit/root-layout-local-runtime-contract.test.ts",
+            "apps/web/tests-unit/same-origin-mutation.test.ts",
+            "apps/web/tests-unit/web-quality-performance-source.test.ts",
+            "apps/web/tests-unit/youtube-kpi-snapshot-contract.test.ts",
+            "apps/web/tests-unit/youtube-kpi-snapshots-runtime.test.ts",
+            "apps/web/tests/admin-kpi-dashboard-runtime.spec.ts",
+            "apps/web/tests/admin-module-ready.ts",
+            "apps/web/tests/home-map-contextual-discovery.spec.ts",
+            "apps/web/tests/mobile-home-map.spec.ts",
+            "apps/web/tests/qa-integration.spec.ts",
+            "backend/bin/run_trend_dry_run.py",
+            "backend/supabase/candidates/restaurant_catalog_edit_api.sql",
+            "backend/supabase/candidates/restaurant_catalog_edit_core.sql",
+            "backend/supabase/candidates/restaurant_catalog_publish_api.sql",
+            "backend/supabase/candidates/restaurant_catalog_publish_core.sql",
+            "backend/supabase/docs/local-working-catalog.md",
+            "backend/supabase/migrations/20260908000100_separate_ingestion_candidate_identity.sql",
+            "backend/supabase/scripts/catalog_publish_operator.py",
+            "backend/supabase/scripts/catalog_publish_transport.py",
+            "backend/supabase/scripts/hosted_data_plane.py",
+            "backend/supabase/scripts/local-migrate.py",
+            "backend/supabase/scripts/local_catalog_edit_install.py",
+            "backend/supabase/scripts/local_catalog_publish.py",
+            "backend/supabase/scripts/local_catalog_publish_plan.py",
+            "backend/supabase/scripts/local_catalog_workspace.py",
+            "backend/supabase/scripts/local_evaluation_review.py",
+            "backend/supabase/scripts/local_review_place_evidence.py",
+            "backend/supabase/scripts/local_working_schema.py",
+            "backend/supabase/scripts/refresh-local-youtube-kpis.mjs",
+            "backend/supabase/scripts/test_catalog_publish_operator.py",
+            "backend/supabase/scripts/test_catalog_publish_transport.py",
+            "backend/supabase/scripts/test_hosted_data_plane.py",
+            "backend/supabase/scripts/test_local_catalog_edit_install.py",
+            "backend/supabase/scripts/test_local_catalog_publish_plan.py",
+            "backend/supabase/scripts/test_local_catalog_workspace.py",
+            "backend/supabase/scripts/test_local_evaluation_review.py",
+            "backend/supabase/scripts/verify_ingestion_identity.sql",
+            "backend/supabase/tests/test_local_function_runtime_contract.py",
+            "backend/supabase/tests/test_local_publication_verifier.py",
+            "backend/supabase/tests/test_local_replay_contract.py",
+            "backend/supabase/tests/test_local_seed_receipt_contract.py",
+            "backend/supabase/tests/test_restaurant_catalog_edit_core.py",
+            "backend/trend/dry_run.py",
+            "backend/trend/momentum.py",
+            "backend/trend/tests/test_momentum.py",
+            "backend/video_evidence/__init__.py",
+            "backend/video_evidence/runner.py",
+            "backend/video_evidence/test_runner.py",
+            "backend/video_evidence/vendor/claude_video/LICENSE",
+            "backend/video_evidence/vendor/claude_video/NOTICE.md",
+            "backend/video_evidence/vendor/claude_video/frames.py",
+            "backend/video_evidence/vendor/claude_video/transcribe.py",
+            "docs/operations/local-first-readiness.md",
+            "docs/operations/nightly-regression.md"
+          ]
+        },
+        {
+          "sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+          "title": "feat(seo): optimize AEO, SEO, and GEO with rich schema, llms.txt, manifest, and crawler pipeline fixes",
+          "paths": [
+            "apps/web/app/layout.tsx",
+            "apps/web/app/manifest.ts",
+            "apps/web/app/robots.ts",
+            "apps/web/app/sitemap.ts",
+            "apps/web/lib/seo.ts",
+            "apps/web/public/llms-full.txt",
+            "apps/web/public/llms.txt",
+            "apps/web/tests-unit/seo-source.test.ts",
+            "backend/bin/evaluate_new_youtube_videos.py",
+            "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+            "backend/restaurant-crawling/scripts/split_video_chunks.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2857,
+      "head_sha": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+      "compared_to": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "equivalent_patches": 0,
+      "unique_patches": 38
+    },
+    {
+      "number": 3099,
+      "head_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+      "compared_to": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "equivalent_patches": 0,
+      "unique_patches": 42
+    }
+  ],
+  "overlaps": [
+    {
+      "prs": [
+        3111,
+        3099
+      ],
+      "count": 0,
+      "paths": []
+    },
+    {
+      "prs": [
+        3111,
+        3032
+      ],
+      "count": 1,
+      "paths": [
+        "apps/web/hooks/use-restaurants.tsx"
+      ]
+    },
+    {
+      "prs": [
+        3031,
+        3032
+      ],
+      "count": 2,
+      "paths": [
+        "apps/web/hooks/use-restaurants.tsx",
+        "apps/web/tests-unit/use-restaurants-merge.test.ts"
+      ]
+    },
+    {
+      "prs": [
+        2857,
+        2908
+      ],
+      "count": 13,
+      "paths": [
+        "apps/web/app/admin/banners/page.tsx",
+        "apps/web/app/admin/evaluations/page.tsx",
+        "apps/web/components/admin/AdminConsoleOverview.tsx",
+        "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+        "apps/web/components/admin/AdminOverviewDashboard.tsx",
+        "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+        "apps/web/components/admin/AdminUsersPanel.tsx",
+        "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+        "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+        "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+        "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+        "apps/web/tests-unit/nightly-regression-workflow.test.ts"
+      ]
+    },
+    {
+      "prs": [
+        2857,
+        3099
+      ],
+      "count": 15,
+      "paths": [
+        "apps/web/app/admin/evaluations/page.tsx",
+        "apps/web/app/admin/layout.tsx",
+        "apps/web/app/globals.css",
+        "apps/web/components/admin/AdminConsoleOverview.tsx",
+        "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+        "apps/web/components/admin/AdminOverviewDashboard.tsx",
+        "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+        "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+        "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+        "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+        "apps/web/tests-unit/admin-storyboard-canvas-shell.test.ts",
+        "apps/web/tests-unit/admin-storyboard-generator.test.ts",
+        "apps/web/tests-unit/design-contract-source.test.ts",
+        "apps/web/tests-unit/mobile-desktop-parity-source.test.ts"
+      ]
+    },
+    {
+      "prs": [
+        2908,
+        3099
+      ],
+      "count": 35,
+      "paths": [
+        ".github/workflows/g014-catalog-contract-baseline.yml",
+        "apps/web/app/admin/evaluations/page.tsx",
+        "apps/web/app/app-globals.css",
+        "apps/web/app/app-runtime-shell.tsx",
+        "apps/web/app/home-runtime-shell.tsx",
+        "apps/web/app/leaderboard/page.tsx",
+        "apps/web/app/mypage/mypage-layout-content.tsx",
+        "apps/web/app/stamp/page.tsx",
+        "apps/web/bun.lock",
+        "apps/web/components/admin/AdminConsoleOverview.tsx",
+        "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+        "apps/web/components/admin/AdminOverviewDashboard.tsx",
+        "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+        "apps/web/components/admin/EvaluationTableNew.tsx",
+        "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+        "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+        "apps/web/components/feed/FeedContent.tsx",
+        "apps/web/components/layout/MainLayout.tsx",
+        "apps/web/components/ui/button.tsx",
+        "apps/web/components/ui/card.tsx",
+        "apps/web/components/ui/skeleton.tsx",
+        "apps/web/package-lock.json",
+        "apps/web/package.json",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+        "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+        "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+        "apps/web/tests-unit/local-supabase-runtime.test.ts",
+        "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+        "apps/web/tests-unit/mypage-mobile-cleanup-contract.test.ts",
+        "apps/web/tests-unit/web-quality-performance-source.test.ts",
+        "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+        "backend/restaurant-crawling/scripts/split_video_chunks.mjs",
+        "backend/supabase/scripts/catalog_docker_endpoint.py",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "backend/supabase/tests/test_catalog_docker_endpoint.py"
+      ]
+    },
+    {
+      "prs": [
+        3099,
+        3066
+      ],
+      "count": 2,
+      "paths": [
+        "apps/web/package-lock.json",
+        "apps/web/package.json"
+      ]
+    },
+    {
+      "prs": [
+        3099,
+        3065
+      ],
+      "count": 2,
+      "paths": [
+        "apps/web/package-lock.json",
+        "apps/web/package.json"
+      ]
+    },
+    {
+      "prs": [
+        3099,
+        3062
+      ],
+      "count": 2,
+      "paths": [
+        "backend/package-lock.json",
+        "backend/package.json"
+      ]
+    },
+    {
+      "prs": [
+        3099,
+        2892
+      ],
+      "count": 1,
+      "paths": [
+        ".github/workflows/security-audit.yml"
+      ]
+    },
+    {
+      "prs": [
+        2902,
+        2924
+      ],
+      "count": 2,
+      "paths": [
+        "backend/package-lock.json",
+        "backend/package.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "baseCommit": "c2c61614574927390f4ea4d90ccc3373ec7a1358",
+  "baseTree": "c0d2cdbbda874e6b286b969d3bcd4a44f5336a7f",
+  "branch": "codex/ts7-summary-quality-20261005",
+  "patchSha256": "bfacfccae2518278e8c06298a7fe3ac5fb6cf46808e015366bb4408f4b3f5fce",
+  "changes": [
+    {
+      "path": "apps/web/scripts/measure-typecheck.mjs",
+      "baseSha256": "0818b42fcad22b1cda60ad8b40ab90d20bbce84bda2eec073cc62972795c56b6",
+      "modifiedSha256": "f292f0cdf060908d147ba9b89d015e87920483690acd9bbbcab1b2bdbf68de26"
+    },
+    {
+      "path": "apps/web/scripts/verify-typecheck-benchmark-report.mjs",
+      "baseSha256": "f3c87e09a009a5d6f16ef31b319d2654247bb3b5e37ebf7bcda6a4769fff332c",
+      "modifiedSha256": "57bfba0ee3d509ca8a0b7e1673464dc9da710574aecadea17d49d61e8a994251"
+    },
+    {
+      "path": "apps/web/tests-unit/typecheck-benchmark-source.test.ts",
+      "baseSha256": "6b52cb6e7e2cf2771d0591e881839386d08574be01ee4820cb0bb30b7584bdf4",
+      "modifiedSha256": "687967ea82382a7203c97173bd0666507d42c7e7dc7e306ff559238b99dfe98e"
+    }
+  ]
+}

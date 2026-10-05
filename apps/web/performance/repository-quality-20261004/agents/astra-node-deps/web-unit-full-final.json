@@ -1,0 +1,17 @@
+{
+  "command": "npm run test:unit",
+  "exit_code": 0,
+  "seconds": 112.44,
+  "summary": [
+    "2654 pass",
+    "1 skip",
+    "0 fail",
+    "82173 expect() calls",
+    "Ran 2655 tests across 350 files. [104.17s]",
+    "150 pass",
+    "8 skip",
+    "0 fail",
+    "1096 expect() calls",
+    "Ran 158 tests across 9 files. [7.85s]"
+  ]
+}

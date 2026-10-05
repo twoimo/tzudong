@@ -1,0 +1,165 @@
+--- a/apps/web/lib/dashboard/helpers.ts
++++ b/apps/web/lib/dashboard/helpers.ts
+@@ -10,9 +10,6 @@
+     'youtube\\.com/embed/',
+     'youtube\\.com/live/',
+ ].map((prefix) => new RegExp(`${prefix}(${VIDEO_ID_TOKEN})(?![A-Za-z0-9_-])`));
+-const VIDEO_ID_CACHE_LIMIT = 4096;
+-const VIDEO_ID_CACHE_MAX_LINK_LENGTH = 2048;
+-const videoIdByLink = new Map<string, string | null>();
+ 
+ export function classifyDashboardVideoId(videoId: string | null | undefined):
+     | { status: 'required' }
+@@ -29,22 +26,11 @@
+ 
+ export function extractVideoIdFromYoutubeLink(link: string | null | undefined): string | null {
+     if (typeof link !== 'string' || link.length === 0) return null;
+-    const cached = videoIdByLink.get(link);
+-    if (cached !== undefined) return cached;
+-
+-    let videoId: string | null = null;
+     for (const pattern of YOUTUBE_VIDEO_ID_PATTERNS) {
+         const match = pattern.exec(link);
+-        if (match?.[1]) {
+-            videoId = match[1];
+-            break;
+-        }
++        if (match?.[1]) return match[1];
+     }
+-    if (link.length <= VIDEO_ID_CACHE_MAX_LINK_LENGTH) {
+-        if (videoIdByLink.size >= VIDEO_ID_CACHE_LIMIT) videoIdByLink.clear();
+-        videoIdByLink.set(link, videoId);
+-    }
+-    return videoId;
++    return null;
+ }
+ 
+ export function canonicalizeYoutubeLink(link: string | null | undefined): string | null {
+--- a/apps/web/lib/dashboard/summary.ts
++++ b/apps/web/lib/dashboard/summary.ts
+@@ -57,21 +57,19 @@
+ }
+ 
+ function sortByUpdatedDesc<T extends { updatedAt: string | null }>(items: T[]): T[] {
+-    return items
+-        .map((item) => ({ item, ms: item.updatedAt ? new Date(item.updatedAt).getTime() : 0 }))
+-        .sort((left, right) => right.ms - left.ms)
+-        .map((entry) => entry.item);
+-}
+-
+-function updatedAtMs(value: string | null | undefined): number {
+-    return value ? new Date(value).getTime() : 0;
++    return [...items].sort((a, b) => {
++        const aMs = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
++        const bMs = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
++        return bMs - aMs;
++    });
+ }
+ 
+ function sortRowsByUpdatedDesc(rows: DashboardRestaurantRow[]): DashboardRestaurantRow[] {
+-    return rows
+-        .map((row) => ({ row, ms: updatedAtMs(row.updated_at) }))
+-        .sort((left, right) => right.ms - left.ms)
+-        .map((entry) => entry.row);
++    return [...rows].sort((a, b) => {
++        const aMs = a.updated_at ? new Date(a.updated_at).getTime() : 0;
++        const bMs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
++        return bMs - aMs;
++    });
+ }
+ 
+ function buildDashboardSummaryChecksum(rows: DashboardRestaurantRow[]): string {
+@@ -257,7 +255,6 @@
+ 
+     let withCoordinates = 0;
+     let latestUpdatedAt: string | null = null;
+-    let latestUpdatedMs = Number.NEGATIVE_INFINITY;
+ 
+     for (const row of rows) {
+         if (typeof row.lat === 'number' && typeof row.lng === 'number') {
+@@ -273,9 +270,7 @@
+         if (videoId) videoIds.add(videoId);
+ 
+         if (row.updated_at) {
+-            const updatedMs = updatedAtMs(row.updated_at);
+-            if (latestUpdatedAt === null || updatedMs > latestUpdatedMs) {
+-                latestUpdatedMs = updatedMs;
++            if (!latestUpdatedAt || new Date(row.updated_at).getTime() > new Date(latestUpdatedAt).getTime()) {
+                 latestUpdatedAt = row.updated_at;
+             }
+         }
+@@ -418,12 +413,6 @@
+     return buildDashboardRestaurantsPageFromRows(paged, sortedRows.length, normalizedFilter, now);
+ }
+ 
+-type VideoRowIndex = {
+-    snapshot: { row: DashboardRestaurantRow; link: string | null }[];
+-    byVideoId: Map<string, DashboardRestaurantRow[]>;
+-};
+-const rowsByVideoId = new WeakMap<readonly DashboardRestaurantRow[], VideoRowIndex>();
+-
+ export function selectDashboardRowsForVideoId(
+     rows: readonly DashboardRestaurantRow[],
+     videoId: string,
+@@ -431,28 +420,7 @@
+     const classified = classifyDashboardVideoId(videoId);
+     if (classified.status !== 'ok') return [];
+ 
+-    let cached = rowsByVideoId.get(rows);
+-    // The fetch cache replaces snapshots, but callers may edit a row or its array.
+-    // Validate membership before reusing the parsed/grouped index.
+-    if (!cached || cached.snapshot.length !== rows.length ||
+-        !cached.snapshot.every((entry, index) => entry.row === rows[index] && entry.link === rows[index].youtube_link)) {
+-        const byVideoId = new Map<string, DashboardRestaurantRow[]>();
+-        for (const row of rows) {
+-            const id = extractVideoIdFromYoutubeLink(row.youtube_link);
+-            if (!id) continue;
+-            const bucket = byVideoId.get(id);
+-            if (bucket) {
+-                bucket.push(row);
+-            } else {
+-                byVideoId.set(id, [row]);
+-            }
+-        }
+-        cached = { snapshot: rows.map((row) => ({ row, link: row.youtube_link })), byVideoId };
+-        rowsByVideoId.set(rows, cached);
+-    }
+-
+-    // Preserve the previous filter result's ownership: consumers cannot mutate the cache.
+-    return cached.byVideoId.get(classified.videoId)?.slice() ?? [];
++    return rows.filter((row) => extractVideoIdFromYoutubeLink(row.youtube_link) === classified.videoId);
+ }
+ 
+ export async function getDashboardVideoDetail(
+--- a/apps/web/tests-unit/dashboard-aggregation.test.ts
++++ b/apps/web/tests-unit/dashboard-aggregation.test.ts
+@@ -46,7 +46,7 @@
+         expect(selectDashboardRowsForVideoId(rows, `${allowed}a`)).toEqual([]);
+     });
+ 
+-    test('keeps index results current after array and link edits without exposing cached arrays', () => {
++    test('selects current rows after array and link edits and returns an independently owned array', () => {
+         const first = makeRow({ id: 'first', youtube_link: 'https://youtu.be/vidAAA111' });
+         const second = makeRow({ id: 'second', youtube_link: 'https://youtu.be/vidBBB222' });
+         const rows = [first, second];
+--- a/apps/web/tests-unit/youtube-link-helpers.test.ts
++++ b/apps/web/tests-unit/youtube-link-helpers.test.ts
+@@ -48,18 +48,6 @@
+     }
+     expect(extractVideoIdFromYoutubeLink('https://youtu.be/Ab_12-')).toBe('Ab_12-');
+     expect(extractVideoIdFromYoutubeLink('https://example.com/watch?v=abc123DEF45')).toBe('abc123DEF45');
+-  });
+-
+-  test('keeps extraction results after the bounded link cache rotates', () => {
+-    const valid = 'https://youtu.be/abc123DEF45';
+-    const invalid = `https://youtu.be/${'a'.repeat(129)}`;
+-    expect(extractVideoIdFromYoutubeLink(valid)).toBe('abc123DEF45');
+-    expect(extractVideoIdFromYoutubeLink(invalid)).toBeNull();
+-    for (let index = 0; index < 4100; index++) {
+-      expect(extractVideoIdFromYoutubeLink(`${valid}?t=${index}`)).toBe('abc123DEF45');
+-    }
+-    expect(extractVideoIdFromYoutubeLink(valid)).toBe('abc123DEF45');
+-    expect(extractVideoIdFromYoutubeLink(invalid)).toBeNull();
+   });
+ 
+   test('extracts a video id from supported YouTube URLs', () => {

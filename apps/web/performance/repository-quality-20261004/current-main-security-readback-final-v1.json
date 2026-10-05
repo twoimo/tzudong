@@ -1,0 +1,52 @@
+{
+  "observedAt": "2026-10-05T00:14:00.024752+00:00",
+  "sourceSHA": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+  "openMainAlerts": 0,
+  "analyses": [
+    {
+      "id": 1890187739,
+      "category": "/language:swift",
+      "errorPresent": false,
+      "resultsCount": 0,
+      "createdAt": "2026-10-05T00:06:17Z"
+    },
+    {
+      "id": 1890164822,
+      "category": "/language:rust",
+      "errorPresent": false,
+      "resultsCount": 0,
+      "createdAt": "2026-10-04T23:54:39Z"
+    },
+    {
+      "id": 1890164452,
+      "category": "/language:javascript-typescript",
+      "errorPresent": false,
+      "resultsCount": 10,
+      "createdAt": "2026-10-04T23:54:29Z"
+    },
+    {
+      "id": 1890163221,
+      "category": "/language:python",
+      "errorPresent": false,
+      "resultsCount": 4,
+      "createdAt": "2026-10-04T23:53:54Z"
+    },
+    {
+      "id": 1890160971,
+      "category": "/language:go",
+      "errorPresent": false,
+      "resultsCount": 0,
+      "createdAt": "2026-10-04T23:52:57Z"
+    },
+    {
+      "id": 1890159577,
+      "category": "/language:actions",
+      "errorPresent": false,
+      "resultsCount": 0,
+      "createdAt": "2026-10-04T23:52:18Z"
+    }
+  ],
+  "sixLanguageCategoriesObserved": true,
+  "historicalAnalysesNotDeleted": true,
+  "notCompleteRepositoryQualityOrPerformanceCertification": true
+}

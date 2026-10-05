@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-04T09:26:15.847875+00:00",
+  "state": "source_preparation_only_during_parent_measurement_window",
+  "source_readback": "All five owned source hashes still match source-and-scope-verification.json. Builder pin remains 99; proposed patch remains unapplied.",
+  "validation_state_preserved": {
+    "passed": 86,
+    "failed_cases": 2,
+    "skipped": 0
+  },
+  "deferred_until_parent_reports_measurements_finished": [
+    "Publication-verifier test rerun",
+    "Any heavier regression, browser or database processes"
+  ],
+  "resume_prerequisites": [
+    "Explicit parent measurement-finished signal",
+    "Parent approval or application of the prepared one-line builder scope extension"
+  ],
+  "resume_scope": "Rerun affected publication verification only after the authorized builder correction; retain prior failed receipts and append new results. No test is marked skipped or passed because execution is deferred.",
+  "heavy_processes_launched_this_turn": 0,
+  "source_edits_this_turn": 0,
+  "existing_receipts_replaced": 0
+}

@@ -1,0 +1,144 @@
+{
+  "baseRefName": "develop",
+  "baseRefOid": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+  "files": [
+    {
+      "path": "README.md",
+      "additions": 14,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/app/api/dashboard/restaurants/route.ts",
+      "additions": 4,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/app/api/dashboard/summary/route.ts",
+      "additions": 4,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+      "additions": 19,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "additions": 0,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "additions": 4,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/dashboard/helpers.ts",
+      "additions": 48,
+      "deletions": 14,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/dashboard/summary.ts",
+      "additions": 52,
+      "deletions": 18,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/home-map-youtube-kpi.ts",
+      "additions": 3,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/map-restaurant-lookup.ts",
+      "additions": 26,
+      "deletions": 16,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs",
+      "additions": 70,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json",
+      "additions": 28,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs",
+      "additions": 194,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/performance/dashboard-video-id-20260923/benchmark.json",
+      "additions": 153,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs",
+      "additions": 101,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/performance/map-restaurant-lookup-20260923/benchmark.json",
+      "additions": 98,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+      "additions": 56,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/dashboard-public-visibility-source.test.ts",
+      "additions": 3,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+      "additions": 18,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/map-restaurant-lookup.test.ts",
+      "additions": 39,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+      "additions": 31,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/youtube-link-helpers.test.ts",
+      "additions": 33,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefName": "codex/perf-guard-20260923",
+  "headRefOid": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+  "number": 3031,
+  "state": "OPEN",
+  "url": "https://github.com/twoimo/tzudong/pull/3031",
+  "comparisonMergeBase": "d75e3360f393038a64846a3c6b0a4daa56b4d38a"
+}

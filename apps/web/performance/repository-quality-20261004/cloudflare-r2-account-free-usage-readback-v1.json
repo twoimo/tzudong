@@ -1,0 +1,18 @@
+{
+  "capturedAt": "2026-10-05T00:11:44.827814+00:00",
+  "source": "authenticated Cloudflare R2 account overview; minimal derived values only",
+  "billingPeriodDisplay": "September 22 - October 22, 2026",
+  "currentBillableUsageDisplayUSD": "0.00",
+  "currentPeriodClassAOperations": 23,
+  "currentPeriodClassBOperations": 381,
+  "currentTotalStorageDisplayMB": 486.4,
+  "bucketCount": 2,
+  "targetBucketObjectCount": 2,
+  "targetBucketStorageDisplayMB": 11.42,
+  "otherBucketNamesOrObjectsNotRetained": true,
+  "accountNameEmailCredentialsAndBillingIdentityNotRetained": true,
+  "standardFreeAllowanceSource": "https://developers.cloudflare.com/r2/pricing/",
+  "currentVolumeNotSameAsGBMonthBillingMetric": true,
+  "notProjectedFutureSpendOrSaving": true,
+  "noBudgetAlertBillingPlanChangeMade": true
+}

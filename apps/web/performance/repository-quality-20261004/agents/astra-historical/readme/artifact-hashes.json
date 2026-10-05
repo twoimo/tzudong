@@ -1,0 +1,19 @@
+{
+  "REPORT.md": "9975cf6b37d741836142e996d951d320dc24856a88a09867ed06fa502c5bd3f8",
+  "REPRODUCE.md": "d32adddd100e9dfef3e5eb604746fd3412375557784894ea92e61300c6dcf89f",
+  "baseline.json": "dc98b9127dbffc03a41e9f30034db558ef31e5d9f84090f302a9c39375b7035b",
+  "delivery.json": "e0b65cb9101e05aa3db522bca81a3f9bb20c034bb080383f051296303653a392",
+  "integration-README.ko.md": "7bb905ac0f6a7ff1b33cb9b02359f0eb1c43a3cb5cab1288075e3da3bdc72c74",
+  "integration-README.md": "a602aeabb60ddfb62c4b7f259c3d8436549d71c8bb1ca7493ba54e8eadf2c64c",
+  "model-metadata.json": "f5fce868ee417a3e00c68442df79d4decc88469ab64a580fcbeb664442a3ac13",
+  "pr2903-base-README.md": "7ca76a36bc467632f75a6fa89d3ef68bb1ee3fdf3539aeae1671e012d24eba8b",
+  "pr2903-exact.diff": "291bac2b2c6aba026532d28d04f2520a80db73b8a42ab5e0ba9640e55425ef68",
+  "pr2903-github.diff": "6d6386fb037b6eb466011051731a480360f7f7137cc1433ef7c4e3741fe97bc4",
+  "pr2903-head-README.md": "f439a0b16f31d968d261925f4b2f5f9f73e7f98f448ae851e187a9d42432cc15",
+  "pr2903-metadata.json": "bb9a53c3dc01f02a3b045e5ae4a27baee914580276c035ec1fb99fb9331f27a5",
+  "pr3114-metadata.json": "4e19932d1efd35ab1b73ab2f0e7f35ff18c43916be81a8e825d5eb8029aef750",
+  "readme.patch": "41b4611e726f21a74058c61a45a4dffffde56f146f9b6c0fbe99ac5aef67d405",
+  "source-evidence.json": "37d340df1d10ecba15fbce7727a43f0d52b62e801ec4224aed1d5394ad5626e4",
+  "validate-readme.py": "4a5e705acea58a46e7e5b8ae0a7fbca52d950d8d0a26122618cf7652f5c6da6c",
+  "validation.json": "12cdfca943e9fa0c4801a4a8bc6c52f41d9c4b9d1e624248905f06aa592e6b0b"
+}

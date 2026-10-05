@@ -1,0 +1,17 @@
+{
+  "label": "artifact",
+  "started_scope": "frozen_current_main_source",
+  "python_version": "3.14.8",
+  "python_executable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+  "expected_github_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "exit_code": 0,
+  "expected_to_pass": true,
+  "expectation_met": true,
+  "stdout_bytes": 0,
+  "stderr_bytes": 0,
+  "bounded_error": null,
+  "snapshot_unchanged": true,
+  "temporary_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005/frozen-verification/scratch-artifact",
+  "temporary_root_empty": true,
+  "observed_at": "2026-10-04T21:23:29.688950+00:00"
+}

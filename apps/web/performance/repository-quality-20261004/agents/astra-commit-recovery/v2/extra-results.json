@@ -1,0 +1,53 @@
+[
+  {
+    "case": "capture-owner-change",
+    "captures": 1,
+    "uploads": 0,
+    "inserts": 0,
+    "removes": 0,
+    "reads": 0,
+    "cleared": 0,
+    "success": 0,
+    "closes": 0
+  },
+  {
+    "case": "transient-snapshot-failure-retry-close",
+    "events": [
+      "snapshot"
+    ],
+    "uploads": 2,
+    "inserts": 1,
+    "removes": 0,
+    "reads": 0,
+    "cleared": 0,
+    "success": 0,
+    "closes": 0,
+    "draftRetained": true,
+    "recoveryStates": [
+      "draft-cleanup",
+      "draft-cleanup",
+      "draft-cleanup"
+    ]
+  },
+  {
+    "case": "unanswered-then-own-autosave-then-recovered-commit",
+    "events": [
+      "snapshot",
+      "same-input-autosave-new-timestamp",
+      "compare",
+      "compare"
+    ],
+    "uploads": 2,
+    "inserts": 1,
+    "removes": 0,
+    "reads": 2,
+    "cleared": 0,
+    "success": 0,
+    "closes": 0,
+    "draftRetained": true,
+    "recoveryStates": [
+      "draft-cleanup",
+      "draft-cleanup"
+    ]
+  }
+]

@@ -1,0 +1,51 @@
+{
+  "name": "repository",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "repo",
+        "x-ratelimit-remaining": "4984",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:31:09.295774+00:00",
+      "next_page": false
+    }
+  ],
+  "count": null,
+  "items": {
+    "archived": false,
+    "default_branch": "main",
+    "full_name": "twoimo/tzudong",
+    "id": 1080324661,
+    "permissions": {
+      "admin": true,
+      "maintain": true,
+      "pull": true,
+      "push": true,
+      "triage": true
+    },
+    "security_and_analysis": {
+      "dependabot_security_updates": {
+        "status": "enabled"
+      },
+      "secret_scanning": {
+        "status": "enabled"
+      },
+      "secret_scanning_non_provider_patterns": {
+        "status": "disabled"
+      },
+      "secret_scanning_push_protection": {
+        "status": "enabled"
+      },
+      "secret_scanning_validity_checks": {
+        "status": "disabled"
+      }
+    },
+    "visibility": "public"
+  }
+}

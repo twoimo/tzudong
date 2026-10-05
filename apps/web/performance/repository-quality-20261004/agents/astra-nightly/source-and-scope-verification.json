@@ -1,0 +1,42 @@
+{
+  "captured_at": "2026-10-04T09:13:37.322623+00:00",
+  "worktree": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+  "branch": "codex/nightly-quality-20261004",
+  "base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "session": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verified_before_implementation": true
+  },
+  "owned_changed_paths": [
+    "backend/supabase/scripts/local-migrate.py",
+    ".github/scripts/verify-nightly-local-publication.py",
+    "backend/supabase/tests/test_local_publication_verifier.py",
+    "backend/supabase/tests/test_local_seed_receipt_contract.py",
+    "backend/supabase/tests/test_local_replay_contract.py"
+  ],
+  "owned_file_sha256": {
+    "backend/supabase/scripts/local-migrate.py": "c78b90e45324f0fcc63b1fffd5b0d216e4056936c673ad63656a14a0ae090afe",
+    ".github/scripts/verify-nightly-local-publication.py": "ac3517f88f228b32edcfee5fbb0819ca15d58b62902bf0dbdc3372c373e37674",
+    "backend/supabase/tests/test_local_publication_verifier.py": "9f1fa2778a0ce7d8da8c87b3de1bac7eb5bce5307e400e93f5cb027d789f9f7d",
+    "backend/supabase/tests/test_local_seed_receipt_contract.py": "5c2c65164788bb82b68828118adfd7307ef0a6a30b028a8cc46114d1aebaa853",
+    "backend/supabase/tests/test_local_replay_contract.py": "2e66df75abb08c1d994a49af4d42aab4d7d2b84d3cb7356ad076746034491e8c"
+  },
+  "concurrent_other_changes_preserved": [
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+    "backend/bin/tests/test_check_layout_manifest_unittest.py",
+    "backend/layout-manifest.v1.json",
+    "backend/utils/tests/test_layout_naming_source_recovery.py"
+  ],
+  "canonical_migration_count": 100,
+  "canonical_migration_chain_sha256": "97bece6f9e28a7f231477aeaba9631e549ee8a25c63ab6ea6492629de95dd27f",
+  "migration_bytes_match_before": true,
+  "applied_migration_source_edits": false,
+  "builder_source_unchanged": true,
+  "workflow_source_unchanged": true,
+  "syntax_parse": true,
+  "diff_check": true,
+  "commits_pushes_workflow_dispatches": 0,
+  "database_provisioning_or_writes": 0
+}

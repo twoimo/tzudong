@@ -1,0 +1,496 @@
+{
+  "captured_at": "2026-10-04T08:34:50.765602+00:00",
+  "items": [
+    {
+      "number": 3066,
+      "head_sha": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "@google/genai",
+          "old": "^2.18.0",
+          "proposed": "^2.24.0",
+          "current_develop": "^2.18.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@supabase/ssr",
+          "old": "^0.12.4",
+          "proposed": "^0.12.7",
+          "current_develop": "^0.12.4"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@tanstack/react-query",
+          "old": "^5.101.4",
+          "proposed": "^5.103.2",
+          "current_develop": "^5.101.4"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "lucide-react",
+          "old": "^1.33.0",
+          "proposed": "^1.48.0",
+          "current_develop": "^1.33.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "maplibre-gl",
+          "old": "^6.10.0",
+          "proposed": "^6.11.2",
+          "current_develop": "^6.10.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "next",
+          "old": "16.3.5",
+          "proposed": "16.3.6",
+          "current_develop": "16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "openai",
+          "old": "^7.4.0",
+          "proposed": "^7.23.0",
+          "current_develop": "^7.4.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react",
+          "old": "^19.2.8",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.8"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-dom",
+          "old": "^19.2.8",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.8"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-error-boundary",
+          "old": "^6.1.3",
+          "proposed": "^6.1.6",
+          "current_develop": "^6.1.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-hook-form",
+          "old": "^7.85.0",
+          "proposed": "^7.88.0",
+          "current_develop": "^7.85.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-resizable-panels",
+          "old": "^4.12.3",
+          "proposed": "^4.13.3",
+          "current_develop": "^4.12.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "supercluster",
+          "old": "^9.0.0",
+          "proposed": "^9.1.0",
+          "current_develop": "^9.0.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "tailwind-merge",
+          "old": "^3.6.0",
+          "proposed": "^3.7.0",
+          "current_develop": "^3.6.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "web-vitals",
+          "old": "^6.1.1",
+          "proposed": "^6.2.2",
+          "current_develop": "^6.1.1"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "zod",
+          "old": "^4.4.3",
+          "proposed": "^4.6.5",
+          "current_develop": "^4.4.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/react",
+          "old": "^19.2.18",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.18"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/react-dom",
+          "old": "^19.2.4",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.4"
+        }
+      ]
+    },
+    {
+      "number": 3065,
+      "head_sha": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "@next/bundle-analyzer",
+          "old": "16.3.5",
+          "proposed": "16.3.6",
+          "current_develop": "16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@playwright/test",
+          "old": "^1.62.1",
+          "proposed": "^1.63.0",
+          "current_develop": "^1.62.1"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/google.maps",
+          "old": "^3.65.5",
+          "proposed": "^3.66.4",
+          "current_develop": "^3.65.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/node",
+          "old": "^24.13.3",
+          "proposed": "^24.13.6",
+          "current_develop": "^24.13.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "baseline-browser-mapping",
+          "old": "2.11.14",
+          "proposed": "2.11.26",
+          "current_develop": "2.11.14"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "eslint-config-next",
+          "old": "^16.3.5",
+          "proposed": "^16.3.6",
+          "current_develop": "^16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "postcss",
+          "old": "^8.5.26",
+          "proposed": "^8.5.28",
+          "current_develop": "^8.5.26"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "supabase",
+          "old": "^2.115.0",
+          "proposed": "^2.117.0",
+          "current_develop": "^2.115.0"
+        }
+      ]
+    },
+    {
+      "number": 3064,
+      "head_sha": "966e114336620c71bbe5482c5a88e366f5c5caaa",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "puppeteer",
+          "old": "^25.8.0",
+          "proposed": "^25.12.0",
+          "current_develop": "^25.8.0"
+        }
+      ]
+    },
+    {
+      "number": 3063,
+      "head_sha": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "package": "langchain-core",
+          "proposed": "langchain-core==1.6.5",
+          "current_develop": [
+            "langchain-core==1.6.0"
+          ],
+          "removed": [
+            "langchain-core==1.6.0"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 3062,
+      "head_sha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "@google/genai",
+          "old": "^2.18.0",
+          "proposed": "^2.24.0",
+          "current_develop": "^2.18.0"
+        }
+      ]
+    },
+    {
+      "number": 3061,
+      "head_sha": "fa568c8ccf04a5e68b153c89033e9b08700f4286",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "dotenv",
+          "old": "^16.6.1",
+          "proposed": "^18.0.3",
+          "current_develop": "^16.6.1"
+        }
+      ]
+    },
+    {
+      "number": 3060,
+      "head_sha": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "package": "langgraph",
+          "proposed": "langgraph==1.2.12",
+          "current_develop": [
+            "langgraph==1.2.1"
+          ],
+          "removed": [
+            "langgraph==1.2.1"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2971,
+      "head_sha": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "openai",
+          "proposed": "openai==3.16.1",
+          "current_develop": [
+            "openai==3.3.1"
+          ],
+          "removed": [
+            "openai==3.3.1"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2924,
+      "head_sha": "40539ca35df591451ee3be8b8456001d72964fcb",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "js-yaml",
+          "old": "^4.2.0",
+          "proposed": "^5.4.2",
+          "current_develop": "^4.2.0"
+        }
+      ]
+    },
+    {
+      "number": 2906,
+      "head_sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/pipeline-control/requirements.txt",
+          "package": "psycopg2-binary",
+          "proposed": "psycopg2-binary==2.9.13",
+          "current_develop": [
+            "psycopg2-binary==2.9.11"
+          ],
+          "removed": [
+            "psycopg2-binary==2.9.11"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2902,
+      "head_sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "maplibre-gl",
+          "old": "^5.24.0",
+          "proposed": "^6.4.1",
+          "current_develop": "^6.10.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "next",
+          "old": "16.2.12",
+          "proposed": "16.3.4",
+          "current_develop": "16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "sharp",
+          "old": "^0.35.3",
+          "proposed": "^0.35.4",
+          "current_develop": "^0.35.4"
+        },
+        {
+          "path": "backend/package.json",
+          "package": "js-yaml",
+          "old": "^4.2.0",
+          "proposed": "^4.3.2",
+          "current_develop": "^4.2.0"
+        }
+      ]
+    },
+    {
+      "number": 2896,
+      "head_sha": "833ddd699e73f95bf84b2b80975fea1783998333",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "google-api-python-client",
+          "proposed": "google-api-python-client==2.200.0",
+          "current_develop": [
+            "google-api-python-client==2.196.0"
+          ],
+          "removed": [
+            "google-api-python-client==2.196.0"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2894,
+      "head_sha": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "curl_cffi",
+          "proposed": "curl_cffi==0.16.3",
+          "current_develop": [
+            "curl_cffi==0.15.0"
+          ],
+          "removed": [
+            "curl_cffi==0.15.0"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2892,
+      "head_sha": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": ".github/workflows/security-audit.yml",
+          "changed_action_lines": [
+            "-        uses: Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4",
+            "+        uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2889,
+      "head_sha": "e817c475ee9c38478deab156a36848eba4e8dffc",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "package": "pydantic",
+          "proposed": "pydantic==2.13.5",
+          "current_develop": [
+            "pydantic==2.13.4"
+          ],
+          "removed": [
+            "pydantic==2.13.4"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2888,
+      "head_sha": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "scrapling",
+          "proposed": "scrapling[fetchers]==0.4.15",
+          "current_develop": [
+            "scrapling[fetchers]==0.4.8"
+          ],
+          "removed": [
+            "scrapling[fetchers]==0.4.8"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2887,
+      "head_sha": "3a10ae6e8004c1f1488861b3f7c118653e62f0da",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": ".github/workflows/security-audit.yml",
+          "changed_action_lines": [
+            "-        uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1",
+            "+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2855,
+      "head_sha": "338de43e80ffaa5cd703dacd7886017b5c219e31",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "framer-motion",
+          "old": "^12.42.2",
+          "proposed": "^13.4.0",
+          "current_develop": "^12.42.2"
+        }
+      ]
+    },
+    {
+      "number": 2850,
+      "head_sha": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+      "comparison_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "dependency_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "yt-dlp",
+          "proposed": "yt-dlp[default]==2026.8.19",
+          "current_develop": [
+            "yt-dlp[default]==2026.7.4"
+          ],
+          "removed": [
+            "yt-dlp[default]==2026.7.4"
+          ]
+        }
+      ]
+    }
+  ]
+}

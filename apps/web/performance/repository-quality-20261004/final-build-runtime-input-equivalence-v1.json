@@ -1,0 +1,11 @@
+{
+  "buildSource": "519c88d183f161fabebb954eb0962613afcad693",
+  "currentSource": "1bc4d06611bffb62bf64e364b1e99a9b6b520f29",
+  "difference": [
+    "apps/web/scripts/measure-typecheck.mjs",
+    "apps/web/scripts/verify-typecheck-benchmark-report.mjs",
+    "apps/web/tests-unit/typecheck-benchmark-source.test.ts"
+  ],
+  "allRetainedBuildInputsMatch": true,
+  "scope": "application source unchanged in this final delta; bundle/deployment/release identity is not claimed identical"
+}

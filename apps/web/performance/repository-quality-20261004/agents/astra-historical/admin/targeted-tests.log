@@ -1,0 +1,109 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-console-uiux-source.test.ts:
+(pass) admin console beginner-friendly UI/UX source contract > gates local storyboard generation by the provider for each action stage [0.67ms]
+(pass) admin console beginner-friendly UI/UX source contract > fails fast on malformed admin/storyboard global CSS [1.94ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps storyboard global CSS and component inline geometry in parity [2.67ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps standalone output and inherited production env out of local Next dev mode [0.97ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps admin module state URL-backed and easy to recover [0.68ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps the G012 shared shell focus path, scroll owner, and containment explicit [2.16ms]
+(pass) admin console beginner-friendly UI/UX source contract > aligns mobile admin menu state and KPI loading without desktop restyle [1.12ms]
+(pass) admin console beginner-friendly UI/UX source contract > suppresses public popup chrome on admin routes in both app layouts [0.40ms]
+(pass) admin console beginner-friendly UI/UX source contract > removes repeated beginner guidance cards from the admin console [0.72ms]
+(pass) admin console beginner-friendly UI/UX source contract > uses the shared compact embedded module shell instead of canvas-level generic headers [0.97ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps embedded insights loading and error states inside the shared compact shell [1.29ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps announcement operations safer and accessible inside the console [0.41ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps announcement read models shared while narrowing banner fetches [0.44ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps the restaurant evaluation detail panel operator-focused and uncluttered [0.38ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps route recommendation as a viewport-bounded two-pane map console [2.81ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps all admin skeletons compact and layout-faithful [11.17ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps overview reference widgets uncluttered and source-honest [51.26ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps KPI PDF report export printable without unsafe HTML sinks [1.93ms]
+(pass) admin console beginner-friendly UI/UX source contract > supports sub-day admin KPI dashboard periods in the insights source [1.49ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps live YouTube KPI refresh behind an admin-only server route [0.56ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps admin pending counts behind an admin-only server route [0.51ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps admin system status center in a dedicated hook/component with fail-closed run_daily states [1.33ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps YouTube channel statistics behind an admin-only server route [0.32ms]
+(pass) admin console beginner-friendly UI/UX source contract > does not render an admin access gate for non-admin visitors [1.82ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps unified admin console as the single operator shell [3.05ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps admin console keyboard and screen-reader navigation intact [1.88ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps announcement management out of the admin sidebar default order [1.65ms]
+(pass) admin console beginner-friendly UI/UX source contract > adds YouTube thumbnail generation as a guarded Lab module [47.69ms]
+(pass) admin console beginner-friendly UI/UX source contract > adds storyboard generation as an operator-controlled admin module [85.15ms]
+(pass) admin console beginner-friendly UI/UX source contract > lets admins reorder the sidebar without polluting the two-pane map overview [18.36ms]
+(pass) admin console beginner-friendly UI/UX source contract > cleans stale admin module query state and canonicalizes invalid modules [1.17ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps route recommendation as only two source-honest map panes [0.75ms]
+(pass) admin console beginner-friendly UI/UX source contract > restricts admin outbound links to canonical validated URLs [2.32ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps selected marker detail as one thumbnail-first evidence card [0.25ms]
+(pass) admin console beginner-friendly UI/UX source contract > removes repeated embedded module context headers from the admin canvas [0.60ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps admin pages dense without sacrificing responsive boundaries [4.76ms]
+(pass) admin console beginner-friendly UI/UX source contract > hardens risky admin submission and OCR actions with typed confirmations [1.29ms]
+(pass) admin console beginner-friendly UI/UX source contract > surfaces restaurant recommendation requests as a guarded admin lane [1.85ms]
+(pass) admin console beginner-friendly UI/UX source contract > guards legacy direct browser admin restaurant and review mutations [0.61ms]
+(pass) admin console beginner-friendly UI/UX source contract > retires legacy browser admin evaluation mutations behind the explicit guard flag [0.34ms]
+(pass) admin console beginner-friendly UI/UX source contract > excludes Python QA seeds from actual GPT Image 2 page history [0.61ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps storyboard provider credentials in synchronously clearable component refs without Web Storage [3.17ms]
+(pass) admin console beginner-friendly UI/UX source contract > exposes storyboard RAG trace and mid-stream steer contracts in chat [2.30ms]
+
+tests-unit/admin-dashboard-widget-order.test.ts:
+(pass) admin dashboard widget order normalization > keeps the KPI card default order stable
+(pass) admin dashboard widget order normalization > accepts both raw array and API-shaped stored values [0.09ms]
+(pass) admin dashboard widget order normalization > drops unknown and duplicate IDs before filling missing defaults
+(pass) admin dashboard widget order normalization > keeps diagnosis as a semantic alias for the legacy engagementRate widget id [0.01ms]
+
+tests-unit/admin-sidebar-order.test.ts:
+(pass) admin sidebar order normalization > keeps server and client defaults stable for review and operations sections [0.01ms]
+(pass) admin sidebar order normalization > covers every routed admin module without tying route id order to sidebar IA order [0.05ms]
+(pass) admin sidebar order normalization > resets old saved section slots when modules move between operations and lab [0.08ms]
+(pass) admin sidebar order normalization > preserves a valid custom order while filling only missing defaults [0.11ms]
+
+tests-unit/admin-guarded-mutation-contract.test.ts:
+(pass) admin guarded mutation contract > defines the required server-side guard sequence and domains [0.01ms]
+(pass) admin guarded mutation contract > builds bounded guarded-contract-required responses [0.10ms]
+(pass) admin guarded mutation contract > accepts only the exact guarded mutation confirmation token [0.01ms]
+(pass) admin guarded mutation contract > feature-gates legacy browser admin mutations off by default [0.18ms]
+(pass) admin guarded mutation contract > keeps inline OCR processing disabled unless explicitly enabled outside production [0.03ms]
+
+tests-unit/admin-route-auth-contract.test.ts:
+(pass) admin route auth source contract > keeps every admin route admin-gated directly or through an accepted route helper [11.27ms]
+(pass) admin route auth source contract > orders admin auth before service-role work [3.74ms]
+(pass) admin route auth source contract > keeps new guarded storyboard RAG auth contracts sanitized [0.08ms]
+(pass) admin route auth source contract > keeps public home/map sources separated from admin overlay/proposal contracts [18.35ms]
+
+tests-unit/admin-user-management-source.test.ts:
+(pass) admin user-management source contract > embeds user management as a URL-backed admin console module [0.71ms]
+(pass) admin user-management source contract > keeps user-management UI Korean, guarded, and accessible [0.28ms]
+(pass) admin user-management source contract > keeps admin user details explicit-selection only [0.09ms]
+(pass) admin user-management source contract > keeps admin user APIs server-only and service-role contained [0.62ms]
+(pass) admin user-management source contract > does not keep ad-hoc service-role helper scripts in the web package root [0.05ms]
+(pass) admin user-management source contract > adds an admin audit trail migration with RLS read access for admins [0.74ms]
+(pass) admin user-management source contract > persists per-admin sidebar ordering with RLS and explicit Data API grants [0.20ms]
+(pass) admin user-management source contract > does not add a separate global shortcut outside the admin console [0.32ms]
+
+tests-unit/admin-pending-counts-source.test.ts:
+(pass) admin pending counts source contract > evaluations submission context consumes canonical pending-counts endpoint [0.20ms]
+(pass) admin pending counts source contract > pending-counts route remains the admin-gated authority for queue domains [0.04ms]
+
+tests-unit/youtube-kpi-snapshot-contract.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module '@supabase/supabase-js' from '/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/apps/web/lib/public-insights/treemap.ts'
+-------------------------------
+
+
+tests-unit/admin-restaurant-refresh-history-source.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'react' from '/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts'
+-------------------------------
+
+
+2 tests failed:
+
+ 70 pass
+ 2 fail
+ 2 errors
+ 5967 expect() calls
+Ran 72 tests across 9 files. [321.00ms]

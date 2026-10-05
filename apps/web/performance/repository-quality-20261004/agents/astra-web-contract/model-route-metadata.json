@@ -1,0 +1,37 @@
+{
+  "basis": "Local session metadata only; upstream serving and hardware unverified; no provider diagnostics retained",
+  "sessions": [
+    {
+      "id": "01a10657-0045-70e2-bc63-f24838f2dff6",
+      "sourceFile": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T18-55-27-01a10657-0045-70e2-bc63-f24838f2dff6.jsonl",
+      "sessionMetadata": {
+        "line": 1,
+        "id": "01a10657-0045-70e2-bc63-f24838f2dff6",
+        "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong",
+        "model_provider": "openai",
+        "originator": "Codex Desktop"
+      },
+      "latestTurnContext": {
+        "line": 6,
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      }
+    },
+    {
+      "id": "01a10658-684b-78d2-bd2f-fd3505a576a7",
+      "sourceFile": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T18-56-59-01a10658-684b-78d2-bd2f-fd3505a576a7.jsonl",
+      "sessionMetadata": {
+        "line": 1,
+        "id": "01a10658-684b-78d2-bd2f-fd3505a576a7",
+        "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong",
+        "model_provider": "openai",
+        "originator": "Codex Desktop"
+      },
+      "latestTurnContext": {
+        "line": 11,
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      }
+    }
+  ]
+}

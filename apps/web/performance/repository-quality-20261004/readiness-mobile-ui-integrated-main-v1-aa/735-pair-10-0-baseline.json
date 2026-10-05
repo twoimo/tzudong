@@ -1,0 +1,201 @@
+{
+  "count": 735,
+  "pair": 8,
+  "position": 0,
+  "kind": "baseline",
+  "warmup": false,
+  "buildId": "ZA2igV6A-ZYDywp-9woc_",
+  "inputs": [
+    {
+      "original": "lib/naver-map-mobile-offset-helpers.ts",
+      "sha256": "cc72d2ce8fb94a574cb605cc7962ecb036855aba7df8a94d94d012e3f24c21ea"
+    },
+    {
+      "original": "components/home/MobileControlOverlay.tsx",
+      "sha256": "a9dcf1291296377cf84be512e87473d9d7b4bb9b1c6da964b9494bd15cebefe4"
+    },
+    {
+      "original": "app/home-runtime-shell.tsx",
+      "sha256": "7fdfd2cec739e5fbc14791b247e8c907ec1af6ac530b50323d94db28ecccf602"
+    },
+    {
+      "original": "app/home-app-globals.css",
+      "sha256": "6755130f075ce73901c105491544fed256d7dea9315b3f8b9fcbfb9959c03368"
+    },
+    {
+      "original": "components/home/home-control-panel.tsx",
+      "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+    },
+    {
+      "original": "components/layout/MobileBottomNav.tsx",
+      "sha256": "8619057c625f84f78eaf3f1f96fc29327313cd90a0c6980aec5d0b3153737977"
+    },
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "46768ac0f3f2993e638ba8fbcea8ead2a0f9f08e0acbc5db7c9fba06af4a1877"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "75edbb62d7f39d7e39cffee90594e172642ec12eb852fda6885dc38a11cd84ab"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "31125a1f08c73f2425182fd5b8f7a609e21654b895da89fad24a888734399ed2"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "7030bd17e667d75834325fc028897c57479a840917848e0a69ab99ff1c7d43f0"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "63ed7540499f5d282ec8a7c6301210e6b07d711c7b77f648ca5051d7ce58fc59"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    },
+    {
+      "original": "components/admin/AdminOverviewDashboard.tsx",
+      "sha256": "8e44714ee3e6a46bd11dce35d745bcaffc7f93fbe5b374b952606629015efc6a"
+    },
+    {
+      "original": "components/map/marker-icons.css",
+      "sha256": "d77c2f5ee74e3035f17e6f08ba5df557a0d2844633178481c26215c04969c258"
+    },
+    {
+      "original": "lib/deferred-marker-renders.ts",
+      "sha256": "5b16f00f4960f24b9a811177704378d5775bc0ba968f4ac348aac93f7ca39a7b"
+    },
+    {
+      "original": "hooks/use-restaurants.tsx",
+      "sha256": "87775923a8d7bde6c515a9355726466a77f0d25cb46f9c83c7e54511437ca244"
+    },
+    {
+      "original": "lib/privacy/onboarding.ts",
+      "sha256": "4f6cdbb5f46a72d9c98d53c9974f6b8a5c5d7066f372c958ed1a3a961b3e98b3"
+    },
+    {
+      "original": "app/api/privacy/onboarding/route.ts",
+      "sha256": "8af3a0b3b992ce2dbfc4e242c584f5830245e24e94a3f694f535364a8ed398f3"
+    },
+    {
+      "original": "app/mypage/reviews/page.tsx",
+      "sha256": "c1b75bf7314668a828c4dcd6d2d473407acca5867e8825066732eea270dcb5c0"
+    },
+    {
+      "original": "components/reviews/ReviewModal.tsx",
+      "sha256": "c85c9554e322ff0df1da24f20d984e12c7515157783ede9f30d7a5bc8dcfc436"
+    }
+  ],
+  "valid": true,
+  "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "sdk": {
+    "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+    "loaded": true,
+    "stub": false,
+    "remoteScript": true,
+    "mapCaptured": true,
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "dpr": 1
+    },
+    "tiles": 75
+  },
+  "resourceBefore": {
+    "observedAt": "2026-10-04T21:27:59.703Z",
+    "logicalCores": 18,
+    "hostCpuPercent": 1420.3999999999992,
+    "otherCpuPercent": 1329.7999999999993,
+    "maxOtherProcessCpuPercent": 720.8,
+    "otherProcessesOver80Percent": 1,
+    "loadAverage": [
+      11.591796875,
+      10.78125,
+      10.421875
+    ],
+    "heavyOverlap": true,
+    "saturated": false,
+    "gpuLoad": "unavailable"
+  },
+  "heap": {
+    "usedSize": 23010064,
+    "totalSize": 37748736,
+    "embedderHeapUsedSize": 18416288,
+    "backingStorageSize": 1927833
+  },
+  "state": {
+    "clickMs": 462.39999985694885,
+    "click": 2162.100000143051,
+    "observedAt": 3739.100000143051,
+    "expectedViewport": 464,
+    "markers": 735,
+    "missingViewport": 0,
+    "unexpectedIds": 0,
+    "duplicates": 0,
+    "mapCreates": 1,
+    "zoom": 14,
+    "visibility": "visible",
+    "overflow": 0,
+    "longTaskCount": 4,
+    "longTaskMs": 621,
+    "shifts": [
+      {
+        "start": 2909.2000000476837,
+        "value": 0.001197115852559351,
+        "recentInput": false
+      },
+      {
+        "start": 2940.100000143051,
+        "value": 0.03672985781990521,
+        "recentInput": false
+      },
+      {
+        "start": 3051.4000000953674,
+        "value": 0.04248441674600116,
+        "recentInput": false
+      }
+    ],
+    "domNodes": 5115
+  },
+  "resourceAfter": {
+    "observedAt": "2026-10-04T21:28:01.454Z",
+    "logicalCores": 18,
+    "hostCpuPercent": 1455.6999999999996,
+    "otherCpuPercent": 1355.5999999999997,
+    "maxOtherProcessCpuPercent": 887.7,
+    "otherProcessesOver80Percent": 1,
+    "loadAverage": [
+      11.591796875,
+      10.78125,
+      10.421875
+    ],
+    "heavyOverlap": true,
+    "saturated": false,
+    "gpuLoad": "unavailable"
+  },
+  "errors": {
+    "page": 0,
+    "console": 2
+  },
+  "requests": {
+    "restaurant": 2,
+    "otherFixture": 3
+  }
+}

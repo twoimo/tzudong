@@ -1,0 +1,3422 @@
+{
+  "summary": {
+    "repository": "twoimo/tzudong",
+    "audit_final_readback_at": "2026-10-04T08:39:06.035134+00:00",
+    "open_issues": 1,
+    "open_prs": 26,
+    "user_owned_prs": 7,
+    "automated_dependency_prs": 19,
+    "open_promotion_prs": 0,
+    "evidence_only_prs": 0,
+    "mixed_source_evidence_prs": [
+      3099,
+      3031,
+      2908
+    ],
+    "prs_with_any_failed_check": 20,
+    "review_threads_total": 64,
+    "unresolved_review_threads": 11,
+    "prs_with_unresolved_reviews": 8,
+    "required_context_failures": {
+      "Promotion Path": [
+        2903,
+        2902
+      ]
+    },
+    "required_context_missing": {
+      "Release": [
+        2908
+      ]
+    },
+    "required_context_skipped": {
+      "Promotion Path": [
+        2850
+      ]
+    },
+    "custom_unprotected_base_prs": [
+      2857
+    ],
+    "conflicting_prs": [
+      3032,
+      2908,
+      2903,
+      2902
+    ],
+    "behind_healthy_merge_prs": 19,
+    "prs_behind_current_target_by_ancestry": 23,
+    "pending_or_running_workflows_at_snapshot": 0,
+    "protected_branch_heads": {
+      "develop": {
+        "target": {
+          "oid": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a"
+        }
+      },
+      "data": {
+        "target": {
+          "oid": "4bda4aaebee8bffac723e09b35b0712e8b4adf6e"
+        }
+      },
+      "main": {
+        "target": {
+          "oid": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+        }
+      }
+    },
+    "model_session": {
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "evidence": "Current session_meta and turn_context fields; no runtime model substitution or additional capacity requested."
+    },
+    "authorization": "Read-only GitHub and git-object audit. Only sanitized audit artifacts written under this directory. No source edits, pushes, merges, comments, review resolutions, closures, settings, account switches, credential creation, workflow runs/cancellations or deployment actions.",
+    "evidence_limits": [
+      "GitHub bodies/reviews are evidence, not permission.",
+      "All 26 PR file lists paginated; #3099 required 7 file pages. REST open-issue list had 27 entries including 26 PRs; filtered to 1 actual issue. All nested check/thread/comment connection pageInfo values exhausted.",
+      "No test/build/browser/DB or hosted runtime execution. Selected CI failures were read live and exact published source read from existing local git objects.",
+      "Security alert inventory/remediation belongs to the other agent. Failing security checks are coordination evidence, not an independent alert audit.",
+      "Protected Release/Promotion Path success is not full quality, merge, deployment or live-user-flow proof.",
+      "Historical parked external legal/hosted gates were not reinstated; product safeguards remain fail-closed.",
+      "No entire PR established as safely closable or fully superseded."
+    ]
+  },
+  "issue_findings": [
+    {
+      "number": 2843,
+      "url": "https://github.com/twoimo/tzudong/issues/2843",
+      "title": "[nightly] Local regression incident",
+      "class": "automated-recurring-regression-incident",
+      "priority": "P1",
+      "comments": 37,
+      "incident_records": 38,
+      "latest_run_url": "https://github.com/twoimo/tzudong/actions/runs/37155813334",
+      "latest_run_sha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+      "findings": [
+        "Latest five nightly runs all failed; latest incident has unit/e2e skipped and cleanup success.",
+        "Publication boundary verification ran 39 tests with 1 failure and 33 errors: hard-coded 99-unit expectation sees 100; fixture ledger construction raises receipt_ledger_state.",
+        "test_local_publication_verifier.py, local-migrate.py and verify-nightly-local-publication.py are byte-identical between failed-run SHA and audited main ca235e2. This is not just an old issue notification."
+      ],
+      "paths": [
+        "backend/supabase/tests/test_local_publication_verifier.py",
+        "backend/supabase/scripts/local-migrate.py",
+        ".github/scripts/verify-nightly-local-publication.py",
+        ".github/workflows/nightly-local-regression.yml"
+      ],
+      "next": "Reconcile exact publication fixture/ledger expectations to the canonical migration contract in a fresh candidate; preserve applied migrations and historical receipts. Run focused publication/replay contracts, then obtain a new successful canonical all-suite nightly with publication/readback evidence. Keep issue open until that proof exists.",
+      "proof": "Latest failure independently checked in GitHub job log and source; no new tests, workflows or deployments executed."
+    }
+  ],
+  "pull_request_findings": [
+    {
+      "number": 3111,
+      "title": "fix(web): restore onboarding and make review retries consistent",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3111",
+      "state": "open",
+      "created_at": "2026-10-04T07:00:03Z",
+      "updated_at": "2026-10-04T07:05:36Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+      "head_ref": "codex/readiness-core-20261004",
+      "base_ref": "develop",
+      "base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "class": "active-parent-owned-source",
+      "priority": "P1",
+      "findings": [
+        "Required checks succeeded at 99f9115, but one unresolved upload ambiguity race blocks conversation-resolution protection. Parent is already editing ReviewModal, review-save-operation and paired tests."
+      ],
+      "next": "Parent completes ambiguous-upload handling, verifies focused review lifecycle tests and current-head release checks, then resolves the addressed review. Audit agent must not duplicate these edits.",
+      "dependencies": [
+        "Parent owns all #3111 source work, promotion and deployment.",
+        "#3032 and #3031 overlap use-restaurants.tsx; integrate after parent fix."
+      ],
+      "proof": "Current published PR SHA; uncommitted parent changes are not CI proof.",
+      "mergeability": {
+        "mergeable": "MERGEABLE",
+        "mergeable_state": "BLOCKED"
+      },
+      "ancestry": {
+        "number": 3111,
+        "head_sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 0,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 16,
+      "changed_paths": [
+        "apps/web/app/api/privacy/onboarding/route.ts",
+        "apps/web/app/mypage/reviews/page.tsx",
+        "apps/web/components/reviews/ReviewModal.tsx",
+        "apps/web/hooks/use-restaurants.tsx",
+        "apps/web/lib/privacy/onboarding.ts",
+        "apps/web/lib/reviews/review-save-operation.ts",
+        "apps/web/lib/verified-review-count-rows.ts",
+        "apps/web/tests-unit/mypage-reviews-read-runtime.test.ts",
+        "apps/web/tests-unit/privacy-compensation-key-runtime.test.ts",
+        "apps/web/tests-unit/privacy-onboarding-route-runtime.test.ts",
+        "apps/web/tests-unit/privacy-onboarding.test.ts",
+        "apps/web/tests-unit/related-review-count-chunking-source.test.ts",
+        "apps/web/tests-unit/review-save-operation.test.ts",
+        "apps/web/tests-unit/review-save-owner-lifecycle.test.ts",
+        "apps/web/tests-unit/review-save-submit.test.ts",
+        "apps/web/tests-unit/verified-review-count-rows.test.ts"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [],
+      "check_state_counts": {
+        "SKIPPED": 1,
+        "SUCCESS": 17
+      },
+      "review_threads_total": 6,
+      "unresolved_reviews": [
+        {
+          "path": "apps/web/lib/reviews/review-save-operation.ts",
+          "line": 132,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3111#discussion_r4176522995"
+          ]
+        }
+      ],
+      "dependency_version_changes": []
+    },
+    {
+      "number": 3099,
+      "title": "Optimize pipeline and review, renew UI, and integrate Gemini and Sentry",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3099",
+      "state": "open",
+      "created_at": "2026-10-03T03:34:39Z",
+      "updated_at": "2026-10-04T04:11:56Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+      "head_ref": "codex/pipeline-performance-restart-20261002",
+      "base_ref": "develop",
+      "base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+      "class": "active-user-owned-source-and-evidence",
+      "priority": "P1",
+      "findings": [
+        "630 changed files, including 309 performance evidence paths; this is not an evidence-only PR.",
+        "Two unresolved current-head P2 defects: warning enrichment makes up to 251 sequential 200-row requests; category classifier checks only nonempty array and can accept malformed elements. Exact source reviewed.",
+        "orchestration-readiness fails test_manifest_is_reproducible_from_current_candidate_blobs with platform_modernization_reconciliation_stale (365 tests, 1 failure in the selected step).",
+        "CodeQL and GitGuardian checks also fail; alert diagnosis/remediation belongs to the separate security agent."
+      ],
+      "next": "Existing source owner should add bounded database warning aggregation and strict category element validation with focused tests. Preserve applied migrations; use a new correction migration when applicable. Refresh current-candidate reconciliation after source settles, preserving historical evidence, and rerun affected gates. Security agent resolves security findings separately.",
+      "dependencies": [
+        "No file overlap with published #3111.",
+        "Shares 15 files with #2857 and 35 with #2908; avoid parallel admin UI integration.",
+        "Shares web/backend manifests and security-audit.yml with automated dependency PRs; serialize those edits."
+      ],
+      "proof": "Current head is based on current develop, but green required contexts do not override unresolved threads or red quality/security checks; no deployment or hosted activation proved.",
+      "mergeability": {
+        "mergeable": "MERGEABLE",
+        "mergeable_state": "BLOCKED"
+      },
+      "ancestry": {
+        "number": 3099,
+        "head_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 0,
+        "ahead_current_base": 47,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 630,
+      "changed_paths": [
+        ".github/workflows/daily-crawler.yml",
+        ".github/workflows/g014-catalog-contract-baseline.yml",
+        ".github/workflows/security-audit.yml",
+        ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+        "apps/web/.env.example",
+        "apps/web/CLAUDE.md",
+        "apps/web/app/admin/evaluations/page.tsx",
+        "apps/web/app/admin/layout.tsx",
+        "apps/web/app/api/admin/evaluations/[id]/route.ts",
+        "apps/web/app/api/admin/evaluations/automation/route.ts",
+        "apps/web/app/api/admin/evaluations/route.ts",
+        "apps/web/app/api/admin/sentry/route.ts",
+        "apps/web/app/api/admin/storyboard/chat/route.ts",
+        "apps/web/app/api/admin/storyboard/images/route.ts",
+        "apps/web/app/api/admin/storyboard/jobs/route.ts",
+        "apps/web/app/api/admin/storyboard/route.ts",
+        "apps/web/app/api/ocr/extract/route.ts",
+        "apps/web/app/api/ocr/extract/stream/route.ts",
+        "apps/web/app/app-globals.css",
+        "apps/web/app/app-runtime-shell.tsx",
+        "apps/web/app/error.tsx",
+        "apps/web/app/feed/error.tsx",
+        "apps/web/app/global-error.tsx",
+        "apps/web/app/global-map/error.tsx",
+        "apps/web/app/globals.css",
+        "apps/web/app/home-runtime-shell.tsx",
+        "apps/web/app/leaderboard/page.tsx",
+        "apps/web/app/mypage/error.tsx",
+        "apps/web/app/mypage/mypage-layout-content.tsx",
+        "apps/web/app/mypage/profile/page.tsx",
+        "apps/web/app/stamp/page.tsx",
+        "apps/web/bun.lock",
+        "apps/web/components/admin/AdminConsoleOverview.tsx",
+        "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+        "apps/web/components/admin/AdminOverviewDashboard.tsx",
+        "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+        "apps/web/components/admin/AdminSentryPanel.tsx",
+        "apps/web/components/admin/EvaluationDetailView.tsx",
+        "apps/web/components/admin/EvaluationTableNew.tsx",
+        "apps/web/components/admin/RestaurantManagementWorkspace.tsx",
+        "apps/web/components/admin/RestaurantReviewAutomation.tsx",
+        "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+        "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+        "apps/web/components/admin/storyboard/LegacyStoryboardReference.tsx",
+        "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+        "apps/web/components/auth/AuthModal.tsx",
+        "apps/web/components/feed/FeedContent.tsx",
+        "apps/web/components/home/map-panel-chrome.tsx",
+        "apps/web/components/layout/MainLayout.tsx",
+        "apps/web/components/layout/ScrollEffects.tsx",
+        "apps/web/components/map/map-view-status-panels.tsx",
+        "apps/web/components/map/naver-map-overlay-indicators.tsx",
+        "apps/web/components/mypage/MyPageSectionFrame.tsx",
+        "apps/web/components/reviews/ReviewCard.tsx",
+        "apps/web/components/stamp/StampCard.tsx",
+        "apps/web/components/ui/button.tsx",
+        "apps/web/components/ui/card.tsx",
+        "apps/web/components/ui/dialog.tsx",
+        "apps/web/components/ui/input.tsx",
+        "apps/web/components/ui/mobile-sheet-frame.tsx",
+        "apps/web/components/ui/skeleton.tsx",
+        "apps/web/components/ui/table.tsx",
+        "apps/web/components/ui/tabs.tsx",
+        "apps/web/instrumentation-client.ts",
+        "apps/web/instrumentation.ts",
+        "apps/web/lib/admin-address-consistency.ts",
+        "apps/web/lib/admin-evaluation-completeness.ts",
+        "apps/web/lib/admin-restaurant-identity-warning.ts",
+        "apps/web/lib/admin-same-video-duplicate-warning.ts",
+        "apps/web/lib/admin/admin-module-routing.ts",
+        "apps/web/lib/admin/evaluation-catalog-server.ts",
+        "apps/web/lib/admin/evaluation-catalog.ts",
+        "apps/web/lib/admin/evaluation-page-client.ts",
+        "apps/web/lib/admin/evaluation-page-query.ts",
+        "apps/web/lib/admin/evaluation-page-server.ts",
+        "apps/web/lib/admin/evaluation-query.ts",
+        "apps/web/lib/admin/evaluation-summary.ts",
+        "apps/web/lib/admin/evaluation-warning-stream.ts",
+        "apps/web/lib/admin/normalize-evaluation-record.ts",
+        "apps/web/lib/admin/restaurant-review-automation.ts",
+        "apps/web/lib/admin/sidebar-order.ts",
+        "apps/web/lib/admin/storyboard/gemini-client.ts",
+        "apps/web/lib/admin/storyboard/gemini-models.ts",
+        "apps/web/lib/admin/storyboard/local-bridge-server.mts",
+        "apps/web/lib/admin/storyboard/outbound-worker-contract.ts",
+        "apps/web/lib/admin/storyboard/outbound-worker.ts",
+        "apps/web/lib/admin/storyboard/production-contract.ts",
+        "apps/web/lib/admin/storyboard/production-store.ts",
+        "apps/web/lib/admin/storyboard/production-worker-auth.ts",
+        "apps/web/lib/admin/storyboard/retired-api.ts",
+        "apps/web/lib/monitoring/sentry-admin.ts",
+        "apps/web/lib/monitoring/sentry-privacy.ts",
+        "apps/web/lib/ocr/gemini.ts",
+        "apps/web/lib/ocr/runtime-config.ts",
+        "apps/web/next.config.mjs",
+        "apps/web/package-lock.json",
+        "apps/web/package.json",
+        "apps/web/performance/pipeline-20261002/admin-api-current-raw.json",
+        "apps/web/performance/pipeline-20261002/admin-api-raw.json",
+        "apps/web/performance/pipeline-20261002/admin-browser-raw.json",
+        "apps/web/performance/pipeline-20261002/admin-db-read-write-raw-20261004.json",
+        "apps/web/performance/pipeline-20261002/admin-desktop-fixture.png",
+        "apps/web/performance/pipeline-20261002/admin-mobile-fixture.png",
+        "apps/web/performance/pipeline-20261002/admin-page-artifact-map-20261004.json",
+        "apps/web/performance/pipeline-20261002/admin-page-artifact-map-20261004.sha256",
+        "apps/web/performance/pipeline-20261002/admin-page-component-summary-20261004.json",
+        "apps/web/performance/pipeline-20261002/admin-page-component-summary-20261004.sha256",
+        "apps/web/performance/pipeline-20261002/admin-revision-fixture.png",
+        "apps/web/performance/pipeline-20261002/artifact-map-current.json",
+        "apps/web/performance/pipeline-20261002/artifact-map-current.json.sha256",
+        "apps/web/performance/pipeline-20261002/artifact-map-current.sha256",
+        "apps/web/performance/pipeline-20261002/artifact-map.json",
+        "apps/web/performance/pipeline-20261002/artifact-map.json.sha256",
+        "apps/web/performance/pipeline-20261002/artifact-map.sha256",
+        "apps/web/performance/pipeline-20261002/billing-readback.json",
+        "apps/web/performance/pipeline-20261002/browser-navigation-intermediate-v1.json",
+        "apps/web/performance/pipeline-20261002/browser-revision-intermediate-v1.json",
+        "apps/web/performance/pipeline-20261002/browser-revision-navigation-raw.json",
+        "apps/web/performance/pipeline-20261002/browser-revision-raw.json",
+        "apps/web/performance/pipeline-20261002/completion-audit.json",
+        "apps/web/performance/pipeline-20261002/configuration-current.json",
+        "apps/web/performance/pipeline-20261002/frame-preview-stop-review-20261004.json",
+        "apps/web/performance/pipeline-20261002/frame-preview-stop-review-20261004.sha256",
+        "apps/web/performance/pipeline-20261002/gemini-admission-intermediate-v1.json",
+        "apps/web/performance/pipeline-20261002/gemini-admission-raw.json",
+        "apps/web/performance/pipeline-20261002/gemini-admission-rejected-order-v2.json",
+        "apps/web/performance/pipeline-20261002/gemini-admission-summary.json",
+        "apps/web/performance/pipeline-20261002/gemini-real-probe-raw.json",
+        "apps/web/performance/pipeline-20261002/hosted-catalog-readback.json",
+        "apps/web/performance/pipeline-20261002/laaj-selection-identity-review-20261004.json",
+        "apps/web/performance/pipeline-20261002/laaj-selection-identity-review-20261004.sha256",
+        "apps/web/performance/pipeline-20261002/media-replay-intermediate-v1.json",
+        "apps/web/performance/pipeline-20261002/media-replay-intermediate-v2.json",
+        "apps/web/performance/pipeline-20261002/media-replay-raw.json",
+        "apps/web/performance/pipeline-20261002/metadata-reader-raw.json",
+        "apps/web/performance/pipeline-20261002/metadata-reader-v2-raw.json",
+        "apps/web/performance/pipeline-20261002/orchestration-readiness-frozen.json",
+        "apps/web/performance/pipeline-20261002/original-crawler-corpus-inventory.json",
+        "apps/web/performance/pipeline-20261002/provider-read-raw.json",
+        "apps/web/performance/pipeline-20261002/receipt-transcript-review-20261004.json",
+        "apps/web/performance/pipeline-20261002/receipt-transcript-review-20261004.sha256",
+        "apps/web/performance/pipeline-20261002/review-recovery-artifact-map-20261004.json",
+        "apps/web/performance/pipeline-20261002/review-recovery-artifact-map-20261004.json.sha256",
+        "apps/web/performance/pipeline-20261002/sql-snapshot-bounds.json",
+        "apps/web/performance/pipeline-20261002/sql-snapshot-pg17-projection.json",
+        "apps/web/performance/pipeline-20261002/sql-verification.json",
+        "apps/web/performance/pipeline-20261002/storage-new-and-failures-raw.json",
+        "apps/web/performance/pipeline-20261002/storage-one-and-resume-raw.json",
+        "apps/web/performance/pipeline-20261002/storage-rpc-before-prefetch.json",
+        "apps/web/performance/pipeline-20261002/storage-rpc-raw.json",
+        "apps/web/performance/pipeline-20261002/storage-summary.json",
+        "apps/web/performance/pipeline-20261002/summary-current.json",
+        "apps/web/performance/pipeline-20261002/summary.json",
+        "apps/web/performance/pipeline-20261002/transcript-cache-intermediate-v3.json",
+        "apps/web/performance/pipeline-20261002/transcript-cache-intermediate-v4.json",
+        "apps/web/performance/pipeline-20261002/transcript-cache-raw.json",
+        "apps/web/performance/pipeline-20261002/transcript-cache-rejected-v1.json",
+        "apps/web/performance/pipeline-20261002/transcript-cache-rejected-v2.json",
+        "apps/web/performance/pipeline-20261002/transcript-summary.json",
+        "apps/web/performance/pipeline-20261002/transform-final-raw.json",
+        "apps/web/performance/pipeline-20261002/transform-intermediate-v2.json",
+        "apps/web/performance/pipeline-20261002/transform-raw.json",
+        "apps/web/performance/pipeline-20261002/transform-rejected-v1.json",
+        "apps/web/performance/pipeline-20261002/transform-restart-v3-raw.json",
+        "apps/web/performance/pipeline-20261002/verification-current.json",
+        "apps/web/performance/pipeline-20261002/verification-gemini-admission.json",
+        "apps/web/performance/pipeline-20261002/verification-transcript-and-billing.json",
+        "apps/web/performance/pipeline-20261002/warning-gate-raw-20261004.json",
+        "apps/web/performance/sentry-20261004/browser-sdk-transport-proof.json",
+        "apps/web/performance/sentry-20261004/node-release-session-20261004.json",
+        "apps/web/performance/sentry-20261004/node-release-session-20261004.json.sha256",
+        "apps/web/performance/sentry-20261004/render-fixture-20261004.json",
+        "apps/web/performance/sentry-20261004/sentry-1440-20261004.png",
+        "apps/web/performance/sentry-20261004/sentry-390-20261004.png",
+        "apps/web/performance/sentry-20261004/sentry-834-20261004.png",
+        "apps/web/performance/sentry-20261004/verification-20261004.json",
+        "apps/web/performance/sentry-20261004/verification-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/admin-desktop-matrix.json",
+        "apps/web/performance/ui-renewal-20261003/admin-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/admin-name-and-warning-conformance-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/admin-name-and-warning-conformance-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/admin-read-normalization-conformance-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/admin-read-normalization-conformance-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/admin-ui-matrix-v3.json",
+        "apps/web/performance/ui-renewal-20261003/artifact-map.json",
+        "apps/web/performance/ui-renewal-20261003/artifact-map.sha256",
+        "apps/web/performance/ui-renewal-20261003/audit-desktop-final.jpg",
+        "apps/web/performance/ui-renewal-20261003/audit-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/audit-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/audit-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/auth-mobile.png",
+        "apps/web/performance/ui-renewal-20261003/banners-desktop-final.jpg",
+        "apps/web/performance/ui-renewal-20261003/banners-desktop-html-fixed.jpg",
+        "apps/web/performance/ui-renewal-20261003/banners-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/banners-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/banners-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/banners-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/banners-tablet-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/banners-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/catalog-checksum-content-review.json",
+        "apps/web/performance/ui-renewal-20261003/catalog-dual-clean-replay-37121857541.json",
+        "apps/web/performance/ui-renewal-20261003/css-security-build.json",
+        "apps/web/performance/ui-renewal-20261003/density-after-20261003.json",
+        "apps/web/performance/ui-renewal-20261003/density-before-20261003.json",
+        "apps/web/performance/ui-renewal-20261003/density-final-1440-capture-attempt.png",
+        "apps/web/performance/ui-renewal-20261003/density-final-1440.png",
+        "apps/web/performance/ui-renewal-20261003/density-final-20261003.json",
+        "apps/web/performance/ui-renewal-20261003/density-final-390.png",
+        "apps/web/performance/ui-renewal-20261003/density-final-834.png",
+        "apps/web/performance/ui-renewal-20261003/density-kpi-after-1440.png",
+        "apps/web/performance/ui-renewal-20261003/density-kpi-after-390-fresh.png",
+        "apps/web/performance/ui-renewal-20261003/density-kpi-after-390-ready.png",
+        "apps/web/performance/ui-renewal-20261003/density-kpi-after-390.png",
+        "apps/web/performance/ui-renewal-20261003/density-kpi-after-834.png",
+        "apps/web/performance/ui-renewal-20261003/density-mobile-info-popover.png",
+        "apps/web/performance/ui-renewal-20261003/density-restaurants-1440.png",
+        "apps/web/performance/ui-renewal-20261003/density-review-after-390.png",
+        "apps/web/performance/ui-renewal-20261003/density-review-before-390.png",
+        "apps/web/performance/ui-renewal-20261003/density-review-final-1440.png",
+        "apps/web/performance/ui-renewal-20261003/density-review-final-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/density-review-final-390.png",
+        "apps/web/performance/ui-renewal-20261003/density-review-final-834.png",
+        "apps/web/performance/ui-renewal-20261003/density-summary-20261003.json",
+        "apps/web/performance/ui-renewal-20261003/feed-mobile-reviewed.jpg",
+        "apps/web/performance/ui-renewal-20261003/g014-service-invoker-hosted.json",
+        "apps/web/performance/ui-renewal-20261003/g014-service-invoker-local.json",
+        "apps/web/performance/ui-renewal-20261003/g014-service-invoker-replay-local.json",
+        "apps/web/performance/ui-renewal-20261003/gemini-live-generation.json",
+        "apps/web/performance/ui-renewal-20261003/gemini-live-image.jpg",
+        "apps/web/performance/ui-renewal-20261003/gemini-live-pro-image.jpg",
+        "apps/web/performance/ui-renewal-20261003/gemini-live-pro-image.json",
+        "apps/web/performance/ui-renewal-20261003/gemini-model-readiness.json",
+        "apps/web/performance/ui-renewal-20261003/gemini-routing-readback.json",
+        "apps/web/performance/ui-renewal-20261003/home-mobile-offline-map.png",
+        "apps/web/performance/ui-renewal-20261003/hosted-storyboard-readback.json",
+        "apps/web/performance/ui-renewal-20261003/hydration-readback.json",
+        "apps/web/performance/ui-renewal-20261003/imagegen-artifact-hash-review-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/insights-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/insights-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/insights-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/insights-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/insights-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/kpi-834-capture-attempt.png",
+        "apps/web/performance/ui-renewal-20261003/kpi-accepted-1440.png",
+        "apps/web/performance/ui-renewal-20261003/kpi-accepted-390.png",
+        "apps/web/performance/ui-renewal-20261003/kpi-accepted-834.png",
+        "apps/web/performance/ui-renewal-20261003/kpi-dark-reduced-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/layout-followup-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/leaderboard-mobile-reviewed.jpg",
+        "apps/web/performance/ui-renewal-20261003/llm-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/llm-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/llm-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/manual-stop-dialog-390-attempt.png",
+        "apps/web/performance/ui-renewal-20261003/manual-stop-dialog-390.png",
+        "apps/web/performance/ui-renewal-20261003/ocr-live-readback.json",
+        "apps/web/performance/ui-renewal-20261003/ocr-runtime-replay.json",
+        "apps/web/performance/ui-renewal-20261003/operations-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/operations-tablet-emulated.jpg",
+        "apps/web/performance/ui-renewal-20261003/operations-tablet-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/overview-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/overview-desktop-v4.jpg",
+        "apps/web/performance/ui-renewal-20261003/overview-mobile-capture.jpg",
+        "apps/web/performance/ui-renewal-20261003/overview-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/overview-tablet-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/overview-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/packed-fork-readback.json",
+        "apps/web/performance/ui-renewal-20261003/pipeline-boundary-review-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/pipeline-boundary-review-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/pipeline-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/pipeline-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/pipeline-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/pipeline-mobile-revised.jpg",
+        "apps/web/performance/ui-renewal-20261003/pipeline-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/pipeline-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/production-preflight-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/profile-mobile-authenticated.jpg",
+        "apps/web/performance/ui-renewal-20261003/profile-mobile-compact.jpg",
+        "apps/web/performance/ui-renewal-20261003/public-ui-observations.json",
+        "apps/web/performance/ui-renewal-20261003/query-model-artifact-map-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/query-model-artifact-map-20261004.json.sha256",
+        "apps/web/performance/ui-renewal-20261003/query-model-capability-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/query-model-capability-20261004.json.sha256",
+        "apps/web/performance/ui-renewal-20261003/refresh-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/refresh-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-batch-raw.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-batch-summary.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-claim-local-attempt.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-claim-local.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-claim-local.sha256",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-detail-tablet.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-hosted.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-local.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-manual-local.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-mobile-v2.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-mobile.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-preview-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-render.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-stop-capacity-local-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-stop-capacity-local-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-tablet.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-automation-tests.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-accepted-1440.png",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-accepted-390.png",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-accepted-834.png",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-closure-guard-tablet.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-direct-desktop.png",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-full-width-desktop.png",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-integrated-final-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-integrated-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-integration-render.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-layout-width.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-refresh-1440.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-refresh-390.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-refresh-834.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-tests.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-management-viewports-final.json",
+        "apps/web/performance/ui-renewal-20261003/restaurant-mobile-reviewed.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-mobile-reviewed.png",
+        "apps/web/performance/ui-renewal-20261003/restaurant-refresh-history-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/restaurant-refresh-history-desktop-v4.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-refresh-history-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurant-refresh-history-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-dark-reduced-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-desktop-header-fixed.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/restaurants-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-desktop-v4.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/restaurants-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/review-automation-request-id-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/review-automation-request-id-20261004.json.sha256",
+        "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-1440-20261004.png",
+        "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-390-20261004.png",
+        "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-834-20261004.png",
+        "apps/web/performance/ui-renewal-20261003/review-detail-tablet.jpg",
+        "apps/web/performance/ui-renewal-20261003/review-fixes-artifact-map-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/review-fixes-artifact-map-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/reviews-desktop-final.jpg",
+        "apps/web/performance/ui-renewal-20261003/reviews-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/reviews-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/reviews-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/reviews-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/reviews-tablet-populated.jpg",
+        "apps/web/performance/ui-renewal-20261003/reviews-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/routes-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/routes-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/routes-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/routes-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/routes-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/security-patch-readback.json",
+        "apps/web/performance/ui-renewal-20261003/service-helper-permissions-hosted.json",
+        "apps/web/performance/ui-renewal-20261003/service-registry-hosted.json",
+        "apps/web/performance/ui-renewal-20261003/service-registry-local.json",
+        "apps/web/performance/ui-renewal-20261003/signup-mobile-reviewed.jpg",
+        "apps/web/performance/ui-renewal-20261003/signup-tablet-reviewed.jpg",
+        "apps/web/performance/ui-renewal-20261003/stamp-mobile-compact.jpg",
+        "apps/web/performance/ui-renewal-20261003/stamp-mobile-reviewed.jpg",
+        "apps/web/performance/ui-renewal-20261003/storyboard-applied-ledger-checksums-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-bundle-before.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-original-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-original-20261004.json.sha256",
+        "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-receipt-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-receipt-20261004.json.sha256",
+        "apps/web/performance/ui-renewal-20261003/storyboard-current-original-verification.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-current-receipt-verification.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/storyboard-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/storyboard-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/storyboard-gemini-desktop.jpg",
+        "apps/web/performance/ui-renewal-20261003/storyboard-gemini-mobile.jpg",
+        "apps/web/performance/ui-renewal-20261003/storyboard-gemini-mobile.png",
+        "apps/web/performance/ui-renewal-20261003/storyboard-history-artifact-map-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-history-artifact-map-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/storyboard-history-original-verification.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-history-output-attempt.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-history-receipt-verification.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-input-gates-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/storyboard-sql-verification.json",
+        "apps/web/performance/ui-renewal-20261003/storyboard-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/submissions-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/submissions-desktop-v4.jpg",
+        "apps/web/performance/ui-renewal-20261003/submissions-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/submissions-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/thumbnail-desktop-inspected.jpg",
+        "apps/web/performance/ui-renewal-20261003/thumbnail-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/token-contrast.json",
+        "apps/web/performance/ui-renewal-20261003/uncertain-generation-and-source-review-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/uncertain-generation-and-source-review-20261004.sha256",
+        "apps/web/performance/ui-renewal-20261003/upstream-integration-20261004.json",
+        "apps/web/performance/ui-renewal-20261003/users-desktop-final.jpg",
+        "apps/web/performance/ui-renewal-20261003/users-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/users-desktop-ready.jpg",
+        "apps/web/performance/ui-renewal-20261003/users-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/users-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/users-tablet-hydration-fixed-final.jpg",
+        "apps/web/performance/ui-renewal-20261003/users-tablet-hydration-fixed.jpg",
+        "apps/web/performance/ui-renewal-20261003/users-tablet-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/verification-final.json",
+        "apps/web/performance/ui-renewal-20261003/youtube-thumbnail-generator-desktop-matrix.png",
+        "apps/web/performance/ui-renewal-20261003/youtube-thumbnail-generator-desktop-v5.jpg",
+        "apps/web/performance/ui-renewal-20261003/youtube-thumbnail-generator-mobile-v3.jpg",
+        "apps/web/performance/ui-renewal-20261003/youtube-thumbnail-generator-tablet-v3.jpg",
+        "apps/web/scripts/benchmark-admin-evaluation-browser.mjs",
+        "apps/web/scripts/benchmark-admin-evaluation-pagination.ts",
+        "apps/web/scripts/benchmark-evaluation-warning-gates.ts",
+        "apps/web/scripts/benchmark-ocr-runtime.ts",
+        "apps/web/scripts/codex-imagegen-provider-core.py",
+        "apps/web/scripts/codex-imagegen-storyboard-provider.py",
+        "apps/web/scripts/codex-imagegen-thumbnail-provider.py",
+        "apps/web/scripts/measure-ui-token-contrast.mjs",
+        "apps/web/scripts/preview-design-fixtures.mjs",
+        "apps/web/scripts/probe-storyboard-gemini.ts",
+        "apps/web/scripts/run-unit-tests.mjs",
+        "apps/web/scripts/storyboard-eight-real-provider-smoke.ts",
+        "apps/web/scripts/storyboard-gemini-only.mjs",
+        "apps/web/scripts/storyboard-gemini-worker.ts",
+        "apps/web/scripts/storyboard-local-bridge.ts",
+        "apps/web/scripts/storyboard-mlx-worker.ts",
+        "apps/web/scripts/storyboard-rag-ollama-pull.mjs",
+        "apps/web/scripts/verify-admin-evaluation-revision-browser.ts",
+        "apps/web/scripts/verify-admin-query-model-browser.ts",
+        "apps/web/scripts/verify-ocr-gemini-live.ts",
+        "apps/web/scripts/verify-pin-contract.mjs",
+        "apps/web/scripts/verify-review-automation-request-id-browser.ts",
+        "apps/web/scripts/verify-sentry-browser-fixture.ts",
+        "apps/web/scripts/verify-sentry-node-session.ts",
+        "apps/web/scripts/verify-storyboard-gemini-live.ts",
+        "apps/web/sentry.edge.config.ts",
+        "apps/web/sentry.server.config.ts",
+        "apps/web/styles/admin-ui.css",
+        "apps/web/styles/light-root-tokens.css",
+        "apps/web/styles/product-ui.css",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+        "apps/web/tests-unit/admin-evaluation-address-filter-source.test.ts",
+        "apps/web/tests-unit/admin-evaluation-page-api.test.ts",
+        "apps/web/tests-unit/admin-evaluation-page-server.test.ts",
+        "apps/web/tests-unit/admin-evaluation-pagination.test.ts",
+        "apps/web/tests-unit/admin-evaluation-revision-read.test.ts",
+        "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+        "apps/web/tests-unit/admin-evaluation-warning-stream.test.ts",
+        "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+        "apps/web/tests-unit/admin-route-auth-contract.test.ts",
+        "apps/web/tests-unit/admin-sentry-route.test.ts",
+        "apps/web/tests-unit/admin-sidebar-order.test.ts",
+        "apps/web/tests-unit/admin-storyboard-async-jobs-contract.test.ts",
+        "apps/web/tests-unit/admin-storyboard-canvas-shell.test.ts",
+        "apps/web/tests-unit/admin-storyboard-eight-real-smoke-source.test.ts",
+        "apps/web/tests-unit/admin-storyboard-generator.test.ts",
+        "apps/web/tests-unit/admin-storyboard-history.test.ts",
+        "apps/web/tests-unit/admin-storyboard-langgraph.test.ts",
+        "apps/web/tests-unit/admin-storyboard-local-bridge.test.ts",
+        "apps/web/tests-unit/admin-storyboard-rag.test.ts",
+        "apps/web/tests-unit/admin-storyboard-request-security.test.ts",
+        "apps/web/tests-unit/admin-storyboard-thinking-trace-source.test.ts",
+        "apps/web/tests-unit/braces-depth-boundary.test.ts",
+        "apps/web/tests-unit/cross-platform-web-tooling-source.test.ts",
+        "apps/web/tests-unit/dependency-install-compatibility.test.ts",
+        "apps/web/tests-unit/design-contract-source.test.ts",
+        "apps/web/tests-unit/gemini-ocr.test.ts",
+        "apps/web/tests-unit/local-supabase-runtime.test.ts",
+        "apps/web/tests-unit/map-view-google-helpers.test.ts",
+        "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+        "apps/web/tests-unit/mypage-mobile-cleanup-contract.test.ts",
+        "apps/web/tests-unit/ocr-runtime-config.test.ts",
+        "apps/web/tests-unit/public-surface-design-contract.test.ts",
+        "apps/web/tests-unit/restaurant-management-routing.test.ts",
+        "apps/web/tests-unit/restaurant-review-automation.test.ts",
+        "apps/web/tests-unit/security-headers-source.test.ts",
+        "apps/web/tests-unit/sentry-admin.test.ts",
+        "apps/web/tests-unit/sentry-privacy.test.ts",
+        "apps/web/tests-unit/sentry-sdk-transport.test.ts",
+        "apps/web/tests-unit/storyboard-gemini-client.test.ts",
+        "apps/web/tests-unit/storyboard-outbound-worker.test.ts",
+        "apps/web/tests-unit/storyboard-production-api.test.ts",
+        "apps/web/tests-unit/storyboard-provider-allowlist-parity.test.ts",
+        "apps/web/tests-unit/storyboard-retired-cli.test.ts",
+        "apps/web/tests-unit/stylegallery-primitive-taxonomy.test.ts",
+        "apps/web/tests-unit/typescript-toolchain-source.test.ts",
+        "apps/web/tests-unit/verify-pin-contract-source.test.ts",
+        "apps/web/tests-unit/web-quality-performance-source.test.ts",
+        "apps/web/tests/admin-storyboard-generator-live.spec.ts",
+        "apps/web/types/admin-sentry.ts",
+        "apps/web/types/evaluation.ts",
+        "apps/web/vendor/braces/LICENSE",
+        "apps/web/vendor/braces/UPSTREAM.json",
+        "apps/web/vendor/braces/index.js",
+        "apps/web/vendor/braces/lib/compile.js",
+        "apps/web/vendor/braces/lib/constants.js",
+        "apps/web/vendor/braces/lib/depth-guard.js",
+        "apps/web/vendor/braces/lib/expand.js",
+        "apps/web/vendor/braces/lib/parse.js",
+        "apps/web/vendor/braces/lib/stringify.js",
+        "apps/web/vendor/braces/lib/utils.js",
+        "apps/web/vendor/braces/package.json",
+        "apps/web/vendor/tzudong-braces-3.0.3-tzudong.1.tgz",
+        "backend/DATA_CONTRACTS.md",
+        "backend/bin/analyze_pipeline_performance.py",
+        "backend/bin/benchmark_gemini_admission.mjs",
+        "backend/bin/benchmark_media_pipeline.py",
+        "backend/bin/benchmark_metadata_reader.py",
+        "backend/bin/benchmark_pipeline_transform.py",
+        "backend/bin/benchmark_provider_reads.py",
+        "backend/bin/benchmark_restaurant_storage.py",
+        "backend/bin/benchmark_transcript_cache.mjs",
+        "backend/bin/check_gemini_runtime.mjs",
+        "backend/bin/probe_gemini_pipeline.mjs",
+        "backend/bin/review_recheck_gemini.mjs",
+        "backend/bin/review_recheck_transcript.mjs",
+        "backend/bin/run_hosted_new_video_pipeline.py",
+        "backend/bin/run_parallel_laaj.py",
+        "backend/bin/run_restaurant_review_automation.py",
+        "backend/bin/stage_cache.py",
+        "backend/bin/tests/test_check_layout_manifest_unittest.py",
+        "backend/bin/tests/test_evaluate_new_youtube_videos.py",
+        "backend/bin/tests/test_restaurant_review_automation.py",
+        "backend/bin/tests/test_service_identity_replay_order.py",
+        "backend/bin/verify_admin_snapshot_bounds.py",
+        "backend/bin/verify_restaurant_review_automation.py",
+        "backend/bin/verify_service_rpc_registry.py",
+        "backend/bin/verify_storyboard_gemini_migration.py",
+        "backend/layout-manifest.v1.json",
+        "backend/package-lock.json",
+        "backend/package.json",
+        "backend/pipeline_control/graph.py",
+        "backend/pipeline_control/media_cache.py",
+        "backend/pipeline_control/tests/test_adapter_profiles.py",
+        "backend/pipeline_control/worker.py",
+        "backend/restaurant-crawling/README.md",
+        "backend/restaurant-crawling/scripts/02-collect-meta.py",
+        "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+        "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+        "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+        "backend/restaurant-crawling/scripts/06-frame-caption.py",
+        "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+        "backend/restaurant-crawling/scripts/final_merge_chunk.mjs",
+        "backend/restaurant-crawling/scripts/gemini_api_request.mjs",
+        "backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs",
+        "backend/restaurant-crawling/scripts/get_optimal_jobs.py",
+        "backend/restaurant-crawling/scripts/parse_result.py",
+        "backend/restaurant-crawling/scripts/split_video_chunks.mjs",
+        "backend/restaurant-crawling/scripts/tests/map-url-network-policy.test.mjs",
+        "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py",
+        "backend/restaurant-crawling/scripts/tests/test_frame_caption_active_files.py",
+        "backend/restaurant-crawling/scripts/tests/test_gemini_chunk_upload_timeout.mjs",
+        "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js",
+        "backend/restaurant-crawling/scripts/tests/transcript-cache.test.mjs",
+        "backend/restaurant-crawling/scripts/tests/transcript-command.test.mjs",
+        "backend/restaurant-evaluation/scripts/09-target-selection.py",
+        "backend/restaurant-evaluation/scripts/10-rule-evaluation.py",
+        "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
+        "backend/restaurant-evaluation/scripts/12-transform.py",
+        "backend/restaurant-evaluation/scripts/13-supabase-insert.py",
+        "backend/restaurant-evaluation/scripts/gemini_api_request.mjs",
+        "backend/restaurant-evaluation/scripts/tests/test_rule_evaluation_precision_lift.py",
+        "backend/restaurant-evaluation/scripts/tests/test_supabase_insert_admin_lock.py",
+        "backend/restaurant-evaluation/scripts/tests/test_target_selection_visual.py",
+        "backend/restaurant-evaluation/scripts/tests/test_transform_rule_merge_read_amplification.py",
+        "backend/supabase/applied-receipts/storyboard-20261003/20261003000711_storyboard_production_foundation.sql",
+        "backend/supabase/applied-receipts/storyboard-20261003/20261003000811_storyboard_historical_restore.sql",
+        "backend/supabase/applied-receipts/storyboard-20261003/manifest.json",
+        "backend/supabase/migrations/20261002235102_admin_evaluation_pagination.sql",
+        "backend/supabase/migrations/20261003000812_storyboard_gemini_only.sql",
+        "backend/supabase/migrations/20261003065736_g014_current_service_rpc_registry.sql",
+        "backend/supabase/migrations/20261003081915_restaurant_review_automation.sql",
+        "backend/supabase/migrations/20261003095444_restore_service_identity_helpers.sql",
+        "backend/supabase/migrations/20261003113923_g014_service_invoker_contract.sql",
+        "backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql",
+        "backend/supabase/migrations/20261003172126_restaurant_review_manual_invoker_contract.sql",
+        "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql",
+        "backend/supabase/migrations/20261003193717_restaurant_review_claim_progress.sql",
+        "backend/supabase/migrations/20261003205335_storyboard_uncertain_lease_recovery.sql",
+        "backend/supabase/migrations/20261003212017_admin_evaluation_read_helpers.sql",
+        "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql",
+        "backend/supabase/migrations/20261003220841_admin_evaluation_page_invoker_contract.sql",
+        "backend/supabase/migrations/20261004003503_admin_evaluation_display_revision.sql",
+        "backend/supabase/migrations/20261004010334_restaurant_review_identity_evidence.sql",
+        "backend/supabase/migrations/20261004023841_storyboard_claim_capability_order.sql",
+        "backend/supabase/scripts/catalog_docker_endpoint.py",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "backend/supabase/scripts/materialize_migration_workspace.py",
+        "backend/supabase/scripts/test_admin_evaluation_catalog.py",
+        "backend/supabase/scripts/transform_service_invoker_replay.py",
+        "backend/supabase/scripts/transform_storyboard_history_replay.py",
+        "backend/supabase/scripts/verify_admin_page_conformance.py",
+        "backend/supabase/tests/storyboard_mlx_worker_integration.py",
+        "backend/supabase/tests/test_admin_evaluation_read_helpers.py",
+        "backend/supabase/tests/test_catalog_docker_endpoint.py",
+        "backend/supabase/tests/test_restaurant_review_identity.py",
+        "backend/supabase/tests/test_service_invoker_contract.py",
+        "backend/supabase/tests/test_service_invoker_replay.py",
+        "backend/supabase/tests/test_storyboard_history.py",
+        "backend/utils/frame-receipt.mjs",
+        "backend/utils/frame_lock_server.py",
+        "backend/utils/gemini-client.mjs",
+        "backend/utils/jsonl_utils.py",
+        "backend/utils/metadata_checkpoint.py",
+        "backend/utils/provider-budget.mjs",
+        "backend/utils/provider_budget.py",
+        "backend/utils/request_budget.py",
+        "backend/utils/resource-budget.mjs",
+        "backend/utils/stage_cache.py",
+        "backend/utils/tests/frame-receipt.test.mjs",
+        "backend/utils/tests/gemini-client.test.mjs",
+        "backend/utils/tests/resource-budget.test.mjs",
+        "backend/utils/tests/test_layout_naming_source_recovery.py",
+        "backend/utils/tests/test_pipeline_performance.py",
+        "backend/utils/tests/test_pipeline_restart_integration.py",
+        "backend/utils/tests/test_platform_modernization_reconciliation.py",
+        "backend/utils/tests/test_stage_execution.py",
+        "backend/utils/tests/test_supply_chain_contract.py",
+        "docs/operations/active-goal-scope-20261003.md",
+        "docs/operations/admin-page-database-20261004.md",
+        "docs/operations/frame-preview-stop-20261004.md",
+        "docs/operations/g014-service-invoker-contract-20261003.md",
+        "docs/operations/information-density-20261003.md",
+        "docs/operations/laaj-selection-identity-20261004.md",
+        "docs/operations/pipeline-performance-20261002.md",
+        "docs/operations/query-model-followup-20261004.md",
+        "docs/operations/renewal-handoff-20261003.md",
+        "docs/operations/restaurant-management-integration-20261003.md",
+        "docs/operations/restaurant-review-automation-20261003.md",
+        "docs/operations/review-recovery-followup-20261004.md",
+        "docs/operations/sentry-integration-20261004.md",
+        "docs/operations/storyboard-eight-real-provider-smoke.md",
+        "docs/operations/ui-and-gemini-renewal-20261003.md",
+        "docs/operations/upstream-integration-20261004.md"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness",
+        "CodeQL",
+        "GitGuardian Security Checks"
+      ],
+      "check_state_counts": {
+        "SKIPPED": 2,
+        "SUCCESS": 26,
+        "FAILURE": 3
+      },
+      "review_threads_total": 50,
+      "unresolved_reviews": [
+        {
+          "path": "apps/web/lib/admin/evaluation-page-server.ts",
+          "line": 62,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3099#discussion_r4176104496"
+          ]
+        },
+        {
+          "path": "backend/supabase/migrations/20261003081915_restaurant_review_automation.sql",
+          "line": 127,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3099#discussion_r4176104502"
+          ]
+        }
+      ],
+      "dependency_version_changes": []
+    },
+    {
+      "number": 3066,
+      "title": "build(deps): bump the web-runtime group across 1 directory with 17 updates",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3066",
+      "state": "open",
+      "created_at": "2026-09-27T19:45:22Z",
+      "updated_at": "2026-09-27T19:49:16Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1",
+      "head_ref": "dependabot/npm_and_yarn/apps/web/develop/web-runtime-bce562e1bc",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "class": "automated-web-runtime-dependencies",
+      "priority": "P1",
+      "findings": [
+        "Only package.json and package-lock.json changed; Bun lock remains stale. Review says 19 changes; direct-manifest audit found 18 changed dependency/devDependency entries, so title/review counts are not authoritative.",
+        "Selected Admin CI log shows 16 TS2702 diagnostics because Supercluster is used as a namespace in NaverMapView and clustering helpers. This is an additional blocker beyond the lockfile review.",
+        "75 commits behind current develop."
+      ],
+      "next": "Use one web-dependency owner with #3065/#2855 after #3099 manifest changes; reconcile npm authority and Bun lock, adapt Supercluster type imports/callers, then parity/build/map runtime checks on the final candidate.",
+      "dependencies": [
+        "Shares web manifests/lockfiles with #3065/#2855 and #3099."
+      ],
+      "proof": "Concrete current-PR-head CI/type failures; current integration is untested.",
+      "mergeability": {
+        "number": 3066,
+        "head_sha": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3066,
+        "head_sha": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 75,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 2,
+      "changed_paths": [
+        "apps/web/package-lock.json",
+        "apps/web/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "Install",
+        "Freshness",
+        "Ubuntu npm",
+        "Ubuntu Bun",
+        "orchestration-readiness",
+        "Windows npm",
+        "Windows Bun",
+        "Admin"
+      ],
+      "check_state_counts": {
+        "FAILURE": 8,
+        "SUCCESS": 15,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 1,
+      "unresolved_reviews": [
+        {
+          "path": "apps/web/package.json",
+          "line": 63,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3066#discussion_r4116700952"
+          ]
+        }
+      ],
+      "dependency_version_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "@google/genai",
+          "old": "^2.18.0",
+          "proposed": "^2.24.0",
+          "current_develop": "^2.18.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@supabase/ssr",
+          "old": "^0.12.4",
+          "proposed": "^0.12.7",
+          "current_develop": "^0.12.4"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@tanstack/react-query",
+          "old": "^5.101.4",
+          "proposed": "^5.103.2",
+          "current_develop": "^5.101.4"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "lucide-react",
+          "old": "^1.33.0",
+          "proposed": "^1.48.0",
+          "current_develop": "^1.33.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "maplibre-gl",
+          "old": "^6.10.0",
+          "proposed": "^6.11.2",
+          "current_develop": "^6.10.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "next",
+          "old": "16.3.5",
+          "proposed": "16.3.6",
+          "current_develop": "16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "openai",
+          "old": "^7.4.0",
+          "proposed": "^7.23.0",
+          "current_develop": "^7.4.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react",
+          "old": "^19.2.8",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.8"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-dom",
+          "old": "^19.2.8",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.8"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-error-boundary",
+          "old": "^6.1.3",
+          "proposed": "^6.1.6",
+          "current_develop": "^6.1.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-hook-form",
+          "old": "^7.85.0",
+          "proposed": "^7.88.0",
+          "current_develop": "^7.85.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "react-resizable-panels",
+          "old": "^4.12.3",
+          "proposed": "^4.13.3",
+          "current_develop": "^4.12.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "supercluster",
+          "old": "^9.0.0",
+          "proposed": "^9.1.0",
+          "current_develop": "^9.0.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "tailwind-merge",
+          "old": "^3.6.0",
+          "proposed": "^3.7.0",
+          "current_develop": "^3.6.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "web-vitals",
+          "old": "^6.1.1",
+          "proposed": "^6.2.2",
+          "current_develop": "^6.1.1"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "zod",
+          "old": "^4.4.3",
+          "proposed": "^4.6.5",
+          "current_develop": "^4.4.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/react",
+          "old": "^19.2.18",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.18"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/react-dom",
+          "old": "^19.2.4",
+          "proposed": "^19.3.0",
+          "current_develop": "^19.2.4"
+        }
+      ]
+    },
+    {
+      "number": 3065,
+      "title": "build(deps-dev): bump the web-development group across 1 directory with 8 updates",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3065",
+      "state": "open",
+      "created_at": "2026-09-27T19:44:02Z",
+      "updated_at": "2026-09-27T19:47:00Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6",
+      "head_ref": "dependabot/npm_and_yarn/apps/web/develop/web-development-0983b03d38",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "class": "automated-web-development-dependencies",
+      "priority": "P1",
+      "findings": [
+        "Eight development dependency updates omit Bun lock and fixed Supabase version-contract updates. Selected Install log confirms frozen-lockfile failure.",
+        "75 commits behind current develop."
+      ],
+      "next": "Reconcile Bun lock and targeted nightly/toolchain version contracts against npm authority; keep native TS 7.0.2 and compatibility TS 6.0.2 pins. Integrate with the single web dependency batch and verify parity/unit/build gates.",
+      "dependencies": [
+        "Same shared web manifests as #3066/#2855/#3099."
+      ],
+      "proof": "Bun failure confirmed; other review assertions remain source/review evidence until fresh tests.",
+      "mergeability": {
+        "number": 3065,
+        "head_sha": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3065,
+        "head_sha": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 75,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 2,
+      "changed_paths": [
+        "apps/web/package-lock.json",
+        "apps/web/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "Install",
+        "Freshness",
+        "Ubuntu npm",
+        "Ubuntu Bun",
+        "orchestration-readiness",
+        "Windows npm",
+        "Windows Bun"
+      ],
+      "check_state_counts": {
+        "FAILURE": 7,
+        "SUCCESS": 16,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 1,
+      "unresolved_reviews": [
+        {
+          "path": "apps/web/package.json",
+          "line": 145,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3065#discussion_r4116689447"
+          ]
+        }
+      ],
+      "dependency_version_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "@next/bundle-analyzer",
+          "old": "16.3.5",
+          "proposed": "16.3.6",
+          "current_develop": "16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@playwright/test",
+          "old": "^1.62.1",
+          "proposed": "^1.63.0",
+          "current_develop": "^1.62.1"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/google.maps",
+          "old": "^3.65.5",
+          "proposed": "^3.66.4",
+          "current_develop": "^3.65.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "@types/node",
+          "old": "^24.13.3",
+          "proposed": "^24.13.6",
+          "current_develop": "^24.13.3"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "baseline-browser-mapping",
+          "old": "2.11.14",
+          "proposed": "2.11.26",
+          "current_develop": "2.11.14"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "eslint-config-next",
+          "old": "^16.3.5",
+          "proposed": "^16.3.6",
+          "current_develop": "^16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "postcss",
+          "old": "^8.5.26",
+          "proposed": "^8.5.28",
+          "current_develop": "^8.5.26"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "supabase",
+          "old": "^2.115.0",
+          "proposed": "^2.117.0",
+          "current_develop": "^2.115.0"
+        }
+      ]
+    },
+    {
+      "number": 3064,
+      "title": "build(deps): bump puppeteer from 25.8.0 to 25.12.0 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3064",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:57Z",
+      "updated_at": "2026-09-27T19:43:35Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "966e114336620c71bbe5482c5a88e366f5c5caaa",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/puppeteer-25.12.0",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "class": "automated-backend-node-dependencies",
+      "priority": "P2",
+      "findings": [
+        "Puppeteer 25.8.0 -> 25.12.0; orchestration-readiness fails at an older base; no PR-specific browser defect established in bounded audit."
+      ],
+      "next": "Reconcile fresh backend lockfile under one owner and verify affected crawler/browser paths plus readiness after baseline evidence repair.",
+      "dependencies": [
+        "Backend package/lock shared with #3062/#3061/#2924 and #3099."
+      ],
+      "proof": "75 commits behind; failed check cause not individually diagnosed.",
+      "mergeability": {
+        "number": 3064,
+        "head_sha": "966e114336620c71bbe5482c5a88e366f5c5caaa",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3064,
+        "head_sha": "966e114336620c71bbe5482c5a88e366f5c5caaa",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 75,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 2,
+      "changed_paths": [
+        "backend/package-lock.json",
+        "backend/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "puppeteer",
+          "old": "^25.8.0",
+          "proposed": "^25.12.0",
+          "current_develop": "^25.8.0"
+        }
+      ]
+    },
+    {
+      "number": 3063,
+      "title": "build(deps): bump langchain-core from 1.6.0 to 1.6.5 in /backend/pipeline",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3063",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:50Z",
+      "updated_at": "2026-09-27T19:43:26Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+      "head_ref": "dependabot/pip/backend/pipeline/develop/langchain-core-1.6.5",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "class": "automated-pipeline-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "langchain-core 1.6.0 -> 1.6.5; orchestration-readiness fails."
+      ],
+      "next": "Resolve together with langgraph/pydantic in a pinned compatible pipeline environment; run affected orchestration/data-contract tests and security-agent-selected audit.",
+      "dependencies": [
+        "Same backend/pipeline/requirements.txt as #3060/#2889."
+      ],
+      "proof": "75 commits behind; no fresh integration or package safety conclusion.",
+      "mergeability": {
+        "number": 3063,
+        "head_sha": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3063,
+        "head_sha": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 75,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/pipeline/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "package": "langchain-core",
+          "proposed": "langchain-core==1.6.5",
+          "current_develop": [
+            "langchain-core==1.6.0"
+          ],
+          "removed": [
+            "langchain-core==1.6.0"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 3062,
+      "title": "build(deps): bump @google/genai from 2.18.0 to 2.24.0 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3062",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:50Z",
+      "updated_at": "2026-09-27T19:43:11Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/google/genai-2.24.0",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "class": "automated-backend-node-dependencies",
+      "priority": "P2",
+      "findings": [
+        "@google/genai 2.18.0 -> 2.24.0; orchestration-readiness fails."
+      ],
+      "next": "Coordinate with #3099 Gemini caller changes; update package and lock once, then validate affected response/cache/usage-boundary contracts.",
+      "dependencies": [
+        "Backend manifest shared with #3099 and other Node bumps; web SDK appears in #3066."
+      ],
+      "proof": "75 commits behind; compatibility must be verified on surviving callers.",
+      "mergeability": {
+        "number": 3062,
+        "head_sha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3062,
+        "head_sha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 75,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 2,
+      "changed_paths": [
+        "backend/package-lock.json",
+        "backend/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "@google/genai",
+          "old": "^2.18.0",
+          "proposed": "^2.24.0",
+          "current_develop": "^2.18.0"
+        }
+      ]
+    },
+    {
+      "number": 3061,
+      "title": "build(deps): bump dotenv from 16.6.1 to 18.0.3 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3061",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:41Z",
+      "updated_at": "2026-09-27T19:46:37Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "fa568c8ccf04a5e68b153c89033e9b08700f4286",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/dotenv-18.0.3",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "class": "automated-backend-node-major-compatibility",
+      "priority": "P1",
+      "findings": [
+        "dotenv 16.6.1 -> 18.0.3; unresolved review identifies stdout banner contamination of JSON CLI output. Current PR source uses config without quiet and dotenv/config side-effect import in two CLI consumers.",
+        "orchestration-readiness fails; 75 commits behind."
+      ],
+      "next": "Preserve machine-readable stdout with explicit quiet configuration; add focused stdout JSON parsing checks for both CLI paths before accepting the major update.",
+      "dependencies": [
+        "Shared backend package/lock with #3099 and other Node updates."
+      ],
+      "proof": "Caller mismatch confirmed by source; dependency runtime behavior is review evidence, not independently rerun here.",
+      "mergeability": {
+        "number": 3061,
+        "head_sha": "fa568c8ccf04a5e68b153c89033e9b08700f4286",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3061,
+        "head_sha": "fa568c8ccf04a5e68b153c89033e9b08700f4286",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 75,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 2,
+      "changed_paths": [
+        "backend/package-lock.json",
+        "backend/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 1,
+      "unresolved_reviews": [
+        {
+          "path": "backend/package.json",
+          "line": 10,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3061#discussion_r4116688113"
+          ]
+        }
+      ],
+      "dependency_version_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "dotenv",
+          "old": "^16.6.1",
+          "proposed": "^18.0.3",
+          "current_develop": "^16.6.1"
+        }
+      ]
+    },
+    {
+      "number": 3060,
+      "title": "build(deps): bump langgraph from 1.2.1 to 1.2.12 in /backend/pipeline",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3060",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:40Z",
+      "updated_at": "2026-09-27T19:42:54Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+      "head_ref": "dependabot/pip/backend/pipeline/develop/langgraph-1.2.12",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+      "class": "automated-pipeline-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "langgraph 1.2.1 -> 1.2.12; orchestration-readiness fails."
+      ],
+      "next": "Integrate with #3063/#2889 under one requirements-file owner; validate state/checkpoint compatibility and affected pipeline contracts.",
+      "dependencies": [
+        "Shares backend/pipeline/requirements.txt."
+      ],
+      "proof": "75 commits behind; old checks do not establish current compatibility.",
+      "mergeability": {
+        "number": 3060,
+        "head_sha": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3060,
+        "head_sha": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 75,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/pipeline/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "package": "langgraph",
+          "proposed": "langgraph==1.2.12",
+          "current_develop": [
+            "langgraph==1.2.1"
+          ],
+          "removed": [
+            "langgraph==1.2.1"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 3032,
+      "title": "fix: 단일 맛집 병합과 모달 너비를 정리한다",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3032",
+      "state": "open",
+      "created_at": "2026-09-23T11:19:04Z",
+      "updated_at": "2026-09-23T11:22:51Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "76afb0634b6710581aa296a9644929313e24b36f",
+      "head_ref": "codex/goal-perf-harden-20260923",
+      "base_ref": "develop",
+      "base_sha": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+      "class": "user-owned-source-needs-reconciliation",
+      "priority": "P1",
+      "findings": [
+        "GitHub mergeability readback is dirty; head is 120 commits behind current develop.",
+        "Source and CI confirm three existing REST-client tests still require old error strings while implementation emits bounded codes; Ubuntu npm unit step fails."
+      ],
+      "next": "After #3111, reconcile this branch with fresh develop without resetting user work; update existing REST-client contract tests to fixed bounded codes, retain fail-closed behavior, and verify modal insets plus single-restaurant merge behavior.",
+      "dependencies": [
+        "Shares use-restaurants.tsx with parent #3111.",
+        "Shares hook and merge test with #3031."
+      ],
+      "proof": "Old-head CI is current only for 76afb06, not current integration.",
+      "mergeability": {
+        "number": 3032,
+        "head_sha": "76afb0634b6710581aa296a9644929313e24b36f",
+        "mergeable": false,
+        "mergeable_state": "dirty",
+        "rebaseable": false
+      },
+      "ancestry": {
+        "number": 3032,
+        "head_sha": "76afb0634b6710581aa296a9644929313e24b36f",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 120,
+        "ahead_current_base": 2,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 8,
+      "changed_paths": [
+        "apps/web/components/filters/CategoryFilter.tsx",
+        "apps/web/components/ui/alert-dialog.tsx",
+        "apps/web/components/ui/dialog.tsx",
+        "apps/web/hooks/use-restaurants.tsx",
+        "apps/web/lib/supabase-rest-client.ts",
+        "apps/web/tests-unit/dialog-content-inset.test.ts",
+        "apps/web/tests-unit/supabase-rest-failure.test.ts",
+        "apps/web/tests-unit/use-restaurants-merge.test.ts"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "Ubuntu npm"
+      ],
+      "check_state_counts": {
+        "SKIPPED": 1,
+        "SUCCESS": 17,
+        "FAILURE": 1
+      },
+      "review_threads_total": 1,
+      "unresolved_reviews": [
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "line": 21,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3032#discussion_r4081864573"
+          ]
+        }
+      ],
+      "dependency_version_changes": []
+    },
+    {
+      "number": 3031,
+      "title": "perf(web): 같은 영상 링크의 ID 추출과 재조회를 한 번만 한다",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3031",
+      "state": "open",
+      "created_at": "2026-09-23T08:51:45Z",
+      "updated_at": "2026-09-23T09:13:50Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+      "head_ref": "codex/perf-guard-20260923",
+      "base_ref": "develop",
+      "base_sha": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+      "class": "user-owned-performance-source-and-evidence",
+      "priority": "P1",
+      "findings": [
+        "Three unresolved threads: retained benchmark uses inline baseline without frozen-tree/scorer/validator/detached artifact-map proof; extracted ID length is unbounded while route classifier limits it to 128; mutable error.name is logged in three dashboard routes.",
+        "Current-head source confirms ID/logging issues. Six performance files are scripts/benchmark JSON across three directories; no accepted speedup established by this audit.",
+        "120 commits behind current develop; checks green on its old SHA do not prove integration."
+      ],
+      "next": "Use one ID length contract, fixed failure codes and related runtime tests; retain canonical frozen baseline/scored/validated evidence before accepting the README speed claim, or remove unsupported acceptance/claim while preserving historical artifacts. Reconcile hook changes after #3111/#3032.",
+      "dependencies": [
+        "Shared use-restaurants.tsx and merge test with #3032; parent owns current hook edits."
+      ],
+      "proof": "No measured 6.41x improvement accepted; current PR checks cover cd86c10 only.",
+      "mergeability": {
+        "number": 3031,
+        "head_sha": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 3031,
+        "head_sha": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 120,
+        "ahead_current_base": 4,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 22,
+      "changed_paths": [
+        "README.md",
+        "apps/web/app/api/dashboard/restaurants/route.ts",
+        "apps/web/app/api/dashboard/summary/route.ts",
+        "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+        "apps/web/components/map/NaverMapView.tsx",
+        "apps/web/hooks/use-restaurants.tsx",
+        "apps/web/lib/dashboard/helpers.ts",
+        "apps/web/lib/dashboard/summary.ts",
+        "apps/web/lib/home-map-youtube-kpi.ts",
+        "apps/web/lib/map-restaurant-lookup.ts",
+        "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs",
+        "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json",
+        "apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs",
+        "apps/web/performance/dashboard-video-id-20260923/benchmark.json",
+        "apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs",
+        "apps/web/performance/map-restaurant-lookup-20260923/benchmark.json",
+        "apps/web/tests-unit/dashboard-aggregation.test.ts",
+        "apps/web/tests-unit/dashboard-public-visibility-source.test.ts",
+        "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+        "apps/web/tests-unit/map-restaurant-lookup.test.ts",
+        "apps/web/tests-unit/use-restaurants-merge.test.ts",
+        "apps/web/tests-unit/youtube-link-helpers.test.ts"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [],
+      "check_state_counts": {
+        "SKIPPED": 1,
+        "SUCCESS": 17
+      },
+      "review_threads_total": 3,
+      "unresolved_reviews": [
+        {
+          "path": "apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs",
+          "line": 21,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3031#discussion_r4080687430"
+          ]
+        },
+        {
+          "path": "apps/web/lib/dashboard/helpers.ts",
+          "line": 11,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3031#discussion_r4080687435"
+          ]
+        },
+        {
+          "path": "apps/web/app/api/dashboard/summary/route.ts",
+          "line": 27,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/3031#discussion_r4080819062"
+          ]
+        }
+      ],
+      "dependency_version_changes": []
+    },
+    {
+      "number": 2971,
+      "title": "chore(deps): bump openai from 3.3.1 to 3.16.1 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2971",
+      "state": "open",
+      "created_at": "2026-09-21T20:44:03Z",
+      "updated_at": "2026-09-21T20:44:12Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/openai-3.16.1",
+      "base_ref": "develop",
+      "base_sha": "fd96ed917e91c07ff6d913af949512f7a1a1c014",
+      "class": "automated-crawler-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "Python openai 3.3.1 -> 3.16.1; orchestration-readiness fails."
+      ],
+      "next": "Batch crawler requirements under one owner with #2896/#2894/#2888/#2850; verify surviving SDK callers and affected crawler tests without changing models/providers.",
+      "dependencies": [
+        "Same crawler requirements file and active #3099 pipeline work."
+      ],
+      "proof": "210 commits behind; no package-specific defect established.",
+      "mergeability": {
+        "number": 2971,
+        "head_sha": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2971,
+        "head_sha": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 210,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/restaurant-crawling/scripts/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "openai",
+          "proposed": "openai==3.16.1",
+          "current_develop": [
+            "openai==3.3.1"
+          ],
+          "removed": [
+            "openai==3.3.1"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2924,
+      "title": "build(deps): bump js-yaml from 4.3.2 to 5.4.2 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2924",
+      "state": "open",
+      "created_at": "2026-09-20T19:43:01Z",
+      "updated_at": "2026-09-21T08:49:32Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "40539ca35df591451ee3be8b8456001d72964fcb",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/js-yaml-5.4.2",
+      "base_ref": "develop",
+      "base_sha": "d60ff0faf163647a4a51f1b63095b0ac3d041ec5",
+      "class": "automated-backend-node-major-compatibility",
+      "priority": "P1",
+      "findings": [
+        "js-yaml manifest changes ^4.2.0 -> ^5.4.2 (PR title describes another prior release).",
+        "Unresolved review identifies removed default export; current PR map crawler still uses const { default: yaml } = await import and yaml.load.",
+        "orchestration-readiness fails; 307 commits behind."
+      ],
+      "next": "Use named load export or namespace consistently, verify channel config parsing and Step 05 callers, and coordinate the surviving YAML update with #2902/backend dependency owner.",
+      "dependencies": [
+        "Shared backend package/lock; #2902 has a still-unapplied minor YAML update."
+      ],
+      "proof": "Caller mismatch confirmed by source; actual v5 runtime not rerun in read-only audit.",
+      "mergeability": {
+        "number": 2924,
+        "head_sha": "40539ca35df591451ee3be8b8456001d72964fcb",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2924,
+        "head_sha": "40539ca35df591451ee3be8b8456001d72964fcb",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 307,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 2,
+      "changed_paths": [
+        "backend/package-lock.json",
+        "backend/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 1,
+      "unresolved_reviews": [
+        {
+          "path": "backend/package.json",
+          "line": 13,
+          "is_outdated": false,
+          "urls": [
+            "https://github.com/twoimo/tzudong/pull/2924#discussion_r4060532814"
+          ]
+        }
+      ],
+      "dependency_version_changes": [
+        {
+          "path": "backend/package.json",
+          "package": "js-yaml",
+          "old": "^4.2.0",
+          "proposed": "^5.4.2",
+          "current_develop": "^4.2.0"
+        }
+      ]
+    },
+    {
+      "number": 2908,
+      "title": "feat(admin): adopt semiotic KPI dashboard, trend momentum, and evaluation review",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2908",
+      "state": "open",
+      "created_at": "2026-09-15T08:25:40Z",
+      "updated_at": "2026-09-15T09:57:55Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+      "head_ref": "codex/local-replay-v2-20260908",
+      "base_ref": "develop",
+      "base_sha": "e5bfd74eda0050c93b9370187d5e4be84bed24e6",
+      "class": "historical-user-owned-partially-duplicated-source-and-evidence",
+      "priority": "P1",
+      "findings": [
+        "Conflicts with current develop and is 492 commits behind. Required Release context is absent on head; GitGuardian fails.",
+        "git cherry finds 30 equivalent patches and 2 unmatched patches among 32 non-merge commits. Unmatched commits are 0bb61220b1d408a22f0cf81f1cc1e1d31148ada1 and adea93042c0bd27f2015ba3200639be9c4b9fa11; these include broad UI/data/evidence and SEO/crawler work. This does not prove semantic supersession.",
+        "PR body historical catalog counts and test claims were not treated as current hosted proof."
+      ],
+      "next": "Reconcile the two unmatched commits by behavior/file against fresh develop and active #3099; retain evidence. Ask the source owner to choose surviving changes only after a concrete reconciliation; obtain fresh required CI and security readback. Keep open until substantive remaining scope is resolved.",
+      "dependencies": [
+        "35 shared files with #3099; 13 with #2857.",
+        "Security agent owns GitGuardian finding interpretation."
+      ],
+      "proof": "Historical partial patch equivalence only; no full supersession or hosted-state claim.",
+      "mergeability": {
+        "number": 2908,
+        "head_sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+        "mergeable": false,
+        "mergeable_state": "dirty",
+        "rebaseable": false
+      },
+      "ancestry": {
+        "number": 2908,
+        "head_sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 492,
+        "ahead_current_base": 32,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 299,
+      "changed_paths": [
+        ".agents/skills/tzudong-guidance-audit/SKILL.md",
+        ".github/scripts/build-nightly-local-publication.py",
+        ".github/scripts/verify-nightly-local-publication.py",
+        ".github/workflows/g014-catalog-contract-baseline.yml",
+        ".gitignore",
+        ".kiro/specs/crawler-pipeline-operational-readiness/catalog-recovery-20260906.md",
+        ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260906.md",
+        ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.json",
+        ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.md",
+        ".kiro/specs/crawler-pipeline-operational-readiness/tasks.md",
+        ".nvmrc",
+        "AGENTS.md",
+        "apps/web/app/admin/banners/page.tsx",
+        "apps/web/app/admin/evaluations/page.tsx",
+        "apps/web/app/admin/loading.tsx",
+        "apps/web/app/admin/page.tsx",
+        "apps/web/app/admin/privacy-incidents/page.tsx",
+        "apps/web/app/api/admin/restaurant-refresh-history/route.ts",
+        "apps/web/app/api/admin/restaurants/[restaurantId]/local-edit/route.ts",
+        "apps/web/app/api/admin/youtube-kpis/route.ts",
+        "apps/web/app/app-globals.css",
+        "apps/web/app/app-runtime-shell.tsx",
+        "apps/web/app/auth/reset-password/loading.tsx",
+        "apps/web/app/auth/reset-password/page.tsx",
+        "apps/web/app/feed/loading.tsx",
+        "apps/web/app/feed/page.tsx",
+        "apps/web/app/global-map/loading.tsx",
+        "apps/web/app/global-map/page.tsx",
+        "apps/web/app/home-client-effects.tsx",
+        "apps/web/app/home-client-loader.tsx",
+        "apps/web/app/home-client.tsx",
+        "apps/web/app/home-runtime-shell.tsx",
+        "apps/web/app/home-supabase-actions.ts",
+        "apps/web/app/insights/insights-client.tsx",
+        "apps/web/app/layout.tsx",
+        "apps/web/app/leaderboard/loading.tsx",
+        "apps/web/app/leaderboard/page.tsx",
+        "apps/web/app/manifest.ts",
+        "apps/web/app/mypage/bookmarks/page.tsx",
+        "apps/web/app/mypage/loading.tsx",
+        "apps/web/app/mypage/my-page-data-region.tsx",
+        "apps/web/app/mypage/mypage-layout-content.tsx",
+        "apps/web/app/mypage/reviews/page.tsx",
+        "apps/web/app/mypage/route-presentation.ts",
+        "apps/web/app/mypage/submissions/edit/page.tsx",
+        "apps/web/app/mypage/submissions/new/page.tsx",
+        "apps/web/app/mypage/submissions/recommend/page.tsx",
+        "apps/web/app/robots.ts",
+        "apps/web/app/sitemap.ts",
+        "apps/web/app/stamp/loading.tsx",
+        "apps/web/app/stamp/page.tsx",
+        "apps/web/app/user/[userId]/loading.tsx",
+        "apps/web/bun.lock",
+        "apps/web/components/admin/AdminConsoleOverview.tsx",
+        "apps/web/components/admin/AdminDataPending.tsx",
+        "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+        "apps/web/components/admin/AdminOverviewDashboard.tsx",
+        "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+        "apps/web/components/admin/AdminReviewPanel.tsx",
+        "apps/web/components/admin/AdminUsersPanel.tsx",
+        "apps/web/components/admin/DashboardDataTable.tsx",
+        "apps/web/components/admin/EditRestaurantModal.tsx",
+        "apps/web/components/admin/EvaluationTableNew.tsx",
+        "apps/web/components/admin/SemioticKpiSparkline.tsx",
+        "apps/web/components/admin/SubmissionListView.tsx",
+        "apps/web/components/admin/TrendProposalQueue.tsx",
+        "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+        "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+        "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx",
+        "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+        "apps/web/components/auth/ResetPasswordProgressiveSkeleton.tsx",
+        "apps/web/components/feed/FeedContent.tsx",
+        "apps/web/components/feed/FeedReadCount.tsx",
+        "apps/web/components/filters/CategoryFilter.tsx",
+        "apps/web/components/home/DesktopLeftPanelMapHome.tsx",
+        "apps/web/components/home/LocalWorkspaceBanner.tsx",
+        "apps/web/components/home/MobileControlOverlay.tsx",
+        "apps/web/components/home/home-control-panel.tsx",
+        "apps/web/components/home/home-desktop-control-panel.tsx",
+        "apps/web/components/home/home-map-container.tsx",
+        "apps/web/components/home/use-overseas-country-counts.ts",
+        "apps/web/components/layout/MainLayout.tsx",
+        "apps/web/components/layout/NavigationPrefetcher.tsx",
+        "apps/web/components/layout/OverlayLayout.tsx",
+        "apps/web/components/map/NaverMapView.tsx",
+        "apps/web/components/map/OverseasMap.tsx",
+        "apps/web/components/profile/UserProfilePanel.tsx",
+        "apps/web/components/profile/UserProfileProgressiveSkeleton.tsx",
+        "apps/web/components/region/RegionSelector.tsx",
+        "apps/web/components/search/RestaurantSearch.tsx",
+        "apps/web/components/ui/button.tsx",
+        "apps/web/components/ui/card.tsx",
+        "apps/web/components/ui/data-pending.tsx",
+        "apps/web/components/ui/skeleton.tsx",
+        "apps/web/constants/overseas-regions.ts",
+        "apps/web/hooks/leaderboard-read-result.ts",
+        "apps/web/hooks/use-announcements.tsx",
+        "apps/web/hooks/use-banner-announcements.tsx",
+        "apps/web/hooks/use-restaurants.tsx",
+        "apps/web/hooks/useLeaderboard.ts",
+        "apps/web/lib/admin/dashboard-visualization-data.ts",
+        "apps/web/lib/admin/local-catalog-edit-client.ts",
+        "apps/web/lib/admin/local-catalog-edit.ts",
+        "apps/web/lib/admin/local-catalog-evaluation-readback.ts",
+        "apps/web/lib/admin/youtube-kpi-snapshots.ts",
+        "apps/web/lib/announcement-localization.ts",
+        "apps/web/lib/home-detail-route-state.ts",
+        "apps/web/lib/home-map-theme-filters.ts",
+        "apps/web/lib/home-map-youtube-kpi.ts",
+        "apps/web/lib/map-query-helpers.ts",
+        "apps/web/lib/overseas-region-matching.ts",
+        "apps/web/lib/popular-restaurants.ts",
+        "apps/web/lib/privacy/sanitize.ts",
+        "apps/web/lib/restaurant-discovery-cache.ts",
+        "apps/web/lib/restaurant-popularity.ts",
+        "apps/web/lib/security/local-development-boundary.ts",
+        "apps/web/lib/security/same-origin-mutation.ts",
+        "apps/web/lib/seo.ts",
+        "apps/web/package-lock.json",
+        "apps/web/package.json",
+        "apps/web/performance/admin-console-20260908/README.md",
+        "apps/web/performance/admin-console-20260908/artifact-map.json",
+        "apps/web/performance/admin-console-20260908/frozen-after/AdminConsoleOverview.tsx.txt",
+        "apps/web/performance/admin-console-20260908/frozen-after/DashboardDataTable.tsx.txt",
+        "apps/web/performance/admin-console-20260908/frozen-after/dashboard-visualization-data.ts.txt",
+        "apps/web/performance/admin-console-20260908/frozen-before/AdminConsoleOverview.tsx.txt",
+        "apps/web/performance/admin-console-20260908/kpi-behavior-readback.json",
+        "apps/web/performance/admin-console-20260908/layout-readback.json",
+        "apps/web/performance/admin-console-20260908/measure-table-render.tsx",
+        "apps/web/performance/admin-console-20260908/table-render-raw.json",
+        "apps/web/performance/admin-console-20260908/table-render-scored.json",
+        "apps/web/performance/admin-console-20260908/verification.json",
+        "apps/web/performance/merge-scaling-20260908/address-exploratory.json",
+        "apps/web/performance/merge-scaling-20260908/count-cache-artifact-map.json",
+        "apps/web/performance/merge-scaling-20260908/count-cache-functional-readback.json",
+        "apps/web/performance/merge-scaling-20260908/home-script-inventory.json",
+        "apps/web/performance/merge-scaling-20260908/local-replay-acl-diagnosis.json",
+        "apps/web/performance/merge-scaling-20260908/local-runtime-admission.json",
+        "apps/web/performance/merge-scaling-20260908/local-runtime-functional-verification.json",
+        "apps/web/performance/merge-scaling-20260908/naver-browser-preparation.json",
+        "apps/web/performance/merge-scaling-20260908/naver-query-scheduling.json",
+        "apps/web/performance/merge-scaling-20260908/replay-command-verification.json",
+        "apps/web/performance/merge-scaling-20260908/replay-v2-integration.json",
+        "apps/web/performance/merge-scaling-20260908/verification.json",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/README.md",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/artifact-map.json",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/baseline.source",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/candidate.source",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/freeze.json",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/measure.mjs",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/raw.json",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/runtime-tests.source",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/score.mjs",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/scored.json",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/treemap.source",
+        "apps/web/performance/youtube-kpi-read-scheduling-20260908/verification.json",
+        "apps/web/public/__local/naver-maps.js",
+        "apps/web/public/fonts/suit/LICENSE",
+        "apps/web/public/fonts/suit/README.md",
+        "apps/web/public/fonts/suit/SUIT-Variable.woff2",
+        "apps/web/public/llms-full.txt",
+        "apps/web/public/llms.txt",
+        "apps/web/scripts/dev-prewarm.mjs",
+        "apps/web/scripts/local-supabase-runtime.mjs",
+        "apps/web/scripts/run-local-dev.mjs",
+        "apps/web/scripts/run-nightly-regression.mjs",
+        "apps/web/scripts/sanitize-evaluation-evidence.ts",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+        "apps/web/tests-unit/admin-evaluation-pending-layout.test.tsx",
+        "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+        "apps/web/tests-unit/admin-owned-pending-render.test.tsx",
+        "apps/web/tests-unit/admin-refresh-apply-route.test.ts",
+        "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+        "apps/web/tests-unit/announcement-localization.test.ts",
+        "apps/web/tests-unit/auth-profile-localized-pending.test.tsx",
+        "apps/web/tests-unit/category-count-state.test.tsx",
+        "apps/web/tests-unit/dashboard-data-table.test.tsx",
+        "apps/web/tests-unit/dashboard-visualization-data.test.ts",
+        "apps/web/tests-unit/home-detail-route-state.test.ts",
+        "apps/web/tests-unit/home-initial-layout-render.test.tsx",
+        "apps/web/tests-unit/home-map-theme-filters.test.ts",
+        "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+        "apps/web/tests-unit/home-root-lazy-boundary.test.ts",
+        "apps/web/tests-unit/local-catalog-edit-client.test.ts",
+        "apps/web/tests-unit/local-catalog-edit.test.ts",
+        "apps/web/tests-unit/local-catalog-evaluation-readback.test.ts",
+        "apps/web/tests-unit/local-dev-runtime-inheritance.test.ts",
+        "apps/web/tests-unit/local-naver-map-stub.test.ts",
+        "apps/web/tests-unit/local-supabase-runtime.test.ts",
+        "apps/web/tests-unit/local-youtube-kpi-refresh.test.ts",
+        "apps/web/tests-unit/map-query-helpers.test.ts",
+        "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+        "apps/web/tests-unit/mypage-mobile-cleanup-contract.test.ts",
+        "apps/web/tests-unit/naver-query-startup.test.ts",
+        "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+        "apps/web/tests-unit/overseas-region-matching.test.ts",
+        "apps/web/tests-unit/privacy-sanitize.test.ts",
+        "apps/web/tests-unit/public-feed-leaderboard-state.test.tsx",
+        "apps/web/tests-unit/public-route-data-layout.test.tsx",
+        "apps/web/tests-unit/restaurant-discovery-cache.test.ts",
+        "apps/web/tests-unit/restaurant-popularity.test.ts",
+        "apps/web/tests-unit/root-layout-local-runtime-contract.test.ts",
+        "apps/web/tests-unit/same-origin-mutation.test.ts",
+        "apps/web/tests-unit/seo-source.test.ts",
+        "apps/web/tests-unit/use-restaurants-merge.test.ts",
+        "apps/web/tests-unit/web-quality-performance-source.test.ts",
+        "apps/web/tests-unit/youtube-kpi-snapshot-contract.test.ts",
+        "apps/web/tests-unit/youtube-kpi-snapshots-runtime.test.ts",
+        "apps/web/tests/admin-kpi-dashboard-runtime.spec.ts",
+        "apps/web/tests/admin-module-ready.ts",
+        "apps/web/tests/home-map-contextual-discovery.spec.ts",
+        "apps/web/tests/mobile-home-map-helpers.ts",
+        "apps/web/tests/mobile-home-map.spec.ts",
+        "apps/web/tests/naver-query-startup.spec.ts",
+        "apps/web/tests/nightly/nightly-test.ts",
+        "apps/web/tests/qa-integration.spec.ts",
+        "backend/bin/evaluate_new_youtube_videos.py",
+        "backend/bin/run_trend_dry_run.py",
+        "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+        "backend/restaurant-crawling/scripts/split_video_chunks.mjs",
+        "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_BUNDLE.v4.json",
+        "backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json",
+        "backend/supabase/baselines/local/application-prerequisites.sql",
+        "backend/supabase/candidates/20260906064459_admin_restaurant_refresh_apply_boundary.sql",
+        "backend/supabase/candidates/restaurant_catalog_edit_api.sql",
+        "backend/supabase/candidates/restaurant_catalog_edit_core.sql",
+        "backend/supabase/candidates/restaurant_catalog_publish_api.sql",
+        "backend/supabase/candidates/restaurant_catalog_publish_core.sql",
+        "backend/supabase/docs/admin-management-group-catalog-slice.md",
+        "backend/supabase/docs/catalog-generator-local-docker.md",
+        "backend/supabase/docs/g014-pg17-owner-recovery.md",
+        "backend/supabase/docs/local-working-catalog.md",
+        "backend/supabase/docs/restaurant-refresh-apply-boundary.md",
+        "backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+        "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+        "backend/supabase/migrations/20260908000100_separate_ingestion_candidate_identity.sql",
+        "backend/supabase/scripts/admin_management_group_plan.py",
+        "backend/supabase/scripts/admin_user_ids_slice_plan.py",
+        "backend/supabase/scripts/catalog_docker_endpoint.py",
+        "backend/supabase/scripts/catalog_publish_operator.py",
+        "backend/supabase/scripts/catalog_publish_transport.py",
+        "backend/supabase/scripts/g014_catalog_diagnostic.py",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "backend/supabase/scripts/hosted_data_plane.py",
+        "backend/supabase/scripts/local-function-runtime-scan.py",
+        "backend/supabase/scripts/local-migrate.py",
+        "backend/supabase/scripts/local_catalog_edit_install.py",
+        "backend/supabase/scripts/local_catalog_publish.py",
+        "backend/supabase/scripts/local_catalog_publish_plan.py",
+        "backend/supabase/scripts/local_catalog_workspace.py",
+        "backend/supabase/scripts/local_evaluation_review.py",
+        "backend/supabase/scripts/local_replay_contract.py",
+        "backend/supabase/scripts/local_review_place_evidence.py",
+        "backend/supabase/scripts/local_working_schema.py",
+        "backend/supabase/scripts/recover_advisor_replay_prerequisites.py",
+        "backend/supabase/scripts/refresh-local-youtube-kpis.mjs",
+        "backend/supabase/scripts/test_catalog_publish_operator.py",
+        "backend/supabase/scripts/test_catalog_publish_transport.py",
+        "backend/supabase/scripts/test_hosted_data_plane.py",
+        "backend/supabase/scripts/test_local_catalog_edit_install.py",
+        "backend/supabase/scripts/test_local_catalog_publish_plan.py",
+        "backend/supabase/scripts/test_local_catalog_workspace.py",
+        "backend/supabase/scripts/test_local_evaluation_review.py",
+        "backend/supabase/scripts/verify_admin_management_group_replay.py",
+        "backend/supabase/scripts/verify_g014_pg17_owner_replay.py",
+        "backend/supabase/scripts/verify_g026_reconstruction_bundle.py",
+        "backend/supabase/scripts/verify_ingestion_identity.sql",
+        "backend/supabase/tests/test_admin_management_group.py",
+        "backend/supabase/tests/test_admin_management_group_replay.py",
+        "backend/supabase/tests/test_admin_user_ids_catalog_slice.py",
+        "backend/supabase/tests/test_admin_user_ids_replay.py",
+        "backend/supabase/tests/test_catalog_docker_endpoint.py",
+        "backend/supabase/tests/test_g014_diagnostic_admission.py",
+        "backend/supabase/tests/test_g014_pg17_owner_contract.py",
+        "backend/supabase/tests/test_g026_reconstruction_bundle.py",
+        "backend/supabase/tests/test_local_function_runtime_contract.py",
+        "backend/supabase/tests/test_local_migration_contract.py",
+        "backend/supabase/tests/test_local_publication_verifier.py",
+        "backend/supabase/tests/test_local_replay_contract.py",
+        "backend/supabase/tests/test_local_seed_receipt_contract.py",
+        "backend/supabase/tests/test_restaurant_catalog_edit_core.py",
+        "backend/supabase/tests/test_restaurant_refresh_apply_boundary.py",
+        "backend/trend/dry_run.py",
+        "backend/trend/momentum.py",
+        "backend/trend/tests/test_momentum.py",
+        "backend/video_evidence/__init__.py",
+        "backend/video_evidence/runner.py",
+        "backend/video_evidence/test_runner.py",
+        "backend/video_evidence/vendor/claude_video/LICENSE",
+        "backend/video_evidence/vendor/claude_video/NOTICE.md",
+        "backend/video_evidence/vendor/claude_video/frames.py",
+        "backend/video_evidence/vendor/claude_video/transcribe.py",
+        "docs/README.md",
+        "docs/agents/privacy.md",
+        "docs/agents/release.md",
+        "docs/agents/verification.md",
+        "docs/archive/handoffs/codex/2026-09-08-agent-guidance-audit.md",
+        "docs/operations/local-first-readiness.md",
+        "docs/operations/nightly-regression.md"
+      ],
+      "required_check_states": {
+        "Release": "MISSING",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "GitGuardian Security Checks"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 9,
+        "FAILURE": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": []
+    },
+    {
+      "number": 2906,
+      "title": "chore(deps): bump psycopg2-binary from 2.9.11 to 2.9.13 in /backend/pipeline-control",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2906",
+      "state": "open",
+      "created_at": "2026-09-13T19:44:32Z",
+      "updated_at": "2026-09-13T19:44:43Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+      "head_ref": "dependabot/pip/backend/pipeline-control/develop/psycopg2-binary-2.9.13",
+      "base_ref": "develop",
+      "base_sha": "e5bfd74eda0050c93b9370187d5e4be84bed24e6",
+      "class": "automated-control-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "psycopg2-binary 2.9.11 -> 2.9.13; Freshness, both npm audit jobs and orchestration-readiness fail on historical head."
+      ],
+      "next": "Reconcile current control requirements and verify connection/transaction contracts; security agent checks current advisories rather than inheriting old npm audit conclusions.",
+      "dependencies": [
+        "Separate requirements file can be owned independently; serialize promotion."
+      ],
+      "proof": "463 commits behind; unrelated historical npm failures do not prove the proposed Python bump is unsafe.",
+      "mergeability": {
+        "number": 2906,
+        "head_sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2906,
+        "head_sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 463,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/pipeline-control/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "Freshness",
+        "npm-audit (apps/web)",
+        "npm-audit (backend)",
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "FAILURE": 4,
+        "SUCCESS": 13,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/pipeline-control/requirements.txt",
+          "package": "psycopg2-binary",
+          "proposed": "psycopg2-binary==2.9.13",
+          "current_develop": [
+            "psycopg2-binary==2.9.11"
+          ],
+          "removed": [
+            "psycopg2-binary==2.9.11"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2903,
+      "title": "docs: clean up README with concise features and visual product tour",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2903",
+      "state": "open",
+      "created_at": "2026-09-09T04:03:59Z",
+      "updated_at": "2026-09-09T04:04:13Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "da096e04baf979ac35531172c7a1de95090aa649",
+      "head_ref": "docs/clean-readme-1788926635",
+      "base_ref": "main",
+      "base_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "class": "user-owned-documentation-with-wrong-promotion-target",
+      "priority": "P2",
+      "findings": [
+        "README-only PR targets main directly, fails mandatory Promotion Path, and conflicts; 461 commits behind main."
+      ],
+      "next": "Prepare surviving README changes against fresh develop and route through develop -> data -> main under protection; retain original PR until successor scope and evidence are explicit.",
+      "dependencies": [
+        "Must use protected promotion order, not direct main merge."
+      ],
+      "proof": "Required Promotion Path failure is current for this old head; README technical claims need fresh comparison.",
+      "mergeability": {
+        "number": 2903,
+        "head_sha": "da096e04baf979ac35531172c7a1de95090aa649",
+        "mergeable": false,
+        "mergeable_state": "dirty",
+        "rebaseable": false
+      },
+      "ancestry": {
+        "number": 2903,
+        "head_sha": "da096e04baf979ac35531172c7a1de95090aa649",
+        "current_base_sha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+        "local_objects_available": true,
+        "behind_current_base": 461,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "README.md"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "FAILURE"
+      },
+      "failed_check_names": [
+        "Promotion Path"
+      ],
+      "check_state_counts": {
+        "FAILURE": 1,
+        "SUCCESS": 10
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": []
+    },
+    {
+      "number": 2902,
+      "title": "chore(deps): bump the npm_and_yarn group across 2 directories with 4 updates",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2902",
+      "state": "open",
+      "created_at": "2026-09-09T03:31:58Z",
+      "updated_at": "2026-09-09T03:32:10Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+      "head_ref": "dependabot/npm_and_yarn/backend/npm_and_yarn-23572d5168",
+      "base_ref": "main",
+      "base_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+      "class": "automated-partially-superseded-multi-manifest-wrong-target",
+      "priority": "P1",
+      "findings": [
+        "Targets main directly: mandatory Promotion Path fails and merge conflicts exist.",
+        "Three proposed web entries are already met/exceeded: current maplibre-gl ^6.10.0 vs proposed ^6.4.1; next 16.3.5 vs 16.3.4; sharp ^0.35.4 already matches.",
+        "Backend js-yaml ^4.3.2 is not represented by current ^4.2.0; therefore entire PR is not proven obsolete."
+      ],
+      "next": "Extract only still-needed compatible YAML intent into fresh develop with the backend batch; do not downgrade web packages or close the original before successor coverage is proven.",
+      "dependencies": [
+        "#2924 overlaps YAML; #3099 and web batch own current manifests."
+      ],
+      "proof": "Manifest-level partial supersession verified; lockfile/behavior equivalence and complete supersession are not proved.",
+      "mergeability": {
+        "number": 2902,
+        "head_sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+        "mergeable": false,
+        "mergeable_state": "dirty",
+        "rebaseable": false
+      },
+      "ancestry": {
+        "number": 2902,
+        "head_sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+        "current_base_sha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+        "local_objects_available": true,
+        "behind_current_base": 461,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 4,
+      "changed_paths": [
+        "apps/web/package-lock.json",
+        "apps/web/package.json",
+        "backend/package-lock.json",
+        "backend/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "FAILURE"
+      },
+      "failed_check_names": [
+        "Install",
+        "Promotion Path",
+        "Ubuntu npm",
+        "Ubuntu Bun",
+        "orchestration-readiness",
+        "Windows npm",
+        "Windows Bun",
+        "Admin"
+      ],
+      "check_state_counts": {
+        "FAILURE": 8,
+        "SUCCESS": 14,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "maplibre-gl",
+          "old": "^5.24.0",
+          "proposed": "^6.4.1",
+          "current_develop": "^6.10.0"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "next",
+          "old": "16.2.12",
+          "proposed": "16.3.4",
+          "current_develop": "16.3.5"
+        },
+        {
+          "path": "apps/web/package.json",
+          "package": "sharp",
+          "old": "^0.35.3",
+          "proposed": "^0.35.4",
+          "current_develop": "^0.35.4"
+        },
+        {
+          "path": "backend/package.json",
+          "package": "js-yaml",
+          "old": "^4.2.0",
+          "proposed": "^4.3.2",
+          "current_develop": "^4.2.0"
+        }
+      ]
+    },
+    {
+      "number": 2896,
+      "title": "Bump google-api-python-client from 2.196.0 to 2.200.0 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2896",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:59Z",
+      "updated_at": "2026-09-06T19:43:52Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "833ddd699e73f95bf84b2b80975fea1783998333",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/google-api-python-client-2.200.0",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "class": "automated-crawler-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "google-api-python-client 2.196.0 -> 2.200.0; no failed head checks but 494 commits behind current develop."
+      ],
+      "next": "Integrate under crawler requirements owner and run current YouTube API adapter contracts.",
+      "dependencies": [
+        "Shares crawler requirements with #2971/#2894/#2888/#2850."
+      ],
+      "proof": "Green checks on a stale head are not fresh integration proof.",
+      "mergeability": {
+        "number": 2896,
+        "head_sha": "833ddd699e73f95bf84b2b80975fea1783998333",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2896,
+        "head_sha": "833ddd699e73f95bf84b2b80975fea1783998333",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 494,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/restaurant-crawling/scripts/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [],
+      "check_state_counts": {
+        "SUCCESS": 17,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "google-api-python-client",
+          "proposed": "google-api-python-client==2.200.0",
+          "current_develop": [
+            "google-api-python-client==2.196.0"
+          ],
+          "removed": [
+            "google-api-python-client==2.196.0"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2894,
+      "title": "Bump curl-cffi from 0.15.0 to 0.16.3 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2894",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:53Z",
+      "updated_at": "2026-09-06T19:43:36Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/curl-cffi-0.16.3",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "class": "automated-crawler-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "curl_cffi 0.15.0 -> 0.16.3; no failed head checks; 494 commits behind."
+      ],
+      "next": "Integrate crawler requirements once and test affected HTTP/crawler error behavior in isolated local checks.",
+      "dependencies": [
+        "Same crawler requirements batch."
+      ],
+      "proof": "No newly established defect; current compatibility unverified.",
+      "mergeability": {
+        "number": 2894,
+        "head_sha": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2894,
+        "head_sha": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 494,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/restaurant-crawling/scripts/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [],
+      "check_state_counts": {
+        "SUCCESS": 17,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "curl_cffi",
+          "proposed": "curl_cffi==0.16.3",
+          "current_develop": [
+            "curl_cffi==0.15.0"
+          ],
+          "removed": [
+            "curl_cffi==0.15.0"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2892,
+      "title": "chore(deps): bump Azure/setup-helm from 4.3.1 to 5.0.1",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2892",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:45Z",
+      "updated_at": "2026-09-22T13:43:56Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "github_actions"
+      ],
+      "draft": false,
+      "head_sha": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d",
+      "head_ref": "dependabot/github_actions/develop/Azure/setup-helm-5.0.1",
+      "base_ref": "develop",
+      "base_sha": "e777691191ae21eaed611a8c8d24b80ca68b7419",
+      "class": "automated-ci-action-dependencies",
+      "priority": "P2",
+      "findings": [
+        "Pinned Azure/setup-helm action changes to 5.0.1; Freshness and orchestration-readiness fail."
+      ],
+      "next": "Coordinate with #3099 security workflow edits and #2887; verify the action revision and existing workflow contract without changing permissions or dispatching workflows in this audit.",
+      "dependencies": [
+        "Same .github/workflows/security-audit.yml as #2887 and #3099."
+      ],
+      "proof": "154 commits behind; current action compatibility not established.",
+      "mergeability": {
+        "number": 2892,
+        "head_sha": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2892,
+        "head_sha": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 154,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        ".github/workflows/security-audit.yml"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "Freshness",
+        "orchestration-readiness"
+      ],
+      "check_state_counts": {
+        "FAILURE": 2,
+        "SUCCESS": 15,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": ".github/workflows/security-audit.yml",
+          "changed_action_lines": [
+            "-        uses: Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4",
+            "+        uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2889,
+      "title": "Bump pydantic from 2.13.4 to 2.13.5 in /backend/pipeline",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2889",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:36Z",
+      "updated_at": "2026-09-06T19:42:53Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "e817c475ee9c38478deab156a36848eba4e8dffc",
+      "head_ref": "dependabot/pip/backend/pipeline/develop/pydantic-2.13.5",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "class": "automated-pipeline-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "pydantic 2.13.4 -> 2.13.5; no failed head checks; 494 commits behind."
+      ],
+      "next": "Resolve and verify with #3063/#3060 against existing model/serialization contracts.",
+      "dependencies": [
+        "Shared pipeline requirements file."
+      ],
+      "proof": "Old green check contexts only.",
+      "mergeability": {
+        "number": 2889,
+        "head_sha": "e817c475ee9c38478deab156a36848eba4e8dffc",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2889,
+        "head_sha": "e817c475ee9c38478deab156a36848eba4e8dffc",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 494,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/pipeline/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [],
+      "check_state_counts": {
+        "SUCCESS": 17,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/pipeline/requirements.txt",
+          "package": "pydantic",
+          "proposed": "pydantic==2.13.5",
+          "current_develop": [
+            "pydantic==2.13.4"
+          ],
+          "removed": [
+            "pydantic==2.13.4"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2888,
+      "title": "Bump scrapling from 0.4.8 to 0.4.15 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2888",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:34Z",
+      "updated_at": "2026-09-06T19:42:45Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/scrapling-0.4.15",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93",
+      "class": "automated-crawler-python-dependencies",
+      "priority": "P1",
+      "findings": [
+        "scrapling[fetchers] 0.4.8 -> 0.4.15; crawler pip-audit fails on this head; 494 commits behind."
+      ],
+      "next": "Let security agent identify current required remediation versions; verify the combined crawler environment and smoke contracts before promotion.",
+      "dependencies": [
+        "Shared crawler requirements batch; security agent owns alert diagnosis."
+      ],
+      "proof": "Failed audit context recorded; no unverified vulnerability or safe-version assertion.",
+      "mergeability": {
+        "number": 2888,
+        "head_sha": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2888,
+        "head_sha": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 494,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/restaurant-crawling/scripts/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "pip-audit (backend/restaurant-crawling/scripts/requirements.txt)"
+      ],
+      "check_state_counts": {
+        "SUCCESS": 16,
+        "FAILURE": 1,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "scrapling",
+          "proposed": "scrapling[fetchers]==0.4.15",
+          "current_develop": [
+            "scrapling[fetchers]==0.4.8"
+          ],
+          "removed": [
+            "scrapling[fetchers]==0.4.8"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2887,
+      "title": "chore(deps): bump opentofu/setup-opentofu from 1.0.8 to 2.0.2",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2887",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:26Z",
+      "updated_at": "2026-09-22T13:43:48Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "github_actions"
+      ],
+      "draft": false,
+      "head_sha": "3a10ae6e8004c1f1488861b3f7c118653e62f0da",
+      "head_ref": "dependabot/github_actions/develop/opentofu/setup-opentofu-2.0.2",
+      "base_ref": "develop",
+      "base_sha": "e777691191ae21eaed611a8c8d24b80ca68b7419",
+      "class": "automated-ci-action-dependencies",
+      "priority": "P2",
+      "findings": [
+        "Pinned opentofu/setup-opentofu action changes to 2.0.2; Freshness fails; 154 commits behind."
+      ],
+      "next": "Reconcile alongside #2892 and active #3099 workflow changes, preserving pins and privileges; validate current workflow source.",
+      "dependencies": [
+        "Shared security-audit.yml."
+      ],
+      "proof": "No package-specific defect established beyond stale freshness evidence.",
+      "mergeability": {
+        "number": 2887,
+        "head_sha": "3a10ae6e8004c1f1488861b3f7c118653e62f0da",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2887,
+        "head_sha": "3a10ae6e8004c1f1488861b3f7c118653e62f0da",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 154,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        ".github/workflows/security-audit.yml"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "Freshness"
+      ],
+      "check_state_counts": {
+        "FAILURE": 1,
+        "SUCCESS": 5,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": ".github/workflows/security-audit.yml",
+          "changed_action_lines": [
+            "-        uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1",
+            "+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2857,
+      "title": "Admin console sidebar refactor: module panel through task 16 verification",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2857",
+      "state": "open",
+      "created_at": "2026-09-03T10:50:32Z",
+      "updated_at": "2026-09-03T14:28:05Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+      "head_ref": "cursor/admin-console-module-panel-90fd",
+      "base_ref": "refactor/admin-console-sidebar",
+      "base_sha": "0a8416d42a37a95e686c4d782e1ec73f6a15e37f",
+      "class": "user-owned-stacked-admin-work",
+      "priority": "P1",
+      "findings": [
+        "Targets refactor/admin-console-sidebar, not protected develop. This base has no matching branch-protection rule in the observed repository.",
+        "25 commits ahead of its explicit base; six web CI jobs fail at install/lint/typecheck steps. Historical task 16/16.1 completion is not proven; description explicitly retains failed local verification.",
+        "Release success on this stack does not prove production readiness. Missing Promotion Path is not classified as a missing mandatory check on this unprotected base."
+      ],
+      "next": "Preserve the stack and owner work; reconcile unique admin behavior with #3099/current develop, fix inherited toolchain/fixture failures in a dedicated candidate, verify sidebar keyboard/hydration/responsive behavior, and use a protected develop integration before promotion.",
+      "dependencies": [
+        "15 shared files with #3099; 13 with #2908.",
+        "No extra reviewer is invented; observed protected branches require zero approvals and conversation resolution."
+      ],
+      "proof": "2026-09-03 head and red CI are historical; no full Kiro or live rendering completion proved.",
+      "mergeability": {
+        "mergeable": "MERGEABLE",
+        "mergeable_state": "UNSTABLE"
+      },
+      "ancestry": {
+        "number": 2857,
+        "head_sha": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+        "current_base_sha": "0a8416d42a37a95e686c4d782e1ec73f6a15e37f",
+        "local_objects_available": true,
+        "behind_current_base": 0,
+        "ahead_current_base": 25,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 84,
+      "changed_paths": [
+        ".kiro/specs/admin-console-sidebar-refactor/tasks.md",
+        "apps/web/app/admin/banners/page.tsx",
+        "apps/web/app/admin/evaluations/page.tsx",
+        "apps/web/app/admin/layout.tsx",
+        "apps/web/app/api/admin/preferences/sidebar-order/route.ts",
+        "apps/web/app/api/admin/system-status/route.ts",
+        "apps/web/app/api/admin/users/route.ts",
+        "apps/web/app/globals.css",
+        "apps/web/components/admin/AdminConsoleOverview.tsx",
+        "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+        "apps/web/components/admin/AdminOverviewDashboard.tsx",
+        "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+        "apps/web/components/admin/AdminUsersPanel.tsx",
+        "apps/web/components/admin/console/AdminAuditEventsPanel.tsx",
+        "apps/web/components/admin/console/AdminConsoleModuleCompleteness.tsx",
+        "apps/web/components/admin/console/AdminConsoleModuleGrid.tsx",
+        "apps/web/components/admin/console/AdminConsoleModuleSkeleton.tsx",
+        "apps/web/components/admin/console/AdminConsoleOverviewVisualizations.tsx",
+        "apps/web/components/admin/console/AdminConsoleSidebarOrderEditor.tsx",
+        "apps/web/components/admin/console/AdminInsightsVisualizations.tsx",
+        "apps/web/components/admin/console/AdminOpsAssistPanel.tsx",
+        "apps/web/components/admin/console/RiskyWorkProcedureSteps.tsx",
+        "apps/web/components/admin/console/module-panel-registry.tsx",
+        "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+        "apps/web/components/admin/viz/ActivityHeatmap.tsx",
+        "apps/web/components/admin/viz/BulletBar.tsx",
+        "apps/web/components/admin/viz/CompactSparklineRow.tsx",
+        "apps/web/components/admin/viz/ConsoleCardMetaRow.tsx",
+        "apps/web/components/admin/viz/ConsoleVizCard.tsx",
+        "apps/web/components/admin/viz/ConsoleVizSummary.tsx",
+        "apps/web/components/admin/viz/KpiSparklineCard.tsx",
+        "apps/web/components/admin/viz/RangeBandArea.tsx",
+        "apps/web/components/admin/viz/SemicircleGaugeArc.tsx",
+        "apps/web/components/admin/viz/StageFunnel.tsx",
+        "apps/web/components/admin/viz/ToneStackedBar.tsx",
+        "apps/web/components/admin/viz/TreemapTile.tsx",
+        "apps/web/components/admin/viz/WaterfallDeltaStep.tsx",
+        "apps/web/components/admin/viz/console-viz-forms.tsx",
+        "apps/web/components/admin/viz/use-viz-value-hint.ts",
+        "apps/web/components/admin/viz/viz-form-props.ts",
+        "apps/web/components/admin/viz/viz-paint.ts",
+        "apps/web/hooks/use-console-tone-scale.ts",
+        "apps/web/lib/admin/admin-api-status.ts",
+        "apps/web/lib/admin/admin-audit-events.ts",
+        "apps/web/lib/admin/admin-client-error.ts",
+        "apps/web/lib/admin/admin-json.ts",
+        "apps/web/lib/admin/admin-theme-prelude.ts",
+        "apps/web/lib/admin/admin-user-display.ts",
+        "apps/web/lib/admin/console-module-state.ts",
+        "apps/web/lib/admin/console-tone-scale.ts",
+        "apps/web/lib/admin/console-viz-state.ts",
+        "apps/web/lib/admin/risky-work-procedure.ts",
+        "apps/web/lib/admin/sidebar-order-session.ts",
+        "apps/web/tests-unit/admin-console-evidence-guard.test.ts",
+        "apps/web/tests-unit/admin-console-guardrail-source.test.ts",
+        "apps/web/tests-unit/admin-console-menu-registry.test.ts",
+        "apps/web/tests-unit/admin-console-module-grid.test.ts",
+        "apps/web/tests-unit/admin-console-module-panel-source.test.ts",
+        "apps/web/tests-unit/admin-console-module-state.test.ts",
+        "apps/web/tests-unit/admin-console-theme-prelude-source.test.ts",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+        "apps/web/tests-unit/admin-console-viz-source.test.ts",
+        "apps/web/tests-unit/admin-console-viz-state.test.ts",
+        "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+        "apps/web/tests-unit/admin-map-overlays-ia-contract.test.ts",
+        "apps/web/tests-unit/admin-pipeline-control.test.ts",
+        "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+        "apps/web/tests-unit/admin-storyboard-canvas-shell.test.ts",
+        "apps/web/tests-unit/admin-storyboard-generator.test.ts",
+        "apps/web/tests-unit/admin-user-management-source.test.ts",
+        "apps/web/tests-unit/design-contract-source.test.ts",
+        "apps/web/tests-unit/frontend-unused-route-compatibility.test.ts",
+        "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+        "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+        "apps/web/tests-unit/preference-trend-request-security.test.ts",
+        "apps/web/tests-unit/privacy-incident-workflow.test.ts",
+        "apps/web/tests/admin-console-keyboard.spec.ts",
+        "apps/web/tests/admin-console-module-grid.spec.ts",
+        "apps/web/tests/admin-console-module-hydration.spec.ts",
+        "apps/web/tests/admin-console-responsive.spec.ts",
+        "apps/web/tests/admin-console-sidebar-ia.spec.ts",
+        "apps/web/tests/admin-console-tone-parity.spec.ts",
+        "apps/web/tests/helpers/admin-console-e2e.ts",
+        "apps/web/tests/helpers/evidence-guard.ts"
+      ],
+      "required_check_states": {},
+      "failed_check_names": [
+        "Install",
+        "Ubuntu npm",
+        "Ubuntu Bun",
+        "Windows npm",
+        "Windows Bun",
+        "Admin"
+      ],
+      "check_state_counts": {
+        "FAILURE": 6,
+        "SUCCESS": 4
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": []
+    },
+    {
+      "number": 2855,
+      "title": "chore(deps): bump framer-motion from 12.42.2 to 13.4.0 in /apps/web",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2855",
+      "state": "open",
+      "created_at": "2026-08-30T19:45:23Z",
+      "updated_at": "2026-09-24T08:20:48Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "338de43e80ffaa5cd703dacd7886017b5c219e31",
+      "head_ref": "dependabot/npm_and_yarn/apps/web/develop/framer-motion-13.1.1",
+      "base_ref": "develop",
+      "base_sha": "47e9342b76c3203e58184e05b9cc06f256d867e9",
+      "class": "automated-web-runtime-major-dependencies",
+      "priority": "P2",
+      "findings": [
+        "framer-motion ^12.42.2 -> ^13.4.0; only npm manifest/lock changed. Install/freshness/platform CI and readiness failures remain."
+      ],
+      "next": "Integrate in the single web dependency batch; reconcile Bun lock and verify animations, reduced motion and responsive map/panel behavior on current source.",
+      "dependencies": [
+        "Web manifests shared with #3066/#3065/#3099."
+      ],
+      "proof": "118 commits behind; major-version behavior not tested by this audit.",
+      "mergeability": {
+        "number": 2855,
+        "head_sha": "338de43e80ffaa5cd703dacd7886017b5c219e31",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2855,
+        "head_sha": "338de43e80ffaa5cd703dacd7886017b5c219e31",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 118,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 2,
+      "changed_paths": [
+        "apps/web/package-lock.json",
+        "apps/web/package.json"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SUCCESS"
+      },
+      "failed_check_names": [
+        "Install",
+        "Freshness",
+        "Ubuntu npm",
+        "Ubuntu Bun",
+        "orchestration-readiness",
+        "Windows npm",
+        "Windows Bun"
+      ],
+      "check_state_counts": {
+        "FAILURE": 7,
+        "SUCCESS": 16,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "apps/web/package.json",
+          "package": "framer-motion",
+          "old": "^12.42.2",
+          "proposed": "^13.4.0",
+          "current_develop": "^12.42.2"
+        }
+      ]
+    },
+    {
+      "number": 2850,
+      "title": "chore(deps): bump yt-dlp from 2026.7.4 to 2026.8.19 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2850",
+      "state": "open",
+      "created_at": "2026-08-30T19:42:53Z",
+      "updated_at": "2026-09-04T23:44:07Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/yt-dlp-2026.8.19",
+      "base_ref": "develop",
+      "base_sha": "f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f",
+      "class": "automated-crawler-python-dependencies",
+      "priority": "P2",
+      "findings": [
+        "yt-dlp[default] 2026.7.4 -> 2026.8.19; 592 commits behind. Release succeeded but Promotion Path was SKIPPED."
+      ],
+      "next": "Integrate crawler requirements on fresh develop and obtain an actually executed promotion-policy check plus affected media metadata contracts.",
+      "dependencies": [
+        "Shared crawler requirements batch."
+      ],
+      "proof": "Skipped status is not a demonstrated policy execution; it is not mislabeled a failed context.",
+      "mergeability": {
+        "number": 2850,
+        "head_sha": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+        "mergeable": true,
+        "mergeable_state": "behind",
+        "rebaseable": true
+      },
+      "ancestry": {
+        "number": 2850,
+        "head_sha": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+        "current_base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+        "local_objects_available": true,
+        "behind_current_base": 592,
+        "ahead_current_base": 1,
+        "head_is_ancestor_of_base": false
+      },
+      "changed_files": 1,
+      "changed_paths": [
+        "backend/restaurant-crawling/scripts/requirements.txt"
+      ],
+      "required_check_states": {
+        "Release": "SUCCESS",
+        "Promotion Path": "SKIPPED"
+      },
+      "failed_check_names": [],
+      "check_state_counts": {
+        "SKIPPED": 1,
+        "SUCCESS": 16,
+        "NEUTRAL": 1
+      },
+      "review_threads_total": 0,
+      "unresolved_reviews": [],
+      "dependency_version_changes": [
+        {
+          "path": "backend/restaurant-crawling/scripts/requirements.txt",
+          "package": "yt-dlp",
+          "proposed": "yt-dlp[default]==2026.8.19",
+          "current_develop": [
+            "yt-dlp[default]==2026.7.4"
+          ],
+          "removed": [
+            "yt-dlp[default]==2026.7.4"
+          ]
+        }
+      ]
+    }
+  ],
+  "suggested_disjoint_batches": [
+    {
+      "id": "B0",
+      "scope": "Parent #3111 upload race and authorized delivery",
+      "items": [
+        3111
+      ],
+      "ownership": "Parent only",
+      "dependency": "All other batches preserve parent review files; hook integration waits for B0."
+    },
+    {
+      "id": "B1",
+      "scope": "Nightly publication fixture and ledger contract",
+      "items": [
+        2843
+      ],
+      "ownership": "Dedicated regression owner",
+      "paths": [
+        "backend/supabase/tests/test_local_publication_verifier.py",
+        "backend/supabase/scripts/local-migrate.py",
+        ".github/scripts/verify-nightly-local-publication.py",
+        ".github/workflows/nightly-local-regression.yml"
+      ],
+      "dependency": "Disjoint from parent upload files. Coordinate canonical migration changes from B2 before final evidence; never rewrite applied migrations/old receipts."
+    },
+    {
+      "id": "B2",
+      "scope": "Active admin evaluation correctness/performance and candidate evidence",
+      "items": [
+        3099
+      ],
+      "ownership": "Existing #3099 source owner, security agent owns alerts",
+      "paths": [
+        "apps/web/lib/admin/evaluation-page-server.ts",
+        "apps/web/lib/admin/evaluation-warning-stream.ts",
+        "backend/supabase/migrations/",
+        "backend/utils/tests/test_platform_modernization_reconciliation.py",
+        "backend/bin/build_platform_modernization_reconciliation.py"
+      ],
+      "dependency": "Fix two unresolved defects; current-candidate reconciliation is generated after content settles. Serialize admin/UI integration with B4 and manifests with B5/B6."
+    },
+    {
+      "id": "B3",
+      "scope": "Dashboard ID/log/evidence contracts and REST contract reconciliation",
+      "items": [
+        3031,
+        3032
+      ],
+      "ownership": "One owner for shared hook and merge test",
+      "dependency": "Wait for B0 before touching use-restaurants.tsx; keep supported logging and benchmark proof requirements. Source fixes may be prepared in disjoint dashboard/REST files meanwhile."
+    },
+    {
+      "id": "B4",
+      "scope": "Historical admin stack and documentation reconciliation",
+      "items": [
+        2857,
+        2908,
+        2903
+      ],
+      "ownership": "Source owner reconciliation; no automatic closure",
+      "dependency": "Compare surviving behavior after B2. #2903 README can be prepared independently against develop. Preserve unmatched commits and evidence; wrong-base original PRs are not directly merged."
+    },
+    {
+      "id": "B5",
+      "scope": "Web dependency manifest, locks and types",
+      "items": [
+        3066,
+        3065,
+        2855
+      ],
+      "ownership": "One web dependency owner",
+      "dependency": "Serialize web manifest/lock edits with #3099; reconcile Bun against npm authority and fix Supercluster namespace types. Preserve pinned toolchain."
+    },
+    {
+      "id": "B6",
+      "scope": "Backend Node dependency compatibility",
+      "items": [
+        3064,
+        3062,
+        3061,
+        2924,
+        2902
+      ],
+      "ownership": "One backend manifest owner",
+      "dependency": "Serialize backend manifest/lock edits with #3099; fix dotenv JSON stdout and YAML namespace callers; retain only unapplied #2902 intent."
+    },
+    {
+      "id": "B7",
+      "scope": "Pipeline Python requirements",
+      "items": [
+        3063,
+        3060,
+        2889
+      ],
+      "ownership": "One pipeline requirements owner",
+      "dependency": "Single resolver-compatible update for shared file; coordinate #3099 pipeline contracts and security-agent conclusions."
+    },
+    {
+      "id": "B8",
+      "scope": "Crawler Python requirements",
+      "items": [
+        2971,
+        2896,
+        2894,
+        2888,
+        2850
+      ],
+      "ownership": "One crawler requirements owner",
+      "dependency": "Disjoint requirements file from B7; preserve models/providers. Use security-agent findings for current dependency remediation; no ad hoc safe-version claims."
+    },
+    {
+      "id": "B9",
+      "scope": "Control Python dependency",
+      "items": [
+        2906
+      ],
+      "ownership": "Control requirements owner",
+      "dependency": "Can prepare independently of B7/B8; protected integration remains serialized."
+    },
+    {
+      "id": "B10",
+      "scope": "Pinned CI action updates",
+      "items": [
+        2892,
+        2887
+      ],
+      "ownership": "One security workflow owner",
+      "dependency": "Shares security-audit.yml with #3099; integrate after active workflow edits, preserve pins and privileges."
+    }
+  ]
+}

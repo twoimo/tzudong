@@ -1,0 +1,24 @@
+{
+  "checked_at_utc": "2026-10-04T10:48:56.606095+00:00",
+  "head": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "branch": "codex/python-dependency-quality-20261004",
+  "v1_file_count": 25,
+  "v1_mismatches": [],
+  "source_hashes": {
+    "backend/pipeline/nodes.py": "9d209c3cdaad646689ca4b34827227ecccf4f3ba7e98b22efaae91d459d7f4db",
+    "backend/pipeline/test_nodes_unittest.py": "3057a8610bbaffdc4ac68673186e87808929c12a88f3f68652197c6cc3e98248",
+    "backend/pipeline/requirements.txt": "f9aec63ba51e3320e3376fb9845e60fb808c4568ff8bb4570203041352e58348",
+    "backend/pipeline-control/requirements.txt": "1b2e5e889820c7d18f9c72ca859859d8905dda49104e7b62e5e455583e300603",
+    "backend/restaurant-crawling/scripts/requirements.txt": "8f0a1587485d3eb240f78a9a8b17af841491c92b6946f2f339aa7d5fc267f2ba"
+  },
+  "requirements_unchanged_from_v1": true,
+  "changed_paths": [
+    "backend/pipeline-control/requirements.txt",
+    "backend/pipeline/nodes.py",
+    "backend/pipeline/requirements.txt",
+    "backend/pipeline/test_nodes_unittest.py",
+    "backend/restaurant-crawling/scripts/requirements.txt"
+  ],
+  "diff_check_exit_code": 0,
+  "untracked_source_paths": []
+}

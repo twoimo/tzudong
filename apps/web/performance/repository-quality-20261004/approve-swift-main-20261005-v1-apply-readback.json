@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-04T22:04:29.990122+00:00",
+  "projectVerified": true,
+  "publicApprovedMainSha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "guardId": "i4fHH6tbzAA1jtCM",
+  "guardKey": "TZUDONG_APPROVED_PRODUCTION_SHA",
+  "guardType": "sensitive",
+  "target": [
+    "production"
+  ],
+  "guardNotDisabled": true,
+  "otherConfigurationChanged": false,
+  "patchReturnedSuccess": true,
+  "independentMetadataReadbackMatches": true,
+  "encryptedValueOrOtherEnvValuesRetained": false,
+  "remainingProof": "exact approved SHA production build READY and independent alias"
+}

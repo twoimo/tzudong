@@ -1,0 +1,38 @@
+{
+  "configuredModel": "gpt-6-astra",
+  "configuredReasoningEffort": "xhigh",
+  "modelEvidence": "Current local session turn_context; no server attestation",
+  "serverAttested": false,
+  "execution": {
+    "node": "v24.21.0",
+    "nodePath": "/opt/homebrew/opt/node@24/bin/node",
+    "bun": "1.4.0",
+    "bunRevision": "34cbb9a40",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "pins": {
+    "nativeTypeScript": "7.0.2",
+    "compatTypeScript": "6.0.2",
+    "npmAuthority": "11.6.2",
+    "bun": "1.4.0"
+  },
+  "availableNode24Npm": "11.19.0",
+  "pinnedNpmInvoked": false,
+  "setupFailures": [
+    {
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "scripts/verify-typescript-toolchain.mjs"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+      "exitCode": 1,
+      "failureCode": "TOOLCHAIN_RECEIPT_PATH_INVALID",
+      "cause": "Existing apps/web/node_modules symlink resolves outside APP_ROOT; relativeReceiptPath rejects the bridge manifest. Dependencies were not changed.",
+      "symlinkTarget": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules"
+    }
+  ],
+  "parentReportedParityInputs": 2449,
+  "localParityInputs": 2379,
+  "nativeWindowsExecutionPerformed": false
+}

@@ -1,0 +1,6 @@
+{
+  "exit_code": 0,
+  "seconds": 16.89,
+  "stdout": "\n> web@1.2.4 typecheck:parity\n> node scripts/run-typecheck.mjs --compiler parity\n\n{\"status\":\"passed\",\"diagnostics\":0,\"logicalInputs\":2591,\"logicalInputNamesSha256\":\"3b00d8da808f91372add8cdfff1638ed4b53ce98723d2b044e3386438940469f\",\"nonLibraryContentSha256\":\"64457b25e6ccc0d474addcbdb78cead58e2cb55acad98e1a0e3a5af1cf93e892\",\"standardLibraryContentSha256\":{\"native\":\"d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64\",\"compat\":\"82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0\"}}\n",
+  "stderr": ""
+}

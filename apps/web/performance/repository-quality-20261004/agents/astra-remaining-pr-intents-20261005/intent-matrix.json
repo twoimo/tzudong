@@ -1,0 +1,1333 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-10-04T21:55:30.462881+00:00",
+  "repository": "twoimo/tzudong",
+  "fixed_main_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "session_metadata": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh"
+  },
+  "method": {
+    "source": "git object reads from fixed SHA; mutable HEAD unused",
+    "pr_input": "gh api GET pull metadata and changed-file patches; head checked again before writing",
+    "evidence": "changed paths and semantic comparisons only; no PR body, author identity, commit messages or raw logs retained",
+    "test_status": "existing source read only; no tests, CI, builds, browsers or benchmarks executed",
+    "scope": "only two reports in the user-authorized new directory; no remote mutations"
+  },
+  "bounds": {
+    "maximum_intents": 64,
+    "maximum_json_bytes": 98304,
+    "raw_patch_retained": false,
+    "raw_samples_retained": false
+  },
+  "pull_requests": [
+    {
+      "number": 3031,
+      "state": "open",
+      "head_sha": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+      "changed_path_count": 22,
+      "changed_path_categories": {
+        "doc": 1,
+        "code": 9,
+        "evidence": 6,
+        "test": 6
+      },
+      "patch_coverage": "complete: all API additions/deletions represented",
+      "changed_paths": [
+        {
+          "path": "README.md",
+          "kind": "doc",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-D22",
+            "3031-D23",
+            "3031-D24"
+          ]
+        },
+        {
+          "path": "apps/web/app/api/dashboard/restaurants/route.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C06"
+          ]
+        },
+        {
+          "path": "apps/web/app/api/dashboard/summary/route.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C06"
+          ]
+        },
+        {
+          "path": "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C04",
+            "3031-C05",
+            "3031-C06"
+          ]
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C15"
+          ]
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C10"
+          ]
+        },
+        {
+          "path": "apps/web/lib/dashboard/helpers.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C01",
+            "3031-C02",
+            "3031-C04"
+          ]
+        },
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C03",
+            "3031-C04",
+            "3031-C07",
+            "3031-C08",
+            "3031-C09"
+          ]
+        },
+        {
+          "path": "apps/web/lib/home-map-youtube-kpi.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C14"
+          ]
+        },
+        {
+          "path": "apps/web/lib/map-restaurant-lookup.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-C11",
+            "3031-C12",
+            "3031-C13"
+          ]
+        },
+        {
+          "path": "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs",
+          "kind": "evidence",
+          "change": "added",
+          "exists_at_fixed_main": false,
+          "intent_ids": [
+            "3031-E24"
+          ]
+        },
+        {
+          "path": "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json",
+          "kind": "evidence",
+          "change": "added",
+          "exists_at_fixed_main": false,
+          "intent_ids": [
+            "3031-E24"
+          ]
+        },
+        {
+          "path": "apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs",
+          "kind": "evidence",
+          "change": "added",
+          "exists_at_fixed_main": false,
+          "intent_ids": [
+            "3031-E22"
+          ]
+        },
+        {
+          "path": "apps/web/performance/dashboard-video-id-20260923/benchmark.json",
+          "kind": "evidence",
+          "change": "added",
+          "exists_at_fixed_main": false,
+          "intent_ids": [
+            "3031-E22"
+          ]
+        },
+        {
+          "path": "apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs",
+          "kind": "evidence",
+          "change": "added",
+          "exists_at_fixed_main": false,
+          "intent_ids": [
+            "3031-E23"
+          ]
+        },
+        {
+          "path": "apps/web/performance/map-restaurant-lookup-20260923/benchmark.json",
+          "kind": "evidence",
+          "change": "added",
+          "exists_at_fixed_main": false,
+          "intent_ids": [
+            "3031-E23"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+          "kind": "test",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-T02"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-public-visibility-source.test.ts",
+          "kind": "test",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-T03"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+          "kind": "test",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-T06"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/map-restaurant-lookup.test.ts",
+          "kind": "test",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-T05"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+          "kind": "test",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-T04"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/youtube-link-helpers.test.ts",
+          "kind": "test",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3031-T01"
+          ]
+        }
+      ],
+      "closure_assessment": "not_ready_as_fully_superseded",
+      "all_intents_satisfied": false
+    },
+    {
+      "number": 3032,
+      "state": "open",
+      "head_sha": "76afb0634b6710581aa296a9644929313e24b36f",
+      "changed_path_count": 8,
+      "changed_path_categories": {
+        "code": 5,
+        "test": 3
+      },
+      "patch_coverage": "complete: all API additions/deletions represented",
+      "changed_paths": [
+        {
+          "path": "apps/web/components/filters/CategoryFilter.tsx",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3032-C01"
+          ]
+        },
+        {
+          "path": "apps/web/components/ui/alert-dialog.tsx",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3032-C03"
+          ]
+        },
+        {
+          "path": "apps/web/components/ui/dialog.tsx",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3032-C02"
+          ]
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3032-C04",
+            "3032-C05",
+            "3032-C06"
+          ]
+        },
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "kind": "code",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3032-C07",
+            "3032-C08",
+            "3032-C09",
+            "3032-C10",
+            "3032-C11"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/dialog-content-inset.test.ts",
+          "kind": "test",
+          "change": "added",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3032-T01"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-failure.test.ts",
+          "kind": "test",
+          "change": "added",
+          "exists_at_fixed_main": false,
+          "intent_ids": [
+            "3032-T02"
+          ]
+        },
+        {
+          "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+          "kind": "test",
+          "change": "modified",
+          "exists_at_fixed_main": true,
+          "intent_ids": [
+            "3032-T03"
+          ]
+        }
+      ],
+      "closure_assessment": "not_ready_as_fully_superseded",
+      "all_intents_satisfied": false
+    }
+  ],
+  "intents": [
+    {
+      "id": "3031-C01",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "정규식 모듈 단위 재사용 및 비문자열/빈 링크 방어",
+      "source_changed_paths": [
+        "apps/web/lib/dashboard/helpers.ts"
+      ],
+      "status": "fulfilled",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/dashboard/helpers.ts",
+          "start": 3,
+          "end": 33
+        },
+        {
+          "path": "apps/web/tests-unit/youtube-link-helpers.test.ts",
+          "start": 17,
+          "end": 57
+        }
+      ],
+      "finding": "정규식은 모듈에서 생성되고 타입/빈 문자열을 검사한다. main은 추출 ID도 6–128자로 제한해 라우트와 일치시킨다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-C02",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "정확한 링크 문자열별 4096개 제한 결과 캐시",
+      "source_changed_paths": [
+        "apps/web/lib/dashboard/helpers.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/dashboard/helpers.ts",
+          "start": 27,
+          "end": 33
+        }
+      ],
+      "finding": "매 호출마다 정규식 루프를 실행한다. videoIdByLink/4096개 제한 캐시는 없다. 정규식 호이스팅만으로 이 의도를 충족하지 않는다.",
+      "remaining": "현재 ID 상한을 보존하는 bounded 결과 재사용 구현 또는 이 성능 의도의 명시적 제외 결정이 필요하다."
+    },
+    {
+      "id": "3031-C03",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "식당 정규화에서 한 번 추출한 videoId를 이름 대체와 필드에 재사용",
+      "source_changed_paths": [
+        "apps/web/lib/dashboard/summary.ts"
+      ],
+      "status": "fulfilled",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "start": 37,
+          "end": 56
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+          "start": 425,
+          "end": 439
+        }
+      ],
+      "finding": "지역 변수 videoId를 재사용하며 영상 ID/미승인 맛집 이름 대체 검증이 있다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-C04",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "공백 정리 및 ID 형태 검사 후 400/404와 데이터 조회 단락",
+      "source_changed_paths": [
+        "apps/web/lib/dashboard/helpers.ts",
+        "apps/web/lib/dashboard/summary.ts",
+        "apps/web/app/api/dashboard/video/[videoId]/route.ts"
+      ],
+      "status": "fulfilled",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/dashboard/helpers.ts",
+          "start": 14,
+          "end": 24
+        },
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "start": 416,
+          "end": 433
+        },
+        {
+          "path": "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+          "start": 13,
+          "end": 38
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-route-contract.test.ts",
+          "start": 64,
+          "end": 89
+        }
+      ],
+      "finding": "미입력 400, 잘못된 형태 404, 유효 ID trim, 없는 영상 404를 구현하고 기존 라우트 테스트가 조회 전 거절을 검증한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-C05",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "잘못된 ID를 invalid-shape와 길이만으로 진단",
+      "source_changed_paths": [
+        "apps/web/app/api/dashboard/video/[videoId]/route.ts"
+      ],
+      "status": "conflicts_with_current_contract",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+          "start": 25,
+          "end": 29
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-route-contract.test.ts",
+          "start": 64,
+          "end": 73
+        }
+      ],
+      "finding": "원본의 reason/length 로그는 없다. 현재 테스트는 잘못된 ID에서 로그 배열이 비어 있어야 한다고 명시한다.",
+      "remaining": "현 무로그 계약과 원본 진단 의도의 차이를 종료 기록에 명시해야 한다. 원본 로그를 그대로 재도입하면 현 테스트 계약과 충돌한다."
+    },
+    {
+      "id": "3031-C06",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "세 dashboard catch에서 Error.name 또는 non-error 진단",
+      "source_changed_paths": [
+        "apps/web/app/api/dashboard/restaurants/route.ts",
+        "apps/web/app/api/dashboard/summary/route.ts",
+        "apps/web/app/api/dashboard/video/[videoId]/route.ts"
+      ],
+      "status": "superseded_by_explicit_contract",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/app/api/dashboard/restaurants/route.ts",
+          "start": 41,
+          "end": 46
+        },
+        {
+          "path": "apps/web/app/api/dashboard/summary/route.ts",
+          "start": 24,
+          "end": 29
+        },
+        {
+          "path": "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+          "start": 42,
+          "end": 47
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-route-contract.test.ts",
+          "start": 46,
+          "end": 62
+        }
+      ],
+      "finding": "현재는 경로별 고정 DASHBOARD_*_FAILED 코드만 남긴다. hostile/getter error.name도 읽지 않도록 검증한다. 원본 error-name 분류와 같지는 않으나 더 안전한 명시적 대체 계약이다.",
+      "remaining": "error.name 출력을 복원하지 않는다. 원본 분류 정보는 의도적으로 대체됐다고 구분한다."
+    },
+    {
+      "id": "3031-C07",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "식당 페이지·영상 상세·checksum 정렬의 날짜를 행당 한 번 파싱",
+      "source_changed_paths": [
+        "apps/web/lib/dashboard/summary.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "start": 59,
+          "end": 94
+        },
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "start": 403,
+          "end": 411
+        },
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "start": 437,
+          "end": 437
+        }
+      ],
+      "finding": "두 정렬 함수 모두 비교자 안에서 Date를 반복 생성한다. 안정 정렬 출력이 같아도 파싱 횟수 최적화가 도입된 것은 아니다.",
+      "remaining": "두 sort의 사전 timestamp 계산이 남아 있다. 순서 동등성 테스트는 이미 있으므로 보존해야 한다."
+    },
+    {
+      "id": "3031-C08",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "summary 최신 시각 계산에서 latestUpdatedMs 재사용",
+      "source_changed_paths": [
+        "apps/web/lib/dashboard/summary.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "start": 256,
+          "end": 276
+        }
+      ],
+      "finding": "latestUpdatedAt 문자열을 매 비교마다 다시 파싱한다. 숫자 누적 변수는 없다.",
+      "remaining": "최신 시각 누적값의 숫자 재사용 또는 의도 제외 기록이 남아 있다."
+    },
+    {
+      "id": "3031-C09",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "동일 rows 배열의 영상 ID별 WeakMap 인덱스 재사용",
+      "source_changed_paths": [
+        "apps/web/lib/dashboard/summary.ts"
+      ],
+      "status": "missing_with_contract_conflict",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/dashboard/summary.ts",
+          "start": 416,
+          "end": 433
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+          "start": 49,
+          "end": 66
+        }
+      ],
+      "finding": "현재 매 요청 rows.filter를 사용한다. 기존 테스트는 링크 수정, 역순/행 교체/pop/push, 반환 배열 수정 후 재조회 정확성을 요구한다. 원본 캐시의 직접 bucket 반환과 배열 identity만의 수명은 이 계약과 충돌한다.",
+      "remaining": "재사용 성능 의도는 미충족이다. 현 변경 감지·결과 배열 독립성을 보존하는 설계 또는 명시적 제외가 필요하며 원본 WeakMap의 단순 이식은 부적절하다."
+    },
+    {
+      "id": "3031-C10",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "singleton 식당은 날짜 정렬용 복사/정렬 생략",
+      "source_changed_paths": [
+        "apps/web/hooks/use-restaurants.tsx"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "start": 307,
+          "end": 329
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "start": 544,
+          "end": 548
+        },
+        {
+          "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+          "start": 104,
+          "end": 182
+        }
+      ],
+      "finding": "현재 indices.length===1에서 조기 반환한다. 원본보다 이른 경로에서 배열 생성·복사·정렬을 생략하며 단독/혼합 그룹 sort 호출 수와 결과를 검증한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-C11",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "지도 식당 매칭에서 병합 ID Set을 검색당 한 번 구축",
+      "source_changed_paths": [
+        "apps/web/lib/map-restaurant-lookup.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/map-restaurant-lookup.ts",
+          "start": 41,
+          "end": 62
+        }
+      ],
+      "finding": "현재 mergedRestaurants.map 뒤 후보와 자식마다 includes를 수행한다. 별도 buildRestaurantLookup의 Set은 이 함수의 대체 구현이 아니다.",
+      "remaining": "이 함수 내부의 검색용 Set 전환이 남아 있다. 이름/좌표와 ID 간 후보 순서는 유지해야 한다."
+    },
+    {
+      "id": "3031-C12",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "지도 매칭 helper의 null/undefined target/list 방어",
+      "source_changed_paths": [
+        "apps/web/lib/map-restaurant-lookup.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/map-restaurant-lookup.ts",
+          "start": 41,
+          "end": 62
+        },
+        {
+          "path": "apps/web/lib/naver-map-selection-helpers.ts",
+          "start": 62,
+          "end": 76
+        }
+      ],
+      "finding": "helper는 target을 바로 역참조하고 candidates.find를 호출한다. 호출부 일부의 선택값 방어는 helper API 자체의 nullable 계약과 동등하지 않다.",
+      "remaining": "nullable 입력 허용과 null 반환, 대응 직접 회귀 테스트가 남아 있다. 현재 사용자 흐름에서 장애가 재현됐다는 주장은 하지 않는다."
+    },
+    {
+      "id": "3031-C13",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "여러 매칭 조건 중 입력상 첫 후보 우선",
+      "source_changed_paths": [
+        "apps/web/lib/map-restaurant-lookup.ts"
+      ],
+      "status": "fulfilled",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/map-restaurant-lookup.ts",
+          "start": 48,
+          "end": 61
+        }
+      ],
+      "finding": "현재 Array.find도 앞선 이름/좌표 일치를 뒤의 ID 일치보다 먼저 반환한다. 코드 의미는 유지되지만 추가된 순서 회귀 테스트는 별도 미충족이다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-C14",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "YouTube KPI ID 수집의 null/undefined 배열 방어",
+      "source_changed_paths": [
+        "apps/web/lib/home-map-youtube-kpi.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/home-map-youtube-kpi.ts",
+          "start": 30,
+          "end": 40
+        }
+      ],
+      "finding": "현재 Restaurant[]만 받고 곧바로 for-of를 실행한다. 빈 배열은 처리하지만 null/undefined 가드는 없다.",
+      "remaining": "nullable 시그니처와 조기 빈 배열 반환이 남아 있다."
+    },
+    {
+      "id": "3031-C15",
+      "pr": 3031,
+      "kind": "code",
+      "intent": "NaverMapView의 사용하지 않는 매칭 helper import 제거",
+      "source_changed_paths": [
+        "apps/web/components/map/NaverMapView.tsx"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "start": 99,
+          "end": 102
+        }
+      ],
+      "finding": "findMatchingRestaurantInList import가 남아 있고 해당 컴포넌트 안에 사용은 없다. 실제 호출은 naver-map-selection-helpers에 있다.",
+      "remaining": "해당 unused import 한 줄 정리가 남아 있다."
+    },
+    {
+      "id": "3031-T01",
+      "pr": 3031,
+      "kind": "test",
+      "intent": "YouTube 링크/ID 경계·반복 호출·라우팅 분류 회귀",
+      "source_changed_paths": [
+        "apps/web/tests-unit/youtube-link-helpers.test.ts"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/youtube-link-helpers.test.ts",
+          "start": 17,
+          "end": 57
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+          "start": 401,
+          "end": 423
+        }
+      ],
+      "finding": "공백/누락·문자 집합·6/128 경계·과도한 토큰·반복 추출·일반 query-v 링크와 위험 ID 거절을 검증한다. 원본 테스트의 모든 문자열 fixture가 동일하지는 않다. 반복 결과 동일성은 캐시 존재나 성능 증거가 아니다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-T02",
+      "pr": 3031,
+      "kind": "test",
+      "intent": "dashboard 동률 정렬·빈 목록·이름 대체·영상 선택 순서/거절",
+      "source_changed_paths": [
+        "apps/web/tests-unit/dashboard-aggregation.test.ts"
+      ],
+      "status": "fulfilled",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+          "start": 142,
+          "end": 154
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+          "start": 401,
+          "end": 439
+        }
+      ],
+      "finding": "PR의 두 추가 테스트와 의미가 같은 검증이 존재한다. 추가로 mutable rows/반환 배열 독립성 검증도 있다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-T03",
+      "pr": 3031,
+      "kind": "test",
+      "intent": "public dashboard route의 검사 연결·서비스 키 배제·invalid-shape 로그 assertion",
+      "source_changed_paths": [
+        "apps/web/tests-unit/dashboard-public-visibility-source.test.ts"
+      ],
+      "status": "partial_explicit_contract",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/dashboard-public-visibility-source.test.ts",
+          "start": 34,
+          "end": 50
+        },
+        {
+          "path": "apps/web/tests-unit/dashboard-route-contract.test.ts",
+          "start": 64,
+          "end": 89
+        }
+      ],
+      "finding": "익명 조회/서비스 키 배제는 존재하고 라우트 행동 테스트로 검사 연결을 검증한다. reason: invalid-shape assertion은 없으며 현재 무로그 assertion과 반대이다.",
+      "remaining": "3031-C05의 계약 차이만 남는다. 데이터 접근 검사 누락으로 해석하면 안 된다."
+    },
+    {
+      "id": "3031-T04",
+      "pr": 3031,
+      "kind": "test",
+      "intent": "singleton의 이름·카테고리·미디어·좌표·리뷰 수와 빈 입력",
+      "source_changed_paths": [
+        "apps/web/tests-unit/use-restaurants-merge.test.ts"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+          "start": 104,
+          "end": 182
+        }
+      ],
+      "finding": "빈/채워진 미디어, 이름 alias, 카테고리 중복 제거, 좌표와 그룹 순서, 입력 불변성 및 singleton 무정렬 테스트가 있다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3031-T05",
+      "pr": 3031,
+      "kind": "test",
+      "intent": "지도 후보 우선순위와 nullable/빈/불일치/빈 병합 배열 경계",
+      "source_changed_paths": [
+        "apps/web/tests-unit/map-restaurant-lookup.test.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/map-restaurant-lookup.test.ts",
+          "start": 22,
+          "end": 71
+        },
+        {
+          "path": "apps/web/tests-unit/naver-map-selection-helpers.test.ts",
+          "start": 82,
+          "end": 113
+        }
+      ],
+      "finding": "현재 직접 helper 테스트는 인덱스 첫 소유자, 병합 소유자 매칭, 이름/좌표 fallback만 검증한다. wrapper의 canonical 선택 테스트도 경쟁 후보 순서나 nullable helper 입력을 검증하지 않는다.",
+      "remaining": "이름/좌표 후보와 ID 후보의 앞뒤 순서, null/undefined target/list, 빈 list·불일치·빈 mergedRestaurants 케이스가 남아 있다."
+    },
+    {
+      "id": "3031-T06",
+      "pr": 3031,
+      "kind": "test",
+      "intent": "KPI 빈 링크/누락 목록/동일 객체 링크 변경 및 chunk 경계",
+      "source_changed_paths": [
+        "apps/web/tests-unit/home-map-youtube-kpi.test.ts"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+          "start": 26,
+          "end": 49
+        },
+        {
+          "path": "apps/web/lib/home-map-youtube-kpi.ts",
+          "start": 22,
+          "end": 55
+        }
+      ],
+      "finding": "기존 테스트는 정상 direct/merged ID 수집과 기본 chunk 크기를 검증한다. PR의 null·빈 링크·반복 수집·동일 객체 링크 변경·빈 입력/NaN chunk assertions는 없다.",
+      "remaining": "PR의 추가 경계 테스트가 남아 있다. 링크 재읽기와 chunk fallback은 소스에 이미 있고 nullable 배열 방어만 구현도 빠져 있다."
+    },
+    {
+      "id": "3031-D22",
+      "pr": 3031,
+      "kind": "doc",
+      "intent": "README: 영상 ID 재사용 및 warm/cold 구분",
+      "source_changed_paths": [
+        "README.md"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "README.md",
+          "start": 185,
+          "end": 191
+        }
+      ],
+      "finding": "원본이 추가한 해당 README 절이 고정 main에 없다. 기존 clustering/marker/review-bubble 절은 다른 workload이다.",
+      "remaining": "구현 채택 여부에 맞는 문서 또는 명시적 제외 기록이 필요하다. 원본 속도 수치를 현재 main/UI 성과로 옮기면 안 된다."
+    },
+    {
+      "id": "3031-E22",
+      "pr": 3031,
+      "kind": "evidence",
+      "intent": "영상 ID 재사용 및 warm/cold 구분의 재현 스크립트 및 저장 benchmark",
+      "source_changed_paths": [
+        "apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs",
+        "apps/web/performance/dashboard-video-id-20260923/benchmark.json"
+      ],
+      "status": "missing",
+      "fixed_evidence": [],
+      "finding": "실제 helper를 import하는 추출/조회 microbenchmark와 저장 결과가 원본에 있다. 캐시 hit, 타이머 바닥의 warm 조회와 cold 재구축을 구분한다. main에 두 파일과 동등 대상의 retained benchmark가 없다.",
+      "remaining": "원본 자료는 역사적 microbenchmark로만 분류한다. 재실행하지 않았고 현재 source/UI/SDK/hosted 성능의 근거로 인정하지 않는다."
+    },
+    {
+      "id": "3031-D23",
+      "pr": 3031,
+      "kind": "doc",
+      "intent": "README: 지도 선택 ID Set 매칭 및 noise 초과 설명",
+      "source_changed_paths": [
+        "README.md"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "README.md",
+          "start": 185,
+          "end": 191
+        }
+      ],
+      "finding": "원본이 추가한 해당 README 절이 고정 main에 없다. 기존 clustering/marker/review-bubble 절은 다른 workload이다.",
+      "remaining": "구현 채택 여부에 맞는 문서 또는 명시적 제외 기록이 필요하다. 원본 속도 수치를 현재 main/UI 성과로 옮기면 안 된다."
+    },
+    {
+      "id": "3031-E23",
+      "pr": 3031,
+      "kind": "evidence",
+      "intent": "지도 선택 ID Set 매칭 및 noise 초과 설명의 재현 스크립트 및 저장 benchmark",
+      "source_changed_paths": [
+        "apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs",
+        "apps/web/performance/map-restaurant-lookup-20260923/benchmark.json"
+      ],
+      "status": "missing",
+      "fixed_evidence": [],
+      "finding": "4,000 후보·8 target ID·4 child ID fixture의 microbenchmark/reported result이다. 원본 자체에서 noise 예산 초과로 accepted=false이다. main에 두 파일과 동등 대상 benchmark가 없다.",
+      "remaining": "원본 자료는 역사적 microbenchmark로만 분류한다. 재실행하지 않았고 현재 source/UI/SDK/hosted 성능의 근거로 인정하지 않는다."
+    },
+    {
+      "id": "3031-D24",
+      "pr": 3031,
+      "kind": "doc",
+      "intent": "README: dashboard updated_at 사전 파싱 정렬",
+      "source_changed_paths": [
+        "README.md"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "README.md",
+          "start": 185,
+          "end": 191
+        }
+      ],
+      "finding": "원본이 추가한 해당 README 절이 고정 main에 없다. 기존 clustering/marker/review-bubble 절은 다른 workload이다.",
+      "remaining": "구현 채택 여부에 맞는 문서 또는 명시적 제외 기록이 필요하다. 원본 속도 수치를 현재 main/UI 성과로 옮기면 안 된다."
+    },
+    {
+      "id": "3031-E24",
+      "pr": 3031,
+      "kind": "evidence",
+      "intent": "dashboard updated_at 사전 파싱 정렬의 재현 스크립트 및 저장 benchmark",
+      "source_changed_paths": [
+        "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs",
+        "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json"
+      ],
+      "status": "missing",
+      "fixed_evidence": [],
+      "finding": "비교자 파싱과 decorate-sort-undecorate를 독립 JS 함수로 비교하는 fixture와 reported result이다. main 구현 직접 import 검증이 아니다. main에 두 파일과 동등 대상 benchmark가 없다.",
+      "remaining": "원본 자료는 역사적 microbenchmark로만 분류한다. 재실행하지 않았고 현재 source/UI/SDK/hosted 성능의 근거로 인정하지 않는다."
+    },
+    {
+      "id": "3032-C01",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "카테고리 조회 실패를 고정 코드로 기록하고 [] 유지",
+      "source_changed_paths": [
+        "apps/web/components/filters/CategoryFilter.tsx"
+      ],
+      "status": "equivalent_safety_literal_not_adopted",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/components/filters/CategoryFilter.tsx",
+          "start": 84,
+          "end": 91
+        }
+      ],
+      "finding": "현재도 payload 없는 상수 로그와 [] fallback이다. 원본 category_restaurant_query_failed 대신 기존 한국어 상수를 쓰고 catch(error) binding이 남아 있다.",
+      "remaining": "안전성과 fallback은 동등하다. 원본 이벤트 키/catch 정리의 문자 그대로 채택은 미충족이므로 필요 시 최소 변경 또는 제외로 기록한다."
+    },
+    {
+      "id": "3032-C02",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "일반 dialog의 화면 gutter와 기본 폭 상한",
+      "source_changed_paths": [
+        "apps/web/components/ui/dialog.tsx"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/components/ui/dialog.tsx",
+          "start": 77,
+          "end": 84
+        },
+        {
+          "path": "apps/web/tests-unit/dialog-content-inset.test.ts",
+          "start": 6,
+          "end": 23
+        }
+      ],
+      "finding": "w-[calc(100vw-2rem)]와 max-w-lg로 기본 min(32rem,viewport-2rem) 효과를 구현한다. 원본의 중첩 min과 달리 호출자가 max-w-2xl만 바꾸는 경우도 보존하는 테스트가 있다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-C03",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "alert dialog의 화면 gutter와 기본 폭 상한",
+      "source_changed_paths": [
+        "apps/web/components/ui/alert-dialog.tsx"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/components/ui/alert-dialog.tsx",
+          "start": 34,
+          "end": 41
+        },
+        {
+          "path": "apps/web/tests-unit/dialog-content-inset.test.ts",
+          "start": 6,
+          "end": 23
+        }
+      ],
+      "finding": "동일한 viewport-minus-2rem 및 max-width 방식과 두 컴포넌트를 순회하는 기존 테스트가 있다. 실제 렌더링은 이번 검토에서 확인하지 않았다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-C04",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "singleton 식당 전체 projection 및 일반 merge 경로 조기 탈출",
+      "source_changed_paths": [
+        "apps/web/hooks/use-restaurants.tsx"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "start": 307,
+          "end": 329
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "start": 544,
+          "end": 548
+        },
+        {
+          "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+          "start": 104,
+          "end": 182
+        }
+      ],
+      "finding": "원본 projection 필드와 fallback이 존재한다. indices 단계에서 조기 탈출해 원본 groupRestaurants 생성도 생략한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-C05",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "OVERSEAS_REGIONS 키워드를 정제하고 빈 term 제외",
+      "source_changed_paths": [
+        "apps/web/hooks/use-restaurants.tsx"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "start": 694,
+          "end": 705
+        },
+        {
+          "path": "apps/web/lib/overseas-region-matching.ts",
+          "start": 7,
+          "end": 8
+        },
+        {
+          "path": "apps/web/tests-unit/overseas-region-filter.test.ts",
+          "start": 37,
+          "end": 40
+        }
+      ],
+      "finding": "직접 해외 지역 branch에서는 keyword를 그대로 세 주소 열 ilike에 삽입한다. sanitizer 함수와 그 unit test가 있어도 이 branch에는 연결되지 않는다.",
+      "remaining": "keyword별 sanitizePostgrestOrTerm과 빈 term 제외가 남아 있다. 현재 상수에서 실제 주입 문제가 발생했다는 주장이나 재현 결과는 없다."
+    },
+    {
+      "id": "3032-C06",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "해외 국가 주소 필터를 한 번 만들고 결과 재사용",
+      "source_changed_paths": [
+        "apps/web/hooks/use-restaurants.tsx"
+      ],
+      "status": "missing",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "start": 706,
+          "end": 714
+        },
+        {
+          "path": "apps/web/lib/overseas-region-matching.ts",
+          "start": 43,
+          "end": 54
+        },
+        {
+          "path": "apps/web/tests-unit/overseas-region-filter.test.ts",
+          "start": 7,
+          "end": 40
+        }
+      ],
+      "finding": "else-if 조건과 본문에서 buildOverseasCountryAddressOrFilter를 두 번 호출한다. helper의 정제 자체는 구현·검증돼 있다.",
+      "remaining": "해당 branch의 단일 호출/지역 변수 재사용이 남아 있다. 성능 크기는 측정하지 않았다."
+    },
+    {
+      "id": "3032-C07",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "REST 호출 시 public 설정 trim/read 및 누락 차단",
+      "source_changed_paths": [
+        "apps/web/lib/supabase-rest-client.ts"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 8,
+          "end": 24
+        },
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 51,
+          "end": 54
+        },
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 90,
+          "end": 98
+        },
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 125,
+          "end": 128
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 174,
+          "end": 198
+        }
+      ],
+      "finding": "각 operation이 설정을 읽고 누락/공백에서 fetch 전에 고정 코드로 차단한다. main은 URL 형태/프로토콜 검사도 추가한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-C08",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "rows/count HTTP 오류에서 provider body 없이 제한된 상태 코드",
+      "source_changed_paths": [
+        "apps/web/lib/supabase-rest-client.ts"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 26,
+          "end": 40
+        },
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 71,
+          "end": 87
+        },
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 147,
+          "end": 159
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 200,
+          "end": 208
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 283,
+          "end": 329
+        }
+      ],
+      "finding": "정수 100–599 이외 상태는 0으로 축소하고 실패 body를 취소한다. 원본보다 transport/JSON 오류도 고정 코드로 제한한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-C09",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "공지·배너 401/403에서 body 취소 후 [] fallback",
+      "source_changed_paths": [
+        "apps/web/lib/supabase-rest-client.ts"
+      ],
+      "status": "fulfilled",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 71,
+          "end": 80
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 88,
+          "end": 100
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 297,
+          "end": 329
+        }
+      ],
+      "finding": "제한된 두 테이블의 두 상태만 빈 배열로 처리하며 stream 취소와 text/json 미독취를 검증한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-C10",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "RPC 함수명 encoding·실패 body 취소·status-only 오류/성공 JSON fallback",
+      "source_changed_paths": [
+        "apps/web/lib/supabase-rest-client.ts"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 90,
+          "end": 122
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 112,
+          "end": 147
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 297,
+          "end": 329
+        }
+      ],
+      "finding": "함수명을 encodeURIComponent하고 HTTP 실패는 {data:null,error:{status}}로 반환한다. 성공 JSON 해석 실패는 null data로 유지한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-C11",
+      "pr": 3032,
+      "kind": "code",
+      "intent": "HEAD exact count와 content-range 누락 시 고정 코드",
+      "source_changed_paths": [
+        "apps/web/lib/supabase-rest-client.ts"
+      ],
+      "status": "fulfilled",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "start": 125,
+          "end": 159
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 149,
+          "end": 172
+        }
+      ],
+      "finding": "정상 count 추출, HTTP 실패 코드 및 count_missing 분기가 구현돼 있고 검증이 있다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-T01",
+      "pr": 3032,
+      "kind": "test",
+      "intent": "dialog/alert-dialog viewport gutter 회귀",
+      "source_changed_paths": [
+        "apps/web/tests-unit/dialog-content-inset.test.ts"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/dialog-content-inset.test.ts",
+          "start": 6,
+          "end": 23
+        }
+      ],
+      "finding": "기본 gutter/상한과 w-full 배제를 검증하고 호출자의 max-width override 케이스까지 포함한다. 원본 literal min 문자열은 현재 계약에서 의도적으로 배제한다.",
+      "remaining": "없음"
+    },
+    {
+      "id": "3032-T02",
+      "pr": 3032,
+      "kind": "test",
+      "intent": "REST 누락 설정·상태 경계·성공/실패·권한 fallback·count·RPC 회귀",
+      "source_changed_paths": [
+        "apps/web/tests-unit/supabase-rest-failure.test.ts"
+      ],
+      "status": "equivalent_with_fixture_differences",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 62,
+          "end": 208
+        },
+        {
+          "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+          "start": 283,
+          "end": 329
+        }
+      ],
+      "finding": "원본 파일명은 없으나 supabase-rest-client.test.ts가 각 구현 경로를 검증한다. 원본의 성공 [] 직접 fixture와 ../secrets 문자열은 그대로 없고, 성공 rows/임의 JSON pass-through 및 slash 포함 이름 encoding 검증이 대응한다.",
+      "remaining": "별도 원본 파일을 통째로 추가할 근거는 없다. 정확히 같은 fixture 보존이 요구된다면 성공 [] 및 ../ 접두 함수명 두 사례만 추가 후보이며 현재 코드의 미충족으로 세지 않는다."
+    },
+    {
+      "id": "3032-T03",
+      "pr": 3032,
+      "kind": "test",
+      "intent": "mergeRestaurants의 빈 입력·미디어 없는 singleton projection",
+      "source_changed_paths": [
+        "apps/web/tests-unit/use-restaurants-merge.test.ts"
+      ],
+      "status": "equivalent",
+      "fixed_evidence": [
+        {
+          "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+          "start": 104,
+          "end": 182
+        }
+      ],
+      "finding": "원본 empty/media fallback assertions에 대응하는 기존 테스트가 있고 객체 identity/입력 불변성과 sort 횟수 검증도 있다.",
+      "remaining": "없음"
+    }
+  ],
+  "conclusion": {
+    "3031": "미충족 구현·테스트·문서·측정 자료가 남아 전체 superseded 종료 불가",
+    "3032": "주요 REST/singleton/dialog 의도는 동등 반영; 해외 keyword 정제와 국가필터 중복 호출 제거가 남아 전체 superseded 종료 불가",
+    "current_performance_claim": "none",
+    "ui_or_sdk_performance_inferred_from_original_microbenchmarks": false,
+    "closure_performed": false
+  }
+}

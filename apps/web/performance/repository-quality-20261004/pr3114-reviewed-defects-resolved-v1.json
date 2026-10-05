@@ -1,0 +1,18 @@
+{
+  "observedAt": "2026-10-04T12:30:33.192754+00:00",
+  "head": "34ebbb21092ef7d3240897d048055fd12762b39b",
+  "resolvedThreads": [
+    "PRRT_kwDOQGRyNc6oxx7T",
+    "PRRT_kwDOQGRyNc6oxx7W",
+    "PRRT_kwDOQGRyNc6oxx7Y",
+    "PRRT_kwDOQGRyNc6oxx7Z"
+  ],
+  "readbackAllResolved": true,
+  "newCommentsPosted": 0,
+  "basis": {
+    "draft": "185 passed final focused + actual own revision browser baseline3failure/after7pass",
+    "nodeCi": "actual command after backend install and PR/push path routing",
+    "ledger": "exact100/97applied source and remaining19runtime/9supply tests/runbook"
+  },
+  "allOpenThreads": []
+}

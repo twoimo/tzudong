@@ -1,0 +1,393 @@
+{
+  "network": "socket audit guard; controlled fixture-only children; sandbox status supplied by launcher",
+  "observation": "Exact registered fixture PIDs only; no command lines/environment/process-wide enumeration.",
+  "cases": [
+    {
+      "mode": "NORMAL_TERM",
+      "reason_code": "SUBPROCESS_CLEANUP_FAILED",
+      "returncode": 126,
+      "seconds": 2.369,
+      "owned_targets": {
+        "parent": {
+          "pid": 65152,
+          "ppid": 65147,
+          "pgid": 65152,
+          "sid": 65152
+        },
+        "child": {
+          "pid": 65154,
+          "ppid": 65152,
+          "pgid": 65152,
+          "sid": 65152
+        },
+        "grandchild": {
+          "pid": 65155,
+          "ppid": 65154,
+          "pgid": 65152,
+          "sid": 65152
+        }
+      },
+      "events": [
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65152,
+              "ppid": 65147,
+              "pgid": 65152,
+              "state": "S"
+            },
+            {
+              "pid": 65154,
+              "ppid": 65152,
+              "pgid": 65152,
+              "state": "S"
+            },
+            {
+              "pid": 65155,
+              "ppid": 65154,
+              "pgid": 65152,
+              "state": "S"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "SIGNAL_SENT",
+          "signal": "SIGTERM"
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65152,
+              "ppid": 65147,
+              "pgid": 65152,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65152,
+              "ppid": 65147,
+              "pgid": 65152,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": false
+        },
+        {
+          "phase": "SIGNAL_OS_ERROR",
+          "signal": "SIGKILL",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "HELPER_RESULT",
+          "signal": "SIGKILL",
+          "success": false
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65152,
+              "ppid": 65147,
+              "pgid": 65152,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": false
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    },
+    {
+      "mode": "FIRST_TERM_FAIL",
+      "reason_code": "SUBPROCESS_CLEANUP_FAILED",
+      "returncode": 126,
+      "seconds": 2.423,
+      "owned_targets": {
+        "parent": {
+          "pid": 65370,
+          "ppid": 65147,
+          "pgid": 65370,
+          "sid": 65370
+        },
+        "child": {
+          "pid": 65372,
+          "ppid": 65370,
+          "pgid": 65370,
+          "sid": 65370
+        },
+        "grandchild": {
+          "pid": 65375,
+          "ppid": 65372,
+          "pgid": 65370,
+          "sid": 65370
+        }
+      },
+      "events": [
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65370,
+              "ppid": 65147,
+              "pgid": 65370,
+              "state": "S"
+            },
+            {
+              "pid": 65372,
+              "ppid": 65370,
+              "pgid": 65370,
+              "state": "S"
+            },
+            {
+              "pid": 65375,
+              "ppid": 65372,
+              "pgid": 65370,
+              "state": "S"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "MOCK_SIGNAL_FAILURE",
+          "signal": "TERM"
+        },
+        {
+          "phase": "HELPER_RESULT",
+          "signal": "SIGTERM",
+          "success": true
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65370,
+              "ppid": 65147,
+              "pgid": 65370,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65370,
+              "ppid": 65147,
+              "pgid": 65370,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": false
+        },
+        {
+          "phase": "SIGNAL_OS_ERROR",
+          "signal": "SIGKILL",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "HELPER_RESULT",
+          "signal": "SIGKILL",
+          "success": false
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65370,
+              "ppid": 65147,
+              "pgid": 65370,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": false
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    },
+    {
+      "mode": "TERM_HELPER_FAIL",
+      "reason_code": "SUBPROCESS_CLEANUP_FAILED",
+      "returncode": 126,
+      "seconds": 5.346,
+      "owned_targets": {
+        "parent": {
+          "pid": 65599,
+          "ppid": 65147,
+          "pgid": 65599,
+          "sid": 65599
+        },
+        "child": {
+          "pid": 65601,
+          "ppid": 65599,
+          "pgid": 65599,
+          "sid": 65599
+        },
+        "grandchild": {
+          "pid": 65604,
+          "ppid": 65601,
+          "pgid": 65599,
+          "sid": 65599
+        }
+      },
+      "events": [
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65599,
+              "ppid": 65147,
+              "pgid": 65599,
+              "state": "S"
+            },
+            {
+              "pid": 65601,
+              "ppid": 65599,
+              "pgid": 65599,
+              "state": "S"
+            },
+            {
+              "pid": 65604,
+              "ppid": 65601,
+              "pgid": 65599,
+              "state": "S"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "MOCK_SIGNAL_FAILURE",
+          "signal": "TERM"
+        },
+        {
+          "phase": "MOCK_HELPER_FAILURE",
+          "signal": "SIGTERM"
+        },
+        {
+          "phase": "SIGNAL_SENT",
+          "signal": "SIGKILL"
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65599,
+              "ppid": 65147,
+              "pgid": 65599,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65599,
+              "ppid": 65147,
+              "pgid": 65599,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": false
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 65599,
+              "ppid": 65147,
+              "pgid": 65599,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": false
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    }
+  ]
+}

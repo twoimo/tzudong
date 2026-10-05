@@ -1,0 +1,37 @@
+{
+  "exit_code": 0,
+  "result": {
+    "checks": {
+      "alias": {
+        "errorCode": null,
+        "offenders": [],
+        "ok": true
+      },
+      "correspondence": {
+        "errorCode": null,
+        "missing": [],
+        "ok": true
+      },
+      "entries": {
+        "errorCode": null,
+        "issues": [],
+        "ok": true
+      },
+      "moves": [],
+      "ownership": {
+        "errorCode": null,
+        "ok": true,
+        "violations": []
+      },
+      "staleReferences": {
+        "errorCode": null,
+        "ok": true,
+        "unresolved": [],
+        "unresolvedCount": 0
+      }
+    },
+    "errorCode": null,
+    "ok": true,
+    "trackedDirectoryCount": 37
+  }
+}

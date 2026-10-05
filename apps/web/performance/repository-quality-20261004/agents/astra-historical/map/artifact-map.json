@@ -1,0 +1,26 @@
+{
+  "sourceAuthority": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "artifacts": {
+    "COMMANDS.md": "c9047fbfad6084aa83f777b517476480d066231b92c0d9613af0c3124f1e6e7a",
+    "REPORT.md": "403996d4a50e860143361320eae95ba112907f9735de162509fc4a4c700bf1cb",
+    "b3-boundary.json": "26f69f8f282ac092eb39b19cf29dc83158383f0cca8a5e117e78dcdf60bcfed9",
+    "model-metadata.json": "e98f784410a8d6349ece2863d930048cb3aa7b15bc891a51b2456e8a4b942411",
+    "pr3031-metadata.json": "7ed5907e6ae97a9f837c72be49b004d3838e43da6ff379128d470542d5050878",
+    "pr3031-scoped.diff": "7d95c85d565861ea50b66e8a26be582c8cb2798a6229f9387f2bb13edfca84d2",
+    "pr3031.patch": "84c2f3cae9cbc3288f573b40e60ed137427cf3444629a64f98266455fbad82cb",
+    "pr3032-metadata.json": "f0a1b6a84ef5a402e0742bedcc298dbe772e295a6aed19afe5cd928a6a13de9d",
+    "pr3032-scoped.diff": "84705f1641fea76bf46b08345560eb299fb47dadce0a40645e1ec1540dfd3e84",
+    "pr3032.patch": "2c7c1859f4c26a808bfbceae199002d13281258b6f0c053411c5b41939a8cd61",
+    "pr3114-metadata.json": "f34008c288a2882cd4f515a133292047a9c89dd652d2590635cc227ca952657b",
+    "reproduce.ts": "fb2a781a8a96ea1455d0640c2844fbccb0d773d72a9895665a7a9b614c1ce12c",
+    "semantic-probes.json": "49ca6c6b8173dd1ef7a1ea08df33e3bf6b506bebf4d749b396726eb5efe810da",
+    "source-evidence.json": "288412d13a25fdfe88e336c820c353e86f619498b2067cdac99a3daf82e77106",
+    "validation.json": "4bacc09641fb6ea8068fa73bc51a537e382f750ae0055372cca9de209a92b4a3"
+  },
+  "evidenceSanitization": {
+    "emailMatches": 0,
+    "prMetadataAuthorFields": 0,
+    "prMetadataBodyFields": 0,
+    "rawProviderOutputFiles": 0
+  }
+}

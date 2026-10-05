@@ -1,0 +1,1 @@
+Local-only sanitized receipts; stack.env and credentials excluded.

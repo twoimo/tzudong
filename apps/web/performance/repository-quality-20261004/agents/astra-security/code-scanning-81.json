@@ -1,0 +1,53 @@
+{
+  "name": "code-scanning-81",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-scanning/alerts/81",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "admin:repo_hook, delete_repo, read:repo_hook, repo, repo:invite, repo:status, repo_deployment, security_events, write:repo_hook",
+        "x-ratelimit-remaining": "4991",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:30:23.323806+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 1,
+  "items": [
+    {
+      "created_at": "2026-10-04T07:02:25Z",
+      "dismissed_reason": "false positive",
+      "fixed_at": null,
+      "most_recent_instance": {
+        "analysis_key": "dynamic/github-code-scanning/codeql:analyze",
+        "category": "/language:javascript-typescript",
+        "commit_sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+        "location": {
+          "end_column": 43,
+          "end_line": 104,
+          "path": "apps/web/lib/privacy/onboarding.ts",
+          "start_column": 38,
+          "start_line": 104
+        },
+        "ref": "refs/pull/3111/head",
+        "state": "dismissed"
+      },
+      "number": 81,
+      "rule": {
+        "id": "js/insufficient-password-hash",
+        "security_severity_level": "high",
+        "severity": "warning"
+      },
+      "state": "dismissed",
+      "tool": {
+        "name": "CodeQL",
+        "version": "2.27.1"
+      },
+      "updated_at": "2026-10-04T07:52:56Z"
+    }
+  ]
+}

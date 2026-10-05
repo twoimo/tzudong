@@ -1,0 +1,10 @@
+{
+  "raw": "live-swift-production-v3/raw.json",
+  "desktopSDKReadyActuallyPassed": true,
+  "cause": "new harness assumed desktop had mobile-only group role",
+  "correctSelectorMatchesOriginalGeometryQuery": true,
+  "productSourceChangedForTest": false,
+  "timeoutStageLabelCorrected": true,
+  "mobileAndTabletPassedSevenChecksEach": true,
+  "originalFailureNotOverwritten": true
+}

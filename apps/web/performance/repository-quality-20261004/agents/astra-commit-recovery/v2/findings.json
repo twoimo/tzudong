@@ -1,0 +1,28 @@
+{
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "provider": "openai",
+  "resolved_v1": [
+    "retry recapture deletes newer draft"
+  ],
+  "findings": [
+    {
+      "id": "v2-P2-recovery-stuck",
+      "priority": "P2",
+      "title": "고정 snapshot의 영구 실패와 복구 가능한 정리 실패를 구분하세요",
+      "file": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web/lib/reviews/review-save-operation.ts",
+      "line_start": 100,
+      "line_end": 104,
+      "body": "clearSavedDraft가 operation에 고정된 closure의 false를 계속 반환하며 UI는 이를 재시도 가능한 정리 실패로 취급합니다. 미확정 insert 응답 뒤 finally가 isSubmitting=false로 바꾸면 500ms autosave가 동일 입력의 savedAt/expiresAt를 갱신합니다. 다음 submit에서 readback이 저장 성공을 확인해도 원래 snapshot과 timestamp가 달라 clearDraft는 계속 false이고 handleClose도 반환하여 callback/닫기가 끝나지 않습니다. 최초 snapshot 읽기 실패가 반환한 항상 false인 closure를 저장한 경우에도 IDB 복구 후 같은 상태가 됩니다. 두 경로 모두 insert 1회, success/close 0회를 재현했습니다. 다른 draft를 다시 캡처하지 않고 보존하면서 이미 저장된 작업을 완료할 terminal 결과를 구분해야 합니다. snapshot capture 자체 실패는 write 전 block 또는 별도의 안전한 완료 정책이 필요합니다.",
+      "reproductions": [
+        "snapshot -> insert committed but reply/readback unavailable -> own same-input autosave updates timestamps -> retry readback saved -> snapshot mismatch -> retry and close remain blocked",
+        "snapshot get fails once -> false closure retained -> insert saved -> storage recovers -> same mounted retry and close still call false closure"
+      ],
+      "evidence": [
+        "extra-results.json",
+        "extra-output.txt",
+        "scratch/cleanup-retry.test.ts"
+      ]
+    }
+  ]
+}

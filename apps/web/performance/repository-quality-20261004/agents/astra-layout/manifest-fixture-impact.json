@@ -1,0 +1,24 @@
+{
+  "fixture": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+  "changed_entries": [
+    {
+      "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
+      "fields": [
+        "candidateGitBlobSha1"
+      ]
+    },
+    {
+      "path": "backend/layout-manifest.v1.json",
+      "fields": [
+        "candidateGitBlobSha1"
+      ]
+    }
+  ],
+  "changed_top_level_fields": [
+    "candidateContentSha256"
+  ],
+  "entry_counts": [
+    207,
+    207
+  ]
+}

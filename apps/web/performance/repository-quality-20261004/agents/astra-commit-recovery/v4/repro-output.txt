@@ -1,0 +1,12 @@
+bun test v1.4.0 (34cbb9a40)
+
+../../../../marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/v4/scratch/capture-recovery.test.ts:
+(pass) v4 io capture failure blocks dispatch; recovery finishes original operation [116.29ms]
+(pass) v4 invalid-stored capture failure blocks dispatch; recovery finishes original operation [70.47ms]
+(pass) v4 capture retries until first valid snapshot, then unknown-write retry preserves B without recapture [68.11ms]
+(pass) v4 capture recovery followed by replacement during known insert preserves B and closes [77.83ms]
+
+ 4 pass
+ 0 fail
+ 120 expect() calls
+Ran 4 tests across 1 file. [535.00ms]

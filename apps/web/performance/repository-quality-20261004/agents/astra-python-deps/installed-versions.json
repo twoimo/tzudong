@@ -1,0 +1,83 @@
+{
+  "pipeline-baseline": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "langgraph": "1.2.1",
+      "langchain-core": "1.6.0",
+      "pydantic": "2.13.4"
+    }
+  },
+  "pipeline-candidate": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "langgraph": "1.2.12",
+      "langchain-core": "1.6.5",
+      "pydantic": "2.13.5"
+    }
+  },
+  "crawler-baseline": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "langgraph": "1.2.12",
+      "langchain-core": "1.6.6",
+      "pydantic": "2.13.5",
+      "openai": "3.3.1",
+      "google-api-python-client": "2.196.0",
+      "curl_cffi": "0.15.0",
+      "scrapling": "0.4.8",
+      "yt-dlp": "2026.7.4",
+      "playwright": "1.59.0",
+      "tqdm": "4.70.1"
+    }
+  },
+  "crawler-candidate": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "langgraph": "1.2.12",
+      "langchain-core": "1.6.6",
+      "pydantic": "2.13.5",
+      "openai": "3.16.1",
+      "google-api-python-client": "2.200.0",
+      "curl_cffi": "0.16.3",
+      "scrapling": "0.4.15",
+      "yt-dlp": "2026.8.19",
+      "playwright": "1.62.0",
+      "tqdm": "4.70.1"
+    }
+  },
+  "control-baseline": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "psycopg2-binary": "2.9.11"
+    }
+  },
+  "control-candidate": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "psycopg2-binary": "2.9.13"
+    }
+  },
+  "combined-final": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "langgraph": "1.2.12",
+      "langchain-core": "1.6.5",
+      "pydantic": "2.13.5",
+      "openai": "3.16.1",
+      "google-api-python-client": "2.200.0",
+      "curl_cffi": "0.16.3",
+      "scrapling": "0.4.15",
+      "yt-dlp": "2026.8.19",
+      "playwright": "1.62.0",
+      "tqdm": "4.70.1",
+      "psycopg2-binary": "2.9.13"
+    }
+  }
+}

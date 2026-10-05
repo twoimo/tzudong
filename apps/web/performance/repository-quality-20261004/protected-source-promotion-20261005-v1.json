@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-04T20:32:21.259738+00:00",
+  "featurePR": 3117,
+  "featureSource": "2f9460ab93de8705237e68480793578c096b3619",
+  "developMerge": "32f5336fa9af166b04fe191ff3a7e1294196e893",
+  "dataPR": 3112,
+  "dataMerge": "bcd10b83995adceebe151099a6b81b056cade711",
+  "sourceTree": "84d8f211d372fab619f344152dc4405e8c37dc82",
+  "allPromotionTreesMatch": true,
+  "mainPR": 3131,
+  "mainMergeCompleted": false,
+  "productionUpdated": false,
+  "namedRollbackReadbackStillRequiredAtDeploy": true
+}

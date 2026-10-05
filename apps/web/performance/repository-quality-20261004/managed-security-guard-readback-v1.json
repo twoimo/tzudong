@@ -1,0 +1,47 @@
+{
+  "capturedAt": "2026-10-04T13:06:05.396Z",
+  "snapshot": {
+    "rpcs": [
+      {
+        "name": "read_public_profile_summaries",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "anon_execute": true,
+        "bounded_to_100": true,
+        "definition_md5": "7c9e0647dd096357a4367957a3c9080c",
+        "service_execute": false,
+        "requires_capability": false,
+        "authenticated_execute": true
+      },
+      {
+        "name": "read_release_auth_revocation_by_operation",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "anon_execute": true,
+        "bounded_to_100": false,
+        "definition_md5": "08cb0f2ea93f4e7890ad058b212a1514",
+        "service_execute": false,
+        "requires_capability": true,
+        "authenticated_execute": true
+      }
+    ],
+    "view": {
+      "owner": "privacy_workflow_owner",
+      "anon_select": false,
+      "definition_md5": "94d8f7c78eef04fcaef1c0075e604ead",
+      "owner_canlogin": false,
+      "service_select": false,
+      "owner_bypassrls": false,
+      "owner_superuser": false,
+      "filters_auth_uid": true,
+      "security_barrier": true,
+      "authenticated_select": true
+    }
+  },
+  "hostedMutations": 0,
+  "claim": "Catalog guards and ACLs inspected; no cross-user row access or live authorization test conducted in this observation."
+}

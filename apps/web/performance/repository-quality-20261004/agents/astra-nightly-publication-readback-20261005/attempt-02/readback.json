@@ -1,0 +1,577 @@
+{
+  "allowlist": [
+    "local-stack-reset.json",
+    "local-image-pull-preflight.json",
+    "local-stack-status.json",
+    "local-migration-manifest.json",
+    "local-migration-summary.json",
+    "local-closure-rescan.json",
+    "local-closure-smoke.json",
+    "local-browser-route-diagnostics.json",
+    "publication-boundary.txt"
+  ],
+  "artifact_inventory": [
+    {
+      "created_at": "2026-10-04T21:03:38Z",
+      "digest": "sha256:bf1b5d4f6eee5071f7a190ebb0ce5bbc77c2d5dc9ba428400ba077187baa7ce8",
+      "expired": false,
+      "id": 11315460774,
+      "name": "nightly-local-diagnostics-37233565208-1",
+      "size_in_bytes": 17612,
+      "updated_at": "2026-10-04T21:03:38Z"
+    },
+    {
+      "created_at": "2026-10-04T21:03:39Z",
+      "digest": "sha256:70ee298dece546c6dcc493434c4a14ca39d061cd81429d4c77118f07520368b1",
+      "expired": false,
+      "id": 11315017178,
+      "name": "nightly-local-publication-37233565208-1",
+      "size_in_bytes": 16589,
+      "updated_at": "2026-10-04T21:03:39Z"
+    }
+  ],
+  "checks": [
+    {
+      "check": "source_tree_equals_task_expected_tree",
+      "pass": true
+    },
+    {
+      "check": "current_protected_main_is_run_head",
+      "pass": true
+    },
+    {
+      "check": "entire_local_source_tree_equals_current_main",
+      "pass": true
+    },
+    {
+      "check": "canonical_complete_run_identity",
+      "pass": true
+    },
+    {
+      "check": "local_and_publish_completed_success",
+      "pass": true
+    },
+    {
+      "check": "step_success:Run local nightly unit regression",
+      "pass": true
+    },
+    {
+      "check": "step_success:Run local nightly browser regression",
+      "pass": true
+    },
+    {
+      "check": "step_success:Aggregate local nightly lane outcomes",
+      "pass": true
+    },
+    {
+      "check": "step_success:Build row-free local publication evidence",
+      "pass": true
+    },
+    {
+      "check": "step_success:Verify generated Supabase types match the local catalog",
+      "pass": true
+    },
+    {
+      "check": "step_success:Verify publication bundle before artifact persistence",
+      "pass": true
+    },
+    {
+      "check": "step_success:Stop and remove disposable local stack",
+      "pass": true
+    },
+    {
+      "check": "step_success:Verify trusted publication ref and artifact boundary",
+      "pass": true
+    },
+    {
+      "check": "step_success:Publish sanitized nightly prerelease",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/nightly-local-publication-allowlist.txt",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/workflows/nightly-regression.yml",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/scripts/verify-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:docs/agents/verification.md",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/scripts/build-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:docs/agents/release.md",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:docs/agents/privacy.md",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/workflows/nightly-local-regression.yml",
+      "pass": true
+    },
+    {
+      "check": "current_main_policy_bytes_match_local",
+      "pass": true
+    },
+    {
+      "check": "unique_exact_publication_artifact",
+      "pass": true
+    },
+    {
+      "check": "artifact_valid_run_binding",
+      "pass": true
+    },
+    {
+      "check": "zip_download_size_bound",
+      "pass": true
+    }
+  ],
+  "completed_at": "2026-10-04T21:18:04.069726+00:00",
+  "failure": {
+    "code": "read_only_command_failed:gh",
+    "type": "RuntimeError"
+  },
+  "incident_management_step": {
+    "conclusion": "skipped",
+    "name": "Manage scheduled nightly incident",
+    "status": "completed"
+  },
+  "issue": {
+    "body_mentions": {
+      "Local": true,
+      "cleanup": true,
+      "e2e": true,
+      "unit": true
+    },
+    "body_run_ids": [
+      "33135404626"
+    ],
+    "closed_at": null,
+    "created_at": "2026-08-28T02:17:01Z",
+    "html_url": "https://github.com/twoimo/tzudong/issues/2843",
+    "number": 2843,
+    "state": "open",
+    "title": "[nightly] Local regression incident",
+    "updated_at": "2026-10-03T21:39:32Z"
+  },
+  "jobs": [
+    {
+      "conclusion": "success",
+      "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "id": 111528128374,
+      "name": "Local",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout source",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify publication boundary implementation",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Node 24",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Bun",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install pinned Docker Compose",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Enable disposable runner user namespaces",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify Linux containment and Python runtime",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Create scoped Docker socket admission",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Python runtime dependencies",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install web dependencies",
+          "number": 11,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify Linux anonymous unit reporter custody",
+          "number": 12,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Chromium for the browser lane",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Pull pinned Compose images",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Probe Compose container creation",
+          "number": 15,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Probe Compose service startup",
+          "number": 16,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Reset disposable local stack",
+          "number": 17,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Apply local migrations, close functions, and seed",
+          "number": 18,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify generated Supabase types match the local catalog",
+          "number": 19,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run local nightly unit regression",
+          "number": 20,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run local nightly browser regression",
+          "number": 21,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Aggregate local nightly lane outcomes",
+          "number": 22,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Write bounded nightly lane diagnostics",
+          "number": 23,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Capture bounded Compose runtime diagnostics",
+          "number": 24,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Capture bounded local diagnostics",
+          "number": 25,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Build row-free local publication evidence",
+          "number": 26,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Prepare allowlisted publication bundle",
+          "number": 27,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify publication bundle before artifact persistence",
+          "number": 28,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload verified sanitized local nightly artifacts",
+          "number": 29,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Prepare bounded lifecycle diagnostic for failure persistence",
+          "number": 30,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Upload bounded failed or partial local nightly diagnostics",
+          "number": 31,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload allowlisted publication bundle",
+          "number": 32,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Stop and remove disposable local stack",
+          "number": 33,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Manage scheduled nightly incident",
+          "number": 34,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Fail when disposable stack cleanup failed",
+          "number": 35,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Install Bun",
+          "number": 68,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Install Node 24",
+          "number": 69,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout source",
+          "number": 70,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 71,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "id": 111530992036,
+      "name": "Publish",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout publication policy",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Download allowlisted local nightly artifacts",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify trusted publication ref and artifact boundary",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Publish sanitized nightly prerelease",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout publication policy",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "main_before": {
+    "protected": true,
+    "sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98"
+  },
+  "main_tree_sha": "84d8f211d372fab619f344152dc4405e8c37dc82",
+  "original_before": {
+    "clean": true,
+    "head": "73fd13a982e7a0851398a5f65735936c4a6b72c2",
+    "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tree": "c35da4f33e345019bb07167ce447fb4cea7c8d50"
+  },
+  "policy_files": [
+    {
+      "byte_length": 251,
+      "github_blob_sha": "8d96f3a1f6bc8acdb09ac3e587ec87c0d8e22fe6",
+      "github_sha256": "25fa74b6e66bfa586f4938b14448c52a8120642b0fefe48f38ad7bd4cf7dd7c5",
+      "local_sha256": "25fa74b6e66bfa586f4938b14448c52a8120642b0fefe48f38ad7bd4cf7dd7c5",
+      "match": true,
+      "path": ".github/nightly-local-publication-allowlist.txt"
+    },
+    {
+      "byte_length": 102420,
+      "github_blob_sha": "50b4901d062d6d1253509f420b7f37c62429cfe0",
+      "github_sha256": "e75441332f3f1128774915dd96e5fb5efcd55b79ae2a0f178c4e96aebf122454",
+      "local_sha256": "e75441332f3f1128774915dd96e5fb5efcd55b79ae2a0f178c4e96aebf122454",
+      "match": true,
+      "path": ".github/workflows/nightly-local-regression.yml"
+    },
+    {
+      "byte_length": 14443,
+      "github_blob_sha": "8dc5eab480c103deabbf5c9f0a42bb5e7d5fb1ca",
+      "github_sha256": "4ab853a010357f4165ce9b9afd8a0224eb82807043ba4f3ce0e157ec3cb61305",
+      "local_sha256": "4ab853a010357f4165ce9b9afd8a0224eb82807043ba4f3ce0e157ec3cb61305",
+      "match": true,
+      "path": ".github/workflows/nightly-regression.yml"
+    },
+    {
+      "byte_length": 15253,
+      "github_blob_sha": "6ce017a924e5025d75bd53bb29e921346a47096e",
+      "github_sha256": "fddedb91677ae298e51ae0f63ab108595e0e96f475bf9b05612a9769b270cd9c",
+      "local_sha256": "fddedb91677ae298e51ae0f63ab108595e0e96f475bf9b05612a9769b270cd9c",
+      "match": true,
+      "path": ".github/scripts/build-nightly-local-publication.py"
+    },
+    {
+      "byte_length": 50065,
+      "github_blob_sha": "7db89fe15522dbfc198cf926f7991e1adbba6f57",
+      "github_sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6",
+      "local_sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6",
+      "match": true,
+      "path": ".github/scripts/verify-nightly-local-publication.py"
+    },
+    {
+      "byte_length": 4080,
+      "github_blob_sha": "7b513cdea6f4cc0e6b531a3f132ece141c754712",
+      "github_sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f",
+      "local_sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f",
+      "match": true,
+      "path": "docs/agents/verification.md"
+    },
+    {
+      "byte_length": 2329,
+      "github_blob_sha": "21e8d9b036ce3ca814a076345b42ce1b07e7787f",
+      "github_sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+      "local_sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+      "match": true,
+      "path": "docs/agents/release.md"
+    },
+    {
+      "byte_length": 2955,
+      "github_blob_sha": "fd0ba2901c684023ddc3cf604802a8feb90e92b6",
+      "github_sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c",
+      "local_sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c",
+      "match": true,
+      "path": "docs/agents/privacy.md"
+    }
+  ],
+  "run": {
+    "conclusion": "success",
+    "created_at": "2026-10-04T20:49:17Z",
+    "event": "workflow_dispatch",
+    "head_branch": "main",
+    "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "html_url": "https://github.com/twoimo/tzudong/actions/runs/37233565208",
+    "id": 37233565208,
+    "name": "Nightly \u00b7 main",
+    "path": ".github/workflows/nightly-local-regression.yml",
+    "run_attempt": 1,
+    "status": "completed",
+    "updated_at": "2026-10-04T21:04:22Z"
+  },
+  "schema": "independent-nightly-publication-readback-v1",
+  "scope": {
+    "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "original_checkout": "/Users/twoimo/.codex/worktrees/179f/tzudong",
+    "raw_logs_env_bodies_user_rows_persisted": false,
+    "remote_methods": [
+      "GET"
+    ],
+    "repository": "twoimo/tzudong",
+    "run_id": 37233565208,
+    "source_checkout": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+    "write_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005/attempt-02"
+  },
+  "source_before": {
+    "clean": false,
+    "head": "32f5336fa9af166b04fe191ff3a7e1294196e893",
+    "status_sha256": "d730ea83246f7e41ff734fe608394e83cb4dbcf0db34f4c8c01ef6e19f8e9247",
+    "tree": "84d8f211d372fab619f344152dc4405e8c37dc82"
+  },
+  "source_expected_head": "2f9460ab93de8705237e68480793578c096b3619",
+  "source_initial_assumption_changed": true,
+  "started_at": "2026-10-04T21:17:59.466573+00:00",
+  "technical_recovery_evidence_complete": false
+}

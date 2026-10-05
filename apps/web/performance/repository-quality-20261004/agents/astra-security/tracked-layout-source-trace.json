@@ -1,0 +1,134 @@
+[
+  {
+    "ref_label": "candidate",
+    "sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+    "tracked_directory_count": 37,
+    "correspondence": {
+      "ok": false,
+      "errorCode": "layout_manifest_missing_entry",
+      "missing": [
+        {
+          "direction": "tree_without_entry",
+          "path": "assets"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "assets/source-fonts"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "docs/build-ship"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "docs/performance"
+        }
+      ]
+    },
+    "scope_top_level": [
+      ".github",
+      "apps",
+      "backend",
+      "docs",
+      "scripts"
+    ],
+    "contributing_files": {
+      "assets": [
+        "assets/source-fonts/ChosunCentennial_otf.otf"
+      ],
+      "assets/source-fonts": [
+        "assets/source-fonts/ChosunCentennial_otf.otf"
+      ],
+      "docs/build-ship": [
+        "docs/build-ship/RELEASE.md",
+        "docs/build-ship/SPEC.md",
+        "docs/build-ship/STATUS.md",
+        "docs/build-ship/TASKS.md"
+      ],
+      "docs/performance": [
+        "docs/performance/field-vitals.md"
+      ]
+    }
+  },
+  {
+    "ref_label": "main",
+    "sha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+    "tracked_directory_count": 37,
+    "correspondence": {
+      "ok": false,
+      "errorCode": "layout_manifest_missing_entry",
+      "missing": [
+        {
+          "direction": "tree_without_entry",
+          "path": "assets"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "assets/source-fonts"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "docs/build-ship"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "docs/performance"
+        }
+      ]
+    },
+    "scope_top_level": [
+      ".github",
+      "apps",
+      "backend",
+      "docs",
+      "scripts"
+    ],
+    "contributing_files": {
+      "assets": [
+        "assets/source-fonts/ChosunCentennial_otf.otf"
+      ],
+      "assets/source-fonts": [
+        "assets/source-fonts/ChosunCentennial_otf.otf"
+      ],
+      "docs/build-ship": [
+        "docs/build-ship/RELEASE.md",
+        "docs/build-ship/SPEC.md",
+        "docs/build-ship/STATUS.md",
+        "docs/build-ship/TASKS.md"
+      ],
+      "docs/performance": [
+        "docs/performance/field-vitals.md"
+      ]
+    }
+  },
+  {
+    "ref_label": "failed-main",
+    "sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+    "tracked_directory_count": 34,
+    "correspondence": {
+      "ok": false,
+      "errorCode": "layout_manifest_missing_entry",
+      "missing": [
+        {
+          "direction": "tree_without_entry",
+          "path": "docs/build-ship"
+        }
+      ]
+    },
+    "scope_top_level": [
+      ".github",
+      "apps",
+      "backend",
+      "docs",
+      "scripts"
+    ],
+    "contributing_files": {
+      "docs/build-ship": [
+        "docs/build-ship/RELEASE.md",
+        "docs/build-ship/SPEC.md",
+        "docs/build-ship/STATUS.md",
+        "docs/build-ship/TASKS.md"
+      ]
+    }
+  }
+]

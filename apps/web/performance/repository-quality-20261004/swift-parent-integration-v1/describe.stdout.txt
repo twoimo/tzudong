@@ -1,0 +1,41 @@
+{
+  "dependencies" : [
+
+  ],
+  "manifest_display_name" : "TzudongVisualOCR",
+  "name" : "TzudongVisualOCR",
+  "path" : "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+  "platforms" : [
+    {
+      "name" : "macos",
+      "version" : "10.15"
+    }
+  ],
+  "products" : [
+    {
+      "name" : "TzudongVisualOCR",
+      "targets" : [
+        "TzudongVisualOCR"
+      ],
+      "type" : {
+        "executable" : null
+      }
+    }
+  ],
+  "targets" : [
+    {
+      "c99name" : "TzudongVisualOCR",
+      "module_type" : "SwiftTarget",
+      "name" : "TzudongVisualOCR",
+      "path" : "backend/restaurant-crawling/scripts",
+      "product_memberships" : [
+        "TzudongVisualOCR"
+      ],
+      "sources" : [
+        "main.swift"
+      ],
+      "type" : "executable"
+    }
+  ],
+  "tools_version" : "5.5"
+}

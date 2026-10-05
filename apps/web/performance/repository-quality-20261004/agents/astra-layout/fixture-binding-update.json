@@ -1,0 +1,25 @@
+{
+  "fixture": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+  "reason": "Existing recovery contract binds the bytes of the changed layout manifest and its unit test.",
+  "entry_count": 207,
+  "changed_entries": [
+    {
+      "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
+      "field": "candidateGitBlobSha1",
+      "before": "ea82b6b7bcaee0eff49df4ffe04a6a02e8cb2053",
+      "after": "3bcc522bed057a6ee6b774601d91031374d322cd"
+    },
+    {
+      "path": "backend/layout-manifest.v1.json",
+      "field": "candidateGitBlobSha1",
+      "before": "f0c3b914753c8618930ba00d13415465a325c87a",
+      "after": "47a773e1f52d5f36e613cfd188d9afa326c0dc70"
+    }
+  ],
+  "aggregate_digest": {
+    "before": "ddfd94252f1bfc406499820111d27e4f608e60c8b6a23acce7ef56d62885477f",
+    "after": "ec8789cd3e8c6c8a6fa87dda0670bb6349b0239c61c545174acb39a6ef765453"
+  },
+  "changed_fields": 3,
+  "all_other_fields_preserved": true
+}

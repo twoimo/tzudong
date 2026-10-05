@@ -1,0 +1,99 @@
+{
+  "sourceAuthority": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "compilerVersion": "6.0.2",
+  "browserOrPerformanceMeasurement": false,
+  "category": [
+    {
+      "rev": "current",
+      "failureCases": 5,
+      "fixedLog": "카테고리 데이터 조회 실패:",
+      "maxLogCharacters": 15,
+      "logArgumentCount": 1,
+      "getterReads": 0,
+      "successRowIdentityPreserved": true,
+      "nullDataFallsBackToArray": true
+    },
+    {
+      "rev": "76afb0634b6710581aa296a9644929313e24b36f",
+      "failureCases": 5,
+      "fixedLog": "category_restaurant_query_failed",
+      "maxLogCharacters": 32,
+      "logArgumentCount": 1,
+      "getterReads": 0,
+      "successRowIdentityPreserved": true,
+      "nullDataFallsBackToArray": true
+    }
+  ],
+  "map": {
+    "validCases": 512,
+    "mismatches": 0,
+    "earliestNameAndCoordinateBeforeIdPreserved": true,
+    "nullableContract": [
+      {
+        "current": {
+          "threw": true
+        },
+        "oldHead": {
+          "returned": "null"
+        }
+      },
+      {
+        "current": {
+          "threw": true
+        },
+        "oldHead": {
+          "returned": "null"
+        }
+      },
+      {
+        "current": {
+          "threw": true
+        },
+        "oldHead": {
+          "returned": "null"
+        }
+      },
+      {
+        "current": {
+          "threw": true
+        },
+        "oldHead": {
+          "returned": "null"
+        }
+      }
+    ]
+  },
+  "homeKpi": [
+    {
+      "rev": "current",
+      "emptyArraySafe": true,
+      "blankLinksIgnored": true,
+      "changedLinkReread": true,
+      "nullInput": {
+        "threw": true
+      },
+      "undefinedInput": {
+        "threw": true
+      }
+    },
+    {
+      "rev": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+      "emptyArraySafe": true,
+      "blankLinksIgnored": true,
+      "changedLinkReread": true,
+      "nullInput": {
+        "returned": "[]"
+      },
+      "undefinedInput": {
+        "returned": "[]"
+      }
+    }
+  ],
+  "regionQuery": {
+    "cases": 25,
+    "mismatches": 0,
+    "constantKeywordCount": 35,
+    "allCurrentKeywordsUnchangedBySanitizer": true,
+    "syntheticInputsOnly": true
+  }
+}

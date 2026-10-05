@@ -1,0 +1,11 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "lint"
+  ],
+  "exit_code": 0,
+  "seconds": 39.11,
+  "stdout": "\n> web@1.2.4 lint\n> node scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0\n\n",
+  "stderr": ""
+}

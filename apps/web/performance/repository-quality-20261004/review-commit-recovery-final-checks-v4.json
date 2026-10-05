@@ -1,0 +1,65 @@
+{
+  "observedAt": "2026-10-04T11:04:11.702081+00:00",
+  "sourceBase": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "checks": [
+    {
+      "check": "unit",
+      "exitCode": 0,
+      "command": [
+        "/Users/twoimo/.bun/bin/bun",
+        "test",
+        "tests-unit/review-draft-deletion-browser.test.ts",
+        "tests-unit/review-draft-privacy.test.ts",
+        "tests-unit/draft-store-hardening-contract.test.ts",
+        "tests-unit/review-save-submit.test.ts",
+        "tests-unit/review-save-operation.test.ts",
+        "tests-unit/review-upload-uncertainty.test.ts",
+        "tests-unit/review-save-owner-lifecycle.test.ts"
+      ],
+      "rawLogsStored": false,
+      "passed": 113,
+      "failed": 0,
+      "assertions": 1535,
+      "failedCases": []
+    },
+    {
+      "check": "lint",
+      "exitCode": 0,
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "components/reviews/ReviewModal.tsx",
+        "lib/reviewDraftDB.ts",
+        "lib/reviews/review-save-operation.ts",
+        "tests-unit/review-save-submit.test.ts",
+        "tests-unit/review-draft-deletion-browser.test.ts"
+      ],
+      "rawLogsStored": false
+    },
+    {
+      "check": "parity",
+      "exitCode": 0,
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "scripts/run-typecheck.mjs",
+        "--compiler",
+        "parity"
+      ],
+      "rawLogsStored": false,
+      "summary": {
+        "status": "passed",
+        "diagnostics": 0,
+        "logicalInputs": 2379,
+        "logicalInputNamesSha256": "8b3e972fc699d26bf9139353ed241af9ea8667d095afb4f2e6e3317198ad8aa3",
+        "nonLibraryContentSha256": "1acb0d84cdff22135f5bd0543624d30daf3cf5b2afd8f29b8d9418daff01562e",
+        "standardLibraryContentSha256": {
+          "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+          "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+        }
+      }
+    }
+  ],
+  "realIdbProcesses": 1,
+  "realIdbInternalCases": 9,
+  "hostedOrPhoneActions": 0
+}

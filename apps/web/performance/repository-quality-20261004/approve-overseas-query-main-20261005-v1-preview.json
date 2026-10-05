@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-04T23:53:29.453886+00:00",
+  "projectVerified": true,
+  "publicApprovedMainSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+  "guardId": "i4fHH6tbzAA1jtCM",
+  "guardKey": "TZUDONG_APPROVED_PRODUCTION_SHA",
+  "guardType": "sensitive",
+  "target": [
+    "production"
+  ],
+  "guardNotDisabled": true,
+  "otherConfigurationChanged": false
+}

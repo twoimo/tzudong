@@ -1,0 +1,127 @@
+diff --git a/.kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json b/.kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json
+index 85272f9c..eec3ee56 100644
+--- a/.kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json
++++ b/.kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json
+@@ -3,7 +3,7 @@
+   "kind": "platform_modernization_reconciliation",
+   "baseCommit": "3f4ca55742aa33869b776291e0d035a16024eef1",
+   "sourceCommit": "880bf06d375dbc6ebe8dcf108419c3f455048a97",
+-  "candidateContentSha256": "ddfd94252f1bfc406499820111d27e4f608e60c8b6a23acce7ef56d62885477f",
++  "candidateContentSha256": "ec8789cd3e8c6c8a6fa87dda0670bb6349b0239c61c545174acb39a6ef765453",
+   "candidateWorkingTreeStateIncluded": true,
+   "sourceDeltaEntryCount": 207,
+   "dispositionCounts": {
+@@ -579,7 +579,7 @@
+       "candidatePresentAtInspectionPath": true,
+       "baseGitBlobSha1": null,
+       "sourceGitBlobSha1": "9055a7380a4033b8337f574bdd44c331d78b7ebd",
+-      "candidateGitBlobSha1": "ea82b6b7bcaee0eff49df4ffe04a6a02e8cb2053",
++      "candidateGitBlobSha1": "3bcc522bed057a6ee6b774601d91031374d322cd",
+       "contentState": "candidate_transformed",
+       "disposition": "candidate_transformed_present",
+       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."
+@@ -1335,7 +1335,7 @@
+       "candidatePresentAtInspectionPath": true,
+       "baseGitBlobSha1": null,
+       "sourceGitBlobSha1": "e2cd20c357e627ab90adf2f54a6bc958757bb927",
+-      "candidateGitBlobSha1": "f0c3b914753c8618930ba00d13415465a325c87a",
++      "candidateGitBlobSha1": "47a773e1f52d5f36e613cfd188d9afa326c0dc70",
+       "contentState": "candidate_transformed",
+       "disposition": "candidate_transformed_present",
+       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."
+diff --git a/backend/bin/tests/test_check_layout_manifest_unittest.py b/backend/bin/tests/test_check_layout_manifest_unittest.py
+index ea82b6b7..3bcc522b 100644
+--- a/backend/bin/tests/test_check_layout_manifest_unittest.py
++++ b/backend/bin/tests/test_check_layout_manifest_unittest.py
+@@ -415,7 +415,7 @@ class RealTreeTest(unittest.TestCase):
+         self.assertTrue(result["ok"], result)
+         self.assertIsNone(result["errorCode"])
+         self.assertIn(result["errorCode"], clm.LAYOUT_CHECK_RESULT_CODES)
+-        self.assertEqual(result["trackedDirectoryCount"], 33)
++        self.assertEqual(result["trackedDirectoryCount"], 37)
+         self.assertEqual(result["checks"]["staleReferences"]["unresolvedCount"], 0)
+         self.assertEqual(result["checks"]["moves"], [])
+         paths = {entry["path"] for entry in clm.load_manifest(_MANIFEST_PATH)["entries"]}
+diff --git a/backend/layout-manifest.v1.json b/backend/layout-manifest.v1.json
+index f0c3b914..47a773e1 100644
+--- a/backend/layout-manifest.v1.json
++++ b/backend/layout-manifest.v1.json
+@@ -2,7 +2,7 @@
+   "schemaVersion": 1,
+   "scope": {
+     "note": "저장소가 추적하거나 현재 후보에 추가한 1단·2단 디렉터리 전체에 대해 항목 하나씩(요구사항 6.1). 소스 항목은 git ls-files --cached --others --exclude-standard 결과와 양방향 대응한다(요구사항 6.9). build_artifact·local_ephemeral 항목은 버전 관리 추적 제외를 vcsTracked=false로 기록한다(요구사항 6.8).",
+-    "trackedTopLevelDirectories": [".github", "apps", "backend", "docs", "scripts"],
++    "trackedTopLevelDirectories": [".github", "apps", "assets", "backend", "docs", "scripts"],
+     "excludedTopLevelDirectories": [".git", ".venv", ".hypothesis", ".cursor", ".kiro", ".local-archive"]
+   },
+   "entries": [
+@@ -90,6 +90,24 @@
+       "classification": "source",
+       "vcsTracked": true
+     },
++    {
++      "path": "assets",
++      "depth": 1,
++      "ownership": "저장소가 추적하는 원본 디자인 자산 소유 경계",
++      "allowedContents": ["원본 폰트 자산 디렉터리"],
++      "forbiddenContents": ["런타임 실행 소스", "빌드 산출물", "시크릿 값 리터럴"],
++      "classification": "source",
++      "vcsTracked": true
++    },
++    {
++      "path": "assets/source-fonts",
++      "depth": 2,
++      "ownership": "변환 전 원본 폰트 자산",
++      "allowedContents": ["원본 폰트 파일"],
++      "forbiddenContents": ["런타임 실행 소스", "생성된 웹 폰트 산출물", "시크릿 값 리터럴"],
++      "classification": "source",
++      "vcsTracked": true
++    },
+     {
+       "path": "backend",
+       "depth": 1,
+@@ -325,6 +343,15 @@
+       "classification": "source",
+       "vcsTracked": true
+     },
++    {
++      "path": "docs/build-ship",
++      "depth": 2,
++      "ownership": "기능 구현·검증·릴리스 기록 문서",
++      "allowedContents": ["기능 명세", "작업·상태 기록", "릴리스 검증 문서"],
++      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
++      "classification": "source",
++      "vcsTracked": true
++    },
+     {
+       "path": "docs/operations",
+       "depth": 2,
+@@ -334,6 +361,15 @@
+       "classification": "source",
+       "vcsTracked": true
+     },
++    {
++      "path": "docs/performance",
++      "depth": 2,
++      "ownership": "성능 측정·검증 절차 문서",
++      "allowedContents": ["성능 수집·측정 절차", "측정 결과 해석 기준"],
++      "forbiddenContents": ["실행 소스", "원시 측정 데이터", "시크릿 값 리터럴"],
++      "classification": "source",
++      "vcsTracked": true
++    },
+     {
+       "path": "docs/product",
+       "depth": 2,
+diff --git a/backend/utils/tests/test_layout_naming_source_recovery.py b/backend/utils/tests/test_layout_naming_source_recovery.py
+index 011a3347..4acb3f5d 100644
+--- a/backend/utils/tests/test_layout_naming_source_recovery.py
++++ b/backend/utils/tests/test_layout_naming_source_recovery.py
+@@ -71,7 +71,7 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
+         result = layout.run_check(root=ROOT, manifest_path=LAYOUT_MANIFEST)
+         self.assertEqual(result["errorCode"], None, result)
+         self.assertTrue(result["ok"], result)
+-        self.assertEqual(result["trackedDirectoryCount"], 33)
++        self.assertEqual(result["trackedDirectoryCount"], 37)
+         self.assertEqual(result["checks"]["moves"], [])
+ 
+     def test_existing_rename_ledger_is_complete_without_aliases(self) -> None:

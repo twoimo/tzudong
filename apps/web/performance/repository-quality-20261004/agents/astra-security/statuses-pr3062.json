@@ -1,0 +1,36 @@
+{
+  "name": "statuses-pr3062",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/commits/7ce49f47d24842079a88b2954692acc6b0b6d6f4/statuses?per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "repo, repo:status",
+        "x-ratelimit-remaining": "4847",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:38:42.834126+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 2,
+  "items": [
+    {
+      "context": "Vercel",
+      "created_at": "2026-09-27T19:43:10Z",
+      "id": 55036779456,
+      "state": "success",
+      "updated_at": "2026-09-27T19:43:10Z"
+    },
+    {
+      "context": "Vercel",
+      "created_at": "2026-09-27T19:42:53Z",
+      "id": 55036771227,
+      "state": "pending",
+      "updated_at": "2026-09-27T19:42:53Z"
+    }
+  ]
+}

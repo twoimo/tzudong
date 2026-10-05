@@ -1,0 +1,105 @@
+[
+  {
+    "advisory": "GHSA-6j4f-fj2g-mc7p",
+    "official_source": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+    "package": "brace-expansion",
+    "upstream_minimum_patches": [
+      "1.1.19",
+      "2.1.5",
+      "3.0.7",
+      "5.0.10"
+    ],
+    "baseline_resolved": [
+      "2.1.4",
+      "5.0.9"
+    ],
+    "candidate_resolved": [
+      "2.1.7",
+      "5.0.12"
+    ],
+    "status": "fixed; final versions cover all three advisories"
+  },
+  {
+    "advisory": "GHSA-qhr7-859c-m2p7",
+    "official_source": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+    "package": "brace-expansion",
+    "upstream_minimum_patches": [
+      "1.1.20",
+      "2.1.6",
+      "3.0.8",
+      "5.0.11"
+    ],
+    "baseline_resolved": [
+      "2.1.4",
+      "5.0.9"
+    ],
+    "candidate_resolved": [
+      "2.1.7",
+      "5.0.12"
+    ],
+    "status": "fixed; final versions cover all three advisories"
+  },
+  {
+    "advisory": "GHSA-q2hr-2g5m-vwhr",
+    "official_source": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+    "package": "brace-expansion",
+    "upstream_minimum_patches": [
+      "1.1.21",
+      "2.1.7",
+      "3.0.9",
+      "5.0.12"
+    ],
+    "baseline_resolved": [
+      "2.1.4",
+      "5.0.9"
+    ],
+    "candidate_resolved": [
+      "2.1.7",
+      "5.0.12"
+    ],
+    "status": "fixed; final versions cover all three advisories"
+  },
+  {
+    "advisory": "GHSA-vcvr-r3jv-pc5j",
+    "official_source": "https://github.com/advisories/GHSA-vcvr-r3jv-pc5j",
+    "package": "next",
+    "affected": ">=16.2.0 <16.3.6",
+    "minimum_patch": "16.3.6",
+    "baseline_resolved": [
+      "16.3.5"
+    ],
+    "candidate_resolved": [
+      "16.3.6"
+    ],
+    "status": "fixed; exposure separately documented in next-og-source-exposure.json"
+  },
+  {
+    "advisory": "GHSA-vfj7-8cjw-p6xm",
+    "official_source": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "affected": "<=3.0.3",
+    "minimum_patch": null,
+    "baseline_resolved": [
+      "3.0.3"
+    ],
+    "candidate_resolved": [
+      "3.0.3"
+    ],
+    "status": "unresolved upstream; full audit continues to fail",
+    "owners": [
+      [
+        "eslint-config-next@16.3.6",
+        "@next/eslint-plugin-next@16.3.6",
+        "fast-glob@3.3.1",
+        "micromatch@4.0.8",
+        "braces@3.0.3"
+      ],
+      [
+        "@tailwindcss/cli@4.3.3",
+        "@parcel/watcher@2.5.1",
+        "micromatch@4.0.8",
+        "braces@3.0.3"
+      ]
+    ]
+  }
+]

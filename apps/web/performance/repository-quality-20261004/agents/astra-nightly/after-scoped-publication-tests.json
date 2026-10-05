@@ -1,0 +1,73 @@
+{
+  "captured_at": "2026-10-04T09:10:32.464447+00:00",
+  "runtime": "3.11.17",
+  "modules": [
+    "backend.supabase.tests.test_local_publication_verifier"
+  ],
+  "tests_run": 40,
+  "failures": 1,
+  "errors": 1,
+  "skipped": 0,
+  "successful": false,
+  "elapsed_seconds": 59.384,
+  "events": [
+    {
+      "test": "backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_builder_omits_private_rows_and_preserves_full_replay_proofs",
+      "outcome": "error",
+      "exception": "SystemExit",
+      "code": "private local migration receipt summary source mismatch",
+      "trace_locations": [
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          57
+        ],
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          623
+        ],
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          579
+        ],
+        [
+          "backend/supabase/tests/test_local_publication_verifier.py",
+          652
+        ],
+        [
+          ".github/scripts/build-nightly-local-publication.py",
+          216
+        ],
+        [
+          ".github/scripts/build-nightly-local-publication.py",
+          57
+        ]
+      ]
+    },
+    {
+      "test": "backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_publication_uses_the_current_100_unit_manifest",
+      "outcome": "failure",
+      "exception": "AssertionError",
+      "code": "99 != 100",
+      "trace_locations": [
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          57
+        ],
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          623
+        ],
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          579
+        ],
+        [
+          "backend/supabase/tests/test_local_publication_verifier.py",
+          940
+        ]
+      ]
+    }
+  ],
+  "database_execution": false,
+  "note": "Existing offline fixtures are temporary test inputs, not real publication or runtime evidence."
+}

@@ -1,0 +1,169 @@
+[
+  {
+    "id": "REAL-LAYOUT-01",
+    "classification": "confirmed_current_quality_defect",
+    "priority": "P2",
+    "source_sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+    "also_present_on_main": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+    "paths": [
+      "backend/layout-manifest.v1.json",
+      "backend/utils/tests/test_layout_naming_source_recovery.py:74",
+      "backend/bin/tests/test_check_layout_manifest_unittest.py:418"
+    ],
+    "missing_entries": [
+      "assets",
+      "assets/source-fonts",
+      "docs/build-ship",
+      "docs/performance"
+    ],
+    "tracked_directory_count": 37,
+    "asserted_count": 33,
+    "evidence": [
+      "current-layout-check.json",
+      "tracked-layout-source-trace.json",
+      "targeted-readonly-tests.json",
+      "jobs-36491966037.json",
+      "job-109162461988-sanitized-failure.json"
+    ],
+    "smallest_batch": "Add the four real source directory entries and assets scope metadata; update the two exact count assertions; preserve all checker admission rules. Verify on a clean candidate without changing the shared node_modules symlink.",
+    "verification": [
+      "python3 -B -m unittest backend.utils.tests.test_layout_naming_source_recovery backend.bin.tests.test_check_layout_manifest_unittest backend.bin.tests.test_check_rename_ledger_unittest",
+      "python3 -B backend/bin/check_layout_manifest.py --json",
+      "Security workflow on the exact candidate SHA after parent-authorized delivery"
+    ]
+  },
+  {
+    "id": "REAL-DEPENDENCIES-02",
+    "classification": "confirmed_vulnerable_versions_on_old_open_pr",
+    "priority": "P1",
+    "pr": 2906,
+    "source_sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+    "paths": [
+      "apps/web/package-lock.json",
+      "backend/package-lock.json"
+    ],
+    "evidence": [
+      "dependency-source-trace.json",
+      "dependency-job-103781384164.json",
+      "dependency-job-103781384047.json"
+    ],
+    "current_main_and_candidate": "js-yaml 4.3.2; maplibre-gl 6.10.0; sharp 0.35.4",
+    "smallest_batch": "Reconcile the older Dependabot candidate against current develop while preserving only its intended dependency update and existing pins. Do not downgrade current lockfiles or broadly upgrade production dependencies. Parent and PR-inventory owner handle supersession decisions.",
+    "verification": [
+      "npm audit --audit-level=moderate in apps/web and backend on the refreshed candidate",
+      "Affected lockfile/package contracts and required CI; no dependency install or audit executed by this auditor"
+    ]
+  },
+  {
+    "id": "REAL-GOVERNANCE-03",
+    "classification": "confirmed_current_open_pr_target_violation",
+    "priority": "P2",
+    "pr": 2902,
+    "source_sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+    "base_ref": "main",
+    "paths": [
+      "apps/web/scripts/verify-dependency-freshness.mjs:154",
+      ".github/workflows/dependency-freshness.yml:85"
+    ],
+    "evidence": [
+      "freshness-artifact-sanitized.json",
+      "freshness-pr2902-current.json"
+    ],
+    "smallest_batch": "Parent and PR-inventory owner reconcile the legacy candidate targeting main with the develop-only dependency workflow; preserve the fail-closed target rule.",
+    "verification": [
+      "Repeat read-only candidate collection and freshness governance classification after the authorized inventory correction",
+      "Run four canonical checks only for an admitted candidate and bind results to its SHA"
+    ]
+  },
+  {
+    "id": "FP-CODEQL-79",
+    "classification": "source_traced_false_positive_candidate_alert_still_open",
+    "scanner_severity": "critical",
+    "alert": 79,
+    "pr": 3099,
+    "source_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+    "path": "apps/web/scripts/preview-design-fixtures.mjs:213",
+    "rule": "js/request-forgery",
+    "evidence": [
+      "code-scanning-pr3099-all-states.json",
+      "ssrf-url-semantics-result.json"
+    ],
+    "trace": "upstream is a constant loopback origin at line 5; request URL parsed at 179; only pathname+search appended at 213; redirects manual at 213; server binds loopback at 221; WebSocket branch also fixes hostname and port at 229. Fourteen offline adversarial URL shapes retain the fixed origin. File absent from candidate99f91157.",
+    "smallest_batch": "No production code change justified by this rule. Parent may review the exact alert with source evidence; no scanner disable, suppression or alert dismissal performed."
+  },
+  {
+    "id": "FP-CODEQL-78",
+    "classification": "source_traced_false_positive_candidate_alert_still_open",
+    "scanner_severity": "high",
+    "alert": 78,
+    "pr": 3099,
+    "source_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+    "path": "apps/web/scripts/codex-imagegen-provider-core.py:359",
+    "rule": "py/weak-sensitive-data-hashing",
+    "trace": "_sha256_json computes a deterministic provenance fingerprint. Only callers at 413-414 hash endpoint+generated request payload and a redacted response. Request payload is built at 395-403; auth_file is passed separately to transport at 404. This is not human-password storage or password verification; static HMAC domain key does not claim secret encryption. File absent from candidate99f91157.",
+    "smallest_batch": "No password KDF change justified. Parent may review only the exact rule with call-site evidence; no source, suppression or alert state change performed."
+  },
+  {
+    "id": "FP-GITGUARDIAN-3099",
+    "classification": "strong_false_positive_candidate_external_incident_state_unverified",
+    "pr": 3099,
+    "check_id": 111356762340,
+    "path": "apps/web/performance/ui-renewal-20261003/catalog-dual-clean-replay-37121857541.json",
+    "trace": "Check references Generic High Entropy Secret in a replay receipt; the traced comparedHashes fields contain 64-character hexadecimal file digests, not credential literals. Actual values not retained.",
+    "evidence": [
+      "check-111356762340-sanitized-output.json"
+    ],
+    "smallest_batch": "Verify exact GitGuardian incident-to-line mapping through the owner integration before any scoped ignore decision; do not rotate credentials or disable the detector based only on this hash finding."
+  },
+  {
+    "id": "FP-GITGUARDIAN-2908",
+    "classification": "source_traced_false_positive_candidate_external_incident_state_unverified",
+    "pr": 2908,
+    "check_id": 104335906269,
+    "source_sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "path": "backend/supabase/tests/test_g014_pg17_owner_contract.py:129",
+    "trace": "LegacyReplay is opt-in; line129 generates secrets.token_hex(24) at runtime. Docker uses --network none and a disposable container at 130; cleanup registered134. The shared docker helper passes the in-memory password via POSTGRES_PASSWORD/PGPASSWORD, without a committed credential value. No database or container executed by auditor.",
+    "smallest_batch": "Preserve random fixture credentials and network isolation; parent may supply this exact source trace to scoped incident review. No credential rotation inferred."
+  },
+  {
+    "id": "UNKNOWN-QUALITY-API",
+    "classification": "unverified_absence_or_access",
+    "http_status": 404,
+    "endpoints": [
+      "/repos/twoimo/tzudong/code-quality/findings?state=open",
+      "/repos/twoimo/tzudong/code-quality/setup"
+    ],
+    "count": null,
+    "evidence": [
+      "code-quality-open.json",
+      "code-quality-setup.json"
+    ],
+    "next_action": "Owner may verify feature exposure and access in GitHub; no enablement, settings changes, account switch or paid upgrade is authorized here."
+  },
+  {
+    "id": "UNKNOWN-AI-CHECKS",
+    "classification": "unclassified_external_workflow_failures",
+    "prs": [
+      3099,
+      3031,
+      2908,
+      2903
+    ],
+    "evidence": [
+      "open-pr-failed-security-checks.json",
+      "latest-failed-ai-security-jobs.json"
+    ],
+    "next_action": "Keep failed statuses visible. The latest inspected run fails at Processing Request (Linux); no source defect, permission cause or quota cause established."
+  },
+  {
+    "id": "UNKNOWN-PR2888-PIP",
+    "classification": "unclassified_older_candidate_audit_failure",
+    "pr": 2888,
+    "check_id": 101547198170,
+    "evidence": [
+      "dependency-job-101547198170.json",
+      "job-metadata-101547198170.json"
+    ],
+    "next_action": "No advisory was recovered in the projected output. Do not call this a confirmed package vulnerability; validate an admitted refreshed candidate with the pinned pip-audit workflow."
+  }
+]

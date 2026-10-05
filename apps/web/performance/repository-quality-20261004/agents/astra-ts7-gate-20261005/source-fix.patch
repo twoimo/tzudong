@@ -1,0 +1,554 @@
+diff --git a/apps/web/scripts/measure-typecheck.mjs b/apps/web/scripts/measure-typecheck.mjs
+index 90928585..a10a0d46 100644
+--- a/apps/web/scripts/measure-typecheck.mjs
++++ b/apps/web/scripts/measure-typecheck.mjs
+@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
+ import path from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ import { logCliError } from './privacy-safe-cli-log.mjs';
++import { validateRawFile, validateRejectedWarmupRaw } from './verify-typecheck-benchmark-report.mjs';
+ 
+ const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+ const REPO_ROOT = path.resolve(APP_ROOT, '..', '..');
+@@ -148,11 +149,12 @@ async function samplerFailureReceipt(evidence) {
+     evidenceTimeout: evidence?.timeoutDiagnostic ?? null,
+   };
+ }
+-async function failureReceipt(error) {
++async function failureReceipt(error, failureStage) {
+   const lastFailure = error?.lastFailure ?? error?.cause?.lastFailure;
+   return {
+     schemaVersion: 2,
+     status: 'failed',
++    failureStage,
+     failureCode: typeof error?.code === 'string' && /^TYPECHECK_[A-Z_]+$/.test(error.code) ? error.code : 'TYPECHECK_BENCHMARK_FAILURE',
+     sampler: await samplerFailureReceipt(error?.samplerEvidence),
+     lastFailure: lastFailure ? {
+@@ -190,6 +192,7 @@ function runCompiler(kind, profile, rawOutput, attempt) {
+       errorCode: samplerResult?.errorCode ?? null,
+       summary,
+       rawOutput,
++      compilerClean: compilerResult?.code === 0 && !compilerResult.signal && compilerStdoutBytes === 0 && compilerStderrBytes === 0,
+       timeoutDiagnostic: evidenceStartedAt === null ? null : {
+         sampler: { pid: Number.isInteger(sampler?.pid) ? sampler.pid : null, running: sampler?.exitCode === null && sampler?.signalCode === null, stdoutBytes: samplerStdoutBytes, stderrBytes: samplerStderrBytes },
+         root: { pid: Number.isInteger(child?.pid) ? child.pid : null, running: child?.exitCode === null && child?.signalCode === null, stdoutBytes: compilerStdoutBytes, stderrBytes: compilerStderrBytes },
+@@ -294,6 +297,85 @@ function sampleFailure(position, retry, kind, error) {
+ export function mustAbortSampleRetries(error) {
+   return error?.code === 'TYPECHECK_SAMPLER_EVIDENCE_TIMEOUT';
+ }
++// A completed, clean compiler with a cadence-only rejection can be sampled again.
++// Setup, protocol, identity, pressure and compiler failures remain immediate failures.
++export function isRetryableWarmupFailure(error) {
++  const evidence = error?.samplerEvidence;
++  const summary = evidence?.summary;
++  return error?.code === 'TYPECHECK_SAMPLER_SUMMARY_INVALID'
++    && evidence?.compilerClean === true && evidence.code === 1 && !evidence.signal && !evidence.errorCode
++    && summary?.schemaVersion === 2 && summary.valid === false && summary.terminalObserved === true
++    && summary.requestedIntervalMs === 10 && summary.maximumAllowedGapMs === 60
++    && Number.isInteger(summary.samples) && summary.samples >= 3 && summary.samples <= 20_000
++    && Number.isSafeInteger(summary.peakRssBytes) && summary.peakRssBytes > 0
++    && finite(summary.maximumGapMs) && summary.maximumGapMs > 60
++    && Number.isInteger(summary.rootPid) && summary.rootPid > 0
++    && typeof summary.rootStartIdentity === 'string' && /^\d+$/.test(summary.rootStartIdentity)
++    && JSON.stringify(summary.invalidReasons) === '["sampling-gap-exceeded"]';
++}
++
++export async function runWarmup(kind, profile, rawDirectory, invalidRuns, recordOutcome, sample = runCompiler) {
++  for (let retry = 1; retry <= 3; retry += 1) {
++    // Keep the first attempt's historical path; never overwrite a rejected sample.
++    const rawOutput = path.join(rawDirectory, retry === 1 ? `warmup-${kind}.ndjson` : `warmup-${kind}-attempt-${retry}.ndjson`);
++    let result; let error;
++    try {
++      result = await sample(kind, profile, rawOutput, retry);
++      await validateRawOutput(rawOutput, result.samplerSummary);
++      if (result.code || result.signal || result.stdout || result.stderr || result.samplerCode || result.samplerSignal) throw Object.assign(new Error('Warm-up compiler evidence was not clean'), { code: 'TYPECHECK_COMPILER_EVIDENCE_INVALID' });
++    } catch (failure) { error = failure; }
++    const rawSha256 = await exists(rawOutput) ? await digestFile(rawOutput) : null;
++    if (!error) {
++      await recordOutcome({ phase: 'warmup', kind, retry, accepted: true, durationMs: result.durationMs, rawOutput: path.basename(rawOutput), rawSha256, summary: result.samplerSummary, failure: null });
++      return { kind, retry, durationMs: result.durationMs, rawOutput: path.basename(rawOutput), rawSha256 };
++    }
++    invalidRuns[kind] += 1;
++    await recordOutcome({ phase: 'warmup', kind, retry, accepted: false, rawOutput: path.basename(rawOutput), rawSha256, failure: sampleOutcomeFailureCode(error) });
++    let retryable = isRetryableWarmupFailure(error);
++    if (retryable) {
++      try { await validateRejectedWarmupRaw(rawOutput); } catch { retryable = false; }
++    }
++    if (!retryable || retry === 3 || invalidRuns[kind] >= 3) {
++      throw Object.assign(sampleFailure(0, retry, kind, error), { code: sampleOutcomeFailureCode(error) });
++    }
++  }
++}
++
++async function checkpointOutcomes(stage, outcomes) {
++  const destination = path.join(stage, 'attempt-outcomes.json');
++  const temporary = `${destination}.tmp`;
++  await writeFile(temporary, `${JSON.stringify(outcomes, null, 2)}\n`, { flag: 'wx' });
++  await rename(temporary, destination);
++}
++
++export async function publishFailureEvidence(stage, destination, error, failureStage, outcomes) {
++  const receipt = await failureReceipt(error, failureStage);
++  await rm(path.join(stage, 'cache'), { recursive: true, force: true });
++  try {
++    await checkpointOutcomes(stage, outcomes);
++    const entries = await publicationEntries(stage);
++    let bytes = 0;
++    for (const entry of entries) {
++      if (entry === 'raw/') continue;
++      const raw = /^raw\/(?:warmup-(?:native|compat)(?:-attempt-[23])?|\d{2}-(?:native|compat)-attempt-[1-3])\.ndjson$/.test(entry);
++      if (!raw && !['preflight-receipts.json', 'attempt-outcomes.json', 'report.json'].includes(entry)) throw new Error('Failure evidence contains an unsupported entry');
++      const file = path.join(stage, entry);
++      const size = (await stat(file)).size;
++      if (size > (raw ? TYPECHECK_BENCHMARK_MAX_RAW_FILE_BYTES : TYPECHECK_BENCHMARK_MAX_METADATA_BYTES)) throw new Error('Failure evidence exceeds its size bound');
++      bytes += size;
++      if (raw) await validateRawFile(file, null);
++    }
++    if (bytes + Buffer.byteLength(JSON.stringify(receipt, null, 2)) + 1 > TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES) throw new Error('Failure evidence exceeds its aggregate bound');
++  } catch {
++    // Never upload unknown bytes or destroy raw staging when its shape is invalid.
++    await mkdir(destination);
++    await writeFile(path.join(destination, 'failure-receipt.json'), `${JSON.stringify({ ...receipt, rawRetention: 'unpublished-stage' }, null, 2)}\n`, { flag: 'wx' });
++    return;
++  }
++  await writeFile(path.join(stage, 'failure-receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`, { flag: 'wx' });
++  if (await exists(destination)) throw new Error('Failure publication destination already exists');
++  await rename(stage, destination);
++}
+ export function samplerCloseRequiresImmediateFailure(usesWindowsGate, compilerResult) {
+   return usesWindowsGate && !compilerResult;
+ }
+@@ -391,6 +473,7 @@ async function main() {
+   const options = parseArgs(process.argv.slice(2)); const publicationDirectory = path.dirname(options.output); const publicationParent = path.dirname(publicationDirectory); const stage = path.join(publicationParent, `.${path.basename(publicationDirectory)}.stage-${randomUUID()}`);
+   if (await exists(publicationDirectory) || await exists(options.output)) throw new Error('Publication directory must not already exist'); await mkdir(publicationParent, { recursive: true }); if (inside(await realpath(publicationParent), await realpath(REPO_ROOT))) throw new Error('Benchmark output resolved inside the repository'); await mkdir(stage);
+   let failureStage = 'INITIALIZATION';
++  const outcomes = [];
+   try {
+     failureStage = 'PROVENANCE';
+     const provenance = await cleanProvenance(options.releaseId);
+@@ -400,19 +483,14 @@ async function main() {
+     const cacheRoot = path.join(stage, 'cache');
+     await mkdir(rawDirectory);
+     const profiles = Object.fromEntries(await Promise.all(Object.keys(COMPILERS).map(async (kind) => { const cacheDirectory = path.join(cacheRoot, kind); const env = compilerEnvironment({ ...process.env, LC_ALL: 'C', LANG: 'C' }, cacheDirectory); await mkdir(env.TMP, { recursive: true }); return [kind, { env, cacheDirectory }]; })));
+-    const outcomes = []; const warmups = []; const runs = []; const invalidRuns = { native: 0, compat: 0 };
++    const warmups = []; const runs = []; const invalidRuns = { native: 0, compat: 0 };
+     for (const kind of ['native', 'compat']) {
+       const stageKind = kind.toUpperCase();
+       failureStage = `WARMUP_${stageKind}_RUN`;
+-      const rawOutput = path.join(rawDirectory, `warmup-${kind}.ndjson`);
+-      const result = await runCompiler(kind, profiles[kind], rawOutput, 0);
+-      failureStage = `WARMUP_${stageKind}_RAW`;
+-      await validateRawOutput(rawOutput, result.samplerSummary);
+-      failureStage = `WARMUP_${stageKind}_COMPILER`;
+-      if (result.code || result.signal || result.stdout || result.stderr) throw new Error(`${kind} warm-up failed`);
+-      const rawSha256 = await digestFile(rawOutput);
+-      outcomes.push({ phase: 'warmup', kind, durationMs: result.durationMs, rawOutput: path.basename(rawOutput), rawSha256, summary: result.samplerSummary });
+-      warmups.push({ kind, durationMs: result.durationMs, rawSha256 });
++      warmups.push(await runWarmup(kind, profiles[kind], rawDirectory, invalidRuns, async (outcome) => {
++        outcomes.push(outcome);
++        await checkpointOutcomes(stage, outcomes);
++      }));
+     }
+     failureStage = 'SAMPLES';
+     async function executeSamples(sampleCount) {
+@@ -438,21 +516,23 @@ async function main() {
+             lastError = error;
+             outcomes.push({ phase: 'measured', position: position + 1, retry: retry + 1, kind, accepted: false, rawOutput: path.basename(rawOutput), rawSha256: await exists(rawOutput) ? await digestFile(rawOutput) : null, failure: sampleOutcomeFailureCode(error) });
+           }
++          await checkpointOutcomes(stage, outcomes);
+           invalidRuns[kind] += 1;
+           if (mustAbortSampleRetries(lastError) || invalidRuns[kind] > 3) throw sampleFailure(position + 1, retry + 1, kind, lastError);
+         }
+         if (!accepted) throw sampleFailure(position + 1, 3, kind, lastError);
+         runs.push(accepted);
++        await checkpointOutcomes(stage, outcomes);
+       }
+       return sequence;
+     }
+     let sequence = await executeSamples(7); let measured = profileStats(runs); const initialNoise = isNoisy(measured); if (initialNoise) { sequence = await executeSamples(9); measured = profileStats(runs); }
+-    await writeFile(path.join(stage, 'attempt-outcomes.json'), `${JSON.stringify(outcomes, null, 2)}\n`, { flag: 'wx' }); const outcomeSha256 = await digestFile(path.join(stage, 'attempt-outcomes.json'));
++    const outcomeSha256 = await digestFile(path.join(stage, 'attempt-outcomes.json'));
+     const decision = buildBenchmarkDecision(runs, initialNoise);
+     measured = decision.measured;
+     const preflightSha256 = await digestFile(path.join(stage, 'preflight-receipts.json'));
+     const report = {
+-      schemaVersion: 4,
++      schemaVersion: 5,
+       releaseId: options.releaseId,
+       candidate: {
+         tree: options.releaseId,
+@@ -515,9 +595,7 @@ async function main() {
+     if (await exists(publicationDirectory)) throw new Error('Publication destination appeared during staging'); await rename(stage, publicationDirectory); process.stdout.write(`${JSON.stringify({ status: report.acceptance.passed ? report.evidenceDecision.status : 'failed', output: path.basename(options.output), profiles: measured })}\n`); if (!report.acceptance.passed) process.exitCode = 1;
+   } catch (error) {
+     if (error instanceof Error && !error.code) error.code = `TYPECHECK_BENCHMARK_${failureStage}`;
+-    await mkdir(publicationDirectory, { recursive: true });
+-    await writeFile(path.join(publicationDirectory, 'failure-receipt.json'), `${JSON.stringify(await failureReceipt(error), null, 2)}\n`, { flag: 'wx' });
+-    await rm(stage, { recursive: true, force: true });
++    await publishFailureEvidence(stage, publicationDirectory, error, failureStage, outcomes);
+     throw error;
+   }
+ }
+diff --git a/apps/web/scripts/verify-typecheck-benchmark-report.mjs b/apps/web/scripts/verify-typecheck-benchmark-report.mjs
+index 9927946b..3f59c3a3 100644
+--- a/apps/web/scripts/verify-typecheck-benchmark-report.mjs
++++ b/apps/web/scripts/verify-typecheck-benchmark-report.mjs
+@@ -125,14 +125,14 @@ function expectedDecision(runs, initialNoise) {
+ }
+ 
+ export function validateBenchmarkReportDocument(report, expected) {
+-  if (!exactKeys(report, ['schemaVersion', 'releaseId', 'candidate', 'receipts', 'contracts', 'warmups', 'sequence', 'initialNoise', 'invalidRuns', 'runs', 'rawEvidence', 'profiles', 'evidenceDecision', 'comparison', 'acceptance']) || report.schemaVersion !== 4 || report.releaseId !== expected.tree || !sha(report.releaseId, 40)) throw new Error('Benchmark report release binding is invalid');
++  if (!exactKeys(report, ['schemaVersion', 'releaseId', 'candidate', 'receipts', 'contracts', 'warmups', 'sequence', 'initialNoise', 'invalidRuns', 'runs', 'rawEvidence', 'profiles', 'evidenceDecision', 'comparison', 'acceptance']) || ![4, 5].includes(report.schemaVersion) || report.releaseId !== expected.tree || !sha(report.releaseId, 40)) throw new Error('Benchmark report release binding is invalid');
+   const expectedPlatform = expected.profile?.startsWith('windows-') ? 'win32-x64' : 'linux-x64';
+   if (expected.platform !== expectedPlatform || !expected.profile?.endsWith(`-${expected.installer}`)) throw new Error('Benchmark verifier lane binding is invalid');
+   const candidate = report.candidate;
+   if (!exactKeys(candidate, ['tree', 'repositoryTopLevelSha256', 'headCommit', 'headTree', 'provenanceSha256', 'platform', 'installer', 'profile', 'node', 'arch', 'installerUserAgentSha256']) || candidate.tree !== expected.tree || candidate.headTree !== expected.tree || candidate.profile !== expected.profile || candidate.platform !== expected.platform || candidate.installer !== expected.installer || candidate.arch !== 'x64' || !/^v24\.[0-9]+\.[0-9]+$/.test(candidate.node ?? '') || !sha(candidate.installerUserAgentSha256, 64) || !sha(candidate.headCommit, 40) || !sha(candidate.repositoryTopLevelSha256, 64) || !sha(candidate.provenanceSha256, 64)) throw new Error('Benchmark report candidate binding is invalid');
+   if (!exactKeys(report.contracts, ['requestedSamplerCadenceMs', 'maximumObservedGapMs', 'hostPressureMaximumPercent', 'retryCapPerPosition', 'invalidRunCapPerCompiler', 'publication', 'publicationMaximumBytes', 'metadataMaximumBytes', 'rawFileMaximumBytes', 'rawRowMaximum', 'budgets']) || !exactJson(report.contracts.budgets, BUDGETS) || report.contracts.requestedSamplerCadenceMs !== 10 || report.contracts.maximumObservedGapMs !== 60 || report.contracts.hostPressureMaximumPercent !== 80 || report.contracts.publication !== 'atomic-directory-rename' || report.contracts.publicationMaximumBytes !== TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES || report.contracts.metadataMaximumBytes !== TYPECHECK_BENCHMARK_MAX_METADATA_BYTES || report.contracts.rawFileMaximumBytes !== TYPECHECK_BENCHMARK_MAX_RAW_FILE_BYTES || report.contracts.rawRowMaximum !== TYPECHECK_BENCHMARK_MAX_RAW_ROWS || report.contracts.retryCapPerPosition !== 2 || report.contracts.invalidRunCapPerCompiler !== 3) throw new Error('Benchmark report budgets or bounded contracts are invalid');
+   if (!validatePreflightReceipts(report.receipts, expected.platform)) throw new Error('Benchmark report compiler or parity receipts are invalid');
+-  if (!Array.isArray(report.warmups) || report.warmups.length !== 2 || report.warmups[0]?.kind !== 'native' || report.warmups[1]?.kind !== 'compat' || !report.warmups.every((warmup) => exactKeys(warmup, ['kind', 'durationMs', 'rawSha256']) && finite(warmup.durationMs) && warmup.durationMs > 0 && sha(warmup.rawSha256, 64))) throw new Error('Benchmark report warm-up evidence is invalid');
++  if (!Array.isArray(report.warmups) || report.warmups.length !== 2 || report.warmups[0]?.kind !== 'native' || report.warmups[1]?.kind !== 'compat' || !report.warmups.every((warmup) => exactKeys(warmup, ['kind', 'durationMs', 'rawSha256', ...(report.schemaVersion === 5 ? ['retry', 'rawOutput'] : [])]) && (report.schemaVersion === 4 || [1, 2, 3].includes(warmup.retry) && warmup.rawOutput === warmupName(warmup.kind, warmup.retry)) && finite(warmup.durationMs) && warmup.durationMs > 0 && sha(warmup.rawSha256, 64))) throw new Error('Benchmark report warm-up evidence is invalid');
+   if (!exactKeys(report.invalidRuns, ['native', 'compat']) || !['native', 'compat'].every((kind) => Number.isInteger(report.invalidRuns[kind]) && report.invalidRuns[kind] >= 0 && report.invalidRuns[kind] <= 3)) throw new Error('Benchmark report invalid-run bounds are invalid');
+   if (!Array.isArray(report.runs) || ![14, 18].includes(report.runs.length) || !report.runs.every((run, index) => exactKeys(run, ['position', 'retry', 'kind', 'durationMs', 'peakRssBytes', 'samples', 'maximumGapMs', 'rawOutput', 'rawSha256']) && run.position === index + 1 && [1, 2, 3].includes(run.retry) && ['native', 'compat'].includes(run.kind) && finite(run.durationMs) && run.durationMs > 0 && Number.isSafeInteger(run.peakRssBytes) && run.peakRssBytes > 0 && Number.isInteger(run.samples) && run.samples >= 3 && finite(run.maximumGapMs) && run.maximumGapMs >= 0 && run.maximumGapMs <= 60 && run.rawOutput === `${String(run.position).padStart(2, '0')}-${run.kind}-attempt-${run.retry}.ndjson` && sha(run.rawSha256, 64))) throw new Error('Benchmark report measured runs are invalid');
+   if (!Array.isArray(report.sequence) || !exactJson(report.sequence, seededOrder(report.releaseId, report.runs.length / 2)) || !report.sequence.every((kind, index) => kind === report.runs[index].kind)) throw new Error('Benchmark report sequence is invalid');
+@@ -166,20 +166,31 @@ async function publicationEntries(directory, prefix = '') {
+ function validSamplerSummary(summary, rawOutput) {
+   return exactKeys(summary, ['schemaVersion', 'rootPid', 'rootStartIdentity', 'requestedIntervalMs', 'maximumAllowedGapMs', 'samples', 'peakRssBytes', 'maximumGapMs', 'terminalObserved', 'valid', 'invalidReasons', 'output']) && summary.schemaVersion === 2 && Number.isInteger(summary.rootPid) && summary.rootPid > 0 && typeof summary.rootStartIdentity === 'string' && /^\d+$/.test(summary.rootStartIdentity) && summary.requestedIntervalMs === 10 && summary.maximumAllowedGapMs === 60 && Number.isInteger(summary.samples) && summary.samples >= 3 && summary.samples <= TYPECHECK_BENCHMARK_MAX_RAW_ROWS && Number.isSafeInteger(summary.peakRssBytes) && summary.peakRssBytes > 0 && finite(summary.maximumGapMs) && summary.maximumGapMs >= 0 && summary.maximumGapMs <= 60 && summary.terminalObserved === true && summary.valid === true && Array.isArray(summary.invalidReasons) && summary.invalidReasons.length === 0 && summary.output === rawOutput;
+ }
+-function validOutcomeShape(outcome) {
++function warmupName(kind, retry) { return retry === 1 ? `warmup-${kind}.ndjson` : `warmup-${kind}-attempt-${retry}.ndjson`; }
++function validOutcomeShape(outcome, schemaVersion) {
+   if (!record(outcome) || !['warmup', 'measured'].includes(outcome.phase) || !['native', 'compat'].includes(outcome.kind) || typeof outcome.rawOutput !== 'string' || !(outcome.rawSha256 === null || sha(outcome.rawSha256, 64))) return false;
+-  if (outcome.phase === 'warmup') return exactKeys(outcome, ['phase', 'kind', 'durationMs', 'rawOutput', 'rawSha256', 'summary']) && finite(outcome.durationMs) && outcome.durationMs > 0 && outcome.rawOutput === `warmup-${outcome.kind}.ndjson` && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput);
++  if (outcome.phase === 'warmup' && schemaVersion === 4) return exactKeys(outcome, ['phase', 'kind', 'durationMs', 'rawOutput', 'rawSha256', 'summary']) && finite(outcome.durationMs) && outcome.durationMs > 0 && outcome.rawOutput === `warmup-${outcome.kind}.ndjson` && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput);
+   const hasSummary = Object.hasOwn(outcome, 'summary');
+-  const expectedKeys = ['phase', 'position', 'retry', 'kind', 'accepted', 'rawOutput', 'rawSha256', 'failure', ...(hasSummary ? ['durationMs', 'summary'] : [])];
+-  if (!exactKeys(outcome, expectedKeys) || !Number.isInteger(outcome.position) || outcome.position < 1 || outcome.position > 18 || ![1, 2, 3].includes(outcome.retry) || ![true, false].includes(outcome.accepted) || outcome.rawOutput !== `${String(outcome.position).padStart(2, '0')}-${outcome.kind}-attempt-${outcome.retry}.ndjson`) return false;
++  const expectedKeys = ['phase', ...(outcome.phase === 'measured' ? ['position'] : []), 'retry', 'kind', 'accepted', 'rawOutput', 'rawSha256', 'failure', ...(hasSummary ? ['durationMs', 'summary'] : [])];
++  if (!exactKeys(outcome, expectedKeys) || (outcome.phase === 'measured' && (!Number.isInteger(outcome.position) || outcome.position < 1 || outcome.position > 18)) || ![1, 2, 3].includes(outcome.retry) || ![true, false].includes(outcome.accepted) || outcome.rawOutput !== (outcome.phase === 'warmup' ? warmupName(outcome.kind, outcome.retry) : `${String(outcome.position).padStart(2, '0')}-${outcome.kind}-attempt-${outcome.retry}.ndjson`)) return false;
+   if (outcome.accepted === true) return outcome.failure === null && sha(outcome.rawSha256, 64) && hasSummary && finite(outcome.durationMs) && outcome.durationMs > 0 && validSamplerSummary(outcome.summary, outcome.rawOutput);
++  if (outcome.phase === 'warmup') return outcome.failure === 'TYPECHECK_SAMPLER_SUMMARY_INVALID' && sha(outcome.rawSha256, 64) && !hasSummary;
+   if (typeof outcome.failure !== 'string' || !OUTCOME_FAILURE_CODES.has(outcome.failure)) return false;
+   return hasSummary ? outcome.failure === 'TYPECHECK_COMPILER_EVIDENCE_INVALID' && finite(outcome.durationMs) && outcome.durationMs > 0 && sha(outcome.rawSha256, 64) && validSamplerSummary(outcome.summary, outcome.rawOutput) : true;
+ }
+-function validateOutcomeOrdering(outcomes, runs) {
+-  if (!Array.isArray(outcomes) || outcomes.length < 16 || outcomes.length > 56 || !outcomes.every(validOutcomeShape)) return false;
+-  if (outcomes[0].phase !== 'warmup' || outcomes[0].kind !== 'native' || outcomes[1].phase !== 'warmup' || outcomes[1].kind !== 'compat' || outcomes.slice(2).some((outcome) => outcome.phase !== 'measured')) return false;
+-  const measured = outcomes.slice(2);
++function validateOutcomeOrdering(outcomes, report) {
++  const { runs, schemaVersion } = report;
++  if (!Array.isArray(outcomes) || outcomes.length < 16 || outcomes.length > 56 || !outcomes.every((outcome) => validOutcomeShape(outcome, schemaVersion))) return false;
++  let warmupCursor = 0;
++  for (const warmup of report.warmups) {
++    const attempts = [];
++    while (warmupCursor < outcomes.length && outcomes[warmupCursor].phase === 'warmup' && outcomes[warmupCursor].kind === warmup.kind) attempts.push(outcomes[warmupCursor++]);
++    if (schemaVersion === 4) {
++      if (attempts.length !== 1) return false;
++    } else if (attempts.length !== warmup.retry || attempts.some((attempt, index) => attempt.retry !== index + 1 || attempt.accepted !== (index === attempts.length - 1)) || attempts.at(-1)?.rawOutput !== warmup.rawOutput) return false;
++  }
++  const measured = outcomes.slice(warmupCursor);
++  if (measured.some((outcome) => outcome.phase !== 'measured')) return false;
+   let cursor = 0;
+   for (const run of runs) {
+     const attempts = [];
+@@ -199,7 +210,7 @@ function validateRawRow(row) {
+   const hostPressurePercent = ((row.totalPhysicalBytes - row.availablePhysicalBytes) * 100) / row.totalPhysicalBytes;
+   return exactJson(row.included, includedNames) && includedRssBytes === row.includedRssBytes && hostPressurePercent === row.hostPressurePercent;
+ }
+-async function validateRawFile(file, summary) {
++export async function validateRawFile(file, summary) {
+   const metadata = await stat(file);
+   if (!metadata.isFile() || metadata.size < 0 || metadata.size > TYPECHECK_BENCHMARK_MAX_RAW_FILE_BYTES) throw new Error('Benchmark raw evidence size is invalid');
+   const source = await readFile(file, 'utf8');
+@@ -225,6 +236,26 @@ async function validateRawFile(file, summary) {
+   if (rows.length !== summary.samples || peak !== summary.peakRssBytes || maximumGap !== summary.maximumGapMs) throw new Error('Benchmark raw aggregates do not match the sampler summary');
+ }
+ 
++export async function validateRejectedWarmupRaw(file) {
++  await validateRawFile(file, null);
++  const rows = (await readFile(file, 'utf8')).trimEnd().split('\n').filter(Boolean).map((line) => JSON.parse(line));
++  let previous = null; let gapSeen = false;
++  if (rows.length < 3) throw new Error('Rejected warm-up cadence evidence is missing');
++  const rootIdentity = rows[0].rootIdentity;
++  const identities = new Map();
++  for (const row of rows) {
++    const gap = previous === null ? 0 : row.monotonicMs - previous;
++    if (gap > 60) gapSeen = true;
++    if (!rootIdentity || row.rootIdentity !== rootIdentity || row.observedGapMs !== gap || gap < 0 || row.hostPressurePercent > 80 || !row.processes.some((process) => process.startIdentity === rootIdentity) || !exactJson(row.errors, gap > 60 ? ['sampling-gap-exceeded'] : [])) throw new Error('Rejected warm-up is not a cadence-only failure');
++    for (const process of row.processes) {
++      if (identities.has(process.pid) && identities.get(process.pid) !== process.startIdentity) throw new Error('Rejected warm-up process identity changed');
++      identities.set(process.pid, process.startIdentity);
++    }
++    previous = row.monotonicMs;
++  }
++  if (!gapSeen) throw new Error('Rejected warm-up cadence failure was not observed');
++}
++
+ export async function verifyPublishedBenchmarkDirectory(options) {
+   const reportPath = path.resolve(options.report);
+   const directory = path.dirname(reportPath);
+@@ -236,7 +267,7 @@ export async function verifyPublishedBenchmarkDirectory(options) {
+   const attemptNames = [];
+   const rawNames = [];
+   for (const attempt of rawEvidence.attempts) {
+-    if (!exactKeys(attempt, ['rawOutput', 'rawSha256']) || !/^(?:warmup-(?:native|compat)|\d{2}-(?:native|compat)-attempt-[1-3])\.ndjson$/.test(attempt.rawOutput) || !(attempt.rawSha256 === null || sha(attempt.rawSha256, 64))) throw new Error('Benchmark raw attempt reference is invalid');
++    if (!exactKeys(attempt, ['rawOutput', 'rawSha256']) || !/^(?:warmup-(?:native|compat)(?:-attempt-[23])?|\d{2}-(?:native|compat)-attempt-[1-3])\.ndjson$/.test(attempt.rawOutput) || !(attempt.rawSha256 === null || sha(attempt.rawSha256, 64))) throw new Error('Benchmark raw attempt reference is invalid');
+     if (attemptNames.includes(attempt.rawOutput)) throw new Error('Benchmark raw attempt reference is duplicated');
+     attemptNames.push(attempt.rawOutput);
+     if (attempt.rawSha256 !== null) {
+@@ -261,13 +292,13 @@ export async function verifyPublishedBenchmarkDirectory(options) {
+   const preflight = (await parseCanonicalJson(preflightPath, TYPECHECK_BENCHMARK_MAX_METADATA_BYTES)).value;
+   const outcomes = (await parseCanonicalJson(outcomesPath, TYPECHECK_BENCHMARK_MAX_METADATA_BYTES)).value;
+   if (!exactJson(preflight, report.receipts)) throw new Error('Benchmark preflight receipt readback is invalid');
+-  if (!validateOutcomeOrdering(outcomes, report.runs) || !exactJson(rawEvidence.attempts, outcomes.map(({ rawOutput, rawSha256 }) => ({ rawOutput, rawSha256 })))) throw new Error('Benchmark attempt manifest readback is invalid');
++  if (!validateOutcomeOrdering(outcomes, report) || !exactJson(rawEvidence.attempts, outcomes.map(({ rawOutput, rawSha256 }) => ({ rawOutput, rawSha256 })))) throw new Error('Benchmark attempt manifest readback is invalid');
+   const measuredOutcomes = outcomes.filter((outcome) => outcome.phase === 'measured');
+   const acceptedOutcomes = measuredOutcomes.filter((outcome) => outcome.accepted === true);
+   if (acceptedOutcomes.length !== report.runs.length || report.runs.some((run) => !acceptedOutcomes.some((outcome) => outcome.position === run.position && outcome.retry === run.retry && outcome.kind === run.kind && outcome.failure === null && outcome.durationMs === run.durationMs && outcome.rawOutput === run.rawOutput && outcome.rawSha256 === run.rawSha256 && outcome.summary.peakRssBytes === run.peakRssBytes && outcome.summary.samples === run.samples && outcome.summary.maximumGapMs === run.maximumGapMs))) throw new Error('Benchmark accepted compiler outcomes do not match measured runs');
+-  const warmupOutcomes = outcomes.slice(0, 2);
++  const warmupOutcomes = outcomes.filter((outcome) => outcome.phase === 'warmup' && (report.schemaVersion === 4 || outcome.accepted === true));
+   if (report.warmups.some((warmup, index) => warmupOutcomes[index].kind !== warmup.kind || warmupOutcomes[index].durationMs !== warmup.durationMs || warmupOutcomes[index].rawSha256 !== warmup.rawSha256)) throw new Error('Benchmark warm-up outcomes do not match report evidence');
+-  const invalidCounts = Object.fromEntries(['native', 'compat'].map((kind) => [kind, measuredOutcomes.filter((outcome) => outcome.kind === kind && outcome.accepted === false).length]));
++  const invalidCounts = Object.fromEntries(['native', 'compat'].map((kind) => [kind, outcomes.filter((outcome) => outcome.kind === kind && outcome.accepted === false).length]));
+   if (!exactJson(invalidCounts, report.invalidRuns) || measuredOutcomes.some((outcome) => ![true, false].includes(outcome.accepted))) throw new Error('Benchmark compiler outcome bounds are invalid');
+   for (const attempt of rawEvidence.attempts) {
+     if (attempt.rawSha256 !== null) {
+@@ -275,11 +306,12 @@ export async function verifyPublishedBenchmarkDirectory(options) {
+       if (await digestFile(rawPath) !== attempt.rawSha256) throw new Error('Benchmark raw attempt hash is invalid');
+       const outcome = outcomes.find((candidate) => candidate.rawOutput === attempt.rawOutput);
+       await validateRawFile(rawPath, outcome?.summary ?? null);
++      if (outcome.phase === 'warmup' && outcome.accepted === false) await validateRejectedWarmupRaw(rawPath);
+     }
+   }
+   const attemptByName = new Map(rawEvidence.attempts.map((attempt) => [attempt.rawOutput, attempt.rawSha256]));
+   if (report.runs.some((run) => attemptByName.get(run.rawOutput) !== run.rawSha256)) throw new Error('Benchmark measured run hashes do not match the attempt manifest');
+-  if (report.warmups.some((warmup) => attemptByName.get(`warmup-${warmup.kind}.ndjson`) !== warmup.rawSha256)) throw new Error('Benchmark warm-up hashes do not match the attempt manifest');
++  if (report.warmups.some((warmup) => attemptByName.get(report.schemaVersion === 5 ? warmup.rawOutput : `warmup-${warmup.kind}.ndjson`) !== warmup.rawSha256)) throw new Error('Benchmark warm-up hashes do not match the attempt manifest');
+   return decision;
+ }
+ 
+diff --git a/apps/web/tests-unit/typecheck-benchmark-source.test.ts b/apps/web/tests-unit/typecheck-benchmark-source.test.ts
+index 7edcf61a..28a12284 100644
+--- a/apps/web/tests-unit/typecheck-benchmark-source.test.ts
++++ b/apps/web/tests-unit/typecheck-benchmark-source.test.ts
+@@ -1,10 +1,10 @@
+ import { describe, expect, test } from "bun:test";
+ import { createHash } from "node:crypto";
+ import { readFileSync } from "node:fs";
+-import { mkdir, mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
++import { mkdir, mkdtemp, readFile, readdir, rm, truncate, writeFile } from "node:fs/promises";
+ import { tmpdir } from "node:os";
+-import { join, resolve } from "node:path";
+-import { benchmarkInstallerMatches, buildBenchmarkDecision, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
++import { basename, join, resolve } from "node:path";
++import { benchmarkInstallerMatches, buildBenchmarkDecision, isRetryableWarmupFailure, publishFailureEvidence, runWarmup, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
+ import { validateBenchmarkReportDocument, verifyPublishedBenchmarkDirectory } from "../scripts/verify-typecheck-benchmark-report.mjs";
+ 
+ const root = resolve(import.meta.dir, "..");
+@@ -185,6 +185,208 @@ function samplerEvidence(rawOutput: string) {
+   };
+ }
+ 
++function cadenceFailure(rawOutput: string) {
++  const evidence = samplerEvidence(basename(rawOutput));
++  const rows = evidence.contents.trimEnd().split("\n").map((line) => JSON.parse(line));
++  rows[2].monotonicMs = 106.9706;
++  rows[2].observedGapMs = rows[2].monotonicMs - rows[1].monotonicMs;
++  rows[2].errors = ["sampling-gap-exceeded"];
++  return {
++    contents: `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`,
++    error: Object.assign(new Error("fixture cadence failure"), {
++      code: "TYPECHECK_SAMPLER_SUMMARY_INVALID",
++      samplerEvidence: {
++        code: 1, signal: null, errorCode: null, compilerClean: true, rawOutput,
++        summary: { ...evidence.summary, valid: false, invalidReasons: ["sampling-gap-exceeded"], maximumGapMs: rows[2].observedGapMs },
++      },
++    }),
++  };
++}
++
++async function warmupSample(rawOutput: string, reject: boolean) {
++  if (reject) {
++    const failure = cadenceFailure(rawOutput);
++    await writeFile(rawOutput, failure.contents, { flag: "wx" });
++    throw failure.error;
++  }
++  const evidence = samplerEvidence(basename(rawOutput));
++  await writeFile(rawOutput, evidence.contents, { flag: "wx" });
++  return { code: 0, signal: null, stdout: "", stderr: "", samplerCode: 0, samplerSignal: null, durationMs: 1000, samplerSummary: evidence.summary };
++}
++
++test("warm-up cadence recovery checkpoints both attempts without changing rejected bytes", async () => {
++  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-recovery-"));
++  try {
++    const outcomes: Array<Record<string, unknown>> = [];
++    const invalidRuns = { native: 0, compat: 0 };
++    const result = await runWarmup("native", {}, directory, invalidRuns, async (outcome: Record<string, unknown>) => {
++      expect(await readFile(join(directory, String(outcome.rawOutput)), "utf8")).not.toBeEmpty();
++      outcomes.push(outcome);
++    }, async (_kind: string, _profile: unknown, output: string, retry: number) => {
++      expect(outcomes).toHaveLength(retry - 1);
++      return warmupSample(output, retry === 1);
++    });
++    expect(result.retry).toBe(2);
++    expect(result.rawOutput).toBe("warmup-native-attempt-2.ndjson");
++    expect(invalidRuns).toEqual({ native: 1, compat: 0 });
++    expect(outcomes.map((outcome) => outcome.accepted)).toEqual([false, true]);
++    const original = cadenceFailure(join(directory, "warmup-native.ndjson")).contents;
++    expect(await readFile(join(directory, "warmup-native.ndjson"), "utf8")).toBe(original);
++    expect(outcomes[0].rawSha256).toBe(digest(original));
++    expect(result.rawSha256).toBe(outcomes[1].rawSha256);
++  } finally { await rm(directory, { recursive: true, force: true }); }
++});
++
++test("warm-up retry eligibility excludes setup, protocol, pressure, identity and compiler failures", () => {
++  const valid = cadenceFailure("warmup-native.ndjson").error;
++  expect(isRetryableWarmupFailure(valid)).toBe(true);
++  const invalid = [
++    { ...valid, code: "TYPECHECK_SAMPLER_EVIDENCE_TIMEOUT" },
++    { ...valid, code: "TYPECHECK_SAMPLER_START_FAILED" },
++    { ...valid, code: "TYPECHECK_SAMPLER_JSON_INVALID" },
++    { ...valid, samplerEvidence: { ...valid.samplerEvidence, compilerClean: false } },
++    { ...valid, samplerEvidence: { ...valid.samplerEvidence, signal: "SIGTERM" } },
++    ...[
++      { invalidReasons: ["host-memory-pressure"] },
++      { invalidReasons: ["root-identity-reused"] },
++      { invalidReasons: ["sampling-gap-exceeded", "missing-root-identity"] },
++      { maximumGapMs: Number.NaN }, { samples: 2 }, { terminalObserved: false }, { schemaVersion: 1 },
++    ].map((summary) => ({ ...valid, samplerEvidence: { ...valid.samplerEvidence, summary: { ...valid.samplerEvidence.summary, ...summary } } })),
++  ];
++  for (const failure of invalid) expect(isRetryableWarmupFailure(failure)).toBe(false);
++});
++
++test("warm-up exhaustion retains all failed raw files and stops at the existing retry and invalid-run caps", async () => {
++  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-exhaustion-"));
++  try {
++    for (const priorFailures of [0, 2]) {
++      const stage = join(directory, `stage-${priorFailures}`);
++      const raw = join(stage, "raw");
++      await mkdir(raw, { recursive: true });
++      await mkdir(join(stage, "cache"));
++      await writeFile(join(stage, "cache", "private-cache"), "must never publish");
++      const outcomes: Array<Record<string, unknown>> = [];
++      const invalidRuns = { native: priorFailures, compat: 0 };
++      let failure: unknown;
++      try {
++        await runWarmup("native", {}, raw, invalidRuns, async (outcome: Record<string, unknown>) => { outcomes.push(outcome); },
++          async (_kind: string, _profile: unknown, output: string) => warmupSample(output, true));
++      } catch (error) { failure = error; }
++      expect(failure).toBeDefined();
++      expect(invalidRuns.native).toBe(3);
++      expect(outcomes).toHaveLength(3 - priorFailures);
++      const destination = join(directory, `failed-${priorFailures}`);
++      await publishFailureEvidence(stage, destination, failure, "WARMUP_NATIVE_RUN", outcomes);
++      const receipt = JSON.parse(await readFile(join(destination, "failure-receipt.json"), "utf8"));
++      expect(receipt.failureCode).toBe("TYPECHECK_SAMPLER_SUMMARY_INVALID");
++      expect(receipt.failureStage).toBe("WARMUP_NATIVE_RUN");
++      expect(receipt.lastFailure.retry).toBe(3 - priorFailures);
++      expect(receipt.lastFailure.sampler.invalidReasons).toEqual(["sampling-gap-exceeded"]);
++      expect((await readdir(destination)).sort()).toEqual(["attempt-outcomes.json", "failure-receipt.json", "raw"]);
++      for (const outcome of outcomes) {
++        const retained = await readFile(join(destination, "raw", String(outcome.rawOutput)));
++        expect(digest(retained)).toBe(outcome.rawSha256);
++      }
++      await expect(verifyPublishedBenchmarkDirectory({ report: join(destination, "report.json") })).rejects.toThrow();
++    }
++  } finally { await rm(directory, { recursive: true, force: true }); }
++});
++
++test("schema 5 readback binds recovered warm-ups, rejected raw bytes, ordering and shared invalid counts", async () => {
++  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-report-"));
++  try {
++    await mkdir(join(directory, "raw"));
++    const report = benchmarkReport(Array(7).fill(1000), Array(7).fill(1000));
++    report.schemaVersion = 5;
++    const outcomes: Array<Record<string, unknown>> = [];
++    for (const [index, kind] of (["native", "compat"] as const).entries()) {
++      const warmup = await runWarmup(kind, {}, join(directory, "raw"), report.invalidRuns, async (outcome: Record<string, unknown>) => { outcomes.push(outcome); },
++        async (_kind: string, _profile: unknown, output: string, retry: number) => warmupSample(output, kind === "native" && retry === 1));
++      Object.assign(report.warmups[index], warmup);
++    }
++    for (const run of report.runs) {
++      const evidence = samplerEvidence(run.rawOutput);
++      await writeFile(join(directory, "raw", run.rawOutput), evidence.contents);
++      run.rawSha256 = digest(evidence.contents);
++      outcomes.push({ phase: "measured", position: run.position, retry: run.retry, kind: run.kind, accepted: true, durationMs: run.durationMs, rawOutput: run.rawOutput, rawSha256: run.rawSha256, summary: evidence.summary, failure: null });
++    }
++    const preflight = `${JSON.stringify(report.receipts, null, 2)}\n`;
++    await writeFile(join(directory, "preflight-receipts.json"), preflight);
++    const refresh = async () => {
++      const serialized = `${JSON.stringify(outcomes, null, 2)}\n`;
++      await writeFile(join(directory, "attempt-outcomes.json"), serialized);
++      report.rawEvidence = { preflight: "preflight-receipts.json", preflightSha256: digest(preflight), outcomes: "attempt-outcomes.json", outcomesSha256: digest(serialized), attempts: outcomes.map(({ rawOutput, rawSha256 }) => ({ rawOutput, rawSha256 })) };
++      await writeFile(join(directory, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
++    };
++    const options = { report: join(directory, "report.json"), tree: report.releaseId, profile: "ubuntu-npm", platform: "linux-x64", installer: "npm" };
++    await refresh();
++    expect(await verifyPublishedBenchmarkDirectory(options)).toEqual({ status: "conclusive", admittedSlices: 2 });
++    expect(report.invalidRuns).toEqual({ native: 1, compat: 0 });
++    report.invalidRuns.native = 0;
++    await refresh();
++    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("outcome bounds");
++    report.invalidRuns.native = 1;
++    Object.assign(report.warmups[0], { retry: 3 });
++    await refresh();
++    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("warm-up evidence");
++    Object.assign(report.warmups[0], { retry: 2 });
++    outcomes[0].retry = 2;
++    await refresh();
++    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("attempt manifest");
++    outcomes[0].retry = 1;
++    outcomes[0].failure = "TYPECHECK_SAMPLER_START_FAILED";
++    await refresh();
++    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("attempt manifest");
++    outcomes[0].failure = "TYPECHECK_SAMPLER_SUMMARY_INVALID";
++
++    const rejectedFile = join(directory, "raw", "warmup-native.ndjson");
++    const rejected = await readFile(rejectedFile, "utf8");
++    await writeFile(rejectedFile, samplerEvidence("warmup-native.ndjson").contents);
++    outcomes[0].rawSha256 = digest(await readFile(rejectedFile));
++    await refresh();
++    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("cadence failure was not observed");
++    const rows = rejected.trimEnd().split("\n").map((line) => JSON.parse(line));
++    rows[1].errors = ["host-memory-pressure"];
++    const pressure = `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
++    await writeFile(rejectedFile, pressure);
++    outcomes[0].rawSha256 = digest(pressure);
++    await refresh();
++    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("cadence-only failure");
++    await writeFile(rejectedFile, rejected);
++    outcomes[0].rawSha256 = digest(rejected);
++    await refresh();
++    expect(await verifyPublishedBenchmarkDirectory(options)).toEqual({ status: "conclusive", admittedSlices: 2 });
++    report.schemaVersion = 4;
++    await refresh();
++    await expect(verifyPublishedBenchmarkDirectory(options)).rejects.toThrow("warm-up evidence");
++  } finally { await rm(directory, { recursive: true, force: true }); }
++});
++
++test("warm-up setup failure is not retried and untrusted failure bytes stay outside publication", async () => {
++  const directory = await mkdtemp(join(tmpdir(), "tzudong-warmup-setup-"));
++  try {
++    const stage = join(directory, "stage");
++    await mkdir(join(stage, "raw"), { recursive: true });
++    const outcomes: Array<Record<string, unknown>> = [];
++    let calls = 0;
++    await expect(runWarmup("native", {}, join(stage, "raw"), { native: 0, compat: 0 }, async (outcome: Record<string, unknown>) => { outcomes.push(outcome); }, async () => {
++      calls += 1;
++      throw Object.assign(new Error("fixture setup failure"), { code: "TYPECHECK_SAMPLER_START_FAILED" });
++    })).rejects.toThrow("Benchmark samples failed");
++    expect(calls).toBe(1);
++    expect(outcomes[0].rawSha256).toBeNull();
++    await writeFile(join(stage, "raw", "warmup-native.ndjson"), "unknown bytes\n");
++    const destination = join(directory, "failed");
++    await publishFailureEvidence(stage, destination, cadenceFailure("warmup-native.ndjson").error, "WARMUP_NATIVE_RUN", outcomes);
++    expect(await readdir(destination)).toEqual(["failure-receipt.json"]);
++    expect(await readFile(join(stage, "raw", "warmup-native.ndjson"), "utf8")).toBe("unknown bytes\n");
++    const receipt = JSON.parse(await readFile(join(destination, "failure-receipt.json"), "utf8"));
++    expect(receipt.rawRetention).toBe("unpublished-stage");
++    await expect(publishFailureEvidence(stage, destination, {}, "PREFLIGHT", [])).rejects.toThrow();
++    expect(JSON.parse(await readFile(join(destination, "failure-receipt.json"), "utf8"))).toEqual(receipt);
++  } finally { await rm(directory, { recursive: true, force: true }); }
++});
++
+ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
+   test("pins independent TS7 CLI and exact stable TS6 bridge", () => {
+     expect(verify).toContain("native: '7.0.2'");

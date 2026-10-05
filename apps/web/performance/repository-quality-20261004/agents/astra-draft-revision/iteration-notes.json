@@ -1,0 +1,10 @@
+{
+  "intermediateFixtureAdjustment": {
+    "observation": "An existing autosave barrier test required the newly introduced memory refs in its synthetic bindings. The first focused run after production edits reported 113 pass / 1 fixture failure. The fixture was updated; final focused run passed all 126 cases.",
+    "productRegression": false
+  },
+  "browserRetries": 0,
+  "fullBuildRuns": 0,
+  "fullUnitRuns": 0,
+  "sourceHeadUnchanged": true
+}

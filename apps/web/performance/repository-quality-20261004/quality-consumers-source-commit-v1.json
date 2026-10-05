@@ -1,0 +1,31 @@
+{
+  "observedAt": "2026-10-04T12:03:49.268479+00:00",
+  "sourceCommit": "c730e1b37f5a469b87039306e2b0a09dd1ead10d",
+  "changedPaths": [
+    ".github/workflows/web-admin-ci.yml",
+    "apps/web/integrations/supabase/database.types.ts",
+    "backend/supabase/tests/test_local_function_runtime_contract.py",
+    "backend/utils/tests/test_supply_chain_contract.py",
+    "docs/operations/nightly-regression.md"
+  ],
+  "canonicalGeneratedPatch": {
+    "run": 37197431551,
+    "addedSchemaLines": 397,
+    "sqlChanged": false
+  },
+  "supabaseTypesParity": {
+    "diagnostics": 0,
+    "logicalInputs": 2449
+  },
+  "backendSupplyChain": {
+    "passed": 9,
+    "failed": 0,
+    "runtime": "isolated Python3.11.17/PyYAML6.0.3"
+  },
+  "backendLocalFunction": {
+    "passed": 20,
+    "failed": 0
+  },
+  "backendCompatibilityCiWiring": "added actual test command after installed backend dependencies and matched PR/push trigger paths",
+  "optionalAuditNotSuppressed": true
+}

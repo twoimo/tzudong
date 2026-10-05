@@ -1,0 +1,32 @@
+diff --git a/.gitignore b/.gitignore
+index 6966a871..a1600b2a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -6,6 +6,7 @@ venv/
+ backend/bun.lock
+ 
+ # ── 빌드 / 출력 / Build & Output ─────────────────────────
++/.build/
+ .next/
+ .next-stale-*/
+ .turbo/
+diff --git a/Package.swift b/Package.swift
+new file mode 100644
+index 00000000..3c7cb952
+--- /dev/null
++++ b/Package.swift
+@@ -0,0 +1,14 @@
++// swift-tools-version: 5.5
++import PackageDescription
++
++let package = Package(
++    name: "TzudongVisualOCR",
++    platforms: [.macOS(.v10_15)],
++    targets: [
++        .executableTarget(
++            name: "TzudongVisualOCR",
++            path: "backend/restaurant-crawling/scripts",
++            sources: ["03-2-visual-ocr.swift"]
++        )
++    ]
++)

@@ -1,0 +1,24 @@
+name: 'Helm tool installer'
+description: 'Install a specific version of helm binary. Acceptable values are latest or any semantic version string like 1.15.0'
+inputs:
+   version:
+      description: 'Version of helm'
+      required: true
+      default: 'latest'
+   token:
+      description: GitHub token. Used to be required to fetch the latest version
+      required: false
+      deprecationMessage: 'GitHub token is no longer required'
+      default: '${{ github.token }}'
+   downloadBaseURL:
+      description: 'Set the download base URL'
+      required: false
+      default: 'https://get.helm.sh'
+outputs:
+   helm-path:
+      description: 'Path to the cached helm binary'
+branding:
+   color: 'blue'
+runs:
+   using: 'node20'
+   main: 'lib/index.js'

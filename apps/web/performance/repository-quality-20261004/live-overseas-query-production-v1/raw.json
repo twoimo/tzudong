@@ -1,0 +1,263 @@
+{
+  "sourceSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+  "browser": "154.0.8037.97",
+  "transport": "real public HTTPS; no SDK/data/asset interception",
+  "scope": "anonymous actual WWW flows; emulated viewports, no physical-device or performance claim",
+  "fieldAdmitted": 0,
+  "cases": [
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "checks": [
+        {
+          "name": "actual SDK readiness",
+          "passed": true,
+          "observed": {
+            "loaded": true,
+            "remote": true,
+            "stub": false
+          }
+        },
+        {
+          "name": "transparent PNG and filter geometry",
+          "passed": true,
+          "observed": {
+            "alpha": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "pngDirect": true,
+            "width": 152,
+            "height": 114,
+            "countRights": [
+              533,
+              533
+            ],
+            "overflow": 0
+          }
+        },
+        {
+          "name": "cluster expansion",
+          "passed": true,
+          "observed": {
+            "individualMarkers": 380
+          }
+        },
+        {
+          "name": "marker detail and close",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "empty search and return",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "provider pan and return",
+          "passed": true,
+          "observed": {
+            "markers": 380,
+            "mapCreates": 1
+          }
+        }
+      ],
+      "errors": {
+        "page": 0,
+        "console": 3
+      },
+      "captures": [],
+      "passed": true,
+      "overlayAtSdkReady": {
+        "visibleLogo": true,
+        "filterControlPresent": true
+      },
+      "overlayReadinessWaitWallMs": 13,
+      "captureLimit": "navigation crop only,4 snapshots/~150ms spacing; no private review/profile screenshots, no physical flicker absence claim"
+    },
+    {
+      "name": "mobile",
+      "viewport": {
+        "width": 384,
+        "height": 824
+      },
+      "checks": [
+        {
+          "name": "actual SDK readiness",
+          "passed": true,
+          "observed": {
+            "loaded": true,
+            "remote": true,
+            "stub": false
+          }
+        },
+        {
+          "name": "transparent PNG and filter geometry",
+          "passed": true,
+          "observed": {
+            "alpha": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "pngDirect": true,
+            "width": 111.359375,
+            "height": 114,
+            "countRights": [],
+            "overflow": 0
+          }
+        },
+        {
+          "name": "cluster expansion",
+          "passed": true,
+          "observed": {
+            "individualMarkers": 380
+          }
+        },
+        {
+          "name": "marker detail and close",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "empty search and return",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "provider pan and return",
+          "passed": true,
+          "observed": {
+            "markers": 380,
+            "mapCreates": 1
+          }
+        },
+        {
+          "name": "ready bottom navigation reservation",
+          "passed": true,
+          "observed": {
+            "navTop": 763,
+            "mapBottom": 763,
+            "skeletons": 0
+          }
+        }
+      ],
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "captures": [
+        "mobile-navigation-0.png",
+        "mobile-navigation-1.png",
+        "mobile-navigation-2.png",
+        "mobile-navigation-3.png"
+      ],
+      "passed": true,
+      "overlayAtSdkReady": {
+        "visibleLogo": true,
+        "filterControlPresent": true
+      },
+      "overlayReadinessWaitWallMs": 12,
+      "captureLimit": "navigation crop only,4 snapshots/~150ms spacing; no private review/profile screenshots, no physical flicker absence claim"
+    },
+    {
+      "name": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "checks": [
+        {
+          "name": "actual SDK readiness",
+          "passed": true,
+          "observed": {
+            "loaded": true,
+            "remote": true,
+            "stub": false
+          }
+        },
+        {
+          "name": "transparent PNG and filter geometry",
+          "passed": true,
+          "observed": {
+            "alpha": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "pngDirect": true,
+            "width": 128,
+            "height": 114,
+            "countRights": [],
+            "overflow": 0
+          }
+        },
+        {
+          "name": "cluster expansion",
+          "passed": true,
+          "observed": {
+            "individualMarkers": 380
+          }
+        },
+        {
+          "name": "marker detail and close",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "empty search and return",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "provider pan and return",
+          "passed": true,
+          "observed": {
+            "markers": 380,
+            "mapCreates": 1
+          }
+        },
+        {
+          "name": "ready bottom navigation reservation",
+          "passed": true,
+          "observed": {
+            "navTop": 963,
+            "mapBottom": 963,
+            "skeletons": 0
+          }
+        }
+      ],
+      "errors": {
+        "page": 0,
+        "console": 2
+      },
+      "captures": [
+        "tablet-navigation-0.png",
+        "tablet-navigation-1.png",
+        "tablet-navigation-2.png",
+        "tablet-navigation-3.png"
+      ],
+      "passed": true,
+      "overlayAtSdkReady": {
+        "visibleLogo": true,
+        "filterControlPresent": true
+      },
+      "overlayReadinessWaitWallMs": 11,
+      "captureLimit": "navigation crop only,4 snapshots/~150ms spacing; no private review/profile screenshots, no physical flicker absence claim"
+    }
+  ],
+  "passed": true
+}

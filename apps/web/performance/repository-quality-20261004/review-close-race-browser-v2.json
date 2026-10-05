@@ -1,0 +1,57 @@
+{
+  "browserProcesses": 1,
+  "reports": [
+    {
+      "phase": "baseline",
+      "result": {
+        "preCaptureBPreserved": true,
+        "uploadRetryClearsOwnRevision": true,
+        "insertRetryClearsOwnRevision": true,
+        "saveScopeFence": true,
+        "loadScopeFence": true,
+        "changedBeforeAutosaveDoesNotRestoreCommittedA": false,
+        "newerAutosaveSurvivesClose": true,
+        "changedCleanupFailureBlocksAndRetries": false,
+        "unmountChangedClearsOnlyA": false,
+        "committedBoundedTextOnly": true,
+        "persistedV3Unchanged": true
+      },
+      "counts": {
+        "uploads": 17,
+        "inserts": 8,
+        "removes": 3,
+        "success": 6,
+        "closes": 7
+      },
+      "cases": 11,
+      "externalRequests": 0,
+      "pageErrors": 0
+    },
+    {
+      "phase": "after",
+      "result": {
+        "preCaptureBPreserved": true,
+        "uploadRetryClearsOwnRevision": true,
+        "insertRetryClearsOwnRevision": true,
+        "saveScopeFence": true,
+        "loadScopeFence": true,
+        "changedBeforeAutosaveDoesNotRestoreCommittedA": true,
+        "newerAutosaveSurvivesClose": true,
+        "changedCleanupFailureBlocksAndRetries": true,
+        "unmountChangedClearsOnlyA": true,
+        "committedBoundedTextOnly": true,
+        "persistedV3Unchanged": true
+      },
+      "counts": {
+        "uploads": 17,
+        "inserts": 8,
+        "removes": 3,
+        "success": 6,
+        "closes": 6
+      },
+      "cases": 11,
+      "externalRequests": 0,
+      "pageErrors": 0
+    }
+  ]
+}

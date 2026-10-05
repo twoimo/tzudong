@@ -1,0 +1,24 @@
+{
+  "tests": [
+    "backend.utils.tests.test_platform_modernization_reconciliation.PlatformModernizationReconciliationTests.test_manifest_is_reproducible_from_current_candidate_blobs",
+    "backend.utils.tests.test_layout_naming_source_recovery.LayoutNamingSourceRecoveryTests.test_layout_manifest_matches_versioned_and_candidate_files",
+    "backend.bin.tests.test_check_layout_manifest_unittest.RealTreeTest.test_committed_manifest_passes_on_real_tree"
+  ],
+  "exit_code": 1,
+  "test_count": 3,
+  "failures": [
+    {
+      "test": "test_layout_manifest_matches_versioned_and_candidate_files",
+      "class": "backend.utils.tests.test_layout_naming_source_recovery.LayoutNamingSourceRecoveryTests.test_layout_manifest_matches_versioned_and_candidate_files"
+    },
+    {
+      "test": "test_committed_manifest_passes_on_real_tree",
+      "class": "backend.bin.tests.test_check_layout_manifest_unittest.RealTreeTest.test_committed_manifest_passes_on_real_tree"
+    }
+  ],
+  "bounded_codes": [
+    "layout_manifest_missing_entry"
+  ],
+  "stdout_stderr_retained": false,
+  "source_head": "99f91157190058ac4691ec10046d3f520466ebd8"
+}

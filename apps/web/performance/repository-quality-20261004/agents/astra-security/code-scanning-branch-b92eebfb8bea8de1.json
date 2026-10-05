@@ -1,0 +1,21 @@
+{
+  "name": "code-scanning-branch-b92eebfb8bea8de1",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-scanning/alerts?state=open&ref=refs%2Fheads%2Fdependabot%2Fpip%2Fbackend%2Frestaurant-crawling%2Fscripts%2Fdevelop%2Fopenai-3.16.1&per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "admin:repo_hook, delete_repo, read:repo_hook, repo, repo:invite, repo:status, repo_deployment, security_events, write:repo_hook",
+        "x-ratelimit-remaining": "4743",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:46:38.598254+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 0,
+  "items": []
+}

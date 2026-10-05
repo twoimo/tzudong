@@ -1,0 +1,100 @@
+[
+  {
+    "pr": 3064,
+    "url": "https://github.com/twoimo/tzudong/pull/3064",
+    "headSha": "966e114336620c71bbe5482c5a88e366f5c5caaa",
+    "actualPrBaseSha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+    "intendedManifest": "^25.12.0",
+    "baselineManifest": "^25.8.0",
+    "baselineResolved": "25.8.0",
+    "selectedManifest": "^25.12.0",
+    "selectedResolved": "25.12.0",
+    "selection": "integrate exact PR target with compatible callers",
+    "excludedScope": [],
+    "verification": [
+      "real puppeteer-extra/stealth URL extractor import",
+      "map/transcript unit tests",
+      "npm ls"
+    ],
+    "securityGateEvidence": "final-audit-moderate.json"
+  },
+  {
+    "pr": 3062,
+    "url": "https://github.com/twoimo/tzudong/pull/3062",
+    "headSha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4",
+    "actualPrBaseSha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+    "intendedManifest": "^2.24.0",
+    "baselineManifest": "^2.18.0",
+    "baselineResolved": "2.18.0",
+    "selectedManifest": "^2.24.0",
+    "selectedResolved": "2.24.0",
+    "selection": "integrate exact PR target with compatible callers",
+    "excludedScope": [],
+    "verification": [
+      "actual chunk caller import and consumed SDK method shape without API requests",
+      "GenAI caller unit tests",
+      "npm ls"
+    ],
+    "securityGateEvidence": "final-audit-moderate.json"
+  },
+  {
+    "pr": 3061,
+    "url": "https://github.com/twoimo/tzudong/pull/3061",
+    "headSha": "fa568c8ccf04a5e68b153c89033e9b08700f4286",
+    "actualPrBaseSha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+    "intendedManifest": "^18.0.3",
+    "baselineManifest": "^16.6.1",
+    "baselineResolved": "16.6.1",
+    "selectedManifest": "^18.0.3",
+    "selectedResolved": "18.0.3",
+    "selection": "integrate exact PR target with compatible callers",
+    "excludedScope": [],
+    "verification": [
+      "eight real dotenv callers staged from source",
+      "five CLI JSON outputs + URL extractor/loader JSON",
+      "process environment remains higher priority than fixture .env",
+      "quiet stderr"
+    ],
+    "securityGateEvidence": "final-audit-moderate.json"
+  },
+  {
+    "pr": 2924,
+    "url": "https://github.com/twoimo/tzudong/pull/2924",
+    "headSha": "40539ca35df591451ee3be8b8456001d72964fcb",
+    "actualPrBaseSha": "d60ff0faf163647a4a51f1b63095b0ac3d041ec5",
+    "intendedManifest": "^5.4.2",
+    "baselineManifest": "^4.2.0",
+    "baselineResolved": "4.3.2",
+    "selectedManifest": "^5.4.2",
+    "selectedResolved": "5.4.2",
+    "selection": "integrate exact PR target with compatible callers",
+    "excludedScope": [],
+    "verification": [
+      "map crawler named load import",
+      "transcript namespace load compatibility",
+      "two current channel configs produce identical JSON hashes against 4.3.2"
+    ],
+    "securityGateEvidence": "final-audit-moderate.json"
+  },
+  {
+    "pr": 2902,
+    "url": "https://github.com/twoimo/tzudong/pull/2902",
+    "headSha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+    "actualPrBaseSha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+    "intendedManifest": "^4.3.2",
+    "baselineManifest": "^4.2.0",
+    "baselineResolved": "4.3.2",
+    "selectedManifest": "^5.4.2",
+    "selectedResolved": "5.4.2",
+    "selection": "No separate replay: resolved 4.3.2 was already in baseline; manifest floor ^4.3.2 was not. PR2924 now supersedes both with ^5.4.2 / resolved 5.4.2.",
+    "excludedScope": [
+      "PR2902 also changes three web manifest entries and the web lock; their baseline evidence and integration decision are owned by parent/B5. B6 makes no whole-PR exclusion/completion claim."
+    ],
+    "verification": [
+      "baseline node_modules/js-yaml version 4.3.2",
+      "actual PR diff 4.3.1 -> 4.3.2",
+      "superseding 5.4.2 parity evidence"
+    ],
+    "securityGateEvidence": "final-audit-moderate.json"
+  }
+]

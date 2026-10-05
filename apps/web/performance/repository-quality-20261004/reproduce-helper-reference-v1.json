@@ -1,0 +1,7 @@
+{
+  "path": "../render-flow-20260930/resources.mjs",
+  "sha256": "7e4a04525ed16446fde58c08fc18c6b36c000de9bb3de9234bd4107966ace091",
+  "deliveryNeighborExists": true,
+  "sameBytesAsRetainedExperiment": true,
+  "snapshots": "numeric host CPU/load aggregates only; no process names/args/IDs retained"
+}

@@ -1,0 +1,67 @@
+{
+  "observedAt": "2026-10-04T23:34:30.555145+00:00",
+  "method": "HEAD only, no private headers/IDs/cookies or object body retained",
+  "rows": [
+    {
+      "name": "legacy",
+      "status": 200,
+      "finalHost": "www.tzudong.app",
+      "finalPathMatchesHashedFont": false,
+      "headers": {
+        "Content-Length": null,
+        "Content-Type": "font/otf",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "CF-Cache-Status": "HIT",
+        "Age": "148171",
+        "Accept-Ranges": null
+      },
+      "responseBodyRead": false
+    },
+    {
+      "name": "asset1",
+      "status": 200,
+      "finalHost": "assets.tzudong.app",
+      "finalPathMatchesHashedFont": true,
+      "headers": {
+        "Content-Length": "11420784",
+        "Content-Type": "font/otf",
+        "Cache-Control": null,
+        "CF-Cache-Status": "DYNAMIC",
+        "Age": null,
+        "Accept-Ranges": "bytes"
+      },
+      "responseBodyRead": false
+    },
+    {
+      "name": "asset2",
+      "status": 200,
+      "finalHost": "assets.tzudong.app",
+      "finalPathMatchesHashedFont": true,
+      "headers": {
+        "Content-Length": "11420784",
+        "Content-Type": "font/otf",
+        "Cache-Control": null,
+        "CF-Cache-Status": "DYNAMIC",
+        "Age": null,
+        "Accept-Ranges": "bytes"
+      },
+      "responseBodyRead": false
+    },
+    {
+      "name": "asset3",
+      "status": 200,
+      "finalHost": "assets.tzudong.app",
+      "finalPathMatchesHashedFont": true,
+      "headers": {
+        "Content-Length": "11420784",
+        "Content-Type": "font/otf",
+        "Cache-Control": null,
+        "CF-Cache-Status": "DYNAMIC",
+        "Age": null,
+        "Accept-Ranges": "bytes"
+      },
+      "responseBodyRead": false
+    }
+  ],
+  "noLatencyOrQuotaSavingExtrapolation": true
+}

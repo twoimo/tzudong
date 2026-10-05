@@ -1,0 +1,17 @@
+{
+  "label": "wrong-sha-negative-control",
+  "started_scope": "frozen_current_main_source",
+  "python_version": "3.14.8",
+  "python_executable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+  "expected_github_sha": "0000000000000000000000000000000000000000",
+  "exit_code": 1,
+  "expected_to_pass": false,
+  "expectation_met": true,
+  "stdout_bytes": 0,
+  "stderr_bytes": 52,
+  "bounded_error": "local migration publication commit binding mismatch",
+  "snapshot_unchanged": true,
+  "temporary_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005/frozen-verification/scratch-wrong-sha-negative-control",
+  "temporary_root_empty": true,
+  "observed_at": "2026-10-04T21:23:31.895487+00:00"
+}

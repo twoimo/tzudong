@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-10-04T20:18:14.855645+00:00",
+  "source": "authenticated Codex in-app browser visible GitHub dashboard",
+  "secretScanning": "No secrets found on current alerts page",
+  "CodeQualitySeparateEndpoint": "not verified; 404 was not treated as zero",
+  "codeqlSwift": {
+    "status": "3 configuration errors",
+    "lastScanSource": "cc4a1bfd12c49d2e31eb84436c5803a79f1563a2",
+    "lastScanDate": "2026-08-24",
+    "reason": "autobuild detected neither Xcode project/workspace nor Swift package",
+    "currentSwiftSource": "backend/restaurant-crawling/scripts/03-2-visual-ocr.swift",
+    "localManifestCandidate": "build initially failed parse-as-library; supported entrypoint investigation continues",
+    "scannerDisabled": false,
+    "historicalConfigurationDeleted": false
+  },
+  "privatePageContentOrCredentialsStored": false
+}

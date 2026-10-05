@@ -1,0 +1,85 @@
+{
+  "id": 111465506075,
+  "name": "Windows Bun",
+  "run_id": 37212205347,
+  "head_sha": "c2c61614574927390f4ea4d90ccc3373ec7a1358",
+  "status": "completed",
+  "conclusion": "failure",
+  "started_at": "2026-10-04T15:13:44Z",
+  "completed_at": "2026-10-04T15:17:35Z",
+  "html_url": "https://github.com/twoimo/tzudong/actions/runs/37212205347/job/111465506075",
+  "steps": [
+    {
+      "number": 5,
+      "name": "Run bun install --frozen-lockfile",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 6,
+      "name": "Run bun run typecheck:verify",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 7,
+      "name": "Run bun run typecheck:native",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 8,
+      "name": "Run bun run typecheck:compat",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 9,
+      "name": "Run bun run typecheck:parity",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 12,
+      "name": "Upload Bun benchmark evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 13,
+      "name": "Fail closed on benchmark evidence",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "number": 14,
+      "name": "Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts",
+      "status": "completed",
+      "conclusion": "skipped"
+    }
+  ],
+  "toolchainReceipts": [
+    {
+      "status": "passed",
+      "nativeCli": "7.0.2",
+      "compatCli": "6.0.2",
+      "programmaticApi": "6.0.2",
+      "platformPackage": "@typescript/typescript-win32-x64"
+    },
+    {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 2449,
+      "logicalInputNamesSha256": "3bcb7cc9786c9858c968918a2fc5e177febb3d198f231c41b5c0f5cd70c5f6cc",
+      "nonLibraryContentSha256": "7a05489242814b0d9e6ef8d489d42a86550d0079f871b56a9c1a8cb9ec7b4299",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    }
+  ],
+  "benchmarkFailureCode": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+  "validatorFailureCode": "ENOENT",
+  "sourceTree": "c0d2cdbbda874e6b286b969d3bcd4a44f5336a7f",
+  "rawSamplesAvailableInOriginalArtifact": false
+}

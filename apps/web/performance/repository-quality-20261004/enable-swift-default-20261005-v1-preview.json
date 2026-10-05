@@ -1,0 +1,36 @@
+{
+  "observedAt": "2026-10-04T22:04:24.366416+00:00",
+  "approvedSourceMain": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "before": {
+    "state": "configured",
+    "languages": [
+      "actions",
+      "go",
+      "javascript",
+      "javascript-typescript",
+      "python",
+      "rust",
+      "typescript"
+    ],
+    "query_suite": "default",
+    "threat_model": "remote",
+    "runner_type": "standard",
+    "schedule": "weekly",
+    "updated_at": "2026-09-05T01:18:53Z"
+  },
+  "partialPatch": {
+    "languages": [
+      "actions",
+      "go",
+      "javascript-typescript",
+      "python",
+      "rust",
+      "swift"
+    ]
+  },
+  "fiveExistingLanguageSemanticsPreserved": true,
+  "querySuiteAndThreatModelPatchOmitted": true,
+  "standardRunnerPreserved": true,
+  "paidCapacityAdded": false,
+  "historicalAnalysisDeletion": false
+}

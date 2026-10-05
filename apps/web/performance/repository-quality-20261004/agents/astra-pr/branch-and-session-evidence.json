@@ -1,0 +1,74 @@
+{
+  "captured_at": "2026-10-04T08:30:55.114824+00:00",
+  "protection": {
+    "branchProtectionRules": {
+      "totalCount": 3,
+      "pageInfo": {
+        "hasNextPage": false
+      },
+      "nodes": [
+        {
+          "pattern": "develop",
+          "requiresStatusChecks": true,
+          "requiredStatusCheckContexts": [
+            "Release",
+            "Promotion Path"
+          ],
+          "requiresStrictStatusChecks": true,
+          "requiresApprovingReviews": true,
+          "requiredApprovingReviewCount": 0,
+          "requiresConversationResolution": true
+        },
+        {
+          "pattern": "data",
+          "requiresStatusChecks": true,
+          "requiredStatusCheckContexts": [
+            "Release",
+            "Promotion Path"
+          ],
+          "requiresStrictStatusChecks": true,
+          "requiresApprovingReviews": true,
+          "requiredApprovingReviewCount": 0,
+          "requiresConversationResolution": true
+        },
+        {
+          "pattern": "main",
+          "requiresStatusChecks": true,
+          "requiredStatusCheckContexts": [
+            "Release",
+            "Promotion Path"
+          ],
+          "requiresStrictStatusChecks": true,
+          "requiresApprovingReviews": true,
+          "requiredApprovingReviewCount": 0,
+          "requiresConversationResolution": true
+        }
+      ]
+    },
+    "develop": {
+      "target": {
+        "oid": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a"
+      }
+    },
+    "data": {
+      "target": {
+        "oid": "4bda4aaebee8bffac723e09b35b0712e8b4adf6e"
+      }
+    },
+    "main": {
+      "target": {
+        "oid": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+      }
+    }
+  },
+  "rulesets": [
+    []
+  ],
+  "session_verification": {
+    "model_provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "evidence": "current session_meta and turn_context",
+    "thread_id": "01a10606-c251-7f33-a724-aef968b87bee"
+  }
+}

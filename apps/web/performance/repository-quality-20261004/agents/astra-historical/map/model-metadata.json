@@ -1,0 +1,16 @@
+{
+  "sourceFile": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T20-37-29-01a106b4-6c68-7330-9fc2-e7645062089e.jsonl",
+  "session": {
+    "id": "01a106b4-6c68-7330-9fc2-e7645062089e",
+    "model_provider": "openai",
+    "originator": "Codex Desktop",
+    "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong"
+  },
+  "sessionLine": 1,
+  "configured": {
+    "model": "gpt-6-astra",
+    "effort": "xhigh"
+  },
+  "turnContextLine": 6,
+  "actualServingModelAttestation": "unavailable; local metadata only"
+}

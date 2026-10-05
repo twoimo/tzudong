@@ -1,0 +1,144 @@
+[
+  {
+    "case": "io-capture-recovery",
+    "first": {
+      "ids": 1,
+      "uploads": 0,
+      "inserts": 0,
+      "removes": 0,
+      "reads": 0,
+      "cleared": 0,
+      "success": 0,
+      "closes": 0,
+      "snapshots": 1
+    },
+    "final": {
+      "ids": 1,
+      "uploads": 2,
+      "inserts": 1,
+      "removes": 0,
+      "reads": 0,
+      "cleared": 0,
+      "success": 1,
+      "closes": 1,
+      "snapshots": 2,
+      "deletes": 1,
+      "draftPresent": false
+    },
+    "outcomes": [
+      "blocked",
+      "saved"
+    ],
+    "captureErrors": [
+      "REVIEW_DRAFT_CAPTURE_FAILED"
+    ]
+  },
+  {
+    "case": "invalid-stored-capture-recovery",
+    "first": {
+      "ids": 1,
+      "uploads": 0,
+      "inserts": 0,
+      "removes": 0,
+      "reads": 0,
+      "cleared": 0,
+      "success": 0,
+      "closes": 0,
+      "snapshots": 1
+    },
+    "final": {
+      "ids": 1,
+      "uploads": 2,
+      "inserts": 1,
+      "removes": 0,
+      "reads": 0,
+      "cleared": 0,
+      "success": 1,
+      "closes": 1,
+      "snapshots": 2,
+      "deletes": 1,
+      "draftPresent": false
+    },
+    "outcomes": [
+      "blocked",
+      "saved"
+    ],
+    "captureErrors": [
+      "REVIEW_DRAFT_CAPTURE_FAILED"
+    ]
+  },
+  {
+    "case": "two-capture-failures-then-valid-then-unknown-retry",
+    "first": {
+      "ids": 1,
+      "uploads": 0,
+      "inserts": 0,
+      "removes": 0,
+      "reads": 0,
+      "cleared": 0,
+      "success": 0,
+      "closes": 0,
+      "snapshots": 2
+    },
+    "final": {
+      "ids": 1,
+      "uploads": 2,
+      "inserts": 1,
+      "removes": 0,
+      "reads": 2,
+      "cleared": 0,
+      "success": 1,
+      "closes": 1,
+      "snapshots": 3,
+      "deletes": 0,
+      "replacementUnchanged": true
+    },
+    "outcomes": [
+      "blocked",
+      "blocked",
+      "blocked",
+      "saved"
+    ],
+    "captureErrors": [
+      "REVIEW_DRAFT_CAPTURE_FAILED",
+      "REVIEW_DRAFT_CAPTURE_FAILED"
+    ],
+    "events": [
+      "snapshot",
+      "snapshot",
+      "snapshot",
+      "new-composer-autosave",
+      "compare"
+    ]
+  },
+  {
+    "case": "capture-recovery-known-commit-preserves-B",
+    "first": {
+      "ids": 1,
+      "uploads": 0,
+      "inserts": 0,
+      "removes": 0,
+      "reads": 0,
+      "cleared": 0,
+      "success": 0,
+      "closes": 0
+    },
+    "final": {
+      "ids": 1,
+      "uploads": 2,
+      "inserts": 1,
+      "removes": 0,
+      "reads": 0,
+      "cleared": 0,
+      "success": 1,
+      "closes": 1,
+      "snapshots": 2,
+      "deletes": 0,
+      "replacementUnchanged": true
+    },
+    "outcomes": [
+      "blocked",
+      "saved"
+    ]
+  }
+]

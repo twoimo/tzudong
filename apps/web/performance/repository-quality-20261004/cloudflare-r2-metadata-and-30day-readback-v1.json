@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-10-05T00:08:41.635995+00:00",
+  "scope": "bucket metadata and aggregate metrics, not content or account billing identity",
+  "bucket": "tzudong-pipeline-artifacts",
+  "objectsObserved": [
+    {
+      "class": "public_font_content_addressed",
+      "bytes": 11420784,
+      "contentSHA256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+      "storageClass": "Standard"
+    },
+    {
+      "class": "inventory_receipt",
+      "bytes": 228,
+      "contentNotStored": true,
+      "sensitivePatternDerivedAudit": "cloudflare-public-receipt-shape-audit-v1.json"
+    }
+  ],
+  "infrequentAccessUsage": 0,
+  "last30DaysHeaderSummary": {
+    "averageStorageDisplay": "737.09 kB",
+    "classA": 19,
+    "classB": 374,
+    "dataRetrievedDisplay": "0 B"
+  },
+  "last30DaysChart": {
+    "averageStorageDisplay": "380.96 kB",
+    "classA": 13,
+    "classB": 255
+  },
+  "headerVsChartMismatchPreserved": true,
+  "notBilledGBMonthFromCurrentObjectSize": true,
+  "allAccountUsagePendingSeparateReadback": true,
+  "paidPlansOrRetentionChanged": false,
+  "UIFormSavedAndReopenedTTLProof": [
+    "cloudflare-font-ttl-proof-v3.png",
+    "cloudflare-font-browser-ttl-proof-v2.png"
+  ]
+}

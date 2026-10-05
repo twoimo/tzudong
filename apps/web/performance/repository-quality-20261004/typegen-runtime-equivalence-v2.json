@@ -1,0 +1,9 @@
+{
+  "base": "34ebbb21092ef7d3240897d048055fd12762b39b",
+  "compiler": "6.0.2",
+  "changedTypeFile": "apps/web/integrations/supabase/database.types.ts",
+  "typeSourceChanged": true,
+  "transpiledRuntimeIdentical": true,
+  "runtimeSha256": "e625dbc98493f464c1b9975ab4b3e08ebaf6da0989e8f60e5ed5720d4c6cf05e",
+  "scope": "Type helper conditional parentheses only; production bundle/current deployment equivalence is not asserted by this transpile diagnostic"
+}

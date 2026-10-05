@@ -1,0 +1,56 @@
+[
+  {
+    "rollout_thread": "01a10678-ad0f-7ee3-9a47-ed1c55fbdd16",
+    "own_session_metadata": [
+      {
+        "id": "01a10678-ad0f-7ee3-9a47-ed1c55fbdd16",
+        "model_provider": "openai",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a0f119-3142-7fe1-b600-e436feaedc75",
+              "depth": 1,
+              "agent_path": null,
+              "agent_nickname": "Newton",
+              "agent_role": null
+            }
+          }
+        },
+        "originator": "Codex Desktop"
+      }
+    ],
+    "latest_turn_context": {
+      "model": "gpt-6-astra",
+      "effort": "xhigh"
+    },
+    "inherited_session_ids": []
+  },
+  {
+    "rollout_thread": "01a1067a-0722-7371-8ad4-d3eee6cfb861",
+    "own_session_metadata": [
+      {
+        "id": "01a1067a-0722-7371-8ad4-d3eee6cfb861",
+        "model_provider": "openai",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a10678-ad0f-7ee3-9a47-ed1c55fbdd16",
+              "depth": 2,
+              "agent_path": null,
+              "agent_nickname": "Peirce",
+              "agent_role": null
+            }
+          }
+        },
+        "originator": "Codex Desktop"
+      }
+    ],
+    "latest_turn_context": {
+      "model": "gpt-6-astra",
+      "effort": "xhigh"
+    },
+    "inherited_session_ids": [
+      "01a10678-ad0f-7ee3-9a47-ed1c55fbdd16"
+    ]
+  }
+]

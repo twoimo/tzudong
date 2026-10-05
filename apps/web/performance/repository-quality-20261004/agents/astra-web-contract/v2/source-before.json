@@ -1,0 +1,17 @@
+{
+  "apps/web/app/api/dashboard/restaurants/route.ts": "26744505c3de07dd8b86d6a9442fa5ff155a3c127c85d3845026394607f665b8",
+  "apps/web/app/api/dashboard/summary/route.ts": "8f373465c2193c6c72d36d79befcf6d2e7b78a6c39c0d91942ee4c7b33279551",
+  "apps/web/app/api/dashboard/video/[videoId]/route.ts": "bd27725081433e3bc93837f9b7fa3cfd5446fe262b65f62bf587ec10820d18da",
+  "apps/web/components/ui/alert-dialog.tsx": "8fbd1080d341f8927947b3a77adb13ca9dd7cddf70a02df0634a57e34549100c",
+  "apps/web/components/ui/dialog.tsx": "131a1e1a4bb49b011c08e664516ac60c112f4567b3154c9b95a7959da63ef820",
+  "apps/web/hooks/use-restaurants.tsx": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+  "apps/web/lib/dashboard/helpers.ts": "316b5573bcc5ce93ab4ce152ed4aa92ba7b61a7b7af7c8362d9611101f4fb5f2",
+  "apps/web/lib/dashboard/summary.ts": "13b4bb9875a158caba1004ec267f36f2b6762ed8c1ce18771ed826e302eac473",
+  "apps/web/lib/supabase-rest-client.ts": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27",
+  "apps/web/tests-unit/dashboard-aggregation.test.ts": "5da5c1e1f1f5f5ecb22de8b64f92081991f22c730642eeb7ef10047f662e45e6",
+  "apps/web/tests-unit/supabase-rest-client.test.ts": "5c16753b5b267cbb6efb1b5ca0876a3a4e948fdf68880c2247fbb21cb0255fd8",
+  "apps/web/tests-unit/use-restaurants-merge.test.ts": "4a43c2e80d373835717122f85d5ef877a3833912ff2932d11e3607913ba23178",
+  "apps/web/tests-unit/youtube-link-helpers.test.ts": "80ac4a0e7ecf574e489133cb57e7f445fca7a10f0e6a6808d3fbd34b004aceb7",
+  "apps/web/tests-unit/dashboard-route-contract.test.ts": "0b69df5cee0d5d3c20d7e8bb10fb887e02e66d0e1e8848be414f359cb46e25b8",
+  "apps/web/tests-unit/dialog-content-inset.test.ts": "9bfa110a852eb81c03d30eaf4afb79390c721d6b641315b291082f54ad0dfbdb"
+}

@@ -1,0 +1,201 @@
+{
+  "captured_at": "2026-10-04T08:33:42.981869+00:00",
+  "items": [
+    {
+      "id": 37155813334,
+      "name": "Nightly · main",
+      "path": ".github/workflows/nightly-local-regression.yml",
+      "head_sha": "3aebb1c6f446250fd49fceac5f1a4ccac2f5d8f0",
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-03T21:38:30Z",
+      "updated_at": "2026-10-03T21:39:35Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/37155813334",
+      "failed_jobs": [
+        {
+          "id": 111298845822,
+          "name": "Local",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/37155813334/job/111298845822",
+          "steps": [
+            {
+              "name": "Verify publication boundary implementation",
+              "number": 3,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Aggregate local nightly lane outcomes",
+              "number": 21,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Write bounded nightly lane diagnostics",
+              "number": 22,
+              "conclusion": "failure"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37175366334,
+      "name": "Optimize pipeline and review, renew UI, and integrate Gemini and Sentry",
+      "path": ".github/workflows/security-audit.yml",
+      "head_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-04T03:53:34Z",
+      "updated_at": "2026-10-04T03:57:48Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/37175366334",
+      "failed_jobs": [
+        {
+          "id": 111356766469,
+          "name": "orchestration-readiness",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/37175366334/job/111356766469",
+          "steps": [
+            {
+              "name": "Verify recovered observability and readiness-agent boundaries",
+              "number": 15,
+              "conclusion": "failure"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 33766960629,
+      "name": "Admin console sidebar refactor: module panel through task 16 verification",
+      "path": ".github/workflows/web-admin-ci.yml",
+      "head_sha": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-09-03T14:27:34Z",
+      "updated_at": "2026-09-03T14:30:59Z",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/33766960629",
+      "failed_jobs": [
+        {
+          "id": 100687193354,
+          "name": "Install",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/33766960629/job/100687193354",
+          "steps": [
+            {
+              "name": "Authoritative npm clean install, Node production probes, and browser behavior",
+              "number": 7,
+              "conclusion": "failure"
+            }
+          ]
+        },
+        {
+          "id": 100687193654,
+          "name": "Ubuntu Bun",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/33766960629/job/100687193654",
+          "steps": [
+            {
+              "name": "Run bun install --frozen-lockfile",
+              "number": 5,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Upload Bun benchmark evidence",
+              "number": 12,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Fail closed on benchmark evidence",
+              "number": 13,
+              "conclusion": "failure"
+            }
+          ]
+        },
+        {
+          "id": 100687193664,
+          "name": "Windows npm",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/33766960629/job/100687193664",
+          "steps": [
+            {
+              "name": "Run npm run lint",
+              "number": 7,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Upload npm benchmark evidence",
+              "number": 14,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Fail closed on benchmark evidence",
+              "number": 15,
+              "conclusion": "failure"
+            }
+          ]
+        },
+        {
+          "id": 100687193671,
+          "name": "Windows Bun",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/33766960629/job/100687193671",
+          "steps": [
+            {
+              "name": "Run bun install --frozen-lockfile",
+              "number": 5,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Upload Bun benchmark evidence",
+              "number": 12,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Fail closed on benchmark evidence",
+              "number": 13,
+              "conclusion": "failure"
+            }
+          ]
+        },
+        {
+          "id": 100687193744,
+          "name": "Admin",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/33766960629/job/100687193744",
+          "steps": [
+            {
+              "name": "Run npx tsc --noEmit --pretty false",
+              "number": 10,
+              "conclusion": "failure"
+            }
+          ]
+        },
+        {
+          "id": 100687193848,
+          "name": "Ubuntu npm",
+          "conclusion": "failure",
+          "html_url": "https://github.com/twoimo/tzudong/actions/runs/33766960629/job/100687193848",
+          "steps": [
+            {
+              "name": "Run npm run typecheck:native",
+              "number": 8,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Upload npm benchmark evidence",
+              "number": 13,
+              "conclusion": "failure"
+            },
+            {
+              "name": "Fail closed on benchmark evidence",
+              "number": 14,
+              "conclusion": "failure"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "sourceRoot": "/Users/twoimo/.codex/worktrees/review-contract-quality-20261004/tzudong",
+  "branch": "codex/review-contract-quality-20261004",
+  "baseline": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "initialTrackedChanges": [],
+  "dependencyRoot": "/Users/twoimo/.codex/worktrees/marker-memory-release-20261002/tzudong/apps/web/node_modules",
+  "node": "v24.21.0",
+  "npm": "11.19.0",
+  "bun": "1.4.0",
+  "fakeSecretsAdded": false,
+  "sharedDependenciesModified": false,
+  "frozenPerformanceFileCount": 2410,
+  "@typescript/native": {
+    "name": "typescript",
+    "version": "7.0.2",
+    "manifestSha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+  },
+  "@typescript/old": {
+    "name": "typescript",
+    "version": "6.0.2",
+    "manifestSha256": "bb6ee7e709ae60426e30b8d393df4d939ee61407794b4f053ce6338d6eaa8c63"
+  },
+  "typescript": {
+    "name": "@typescript/typescript6",
+    "version": "6.0.2",
+    "manifestSha256": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+  },
+  "typescript-eslint": {
+    "name": "typescript-eslint",
+    "version": "8.63.0",
+    "manifestSha256": "bcaa4b73507ada8ee7500fae979838e0d83f447e30527bb6051adb02c9f8fffd"
+  },
+  "next": {
+    "name": "next",
+    "version": "16.3.5",
+    "manifestSha256": "73192ad53e2c6f25f5f81177819607dff0b254548932a0a225aad09307fd6772"
+  }
+}

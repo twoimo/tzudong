@@ -1,0 +1,9 @@
+{
+  "node": [
+    "v24.6.0"
+  ],
+  "bun": [
+    "unverified_from_allowlisted_pattern"
+  ],
+  "raw_logs_persisted": false
+}

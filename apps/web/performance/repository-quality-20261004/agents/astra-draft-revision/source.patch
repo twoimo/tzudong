@@ -1,0 +1,674 @@
+diff --git a/apps/web/components/reviews/ReviewModal.tsx b/apps/web/components/reviews/ReviewModal.tsx
+index 6971a6f7..235629d8 100644
+--- a/apps/web/components/reviews/ReviewModal.tsx
++++ b/apps/web/components/reviews/ReviewModal.tsx
+@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
+ import { supabase } from "@/integrations/supabase/client";
+ import { toast } from "@/hooks/use-toast";
+ import imageCompression from "browser-image-compression";
+-import { saveDraft, getDraft, prepareDraftDeletion } from "@/lib/reviewDraftDB";
++import { saveDraft, getDraft, prepareDraftDeletion, type ReviewDraft } from "@/lib/reviewDraftDB";
+ import {
+     buildReviewPhotoObjectPath,
+     cleanupCanonicalReviewPhotoObjects,
+@@ -82,10 +82,13 @@ const compressFoodImage = async (file: File): Promise<File> => {
+     }
+ };
+ // The controller retains exactly one operation in memory; draft persistence stays unchanged.
+-function createReviewSaveOperation(currentOwner: () => string | undefined) {
++function createReviewSaveOperation(
++    currentOwner: () => string | undefined,
++    currentDraftRevision: () => ReviewDraft | null,
++) {
+     return new ReviewSaveOperation({
+         currentOwner,
+-        captureDraftDeletion: draft => prepareDraftDeletion(draft.ownerId, draft.restaurantId),
++        captureDraftDeletion: draft => prepareDraftDeletion(draft.ownerId, draft.restaurantId, currentDraftRevision()),
+         newId: () => {
+             const reviewId = crypto.randomUUID();
+             return reviewId;
+@@ -457,6 +460,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+     const [isSearching, setIsSearching] = useState(false);
+     const [selectedRestaurant, setSelectedRestaurant] = useState<{ id: string; name: string } | null>(restaurant);
+     const reviewTargetRestaurant = selectedRestaurant || restaurant;
++    // One bounded text revision, obtained only from our committed save or load.
++    // Scope object identity also fences asynchronous completions across A -> B -> A.
++    const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null as ReviewDraft | null });
+     const saveOwnerRef = useRef(user?.id);
+     const saveOperationRef = useRef<ReviewSaveOperation | null>(null);
+     const submitInFlightRef = useRef(false);
+@@ -464,10 +470,13 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+     const composerOpenRef = useRef(isOpen);
+     const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id });
+     useLayoutEffect(() => {
++        if (draftScopeRef.current.ownerId !== user?.id || draftScopeRef.current.restaurantId !== reviewTargetRestaurant?.id || !isOpen) {
++            draftScopeRef.current = { ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null };
++        }
+         saveOwnerRef.current = user?.id;
+         composerOpenRef.current = isOpen;
+         latestSaveInputsRef.current = { visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id };
+-        saveOperationRef.current ??= createReviewSaveOperation(() => saveOwnerRef.current);
++        saveOperationRef.current ??= createReviewSaveOperation(() => saveOwnerRef.current, () => draftScopeRef.current.revision);
+     }, [user?.id, isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, reviewTargetRestaurant?.id]);
+ 
+     useLayoutEffect(() => {
+@@ -479,6 +488,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+         return () => {
+             composerOpenRef.current = false;
+             saveOwnerRef.current = undefined;
++            draftScopeRef.current = { ...draftScopeRef.current, revision: null };
+             // A dispatched insert cannot be safely aborted. The controller waits
+             // for it and preserves objects whenever its outcome stays unknown.
+             operation.requestCancel();
+@@ -1585,9 +1595,16 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+         const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+         if (!user?.id || !targetRestaurantId) return;
+ 
++        const scope = draftScopeRef.current;
++        if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current
++            || submitInFlightRef.current || closeRequestedRef.current) return;
++        const previousRevision = scope.revision;
+         try {
+             const draft = await getDraft(user.id, targetRestaurantId);
++            if (draftScopeRef.current !== scope || scope.revision !== previousRevision || !composerOpenRef.current
++                || saveOwnerRef.current !== user.id || submitInFlightRef.current || closeRequestedRef.current) return;
+             if (draft) {
++                scope.revision = draft;
+                 setVisitedDate(draft.visitedDate);
+                 setVisitedTime(draft.visitedTime);
+                 setCategories(draft.categories as Category[]);
+@@ -1623,21 +1640,26 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+             return;
+         }
+ 
++        const scope = draftScopeRef.current;
++        if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current) return;
+         const previousSave = autoSaveInFlightRef.current;
+         const pendingSave = (async () => {
+             await previousSave;
+-            if (submitInFlightRef.current || closeRequestedRef.current) return;
++            if (submitInFlightRef.current || closeRequestedRef.current || draftScopeRef.current !== scope
++                || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
+             try {
+                 setIsSaving(true);
+-                await saveDraft({
++                const committed = await saveDraft({
+                     userId: user.id, restaurantId: targetRestaurantId,
+                     visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep,
+                 });
+-                setLastSavedAt(new Date());
++                if (draftScopeRef.current !== scope || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
++                scope.revision = committed;
++                setLastSavedAt(committed ? new Date(committed.savedAt) : null);
+             } catch {
+                 console.error('자동 저장 실패:');
+             } finally {
+-                setIsSaving(false);
++                if (draftScopeRef.current === scope && composerOpenRef.current) setIsSaving(false);
+             }
+         })();
+         autoSaveInFlightRef.current = pendingSave;
+diff --git a/apps/web/lib/reviewDraftDB.ts b/apps/web/lib/reviewDraftDB.ts
+index ae16d445..28415c2c 100644
+--- a/apps/web/lib/reviewDraftDB.ts
++++ b/apps/web/lib/reviewDraftDB.ts
+@@ -347,7 +347,7 @@ async function enforceUserDraftLimit(
+     }
+ }
+ 
+-export async function saveDraft(draft: ReviewDraftSaveInput): Promise<void> {
++export async function saveDraft(draft: ReviewDraftSaveInput): Promise<ReviewDraft | null> {
+     const persistedDraft = createPersistedDraft(draft, Date.now());
+     if (!persistedDraft) {
+         throw new Error('임시 저장 데이터가 유효하지 않습니다.');
+@@ -359,7 +359,9 @@ export async function saveDraft(draft: ReviewDraftSaveInput): Promise<void> {
+         const transaction = db.transaction(STORE_NAME, 'readwrite');
+         await transaction.store.put(persistedDraft);
+         await enforceUserDraftLimit(transaction.store, persistedDraft.userId);
++        const committed = await transaction.store.get([persistedDraft.userId, persistedDraft.restaurantId]);
+         await transaction.done;
++        return committed ? toPublicDraft(committed) : null;
+     } catch {
+         console.error('Draft 저장 실패:');
+         throw new Error('임시 저장에 실패했습니다.');
+@@ -405,20 +407,33 @@ export async function deleteDraft(userId: string, restaurantId: string): Promise
+     }
+ }
+ 
+-// Capture the existing bounded text row before a review write. The returned
++// Capture only the bounded text revision this composer saved or restored. The returned
+ // cleanup may finish after the composer unmounts, but cannot delete a newer
+ // draft from another composer. Compare and delete share one IDB transaction.
+ // This adds no persisted fields, media, operation IDs, or retention policy.
+-export async function prepareDraftDeletion(userId: string, restaurantId: string): Promise<() => Promise<boolean>> {
++export async function prepareDraftDeletion(
++    userId: string,
++    restaurantId: string,
++    revision: ReviewDraft | null,
++): Promise<() => Promise<boolean>> {
+     if (!isValidIdentifier(userId) || !isValidIdentifier(restaurantId)) return async () => false;
++    // A row at this key is not proof of ownership: another composer may have
++    // saved it even before capture. Missing/out-of-scope authority is a no-op.
++    if (!revision || revision.userId !== userId || revision.restaurantId !== restaurantId) return async () => true;
++    const savedAt = parseCanonicalTimestamp(revision.savedAt);
++    const owned = savedAt === null ? null : createPersistedDraft(revision, savedAt);
++    if (!owned) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
++    if (owned.expiresAt <= Date.now()) return async () => true;
++    if (!readPersistedReviewDraft(owned)) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
++    const expected = JSON.stringify(owned);
+     const key: DraftKey = [userId, restaurantId];
+-    let snapshot: PersistedReviewDraft | null;
+     let db: IDBPDatabase<ReviewDraftDB> | undefined;
+     try {
+         db = await initDB();
+         const stored = await db.get(STORE_NAME, key);
+-        snapshot = stored === undefined ? null : readPersistedReviewDraft(stored);
++        const snapshot = stored === undefined ? null : readPersistedReviewDraft(stored);
+         if (stored !== undefined && !snapshot) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
++        if (JSON.stringify(snapshot) !== expected) return async () => true;
+     } catch {
+         // No deletion authority was captured. The operation must retry this
+         // read before it dispatches uploads/insert, rather than retaining a
+@@ -427,7 +442,6 @@ export async function prepareDraftDeletion(userId: string, restaurantId: string)
+     } finally {
+         db?.close();
+     }
+-    const expected = JSON.stringify(snapshot);
+     return async () => {
+         let cleanupDb: IDBPDatabase<ReviewDraftDB> | undefined;
+         try {
+diff --git a/apps/web/lib/reviews/review-save-operation.ts b/apps/web/lib/reviews/review-save-operation.ts
+index eb2fbd14..23f1e5c7 100644
+--- a/apps/web/lib/reviews/review-save-operation.ts
++++ b/apps/web/lib/reviews/review-save-operation.ts
+@@ -187,6 +187,12 @@ export class ReviewSaveOperation {
+             const recovered = this.savedResult(op, draft);
+             if (recovered) return recovered;
+             if (!sameDraft(op.draft, draft)) { this.operation = null; op = null; }
++            else if (op.write !== 'unknown' && op.unansweredUploads.size === 0 && op.touched.size === 0) {
++                // A fully compensated dispatch has no unresolved remote work.
++                // The same composer may since have autosaved a new timestamp.
++                // Refresh only its owned revision for this next dispatch interval.
++                op.draftDeletion = undefined;
++            }
+         }
+         if (this.cancelling) return 'cancelled';
+         if (!op) {
+@@ -198,7 +204,7 @@ export class ReviewSaveOperation {
+             this.operation = op;
+         }
+         const current = op;
+-        // Snapshot belongs to this exact review ID, including cleanup retries.
++        // Snapshot belongs to this dispatch interval, including cleanup retries.
+         // Never recapture a replacement draft after a committed/unknown write.
+         if (this.deps.captureDraftDeletion && !current.draftDeletion) {
+             try { current.draftDeletion = await this.deps.captureDraftDeletion(current.draft); }
+diff --git a/apps/web/tests-unit/review-draft-deletion-browser.test.ts b/apps/web/tests-unit/review-draft-deletion-browser.test.ts
+index be0ba3a5..7a52117e 100644
+--- a/apps/web/tests-unit/review-draft-deletion-browser.test.ts
++++ b/apps/web/tests-unit/review-draft-deletion-browser.test.ts
+@@ -19,34 +19,34 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+         window.run = async () => {
+             const result = {};
+             await saveDraft(draft());
+-            const deletedAfterUnmount = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
++            const deletedAfterUnmount = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
+             result.knownCommitClearsCapturedRow = await deletedAfterUnmount() && await getDraft('fixture-owner', 'fixture-restaurant') === null;
+             result.repeatedCleanupIsIdempotent = await deletedAfterUnmount();
+ 
+             await saveDraft(draft());
+-            const oldCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
++            const oldCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
+             now++;
+             await saveDraft(draft('fixture-owner', 'fixture-restaurant', 'Newer synthetic edited draft'));
+             result.changedRowSurvives = await oldCleanup() && (await getDraft('fixture-owner', 'fixture-restaurant'))?.content === 'Newer synthetic edited draft';
+ 
+-            const sameTextCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
++            const sameTextCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
+             now++;
+             await saveDraft(draft('fixture-owner', 'fixture-restaurant', 'Newer synthetic edited draft'));
+             result.newerTimestampSurvives = await sameTextCleanup() && await getDraft('fixture-owner', 'fixture-restaurant') !== null;
+ 
+-            const absentCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-new-restaurant');
++            const absentCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-new-restaurant', null);
+             await saveDraft(draft('fixture-owner', 'fixture-new-restaurant'));
+             result.newRowAtAbsentKeySurvives = await absentCleanup() && await getDraft('fixture-owner', 'fixture-new-restaurant') !== null;
+ 
+             await saveDraft(draft('fixture-other-owner'));
+             await saveDraft(draft('fixture-owner', 'fixture-other-restaurant'));
+-            const scopedCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant');
++            const scopedCleanup = await prepareDraftDeletion('fixture-owner', 'fixture-restaurant', await getDraft('fixture-owner', 'fixture-restaurant'));
+             result.scopePreserved = await scopedCleanup()
+                 && await getDraft('fixture-owner', 'fixture-restaurant') === null
+                 && await getDraft('fixture-other-owner', 'fixture-restaurant') !== null
+                 && await getDraft('fixture-owner', 'fixture-other-restaurant') !== null;
+ 
+-            const rejectedCleanup = await prepareDraftDeletion('invalid identifier', 'fixture-restaurant');
++            const rejectedCleanup = await prepareDraftDeletion('invalid identifier', 'fixture-restaurant', null);
+             result.invalidScopeRejected = !await rejectedCleanup();
+             await saveDraft({ ...draft(), verificationPhoto: new File(['synthetic'], 'fixture.jpg'), foodPhotos: [new File(['synthetic'], 'fixture.jpg')] });
+             const read = await getDraft('fixture-owner', 'fixture-restaurant');
+@@ -55,7 +55,7 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+             let inserts = 0, captures = 0;
+             const operation = new ReviewSaveOperation({
+                 currentOwner: () => 'fixture-owner', newId: () => 'fixture-review-id',
+-                captureDraftDeletion: async saved => { captures++; return prepareDraftDeletion(saved.ownerId, saved.restaurantId); },
++                captureDraftDeletion: async saved => { captures++; return prepareDraftDeletion(saved.ownerId, saved.restaurantId, read); },
+                 prepare: async (saved, reviewId) => [saved.verificationPhoto, ...saved.foodPhotos].map((file, index) => ({
+                     file, purpose: index ? 'food' : 'verification',
+                     path: buildReviewPhotoObjectPath({ ownerId: saved.ownerId, reviewId, purpose: index ? 'food' : 'verification' }, 'fixture.jpg'),
+diff --git a/apps/web/tests-unit/review-save-owner-lifecycle.test.ts b/apps/web/tests-unit/review-save-owner-lifecycle.test.ts
+index bb020650..625dfd4a 100644
+--- a/apps/web/tests-unit/review-save-owner-lifecycle.test.ts
++++ b/apps/web/tests-unit/review-save-owner-lifecycle.test.ts
+@@ -68,6 +68,7 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+             const [verificationPhoto] = useState(() => new File(['receipt'], 'receipt.jpg'));
+             const [foodPhotos] = useState(() => [new File(['food'], 'food.jpg')]);
+             const reviewTargetRestaurant = { id: 'fixture-restaurant' };
++            const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant.id, revision: null });
+             const saveOwnerRef = useRef(user?.id), saveOperationRef = useRef(null);
+             const composerOpenRef = useRef(isOpen), closeRequestedRef = useRef(false), consumerNotifiedRef = useRef(false);
+             const latestSaveInputsRef = useRef(null);
+diff --git a/apps/web/tests-unit/review-save-submit.test.ts b/apps/web/tests-unit/review-save-submit.test.ts
+index 6850056c..fcfa1f5e 100644
+--- a/apps/web/tests-unit/review-save-submit.test.ts
++++ b/apps/web/tests-unit/review-save-submit.test.ts
+@@ -6,6 +6,7 @@ import ts from 'typescript';
+ import * as jsxRuntime from 'react/jsx-runtime';
+ import { renderToStaticMarkup } from 'react-dom/server';
+ import type { ReactNode } from 'react';
++import type { ReviewDraft } from '../lib/reviewDraftDB';
+ import { ReviewSaveOperation } from '../lib/reviews/review-save-operation';
+ import { buildReviewPhotoObjectPath, cleanupCanonicalReviewPhotoObjects, normalizeReviewPhotoFilename, getCanonicalReviewPhotoObjectPaths } from '../lib/review-photo-url';
+ 
+@@ -40,13 +41,16 @@ function fixture() {
+     const filters: Record<string, unknown>[] = [];
+     let mode: 'normal' | 'denied' | 'lost' | 'lost-read-fails' = 'normal';
+     let readFail = false;
++    let uploadError: unknown = null;
++    const draftScopeRef = { current: { ownerId: 'fixture-owner', restaurantId: 'fixture-restaurant', revision: null as ReviewDraft | null } };
+     let afterInsert: (() => void) | undefined;
+     let currentOwner = (): string | undefined => 'fixture-owner';
+-    let prepareDeletion: () => Promise<() => Promise<boolean>> = async () => async () => { counts.cleared++; return true; };
++    let prepareDeletion: (...args: unknown[]) => Promise<() => Promise<boolean>> = async () => async () => { counts.cleared++; return true; };
+     const storage = {
+         async upload(path: string, _file: File, options: unknown) {
+             expect(options).toEqual({ cacheControl: '3600', upsert: false });
+-            counts.uploads++; objects.add(path); return { error: null };
++            counts.uploads++; if (uploadError) return { error: uploadError };
++            objects.add(path); return { error: null };
+         },
+         async remove(paths: string[]) { counts.removes++; paths.forEach(path => objects.delete(path)); return { error: null }; },
+         async list(directory: string, { search }: {search: string}) { return { data: objects.has(`${directory}/${search}`) ? [{ name: search }] : [], error: null }; },
+@@ -84,8 +88,8 @@ function fixture() {
+     const create = evaluate(`${nodeText(source, 'createReviewSaveOperation')}\ncreateReviewSaveOperation;`, {
+         ReviewSaveOperation, supabase, buildReviewPhotoObjectPath, normalizeReviewPhotoFilename, cleanupCanonicalReviewPhotoObjects,
+         prepareReceiptImage: async (file: File) => file, compressFoodImage: async (file: File) => file,
+-        prepareDraftDeletion: () => prepareDeletion(),
+-    }) as (owner: () => string) => ReviewSaveOperation;
++        prepareDraftDeletion: (...args: unknown[]) => prepareDeletion(...args),
++    }) as (owner: () => string, revision: () => ReviewDraft | null) => ReviewSaveOperation;
+     const fields = {
+         visitedDate: '2026-10-04', visitedTime: '12:00', categories: ['한식'],
+         content: 'Synthetic offline fixture review content only.',
+@@ -97,7 +101,8 @@ function fixture() {
+     const bindings = {
+         ...fields, selectedRestaurant: { id: fields.restaurantId, name: 'Fixture' }, restaurant: null,
+         user: { id: 'fixture-owner' }, saveOwnerRef: { current: 'fixture-owner' },
+-        saveOperationRef: { current: create(() => currentOwner()!) },
++        saveOperationRef: { current: create(() => currentOwner()!, () => draftScopeRef.current.revision) },
++        draftScopeRef,
+         submitInFlightRef: { current: false }, closeRequestedRef: { current: false }, composerOpenRef: { current: true },
+         autoSaveInFlightRef: { current: null },
+         latestSaveInputsRef: { current: fields }, setIsSubmitting() {}, toast: (message: {title: string}) => messages.push(message),
+@@ -121,7 +126,8 @@ function fixture() {
+     return { counts, rows, objects, messages, recoveryStates, selected, filters, bindings, submit, close,
+         setMode: (value: typeof mode) => { mode = value; }, failReads: (value: boolean) => { readFail = value; },
+         onInsert: (callback: () => void) => { afterInsert = callback; },
+-        setPrepareDeletion: (callback: typeof prepareDeletion) => { prepareDeletion = callback; } };
++        setPrepareDeletion: (callback: typeof prepareDeletion) => { prepareDeletion = callback; },
++        setUploadError: (error: unknown) => { uploadError = error; } };
+ }
+ 
+ describe('actual ReviewModal submit and Supabase adapter', () => {
+@@ -294,6 +300,8 @@ describe('actual draft handlers and IndexedDB deletion boundary', () => {
+             verificationPhoto: null, foodPhotos: [], currentStep: 3, useCallback: (callback: unknown) => callback,
+             submitInFlightRef: { current: false }, closeRequestedRef: { current: false },
+             autoSaveInFlightRef: { current: null as Promise<void> | null },
++            draftScopeRef: { current: { ownerId: 'fixture-owner', restaurantId: 'fixture-restaurant', revision: null } },
++            saveOwnerRef: { current: 'fixture-owner' }, composerOpenRef: { current: true },
+             saveOperationRef: { current: { clearSavedDraft: async () => { await deleteDraft('fixture-owner', 'fixture-restaurant'); return true; } } },
+             setIsSaving() {}, setLastSavedAt() {}, deleteDraft,
+             saveDraft: async () => { writes++; writeEntered.resolve(); await writeDone.promise; exists = true; },
+@@ -320,3 +328,143 @@ describe('actual draft handlers and IndexedDB deletion boundary', () => {
+         expect(await clearDraft()).toBe(false);
+     });
+ });
++
++
++// Execute the real DB validators/save/read/compare-delete with a deterministic
++// transaction transport. The companion browser regression uses actual IDB.
++function revisionFixture() {
++    const f = fixture();
++    let now = Date.now() - 1000;
++    let stored: Record<string, unknown> | undefined;
++    let failCapture = false;
++    let failDelete = false;
++    const events = { captures: 0, deletes: 0 };
++    const read = () => stored && structuredClone(stored);
++    const db = {
++        get: async () => { if (failCapture) throw Error('SYNTHETIC_IO'); return read(); },
++        transaction: () => ({
++            store: {
++                put: async (row: Record<string, unknown>) => { stored = structuredClone(row); },
++                get: async () => read(),
++                delete: async () => { if (failDelete) throw Error('SYNTHETIC_IO'); events.deletes++; stored = undefined; },
++            }, done: Promise.resolve(),
++        }), close() {},
++    };
++    const draftSource = readFileSync(join(import.meta.dir, '../lib/reviewDraftDB.ts'), 'utf8');
++    const api = evaluate(draftSource.replace(/^import .* from 'idb';\n/, '') + `
++        initDB = async () => fixtureDB;
++        sweepExpiredOrInvalidDrafts = async () => {};
++        enforceUserDraftLimit = async () => {};
++        ({ saveDraft, getDraft, prepareDraftDeletion });`, {
++        fixtureDB: db, TextEncoder, Date: class extends Date { static now() { return now; } },
++    }) as Pick<typeof import('../lib/reviewDraftDB'), 'saveDraft' | 'getDraft' | 'prepareDraftDeletion'>;
++    f.setPrepareDeletion(async (...args) => { events.captures++; return Reflect.apply(api.prepareDraftDeletion, null, args); });
++    const bindings = {
++        ...f.bindings, currentStep: 3, useCallback: (fn: unknown) => fn,
++        ...api, setIsSaving() {}, setLastSavedAt() {},
++        setVisitedDate() {}, setVisitedTime() {}, setCategories() {}, setContent() {}, setCurrentStep() {},
++        replaceVerificationPhoto() {}, setFoodPhotos() {}, REVIEW_FORM_STEPS: [{ id: 1 }, { id: 2 }, { id: 3 }],
++    };
++    bindings.clearDraft = evaluate(nodeText(source, 'clearDraft') + ';', bindings) as () => Promise<boolean>;
++    const submit = () => (evaluate(nodeText(source, 'handleSubmit') + ';', bindings) as () => Promise<void>)();
++    const autoSave = () => (evaluate(nodeText(source, 'autoSave') + ';', bindings) as () => Promise<void>)();
++    const load = () => (evaluate(nodeText(source, 'loadDraft') + ';', bindings) as () => Promise<void>)();
++    const input = (content = f.bindings.content) => ({ userId: 'fixture-owner', restaurantId: 'fixture-restaurant',
++        visitedDate: f.bindings.visitedDate, visitedTime: f.bindings.visitedTime, categories: ['한식'], content, currentStep: 3 as const });
++    return { f, bindings, api, events, submit, autoSave, load, input, read,
++        tick: (ms = 1) => { now += ms; }, failCapture: (value: boolean) => { failCapture = value; },
++        failDelete: (value: boolean) => { failDelete = value; } };
++}
++
++describe('composer-owned draft revisions', () => {
++    test('pre-capture B saved at the same key survives A submit', async () => {
++        const s = revisionFixture(); await s.autoSave(); s.tick();
++        await s.api.saveDraft(s.input('Independent composer B synthetic text'));
++        const replacement = s.read(); await s.submit();
++        expect(s.f.counts.inserts).toBe(1); expect(s.f.counts.success).toBe(1);
++        expect(s.read()).toEqual(replacement); expect(s.events.deletes).toBe(0);
++    });
++    test.each(['upload', 'insert'])('fully compensated %s rejection refreshes same-composer autosave timestamp on retry', async kind => {
++        const s = revisionFixture(); await s.autoSave();
++        if (kind === 'upload') s.f.setUploadError({ statusCode: '403' }); else s.f.setMode('denied');
++        await s.submit(); expect(s.f.objects.size).toBe(0); expect(s.f.counts.success).toBe(0);
++        const before = s.read(); s.tick(); await s.autoSave();
++        expect(s.read()?.savedAt).not.toBe(before?.savedAt);
++        s.f.setUploadError(null); s.f.setMode('normal'); await s.submit();
++        expect(s.read()).toBeUndefined(); expect(s.f.rows.size).toBe(1);
++        expect(s.f.counts.success).toBe(1); expect(s.events.captures).toBe(2);
++    });
++    test('no own revision cannot delete an existing row; restored revision can', async () => {
++        const unowned = revisionFixture(); await unowned.api.saveDraft(unowned.input());
++        const row = unowned.read(); await unowned.submit();
++        expect(unowned.read()).toEqual(row); expect(unowned.events.deletes).toBe(0);
++        const restored = revisionFixture(); await restored.api.saveDraft(restored.input());
++        await restored.load(); await restored.submit();
++        expect(restored.read()).toBeUndefined(); expect(restored.events.deletes).toBe(1);
++    });
++    test('absent owned row never authorizes a subsequently saved row', async () => {
++        const s = revisionFixture();
++        const cleanup = await s.api.prepareDraftDeletion('fixture-owner', 'fixture-restaurant', null);
++        await s.autoSave(); const row = s.read();
++        expect(await cleanup()).toBe(true); expect(s.read()).toEqual(row);
++    });
++    test('B timestamp-only replacement before capture survives', async () => {
++        const s = revisionFixture(); await s.autoSave(); s.tick();
++        await s.api.saveDraft(s.input()); const row = s.read(); await s.submit();
++        expect(s.read()).toEqual(row); expect(s.events.deletes).toBe(0);
++    });
++    test('compensated retry cannot acquire B revision from the current IDB row', async () => {
++        const s = revisionFixture(); await s.autoSave(); s.f.setMode('denied'); await s.submit();
++        s.tick(); await s.api.saveDraft(s.input('Composer B after compensation'));
++        const row = s.read(); s.f.setMode('normal'); await s.submit();
++        expect(s.read()).toEqual(row); expect(s.events.captures).toBe(2);
++    });
++    test.each(['unknown-insert', 'unanswered-upload'])('%s never refreshes to a later same-composer autosave', async kind => {
++        const s = revisionFixture(); await s.autoSave();
++        if (kind === 'unknown-insert') s.f.setMode('lost-read-fails'); else s.f.setUploadError({ statusCode: '503' });
++        await s.submit(); s.tick(); await s.autoSave(); const row = s.read();
++        s.f.setMode('normal'); s.f.setUploadError(null); await s.submit();
++        expect(s.f.counts.success).toBe(1); expect(s.events.captures).toBe(1);
++        expect(s.read()).toEqual(row); expect(s.events.deletes).toBe(0);
++    });
++    test('known commit cleanup retry retains original revision after later autosave', async () => {
++        const s = revisionFixture(); await s.autoSave(); s.failDelete(true); await s.submit();
++        expect(s.f.recoveryStates).toEqual(['draft-cleanup']);
++        s.tick(); await s.autoSave(); const row = s.read(); s.failDelete(false); await s.submit();
++        expect(s.events.captures).toBe(1); expect(s.f.counts.inserts).toBe(1);
++        expect(s.read()).toEqual(row); expect(s.f.counts.success).toBe(1);
++    });
++    test('capture IO failure blocks writes and retry uses only the remembered revision', async () => {
++        const s = revisionFixture(); await s.autoSave(); s.failCapture(true); await s.submit();
++        expect(s.f.counts.uploads).toBe(0); expect(s.f.counts.inserts).toBe(0);
++        s.failCapture(false); s.tick(); await s.api.saveDraft(s.input('Composer B during capture failure'));
++        const row = s.read(); await s.submit();
++        expect(s.f.counts.success).toBe(1); expect(s.events.captures).toBe(2); expect(s.read()).toEqual(row);
++    });
++    test('scope mismatch cannot grant cleanup authority', async () => {
++        const s = revisionFixture(); await s.autoSave(); const row = s.read();
++        const other = { ...s.f.bindings.draftScopeRef.current.revision!, restaurantId: 'another-restaurant' };
++        const cleanup = await s.api.prepareDraftDeletion('fixture-owner', 'fixture-restaurant', other);
++        expect(await cleanup()).toBe(true); expect(s.read()).toEqual(row);
++    });
++    test.each(['autoSave', 'loadDraft'])('late %s completion cannot restore old scope authority', async name => {
++        const s = revisionFixture(); await s.autoSave(); const entered = gate(); const done = gate();
++        const local = { ...s.bindings,
++            saveDraft: async () => { entered.resolve(); await done.promise; return s.api.getDraft('fixture-owner', 'fixture-restaurant'); },
++            getDraft: async () => { entered.resolve(); await done.promise; return s.api.getDraft('fixture-owner', 'fixture-restaurant'); },
++        };
++        const run = evaluate(nodeText(source, name) + ';', local) as () => Promise<void>;
++        const pending = run(); await entered.promise;
++        // Even A -> B -> A receives a fresh scope object.
++        s.bindings.draftScopeRef.current = { ownerId: 'fixture-owner', restaurantId: 'fixture-restaurant', revision: null };
++        done.resolve(); await pending;
++        expect(s.bindings.draftScopeRef.current.revision).toBeNull();
++    });
++
++    test('expired owned revision cannot block submit or acquire a fresh B row', async () => {
++        const s = revisionFixture(); await s.autoSave(); s.tick(86_400_001);
++        await s.api.saveDraft(s.input('Fresh composer B after TTL')); const row = s.read();
++        await s.submit(); expect(s.f.counts.success).toBe(1); expect(s.read()).toEqual(row);
++    });
++
++});
+diff --git a/apps/web/tests-unit/review-draft-revision-browser.test.ts b/apps/web/tests-unit/review-draft-revision-browser.test.ts
+new file mode 100644
+index 00000000..b900033f
+--- /dev/null
++++ b/apps/web/tests-unit/review-draft-revision-browser.test.ts
+@@ -0,0 +1,182 @@
++import { expect, test } from 'bun:test';
++import { existsSync, readFileSync, writeFileSync } from 'node:fs';
++import { join } from 'node:path';
++import ts from 'typescript';
++import { chromium } from '@playwright/test';
++
++const appRoot = join(import.meta.dir, '..');
++const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
++
++async function bundle(sourceRoot: string) {
++    const source = readFileSync(join(sourceRoot, 'components/reviews/ReviewModal.tsx'), 'utf8');
++    const tree = ts.createSourceFile('ReviewModal.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
++    const nodes = new Map<string, string>();
++    const lifecycle: string[] = [];
++    function visit(node: ts.Node) {
++        if (ts.isFunctionDeclaration(node) && node.name) nodes.set(node.name.text, node.getText(tree));
++        if (ts.isVariableDeclaration(node) && node.initializer) nodes.set(node.name.getText(tree), node.initializer.getText(tree));
++        if (ts.isCallExpression(node) && node.expression.getText(tree) === 'useLayoutEffect'
++            && /saveOwnerRef|saveOperationRef/.test(node.getText(tree))) lifecycle.push(node.getText(tree));
++        ts.forEachChild(node, visit);
++    }
++    visit(tree);
++    expect(lifecycle).toHaveLength(2);
++    const handlers = ['autoSave', 'loadDraft', 'clearDraft', 'notifySavedReview', 'handleSubmit']
++        .map(name => { expect(nodes.has(name)).toBe(true); return `const ${name} = ${nodes.get(name)};`; }).join('\n');
++    const script = `
++        import React, { useState, useRef, useCallback, useLayoutEffect } from 'react';
++        import { createRoot } from 'react-dom/client';
++        import { flushSync } from 'react-dom';
++        import * as db from '@revision/db';
++        import { ReviewSaveOperation } from '@revision/operation';
++        import { buildReviewPhotoObjectPath, normalizeReviewPhotoFilename, cleanupCanonicalReviewPhotoObjects } from './lib/review-photo-url';
++        const { prepareDraftDeletion } = db;
++        let heldSave = null, heldLoad = null;
++        const saveDraft = async value => { const result = await db.saveDraft(value); if (heldSave) { heldSave.enter(); await heldSave.wait; } return result; };
++        const getDraft = async (...args) => { const result = await db.getDraft(...args); if (heldLoad) { heldLoad.enter(); await heldLoad.wait; } return result; };
++        const prepareReceiptImage = async file => file, compressFoodImage = async file => file;
++        let owner = 'fixture-owner', mode = 'normal', now = Date.now(), nextRestaurant = 0;
++        Date.now = () => now;
++        const rows = new Map(), objects = new Set(), registry = new Map();
++        const counts = { uploads: 0, inserts: 0, removes: 0, success: 0, closes: 0 };
++        const storage = {
++            async upload(path) { counts.uploads++; if (mode === 'upload-denied') return { error: { statusCode: '403' } }; objects.add(path); return { error: null }; },
++            async remove(paths) { counts.removes++; paths.forEach(path => objects.delete(path)); return { error: null }; },
++            async list(directory, { search }) { return { data: objects.has(directory + '/' + search) ? [{ name: search }] : [], error: null }; },
++        };
++        const supabase = {
++            storage: { from: () => storage },
++            from: () => ({
++                async insert(row) { counts.inserts++; if (mode === 'insert-denied') return { error: { code: '42501' } }; rows.set(row.id, row); return { error: null }; },
++                select() { const filters = {}; const q = { eq(key, value) { filters[key] = value; return q; }, async maybeSingle() { return { data: rows.get(filters.id) || null, error: null }; } }; return q; },
++            }),
++        };
++        const useAuth = () => ({ user: { id: owner } });
++        const REVIEW_FORM_STEPS = [{ id: 1 }, { id: 2 }, { id: 3 }];
++        const toast = () => {};
++        ${nodes.get('createReviewSaveOperation')}
++        ${nodes.get('ReviewModal')}
++        function ReviewComposer({ isOpen, restaurant, label, initialContent }) {
++            const { user } = useAuth();
++            const selectedRestaurant = null, reviewTargetRestaurant = restaurant;
++            const [visitedDate, setVisitedDate] = useState('2026-10-04');
++            const [visitedTime, setVisitedTime] = useState('12:00');
++            const [categories, setCategories] = useState(['한식']);
++            const [content, setContent] = useState(initialContent);
++            const [verificationPhoto, replaceVerificationPhoto] = useState(() => new File(['synthetic'], 'receipt.jpg'));
++            const [foodPhotos, setFoodPhotos] = useState(() => [new File(['synthetic'], 'food.jpg')]);
++            const [currentStep, setCurrentStep] = useState(3);
++            const [, setIsSubmitting] = useState(false), [, setIsSaving] = useState(false), [, setLastSavedAt] = useState(null), [, setSaveRecovery] = useState(null);
++            const saveOwnerRef = useRef(user.id), saveOperationRef = useRef(null), submitInFlightRef = useRef(false);
++            const closeRequestedRef = useRef(false), composerOpenRef = useRef(isOpen), consumerNotifiedRef = useRef(false), autoSaveInFlightRef = useRef(null);
++            const draftScopeRef = useRef({ ownerId: user.id, restaurantId: restaurant.id, revision: null });
++            const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: restaurant.id });
++            ${lifecycle.join(';\n')};
++            const onSuccess = () => { counts.success++; };
++            const handleClose = async () => { counts.closes++; };
++            ${handlers}
++            useLayoutEffect(() => { registry.set(label, { autoSave, loadDraft, handleSubmit, draftScopeRef, content }); });
++            return <output>{content}</output>;
++        }
++        function mount(label, restaurantId, initialContent = 'Synthetic composer text with sufficient length.') {
++            const host = document.createElement('div'); document.body.append(host); const root = createRoot(host);
++            const render = id => flushSync(() => root.render(<ReviewModal label={label} initialContent={initialContent} isOpen={true} restaurant={{ id, name: 'Fixture' }} />));
++            render(restaurantId);
++            return { get current() { return registry.get(label); }, render, close() { flushSync(() => root.unmount()); host.remove(); } };
++        }
++        function barrier() { let enter, release; const entered = new Promise(resolve => { enter = resolve; }); const wait = new Promise(resolve => { release = resolve; }); return { enter, entered, wait, release }; }
++        window.run = async () => {
++            const result = {};
++            const id = () => 'fixture-restaurant-' + (++nextRestaurant);
++            const firstId = id(); const a = mount('a', firstId); const b = mount('b', firstId, 'Independent composer B synthetic bounded text.');
++            await a.current.autoSave(); now++; await b.current.autoSave();
++            const beforeB = await db.getDraft(owner, firstId); await a.current.handleSubmit();
++            result.preCaptureBPreserved = JSON.stringify(await db.getDraft(owner, firstId)) === JSON.stringify(beforeB);
++            a.close(); b.close();
++            for (const kind of ['upload', 'insert']) {
++                const restaurant = id(); const composer = mount(kind, restaurant);
++                await composer.current.autoSave(); const before = await db.getDraft(owner, restaurant);
++                mode = kind + '-denied'; await composer.current.handleSubmit();
++                const compensated = objects.size === 2; // Only A's successful review from the prior scene.
++                now++; await composer.current.autoSave(); const after = await db.getDraft(owner, restaurant);
++                mode = 'normal'; await composer.current.handleSubmit();
++                result[kind + 'RetryClearsOwnRevision'] = compensated && before.savedAt !== after.savedAt && await db.getDraft(owner, restaurant) === null;
++                composer.close();
++                // Keep only first scene's two objects for the next compensation check.
++                for (const path of [...objects]) if (rows.get(path.split('/')[2])?.restaurant_id === restaurant) objects.delete(path);
++            }
++            for (const kind of ['save', 'load']) {
++                const restaurant = id(); const composer = mount('late-' + kind, restaurant);
++                const input = { userId: owner, restaurantId: restaurant, currentStep: 3, visitedDate: '2026-10-04', visitedTime: '12:00', categories: ['한식'], content: 'Synthetic stored text for delayed load completion.' };
++                await db.saveDraft(input); const barrierState = barrier();
++                if (kind === 'save') heldSave = barrierState; else heldLoad = barrierState;
++                const pending = kind === 'save' ? composer.current.autoSave() : composer.current.loadDraft();
++                await barrierState.entered;
++                composer.render(id()); composer.render(restaurant);
++                barrierState.release(); await pending;
++                heldSave = null; heldLoad = null;
++                result[kind + 'ScopeFence'] = composer.current.draftScopeRef.current.revision === null;
++                composer.close();
++            }
++            const restaurant = id();
++            const committed = await db.saveDraft({ userId: owner, restaurantId: restaurant, currentStep: 3, visitedDate: '2026-10-04', visitedTime: '12:00', categories: ['한식'], content: 'Synthetic privacy row', verificationPhoto: new File(['synthetic'], 'receipt.jpg'), foodPhotos: ['blob:excluded'] });
++            const database = await new Promise((resolve, reject) => { const request = indexedDB.open('tzudong-review-drafts', 3); request.onsuccess = () => resolve(request.result); request.onerror = reject; });
++            const persisted = await new Promise(resolve => { const request = database.transaction('review-drafts').objectStore('review-drafts').get([owner, restaurant]); request.onsuccess = () => resolve(request.result); });
++            result.committedBoundedTextOnly = !!committed && Object.keys(committed).sort().join(',') === 'categories,content,currentStep,restaurantId,savedAt,userId,visitedDate,visitedTime'
++                && JSON.stringify(committed) === JSON.stringify(await db.getDraft(owner, restaurant));
++            result.persistedV3Unchanged = database.version === 3 && Object.keys(persisted).sort().join(',') === 'categories,content,currentStep,expiresAt,restaurantId,savedAt,userId,visitedDate,visitedTime'
++                && persisted.expiresAt - Date.parse(persisted.savedAt) === 86400000;
++            database.close();
++            return { result, counts, cases: Object.keys(result).length };
++        };
++    `;
++    const built = await Bun.build({
++        entrypoints: ['review-revision-fixture'], target: 'browser', format: 'iife', write: false,
++        plugins: [{ name: 'offline-source-revision', setup(builder) {
++            builder.onResolve({ filter: /^review-revision-fixture$/ }, () => ({ path: 'fixture', namespace: 'fixture' }));
++            builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: script, loader: 'tsx', resolveDir: appRoot }));
++            builder.onResolve({ filter: /^@revision\// }, args => ({ path: args.path, namespace: 'revision' }));
++            builder.onLoad({ filter: /.*/, namespace: 'revision' }, args => ({
++                contents: readFileSync(join(sourceRoot, args.path.endsWith('/db') ? 'lib/reviewDraftDB.ts' : 'lib/reviews/review-save-operation.ts'), 'utf8'),
++                loader: 'ts', resolveDir: appRoot,
++            }));
++        } }],
++    });
++    expect(built.success).toBe(true);
++    return built.outputs[0].text();
++}
++
++// One isolated browser process, no configured SDK, server, profile or remote I/O.
++// Optional frozen baseline comparison stays inside this same process.
++(existsSync(chrome) ? test : test.skip)('real React and IDB composer revision orderings', async () => {
++    const roots = [{ phase: 'after', root: appRoot }];
++    if (process.env.TZUDONG_DRAFT_REVISION_BASELINE) roots.unshift({ phase: 'baseline', root: process.env.TZUDONG_DRAFT_REVISION_BASELINE });
++    const scripts = await Promise.all(roots.map(async entry => ({ ...entry, script: await bundle(entry.root) })));
++    const browser = await chromium.launch({ executablePath: chrome, headless: true });
++    const reports: unknown[] = [];
++    try {
++        for (const entry of scripts) {
++            const context = await browser.newContext(); const page = await context.newPage();
++            let externalRequests = 0, pageErrors = 0;
++            page.on('pageerror', () => { pageErrors++; });
++            await page.route('**/*', route => {
++                if (route.request().url() === 'https://draft-revision.test/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' });
++                externalRequests++; return route.abort();
++            });
++            await page.goto('https://draft-revision.test/'); await page.addScriptTag({ content: entry.script });
++            const report = await page.evaluate(async () => (window as unknown as { run(): Promise<{ result: Record<string, boolean>; cases: number }> }).run());
++            reports.push({ phase: entry.phase, ...report, externalRequests, pageErrors });
++            expect(externalRequests).toBe(0); expect(pageErrors).toBe(0);
++            expect(report.cases).toBe(7);
++            if (entry.phase === 'baseline') {
++                expect(report.result.preCaptureBPreserved).toBe(false);
++                expect(report.result.uploadRetryClearsOwnRevision).toBe(false);
++                expect(report.result.insertRetryClearsOwnRevision).toBe(false);
++            } else for (const passed of Object.values(report.result)) expect(passed).toBe(true);
++            await context.close();
++        }
++    } finally {
++        await browser.close();
++        if (process.env.TZUDONG_DRAFT_REVISION_EVIDENCE) writeFileSync(process.env.TZUDONG_DRAFT_REVISION_EVIDENCE, JSON.stringify({ browserProcesses: 1, reports }, null, 2) + '\n');
++    }
++}, 30_000);

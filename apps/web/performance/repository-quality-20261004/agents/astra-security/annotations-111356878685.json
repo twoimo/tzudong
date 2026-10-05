@@ -1,0 +1,34 @@
+{
+  "name": "annotations-111356878685",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/check-runs/111356878685/annotations?per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4951",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:39:44.809327+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 2,
+  "items": [
+    {
+      "annotation_level": "failure",
+      "end_line": 359,
+      "path": "apps/web/scripts/codex-imagegen-provider-core.py",
+      "start_line": 359
+    },
+    {
+      "annotation_level": "failure",
+      "end_line": 214,
+      "path": "apps/web/scripts/preview-design-fixtures.mjs",
+      "start_line": 213
+    }
+  ]
+}

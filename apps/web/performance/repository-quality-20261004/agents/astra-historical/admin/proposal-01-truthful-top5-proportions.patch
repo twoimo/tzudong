@@ -1,0 +1,32 @@
+--- a/apps/web/components/admin/AdminConsoleOverview.tsx
++++ b/apps/web/components/admin/AdminConsoleOverview.tsx
+@@ -5167,8 +5167,9 @@
+                       lines={
+                         metric.key === "viewCount"
+                           ? [
+                               `${row.label}`,
++                              `${metric.label}: ${formatNumber(value)}`,
+                               `막대 비중: ${formatDashboardPercent(percent)}`,
+                               `성과 기여: ${row.viewBenchmark}`,
+                             ]
+                           : [
+@@ -5178,16 +5179,16 @@
+                               formatDashboardAverageComparison(value, average),
+                             ]
+                       }
+                       className={cn(
+-                        "flex min-w-[8%] items-center justify-center px-0.5 text-2xs font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
++                        "flex min-w-0 shrink-0 items-center justify-center overflow-hidden text-2xs font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                         rankColors[index]?.barClass ??
+                           "bg-muted-foreground/28 text-foreground dark:bg-muted-foreground/35 dark:text-foreground",
+                       )}
+                       rankSegment={index + 1}
+-                      style={{ width: `${Math.max(8, percent)}%` }}
++                      style={{ width: `${percent}%` }}
+                     >
+-                      {percent.toFixed(0)}%
++                      {percent >= 8 ? `${percent.toFixed(0)}%` : ""}
+                     </AdminDashboardInlineTooltip>
+                   );
+                 })}
+               </div>

@@ -1,0 +1,21 @@
+{
+  "name": "code-scanning-branch-88dc1d2ddb3b10c3",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-scanning/alerts?state=open&ref=refs%2Fheads%2Fgjc%2Fg016-readback-fix&per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "admin:repo_hook, delete_repo, read:repo_hook, repo, repo:invite, repo:status, repo_deployment, security_events, write:repo_hook",
+        "x-ratelimit-remaining": "4619",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:46:52.513481+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 0,
+  "items": []
+}

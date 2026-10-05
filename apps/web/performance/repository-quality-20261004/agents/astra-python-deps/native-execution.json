@@ -1,0 +1,45 @@
+{
+  "verification_level": "Local native session metadata plus actual tool executions; no independent server model attestation.",
+  "sessions": [
+    {
+      "id": "01a10657-0201-7350-a73d-88dd8ce446ca",
+      "metadata_path": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T18-55-27-01a10657-0201-7350-a73d-88dd8ce446ca.jsonl",
+      "turns": [
+        {
+          "line": 6,
+          "model": "gpt-6-astra",
+          "effort": "xhigh",
+          "turn_id": "01a10657-026e-74a3-813d-801ae3b2c8e0"
+        }
+      ],
+      "current_turn_tool_calls": 35,
+      "current_turn_tool_results": 34,
+      "current_turn_token_events": 35,
+      "model_provider": "openai",
+      "originator": "Codex Desktop",
+      "meta_line": 1,
+      "cli_version": "0.160.0",
+      "native_subagent": true
+    },
+    {
+      "id": "01a10658-08f4-75a1-84f7-f94e5f3efebf",
+      "metadata_path": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T18-56-35-01a10658-08f4-75a1-84f7-f94e5f3efebf.jsonl",
+      "turns": [
+        {
+          "line": 11,
+          "model": "gpt-6-astra",
+          "effort": "xhigh",
+          "turn_id": "01a10658-0b0c-75f1-b9ca-bf2d9c59d92e"
+        }
+      ],
+      "current_turn_tool_calls": 21,
+      "current_turn_tool_results": 21,
+      "current_turn_token_events": 22,
+      "model_provider": "openai",
+      "originator": "Codex Desktop",
+      "meta_line": 1,
+      "cli_version": "0.160.0",
+      "native_subagent": true
+    }
+  ]
+}

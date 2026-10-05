@@ -1,0 +1,21 @@
+{
+  "existing_test_definitions_compared": 20,
+  "existing_test_changes": [],
+  "added_test_definitions": [
+    "PosixProcessGroupReapingTests.test_exited_leader_is_reaped_while_waiting_for_group_empty",
+    "PosixProcessGroupReapingTests.test_failed_supervision_reaps_child_without_claiming_success",
+    "PosixProcessGroupReapingTests.test_reaped_leader_does_not_override_unconfirmed_group",
+    "PosixProcessGroupReapingTests.test_reaped_leader_still_requires_stubborn_descendant_to_exit",
+    "PosixProcessGroupReapingTests.test_reaping_preserves_nonzero_status_and_unrelated_child",
+    "PosixProcessGroupReapingTests.test_signal_failures_never_fall_back_to_parent_only_cleanup"
+  ],
+  "changed_production_definitions": [
+    "_wait_for_posix_process_group",
+    "_terminate_posix_process_group",
+    "_ProcessTreeSupervisor.terminate",
+    "run_command"
+  ],
+  "added_production_definitions": [],
+  "baseline_nodes_sha256": "f1170e09ba459331af52ae2e6155bb4f7d8bdfa95d2c36ab6666af8c759dd788",
+  "baseline_tests_sha256": "16ed22ec3086ab90047984a4d7fd92095862bba05e76c5821ba3190428c3ee54"
+}

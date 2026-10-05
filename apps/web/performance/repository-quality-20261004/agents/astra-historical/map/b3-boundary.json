@@ -1,0 +1,85 @@
+{
+  "b3EvidenceHashes": {
+    "REPORT.md": "684283f4afea3263122b52ee5e74d73d75314e1cff8ab02675b4d6d8d21c681e",
+    "pr3032-worker.md": "322c4c10df91bafefef3b7ea3396f73101db57a0cc868743986cd965fca49680",
+    "v2/REPORT.md": "a54c4cbc6b69b9966cae05139dfc12440677b2cc36f5af92ad6f3ad5383f71fc",
+    "v2/validation.json": "f9b3dc56f35328105dad461b79a107b56bfa1539d57e5db978e7670f867ba349"
+  },
+  "b3SourceComparison": {
+    "apps/web/app/api/dashboard/restaurants/route.ts": {
+      "b3v2": "26744505c3de07dd8b86d6a9442fa5ff155a3c127c85d3845026394607f665b8",
+      "current": "26744505c3de07dd8b86d6a9442fa5ff155a3c127c85d3845026394607f665b8",
+      "equal": true
+    },
+    "apps/web/app/api/dashboard/summary/route.ts": {
+      "b3v2": "8f373465c2193c6c72d36d79befcf6d2e7b78a6c39c0d91942ee4c7b33279551",
+      "current": "8f373465c2193c6c72d36d79befcf6d2e7b78a6c39c0d91942ee4c7b33279551",
+      "equal": true
+    },
+    "apps/web/app/api/dashboard/video/[videoId]/route.ts": {
+      "b3v2": "bd27725081433e3bc93837f9b7fa3cfd5446fe262b65f62bf587ec10820d18da",
+      "current": "bd27725081433e3bc93837f9b7fa3cfd5446fe262b65f62bf587ec10820d18da",
+      "equal": true
+    },
+    "apps/web/components/ui/alert-dialog.tsx": {
+      "b3v2": "8fbd1080d341f8927947b3a77adb13ca9dd7cddf70a02df0634a57e34549100c",
+      "current": "8fbd1080d341f8927947b3a77adb13ca9dd7cddf70a02df0634a57e34549100c",
+      "equal": true
+    },
+    "apps/web/components/ui/dialog.tsx": {
+      "b3v2": "131a1e1a4bb49b011c08e664516ac60c112f4567b3154c9b95a7959da63ef820",
+      "current": "131a1e1a4bb49b011c08e664516ac60c112f4567b3154c9b95a7959da63ef820",
+      "equal": true
+    },
+    "apps/web/hooks/use-restaurants.tsx": {
+      "b3v2": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+      "current": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+      "equal": true
+    },
+    "apps/web/lib/dashboard/helpers.ts": {
+      "b3v2": "cb8fe6708a4496e9ba8f4954e27b124f60326c9dc5d66017dcfeb174a0947943",
+      "current": "cb8fe6708a4496e9ba8f4954e27b124f60326c9dc5d66017dcfeb174a0947943",
+      "equal": true
+    },
+    "apps/web/lib/dashboard/summary.ts": {
+      "b3v2": "a714eb474871a021d3c16ce1d9f62d50885df01c3b7179e3807dfb8a3ebe3faf",
+      "current": "a714eb474871a021d3c16ce1d9f62d50885df01c3b7179e3807dfb8a3ebe3faf",
+      "equal": true
+    },
+    "apps/web/lib/supabase-rest-client.ts": {
+      "b3v2": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27",
+      "current": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27",
+      "equal": true
+    },
+    "apps/web/tests-unit/dashboard-aggregation.test.ts": {
+      "b3v2": "93aef611c21dd40ac1163e8a7ed916bc946aa74d97eb15d7c47d0c8653369192",
+      "current": "93aef611c21dd40ac1163e8a7ed916bc946aa74d97eb15d7c47d0c8653369192",
+      "equal": true
+    },
+    "apps/web/tests-unit/supabase-rest-client.test.ts": {
+      "b3v2": "5c16753b5b267cbb6efb1b5ca0876a3a4e948fdf68880c2247fbb21cb0255fd8",
+      "current": "5c16753b5b267cbb6efb1b5ca0876a3a4e948fdf68880c2247fbb21cb0255fd8",
+      "equal": true
+    },
+    "apps/web/tests-unit/use-restaurants-merge.test.ts": {
+      "b3v2": "4a43c2e80d373835717122f85d5ef877a3833912ff2932d11e3607913ba23178",
+      "current": "4a43c2e80d373835717122f85d5ef877a3833912ff2932d11e3607913ba23178",
+      "equal": true
+    },
+    "apps/web/tests-unit/youtube-link-helpers.test.ts": {
+      "b3v2": "f7c129d4067da361fac637f99641507882844a5607ce7c9e1fc03ee1a4a4eab5",
+      "current": "f7c129d4067da361fac637f99641507882844a5607ce7c9e1fc03ee1a4a4eab5",
+      "equal": true
+    },
+    "apps/web/tests-unit/dashboard-route-contract.test.ts": {
+      "b3v2": "0b69df5cee0d5d3c20d7e8bb10fb887e02e66d0e1e8848be414f359cb46e25b8",
+      "current": "0b69df5cee0d5d3c20d7e8bb10fb887e02e66d0e1e8848be414f359cb46e25b8",
+      "equal": true
+    },
+    "apps/web/tests-unit/dialog-content-inset.test.ts": {
+      "b3v2": "9bfa110a852eb81c03d30eaf4afb79390c721d6b641315b291082f54ad0dfbdb",
+      "current": "9bfa110a852eb81c03d30eaf4afb79390c721d6b641315b291082f54ad0dfbdb",
+      "equal": true
+    }
+  }
+}

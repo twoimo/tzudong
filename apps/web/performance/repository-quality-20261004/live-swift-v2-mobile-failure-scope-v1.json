@@ -1,0 +1,1 @@
+{"preservedRaw":"live-swift-production-v2/raw.json","passedCases":["desktop","tablet"],"failedCase":"mobile","failedStage":"transparent PNG and filter geometry","newHarnessUsesActualControlAndDecodedImageReadiness":true,"productDelayAdded":false,"failureCauseNotYetProven":true}

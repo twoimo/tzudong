@@ -1,0 +1,41 @@
+{
+  "status": "produced_pending_scorer",
+  "binding": {
+    "releaseId": "repository-quality-main-lab-20261005",
+    "candidate": {
+      "sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "tree": "84d8f211d372fab619f344152dc4405e8c37dc82"
+    },
+    "configSha256": "08beb50dbb1c9450d27284f07cba65bf141ba319de533da93b7d6fdf8e90bfe1",
+    "dataProfileSha256": "230a084b2e50a46603e5400af6225baccfdd75d810d933236b7de8801cbddf1d"
+  },
+  "window": {
+    "start": "2026-10-04T18:47:51.533660Z",
+    "end": "2026-10-04T21:47:51.533660Z"
+  },
+  "pins": {
+    "rawSchema": {
+      "path": "contracts/backlog-raw.schema.json",
+      "sha256": "1b9a7b84e08496ad5eeda2823b9f92524cbf02025c5d6177c787e2f826d3d11b"
+    },
+    "scoredSchema": {
+      "path": "contracts/backlog-scored.schema.json",
+      "sha256": "04d50a9f126fe8cfca3c166c04f4b5ece121ba5617649a38e8f4a9619d5c4207"
+    },
+    "budget": {
+      "path": "contracts/performance-budgets.v1.json",
+      "sha256": "7e563fc1c1c18cfa7878f45218768d13f400db364e75f06e482d2c858eeabb37"
+    }
+  },
+  "actualBrowserSummarySha256": "711930a0fa8788e32f52c621b2879194e341d03d80e40c92653133fd63c4f44e",
+  "healthCaptureTime": "2026-10-04T20:59:46.950095Z",
+  "healthCaptureTimeMeaning": "file recording timestamp of the bounded outcome; event-level timestamps not available",
+  "timingAdmissionAllowed": false,
+  "emptyItemsReason": "These lab medians and small field cohorts do not provide the required canonical app-owned p75 measurement envelope. No fabricated observations.",
+  "observedConsoleEventCount": 7,
+  "coverageMeaning": "Counts are only incidents in this bounded source/selected evidence window, not full production health coverage. Other zero counts must not be construed as no operational errors. Required UI console events fail the score health gate.",
+  "canonicalMeasurementsProduced": 0,
+  "mapSha256": "76b471a87b2a36e84ada58b7954f4918affb01fd1bba80e1167b7911eeeb327e",
+  "pinExternalToArtifactRoot": true,
+  "oldCanonicalPacketNotOverwritten": true
+}

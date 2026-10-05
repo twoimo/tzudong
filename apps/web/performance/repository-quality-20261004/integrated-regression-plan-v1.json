@@ -1,0 +1,41 @@
+{
+  "createdAt": "2026-10-04T11:34:44.076103+00:00",
+  "baselineBuild": "readiness-v1",
+  "candidateBuild": "integrated-v1",
+  "baseSourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "changeScope": "integrated known-commit recovery, video/REST/modal contracts, Next16.3.6 and dependency compatibility; fixed prior guards unchanged",
+  "processPairs": 9,
+  "warmupPairs": 2,
+  "aaCounts": [
+    735
+  ],
+  "abCounts": [
+    735,
+    2000
+  ],
+  "cpuRate": 4,
+  "viewport": [
+    390,
+    844
+  ],
+  "network": "unthrottled actual remote Naver SDK and tiles; synthetic REST responses",
+  "cache": "fresh process/context per observation, HTTP cache disabled, service workers blocked/bypassed",
+  "heapEndpointAfterVisibleMs": 600,
+  "retentionMax": 1000,
+  "latencyRegressionTolerancePercent": 15,
+  "naturalHeapRegressionTolerancePercent": 20,
+  "noiseFloorRelativePercent": 15,
+  "aaNoise": "fresh735 A/A9pairs in same new window before A/B; no2000 A/A or improvement claim",
+  "sameEndpoint": "trusted cluster click to first of two visible rAFs; natural heap +600ms before membership serialization",
+  "probe": "visible-marker scanning stops at the first display; does not scan retained offscreen markers throughout the endpoint window",
+  "forcedGC": false,
+  "p95": "not reported at n9",
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "warmMemory": "not measured by this cold protocol; preserve original warm evidence separately",
+  "thresholdsChangedAfterObservation": false,
+  "sourceCommit": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "beforeAndAfterSmallRetention": true,
+  "afterIndependentWarmRegression": "not established by this protocol",
+  "physicalDevice": "held by explicit user request; no phone use or extrapolation"
+}

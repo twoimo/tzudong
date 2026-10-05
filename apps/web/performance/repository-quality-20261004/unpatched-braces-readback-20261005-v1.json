@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-10-04T16:40:35.491084+00:00",
+  "registryLatest": "3.0.3",
+  "upstreamPR": {
+    "head": "28d440b5dd449dbf1fe6f3506cf94ecca4d02660",
+    "merged": false,
+    "state": "open"
+  },
+  "advisory": [
+    {
+      "ecosystem": "npm",
+      "package": "braces",
+      "range": "<= 3.0.3",
+      "firstPatched": null
+    }
+  ]
+}

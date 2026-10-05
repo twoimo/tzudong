@@ -1,0 +1,97 @@
+[
+  {
+    "case": "capture-owner-change",
+    "captures": 1,
+    "uploads": 0,
+    "inserts": 0,
+    "removes": 0,
+    "reads": 0,
+    "cleared": 0,
+    "success": 0,
+    "closes": 0
+  },
+  {
+    "case": "transient-snapshot-failure-retry-close",
+    "events": [
+      "snapshot"
+    ],
+    "uploads": 2,
+    "inserts": 1,
+    "removes": 0,
+    "reads": 0,
+    "cleared": 0,
+    "success": 0,
+    "closes": 0,
+    "draftRetained": true,
+    "recoveryStates": [
+      "draft-cleanup",
+      "draft-cleanup",
+      "draft-cleanup"
+    ]
+  },
+  {
+    "case": "unanswered-then-own-autosave-then-recovered-commit",
+    "events": [
+      "snapshot",
+      "same-input-autosave-new-timestamp",
+      "compare"
+    ],
+    "uploads": 2,
+    "inserts": 1,
+    "removes": 0,
+    "reads": 2,
+    "cleared": 0,
+    "success": 1,
+    "closes": 1,
+    "draftRetained": true,
+    "recoveryStates": [
+      null
+    ]
+  },
+  {
+    "case": "exact-row-then-absent",
+    "first": true,
+    "second": true,
+    "deletes": 1,
+    "rowPresent": false
+  },
+  {
+    "case": "changed-text",
+    "first": true,
+    "second": true,
+    "deletes": 0,
+    "rowPreservedExactly": true
+  },
+  {
+    "case": "same-text-new-timestamp",
+    "first": true,
+    "second": true,
+    "deletes": 0,
+    "rowPreservedExactly": true
+  },
+  {
+    "case": "absent-then-replaced",
+    "first": true,
+    "second": true,
+    "deletes": 0,
+    "rowPreservedExactly": true
+  },
+  {
+    "case": "unknown-retry-preserves-B",
+    "snapshots": 1,
+    "deletes": 0,
+    "uploads": 2,
+    "inserts": 1,
+    "removes": 0,
+    "reads": 2,
+    "cleared": 0,
+    "success": 1,
+    "closes": 1,
+    "rowPreservedExactly": true
+  },
+  {
+    "case": "invalid-snapshot",
+    "result": false,
+    "deletes": 0
+  }
+]

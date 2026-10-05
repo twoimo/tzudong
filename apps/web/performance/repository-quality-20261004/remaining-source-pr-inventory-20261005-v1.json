@@ -1,0 +1,221 @@
+[
+  {
+    "number": 3031,
+    "title": "perf(web): 같은 영상 링크의 ID 추출과 재조회를 한 번만 한다",
+    "state": "OPEN",
+    "head": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+    "base": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+    "files": [
+      {
+        "path": "README.md",
+        "additions": 14,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/app/api/dashboard/restaurants/route.ts",
+        "additions": 4,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/app/api/dashboard/summary/route.ts",
+        "additions": 4,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+        "additions": 19,
+        "deletions": 3,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/components/map/NaverMapView.tsx",
+        "additions": 0,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/hooks/use-restaurants.tsx",
+        "additions": 4,
+        "deletions": 2,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/lib/dashboard/helpers.ts",
+        "additions": 48,
+        "deletions": 14,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/lib/dashboard/summary.ts",
+        "additions": 52,
+        "deletions": 18,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/lib/home-map-youtube-kpi.ts",
+        "additions": 3,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/lib/map-restaurant-lookup.ts",
+        "additions": 26,
+        "deletions": 16,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs",
+        "additions": 70,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json",
+        "additions": 28,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs",
+        "additions": 194,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/performance/dashboard-video-id-20260923/benchmark.json",
+        "additions": 153,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs",
+        "additions": 101,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/performance/map-restaurant-lookup-20260923/benchmark.json",
+        "additions": 98,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+        "additions": 56,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/tests-unit/dashboard-public-visibility-source.test.ts",
+        "additions": 3,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+        "additions": 18,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/tests-unit/map-restaurant-lookup.test.ts",
+        "additions": 39,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+        "additions": 31,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/tests-unit/youtube-link-helpers.test.ts",
+        "additions": 33,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      }
+    ],
+    "intentFullyCompared": false,
+    "closureIssued": false
+  },
+  {
+    "number": 3032,
+    "title": "fix: 단일 맛집 병합과 모달 너비를 정리한다",
+    "state": "OPEN",
+    "head": "76afb0634b6710581aa296a9644929313e24b36f",
+    "base": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+    "files": [
+      {
+        "path": "apps/web/components/filters/CategoryFilter.tsx",
+        "additions": 2,
+        "deletions": 3,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/components/ui/alert-dialog.tsx",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/components/ui/dialog.tsx",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/hooks/use-restaurants.tsx",
+        "additions": 37,
+        "deletions": 15,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/lib/supabase-rest-client.ts",
+        "additions": 40,
+        "deletions": 23,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "apps/web/tests-unit/dialog-content-inset.test.ts",
+        "additions": 16,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/tests-unit/supabase-rest-failure.test.ts",
+        "additions": 145,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+        "additions": 40,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      }
+    ],
+    "intentFullyCompared": false,
+    "closureIssued": false
+  },
+  {
+    "number": 2903,
+    "title": "docs: clean up README with concise features and visual product tour",
+    "state": "OPEN",
+    "head": "da096e04baf979ac35531172c7a1de95090aa649",
+    "base": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+    "files": [
+      {
+        "path": "README.md",
+        "additions": 92,
+        "deletions": 54,
+        "changeType": "MODIFIED"
+      }
+    ],
+    "intentFullyCompared": false,
+    "closureIssued": false
+  }
+]

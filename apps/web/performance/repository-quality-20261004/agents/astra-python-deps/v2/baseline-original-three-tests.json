@@ -1,0 +1,47 @@
+[
+  {
+    "target": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_timeout_terminates_descendant_process_tree",
+    "tests_run": 1,
+    "failures": 1,
+    "errors": 0,
+    "skips": [],
+    "issues": [
+      {
+        "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_timeout_terminates_descendant_process_tree",
+        "kind": "failure",
+        "type": "AssertionError"
+      }
+    ],
+    "successful": false
+  },
+  {
+    "target": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_killpg_failure_uses_full_group_helper_without_descendant_leak",
+    "tests_run": 1,
+    "failures": 1,
+    "errors": 0,
+    "skips": [],
+    "issues": [
+      {
+        "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_killpg_failure_uses_full_group_helper_without_descendant_leak",
+        "kind": "failure",
+        "type": "AssertionError"
+      }
+    ],
+    "successful": false
+  },
+  {
+    "target": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_tree_helper_term_failure_escalates_to_full_group_kill",
+    "tests_run": 1,
+    "failures": 1,
+    "errors": 0,
+    "skips": [],
+    "issues": [
+      {
+        "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_tree_helper_term_failure_escalates_to_full_group_kill",
+        "kind": "failure",
+        "type": "AssertionError"
+      }
+    ],
+    "successful": false
+  }
+]

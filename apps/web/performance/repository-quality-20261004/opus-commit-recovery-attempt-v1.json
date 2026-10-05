@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-04T10:14:03.903171+00:00",
+  "requestedModel": "google-antigravity/claude-opus-5-5",
+  "requestedEffort": "high",
+  "agentId": "01a10664-9ebb-7f10-ad03-a80eb32b744d",
+  "outcome": "upstream429",
+  "reviewCompleted": false,
+  "fallbackModelUsed": false,
+  "paidCapacityAdded": false
+}

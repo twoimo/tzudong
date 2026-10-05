@@ -1,0 +1,21 @@
+{
+  "name": "statuses-data",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/commits/4bda4aaebee8bffac723e09b35b0712e8b4adf6e/statuses?per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "repo, repo:status",
+        "x-ratelimit-remaining": "4970",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:31:30.363380+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 0,
+  "items": []
+}

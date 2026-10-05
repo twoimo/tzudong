@@ -1,0 +1,56 @@
+[
+  {
+    "label": "pr2906",
+    "sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+    "path": "apps/web/package-lock.json",
+    "package_versions": {
+      "node_modules/js-yaml": "4.3.1",
+      "node_modules/maplibre-gl": "5.24.0",
+      "node_modules/sharp": "0.35.3"
+    }
+  },
+  {
+    "label": "pr2906",
+    "sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+    "path": "backend/package-lock.json",
+    "package_versions": {
+      "node_modules/js-yaml": "4.3.1"
+    }
+  },
+  {
+    "label": "candidate",
+    "sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+    "path": "apps/web/package-lock.json",
+    "package_versions": {
+      "node_modules/js-yaml": "4.3.2",
+      "node_modules/maplibre-gl": "6.10.0",
+      "node_modules/sharp": "0.35.4"
+    }
+  },
+  {
+    "label": "candidate",
+    "sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+    "path": "backend/package-lock.json",
+    "package_versions": {
+      "node_modules/js-yaml": "4.3.2"
+    }
+  },
+  {
+    "label": "main",
+    "sha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+    "path": "apps/web/package-lock.json",
+    "package_versions": {
+      "node_modules/js-yaml": "4.3.2",
+      "node_modules/maplibre-gl": "6.10.0",
+      "node_modules/sharp": "0.35.4"
+    }
+  },
+  {
+    "label": "main",
+    "sha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+    "path": "backend/package-lock.json",
+    "package_versions": {
+      "node_modules/js-yaml": "4.3.2"
+    }
+  }
+]

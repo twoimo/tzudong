@@ -1,0 +1,8 @@
+{
+  "thread_id": "01a10606-c2a4-7c90-a8be-65fdc39d124f",
+  "evidence": "session_meta and turn_context in current session rollout",
+  "provider": "openai",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "model_substitution": false
+}

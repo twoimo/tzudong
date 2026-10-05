@@ -1,0 +1,827 @@
+{
+  "runtime": "Python 3.12.13 / macOS arm64",
+  "security_ci_interpreter": "Python 3.11.17",
+  "audit_tool_pin": "pip-audit==2.10.1 from .github/workflows/security-audit.yml",
+  "resolution_policy": "Task-owned uv cache/virtual environments. Snapshot resolved files are evidence, not newly committed project locks. Runtime and CI component closures and final combined closure resolved.",
+  "initial_environments": {
+    "pipeline-baseline": [
+      {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/pipeline-baseline-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-baseline.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.37,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "venv",
+          "--no-project",
+          "--seed",
+          "--no-python-downloads",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-baseline"
+        ],
+        "exit_code": 0,
+        "seconds": 0.2,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-baseline/bin/python",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/pipeline-baseline-resolved.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 2.3,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-baseline/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.62,
+        "summary": "No broken requirements found."
+      }
+    ],
+    "pipeline-candidate": [
+      {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/pipeline-candidate-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-candidate.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.36,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "venv",
+          "--no-project",
+          "--seed",
+          "--no-python-downloads",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-candidate"
+        ],
+        "exit_code": 0,
+        "seconds": 0.21,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-candidate/bin/python",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/pipeline-candidate-resolved.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 2.3,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-candidate/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.61,
+        "summary": "No broken requirements found."
+      }
+    ],
+    "crawler-baseline": [
+      {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-baseline-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-baseline.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.5,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "venv",
+          "--no-project",
+          "--seed",
+          "--no-python-downloads",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-baseline"
+        ],
+        "exit_code": 0,
+        "seconds": 0.06,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-baseline/bin/python",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-baseline-resolved.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 3.99,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-baseline/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.48,
+        "summary": "No broken requirements found."
+      }
+    ],
+    "crawler-candidate": [
+      {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-candidate-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-candidate.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.13,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "venv",
+          "--no-project",
+          "--seed",
+          "--no-python-downloads",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-candidate"
+        ],
+        "exit_code": 0,
+        "seconds": 0.04,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-candidate/bin/python",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-candidate-resolved.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 2.0,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-candidate/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.35,
+        "summary": "No broken requirements found."
+      }
+    ],
+    "control-baseline": [
+      {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/control-baseline-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-baseline.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.12,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "venv",
+          "--no-project",
+          "--seed",
+          "--no-python-downloads",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-baseline"
+        ],
+        "exit_code": 0,
+        "seconds": 0.04,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-baseline/bin/python",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/control-baseline-resolved.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.9,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-baseline/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.39,
+        "summary": "No broken requirements found."
+      }
+    ],
+    "control-candidate": [
+      {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/control-candidate-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-candidate.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.07,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "venv",
+          "--no-project",
+          "--seed",
+          "--no-python-downloads",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-candidate"
+        ],
+        "exit_code": 0,
+        "seconds": 0.05,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-candidate/bin/python",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/control-candidate-resolved.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.85,
+        "summary": "ok"
+      },
+      {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-candidate/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.39,
+        "summary": "No broken requirements found."
+      }
+    ]
+  },
+  "baseline_and_candidate_snapshot_audits": {
+    "pipeline-baseline": {
+      "name": "pipeline-baseline",
+      "command": [
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+        "-m",
+        "pip_audit",
+        "-r",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/pipeline-baseline-resolved.txt",
+        "--no-deps",
+        "--disable-pip",
+        "--strict",
+        "--format",
+        "json",
+        "--desc",
+        "off",
+        "--progress-spinner",
+        "off",
+        "--cache-dir",
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+      ],
+      "exit_code": 0,
+      "seconds": 3.72,
+      "packages_audited": 38,
+      "vulnerabilities": [],
+      "skipped": [],
+      "collection_error": false
+    },
+    "pipeline-candidate": {
+      "name": "pipeline-candidate",
+      "command": [
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+        "-m",
+        "pip_audit",
+        "-r",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/pipeline-candidate-resolved.txt",
+        "--no-deps",
+        "--disable-pip",
+        "--strict",
+        "--format",
+        "json",
+        "--desc",
+        "off",
+        "--progress-spinner",
+        "off",
+        "--cache-dir",
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+      ],
+      "exit_code": 0,
+      "seconds": 3.72,
+      "packages_audited": 38,
+      "vulnerabilities": [],
+      "skipped": [],
+      "collection_error": false
+    },
+    "crawler-baseline": {
+      "name": "crawler-baseline",
+      "command": [
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+        "-m",
+        "pip_audit",
+        "-r",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-baseline-resolved.txt",
+        "--no-deps",
+        "--disable-pip",
+        "--strict",
+        "--format",
+        "json",
+        "--desc",
+        "off",
+        "--progress-spinner",
+        "off",
+        "--cache-dir",
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+      ],
+      "exit_code": 0,
+      "seconds": 9.43,
+      "packages_audited": 122,
+      "vulnerabilities": [],
+      "skipped": [],
+      "collection_error": false
+    },
+    "crawler-candidate": {
+      "name": "crawler-candidate",
+      "command": [
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+        "-m",
+        "pip_audit",
+        "-r",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-candidate-resolved.txt",
+        "--no-deps",
+        "--disable-pip",
+        "--strict",
+        "--format",
+        "json",
+        "--desc",
+        "off",
+        "--progress-spinner",
+        "off",
+        "--cache-dir",
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+      ],
+      "exit_code": 0,
+      "seconds": 5.71,
+      "packages_audited": 122,
+      "vulnerabilities": [],
+      "skipped": [],
+      "collection_error": false
+    },
+    "control-baseline": {
+      "name": "control-baseline",
+      "command": [
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+        "-m",
+        "pip_audit",
+        "-r",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/control-baseline-resolved.txt",
+        "--no-deps",
+        "--disable-pip",
+        "--strict",
+        "--format",
+        "json",
+        "--desc",
+        "off",
+        "--progress-spinner",
+        "off",
+        "--cache-dir",
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+      ],
+      "exit_code": 0,
+      "seconds": 1.31,
+      "packages_audited": 16,
+      "vulnerabilities": [],
+      "skipped": [],
+      "collection_error": false
+    },
+    "control-candidate": {
+      "name": "control-candidate",
+      "command": [
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+        "-m",
+        "pip_audit",
+        "-r",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/control-candidate-resolved.txt",
+        "--no-deps",
+        "--disable-pip",
+        "--strict",
+        "--format",
+        "json",
+        "--desc",
+        "off",
+        "--progress-spinner",
+        "off",
+        "--cache-dir",
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+      ],
+      "exit_code": 0,
+      "seconds": 0.68,
+      "packages_audited": 16,
+      "vulnerabilities": [],
+      "skipped": [],
+      "collection_error": false
+    }
+  },
+  "final_components": {
+    "pipeline": {
+      "group": "pipeline",
+      "compile": {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/pipeline-final-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/requirements.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.1,
+        "summary": "ok"
+      },
+      "pip_check": {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-candidate/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.51,
+        "summary": "No broken requirements found."
+      },
+      "ci_equivalent_strict_audit": {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+          "-m",
+          "pip_audit",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/requirements.txt",
+          "--strict",
+          "--format",
+          "json",
+          "--desc",
+          "off",
+          "--progress-spinner",
+          "off",
+          "--cache-dir",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+        ],
+        "exit_code": 0,
+        "seconds": 8.41,
+        "python": "3.11",
+        "pip_audit": "2.10.1",
+        "packages": 37,
+        "vulnerabilities": [],
+        "skipped": [],
+        "collection_error": false
+      }
+    },
+    "crawler": {
+      "group": "crawler",
+      "compile": {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-final-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/restaurant-crawling/scripts/requirements.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.12,
+        "summary": "ok"
+      },
+      "pip_check": {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-candidate/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.64,
+        "summary": "No broken requirements found."
+      },
+      "ci_equivalent_strict_audit": {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+          "-m",
+          "pip_audit",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/restaurant-crawling/scripts/requirements.txt",
+          "--strict",
+          "--format",
+          "json",
+          "--desc",
+          "off",
+          "--progress-spinner",
+          "off",
+          "--cache-dir",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+        ],
+        "exit_code": 0,
+        "seconds": 12.68,
+        "python": "3.11",
+        "pip_audit": "2.10.1",
+        "packages": 122,
+        "vulnerabilities": [],
+        "skipped": [],
+        "collection_error": false
+      }
+    },
+    "control": {
+      "group": "control",
+      "compile": {
+        "command": [
+          "uv",
+          "pip",
+          "compile",
+          "--python",
+          "/Users/twoimo/.local/bin/python3.12",
+          "--no-header",
+          "--no-annotate",
+          "--output-file",
+          "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/control-final-resolved.txt",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline-control/requirements.txt"
+        ],
+        "exit_code": 0,
+        "seconds": 0.1,
+        "summary": "ok"
+      },
+      "pip_check": {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-candidate/bin/python",
+          "-m",
+          "pip",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.46,
+        "summary": "No broken requirements found."
+      },
+      "ci_equivalent_strict_audit": {
+        "command": [
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+          "-m",
+          "pip_audit",
+          "-r",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline-control/requirements.txt",
+          "--strict",
+          "--format",
+          "json",
+          "--desc",
+          "off",
+          "--progress-spinner",
+          "off",
+          "--cache-dir",
+          "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+        ],
+        "exit_code": 0,
+        "seconds": 7.13,
+        "python": "3.11",
+        "pip_audit": "2.10.1",
+        "packages": 16,
+        "vulnerabilities": [],
+        "skipped": [],
+        "collection_error": false
+      }
+    }
+  },
+  "combined_baseline_resolver": {
+    "command": [
+      "uv",
+      "pip",
+      "compile",
+      "--python",
+      "/Users/twoimo/.local/bin/python3.12",
+      "--no-header",
+      "--no-annotate",
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-baseline.txt",
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-baseline.txt",
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/control-baseline.txt"
+    ],
+    "exit_code": 1,
+    "seconds": 0.15,
+    "summary": "error: No solution found when resolving dependencies\n  cause: Because langchain==1.3.9 depends on langgraph>=1.2.4 and you require langgraph==1.2.1, we can conclude that your requirements and langchain==1.3.9 are incompatible.\n         And because you require langchain==1.3.9, we can conclude that your requirements are unsatisfiable.\n"
+  },
+  "combined_final_resolver": {
+    "command": [
+      "uv",
+      "pip",
+      "compile",
+      "--python",
+      "/Users/twoimo/.local/bin/python3.12",
+      "--no-header",
+      "--no-annotate",
+      "--output-file",
+      "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/combined-final-resolved.txt",
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/requirements.txt",
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/restaurant-crawling/scripts/requirements.txt",
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline-control/requirements.txt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.03,
+    "summary": "ok"
+  },
+  "combined_final_audit": {
+    "command": [
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-tools/bin/python",
+      "-m",
+      "pip_audit",
+      "-r",
+      "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/combined-final-resolved.txt",
+      "--no-deps",
+      "--disable-pip",
+      "--strict",
+      "--format",
+      "json",
+      "--desc",
+      "off",
+      "--progress-spinner",
+      "off",
+      "--cache-dir",
+      "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/audit-cache"
+    ],
+    "exit_code": 0,
+    "packages": 130,
+    "vulnerabilities": [],
+    "skipped": [],
+    "installed_environment_pip_check": {
+      "exit_code": 0,
+      "command": [
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/combined-final/bin/python",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "evidence": "Observed immediately after installing combined-final-resolved.txt plus backend/test-requirements.txt in this task."
+    },
+    "audit_python": "Python 3.11.17"
+  },
+  "naive_pr_only_crawler_failure": [
+    {
+      "command": [
+        "uv",
+        "pip",
+        "compile",
+        "--python",
+        "/Users/twoimo/.local/bin/python3.12",
+        "--no-header",
+        "--no-annotate",
+        "--output-file",
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-python-deps/crawler-candidate-resolved.txt",
+        "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/crawler-candidate.txt"
+      ],
+      "exit_code": 1,
+      "seconds": 0.09,
+      "summary": "error: No solution found when resolving dependencies\n  cause: Because scrapling[fetchers]>=0.4.15 depends on playwright>=1.62.0 and you require scrapling[fetchers]==0.4.15, we can conclude that you require playwright>=1.62.0.\n         And because you require playwright==1.59.0, we can conclude that your requirements are unsatisfiable.\n"
+    }
+  ],
+  "test_prerequisites": [
+    {
+      "env": "pipeline-baseline",
+      "exit_code": 0,
+      "seconds": 0.18,
+      "summary": "ok"
+    },
+    {
+      "env": "pipeline-candidate",
+      "exit_code": 0,
+      "seconds": 0.17,
+      "summary": "ok"
+    },
+    {
+      "env": "crawler-baseline",
+      "exit_code": 0,
+      "seconds": 0.17,
+      "summary": "ok"
+    },
+    {
+      "env": "crawler-candidate",
+      "exit_code": 0,
+      "seconds": 0.04,
+      "summary": "ok"
+    },
+    {
+      "env": "control-baseline",
+      "exit_code": 0,
+      "seconds": 0.03,
+      "summary": "ok"
+    },
+    {
+      "env": "control-candidate",
+      "exit_code": 0,
+      "seconds": 0.03,
+      "summary": "ok"
+    }
+  ]
+}

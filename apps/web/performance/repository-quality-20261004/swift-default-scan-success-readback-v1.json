@@ -1,0 +1,210 @@
+{
+  "observedAt": "2026-10-04T22:22:04.439100+00:00",
+  "sourceSHA": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "validationRun": 37238858201,
+  "runStatus": "completed",
+  "runConclusion": "success",
+  "setup": {
+    "state": "configured",
+    "languages": [
+      "actions",
+      "go",
+      "javascript",
+      "javascript-typescript",
+      "python",
+      "rust",
+      "swift",
+      "typescript"
+    ],
+    "query_suite": "default",
+    "threat_model": "remote",
+    "runner_type": "standard",
+    "updated_at": "2026-10-04T22:19:59Z",
+    "schedule": "weekly"
+  },
+  "jobs": [
+    {
+      "name": "Analyze (rust)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Analyze (go)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Analyze (actions)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Analyze (python)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Upload Results",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "mainAnalyses": [
+    {
+      "id": 1889958634,
+      "category": "/language:actions",
+      "analysisKey": "dynamic/github-code-scanning/codeql:upload",
+      "createdAt": "2026-10-04T22:19:56Z",
+      "resultsCount": 0,
+      "rulesCount": 17,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": null,
+      "buildMode": null,
+      "runner": null
+    },
+    {
+      "id": 1889958598,
+      "category": "/language:python",
+      "analysisKey": "dynamic/github-code-scanning/codeql:upload",
+      "createdAt": "2026-10-04T22:19:55Z",
+      "resultsCount": 4,
+      "rulesCount": 43,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": null,
+      "buildMode": null,
+      "runner": null
+    },
+    {
+      "id": 1889958567,
+      "category": "/language:go",
+      "analysisKey": "dynamic/github-code-scanning/codeql:upload",
+      "createdAt": "2026-10-04T22:19:54Z",
+      "resultsCount": 0,
+      "rulesCount": 34,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": null,
+      "buildMode": null,
+      "runner": null
+    },
+    {
+      "id": 1889958543,
+      "category": "/language:swift",
+      "analysisKey": "dynamic/github-code-scanning/codeql:upload",
+      "createdAt": "2026-10-04T22:19:54Z",
+      "resultsCount": 0,
+      "rulesCount": 27,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": null,
+      "buildMode": null,
+      "runner": null
+    },
+    {
+      "id": 1889958510,
+      "category": "/language:rust",
+      "analysisKey": "dynamic/github-code-scanning/codeql:upload",
+      "createdAt": "2026-10-04T22:19:53Z",
+      "resultsCount": 0,
+      "rulesCount": 26,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": null,
+      "buildMode": null,
+      "runner": null
+    },
+    {
+      "id": 1889958469,
+      "category": "/language:javascript-typescript",
+      "analysisKey": "dynamic/github-code-scanning/codeql:upload",
+      "createdAt": "2026-10-04T22:19:52Z",
+      "resultsCount": 10,
+      "rulesCount": 87,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": null,
+      "buildMode": null,
+      "runner": null
+    },
+    {
+      "id": 1889930754,
+      "category": "/language:javascript-typescript",
+      "analysisKey": "dynamic/github-code-scanning/codeql:analyze",
+      "createdAt": "2026-10-04T22:07:23Z",
+      "resultsCount": 10,
+      "rulesCount": 87,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": "javascript-typescript",
+      "buildMode": "none",
+      "runner": "[\"ubuntu-latest\"]"
+    },
+    {
+      "id": 1889929545,
+      "category": "/language:rust",
+      "analysisKey": "dynamic/github-code-scanning/codeql:analyze",
+      "createdAt": "2026-10-04T22:06:52Z",
+      "resultsCount": 0,
+      "rulesCount": 26,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": "rust",
+      "buildMode": "none",
+      "runner": "[\"ubuntu-latest\"]"
+    },
+    {
+      "id": 1889926290,
+      "category": "/language:python",
+      "analysisKey": "dynamic/github-code-scanning/codeql:analyze",
+      "createdAt": "2026-10-04T22:05:28Z",
+      "resultsCount": 4,
+      "rulesCount": 43,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": "python",
+      "buildMode": "none",
+      "runner": "[\"ubuntu-latest\"]"
+    },
+    {
+      "id": 1889924576,
+      "category": "/language:go",
+      "analysisKey": "dynamic/github-code-scanning/codeql:analyze",
+      "createdAt": "2026-10-04T22:04:46Z",
+      "resultsCount": 0,
+      "rulesCount": 34,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": "go",
+      "buildMode": "autobuild",
+      "runner": "[\"ubuntu-latest\"]"
+    },
+    {
+      "id": 1889924049,
+      "category": "/language:actions",
+      "analysisKey": "dynamic/github-code-scanning/codeql:analyze",
+      "createdAt": "2026-10-04T22:04:32Z",
+      "resultsCount": 0,
+      "rulesCount": 17,
+      "errorPresent": false,
+      "warningCount": 0,
+      "language": "actions",
+      "buildMode": "none",
+      "runner": "[\"ubuntu-latest\"]"
+    }
+  ],
+  "OCRSourceOriginalByteIdentityReceipt": "swift-protected-promotion-source-readback-v1.json",
+  "sourceCoverageLimit": "Successful Swift autobuild/analysis; exact scanned-file coverage still to confirm via status UI/SARIF statistics",
+  "rawErrorsDiagnosticsOrSnippetsStored": false
+}

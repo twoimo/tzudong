@@ -1,0 +1,27 @@
+{
+  "baseRefName": "develop",
+  "baseRefOid": "e777691191ae21eaed611a8c8d24b80ca68b7419",
+  "commits": [
+    {
+      "committedDate": "2026-09-22T13:42:29Z",
+      "messageHeadline": "chore(deps): bump opentofu/setup-opentofu from 1.0.8 to 2.0.2",
+      "oid": "3a10ae6e8004c1f1488861b3f7c118653e62f0da"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/security-audit.yml",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefName": "dependabot/github_actions/develop/opentofu/setup-opentofu-2.0.2",
+  "headRefOid": "3a10ae6e8004c1f1488861b3f7c118653e62f0da",
+  "number": 2887,
+  "state": "OPEN",
+  "title": "chore(deps): bump opentofu/setup-opentofu from 1.0.8 to 2.0.2",
+  "url": "https://github.com/twoimo/tzudong/pull/2887",
+  "historical_parent": "e777691191ae21eaed611a8c8d24b80ca68b7419",
+  "exact_hunks_match_local_objects": true
+}

@@ -1,0 +1,13 @@
+{
+  "typegen": {
+    "status": "verified",
+    "failure_class": "none",
+    "cli_version": "2.115.0",
+    "image": "public.ecr.aws/supabase/postgres-meta:v0.96.6",
+    "pull_reference": "public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed",
+    "platform": "linux/amd64",
+    "image_id": "sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a",
+    "repo_digest": "public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed"
+  },
+  "raw_artifact_persisted": false
+}

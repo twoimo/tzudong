@@ -1,0 +1,78 @@
+{
+  "name": "job-metadata-101547198170",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/actions/jobs/101547198170",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4946",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:39:46.555720+00:00",
+      "next_page": false
+    }
+  ],
+  "count": null,
+  "items": {
+    "conclusion": "failure",
+    "head_sha": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+    "id": 101547198170,
+    "name": "pip-audit (backend/restaurant-crawling/scripts/requirements.txt)",
+    "run_id": 34055742927,
+    "status": "completed",
+    "steps": [
+      {
+        "conclusion": "success",
+        "name": "Set up job",
+        "number": 1,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Checkout repository",
+        "number": 2,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Set up Python",
+        "number": 3,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Install pip-audit",
+        "number": 4,
+        "status": "completed"
+      },
+      {
+        "conclusion": "failure",
+        "name": "Audit Python requirements",
+        "number": 5,
+        "status": "completed"
+      },
+      {
+        "conclusion": "skipped",
+        "name": "Post Set up Python",
+        "number": 9,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Post Checkout repository",
+        "number": 10,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Complete job",
+        "number": 11,
+        "status": "completed"
+      }
+    ]
+  }
+}

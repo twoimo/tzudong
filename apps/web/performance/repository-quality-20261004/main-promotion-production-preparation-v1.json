@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-10-04T20:51:28.025156+00:00",
+  "mainPR": 3131,
+  "mainMerge": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "sourceTree": "84d8f211d372fab619f344152dc4405e8c37dc82",
+  "dataTreeMatches": true,
+  "rollback": {
+    "sha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+    "deployment": "dpl_D6wm9mbMeZEbLtHM3PFXMctZ9txm",
+    "alias": "www.tzudong.app",
+    "freshReadback": "production-rollback-quality-20261005-v1.json"
+  },
+  "guardApprovedExactMain": true,
+  "guardNotDisabled": true,
+  "automaticDeployment": {
+    "id": "dpl_322MLQxymhV2CcqggjZE4aWBra81",
+    "state": "CANCELED",
+    "causeNotAsserted": true
+  },
+  "redeployOutcomeStillRequiresReadback": true
+}

@@ -1,0 +1,52 @@
+{
+  "run_id": 37197431551,
+  "attempt": 1,
+  "run_sha": "b12fc956de63e1b9d73ac812098107f5b3578903",
+  "baseline": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "generated_target": "apps/web/integrations/supabase/database.types.ts",
+  "result": "generated_success_diff_exit_1",
+  "old_git_blob": "413fbd9586b0e55aabb4728ec2d34e33e029a0b4",
+  "new_git_blob": "09b4a405292cfd705303fe11f0c7bc72f0cdd159",
+  "old_sha256": "7c10eb1ba07e9d1532f241e17f245c3fc9fb6cd3d23f5ba816a22a1189d53e6d",
+  "new_sha256": "36ffd9c0dda9a81eea7f693147fac7a47e677400a69dfcf70ffef815bac18854",
+  "run_source_equals_baseline": true,
+  "hunks": [
+    {
+      "old_start": 1604,
+      "old_count": 6,
+      "new_start": 1604,
+      "new_count": 347
+    },
+    {
+      "old_start": 6465,
+      "old_count": 6,
+      "new_start": 6806,
+      "new_count": 62
+    }
+  ],
+  "added_lines": 397,
+  "deleted_lines": 0,
+  "added_schema_objects": [
+    "admin_storyboard_production_assets",
+    "admin_storyboard_production_events",
+    "admin_storyboard_production_jobs",
+    "admin_storyboard_production_projects",
+    "admin_storyboard_production_restores",
+    "admin_storyboard_production_revisions",
+    "admin_storyboard_production_workers",
+    "storyboard_production_admin",
+    "storyboard_production_assert_owner",
+    "storyboard_production_auth_worker",
+    "storyboard_production_error_allowed",
+    "storyboard_production_final_status",
+    "storyboard_production_job_json",
+    "storyboard_production_model_available",
+    "storyboard_production_project_json",
+    "storyboard_production_snapshot",
+    "storyboard_production_worker"
+  ],
+  "raw_logs_persisted": false,
+  "source_modified": false,
+  "generated_bytes_recovered_from_exact_diff": true,
+  "secondary_failures": "lane_aggregate_and_diagnostics_follow_typegen_failure_not_independent_findings"
+}

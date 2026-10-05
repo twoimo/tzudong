@@ -1,0 +1,48 @@
+{
+  "observedAt": "2026-10-04T22:05:40.858423+00:00",
+  "exactProjectVerified": true,
+  "deploymentRows": [
+    {
+      "uid": "dpl_14tpXdEocDNsFxyQChLFukmzNf4c",
+      "url": "tzudong-fgpg8ohvy-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "readyState": "CANCELED",
+      "created": 1791151429822,
+      "gitSha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa"
+    },
+    {
+      "uid": "dpl_FNch76WAu4GmrQ1jx5V1WSEvdfFE",
+      "url": "tzudong-mi3oukryz-twoimos-projects.vercel.app",
+      "state": "READY",
+      "readyState": "READY",
+      "created": 1791147090558,
+      "gitSha": "b90154e22e6b4ba089275c7ae6d53e7274feae98"
+    },
+    {
+      "uid": "dpl_322MLQxymhV2CcqggjZE4aWBra81",
+      "url": "tzudong-fmj14q6ry-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "readyState": "CANCELED",
+      "created": 1791146837816,
+      "gitSha": "b90154e22e6b4ba089275c7ae6d53e7274feae98"
+    },
+    {
+      "uid": "dpl_D6wm9mbMeZEbLtHM3PFXMctZ9txm",
+      "url": "tzudong-jc5pr8vn4-twoimos-projects.vercel.app",
+      "state": "READY",
+      "readyState": "READY",
+      "created": 1791065890467,
+      "gitSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+    },
+    {
+      "uid": "dpl_HgVcpKfcUh7RG9UeBfRX1ZiN9xsU",
+      "url": "tzudong-pct59hp1m-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "readyState": "CANCELED",
+      "created": 1791065357241,
+      "gitSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+    }
+  ],
+  "aliasDeploymentId": "dpl_FNch76WAu4GmrQ1jx5V1WSEvdfFE",
+  "privateValuesStored": false
+}

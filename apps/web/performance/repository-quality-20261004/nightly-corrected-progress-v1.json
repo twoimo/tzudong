@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-04T11:36:21.542119+00:00",
+  "runId": 37197431551,
+  "sha": "b12fc956de63e1b9d73ac812098107f5b3578903",
+  "status": "completed",
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "name": "Local",
+      "status": "completed",
+      "conclusion": "failure",
+      "failed": [
+        "Verify generated Supabase types match the local catalog",
+        "Aggregate local nightly lane outcomes",
+        "Write bounded nightly lane diagnostics"
+      ],
+      "active": []
+    },
+    {
+      "name": "Publish",
+      "status": "completed",
+      "conclusion": "skipped",
+      "failed": [],
+      "active": []
+    }
+  ]
+}

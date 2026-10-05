@@ -1,0 +1,42 @@
+{
+  "observed_at": "2026-10-04T11:42:24.746351+00:00",
+  "source_base": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "paths": [
+    {
+      "path": ".github/workflows/nightly-local-regression.yml",
+      "sha256": "77dffc298ba839591ccddc71f47e14ff4cfb9bd72e5f782cc7ae525fa3a0707a",
+      "matches_start_head": true
+    },
+    {
+      "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "sha256": "dccb5e46e36987af94d4f4b1c590a41e8bfc3726aead209b3d0e2d104e842c61",
+      "matches_start_head": true
+    },
+    {
+      "path": "apps/web/package.json",
+      "sha256": "b81254a4389fca87fa443be4857655b5351880aed1d8644f121152216434d65c",
+      "matches_start_head": true
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "sha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694",
+      "matches_start_head": true
+    },
+    {
+      "path": "apps/web/bun.lock",
+      "sha256": "28b37410059368fe4433592989bb7337ccfa16dd2d97f0fa4f89bc763da20800",
+      "matches_start_head": true
+    },
+    {
+      "path": "backend/package.json",
+      "sha256": "7b32079bd7b063365903593308db9f1d93a2b8ff18a68732910902c55237aaeb",
+      "matches_start_head": true
+    },
+    {
+      "path": "backend/package-lock.json",
+      "sha256": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd",
+      "matches_start_head": true
+    }
+  ],
+  "note": "Focused early readback; final allowed-path validation is separately recorded at handoff."
+}

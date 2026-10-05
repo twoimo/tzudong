@@ -1,0 +1,444 @@
+{
+  "version": 2,
+  "started_at_utc": "2026-10-04T20:19:50.237787+00:00",
+  "workspace": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+  "branch": "codex/swift-codeql-build-20261005",
+  "expected_head": "e39635a89a3d7e9570ca9f67cda4906af3816004",
+  "evidence_directory": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-swift-codeql-20261005/v2",
+  "owned_temp_directory": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj",
+  "preserved_v1_receipt_hashes": {
+    "verification.json": "c24a0efc36fd2831212a35e32dd6c03a3dac768c16029cc7390137b899af9f4c",
+    "HANDOFF.md": "2176e5028f838b6b5e4ee05af78cbd09baae0c7429fc79d20e7d482b60981a86",
+    "source.patch": "17f85d539fb0b77dbf462b7c5e687ac5710623f74efc4326ff23022e22fe0580"
+  },
+  "initial_status": " M .gitignore\n?? Package.swift\n",
+  "initial_alias_lexists": false,
+  "local_model_evidence": {
+    "metadata_path": "/Users/twoimo/.codex/sessions/2026/10/05/rollout-2026-10-05T05-06-48-01a10886-b691-7843-a235-4932e7c8f8aa.jsonl",
+    "session_meta": {
+      "id": "01a10886-b691-7843-a235-4932e7c8f8aa",
+      "cli_version": "0.160.0",
+      "model_provider": "openai"
+    },
+    "turn_context": {
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong"
+    },
+    "matches_v1_model_and_effort": true,
+    "evidence_limit": "Local session metadata only; no server attestation. No model/provider setting changed."
+  },
+  "primary_sources": {
+    "swiftpm_url": "https://docs.swift.org/package-manager/PackageDescription/PackageDescription.html#target",
+    "swiftpm_finding": "The executableTarget API documents main.swift or an @main entrypoint; sources explicitly selects the compilation files. Symlink compatibility is tested by the actual build, not assumed from this documentation.",
+    "codeql_verified_source_reference": "../verification.json:primary_source_verification",
+    "codeql_source_commit": "7d04932ce03b907a4865daa2e633778f5650dc20"
+  },
+  "source_files": {
+    ".gitignore": {
+      "before_sha256": "a40fbabaa51435c1a19f8637d7e8f7cbfa89018762b6497cb7203a00456b8324",
+      "head_sha256": "b780908e13081e2721d101e681c48ff28673dd9a8c129ec03728ba2cf9fa827d",
+      "after_sha256": "a40fbabaa51435c1a19f8637d7e8f7cbfa89018762b6497cb7203a00456b8324",
+      "unchanged_from_v1": true
+    },
+    "backend/restaurant-crawling/scripts/03-2-visual-ocr.swift": {
+      "before_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+      "head_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+      "after_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+      "unchanged_from_v1": true
+    },
+    "backend/restaurant-crawling/scripts/03-2-visual-location.py": {
+      "before_sha256": "cb0c789756948c20eadee9beb20bdc948c40cb9bf7440cd63fd628345182077b",
+      "head_sha256": "cb0c789756948c20eadee9beb20bdc948c40cb9bf7440cd63fd628345182077b",
+      "after_sha256": "cb0c789756948c20eadee9beb20bdc948c40cb9bf7440cd63fd628345182077b",
+      "unchanged_from_v1": true
+    },
+    "Package.swift": {
+      "before_sha256": "99115245db7410f33033ab63a9db5c9e6d5e5743ee127fcdecd9c3a529f73613",
+      "head_sha256": null,
+      "after_sha256": "adc4daa71d5424d54b76d6e66f3c6f9418a73ed2677c08e834563b0ce433a0e6",
+      "unchanged_from_v1": false
+    }
+  },
+  "build_commands": [
+    {
+      "label": "describe",
+      "argv": [
+        "/usr/bin/swift",
+        "package",
+        "--package-path",
+        "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+        "--scratch-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build",
+        "--cache-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/cache",
+        "--config-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/config",
+        "--security-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/security",
+        "describe",
+        "--type",
+        "json"
+      ],
+      "shell_command": "/usr/bin/swift package --package-path /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong --scratch-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build --cache-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/cache --config-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/config --security-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/security describe --type json",
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "environment_overrides": {
+        "TMPDIR": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/tmp/",
+        "CLANG_MODULE_CACHE_PATH": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/module-cache",
+        "SWIFTPM_MODULECACHE_OVERRIDE": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/manifest-module-cache"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 3.297,
+      "stdout": "{\n  \"dependencies\" : [\n\n  ],\n  \"manifest_display_name\" : \"TzudongVisualOCR\",\n  \"name\" : \"TzudongVisualOCR\",\n  \"path\" : \"/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong\",\n  \"platforms\" : [\n    {\n      \"name\" : \"macos\",\n      \"version\" : \"10.15\"\n    }\n  ],\n  \"products\" : [\n    {\n      \"name\" : \"TzudongVisualOCR\",\n      \"targets\" : [\n        \"TzudongVisualOCR\"\n      ],\n      \"type\" : {\n        \"executable\" : null\n      }\n    }\n  ],\n  \"targets\" : [\n    {\n      \"c99name\" : \"TzudongVisualOCR\",\n      \"module_type\" : \"SwiftTarget\",\n      \"name\" : \"TzudongVisualOCR\",\n      \"path\" : \"backend/restaurant-crawling/scripts\",\n      \"product_memberships\" : [\n        \"TzudongVisualOCR\"\n      ],\n      \"sources\" : [\n        \"main.swift\"\n      ],\n      \"type\" : \"executable\"\n    }\n  ],\n  \"tools_version\" : \"5.5\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "build",
+      "argv": [
+        "/usr/bin/swift",
+        "build",
+        "--package-path",
+        "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+        "--scratch-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build",
+        "--cache-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/cache",
+        "--config-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/config",
+        "--security-path",
+        "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/security",
+        "--jobs",
+        "2"
+      ],
+      "shell_command": "/usr/bin/swift build --package-path /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong --scratch-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build --cache-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/cache --config-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/config --security-path /private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/security --jobs 2",
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "environment_overrides": {
+        "TMPDIR": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/tmp/",
+        "CLANG_MODULE_CACHE_PATH": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/module-cache",
+        "SWIFTPM_MODULECACHE_OVERRIDE": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/manifest-module-cache"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 10.301,
+      "stdout": "Building for debugging...\n[Planning deferred tasks]\n[19\u2009/\u200924]\n[20\u2009/\u200925] TzudongVisualOCR-product\n[26\u2009/\u200994]\n[30\u2009/\u200994]\n[36\u2009/\u200994]\n[40\u2009/\u200994]\n[43\u2009/\u200994]\n[48\u2009/\u200994]\n[50\u2009/\u200994]\n[54\u2009/\u200994]\n[59\u2009/\u200994]\n[62\u2009/\u200994]\n[65\u2009/\u200994]\n[66\u2009/\u200994]\n[69\u2009/\u200994]\n[71\u2009/\u200994]\n[75\u2009/\u200994]\n[77\u2009/\u200994]\n[80\u2009/\u200994]\n[82\u2009/\u200994]\n[86\u2009/\u200994]\n[87\u2009/\u200994]\n[89\u2009/\u200994] TzudongVisualOCR-product\n[90\u2009/\u200994] TzudongVisualOCR-product\n[92\u2009/\u200994] TzudongVisualOCR-product\nBuild complete! (9.71\ucd08)\n",
+      "stderr": "warning: 'tzudong': found 48 file(s) which are unhandled; explicitly declare them as resources or exclude from the target\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/01-collect-urls.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/02-1-migrate-meta-to-supabase.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/02-5-cleanup-orphans.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/02-collect-meta.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-1-generate-transcript-context.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-location.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-collect-transcript.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/05-map-url-crawling.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/06-1-transcript-document-with-meta.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/06-frame-caption.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/07-gemini-crawling.sh\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/chunk_planner.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/colab-generate-context-optimized.ipynb\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/colab-migrate_documents.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/colab_frame_captioning.ipynb\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/collect_heatmap.log\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/collect_multimodal.log\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/final_merge_chunk.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/gemini_api_request.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/get_optimal_jobs.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/kaggle-context-generation-git.ipynb\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/login_and_save_cookies.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/merge_chunk_results.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/parse_result.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/requirements.txt\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/split_video_chunks.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/map-url-network-policy.test.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_chunk_download_retry.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_cleanup_orphans_safety.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_gemini_chunk_error_class.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_gemini_chunk_upload_timeout.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_gemini_scrapling_fallback_regression.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_merge_chunk_visual.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_parse_result_regression.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_privileged_supabase_client_trust.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_split_video_chunks_timeout.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_visual_location.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/transcript-command.test.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/transcript-command.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/url-extractor.js\n"
+    }
+  ],
+  "ocr_executed": false,
+  "hosted_codeql_success_verified": false,
+  "alias": {
+    "path": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/main.swift",
+    "link_target": "03-2-visual-ocr.swift",
+    "relative_link": true,
+    "resolved_path": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift",
+    "resolved_bytes_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+    "original_bytes_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+    "link_payload_sha256": "1e15a1b8324bec561ec234911bc2e6dca7d780e66bd87623c1c3e060dbb52b83",
+    "byte_equality_verified": true,
+    "original_mode": "0o100644",
+    "symlink_lstat_mode": "0o120755",
+    "final_byte_equality_verified": true
+  },
+  "local_toolchain_commands": [
+    {
+      "argv": [
+        "/usr/bin/sw_vers"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/uname",
+        "-m"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "arm64\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/xcode-select",
+        "-p"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "/Applications/Xcode.app/Contents/Developer\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/swift",
+        "--version"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0\n",
+      "stderr": "swift-driver version: 1.168.6 "
+    },
+    {
+      "argv": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "--show-sdk-path"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "--show-sdk-version"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "27.0\n",
+      "stderr": ""
+    }
+  ],
+  "package_scope_check": {
+    "pass": true,
+    "targets": 1,
+    "products": 1,
+    "sources": [
+      "main.swift"
+    ],
+    "external_dependencies": 0,
+    "target_type": "executable",
+    "source_alias_resolves_to": "backend/restaurant-crawling/scripts/03-2-visual-ocr.swift"
+  },
+  "compile_only_completed_at_utc": "2026-10-04T20:20:52.197417+00:00",
+  "result": {
+    "status": "local_compile_passed",
+    "package_describe_exit_code": 0,
+    "package_build_exit_code": 0,
+    "v2_build_attempt_count": 1,
+    "ocr_executed": false,
+    "hosted_scan_verified": false,
+    "ready_for_parent_source_review": true,
+    "v1_receipts_unchanged": true,
+    "ocr_source_and_python_caller_byte_identical_to_head": true,
+    "source_paths": [
+      "Package.swift",
+      ".gitignore",
+      "backend/restaurant-crawling/scripts/main.swift"
+    ],
+    "source_changes_staged_committed_pushed": false,
+    "symlink_git_patch_mode": "120000",
+    "symlink_tracking_status": "New untracked symlink, included with mode 120000 in source.patch; parent owns staging and protected delivery.",
+    "nonfatal_warning": "48 unhandled neighboring files, including the original path; only main.swift is selected and its bytes equal the original. No scanner exclusion or unsafe compiler flags.",
+    "ignored_outputs": "Existing root .build markers remain ignored by /.build/; v2 compilation/cache/output files are outside the repo in the owned temporary directory.",
+    "future_main_readback": "After parent delivers all three paths including the real symlink to main, verify a fresh language:swift analysis for that main SHA and default configuration46be7d0..., successful package discovery/build/extraction/analysis/upload, and coverage of the original OCR logic via main.swift (inspect alias/source attribution rather than assuming it). Confirm the other five default languages remain scanned and preserve historical Aug24 cc4a1bfd evidence.",
+    "scope_limits": "No CodeQL database/scan was run here. Local compilation and framework links do not attest hosted extraction, path attribution, runner compatibility, or OCR runtime behavior."
+  },
+  "compiled_coverage": {
+    "source_list": {
+      "path": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.SwiftFileList",
+      "contents": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/main.swift\n",
+      "sha256": "9787cc53fdf06ff06c98fee28cfa5a4f8418dff50e1f2d41a0ae955dc0a410c1"
+    },
+    "link_list": {
+      "path": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.LinkFileList",
+      "contents": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/main.o",
+      "sha256": "eff419523bc908d243bd3d863e6aa8de1f8df3f031e8c45ebb5ec613f30dcc6d"
+    },
+    "object": {
+      "path": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/main.o",
+      "bytes": 94728,
+      "sha256": "ee51bfa6a013575248a1a8400024b4b2cfb04cf8599b0d304213b556f3a2bd81"
+    },
+    "binary": {
+      "path": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Products/Debug/TzudongVisualOCR",
+      "bytes": 133936,
+      "sha256": "c06c50add10cd9858eade29ffa5095e634139de427241ea19afa8a33ae31ebd9"
+    },
+    "binary_inspection_commands": [
+      {
+        "argv": [
+          "/usr/bin/file",
+          "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Products/Debug/TzudongVisualOCR"
+        ],
+        "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+        "exit_code": 0,
+        "stdout": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Products/Debug/TzudongVisualOCR: Mach-O 64-bit executable arm64\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "/usr/bin/xcrun",
+          "otool",
+          "-L",
+          "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Products/Debug/TzudongVisualOCR"
+        ],
+        "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+        "exit_code": 0,
+        "stdout": "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Products/Debug/TzudongVisualOCR:\n\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5027.0.69)\n\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.0.0)\n\t/System/Library/Frameworks/ImageIO.framework/Versions/A/ImageIO (compatibility version 1.0.0, current version 1.0.0)\n\t/System/Library/Frameworks/Vision.framework/Versions/A/Vision (compatibility version 1.0.0, current version 10.0.44)\n\t/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2200.27.0)\n\t/usr/lib/swift/libswiftAVFoundation.dylib (compatibility version 1.0.0, current version 2450.77.5, weak)\n\t/usr/lib/swift/libswiftAccelerate.dylib (compatibility version 1.0.0, current version 82.0.0, weak)\n\t/usr/lib/swift/libswiftCompression.dylib (compatibility version 1.0.0, current version 18.0.0, weak)\n\t/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)\n\t/usr/lib/swift/libswiftCoreAudio.dylib (compatibility version 1.0.0, current version 482.102.10, weak)\n\t/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0, weak)\n\t/usr/lib/swift/libswiftCoreImage.dylib (compatibility version 1.0.0, current version 3.0.0, weak)\n\t/usr/lib/swift/libswiftCoreMIDI.dylib (compatibility version 1.0.0, current version 6.0.0, weak)\n\t/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 428.0.10, weak)\n\t/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 1605.0.2, weak)\n\t/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)\n\t/usr/lib/swift/libswiftMetal.dylib (compatibility version 1.0.0, current version 382.5.3, weak)\n\t/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 973.1.0, weak)\n\t/usr/lib/swift/libswiftQuartzCore.dylib (compatibility version 1.0.0, current version 5.0.0, weak)\n\t/usr/lib/swift/libswiftUniformTypeIdentifiers.dylib (compatibility version 1.0.0, current version 917.0.1, weak)\n\t/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 167.0.2, weak)\n\t/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1090.0.0, weak)\n\t/usr/lib/swift/libswiftsimd.dylib (compatibility version 1.0.0, current version 25.0.0, weak)\n\t/usr/lib/swift/libswiftFoundation.dylib (compatibility version 1.0.0, current version 1.0.0)\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "/usr/bin/xcrun",
+          "nm",
+          "-gU",
+          "/private/tmp/tzudong-swift-codeql-v2-20261005-6iaffasj/build/out/Products/Debug/TzudongVisualOCR"
+        ],
+        "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+        "exit_code": 0,
+        "stdout": "000000010000ca70 S _$s16TzudongVisualOCR3url10Foundation3URLVvp\n000000010000caa0 S _$s16TzudongVisualOCR4data10Foundation4DataVvp\n0000000100002bdc T _$s16TzudongVisualOCR4failys5NeverOSSF\n000000010000ca60 S _$s16TzudongVisualOCR4pathSSvp\n000000010000ca98 S _$s16TzudongVisualOCR5textsSaySSGvp\n00000001000039c8 T _$s16TzudongVisualOCR7PayloadV5textsACSaySSG_tcfC\n00000001000046a8 T _$s16TzudongVisualOCR7PayloadV5textsSaySSGvg\n00000001000064a8 S _$s16TzudongVisualOCR7PayloadV5textsSaySSGvpMV\n0000000100004a9c T _$s16TzudongVisualOCR7PayloadV6encode2toys7Encoder_p_tKF\n0000000100004d88 T _$s16TzudongVisualOCR7PayloadVMa\n00000001000067d0 S _$s16TzudongVisualOCR7PayloadVMn\n0000000100008010 S _$s16TzudongVisualOCR7PayloadVN\n0000000100006480 S _$s16TzudongVisualOCR7PayloadVSEAAMc\n000000010000ca90 S _$s16TzudongVisualOCR7handlerSo21VNImageRequestHandlerCvp\n000000010000ca88 S _$s16TzudongVisualOCR7requestSo22VNRecognizeTextRequestCvp\n0000000100000000 T __mh_execute_header\n0000000100001fcc T _main\n",
+        "stderr": ""
+      }
+    ],
+    "observed_direct_framework_links": [
+      "Foundation",
+      "Vision",
+      "ImageIO"
+    ],
+    "source_imports_verified": [
+      "Foundation",
+      "Vision",
+      "ImageIO",
+      "CoreGraphics"
+    ],
+    "binary_executed": false,
+    "only_ocr_alias_compiled": true,
+    "inspection_correction": "An initial inspection assertion incorrectly expected every source import as a direct binary framework link. otool shows Foundation, ImageIO and Vision, with no direct CoreGraphics entry. The successful compile covers the unchanged CoreGraphics import. No source/settings change or rebuild was made for this inspection assumption."
+  },
+  "final_checks": [
+    {
+      "argv": [
+        "git",
+        "status",
+        "--short",
+        "--untracked-files=all"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": " M .gitignore\n?? Package.swift\n?? backend/restaurant-crawling/scripts/main.swift\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "codex/swift-codeql-build-20261005\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "e39635a89a3d7e9570ca9f67cda4906af3816004\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "--",
+        "/dev/null",
+        "Package.swift"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "check-ignore",
+        "-v",
+        ".build/.buildSystem_debug",
+        ".build/CACHEDIR.TAG"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": ".gitignore:9:/.build/\t.build/.buildSystem_debug\n.gitignore:9:/.build/\t.build/CACHEDIR.TAG\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "check-ignore",
+        "-v",
+        "Package.swift",
+        "backend/restaurant-crawling/scripts/main.swift"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--",
+        ".gitignore"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "diff --git a/.gitignore b/.gitignore\nindex 6966a871..a1600b2a 100644\n--- a/.gitignore\n+++ b/.gitignore\n@@ -6,6 +6,7 @@ venv/\n backend/bun.lock\n \n # \u2500\u2500 \ube4c\ub4dc / \ucd9c\ub825 / Build & Output \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n+/.build/\n .next/\n .next-stale-*/\n .turbo/\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--",
+        "/dev/null",
+        "Package.swift"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 1,
+      "stdout": "diff --git a/Package.swift b/Package.swift\nnew file mode 100644\nindex 00000000..78560c64\n--- /dev/null\n+++ b/Package.swift\n@@ -0,0 +1,14 @@\n+// swift-tools-version: 5.5\n+import PackageDescription\n+\n+let package = Package(\n+    name: \"TzudongVisualOCR\",\n+    platforms: [.macOS(.v10_15)],\n+    targets: [\n+        .executableTarget(\n+            name: \"TzudongVisualOCR\",\n+            path: \"backend/restaurant-crawling/scripts\",\n+            sources: [\"main.swift\"]\n+        )\n+    ]\n+)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--",
+        "/dev/null",
+        "backend/restaurant-crawling/scripts/main.swift"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 1,
+      "stdout": "diff --git a/backend/restaurant-crawling/scripts/main.swift b/backend/restaurant-crawling/scripts/main.swift\nnew file mode 120000\nindex 00000000..7ddce7af\n--- /dev/null\n+++ b/backend/restaurant-crawling/scripts/main.swift\n@@ -0,0 +1 @@\n+03-2-visual-ocr.swift\n\\ No newline at end of file\n",
+      "stderr": ""
+    }
+  ],
+  "check_exit_interpretation": "git diff --no-index --check returned 1 with empty stdout/stderr for the new manifest; this is the observed no-index difference status, not a whitespace diagnostic. A preliminary receipt assertion expected 0 and stopped before saving; inspection corrected that expectation. git diff --check returned 0. No source edit or build retry was made.",
+  "source_patch_sha256": "175d81e400f928ccc8f52d2ff6115219a0da3f2d9bbdc79aaa37d5e420308d4d",
+  "finished_at_utc": "2026-10-04T20:25:07.233559+00:00"
+}

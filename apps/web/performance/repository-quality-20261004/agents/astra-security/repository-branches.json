@@ -1,0 +1,2658 @@
+{
+  "name": "repository-branches",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/branches?per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4799",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:45:26.112654+00:00",
+      "next_page": true
+    },
+    {
+      "endpoint": "repositories/1080324661/branches?per_page=100&page=2",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4798",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:45:26.514204+00:00",
+      "next_page": true
+    },
+    {
+      "endpoint": "repositories/1080324661/branches?per_page=100&page=3",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4797",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:45:26.920939+00:00",
+      "next_page": true
+    },
+    {
+      "endpoint": "repositories/1080324661/branches?per_page=100&page=4",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4796",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:45:27.317127+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 371,
+  "items": [
+    {
+      "commit": {
+        "sha": "b1b9df8ee91b65948b042438dbe020f24b12f9d7"
+      },
+      "name": "align-data-codebase-with-main-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "8c6cdd3a2894466b990546a32c4a4d94b036f08e"
+      },
+      "name": "aside/unpushed-20260909",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c7039d92ec499cad10dfa150307d365dcb776e3d"
+      },
+      "name": "chore/drop-session-receipts",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f8542347f6bd26549dac29605acc15a84b1a6eca"
+      },
+      "name": "chore/pip-audit-pipeline-control",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6da50c38ab52c6d8c4aff29906bff7abe7cff39f"
+      },
+      "name": "chore/recovery-landing-zone",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b393f00e137e941c7a9cea14dd746efec2abdcd5"
+      },
+      "name": "chore/thumbnail-chat-parity-sync-20260629",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bb08621c84c9aeca718e4384a01b290294f7fc89"
+      },
+      "name": "codex/admin-marker-css-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6cc4b58fe7436df19af32dea7bacad18f70651cd"
+      },
+      "name": "codex/browser-storage-guard-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "dce0ea602a926c06077cfd73f96efc72cdc02542"
+      },
+      "name": "codex/canonical-visited-index-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a59f9d1f6491fa1339e3357f7dffe9b85ed85ef7"
+      },
+      "name": "codex/clustering-region-district-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bca48572eabd1f20eaf6ff529141c43460d25ad5"
+      },
+      "name": "codex/compact-map-filter-controls-20261003",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0580a66c92c2e30245bfde13a3c48a26eeb8f3d1"
+      },
+      "name": "codex/data-storyboard-parity-20260624",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ca5cb640cb5df5310a2c03bf18824407e259542c"
+      },
+      "name": "codex/dead-export-typehole-cleanup-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "251a2adf7f7fab77e8542cfec5d892183fe3a3d9"
+      },
+      "name": "codex/enable-production-web-deploy-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0cfe1b97a06dba366d6c15aa7eb86af14ca2430a"
+      },
+      "name": "codex/field-vitals-baseline-20261001",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f29032e3d67b23fc1ed2f2dbdb02e8cb577bc4c2"
+      },
+      "name": "codex/fix-linux-cleanup-proof",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "de6f59ef96499a6eeac45b551c8c370a2ddc3e52"
+      },
+      "name": "codex/g037-readonly-transaction-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4812bf09cfef88c3b0e36ddcf3e73745de303c10"
+      },
+      "name": "codex/g037-task-evidence-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "76afb0634b6710581aa296a9644929313e24b36f"
+      },
+      "name": "codex/goal-perf-harden-20260923",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6cdebeeb675b9572ccaa4f3a8c12c42fb3093886"
+      },
+      "name": "codex/harden-nightly-publication",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c774351a36423d056cae4116692ab1cb2ccb0cee"
+      },
+      "name": "codex/home-static-skeleton-20260924",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bc2005da501d933ef58110958aedb0901a4b66b9"
+      },
+      "name": "codex/kiro-closure-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "168bdd51e89e713ee7d48450e130a2c4e60f9015"
+      },
+      "name": "codex/kiro-closure-audit-20260906",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1cbaffa4756c7423a3c6bba10dc78fa9e37545e6"
+      },
+      "name": "codex/kiro-db-completion-20260906",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c22b778ee383a4f08db279c526261dc57de24671"
+      },
+      "name": "codex/kiro-drive-read-diagnostics-20260906",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6834b7cb3ac1c26fa085a8a5cbcb2156a73a84dd"
+      },
+      "name": "codex/kiro-inventory-review-20260906",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "251f2ae55b8cd01175276718c561770d48d02ec8"
+      },
+      "name": "codex/latest-order-release-record-20260923",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b735c32ef5e75ad91b4a820f7ac810307b4f07b1"
+      },
+      "name": "codex/latest-restaurant-order-20260923",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ca49e6eeb09ff8d4474c26354039d98ac3ae2e14"
+      },
+      "name": "codex/linux-node24-bridge-fix",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11"
+      },
+      "name": "codex/local-replay-v2-20260908",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f98f1b4d5d5d5e85bd287684973096920328bb5d"
+      },
+      "name": "codex/map-hook-deps-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ab970bdd8b8eda6848484b7e327f331091ed6d5f"
+      },
+      "name": "codex/marker-deferred-retry-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "8c8e5532dbc459d76ad14764bf0995189bfe9130"
+      },
+      "name": "codex/marker-memory-release-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "364f88338241ae7c7cd81153bb20110080de5f01"
+      },
+      "name": "codex/marker-offscreen-updates-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d0633d0139b2c901c5303a5ce51fd0eaff3505c8"
+      },
+      "name": "codex/meta-hardening-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d41110e66dea83d4e306cb1c2846817539b79eeb"
+      },
+      "name": "codex/mobile-bottom-nav-flicker-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c4e990e7024a86e62e28b65b6a4930c519f7e744"
+      },
+      "name": "codex/mobile-home-frame-perf-20260930",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "48090a1f8bb1c9ec129f959231e34fe5db2f905f"
+      },
+      "name": "codex/mobile-map-nav-centering-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a226c28d04a6f9b024cd9cd33b2da9946911cccb"
+      },
+      "name": "codex/mobile-map-nav-occlusion-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "361d9f102dcf07a46fe9e0f4cbcbf7a3e337d47e"
+      },
+      "name": "codex/mobile-marker-memory-20261004",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "86940f7bca3472958d9df4a5dd7bd250660aed79"
+      },
+      "name": "codex/mobile-skeleton-fullscreen-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2f091f6e767a9d60117960db6e5d7a401d9cd47c"
+      },
+      "name": "codex/mypage-responsive-desktop-fill-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "74e3d4b6a09b67b87dac81cbf449008dce5ece85"
+      },
+      "name": "codex/nightly-local-actions",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1f95be2d94eaea2020edc75abf7950b7aa3a3837"
+      },
+      "name": "codex/nightly-local-release",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bab86fc8b9f94cc6ee8017d703e0d21a5e0008c6"
+      },
+      "name": "codex/nightly-local-survival-20260812-v2",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "9670c4d34af77c878443c8ab1ee936ee1c06cd75"
+      },
+      "name": "codex/observation-provenance-binding-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "db0e05d79fb08280df1409f9ec81ff557e25436a"
+      },
+      "name": "codex/overseas-region-routing-20260915",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "94678e3ef78be937b06d99ce31f74ce8c5f655db"
+      },
+      "name": "codex/pending-apply-integrity-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "266280ee15c8a57816786a17af24f0ec1532d95a"
+      },
+      "name": "codex/pending-review-collect-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "cd86c106b468c40e83a2e2edf39b49c3b9529937"
+      },
+      "name": "codex/perf-guard-20260923",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "592fb8dc185c75836fe554148f057ae2cd70006d"
+      },
+      "name": "codex/pipeline-adapter-profiles",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "cd1af6088bec3b0aefb68b8776f6b280f545de0e"
+      },
+      "name": "codex/pipeline-admin-grafana",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "969504af2784483ab7be5ab6a3e686202041343c"
+      },
+      "name": "codex/pipeline-batch-upsert",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d2a2bca05f155d11025a0d9bb24617413880c621"
+      },
+      "name": "codex/pipeline-container-runtime",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "cb130bc823c4c9f8677d3dfaa570361c57d40332"
+      },
+      "name": "codex/pipeline-events-observability",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566"
+      },
+      "name": "codex/pipeline-performance-restart-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d48b1bd662bfd881f0e49f5ab347055e19bb3249"
+      },
+      "name": "codex/pipeline-postgres-control",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a17354e240eeff58bcccb931261c179982fb64e0"
+      },
+      "name": "codex/pipeline-truth-guard",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "85aa2cdb125bfeae0cd1f0eb5ae82453e20558bc"
+      },
+      "name": "codex/png-promotion-sync-20261004",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5457312c7a3686d16c47eab4ef2a1bdc65a60b20"
+      },
+      "name": "codex/privacy-hydration-render-flow-20260930",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "faf334e9514c42131a11d1214f5a1599b859bc04"
+      },
+      "name": "codex/privacy-trace-redaction-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "73eb5f576cd2727785e8c216321cb1a375ee6fc9"
+      },
+      "name": "codex/production-readiness-observation-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "43fb2fdb002809231accabf14ecddcb2a8e6ae06"
+      },
+      "name": "codex/promote-develop-to-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3ee4a4e82508286df2ab8402902392cc5aa08502"
+      },
+      "name": "codex/promote-nightly-local-to-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "79277f7369e8e78caa2159a5d9fb8826354d60d4"
+      },
+      "name": "codex/promotion-ancestry-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e9d4881aaa655843e8810697398da9b990f87c97"
+      },
+      "name": "codex/promotion-review-closure-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "99f91157190058ac4691ec10046d3f520466ebd8"
+      },
+      "name": "codex/readiness-core-20261004",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5f9390e234d90757fa50a01c4a65c197db42b552"
+      },
+      "name": "codex/reconcile-main-into-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c9faaaf9a4e08e5eae6b4211a5822d6c0e051195"
+      },
+      "name": "codex/reconcile-recovery-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "da5facfee3acabf0d51d47c904d2129cb72ebe4b"
+      },
+      "name": "codex/recover-hosted-release",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6c5ac15f37288f80e3bce52adb4495c2f72392f9"
+      },
+      "name": "codex/recover-public-surface",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0dd54267d9d8075768a538751cbbba2aaab02dff"
+      },
+      "name": "codex/release-review-fixes-20260924",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2f78cacd456cc3a286f34111cfc8629562569271"
+      },
+      "name": "codex/render-flicker-20260925",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7063d2da64b2ac3aff5d567f1c1ec726f08953ea"
+      },
+      "name": "codex/render-flow-release-20260930",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "cc37c1715a61da42d36fc8ff23568c4f9fdcfc2f"
+      },
+      "name": "codex/render-memory-evidence-20261002",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "baa2415d011fcd18b7d0e038d4ce46c39c01bdec"
+      },
+      "name": "codex/render-typecheck-20260925",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "9b9b590319bc8547d2b24ee92afecf47a391d7af"
+      },
+      "name": "codex/retained-marker-root-readiness-20261004",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d24f8d633a628518f072c24d76166d388d33c398"
+      },
+      "name": "codex/retained-overlay-accessibility-20261004",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "522ee656c48c99de2a22560d199f989850559d38"
+      },
+      "name": "codex/runtime-closure-20260905",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "40d31bc7e1eb5efbb6110062be6a72f92f82bf53"
+      },
+      "name": "codex/skeleton-once-20260923",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bde5e2c277c06fcf3818261d8717f3b5b51f009b"
+      },
+      "name": "codex/skeleton-release-record-20260923",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0ed982cafcd70803776cfdfe6f04414b2ae683de"
+      },
+      "name": "codex/stamp-overlay-visited-memo-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d4904cc80e0f20e4a075d422363f39b66f18165f"
+      },
+      "name": "codex/stamp-visited-lookup-memo-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "63210af590f8af95a9c4f3552caad7f12b24d1df"
+      },
+      "name": "codex/static-skeleton-release-record-20260924",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bc376b6d12c530e61cc6d13f4a19d546b7e0c669"
+      },
+      "name": "codex/storyboard-admin-parity-20260623",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "64768d72d0b0d69252162ce0ec9c8e93512bf06c"
+      },
+      "name": "codex/storyboard-local-mlx-20260918",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "8f6f423ab98df563a9e73c77633dc349e44f3502"
+      },
+      "name": "codex/storyboard-local-mlx-continue-20260920",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c5e39d7c2f5d807dbc8c5b107e1d057573a52f73"
+      },
+      "name": "codex/swipe-render-perf-20260925",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ca1d756152193b1ff4bc6fb31e6cf1fa45c5b38a"
+      },
+      "name": "codex/sync-data-final-render-flow-20260930",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b6d61e0f0bcb41aff0e5ced9948cfa8e17bc5686"
+      },
+      "name": "codex/sync-data-history-render-flow-20260930",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "41cf9ecacb4fcb5372779bf1b1b1dfa7f79382e6"
+      },
+      "name": "codex/sync-data-into-develop-20260921b",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a22590a74b9e910caeb910fe8f2d856f628a9a58"
+      },
+      "name": "codex/sync-data-into-develop-20260921c",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "96e000b02e37f11540c5c44d0f4ae6cfbffd95c0"
+      },
+      "name": "codex/sync-data-into-develop-20260921d",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4423d17ac2187514ff0530ceae59959dedf7f3a3"
+      },
+      "name": "codex/sync-data-into-develop-20260921e",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "46b653e695a68f52943c67187193155651f7f667"
+      },
+      "name": "codex/sync-data-into-develop-20260921f",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "64d0b756e50ad111b83df765398d90c5eb912f35"
+      },
+      "name": "codex/sync-data-into-develop-20260921g",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d55aa8ef957505aad3e815be29845446d584d34a"
+      },
+      "name": "codex/sync-data-into-develop-20260921",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d26a5922da542265ce4e0c8f2fb8295e902bc9ba"
+      },
+      "name": "codex/sync-data-into-develop-20260922b",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e286909f298b96625f0117bd1071f9847cf24c3e"
+      },
+      "name": "codex/sync-data-into-develop-20260922c",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0fd1e7fdf6096f52db580099cce6822336550b11"
+      },
+      "name": "codex/sync-data-into-develop-20260922d",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2d100c5c690bea0d6ecb234c669d8a295b7e1cf6"
+      },
+      "name": "codex/sync-data-into-develop-20260922e",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ef33c6364e7075b78fe500eaa4993ebee08b64e6"
+      },
+      "name": "codex/sync-data-into-develop-20260922q",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7e8608f98c68d7e3b2de49a60536639b80129ad5"
+      },
+      "name": "codex/sync-data-into-develop-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f2f9edfb487cbed32a4487ca00359e4fe1046da9"
+      },
+      "name": "codex/sync-data-into-develop-20260925",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "75e5c2f23f6ce99de98d268e1ff738c2820c2185"
+      },
+      "name": "codex/sync-data-tip-into-develop-20260924b",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c22c6036a431a34bb1004e29d4d9c71903dfcf9d"
+      },
+      "name": "codex/sync-data-tip-into-develop-20260924",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ce59f5f888680db235b8751b82638c765927cb78"
+      },
+      "name": "codex/sync-develop-main-20260919",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bc9076fd2d9350439d89aa234fe87b1c0e8a08e1"
+      },
+      "name": "codex/sync-main-data-into-develop-20260922f",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ff1d3197a3fff38593b39c4c2b1f65ceb913b2ef"
+      },
+      "name": "codex/sync-main-data-into-develop-20260922g",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b298bb213329bd1a6c65594499fa10cf44d370c3"
+      },
+      "name": "codex/sync-main-data-into-develop-20260922h",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7dca156a7d000dc80df03921e7e3851ad068b805"
+      },
+      "name": "codex/sync-main-data-into-develop-20260922i",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "dd738384e570fed0581f493a050a2364943734c9"
+      },
+      "name": "codex/sync-main-data-into-develop-20260922j",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "746335b98392ff6fc0a45321b3d61e9b494924b1"
+      },
+      "name": "codex/sync-main-data-into-develop-20260922k",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0865a9a26b0ddfbbd4a60b16f5ba062078cdc64a"
+      },
+      "name": "codex/sync-main-history-render-flow-20260930",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "395ac01c0039473f71adb538e69dcfbf70800f2b"
+      },
+      "name": "codex/sync-main-into-data-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1e6d0d937e7339399844bd00b9cbe748d524a628"
+      },
+      "name": "codex/sync-main-into-data-20260925",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "dc041dd25723b187c308070bf69070ae8fa7085b"
+      },
+      "name": "codex/sync-main-into-develop-20260922p",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2b71084fb52674ef03b6801795848ef8c39fa316"
+      },
+      "name": "codex/sync-main-into-develop-20260925",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5dd3a93f68b6862d9c3fbce1aae32709e88a5369"
+      },
+      "name": "codex/sync-main-into-develop-20260927",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ea9decc996cc3a95237c9601003d82497b82c872"
+      },
+      "name": "codex/sync-main-record-into-develop-20260924",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "9494e55d73275d7311156ea16cb95322ec8abc8f"
+      },
+      "name": "codex/sync-main-tip-into-develop-20260924",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0acbcb395a7b91fe1021531c28cd68c2bd8b9e31"
+      },
+      "name": "codex/transparent-png-logo-size-20261003",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a7c15b568629d1bdbaf0f1489489aaca1f105ba0"
+      },
+      "name": "codex/visited-matcher-index-20260922",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446"
+      },
+      "name": "cursor/admin-console-module-panel-90fd",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "acf14343f04cc233b513a099353b5a04b0e46a84"
+      },
+      "name": "cursor/dev-environment-setup-e09e",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4bda4aaebee8bffac723e09b35b0712e8b4adf6e"
+      },
+      "name": "data",
+      "protected": true
+    },
+    {
+      "commit": {
+        "sha": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d"
+      },
+      "name": "dependabot/github_actions/develop/Azure/setup-helm-5.0.1",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3a10ae6e8004c1f1488861b3f7c118653e62f0da"
+      },
+      "name": "dependabot/github_actions/develop/opentofu/setup-opentofu-2.0.2",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "338de43e80ffaa5cd703dacd7886017b5c219e31"
+      },
+      "name": "dependabot/npm_and_yarn/apps/web/develop/framer-motion-13.1.1",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6"
+      },
+      "name": "dependabot/npm_and_yarn/apps/web/develop/web-development-0983b03d38",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1"
+      },
+      "name": "dependabot/npm_and_yarn/apps/web/develop/web-runtime-bce562e1bc",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "fa568c8ccf04a5e68b153c89033e9b08700f4286"
+      },
+      "name": "dependabot/npm_and_yarn/backend/develop/dotenv-18.0.3",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4"
+      },
+      "name": "dependabot/npm_and_yarn/backend/develop/google/genai-2.24.0",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "40539ca35df591451ee3be8b8456001d72964fcb"
+      },
+      "name": "dependabot/npm_and_yarn/backend/develop/js-yaml-5.4.2",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "966e114336620c71bbe5482c5a88e366f5c5caaa"
+      },
+      "name": "dependabot/npm_and_yarn/backend/develop/puppeteer-25.12.0",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b"
+      },
+      "name": "dependabot/npm_and_yarn/backend/npm_and_yarn-23572d5168",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d"
+      },
+      "name": "dependabot/pip/backend/pipeline/develop/langchain-core-1.6.5",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2"
+      },
+      "name": "dependabot/pip/backend/pipeline/develop/langgraph-1.2.12",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e817c475ee9c38478deab156a36848eba4e8dffc"
+      },
+      "name": "dependabot/pip/backend/pipeline/develop/pydantic-2.13.5",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6"
+      },
+      "name": "dependabot/pip/backend/pipeline-control/develop/psycopg2-binary-2.9.13",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f286446ff1000d67fdf780c57cc2714b2fb820e7"
+      },
+      "name": "dependabot/pip/backend/restaurant-crawling/scripts/develop/curl-cffi-0.16.3",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "833ddd699e73f95bf84b2b80975fea1783998333"
+      },
+      "name": "dependabot/pip/backend/restaurant-crawling/scripts/develop/google-api-python-client-2.200.0",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0063bc00e85b1d9f0c24631203c057c53a3eef75"
+      },
+      "name": "dependabot/pip/backend/restaurant-crawling/scripts/develop/openai-3.16.1",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7333b4877dc077ed936a93f5fdd82694b1f304a8"
+      },
+      "name": "dependabot/pip/backend/restaurant-crawling/scripts/develop/scrapling-0.4.15",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ae2d394a470ec2a0ac582200235b30e695eeaaee"
+      },
+      "name": "dependabot/pip/backend/restaurant-crawling/scripts/develop/yt-dlp-2026.8.19",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a"
+      },
+      "name": "develop",
+      "protected": true
+    },
+    {
+      "commit": {
+        "sha": "da096e04baf979ac35531172c7a1de95090aa649"
+      },
+      "name": "docs/clean-readme-1788926635",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b1b90673002d29f2424e1d4c36fee127cbe40c30"
+      },
+      "name": "docs/pipeline-control-contracts",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f343e8b823fc142c9b2ee858036491f0c003c8b1"
+      },
+      "name": "feat/admin-eval-metric-parser",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bf64b1880ee025cea3ffbd2567aa1d1bd15c1d3a"
+      },
+      "name": "feat/admin-eval-video-label",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3e09bc4ec0c139d715ba87638e1f69c3f2fd3ee4"
+      },
+      "name": "feat/admin-job-sot",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "97ed2b9f2d9d3f713a46422d2db9e5b687c6970a"
+      },
+      "name": "feat/admin-restaurants-ops-strip",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "76b4ca004c3c9fe7460031ca51a7f1baee316346"
+      },
+      "name": "feat/admin-write-path",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4ab3c6bddd13cbc9d8c9c9a4b036d13898c88ac4"
+      },
+      "name": "feat/es-slice2-index-sink",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "94827f6f16b01c9e8aa7570d0c08195fa3f81d69"
+      },
+      "name": "feat/fix-pipeline-route-brace",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2fc49974c9377af02e7913b5c32da276e2d777ae"
+      },
+      "name": "feat/fix-pipeline-route-brace-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1cb7ad6f45ae04a5158c6b22e28849f4a4308772"
+      },
+      "name": "feat/g038-successor",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3a9eb45fd67218518e2e8e23eafc6cc7ca8c569f"
+      },
+      "name": "feat/g038-successor-clean",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "08402b3ad04cec2d0bfb8a53672853a9eb3257dc"
+      },
+      "name": "feat/g038-successor-clean2",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7b27a80a3dc2fe2dc93029007ecf53ceadfde2a0"
+      },
+      "name": "feat/g038-successor-clean3",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0343fdd0ca33abeb8f30f38db8ae8b378fc93a95"
+      },
+      "name": "feat/g040-prefix-recovery",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "fdc60481b5d5ede8408fca6d4f70daa791bd3169"
+      },
+      "name": "feat/hosted-data-plane-eval-r2",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "8085610934c055e601bdb633622a9e32bc3f88c5"
+      },
+      "name": "feat/kafka-live-produce",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "623272e43c08b7fd05c4ade997d131605ec1f259"
+      },
+      "name": "feat/kafka-slice1-event-sink",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "15238d548b29633ae3e4687ef5d59ab775c3a7aa"
+      },
+      "name": "feat/otel-sdk-frozen-counters",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "375b5e3f3116cf2204872ceab12c211c9151e2b4"
+      },
+      "name": "feat/persist-divergence-detector",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3cbabfa063ac8640da925c8a4f7058c577253a56"
+      },
+      "name": "feat/pipeline-local-db-live-rest",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0838e70da768d7f03a624e4a422092fba21f92f8"
+      },
+      "name": "feat/pipeline-runs-collection",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "483236c8441f546029ef3a9e386afa315f963ebb"
+      },
+      "name": "feat/pipeline-schema-v2-cutover",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "492cd5fbe3b1b6769c7dabab9ceb3fe48af266a8"
+      },
+      "name": "feat/platform-modernization",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5a6dec413364f8baaadb90195254eda0a65d79b7"
+      },
+      "name": "feat/record-upserted-emit",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ed503b74109ed2e9ef76ec2888bc3770206e3b74"
+      },
+      "name": "feat/system-status-dual-read",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "59126899bef9054863e79bae58e64684392d82c9"
+      },
+      "name": "feat/tzuyang-pipeline-VYv06RZqe8k",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e9f484dacf3cc03cd26af41192a787ebc3d020f5"
+      },
+      "name": "feat/visual-location-windows",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "166385ee72ce494eed5ba58766d4195990b6c57b"
+      },
+      "name": "feat/visual-location-wire",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "35a4d5f921bec82309db41acd43a3367666ea1b4"
+      },
+      "name": "feat/web-admin-ci-path-cache",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ac9423c280a2e6d0539ca23fc6b1c03ab162dafa"
+      },
+      "name": "feature/browser-title-youtube-signals",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "95f8911b05d5b50af9fa70c9a0d3df9258fe02c2"
+      },
+      "name": "fix/admin-ops-strip-typecheck",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "01d9e07356af57c6b659116556deffc818978423"
+      },
+      "name": "fix/auth-privacy-recovery",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d2452e3fa8f4babfeb518dcf234657334d9a793e"
+      },
+      "name": "fix/auth-privacy-recovery-postdeploy",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4fd637f6b12ea5273bc8060e6412acba9c33ce51"
+      },
+      "name": "fix/cas-414-compact-predicates",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3eb3031bfcccbee7a7248ad42af3e52a213f4ae2"
+      },
+      "name": "fix/data-ledger-units-83",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "59ad26d3ffce9344163803723e3e64e861839c06"
+      },
+      "name": "fix/detail-back-button-outline",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "efea2f88637422e36086e3b9657798adc6fe91e1"
+      },
+      "name": "fix/detail-back-button-outline-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7238929b88696aec9fdea57376cf267e0f194571"
+      },
+      "name": "fix/detail-back-button-outline-develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "91df1bef982f9b3b743ac690a4f2bcc03394da9d"
+      },
+      "name": "fix/g034-reserved-catalog-alias",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "70cf8f987ffe3e0cb7e2908b8f7877b3e2224d53"
+      },
+      "name": "fix/g035-ledger-terminal-capture",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b1f79137ca69d8da5d020598553d5686699b158a"
+      },
+      "name": "fix/g038-clone-data-owner-partition",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e92b0b7a2a0f8773efd10094acfd6e78c8657b5c"
+      },
+      "name": "fix/g038-clone-effective-insert-window",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4cefaf2b3b856a578b414575c8d9a6db7b8a4d1c"
+      },
+      "name": "fix/g038-clone-extensions-reset",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2897dc320766b02c25f38ac81520f8c55dc6aafa"
+      },
+      "name": "fix/g038-clone-final-readiness",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f70022d382a5dcf37314fb6e5848786941720d3b"
+      },
+      "name": "fix/g038-clone-fk-authority-window",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "cdd14ad3bbf7cda8c8150426df1270774fb0de1a"
+      },
+      "name": "fix/g038-clone-inherited-trigger-authority",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "11cb3f777a0493d3be19c5824e032b9b92778f65"
+      },
+      "name": "fix/g038-clone-inventory-admission",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c05728f48c45aa0c52eaed6256263aac7796b620"
+      },
+      "name": "fix/g038-clone-live-connection",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "053d642251f19ba936e1a77eed83e02a0c06981b"
+      },
+      "name": "fix/g038-clone-managed-schema-staging",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "78c98649e559984a0aa3c245a49dabd2319d1fb5"
+      },
+      "name": "fix/g038-clone-null-acl-authority",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d4d0f1dae1501c84ffbeae216c040c4f418a07f3"
+      },
+      "name": "fix/g038-clone-null-acl-query",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "99398fe58d9aaf23828d7feccba7bd11b3981323"
+      },
+      "name": "fix/g038-clone-postdata-owner-runs",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "897e62b1e54ecf22c814334eee29ef951dc267f7"
+      },
+      "name": "fix/g038-clone-privacy-acl-baseline",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1dcf4da846b48968c77fcddf0ff14507be53ad10"
+      },
+      "name": "fix/g038-clone-privacy-data-grant",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0df601c191b2fa63f264cd9eb73b103bd6dcfbaa"
+      },
+      "name": "fix/g038-clone-public-usage-staging",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "28a6ff027276ccf500dd50d4f354c9f0ccc1b7a5"
+      },
+      "name": "fix/g038-clone-receipt-canonicalizer",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "074278a5de8fef674ebd444eddce9bcc0f6ae9ca"
+      },
+      "name": "fix/g038-clone-restore-authority",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4713e5caf5cf7b677a52dbcca94a2f16a9d0d7fc"
+      },
+      "name": "fix/g038-clone-schema-staging",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f988545dc2013fdeda42836337ce16797615bdd6"
+      },
+      "name": "fix/g038-clone-shared-fk-acl",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "114fe31b6062a916b25ed46d10da51c239050f95"
+      },
+      "name": "fix/g038-clone-signing-runtime",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7afd4398200366a787eb25645d0cc856402002a1"
+      },
+      "name": "fix/g038-clone-table-trigger-authority",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ec2cc955ac2f78cfba830ece9dcd31c400477ce6"
+      },
+      "name": "fix/g038-clone-trigger-authority-window",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4277b56ae5e38ec51ba3d8b74e58fb7cdda112ef"
+      },
+      "name": "fix/g038-complete-capture-scope",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "9e0883b5907e25103e46cdf123d41cd7046c28f4"
+      },
+      "name": "fix/g038-darwin-clone-network",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3a111af09738d7c5a0a0b51780493972a0d5628c"
+      },
+      "name": "fix/g038-extension-dependency-owner",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "fcfd87572d2522ba21e9ab4976dd5c44a69503ac"
+      },
+      "name": "fix/g038-extension-dependency-parity",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1e0b330907618d5a7476e8ea882b8eb9dfa62fe1"
+      },
+      "name": "fix/g038-extension-full-acl",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6dd2e1241c0cd5f81b4000a74e31b044e5578be9"
+      },
+      "name": "fix/g038-extension-restore-phases",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6506b7e0550f2ed8f9cbae1cc0a1e4cd5228b412"
+      },
+      "name": "fix/g038-gh-home-isolation",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "766b67f6cc4ad4f9de5651ca0422b31aae1d06d6"
+      },
+      "name": "fix/g038-lock-authority-prelude",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f405ed42e11067b24429d6b67d3f4c7d23ada420"
+      },
+      "name": "fix/g038-macos-journal-custody",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "99ced80eed8f1242d0a1502a4c0840878bc6f3ae"
+      },
+      "name": "fix/g038-postdata-trigger-final-state",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "87c18cd7b3453b3d2349a07362fdfeffbd3ce1b1"
+      },
+      "name": "fix/g038-predecessor-root-admission",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "79bd0708382896d0c610557fb0325d95834a7870"
+      },
+      "name": "fix/g038-restored-function-acl-matrix",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b9dc5705b6ff460dd1113b57da433c43e6612403"
+      },
+      "name": "fix/g038-restored-schema-acl-phase",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "234ff61ffbe67496594740ad7142ad4b9a0abc00"
+      },
+      "name": "fix/g038-source-workflow-cache",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "30809616c55cccdc42c15c7a4ea7e2c619c725a9"
+      },
+      "name": "fix/g038-storage-auth-schema-window",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2d65744368da3a9ca28ceda638ff1c69c0b28bc1"
+      },
+      "name": "fix/g038-terminal-acl-parity",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "47d320cd60819663e9c9ff3fbcf5fab50bf82579"
+      },
+      "name": "fix/g038-terminal-contype-cast",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ec5b025ceee506e9220381f72bfdf34f1060ed17"
+      },
+      "name": "fix/g038-terminal-owner-assertion",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "96263eb9212b99781fbe53931eb92458ef604be5"
+      },
+      "name": "fix/g038-terminal-policy-role-cast",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "60c7ccacf7cdf8aa88d4c58c360debed4038fa43"
+      },
+      "name": "fix/g040-canonical-manifest-newline",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "91157c3befbe3e5d9b0acc0d224f7353385ed50b"
+      },
+      "name": "fix/g040-clone-role-attributes",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "9fd1e5395fc1a29910cc123b6a9443aadeb639c8"
+      },
+      "name": "fix/g040-hosted-acl-grantors",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3d12e453c5f324a4b1affc62cd35a387f01d59cc"
+      },
+      "name": "fix/g040-hosted-clone-identity",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4e5a7c79fffac9ad996127198c89e17545f0c32e"
+      },
+      "name": "fix/g040-hosted-clone-runbook",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "dea55b09f56f8210a9672e4c801bf1b8fde11993"
+      },
+      "name": "fix/g040-hosted-function-owners",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "03350390bce2e439439e2314d3757fa83c54db73"
+      },
+      "name": "fix/g040-hosted-role-grantor",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "813ef23e5c6c904f059e0c045e058bc37abd41e8"
+      },
+      "name": "fix/g040-libpq-service-file",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "17a9a897cbfdbe1e7fc7a4ca899d23634389739b"
+      },
+      "name": "fix/g040-live-identity-cursor",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "75f5eca045aa9d47f1bf4f54438fce02e4ff38e4"
+      },
+      "name": "fix/g040-provider-extension-acl",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "803e4913c399c60a3d061796e7b4ff6801cce29d"
+      },
+      "name": "fix/g040-provider-extension-owner",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6bc4b8b4a3bb73e1fcfc10a76f0233962f9daf01"
+      },
+      "name": "fix/g040-provider-vector-runtime-rpc",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2b2780d57ff9df131863a12362d0711a936f2b98"
+      },
+      "name": "fix/g040-provider-vector-terminal-acl",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4f741a99d819b03f792aa4a952ea48f3cd7416e3"
+      },
+      "name": "fix/g040-stable-docker-recheck",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2435932c6786ec74526f0388edb33decbcfb4da2"
+      },
+      "name": "fix/g040-terminal-data-probe",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "cda8a64401c6934c117f930bb37fbb65f8722b26"
+      },
+      "name": "fix/g040-vector-schema-parity",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7558f69a8c01fb4fbc26ecfe53576f2848feaac7"
+      },
+      "name": "fix/g041-auth-boundary-closure",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "603c882c91223e9bae06a27aaa418d675ee70318"
+      },
+      "name": "fix/g041-auth-workflow-bridge",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "910619238ffaec58f41bcd7b910279970606270a"
+      },
+      "name": "fix/g041-migration-replay",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "be8294fa754b8a091e25f51bf9995ca0b939cedf"
+      },
+      "name": "fix/home-detail-back-state",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1a911731054744314918d827bbf7176b6f3272e2"
+      },
+      "name": "fix/home-detail-back-state-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "86e0403b99939fc6f8f98193e3bbdc68e24ff512"
+      },
+      "name": "fix/home-detail-back-state-develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "9323becd3d5925a8c6f1ba808c69798fd38cb22e"
+      },
+      "name": "fix/httploop-env-snapshot",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1a1a6a27e089428fc073bbf827be14e8aeed4851"
+      },
+      "name": "fix/local-typegen-direct-db-url",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1a3cd0e0fe72505a5886f44c1a23cc1912e20674"
+      },
+      "name": "fix/local-typegen-pg-meta",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f6f693dc7ed662192a7d61d4f17342170be5bb2d"
+      },
+      "name": "fix/mac-launchd-tcc",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b49424ea4ba89386ec9cdd85feded5ed917aaadf"
+      },
+      "name": "fix/map-filter-typography",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "745d958655861c8a7290809bf38907085cd34705"
+      },
+      "name": "fix/nightly-bun-frozen-lockfile",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "576136937cb3f0a5bca25d2a0b06bcb28cc27352"
+      },
+      "name": "fix/nightly-ledger-units-83",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5c1f98a67cac76c2fc05190474d20bcb6db29647"
+      },
+      "name": "fix/nightly-local-catalog-types",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "16cacdfc031ce53712b8435fdc732e2ba532bd10"
+      },
+      "name": "fix/nightly-runner-ledger-83",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b240aa1503a012620d768b0bea7cb81a079b0839"
+      },
+      "name": "fix/persist-error-json-envelope",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "474d2a46fe1136144df6940796f0c3f93a1895b2"
+      },
+      "name": "fix/remaining-work-g001-g002-leftovers",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "64d6be6e3ef02ea475b7934a3605b3e090013853"
+      },
+      "name": "fix/toast-empty-state-placement",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "71d096669522766b396670875db63a20c472166f"
+      },
+      "name": "fix/vercel-webpack-build",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c9936d31aa24a31b8a2e9f18a4e9493f94a983fc"
+      },
+      "name": "gjc/g016-admin-role-bridge",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "28a3bbcad70718989cb17642e6f1893c07841e9b"
+      },
+      "name": "gjc/g016-freeze-scoped-apply",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d0feb5d22f283a213a8a3e4a54c80bc826573231"
+      },
+      "name": "gjc/g016-privacy-audit-owner-policy",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0d5a452d08ff5430821fcc5a67ab6e83428d8b84"
+      },
+      "name": "gjc/g016-privacy-release",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "306ca46f3c9f842838c3b8b80233b350be88e8b5"
+      },
+      "name": "gjc/g016-readback-fix",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "be21e2719549ee57c0590f3e57c4eaaba3ef7e57"
+      },
+      "name": "gjc/g038-source-import-fix",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c9abf66807e801a145df714aa39dd7f1c03e43ad"
+      },
+      "name": "gjc/privacy-onboarding-runtime-20260804",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6f3602f9df411bfa2ecf6ea6b0940c06016b0553"
+      },
+      "name": "gjc/sync-data-to-main-20260731",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "936198cde73b0cab5612e231ef5686628da1b3f1"
+      },
+      "name": "gjc/sync-develop-to-main-20260731",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f7eef421b4b1d9be2d8d4e7b69ac2f2068a9d7ec"
+      },
+      "name": "gjc/ultragoal-signup-admin-20260804",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f6ac88aa42c6c78f2fd7231d63e54a3c6e9be6d0"
+      },
+      "name": "kpi-dashboard-parity-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3421c66e0561790dc39b1d9a9dd8cdaacc4c9c46"
+      },
+      "name": "kpi-dashboard-production-parity-data-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ae4afcbc5f5916445d6c9f8f8897a3350ce3c0bd"
+      },
+      "name": "kpi-tailwind-guardrails-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "232a8d254761dbd8fe0eca260333ab7946da499b"
+      },
+      "name": "kpi-tailwind-guardrails-exact-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "adf2f8f08a9e9dcbab2c5cd1bd27c66bb524387f"
+      },
+      "name": "kpi-tailwind-scoped-guard-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b0e27f7ab80f80f21a942763ca8fbe6071c4917e"
+      },
+      "name": "kpi-tailwind-scoped-guard-data-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ce56e484eb603bd3e24516f8ce8f882b7b89d1e3"
+      },
+      "name": "kpi-tailwind-scoped-guard-develop-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "c92422ad6c852a18c5dc949360f47c0e582f405f"
+      },
+      "name": "kpi-tailwind-scoped-guard-v2-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bea97b8a9eb214cde6f57407e27a856d2cf3a2e9"
+      },
+      "name": "kpi-tailwind-standalone-guard-data-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "09c832a5e15df666104b5100261de9c1bf56abad"
+      },
+      "name": "kpi-tailwind-standalone-guard-data-v2-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "17d722322b5a240b5a9afd0672672a60c22ad223"
+      },
+      "name": "kpi-tailwind-standalone-guard-develop-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d57775b06c3092c695164b21c4d5935888094f7b"
+      },
+      "name": "kpi-tailwind-standalone-guard-main-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ce5cd9c33f75ef576c1a1451093d420bd818e24c"
+      },
+      "name": "kpi-tailwind-tracking-guard-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+      },
+      "name": "main",
+      "protected": true
+    },
+    {
+      "commit": {
+        "sha": "2e0ac57d3a4196c2686f6c895a580bea53f7e265"
+      },
+      "name": "ops/safety-admin-readiness-20260709",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "694042031bea63710b0e7b87fdaf88de98f56b65"
+      },
+      "name": "promote/bun-lock-to-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "26bd7ba765b01101efe63b400a089a0cd463302a"
+      },
+      "name": "promote/bun-lock-to-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "65980bd26f47c37b07a16f7e35b23f824cfaba4d"
+      },
+      "name": "promote/catalog-types-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7327630fd95732f51cf6f00bcd6240535cf46551"
+      },
+      "name": "promote/catalog-types-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b1a604e72d68b748514e0727add074d7fdb1985c"
+      },
+      "name": "promote/data-to-main-2796",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "88e49e047d679b2fd1da1a558175bac9fabadd75"
+      },
+      "name": "promote/data-to-main-2799",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "41296b2d241b76a9dd6615380347027a15389b6c"
+      },
+      "name": "promote/ledger-83",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4dca2b981ae535a9143c6f73e53af0c1399f7924"
+      },
+      "name": "promote/mac-launchd-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ce57cbdaa53744e5f981e0141e3a8884a06b5d6c"
+      },
+      "name": "promote/mac-launchd-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "94ac1bd28afa7878a01574f9c7e8cc44c836a82f"
+      },
+      "name": "promote/runner-ledger-83-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "78fab8782d002588244d4a89ec9b650cd6160b64"
+      },
+      "name": "promote/runner-ledger-83-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2bc2a95338d8fa244a8c55543b7809216edfaeb7"
+      },
+      "name": "promote/typegen-classifier-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e2de170c0c3ef3e374b9d15287609ab45de4731f"
+      },
+      "name": "promote/typegen-classifier-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e2de170c0c3ef3e374b9d15287609ab45de4731f"
+      },
+      "name": "promote/typegen-classifier-to-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a433b8c5c8e3707d11e27747d5b50c61c0e49bad"
+      },
+      "name": "promote/typegen-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "919da81fb94c066fe272569dcb480971bde05ef1"
+      },
+      "name": "promote/typegen-pg-meta-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "849073a42356364030849c968862eabcf7d9e922"
+      },
+      "name": "promote/typegen-pg-meta-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0a8416d42a37a95e686c4d782e1ec73f6a15e37f"
+      },
+      "name": "refactor/admin-console-sidebar",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "32e4406e714e306dc4313c7d44557c2c09ec0a94"
+      },
+      "name": "release/final-migration-catalog-casts",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0d01520d30a10622a11a2d3a626e992cc363de2b"
+      },
+      "name": "release/final-migration-diagnostics",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "62b1add41c0459c289fcd05904e3c83d91a6b0fe"
+      },
+      "name": "release/final-migration-diagnostics-clean",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0361584d421cebd981f6a28994151d1c05735a0f"
+      },
+      "name": "release/final-migration-function-clean",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "e0d362302af08c649969cbd284254e4381effb09"
+      },
+      "name": "release/final-migration-function-diagnostic",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b62c0b60d33e30126aa4f567a3f022360be5f134"
+      },
+      "name": "release/final-migration-function-name",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "053a9203f0ed746c6287684363c8294829aee3d5"
+      },
+      "name": "release/final-migration-operator-diagnostic",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ba6ea67e2eef324e02812e6aad3c92193b90ddf1"
+      },
+      "name": "release/final-migration-policy-casts",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "fdf77c61e11a41758f91cdee2516fe8d479cf000"
+      },
+      "name": "release/final-migration-sqlstate-clean",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ca5aa618896b58718ea5ce5085425209b1ef5d47"
+      },
+      "name": "release/final-migration-sqlstate-prefix",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "983ccf455560e6bebc7903f55bc9dabbb34ae08d"
+      },
+      "name": "release/final-migration-terminal-readback",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7e412b9795c790f9c16f08e9c92f5452d3b833fa"
+      },
+      "name": "release/internal-worker-proxy",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "708804485a934eeac1922cef5ffff4b2ddfc4403"
+      },
+      "name": "release/mobile-admin-layouts-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "131409ac22db0b22a305ae24510f9bf79e514a4a"
+      },
+      "name": "release/mobile-admin-layouts-develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "27de1c5d0c1dd56889f86c2bbce28f9a58797115"
+      },
+      "name": "release/mobile-admin-layouts-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ac8f98163059b0c7b446fd07debdb4a4bb307dfc"
+      },
+      "name": "release/rlm-followup-weekly",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5016682a261950026cb1b3877f90420ba3442e91"
+      },
+      "name": "release/runtime-bindings",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "788a472e4eecd5c4e799d7c844b3ea832841e0ba"
+      },
+      "name": "release/runtime-bindings-postmerge",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b05806335b7bb1f0723aba75170c79bc4228ff63"
+      },
+      "name": "release/ts7-performance-019f4809-recovery",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "ec65c40c8dbffec61f58a1a1ed948491039d1f87"
+      },
+      "name": "release/vercel-routing-data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "6ecb1a8153a6dd168ce112f6783082cdb57cb698"
+      },
+      "name": "release/vercel-routing-develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a5721a02e2970bc42604af9e80f2007b0895d3eb"
+      },
+      "name": "release/vercel-routing-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5abf1479da0f725701760656e0e20ec9d92aedc2"
+      },
+      "name": "release/vercel-trace-followup",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "a1f5645a9f94f56c7b108e83abf6d11f210cc73f"
+      },
+      "name": "release/visual-contract",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "80ee2fae0c5896a17db7ce33d936ef83414ca980"
+      },
+      "name": "release/worker-capability-deploy-trigger",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3d7f14b242e2c61c1b4b5e28974998638d8c71fe"
+      },
+      "name": "revert/admin-restaurants-ops-strip",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d12fa1a8db6f253d80c4448209b724276608cd8a"
+      },
+      "name": "sync/admin-sidebar-chrome-20260626",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "bac2dda51400404acb0dbf9f10b0dd9b7129b419"
+      },
+      "name": "sync/admin-sidebar-storyboard-final-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "62b2e12bc7cde310cf39ddecb27029686eb3da38"
+      },
+      "name": "sync/claim-release-data-20260628",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1c920218d22843979f7f87e45b810b191a0fc750"
+      },
+      "name": "sync/claim-release-develop-20260628",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "47b3ae6235e8e6592242a4ea24684ec9a1181327"
+      },
+      "name": "sync/code-parity-develop-20260620",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "b05fa59fe30f230e4833d06264ccfe78f7d2247a"
+      },
+      "name": "sync/code-parity-main-20260620",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "eec8c479e2937d9c1bcc12c6a697e03cd2654c7f"
+      },
+      "name": "sync/data-admin-shell-layout-20260625-af9a624",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "31894ca1f5c21a7409c2f3ce56b40c8627f68e72"
+      },
+      "name": "sync/data-browser-title",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "14a073625878e194c08b312a547d0c0a1262de7e"
+      },
+      "name": "sync/data-code-to-develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3e5b7cca7b21dc8f6d0af42bc4b5365e72c186c0"
+      },
+      "name": "sync/data-code-to-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "4d97be8ef7eaac1e9ed62485fe85f7003c513695"
+      },
+      "name": "sync/data-codebase-main-20260629",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "3c8e400abfde409356d58480a5ce616392795ef8"
+      },
+      "name": "sync/data-storyboard-admin-parity-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "218ada01ba55ed2577db871497fabf5aaf88496e"
+      },
+      "name": "sync/data-storyboard-parity-20260621",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0a6075cba640e69316634e3da0636e4dcf85e1a6"
+      },
+      "name": "sync/data-tree-equal",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "038f81e28ccb006ad357d512faf2ef162eba4f3f"
+      },
+      "name": "sync/develop-admin-shell-layout-20260625-af9a624",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "59822119aa6f7478558b92abed0e9e62b32f8884"
+      },
+      "name": "sync/develop-admin-sidebar-storyboard-final-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "61941a041fb8e5c4f5c0089e1b0c7d8d489f3c35"
+      },
+      "name": "sync/develop-browser-title",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "9dccdf46e9a84d5114d987cd0a3c518bf79626b6"
+      },
+      "name": "sync/develop-codebase-main-20260629",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0e2a4040d1fa9ecf9b5f29f6a4474d3b7deb8999"
+      },
+      "name": "sync/develop-data-parity-20260621",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "1e77bb77fc818d3c5d54741abf6ff251d2536bea"
+      },
+      "name": "sync/develop-storyboard-admin-parity-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "5a389045a24175cb6accd7281c23f0a4f2b765cc"
+      },
+      "name": "sync/develop-storyboard-parity-20260621",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f9884f7450425a2a70ff62fa9885d57e04d0a196"
+      },
+      "name": "sync/local-bridge-recovery-20260620",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "59ef4705850c10a7dee7a8f4ee7a6697295b9c92"
+      },
+      "name": "sync/main-admin-shell-layout-20260625-af9a624",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d66d893dd596d22793dd732fe53ad9fcbe6f7a62"
+      },
+      "name": "sync/main-admin-sidebar-storyboard-final-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "8307830d4b1e141d0ce34f2b2d2d0263abbcbce6"
+      },
+      "name": "sync/main-data-parity-20260621",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "94701bb54f86bbbdc1e4ae53ef4ea892ae7ac230"
+      },
+      "name": "sync/main-storyboard-admin-parity-20260625",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d31f07509ea5dd62322f36f04a6de1a73d01b019"
+      },
+      "name": "sync/main-storyboard-parity-20260621",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "904b66e465e7647a3a262482d24d2c236ab968ad"
+      },
+      "name": "sync/release/485ccdaa7/data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "f16c6adfcfb54e940980608c3d6024aab73e1346"
+      },
+      "name": "sync/release/485ccdaa7/develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2c39ca7daa3e17be0d2a0446c205b2ca2898ad65"
+      },
+      "name": "sync/release/247901980/data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "0d788b987c3976e489fb575bc14cc8e62f726794"
+      },
+      "name": "sync/release/247901980/develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "7ee3923b7ee8adfd31285ccc7cbdd2d4a762db88"
+      },
+      "name": "sync/storyboard-eight-ultraqa-20260626",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "56b35895cadf3fc6b9508b87140468ad566be091"
+      },
+      "name": "sync/typography-45c7c3b5c/data",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "d26d57dac78321f41179a3cd26f8af069aaa26fa"
+      },
+      "name": "sync/typography-45c7c3b5c/develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "525757ab1880f4902743df44c9132e4758564122"
+      },
+      "name": "sync/vercel-tracing-develop",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "45ddbf975548dde1100bea7dd1eaec1effb59d05"
+      },
+      "name": "sync/vercel-tracing-main",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "789430c4fc9f9b1ff4cfdfe5eaed441122e19f8d"
+      },
+      "name": "test/persist-dsn-required",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c"
+      },
+      "name": "wip/mac-local-2026-09-02",
+      "protected": false
+    },
+    {
+      "commit": {
+        "sha": "2f701f12418f60cb03adc648e62d13b9607d06f7"
+      },
+      "name": "work/storyboard-admin-local-parity-20260621",
+      "protected": false
+    }
+  ]
+}

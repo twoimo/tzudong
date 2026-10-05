@@ -1,0 +1,8 @@
+{
+  "artifactCount": 1274,
+  "mapSha256": "290ce4b8df4480d33b83437089259932cf91f93bd03973ae82d8e711a86bd89d",
+  "externalPinOutsideEvidence": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/runtime/artifact-map-checkpoint-20261005-v1.sha256",
+  "allBytesReadbackMatched": true,
+  "finalFreeze": false,
+  "GitBlobReadbackCompleted": false
+}

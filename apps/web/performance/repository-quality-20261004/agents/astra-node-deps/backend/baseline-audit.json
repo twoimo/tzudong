@@ -1,0 +1,83 @@
+{
+  "exitCode": 1,
+  "command": "npm audit --json --audit-level=high",
+  "node": "v24.21.0",
+  "npm": "11.6.2",
+  "lockSha256": "bb77dec146a3eda4faaacea489a629f3120148cd3e5608a127909a7a12fce75e",
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 1,
+      "critical": 0,
+      "total": 1
+    },
+    "dependencies": {
+      "prod": 208,
+      "dev": 0,
+      "optional": 2,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 209
+    }
+  },
+  "vulnerabilities": {
+    "brace-expansion": {
+      "name": "brace-expansion",
+      "severity": "high",
+      "isDirect": false,
+      "effects": [],
+      "range": "<=1.1.20 || 2.0.0 - 2.1.6",
+      "nodes": [
+        "node_modules/brace-expansion",
+        "node_modules/gaxios/node_modules/brace-expansion"
+      ],
+      "fixAvailable": true,
+      "via": [
+        {
+          "name": "brace-expansion",
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+          "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+          "severity": "moderate",
+          "range": "<1.1.21"
+        },
+        {
+          "name": "brace-expansion",
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+          "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+          "severity": "moderate",
+          "range": ">=2.0.0 <2.1.7"
+        },
+        {
+          "name": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+          "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+          "severity": "high",
+          "range": "<1.1.20"
+        },
+        {
+          "name": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+          "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+          "severity": "high",
+          "range": ">=2.0.0 <2.1.6"
+        },
+        {
+          "name": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+          "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+          "severity": "high",
+          "range": "<1.1.19"
+        },
+        {
+          "name": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+          "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+          "severity": "high",
+          "range": ">=2.0.0 <2.1.5"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "completed_at_utc": "2026-10-04T11:53:39.451083+00:00",
+  "scope": "PR2857 and PR2908 admin historical semantic reconciliation",
+  "source_authority": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "observed_checkout_head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "worker_changed_source_files": [],
+  "admin_diff_readback": "",
+  "proposal_files": [
+    "proposal-01-truthful-top5-proportions.patch"
+  ],
+  "proposal_applied": false,
+  "existing_focused_tests": {
+    "pass": 70,
+    "missing_dependency_load_errors": 2,
+    "files": 9,
+    "rerun": false
+  },
+  "full_build_or_full_unit_or_naver": false,
+  "remote_mutations": 0,
+  "old_pr_whole_supersession_claim": false,
+  "report": "REPORT.md",
+  "reproduction": "REPRODUCE.md",
+  "evidence_sanitization": "Metadata excludes author/email/body; only commit parents/subject/path/hash fields retained. Historical broad source diff scratch copies replaced by 12 bounded excerpts. No raw provider or hosted payload logs."
+}

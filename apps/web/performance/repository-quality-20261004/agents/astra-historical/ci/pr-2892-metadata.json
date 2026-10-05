@@ -1,0 +1,27 @@
+{
+  "baseRefName": "develop",
+  "baseRefOid": "e777691191ae21eaed611a8c8d24b80ca68b7419",
+  "commits": [
+    {
+      "committedDate": "2026-09-22T13:42:42Z",
+      "messageHeadline": "chore(deps): bump Azure/setup-helm from 4.3.1 to 5.0.1",
+      "oid": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/security-audit.yml",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefName": "dependabot/github_actions/develop/Azure/setup-helm-5.0.1",
+  "headRefOid": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d",
+  "number": 2892,
+  "state": "OPEN",
+  "title": "chore(deps): bump Azure/setup-helm from 4.3.1 to 5.0.1",
+  "url": "https://github.com/twoimo/tzudong/pull/2892",
+  "historical_parent": "e777691191ae21eaed611a8c8d24b80ca68b7419",
+  "exact_hunks_match_local_objects": true
+}

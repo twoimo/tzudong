@@ -1,0 +1,72 @@
+{
+  "name": "job-metadata-103781384047",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/actions/jobs/103781384047",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4947",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:39:45.944160+00:00",
+      "next_page": false
+    }
+  ],
+  "count": null,
+  "items": {
+    "conclusion": "failure",
+    "head_sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+    "id": 103781384047,
+    "name": "npm-audit (backend)",
+    "run_id": 34778613753,
+    "status": "completed",
+    "steps": [
+      {
+        "conclusion": "success",
+        "name": "Set up job",
+        "number": 1,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Checkout repository",
+        "number": 2,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Set up Node.js",
+        "number": 3,
+        "status": "completed"
+      },
+      {
+        "conclusion": "failure",
+        "name": "Audit npm dependencies",
+        "number": 4,
+        "status": "completed"
+      },
+      {
+        "conclusion": "skipped",
+        "name": "Post Set up Node.js",
+        "number": 7,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Post Checkout repository",
+        "number": 8,
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "Complete job",
+        "number": 9,
+        "status": "completed"
+      }
+    ]
+  }
+}

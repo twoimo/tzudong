@@ -1,0 +1,110 @@
+{
+  "observedAt": "2026-10-04T11:48:30.619159+00:00",
+  "head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "branch": "codex/historical-quality-20261004",
+  "sourceChangedByThisWorker": [],
+  "sourceStable": true,
+  "verifiedSourceFileCount": 19,
+  "sourceHashesAfter": {
+    "apps/web/components/filters/CategoryFilter.tsx": "8e5cf36934a9a7d3239cab97503c374be83248f361dc248c87dd203025beb8b9",
+    "apps/web/lib/map-restaurant-lookup.ts": "147f787c5fbad3e2a60ae15f1f64f8f528a1f2d08245aad5d27166bfa14fb8d1",
+    "apps/web/lib/naver-map-selection-helpers.ts": "a4ee40bcdc76f923014d93614dc7a2ab769d7e90d5d8164c374ccd7c7666f83d",
+    "apps/web/components/map/NaverMapView.tsx": "1f1c322ce58214732ae3a88dc35f5fa1f796501da1a53924416ec6f468bb8a7e",
+    "apps/web/lib/home-map-youtube-kpi.ts": "9d97b99bb48e9b7a4c25bdfb2658af869a2f76628b824b3ff5ba45b12143620a",
+    "apps/web/hooks/use-restaurants.tsx": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+    "apps/web/lib/popular-restaurants.ts": "c76aea565b1b389b0a443b1572984c88409150dcf900c64decc2c8859e96cb6c",
+    "apps/web/lib/overseas-region-matching.ts": "94894e9b8117137f0b8150405aab137ceb192d84156d4811e1144d6e628f1be0",
+    "apps/web/constants/overseas-regions.ts": "4d986e8cb4b9166ec56ed9d12b3d8d32db2ed63b861a772888c7e8b319fde4af",
+    "apps/web/tests-unit/map-restaurant-lookup.test.ts": "278d26429cf6401420a549d2b8d70c62607bb4a42188dda65725662a4793ce75",
+    "apps/web/tests-unit/naver-map-selection-helpers.test.ts": "0ac5a2413a98031d3193e0086777b5c22cce5824aad5ec16f542acdcf23314a1",
+    "apps/web/tests-unit/home-map-youtube-kpi.test.ts": "9629155b31425ed0935cfbdae85a5dcb7a00b8844084112364e0e429367cfdab",
+    "apps/web/tests-unit/overseas-region-filter.test.ts": "62248370deaaf2eaf827574a64ccd5e79a9c3da5de034e1382d0c8e61e80a2e9",
+    ".github/workflows/g037-hosted-closure.yml": "007b84768af0b9ffcf5548de992e7104e392c8c811771976b18ec7970ff69289",
+    "backend/supabase/scripts/g037_hosted_closure_executor.py": "fe908fad3738ad520f99955fae88b74076e149c044eb7f32aeebf5e33be13836",
+    "backend/supabase/scripts/g037_production_controller.py": "05ff10b9d920b115ad24a2cf3734dec76d26c25d1320d2322b9b18f7d9bbe5ae",
+    "backend/supabase/scripts/g037_write_freeze.py": "341a810e14afa900c9617345b2f8802b01a64f67e4b6951175823c83cfe58fcf",
+    "backend/supabase/tests/test_g037_write_freeze.py": "eff47da6c15eafecf182425762b901c48396b5552408fbbd07ff049bd729dfd9",
+    "backend/supabase/tests/test_g037_hosted_closure_workflow.py": "97660555dfffe609dbc059cf7e5d6e4112f8663bc500d091d17c60f31499b323"
+  },
+  "observedOtherWorkerDirtyStatus": [
+    " M .github/workflows/security-audit.yml",
+    " M README.ko.md",
+    " M README.md"
+  ],
+  "unitCheck": {
+    "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/apps/web",
+    "command": [
+      "/Users/twoimo/.bun/bin/bun",
+      "test",
+      "tests-unit/map-restaurant-lookup.test.ts",
+      "tests-unit/naver-map-selection-helpers.test.ts",
+      "tests-unit/home-map-youtube-kpi.test.ts",
+      "tests-unit/overseas-region-filter.test.ts"
+    ],
+    "exitCode": 0,
+    "passed": 24,
+    "failed": 0,
+    "assertions": 53,
+    "testFiles": 4,
+    "evidence": "Actual successful tool output in this run; not rerun"
+  },
+  "semanticProbe": {
+    "command": [
+      "/Users/twoimo/.bun/bin/bun",
+      "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-historical/map/reproduce.ts"
+    ],
+    "exitCode": 0,
+    "output": "semantic-probes.json",
+    "typescriptVersion": "6.0.2",
+    "limitations": [
+      "Source AST extraction and dependency stubs; no rendering",
+      "No performance or hosted verification"
+    ]
+  },
+  "diffCheck": {
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exitCode": 0,
+    "diagnosticLineCount": 0
+  },
+  "remoteWrites": 0,
+  "commits": 0,
+  "pushes": 0,
+  "messages": 0,
+  "configurationChanges": 0,
+  "notRun": [
+    "full build",
+    "full unit",
+    "Naver measurement",
+    "G037 unit or database tests",
+    "typecheck/parity",
+    "hosted operations"
+  ],
+  "stillNeededReproducedCategoryDefects": 0,
+  "activeOwnerReadOnlySnapshot": {
+    "root": "/Users/twoimo/.codex/worktrees/pipeline-performance-20261002/tzudong",
+    "branch": "codex/pipeline-performance-restart-20261002",
+    "head": "a60ef70dba0bd32ea44d32218e2c66ef1b5410e1",
+    "observedDirty": [
+      "apps/web/tsconfig.json",
+      "backend/supabase/.temp/cli-latest"
+    ],
+    "observedUntracked": [
+      "backend/supabase/supabase/"
+    ],
+    "writesByThisWorker": 0,
+    "testsRunByThisWorker": 0,
+    "snapshotOnly": true
+  },
+  "remoteMainIntegration": "not inspected or claimed",
+  "runtime": {
+    "bun": "1.4.0",
+    "node24Path": "/opt/homebrew/opt/node@24/bin/node",
+    "node24Version": "v24.21.0",
+    "sourceNodeModulesPresent": false,
+    "installedDependencies": false
+  }
+}

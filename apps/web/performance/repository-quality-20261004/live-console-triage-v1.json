@@ -1,0 +1,23 @@
+{
+  "sourceSHA": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "measurement": "fresh owned public QA context, actual SDK",
+  "primaryEvidence": "live-console-diagnostic-v7/raw.json",
+  "httpFailures": {
+    "supabase_rest:announcements:401": 1,
+    "supabase_rest:ad_banners:401": 1
+  },
+  "httpInterpretation": "announcements/ad_banners denied; existing fetchSupabaseRows bounded 401/403 branch discards body and returns []",
+  "cspEvents": {
+    "script-src:eval": 1,
+    "connect-src:remote_public_domain:navercorp.com": 1
+  },
+  "pageErrors": 0,
+  "customFieldPosts": 0,
+  "sdkReady": true,
+  "securityPolicyRelaxed": false,
+  "remainingLimit": "Exact navercorp endpoint and initiator not yet classified; eval event could be provider feature probe or automation overhead. No claim of complete absence of console errors.",
+  "navigationImagesInspected": {
+    "mobile0": "5 labelled items, no visible black rectangle inside this nav crop",
+    "limits": "Nav-only crop excludes the map behind/above navigation. Four frames per mobile/tablet separated by >=150ms plus screenshot overhead; not a flicker occurrence-rate estimate or physical-device proof."
+  }
+}

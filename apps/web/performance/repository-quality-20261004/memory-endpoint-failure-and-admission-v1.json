@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-04T22:02:52.788051+00:00",
+  "sourceSHA": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "primaryRaw": "integrated-warm-minimal-main-v1/raw.json",
+  "primarySummary": "integrated-warm-minimal-summary-main-v1.json",
+  "status": "warm_endpoint_fixed_guard_failed",
+  "endpointBeforeMB": 26.69858,
+  "endpointAfterMB": 33.697466,
+  "absoluteReductionMB": -6.998886,
+  "relativeReductionPercent": -26.214450356535814,
+  "fixedTolerancePercent": 20,
+  "medianAndPeakGuardsPassed": true,
+  "diagnosticGCNotWaiver": true,
+  "sameSourceNoiseNotYetSeparated": true,
+  "memoryRegressionResolvedClaimAllowed": false,
+  "physicalPhoneHold": true,
+  "nextDiagnostic": "diagnose-main-warm-gc-plan-v1.json; profiling excluded from primary comparison",
+  "canonicalAdmission": {
+    "scorerReplayExit": 0,
+    "validatorExit": 0,
+    "admittedCount": 0,
+    "performanceHealthBlocked": true,
+    "evidence": "canonical-main-zero-admitted-v1/validation-v4.json"
+  },
+  "productionConsoleClassification": {
+    "source": "live-console-diagnostic-v8/raw.json",
+    "naverSdkBlockedReportingOrigin": "kr-col-ext.nelo.navercorp.com",
+    "evalEventSourceClass": "same_origin_app",
+    "securityPolicyRelaxed": false,
+    "scriptEvalSpecificCallerUnresolved": true,
+    "pageErrors": 0
+  }
+}

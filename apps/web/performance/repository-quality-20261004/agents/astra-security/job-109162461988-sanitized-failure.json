@@ -1,0 +1,25 @@
+{
+  "job_id": 109162461988,
+  "retrieved": true,
+  "test_failures": [
+    {
+      "test": "test_layout_manifest_matches_versioned_and_candidate_files",
+      "class": "backend.utils.tests.test_layout_naming_source_recovery.LayoutNamingSourceRecoveryTests.test_layout_manifest_matches_versioned_and_candidate_files"
+    },
+    {
+      "test": "test_committed_manifest_passes_on_real_tree",
+      "class": "backend.bin.tests.test_check_layout_manifest_unittest.RealTreeTest.test_committed_manifest_passes_on_real_tree"
+    }
+  ],
+  "source_frames": [
+    {
+      "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
+      "line": 415
+    },
+    {
+      "path": "backend/utils/tests/test_layout_naming_source_recovery.py",
+      "line": 72
+    }
+  ],
+  "bounded_codes": []
+}

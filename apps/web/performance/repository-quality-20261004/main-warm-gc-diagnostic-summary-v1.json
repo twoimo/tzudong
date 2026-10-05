@@ -1,0 +1,101 @@
+{
+  "profilingOnly": true,
+  "cannotWaivePrimaryFailure": true,
+  "independentProcessesPerVariant": 1,
+  "raw": "integrated-warm-minimal-gc-diagnostic-v1/raw.json",
+  "runs": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "naturalEndpointMB": 36.994404,
+      "medianNaturalMB": 32.005054,
+      "peakNaturalMB": 48.216808,
+      "postFinalDiagnosticGCMB": 18.66024,
+      "all60CyclesExactMembership": true,
+      "traceDropped": 0,
+      "gcTopLevelEvents": 44,
+      "gcEventsWithNumericalHeap": 44,
+      "sumObservedCollectedMB": 684.406984,
+      "lastGCToEndpointMsApprox": 2491.9370000362396,
+      "clockCalibrationUncertaintyBoundMs": 2.0999999046325684,
+      "inclusiveCategoryTimesNotAdditive": {
+        "UpdateLayoutTree": {
+          "count": 442,
+          "inclusiveMs": 1010.3449999999993,
+          "maxMs": 6.054
+        },
+        "Layout": {
+          "count": 246,
+          "inclusiveMs": 381.26500000000004,
+          "maxMs": 5.244
+        },
+        "Paint": {
+          "count": 23805,
+          "inclusiveMs": 844.9699999997694,
+          "maxMs": 4.925
+        },
+        "MinorGC": {
+          "count": 25,
+          "inclusiveMs": 53.855000000000004,
+          "maxMs": 3.207
+        },
+        "MajorGC": {
+          "count": 19,
+          "inclusiveMs": 213.15999999999997,
+          "maxMs": 16.253
+        }
+      }
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "sourceCommit": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "naturalEndpointMB": 23.229204,
+      "medianNaturalMB": 32.182646,
+      "peakNaturalMB": 47.450704,
+      "postFinalDiagnosticGCMB": 18.647324,
+      "all60CyclesExactMembership": true,
+      "traceDropped": 0,
+      "gcTopLevelEvents": 42,
+      "gcEventsWithNumericalHeap": 42,
+      "sumObservedCollectedMB": 711.112248,
+      "lastGCToEndpointMsApprox": 699.1229999065399,
+      "clockCalibrationUncertaintyBoundMs": 1.4000000953674316,
+      "inclusiveCategoryTimesNotAdditive": {
+        "UpdateLayoutTree": {
+          "count": 430,
+          "inclusiveMs": 982.874,
+          "maxMs": 5.822
+        },
+        "Layout": {
+          "count": 247,
+          "inclusiveMs": 354.4309999999999,
+          "maxMs": 3.162
+        },
+        "Paint": {
+          "count": 23658,
+          "inclusiveMs": 773.9919999997851,
+          "maxMs": 4.57
+        },
+        "MinorGC": {
+          "count": 27,
+          "inclusiveMs": 58.672999999999995,
+          "maxMs": 3.115
+        },
+        "MajorGC": {
+          "count": 15,
+          "inclusiveMs": 180.396,
+          "maxMs": 15.982
+        }
+      }
+    }
+  ],
+  "limits": [
+    "one profiling process per source, tracer can alter GC scheduling; no primary improvement/regression estimate",
+    "V8 heap endpoint depends on uncollected transient allocation; profiling does not establish source causality",
+    "post-final forcedGC is diagnostic and does not pass the failed natural endpoint guard",
+    "trace arguments/URLs/headers/bodies/screens removed; category durations overlap",
+    "no physical device or field performance claim"
+  ]
+}

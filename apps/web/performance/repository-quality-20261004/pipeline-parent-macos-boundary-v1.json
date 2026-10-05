@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "target": "backend.pipeline.test_nodes_unittest",
+  "python": "3.12.13",
+  "platform": "darwin",
+  "elapsedSeconds": 3.705,
+  "run": 19,
+  "passed": 17,
+  "failures": 0,
+  "errors": 0,
+  "skips": 2,
+  "outcomes": [
+    {
+      "test": "backend.pipeline.test_nodes_unittest.NodeCommandResultPropagationTests.test_each_node_maps_executable_launch_failure_to_graph_failure",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.NodeCommandResultPropagationTests.test_every_node_consumes_each_command_result_reason_code",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.NodeCommandResultPropagationTests.test_insert_nonzero_and_timeout_never_publish_completion",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.PosixProcessGroupReapingTests.test_exited_leader_is_reaped_while_waiting_for_group_empty",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.PosixProcessGroupReapingTests.test_failed_supervision_reaps_child_without_claiming_success",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.PosixProcessGroupReapingTests.test_reaped_leader_does_not_override_unconfirmed_group",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.PosixProcessGroupReapingTests.test_reaped_leader_still_requires_stubborn_descendant_to_exit",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.PosixProcessGroupReapingTests.test_reaping_preserves_nonzero_status_and_unrelated_child",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.PosixProcessGroupReapingTests.test_signal_failures_never_fall_back_to_parent_only_cleanup",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_killpg_failure_uses_full_group_helper_without_descendant_leak",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_taskkill_failure_closes_job_without_descendant_leak",
+      "outcome": "SKIP"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_tree_helper_term_failure_escalates_to_full_group_kill",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_windows_job_is_empty_after_ordinary_exit",
+      "outcome": "SKIP"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_final_writer_capability_is_explicit_and_fail_closed",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_isolated_provider_stages_do_not_reload_repository_env_files",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_noisy_child_is_capped_and_stopped_on_aggregate_overflow",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_pinned_executables_ignore_parent_path_and_reject_fakes",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_timeout_terminates_descendant_process_tree",
+      "outcome": "PASS"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_untrusted_stages_do_not_receive_parent_secrets_or_paths",
+      "outcome": "PASS"
+    }
+  ],
+  "successful": true
+}

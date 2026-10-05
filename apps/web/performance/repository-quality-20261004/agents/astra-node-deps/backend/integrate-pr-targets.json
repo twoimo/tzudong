@@ -1,0 +1,30 @@
+{
+  "label": "integrate-pr-targets",
+  "command": [
+    "npm",
+    "install",
+    "--package-lock-only",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund",
+    "--json",
+    "@google/genai@2.24.0",
+    "puppeteer@25.12.0",
+    "dotenv@18.0.3",
+    "js-yaml@5.4.2"
+  ],
+  "exitCode": 0,
+  "seconds": 0.923,
+  "node": "v24.21.0",
+  "npm": "11.6.2",
+  "lockBefore": "bb77dec146a3eda4faaacea489a629f3120148cd3e5608a127909a7a12fce75e",
+  "lockAfter": "7e4530e8316043c65f28919df42e7f165bd21d93c345e7d63744ce4ad3b813ee",
+  "stdoutBytes": 126,
+  "stderrBytes": 0,
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "changed": 0,
+    "audited": 0
+  }
+}

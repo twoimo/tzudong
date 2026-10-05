@@ -1,0 +1,43 @@
+{
+  "deliveredMain": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "PR2902": {
+    "head": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+    "requested": {
+      "webMaplibre": "6.4.1",
+      "webNext": "16.3.4",
+      "webSharp": "0.35.4",
+      "jsYaml": "4.3.2"
+    },
+    "delivered": {
+      "webMaplibre": "6.11.2",
+      "webNext": "16.3.6",
+      "webSharp": "0.35.4",
+      "jsYamlLocks": [
+        {
+          "manifest": "apps/web/package-lock.json",
+          "jsYaml": [
+            {
+              "path": "node_modules/js-yaml",
+              "version": "4.3.2"
+            }
+          ]
+        },
+        {
+          "manifest": "backend/package-lock.json",
+          "jsYaml": [
+            {
+              "path": "node_modules/js-yaml",
+              "version": "5.4.2"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "PR2850": {
+    "head": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+    "requestedYtDlp": "2026.8.19",
+    "deliveredYtDlp": "2026.8.19"
+  },
+  "closureIssued": false
+}

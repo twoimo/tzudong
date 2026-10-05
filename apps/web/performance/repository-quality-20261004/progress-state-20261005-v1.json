@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-10-04T18:32:36.216967+00:00",
+  "sourceHead": "19a1e1d0cab443b7386c3d489986cbb1d7f6a9d3",
+  "sourcePR": 3117,
+  "developSource": "e39635a89a3d7e9570ca9f67cda4906af3816004",
+  "productionSource": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "lastAllLocalNightly": {
+    "run": 37221500745,
+    "source": "c135c9b3893c7c605b4c00e3d178e3fcc93571a5",
+    "local": "success",
+    "publish": "skipped"
+  },
+  "currentNightly": {
+    "run": 37223585147,
+    "lastObserved": "in_progress, pull pinned Compose images",
+    "completionNotAsserted": true
+  },
+  "reviewThreadsResolved": [
+    "PRRT_kwDOQGRyNc6ozg24",
+    "PRRT_kwDOQGRyNc6oz4Go",
+    "PRRT_kwDOQGRyNc6oz4Gq",
+    "PRRT_kwDOQGRyNc6oz4Gt",
+    "PRRT_kwDOQGRyNc6o0gLl"
+  ],
+  "canonicalTimingAdmitted": 0,
+  "fieldGainClaimed": false,
+  "fieldSamples": {
+    "LCP": 7,
+    "INP": 3,
+    "CLS": 5
+  },
+  "distinctUsersUnknown": true,
+  "phoneHold": true,
+  "goalCompleted": false,
+  "evidenceFrozen": false
+}

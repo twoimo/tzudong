@@ -1,0 +1,36 @@
+{
+  "label": "final-audit-moderate",
+  "command": [
+    "npm",
+    "audit",
+    "--json",
+    "--audit-level=moderate"
+  ],
+  "exitCode": 0,
+  "seconds": 0.495,
+  "node": "v24.21.0",
+  "npm": "11.6.2",
+  "lockBefore": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd",
+  "lockAfter": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd",
+  "stdoutBytes": 362,
+  "stderrBytes": 0,
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 204,
+      "dev": 0,
+      "optional": 2,
+      "peer": 4,
+      "peerOptional": 0,
+      "total": 209
+    }
+  },
+  "vulnerabilityPackages": []
+}

@@ -1,0 +1,19 @@
+{
+  "source": "relevant-unit-tests.json",
+  "cases": [
+    "ok 10 - map crawler loads js-yaml named exports before the no-channel exit",
+    "ok 11 - transcript crawler loads YAML and dotenv without starting collection",
+    "ok 12 - URL extractor import preserves JSON stdout and existing environment",
+    "ok 13 - build_google_maps_browser_review_queue.mjs emits one JSON document with a local empty DB double",
+    "ok 14 - build_supabase_address_consistency_guarded_plan.mjs emits one JSON document with a local empty DB double",
+    "ok 15 - build_tzuyang_address_evidence_ledger.mjs emits one JSON document with a local empty DB double",
+    "ok 16 - validate_supabase_review_queue_live.mjs preserves JSON stdout for an empty local queue",
+    "ok 17 - validate_supabase_same_origin_candidates.mjs preserves JSON stdout for an empty local queue",
+    "ok 18 - apply ledger environment loader stays silent without executing apply",
+    "ok 19 - GenAI caller imports and consumed SDK methods remain available offline",
+    "ok 20 - brace expansion remains compatible and bounded through node_modules/minimatch/package.json",
+    "ok 21 - brace expansion remains compatible and bounded through node_modules/gaxios/node_modules/minimatch/package.json"
+  ],
+  "pass": 12,
+  "fail": 0
+}

@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-04T21:37:55.002351+00:00",
+  "rawEnvironmentWinsOverStaleProse": true,
+  "rawEvidence": {
+    "integrated-v2-aa": {
+      "rawSha256": "4cef6a10daf8720cb808c2e85a845725ff593c4d0ce429924902a0da4c65fe25",
+      "actualChromeMajor": [
+        "154.0.0.0"
+      ],
+      "samples": 22
+    },
+    "integrated-v2-ab": {
+      "rawSha256": "86006db008392fca99952f1091b773b210a0e25933d9e15a5e369a94f87b5979",
+      "actualChromeMajor": [
+        "154.0.0.0"
+      ],
+      "samples": 44
+    },
+    "integrated-main-v1-aa": {
+      "rawSha256": "bb690aea192193ca81ead092091179f75da1defb87a22624cc0117b33f11ba1e",
+      "actualChromeMajor": [
+        "154.0.0.0"
+      ],
+      "samples": 44
+    },
+    "integrated-main-v1-ab": {
+      "rawSha256": "e85d49b19b0e9d01192ceb5cc351f3741a678e21054ba779c03a6169d0cbc201",
+      "actualChromeMajor": [
+        "154.0.0.0"
+      ],
+      "samples": 44
+    }
+  },
+  "installedChromeVersion": "154.0.8037.97",
+  "documentCorrection": "Earlier PROGRESS/REPRODUCE prose and inherited handoffs label Chrome151. All inspected integrated-v2 and current-main raw UA records Chrome154. Old raw/plan bytes are preserved, not overwritten. Comparisons within each retained experiment use the same observed Chrome major. Do not merge results across browser versions or apply current noise to old experiments.",
+  "physicalMobileClaim": false
+}

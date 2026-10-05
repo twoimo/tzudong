@@ -1,0 +1,22 @@
+{
+  "version": 3,
+  "source_set_sha256": "64152bb8891678b222942060408cd88431d36695230df6f8e388c595bdbabbb8",
+  "source_read_only": true,
+  "tested_runtime_source_unchanged": true,
+  "parent_browser_test_expanded_during_review": true,
+  "v1_v2_artifacts_preserved": true,
+  "prior_file_count": 33,
+  "tests": {
+    "pass": 15,
+    "fail": 1,
+    "assertions": 131,
+    "runner": "bun 1.4.0 (34cbb9a40)"
+  },
+  "remaining_P1": 0,
+  "remaining_P2": 1,
+  "boolean_contract": {
+    "true": "original captured row cleanup complete: deleted, already absent, or valid replacement retained",
+    "false": "snapshot, IO or current-row validation cannot establish completion"
+  },
+  "scope": "Actual submit/close/autosave/helper/controller/validator with deterministic fake transports. No browser, React rendering, phone, authStorage, remote writes, full-suite, lint, parity, or deployment validation."
+}

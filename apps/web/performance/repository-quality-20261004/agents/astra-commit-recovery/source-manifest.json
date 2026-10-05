@@ -1,0 +1,27 @@
+{
+  "reviewed_at": "2026-10-04T10:18:09.998862+00:00",
+  "source_root": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong",
+  "base": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "files": [
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "sha256": "2e5d06eb0fc7ac1c0f60147e4834b93434d7afb10ea485264e413d67d7e8b029"
+    },
+    {
+      "path": "apps/web/lib/reviewDraftDB.ts",
+      "sha256": "3d98eff5e915c21378cc9d0ff7ad5ed6be0c3c87768fc951005b1d8a00ae8e78"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "sha256": "62497551adb3736b6ee62bea082ebb7bd0f051beb09225abe7eaa36569bad801"
+    },
+    {
+      "path": "apps/web/tests-unit/review-draft-deletion-browser.test.ts",
+      "sha256": "aef8e0e078a5c06c54af5ebffe4f43327efa61b4fcfdcd4dba0cc35df115d624"
+    },
+    {
+      "path": "apps/web/lib/reviews/review-save-operation.ts",
+      "sha256": "be25e19258a96d5059e902914a88f71702358857bf4ca3da7ea7e626af790d18"
+    }
+  ]
+}

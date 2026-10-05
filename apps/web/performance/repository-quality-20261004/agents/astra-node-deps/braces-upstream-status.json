@@ -1,0 +1,20 @@
+{
+  "sources": [
+    "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "https://registry.npmjs.org/braces",
+    "https://github.com/micromatch/braces/issues/70",
+    "https://github.com/micromatch/braces/pull/72"
+  ],
+  "registry_latest": "3.0.3",
+  "published_at": "2024-05-21T08:59:11.390Z",
+  "version_count": 37,
+  "upstream_pr": {
+    "number": 72,
+    "state": "open",
+    "title": "fix: prevent stack overflow from deeply nested patterns (CVE-2026-93687)",
+    "merged": false,
+    "merge_commit_sha": "2f2eb935a1afa189ab95aed83a09d2ba4def848f"
+  },
+  "upstream_pr_head": "28d440b5dd449dbf1fe6f3506cf94ecca4d02660",
+  "repository_archived": false
+}

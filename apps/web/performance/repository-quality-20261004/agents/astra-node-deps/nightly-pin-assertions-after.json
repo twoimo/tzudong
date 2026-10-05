@@ -1,0 +1,11 @@
+{
+  "command": [
+    "bun",
+    "test",
+    "tests-unit/nightly-regression-workflow.test.ts",
+    "--test-name-pattern",
+    "reconstructs local Docker nightly"
+  ],
+  "exit_code": 0,
+  "summary": "bun test v1.4.0 (34cbb9a40)\n\ntests-unit/nightly-regression-workflow.test.ts:\n(pass) nightly regression package and source contracts > reconstructs local Docker nightly and uploads only sanitized artifacts [4.20ms]\n\n 1 pass\n 29 filtered out\n 0 fail\n 296 expect() calls\nRan 1 test across 1 file. [73.00ms]\n"
+}

@@ -1,0 +1,31 @@
+{
+  "captured_at_utc": "2026-10-04T11:44:33.433055+00:00",
+  "head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "own_changed_files": [
+    "README.md",
+    "README.ko.md"
+  ],
+  "diff_numstat": [
+    "23\t2\tREADME.ko.md",
+    "23\t2\tREADME.md"
+  ],
+  "diff_sha256": "41b4611e726f21a74058c61a45a4dffffde56f146f9b6c0fbe99ac5aef67d405",
+  "reverse_apply_check": {
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "static_checks_passed": 14,
+  "static_checks_total": 14,
+  "local_reference_count": 62,
+  "internal_anchor_count": 8,
+  "current_status_unowned_paths_are_other_workers": [
+    " M .github/workflows/security-audit.yml",
+    " M README.ko.md",
+    " M README.md"
+  ],
+  "tracked_performance_diff_paths_at_readback": [],
+  "unit_build_install_server_provider_measurements": "not run; documentation-only validation",
+  "external_writes": "none",
+  "commit_push_pr_comment_message_setting_changes": "none"
+}

@@ -1,0 +1,47 @@
+{
+  "fileName": "rollout-2026-10-04T19-33-42-01a1067a-0722-7371-8ad4-d3eee6cfb861.jsonl",
+  "ownThreadId": "01a1067a-0722-7371-8ad4-d3eee6cfb861",
+  "ownSessionMetadata": [
+    {
+      "type": "session_meta",
+      "timestamp": "2026-10-04T10:33:42.990Z",
+      "id": "01a1067a-0722-7371-8ad4-d3eee6cfb861",
+      "model_provider": "openai",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a10678-ad0f-7ee3-9a47-ed1c55fbdd16",
+            "depth": 2,
+            "agent_path": null,
+            "agent_nickname": "Peirce",
+            "agent_role": null
+          }
+        }
+      }
+    }
+  ],
+  "latestSessionMetadata": {
+    "type": "session_meta",
+    "timestamp": "2026-10-04T10:33:42.990Z",
+    "id": "01a10678-ad0f-7ee3-9a47-ed1c55fbdd16",
+    "model_provider": "openai",
+    "source": {
+      "subagent": {
+        "thread_spawn": {
+          "parent_thread_id": "01a0f119-3142-7fe1-b600-e436feaedc75",
+          "depth": 1,
+          "agent_path": null,
+          "agent_nickname": "Newton",
+          "agent_role": null
+        }
+      }
+    }
+  },
+  "latestTurnContext": {
+    "type": "turn_context",
+    "timestamp": "2026-10-04T10:33:43.757Z",
+    "model": "gpt-6-astra",
+    "effort": "xhigh"
+  },
+  "note": "File contains a later inherited parent session_meta id; file identity and matching own id are reported separately. Latest turn_context provides model/effort."
+}

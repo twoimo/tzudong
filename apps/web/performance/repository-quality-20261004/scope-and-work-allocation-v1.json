@@ -1,0 +1,45 @@
+{
+  "observedAt": "2026-10-04T09:22:46.465155+00:00",
+  "userScope": "all Tzudong issues/pullrequests/security/quality",
+  "originalRenderMemoryFieldGoalRetained": true,
+  "phonePausedByUser": true,
+  "readOnlyAudit": {
+    "openIssues": 1,
+    "openPrs": 26,
+    "humanOwnedPrs": 7,
+    "automatedDependencyPrs": 19,
+    "prsWithFailedChecks": 20,
+    "unresolvedThreads": 11,
+    "conflictingPrs": 4,
+    "actualAllItemsCoverage": "agents/astra-pr/findings.json"
+  },
+  "security": {
+    "branchesRead": 371,
+    "branchOpenAlerts": 0,
+    "prOpenAlerts": 2,
+    "prOpenAlertsSource": 3099,
+    "secretScanOpen": 0,
+    "dependabotOpen": 0,
+    "codeQualityApi404": "unverified; not zero"
+  },
+  "implementationWorktree": "nightly-quality-20261004/tzudong",
+  "workers": {
+    "nightly": {
+      "agent": "01a10606-c251-7f33-a724-aef968b87bee",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "observedLatestModelMatches": true,
+      "writeScope": "nightlypublicationfixture/verifier only"
+    },
+    "layout": {
+      "agent": "01a10606-c2a4-7c90-a8be-65fdc39d124f",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "observedLatestModelMatches": true,
+      "writeScope": "layoutmanifest/twofocusedcontracts only"
+    }
+  },
+  "sourcePromotionOwner": "parent serialized develop->data->main",
+  "existingUserWorkAndHistoricalEvidencePreserved": true,
+  "scopeComplete": false
+}

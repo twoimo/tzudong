@@ -1,0 +1,22 @@
+{
+  "agents/astra-commit-recovery/v4/repro-results.json": "dd82bd65c8bf0bd5d55e73ce5def6114f400f1ddf2e231359f3b20804045a53c",
+  "agents/astra-commit-recovery/v4/source-manifest.json": "44dcef3dc70c2968d9560dfc1db7a61f1a60d86a2efe5348c4fe5464a2150beb",
+  "agents/astra-commit-recovery/v4/model-metadata.json": "a04cf560fe7712ee7c5bc42c4efa0c61f06c8dcd6c5f2ff4ec783c9db24889e9",
+  "agents/astra-commit-recovery/v4/source.patch": "fa11cca484a2e7cf67bf918713708a43e1eb1585571066e498b9dcd952c31a80",
+  "agents/astra-commit-recovery/v4/prior-preservation-manifest.json": "b6c6d8cedf697d008bb4034fd62739f08c3575f345e8765ad5fc1933649d4eb1",
+  "agents/astra-commit-recovery/v4/final-source-binding.json": "9f6515075c340b78fc2da9594ad5713b6587237cbe372487b9b3189d90d85eb9",
+  "agents/astra-commit-recovery/v4/findings.json": "1c7681786f50379cbe11297ea566593866614c17632e39080ad88cc6d5644e02",
+  "agents/astra-commit-recovery/v4/final-source-hashes.sha256": "1c346b60c9a35e5afc77ede4e4a3c56980bcc16aa7b49e1fb9589b3020d93398",
+  "agents/astra-commit-recovery/v4/repro-output.txt": "a8b7b9d2252601d9038c94eee7f05e77129a0f4a51f3c9763e85c00ae2c88851",
+  "agents/astra-commit-recovery/v4/verification.json": "11804a1d1d58b8391942a878d46198673c68c19c1bbee7108296cab82e4bda33",
+  "agents/astra-commit-recovery/v4/review.md": "d6261d215d2f6a3a540ea6e9cb60a3cb1cb3c8780dff7461b8e7075ec68aa178",
+  "agents/astra-commit-recovery/v4/scratch/setup.ts": "b923b4e3c2bd027ace8035900b26ed9e26056ab9aefd2f03b8fc40dbed5e8cf6",
+  "agents/astra-commit-recovery/v4/scratch/capture-recovery.test.ts": "452c780deeeda79ceb72576f1885f6e7bfe96fdceaf180f243d1a0cb50bbb24e",
+  "agents/astra-commit-recovery/v4/scratch/fixture.ts": "1ad9a1cd98fd02b6968aceb2fc3210f8a63bdc5c0f249ca2fb1e1251f492a2ca",
+  "agents/astra-commit-recovery/v4/source/apps/web/tests-unit/review-save-submit.test.ts": "eba156d87211e9e50eb930d91efdb0c6229d7ddf2dfda20c8aaba1736a05fa40",
+  "agents/astra-commit-recovery/v4/source/apps/web/tests-unit/review-draft-deletion-browser.test.ts": "638899794c077cbb1c002eec1c9cae16ffa3c1f7073fe47a5c6183d06051f1ba",
+  "agents/astra-commit-recovery/v4/source/apps/web/lib/reviewDraftDB.ts": "2461dd8a29e59360aeaeb48e3647ea42adbca22244af54c8e8f05398914f275f",
+  "agents/astra-commit-recovery/v4/source/apps/web/lib/reviews/review-save-operation.ts": "c6437f5ddabd8c2a949492b6252483ac3f16ad96d0e9abd70710911a896d3106",
+  "agents/astra-commit-recovery/v4/source/apps/web/components/reviews/ReviewModal.tsx": "a72506853619b8bf0233b56df2e434aacbea1ec166a6fdbb18d77416128b617d",
+  "review-commit-recovery-final-checks-v4.json": "54107a0e4a4aa3bcf51c1c1b12868b9c339edbb96b055cddbfb28b26855c2036"
+}

@@ -1,0 +1,27 @@
+{
+  "purpose": "Current dependencies with unchanged baseline callers demonstrate that compatibility tests detect the regressions. Snapshot stays in task runtime and is not promoted.",
+  "expectedExitCode": 1,
+  "exitCode": 1,
+  "summaryLines": [
+    "not ok 1 - map crawler loads js-yaml named exports before the no-channel exit",
+    "not ok 2 - transcript crawler loads YAML and dotenv without starting collection",
+    "not ok 3 - URL extractor import preserves JSON stdout and existing environment",
+    "not ok 4 - build_google_maps_browser_review_queue.mjs emits one JSON document with a local empty DB double",
+    "not ok 5 - build_supabase_address_consistency_guarded_plan.mjs emits one JSON document with a local empty DB double",
+    "not ok 6 - build_tzuyang_address_evidence_ledger.mjs emits one JSON document with a local empty DB double",
+    "not ok 7 - validate_supabase_review_queue_live.mjs preserves JSON stdout for an empty local queue",
+    "not ok 8 - validate_supabase_same_origin_candidates.mjs preserves JSON stdout for an empty local queue",
+    "not ok 9 - apply ledger environment loader stays silent without executing apply",
+    "ok 10 - GenAI caller imports and consumed SDK methods remain available offline",
+    "ok 11 - brace expansion remains compatible and bounded through node_modules/minimatch/package.json",
+    "ok 12 - brace expansion remains compatible and bounded through node_modules/gaxios/node_modules/minimatch/package.json",
+    "# tests 12",
+    "# suites 0",
+    "# pass 3",
+    "# fail 9",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0"
+  ],
+  "stderrBytes": 0
+}

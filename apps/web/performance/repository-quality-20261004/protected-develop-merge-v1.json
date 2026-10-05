@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-10-04T13:47:25.278350+00:00",
+  "pr3114": {
+    "headRefOid": "31947158aa63accbb7e4769991a19e350fea11fa",
+    "mergeCommit": {
+      "oid": "e39635a89a3d7e9570ca9f67cda4906af3816004"
+    },
+    "mergedAt": "2026-10-04T13:40:23Z",
+    "state": "MERGED"
+  },
+  "refs": {
+    "develop": "e39635a89a3d7e9570ca9f67cda4906af3816004",
+    "data": "4bda4aaebee8bffac723e09b35b0712e8b4adf6e",
+    "main": "ca235e250957c4360ad713ffd29e118c11cc5b7c"
+  },
+  "candidateBranch": "codex/nightly-failure-diagnostics-20261004",
+  "candidateHead": "e39635a89a3d7e9570ca9f67cda4906af3816004",
+  "candidateStatus": [],
+  "productionDeployIssuedByThisTurn": false,
+  "goalComplete": false,
+  "phoneHeldByExplicitUserInstruction": true
+}

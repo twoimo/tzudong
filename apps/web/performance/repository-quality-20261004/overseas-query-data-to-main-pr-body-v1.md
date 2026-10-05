@@ -1,0 +1,3 @@
+해외 지역 query 정제와 국가 주소 조건 1회 재사용을 data에서 main으로 정상 보호 규칙에 따라 승격합니다. 정상 해외 12개 config·국내 fallback의 query 조건과 순서, projection과 반환 ID 계약은 보존합니다. 기존에 동등 반영된 #3032의 REST/singleton/dialog 구현은 유지합니다.
+
+검증: 관련 unit25개/205 assertions, 변경 ESLint, TypeScript parity, feature 및 data 전체 CI·6개 언어 CodeQL 성공. source91a2의 production build와 실제 Naver SDK+synthetic735 browser10checks/4trusted touch swipes도 통과했습니다. 실제 hosted 데이터·field 성능 성과는 이 fixture와 구분합니다. 현재 운영 rollback은 ca1fcf4440ffd564c425422cdd373b1d4a233daa / dpl_5VaSDrLyLkKhFkLMoyFXdtkaabve이며 승격 직전 다시 읽습니다. 배포 후 정확한 main guard·READY·www alias와 실제 브라우저 흐름을 재검증합니다.

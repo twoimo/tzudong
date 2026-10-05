@@ -1,0 +1,117 @@
+{
+  "v1_files": [
+    {
+      "path": "README.md",
+      "sha256": "def1aaba9635755862c11d04ba97e29e28b3a7d3ecde33db43a38c6bccb17470"
+    },
+    {
+      "path": "combined-final-resolved.txt",
+      "sha256": "3596869d33d4f833ff161db930715ad1ecfe339df891e8d1bd3d8e9860231570"
+    },
+    {
+      "path": "compatibility-findings.json",
+      "sha256": "27cf306014bc5ac12309e47511c48fc33fbad63b624cab94769b82325350a8bd"
+    },
+    {
+      "path": "control-baseline-resolved.txt",
+      "sha256": "e8a3d0e97233db74138eb712ced590ea82afd0b6ab69cbb474efb5d7aed9dcf2"
+    },
+    {
+      "path": "control-final-resolved.txt",
+      "sha256": "a656208fa8ddf8a98983c735377d64426bdf20aeadf5271f5aaf9a55162bd734"
+    },
+    {
+      "path": "crawler-baseline-resolved.txt",
+      "sha256": "4742429b28b0d93230d9edf558b2326d58af8c7b3d710e04fd2473e6b17544de"
+    },
+    {
+      "path": "crawler-final-resolved.txt",
+      "sha256": "1830e29ca632e220d454b95b9b18a93ec0a91571a0df1731a836545133790f0c"
+    },
+    {
+      "path": "final-source-state.json",
+      "sha256": "e1f6facc93f0af44a49d30b3e8afdfd8e35fb459882be03fe2af0bf0f307b28a"
+    },
+    {
+      "path": "installed-versions.json",
+      "sha256": "84179efa0a6b83f2acb5c307b8f991878ed6108c64b19445054b3aa49dde7276"
+    },
+    {
+      "path": "integration.patch",
+      "sha256": "51b571918187fe318f6244cd503079fb3de46195b4b53eb690c7d9c3b98eb0af"
+    },
+    {
+      "path": "native-execution.json",
+      "sha256": "779ff1361e6f03347bfc8e8296378ec50b4471807b1d13421b0dcd9d7fe81756"
+    },
+    {
+      "path": "offline_sdk_contracts.py",
+      "sha256": "571fd76411f7a7ac344afd2d67e39c72b9a3067c3f139c39718ac2ba88625fdc"
+    },
+    {
+      "path": "offline_unittest.py",
+      "sha256": "f1393ff9b88edb93dc9b5f93004edeae1cdad40d50939f8dd6ea8d27f3fcd7c5"
+    },
+    {
+      "path": "pipeline-baseline-resolved.txt",
+      "sha256": "fe03b7f3bfb64bc13585dcbb6b415482f88f2e3c9475e0ae1f036f80c414266b"
+    },
+    {
+      "path": "pipeline-final-resolved.txt",
+      "sha256": "eb95f431f3160fe460706e58af0558569a79af3923c834cef84d70385853d6f6"
+    },
+    {
+      "path": "pr-decisions.json",
+      "sha256": "3151e2ee45d8ee8fcac6a85327336a93bdce6c7b5491c48877f75780aa840adf"
+    },
+    {
+      "path": "pr-inputs.json",
+      "sha256": "e5c6086a67af39dbb13ed78cf8dce87a9f3412c29771a735450439a4871d8ee1"
+    },
+    {
+      "path": "pr2906-excluded-tree-differences.json",
+      "sha256": "6f66f2dd8885a1648bff2dfaba4a19258290d64f15d9eecb3de06b00bc5b23f4"
+    },
+    {
+      "path": "pypi-metadata.json",
+      "sha256": "2234cd7cc918e64f0adc81eb9087cba40afa8e47d6bd518972071a9f14bb3fa4"
+    },
+    {
+      "path": "remote-readback.json",
+      "sha256": "0e00e1c90bcc962dae28b4e6ab150048a9f539650f3610701954bb8812e92f71"
+    },
+    {
+      "path": "sidecar/review.md",
+      "sha256": "3b6eed3fb3e1309ce93014adbfef21ec7f7fe7e5287df31236358a0ce48c0229"
+    },
+    {
+      "path": "sources.md",
+      "sha256": "8ea44497e654b09a8e29530638fb5ea31aad75b61f7b2bc4fd8f9b086a03c415"
+    },
+    {
+      "path": "test-results.json",
+      "sha256": "1c40a7d0dd0b804409e274e6fc949326d33af9c901c347f3ec865b18416389b3"
+    },
+    {
+      "path": "verification.json",
+      "sha256": "783f05c45893f12d3c721aaedeb58fee9a833392fd549e8b7302b88c919f9b0d"
+    },
+    {
+      "path": "artifact-index.json",
+      "sha256": "5a1458c719b3382bbbe78663b169f7a072002b8e538ca9de45de2a7c21cf58de"
+    }
+  ],
+  "head": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "initial_dirty_paths": [
+    "backend/pipeline-control/requirements.txt",
+    "backend/pipeline/requirements.txt",
+    "backend/restaurant-crawling/scripts/requirements.txt"
+  ],
+  "owned_source": {
+    "backend/pipeline/nodes.py": "f1170e09ba459331af52ae2e6155bb4f7d8bdfa95d2c36ab6666af8c759dd788",
+    "backend/pipeline/test_nodes_unittest.py": "16ed22ec3086ab90047984a4d7fd92095862bba05e76c5821ba3190428c3ee54",
+    "backend/pipeline/requirements.txt": "f9aec63ba51e3320e3376fb9845e60fb808c4568ff8bb4570203041352e58348",
+    "backend/pipeline-control/requirements.txt": "1b2e5e889820c7d18f9c72ca859859d8905dda49104e7b62e5e455583e300603",
+    "backend/restaurant-crawling/scripts/requirements.txt": "8f0a1587485d3eb240f78a9a8b17af841491c92b6946f2f339aa7d5fc267f2ba"
+  }
+}

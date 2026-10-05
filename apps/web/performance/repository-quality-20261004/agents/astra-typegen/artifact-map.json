@@ -1,0 +1,74 @@
+{
+  "files": [
+    {
+      "name": "REPORT.md",
+      "bytes": 11972,
+      "sha256": "f384b672cab4304539f6add1e83ac73c05dcbd266aa7542009639b3e61113b9f"
+    },
+    {
+      "name": "database.types.generated.ts",
+      "bytes": 235592,
+      "sha256": "36ffd9c0dda9a81eea7f693147fac7a47e677400a69dfcf70ffef815bac18854"
+    },
+    {
+      "name": "nightly-37197431551-generated.patch",
+      "bytes": 12909,
+      "sha256": "9a7a2faf0e5559a075c6c252c3ee7a4282be85f3584fa9ae9fe9356c3937f8c0"
+    },
+    {
+      "name": "nightly-generator-metadata.json",
+      "bytes": 593,
+      "sha256": "0d2e0e2c8af99e6da0b782fb19f429f55fb629906459c3b47e66ef7204584485"
+    },
+    {
+      "name": "nightly-runtime-metadata.json",
+      "bytes": 123,
+      "sha256": "a52ae2d16e1cfaa3a88d0c8a8a601bae566ec50596bc3c7c1c7a23b68b1a05ef"
+    },
+    {
+      "name": "patch-verification.json",
+      "bytes": 312,
+      "sha256": "c42696a69971c1db3fa25134a081045c44880a929b5c87f03b64e1185e4c6b3f"
+    },
+    {
+      "name": "retain-typegen-evidence.py",
+      "bytes": 5576,
+      "sha256": "a02316cfb65ed808668bead8876294f130b6c7e91188a07b7318a6566938b8c0"
+    },
+    {
+      "name": "runtime-model-metadata.json",
+      "bytes": 3260,
+      "sha256": "651a28605c80f8bc9b74c2f968dfda8eef820ff720c7c1a8919483ea55ec8e1b"
+    },
+    {
+      "name": "source-preservation.json",
+      "bytes": 1940,
+      "sha256": "7c31721b0a3773a2393ab489d445c100dcbcb3106be001015f49a3d24807ec48"
+    },
+    {
+      "name": "tsconfig.fixture.json",
+      "bytes": 272,
+      "sha256": "31dc773d6f187ad2336a0beb383d1884b7c4c4bb98074d663f7d569c7b43c753"
+    },
+    {
+      "name": "typegen-contract.fixture.ts",
+      "bytes": 2770,
+      "sha256": "a1c2e908172b26fea59cc217f494abd249cad41c29ccf1146a5c33d3dd1df36c"
+    },
+    {
+      "name": "typegen-exact-output.test.ts",
+      "bytes": 2726,
+      "sha256": "ecebc9461b6c72ccc23d07391172cdd398c5d886d9b6f300baaf4d280ab9fce9"
+    },
+    {
+      "name": "typegen-source-evidence.json",
+      "bytes": 1836,
+      "sha256": "5ad5f27c92d7edd5cde54c6ef1d993f2fc20c3992fd5e7516354aee4aedf9305"
+    },
+    {
+      "name": "verification.json",
+      "bytes": 3486,
+      "sha256": "53f28c92315d995dd3a6b0fea76a2fb553d70a63fb1ce7a23fb5c36b1e3e6c04"
+    }
+  ]
+}

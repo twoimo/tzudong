@@ -1,0 +1,427 @@
+{
+  "artifact": {
+    "actual_sha256": "70ee298dece546c6dcc493434c4a14ca39d061cd81429d4c77118f07520368b1",
+    "actual_size": 16589,
+    "created_at": "2026-10-04T21:03:39Z",
+    "digest": "sha256:70ee298dece546c6dcc493434c4a14ca39d061cd81429d4c77118f07520368b1",
+    "files": [
+      {
+        "bytes": 1275,
+        "name": "local-stack-reset.json",
+        "sha256": "f44ec0af0def868d12093b3a30359019ab991a79287c1fc2bad01c520cc1df3e"
+      },
+      {
+        "bytes": 1877,
+        "name": "local-image-pull-preflight.json",
+        "sha256": "6471cbd9cfecd35d2521f3ae0c9ac817c595296aeb7425c5e9fbe32ad464e44b"
+      },
+      {
+        "bytes": 1262,
+        "name": "local-stack-status.json",
+        "sha256": "ae3a7d8d5529cd982c844ef75d6e6f141062bfe8cd9a8c888bc13fa3c49f736a"
+      },
+      {
+        "bytes": 33114,
+        "name": "local-migration-manifest.json",
+        "sha256": "50b3fa6ea6f45959f6db5e36a6f0782fd59ca7fbca7827095d79995c0aefa412"
+      },
+      {
+        "bytes": 8029,
+        "name": "local-migration-summary.json",
+        "sha256": "9b9523d8f1ba0b9ab13b0472e203dfa07aab65c93fa6d568c70cd30c4aeae9ea"
+      },
+      {
+        "bytes": 1525,
+        "name": "local-closure-rescan.json",
+        "sha256": "4ea174d1b8775a540edb1bb8ecea74fd794519cc284825cdfb0a880011cf1d64"
+      },
+      {
+        "bytes": 18947,
+        "name": "local-closure-smoke.json",
+        "sha256": "2e9bd6a1f5b7bad4a086c96852a5bb4199ee73d11c80769ec242cab3151bbb9c"
+      },
+      {
+        "bytes": 13132,
+        "name": "local-browser-route-diagnostics.json",
+        "sha256": "0374cf508d8d8684ec3876a5e10d93bb3ce400c5a487b916816bd5afd5a870bd"
+      },
+      {
+        "bytes": 67,
+        "name": "publication-boundary.txt",
+        "sha256": "11872323546e0fa266677c4ff1ead72ad91a86b36b65fcdd22101b002dd78923"
+      }
+    ],
+    "id": 11315017178,
+    "name": "nightly-local-publication-37233565208-1",
+    "size_in_bytes": 16589,
+    "updated_at": "2026-10-04T21:03:39Z"
+  },
+  "bounded_receipt_summary": {
+    "browser_record_count": 128,
+    "browser_request_count": 403,
+    "browser_test_groups": 27,
+    "candidate_rpc_count": 48,
+    "candidate_rpc_passed": 48,
+    "closure_function_count": 365,
+    "closure_smoke_status": "passed",
+    "commit_sha256": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "ledger_count": 100,
+    "readback_row_count": 6395,
+    "rpc_failed": 0,
+    "rpc_passed": 4,
+    "sequence_count": 5,
+    "source_chain_sha256": "97bece6f9e28a7f231477aeaba9631e549ee8a25c63ab6ea6492629de95dd27f"
+  },
+  "checks": {
+    "all_prior_content_checks_pass": true,
+    "artifact_still_available_and_digest_matches": true,
+    "current_main_still_b90154e": true,
+    "frozen_source_integrity": true,
+    "internal_verifiers_and_negative_control_pass": true,
+    "original_179f_head_and_status_preserved": true,
+    "release_assets_still_same": true,
+    "release_still_same_published_prerelease": true,
+    "run_still_completed_success": true,
+    "tag_still_resolves_to_run_commit": true
+  },
+  "closure_judgment": {
+    "issue_closed_by_this_session": false,
+    "manual_closure_supported_by_evidence": true,
+    "policy_basis": ".github/workflows/nightly-local-regression.yml:1991-2021; automatic incident handling is schedule-only and requires all lanes plus cleanup success",
+    "scheduled_automatic_closure_eligible": false,
+    "technical_recovery_evidence_sufficient": true
+  },
+  "frozen_source": {
+    "byte_count": 2940361,
+    "file_count": 121,
+    "git_commit": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "manifest": "frozen-verification/source-materialization.json",
+    "permissions": "read-only files and directories"
+  },
+  "issue": {
+    "closed_at": null,
+    "html_url": "https://github.com/twoimo/tzudong/issues/2843",
+    "number": 2843,
+    "state": "open",
+    "title": "[nightly] Local regression incident",
+    "updated_at": "2026-10-03T21:39:32Z"
+  },
+  "limits": [
+    "The successful run is workflow_dispatch all. Automatic scheduled incident closure was skipped, so this is evidence for an operator manual closure, not proof that the scheduled closure path executed.",
+    "Full private migration receipts and user/database rows were intentionally not downloaded; published counts/hashes and fixed schemas were verified.",
+    "Browser groups are bounded request telemetry, not an exact total of Playwright tests. Unit pass totals are not present in the publication allowlist.",
+    "The internal verifier was independently executed with local Python 3.14.8; the CI application/unit/E2E stack was not rerun locally.",
+    "This proves the run publication boundary and source bindings; it does not prove hosted database or production deployment state.",
+    "The prerelease reports immutable=false. Integrity is established at this readback time by GitHub and locally computed digests.",
+    "docs/operations/nightly-regression.md contains an outdated tag example; the actual workflow and observed release use v1.2.4-nightly.37233565208.gb90154e22e6b."
+  ],
+  "minimal_evidence": [
+    "RESULT.md",
+    "verification.json",
+    "frozen-verification/verifier-results.json",
+    "attempt-03/publication-artifact.zip"
+  ],
+  "observed_at": "2026-10-04T21:25:14.259807+00:00",
+  "read_only_scope": {
+    "original_179f_after": {
+      "clean": true,
+      "head": "73fd13a982e7a0851398a5f65735936c4a6b72c2",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tree": "c35da4f33e345019bb07167ce447fb4cea7c8d50"
+    },
+    "original_179f_before": {
+      "clean": true,
+      "head": "73fd13a982e7a0851398a5f65735936c4a6b72c2",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tree": "c35da4f33e345019bb07167ce447fb4cea7c8d50"
+    },
+    "raw_logs_environment_bodies_user_rows_saved": false,
+    "remote_methods": [
+      "GET"
+    ],
+    "source_checkout_after": {
+      "clean": true,
+      "head": "79922b3b9cd4941d3b85dbb732fdfbbfb11ed810",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tree": "1650d3b97e8279e099238c01a06f023caa17f19e"
+    },
+    "source_checkout_before_attempt03": {
+      "clean": false,
+      "head": "32f5336fa9af166b04fe191ff3a7e1294196e893",
+      "status_sha256": "d730ea83246f7e41ff734fe608394e83cb4dbcf0db34f4c8c01ef6e19f8e9247",
+      "tree": "84d8f211d372fab619f344152dc4405e8c37dc82"
+    },
+    "source_checkout_changed_by_other_work": true,
+    "source_checkout_observed_initial_head": "2f9460ab93de8705237e68480793578c096b3619",
+    "source_commit_push_remote_mutation_issue_closure_performed": false
+  },
+  "release": {
+    "assets": [
+      {
+        "actual_sha256": "0374cf508d8d8684ec3876a5e10d93bb3ce400c5a487b916816bd5afd5a870bd",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:0374cf508d8d8684ec3876a5e10d93bb3ce400c5a487b916816bd5afd5a870bd",
+        "id": 610671043,
+        "name": "local-browser-route-diagnostics.json",
+        "size": 13132,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      },
+      {
+        "actual_sha256": "4ea174d1b8775a540edb1bb8ecea74fd794519cc284825cdfb0a880011cf1d64",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:4ea174d1b8775a540edb1bb8ecea74fd794519cc284825cdfb0a880011cf1d64",
+        "id": 610671042,
+        "name": "local-closure-rescan.json",
+        "size": 1525,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      },
+      {
+        "actual_sha256": "2e9bd6a1f5b7bad4a086c96852a5bb4199ee73d11c80769ec242cab3151bbb9c",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:2e9bd6a1f5b7bad4a086c96852a5bb4199ee73d11c80769ec242cab3151bbb9c",
+        "id": 610671041,
+        "name": "local-closure-smoke.json",
+        "size": 18947,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      },
+      {
+        "actual_sha256": "6471cbd9cfecd35d2521f3ae0c9ac817c595296aeb7425c5e9fbe32ad464e44b",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:6471cbd9cfecd35d2521f3ae0c9ac817c595296aeb7425c5e9fbe32ad464e44b",
+        "id": 610671027,
+        "name": "local-image-pull-preflight.json",
+        "size": 1877,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "50b3fa6ea6f45959f6db5e36a6f0782fd59ca7fbca7827095d79995c0aefa412",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:50b3fa6ea6f45959f6db5e36a6f0782fd59ca7fbca7827095d79995c0aefa412",
+        "id": 610671026,
+        "name": "local-migration-manifest.json",
+        "size": 33114,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "9b9523d8f1ba0b9ab13b0472e203dfa07aab65c93fa6d568c70cd30c4aeae9ea",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:9b9523d8f1ba0b9ab13b0472e203dfa07aab65c93fa6d568c70cd30c4aeae9ea",
+        "id": 610671020,
+        "name": "local-migration-summary.json",
+        "size": 8029,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "f44ec0af0def868d12093b3a30359019ab991a79287c1fc2bad01c520cc1df3e",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:f44ec0af0def868d12093b3a30359019ab991a79287c1fc2bad01c520cc1df3e",
+        "id": 610671024,
+        "name": "local-stack-reset.json",
+        "size": 1275,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "ae3a7d8d5529cd982c844ef75d6e6f141062bfe8cd9a8c888bc13fa3c49f736a",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:ae3a7d8d5529cd982c844ef75d6e6f141062bfe8cd9a8c888bc13fa3c49f736a",
+        "id": 610671021,
+        "name": "local-stack-status.json",
+        "size": 1262,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "11872323546e0fa266677c4ff1ead72ad91a86b36b65fcdd22101b002dd78923",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:19Z",
+        "digest": "sha256:11872323546e0fa266677c4ff1ead72ad91a86b36b65fcdd22101b002dd78923",
+        "id": 610671045,
+        "name": "publication-boundary.txt",
+        "size": 67,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      }
+    ],
+    "body_commit_reference_matches": true,
+    "body_run_reference_matches": true,
+    "created_at": "2026-10-04T20:47:12Z",
+    "draft": false,
+    "html_url": "https://github.com/twoimo/tzudong/releases/tag/v1.2.4-nightly.37233565208.gb90154e22e6b",
+    "id": 403208452,
+    "immutable": false,
+    "prerelease": true,
+    "published_at": "2026-10-04T21:04:19Z",
+    "tag_name": "v1.2.4-nightly.37233565208.gb90154e22e6b",
+    "tag_object": {
+      "sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "type": "commit"
+    },
+    "target_commitish": "b90154e22e6b4ba089275c7ae6d53e7274feae98"
+  },
+  "schema": "independent-nightly-publication-final-v1",
+  "scope": {
+    "current_main": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "current_main_tree": "84d8f211d372fab619f344152dc4405e8c37dc82",
+    "event": "workflow_dispatch",
+    "repository": "twoimo/tzudong",
+    "run_attempt": 1,
+    "run_id": 37233565208,
+    "run_url": "https://github.com/twoimo/tzudong/actions/runs/37233565208"
+  },
+  "source_policy_files": [
+    {
+      "byte_length": 251,
+      "github_blob_sha": "8d96f3a1f6bc8acdb09ac3e587ec87c0d8e22fe6",
+      "github_sha256": "25fa74b6e66bfa586f4938b14448c52a8120642b0fefe48f38ad7bd4cf7dd7c5",
+      "local_sha256": "25fa74b6e66bfa586f4938b14448c52a8120642b0fefe48f38ad7bd4cf7dd7c5",
+      "match": true,
+      "path": ".github/nightly-local-publication-allowlist.txt"
+    },
+    {
+      "byte_length": 102420,
+      "github_blob_sha": "50b4901d062d6d1253509f420b7f37c62429cfe0",
+      "github_sha256": "e75441332f3f1128774915dd96e5fb5efcd55b79ae2a0f178c4e96aebf122454",
+      "local_sha256": "e75441332f3f1128774915dd96e5fb5efcd55b79ae2a0f178c4e96aebf122454",
+      "match": true,
+      "path": ".github/workflows/nightly-local-regression.yml"
+    },
+    {
+      "byte_length": 14443,
+      "github_blob_sha": "8dc5eab480c103deabbf5c9f0a42bb5e7d5fb1ca",
+      "github_sha256": "4ab853a010357f4165ce9b9afd8a0224eb82807043ba4f3ce0e157ec3cb61305",
+      "local_sha256": "4ab853a010357f4165ce9b9afd8a0224eb82807043ba4f3ce0e157ec3cb61305",
+      "match": true,
+      "path": ".github/workflows/nightly-regression.yml"
+    },
+    {
+      "byte_length": 15253,
+      "github_blob_sha": "6ce017a924e5025d75bd53bb29e921346a47096e",
+      "github_sha256": "fddedb91677ae298e51ae0f63ab108595e0e96f475bf9b05612a9769b270cd9c",
+      "local_sha256": "fddedb91677ae298e51ae0f63ab108595e0e96f475bf9b05612a9769b270cd9c",
+      "match": true,
+      "path": ".github/scripts/build-nightly-local-publication.py"
+    },
+    {
+      "byte_length": 50065,
+      "github_blob_sha": "7db89fe15522dbfc198cf926f7991e1adbba6f57",
+      "github_sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6",
+      "local_sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6",
+      "match": true,
+      "path": ".github/scripts/verify-nightly-local-publication.py"
+    },
+    {
+      "byte_length": 4080,
+      "github_blob_sha": "7b513cdea6f4cc0e6b531a3f132ece141c754712",
+      "github_sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f",
+      "local_sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f",
+      "match": true,
+      "path": "docs/agents/verification.md"
+    },
+    {
+      "byte_length": 2329,
+      "github_blob_sha": "21e8d9b036ce3ca814a076345b42ce1b07e7787f",
+      "github_sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+      "local_sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+      "match": true,
+      "path": "docs/agents/release.md"
+    },
+    {
+      "byte_length": 2955,
+      "github_blob_sha": "fd0ba2901c684023ddc3cf604802a8feb90e92b6",
+      "github_sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c",
+      "local_sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c",
+      "match": true,
+      "path": "docs/agents/privacy.md"
+    }
+  ],
+  "status": "PASS",
+  "superseded_attempts": [
+    {
+      "limitation": "original clean/HEAD assumption changed concurrently; no bundle downloaded in this attempt",
+      "path": "readback.json"
+    },
+    {
+      "limitation": "GitHub artifact request rejected application/octet-stream with HTTP 415; corrected artifact download uses the default JSON Accept before following the archive redirect",
+      "path": "attempt-02/readback.json"
+    },
+    {
+      "limitation": "bytes/digests/policy checks passed; blanket write denial blocked the internal verifier offline temporary SQL generator; checkout changed concurrently",
+      "path": "attempt-03/readback.json"
+    },
+    {
+      "path": "frozen-verification/verifier-results.json",
+      "resolution": "unchanged current-main verifier ran successfully against both retained bundles using a Git-object source snapshot and temporary directories inside the authorized output root; incorrect commit rejected"
+    }
+  ],
+  "verifier_results": {
+    "all_expectations_met": true,
+    "results": [
+      {
+        "bounded_error": null,
+        "exit_code": 0,
+        "expectation_met": true,
+        "expected_github_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+        "expected_to_pass": true,
+        "label": "artifact",
+        "observed_at": "2026-10-04T21:23:29.688950+00:00",
+        "python_executable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "python_version": "3.14.8",
+        "snapshot_unchanged": true,
+        "started_scope": "frozen_current_main_source",
+        "stderr_bytes": 0,
+        "stdout_bytes": 0,
+        "temporary_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005/frozen-verification/scratch-artifact",
+        "temporary_root_empty": true
+      },
+      {
+        "bounded_error": null,
+        "exit_code": 0,
+        "expectation_met": true,
+        "expected_github_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+        "expected_to_pass": true,
+        "label": "prerelease",
+        "observed_at": "2026-10-04T21:23:30.978827+00:00",
+        "python_executable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "python_version": "3.14.8",
+        "snapshot_unchanged": true,
+        "started_scope": "frozen_current_main_source",
+        "stderr_bytes": 0,
+        "stdout_bytes": 0,
+        "temporary_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005/frozen-verification/scratch-prerelease",
+        "temporary_root_empty": true
+      },
+      {
+        "bounded_error": "local migration publication commit binding mismatch",
+        "exit_code": 1,
+        "expectation_met": true,
+        "expected_github_sha": "0000000000000000000000000000000000000000",
+        "expected_to_pass": false,
+        "label": "wrong-sha-negative-control",
+        "observed_at": "2026-10-04T21:23:31.895487+00:00",
+        "python_executable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "python_version": "3.14.8",
+        "snapshot_unchanged": true,
+        "started_scope": "frozen_current_main_source",
+        "stderr_bytes": 52,
+        "stdout_bytes": 0,
+        "temporary_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005/frozen-verification/scratch-wrong-sha-negative-control",
+        "temporary_root_empty": true
+      }
+    ]
+  }
+}

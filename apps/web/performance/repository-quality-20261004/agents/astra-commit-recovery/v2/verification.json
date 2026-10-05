@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "source_read_only": true,
+  "source_hashes_unchanged_at_completion": true,
+  "v1_artifacts_preserved": true,
+  "v1_files_verified": 15,
+  "reviewed_files": 5,
+  "requested_cases": {
+    "pass": 7,
+    "fail": 0
+  },
+  "additional_cases": {
+    "pass": 1,
+    "fail": 2,
+    "failures": [
+      "transient snapshot failure never recovers UI completion",
+      "same-input autosave after unanswered reply prevents recovered commit completion"
+    ]
+  },
+  "total_distinct_cases": {
+    "pass": 8,
+    "fail": 2
+  },
+  "findings": {
+    "P1": 0,
+    "P2": 1
+  },
+  "original_recapture_P2": "resolved",
+  "limits": "Local source handlers/controller with synthetic transports; no browser, React render, phone, authStorage, remote writes, full suite, lint, parity or deployment claims."
+}

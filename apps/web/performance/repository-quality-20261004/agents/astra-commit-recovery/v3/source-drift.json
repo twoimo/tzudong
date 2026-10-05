@@ -1,0 +1,8 @@
+[
+  {
+    "path": "apps/web/tests-unit/review-draft-deletion-browser.test.ts",
+    "previous_sha256": "829048c64e4bef5d1666c082fd3f9203b7d4e475f8e8b453ec17b59de4f260d5",
+    "final_sha256": "638899794c077cbb1c002eec1c9cae16ffa3c1f7073fe47a5c6183d06051f1ba",
+    "reason": "Parent added ninth browser case covering operation retry; diff read, browser not rerun."
+  }
+]

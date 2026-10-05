@@ -1,0 +1,22 @@
+{
+  "run": 37225167508,
+  "source": "519c88d183f161fabebb954eb0962613afcad693",
+  "artifact": 11311629072,
+  "zipDigest": "67c07f16f07a000fe827f49237eee8af7465c9bffc0c4ce648024c9111e2db2a",
+  "zipDigestMatchesGitHub": true,
+  "files": [
+    "local-browser-route-diagnostics.json",
+    "local-closure-rescan.json",
+    "local-closure-smoke.json",
+    "local-image-pull-preflight.json",
+    "local-migration-manifest.json",
+    "local-migration-summary.json",
+    "local-stack-reset.json",
+    "local-stack-status.json",
+    "publication-boundary.txt"
+  ],
+  "verifierExit": 0,
+  "localJob": "success",
+  "mainPublish": "not verified; feature skipped",
+  "privateDataOrLogsCopied": false
+}

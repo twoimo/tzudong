@@ -1,0 +1,33 @@
+{
+  "baseRefName": "main",
+  "baseRefOid": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+  "body": "Streamline README to focus on core product surfaces, visual tour GIFs, tech stack, and local development.",
+  "commits": [
+    {
+      "authoredDate": "2026-09-09T04:03:57Z",
+      "committedDate": "2026-09-09T04:03:57Z",
+      "messageBody": "…d dev guide",
+      "messageHeadline": "docs: clean up README with concise features, visual tour, and standar…",
+      "oid": "da096e04baf979ac35531172c7a1de95090aa649"
+    }
+  ],
+  "createdAt": "2026-09-09T04:03:59Z",
+  "files": [
+    {
+      "path": "README.md",
+      "additions": 92,
+      "deletions": 54,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefName": "docs/clean-readme-1788926635",
+  "headRefOid": "da096e04baf979ac35531172c7a1de95090aa649",
+  "isDraft": false,
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 2903,
+  "state": "OPEN",
+  "title": "docs: clean up README with concise features and visual product tour",
+  "updatedAt": "2026-09-09T04:04:13Z",
+  "url": "https://github.com/twoimo/tzudong/pull/2903"
+}

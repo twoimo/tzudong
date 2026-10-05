@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-04T09:59:41.030901+00:00",
+  "alert": 79,
+  "rule": "js/request-forgery",
+  "reviewedCommit": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+  "reviewedRef": "refs/pull/3099/head",
+  "operationExit": 0,
+  "globalState": "dismissed",
+  "dismissedReason": "false positive",
+  "dismissedComment": "The fixture gateway fixes fetch authority to 127.0.0.1:18792, appends only parsed path/query, and disables redirects. WebSocket hostname/port are also fixed; 14 adversarial URL cases retain the same destination. Reviewed at a29e464e.",
+  "dismissedAt": "2026-10-04T09:59:39Z",
+  "analyzerInstanceState": "dismissed",
+  "scope": "individual proven false positive; scanner/protection unchanged",
+  "sourceEvidence": "agents/astra-security/REPORT.md"
+}

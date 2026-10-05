@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-04T22:50:05.590087+00:00",
+  "base": "93fa1131595508b5b324a88101bbdaf1b0e77b03",
+  "sourcePatch": "overseas-query-correctness-source-v1.patch",
+  "scope": [
+    "hooks/use-restaurants.tsx",
+    "tests-unit/use-restaurants-merge.test.ts"
+  ],
+  "focusedUnit": {
+    "pass": 25,
+    "fail": 0,
+    "assertions": 205,
+    "files": 2,
+    "beforeAgent": {
+      "newAndHelperPass": 2,
+      "fail": 3
+    },
+    "transport": "isolated real hook initializer/query callback with fixture rows; no hosted requests"
+  },
+  "eslint": {
+    "exitCode": 0,
+    "maxWarnings": 0
+  },
+  "parity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2449,
+    "nonLibraryContentSha256": "abd13cb5b52e7357cabeda31bbb9d71792a2c8ce6c02c9d893d567187aeb39db"
+  },
+  "bundleBuildAndBrowserPending": true,
+  "notPerformanceImprovementClaim": true,
+  "notDeployedYet": true
+}

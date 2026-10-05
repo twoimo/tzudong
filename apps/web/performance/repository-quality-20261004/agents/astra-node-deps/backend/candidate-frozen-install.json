@@ -1,0 +1,25 @@
+{
+  "label": "candidate-frozen-install",
+  "command": [
+    "npm",
+    "ci",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund",
+    "--json"
+  ],
+  "exitCode": 0,
+  "seconds": 2.114,
+  "node": "v24.21.0",
+  "npm": "11.6.2",
+  "lockBefore": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd",
+  "lockAfter": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd",
+  "stdoutBytes": 40774,
+  "stderrBytes": 781,
+  "summary": {
+    "added": 209,
+    "removed": 0,
+    "changed": 0,
+    "audited": 0
+  }
+}

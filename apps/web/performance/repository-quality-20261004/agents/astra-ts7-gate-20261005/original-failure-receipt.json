@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "status": "failed",
+  "failureCode": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+  "sampler": {
+    "code": 1,
+    "signal": null,
+    "errorCode": null,
+    "summaryPresent": true,
+    "invalidReasons": [
+      "sampling-gap-exceeded"
+    ],
+    "samples": 99,
+    "maximumGapMs": 96.9706000000001,
+    "maximumHostPressurePercent": 31.883521875601456,
+    "evidenceTimeout": {
+      "sampler": {
+        "pid": 3880,
+        "running": false,
+        "stdoutBytes": 5618,
+        "stderrBytes": 0
+      },
+      "root": {
+        "pid": 7896,
+        "running": false,
+        "stdoutBytes": 0,
+        "stderrBytes": 0
+      },
+      "recordedSamples": 99,
+      "lastControlFrame": "summary",
+      "elapsedMs": 8393,
+      "remainingBudgetMs": 111607
+    }
+  },
+  "lastFailure": null
+}

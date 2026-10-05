@@ -1,0 +1,27 @@
+{
+  "name": "branch-develop",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/branches/develop",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4980",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:31:09.754640+00:00",
+      "next_page": false
+    }
+  ],
+  "count": null,
+  "items": {
+    "commit": {
+      "sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a"
+    },
+    "name": "develop",
+    "protected": true
+  }
+}

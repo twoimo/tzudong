@@ -1,0 +1,106 @@
+{
+  "started_at": "2026-10-04T09:39:34.404990+00:00",
+  "completed_at": "2026-10-04T09:39:41.253461+00:00",
+  "workspace": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+  "branch": "codex/nightly-quality-20261004",
+  "head": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "head_unchanged": true,
+  "runtime": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verified_from": "current session_meta and latest turn_context"
+  },
+  "parent_measurement_complete_notice": "User reports A/A and A/B measurements finished with 66 valid process samples; auditor did not rerun browser measurements.",
+  "test_environment": {
+    "python": "3.11.17",
+    "hypothesis": "6.165.10",
+    "PyYAML": "6.0.3"
+  },
+  "tests": {
+    "modules": [
+      "backend.utils.tests.test_layout_naming_source_recovery",
+      "backend.bin.tests.test_check_layout_manifest_unittest",
+      "backend.bin.tests.test_check_rename_ledger_unittest",
+      "backend.bin.tests.test_layout_move_pbt",
+      "backend.bin.tests.test_rename_scope_pbt",
+      "backend.utils.tests.test_platform_modernization_reconciliation"
+    ],
+    "exit_code": 0,
+    "test_count": 87,
+    "seconds": 6.243,
+    "failures": [],
+    "skip_count": 0,
+    "raw_output_retained": false
+  },
+  "layout_checker": {
+    "exit_code": 0,
+    "result": {
+      "checks": {
+        "alias": {
+          "errorCode": null,
+          "offenders": [],
+          "ok": true
+        },
+        "correspondence": {
+          "errorCode": null,
+          "missing": [],
+          "ok": true
+        },
+        "entries": {
+          "errorCode": null,
+          "issues": [],
+          "ok": true
+        },
+        "moves": [],
+        "ownership": {
+          "errorCode": null,
+          "ok": true,
+          "violations": []
+        },
+        "staleReferences": {
+          "errorCode": null,
+          "ok": true,
+          "unresolved": [],
+          "unresolvedCount": 0
+        }
+      },
+      "errorCode": null,
+      "ok": true,
+      "trackedDirectoryCount": 37
+    }
+  },
+  "diff_check_exit_code": 0,
+  "owned_source_sha256_before": {
+    "backend/layout-manifest.v1.json": "ab3a91c9621528aadad36e9acb9129b5a3004513876936f81bfcce5092f22c55",
+    "backend/utils/tests/test_layout_naming_source_recovery.py": "8d02f06cc847fbcf75af86706a50f7963117ce9dda4b56c006d855ef461cc6dd",
+    "backend/bin/tests/test_check_layout_manifest_unittest.py": "d543eaf4020e4857ca4c4d5c231de745353c0b4ef55a76678cd719082bc32714",
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json": "a686ce8b3d9408ffc6bced7662b018e089a804833729364c208ea5d1803d1945"
+  },
+  "owned_source_sha256_after": {
+    "backend/layout-manifest.v1.json": "ab3a91c9621528aadad36e9acb9129b5a3004513876936f81bfcce5092f22c55",
+    "backend/utils/tests/test_layout_naming_source_recovery.py": "8d02f06cc847fbcf75af86706a50f7963117ce9dda4b56c006d855ef461cc6dd",
+    "backend/bin/tests/test_check_layout_manifest_unittest.py": "d543eaf4020e4857ca4c4d5c231de745353c0b4ef55a76678cd719082bc32714",
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json": "a686ce8b3d9408ffc6bced7662b018e089a804833729364c208ea5d1803d1945"
+  },
+  "owned_source_unchanged_during_verification": true,
+  "working_tree_status": [
+    "M .github/scripts/verify-nightly-local-publication.py",
+    " M .kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+    " M backend/bin/tests/test_check_layout_manifest_unittest.py",
+    " M backend/layout-manifest.v1.json",
+    " M backend/supabase/scripts/local-migrate.py",
+    " M backend/supabase/tests/test_local_publication_verifier.py",
+    " M backend/supabase/tests/test_local_replay_contract.py",
+    " M backend/supabase/tests/test_local_seed_receipt_contract.py",
+    " M backend/utils/tests/test_layout_naming_source_recovery.py"
+  ],
+  "node_modules_present": false,
+  "delivery": {
+    "commits": 0,
+    "pushes": 0,
+    "remote_writes": 0,
+    "additional_source_edits_this_checkpoint": 0,
+    "integration_into_parent_develop_not_performed": true
+  }
+}

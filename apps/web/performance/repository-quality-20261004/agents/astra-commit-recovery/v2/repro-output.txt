@@ -1,0 +1,15 @@
+bun test v1.4.0 (34cbb9a40)
+
+../../../../marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/v2/scratch/cleanup-retry.test.ts:
+(pass) P2 regression: retry must preserve newer draft rejected by the first compare/delete [119.46ms]
+(pass) control: known success after unmounted clears snapshot and preserves objects [63.47ms]
+(pass) control: known success after owner-change clears snapshot and preserves objects [62.30ms]
+(pass) control: newer draft is protected when the original insert finishes after unmount [61.57ms]
+(pass) control: unanswered commit after unmount preserves draft and uploaded photos [62.61ms]
+(pass) control: failed snapshot does not authorize draft deletion after known commit [67.56ms]
+(pass) control: delete failure can retry without a second insert [58.86ms]
+
+ 7 pass
+ 0 fail
+ 64 expect() calls
+Ran 7 tests across 1 file. [737.00ms]

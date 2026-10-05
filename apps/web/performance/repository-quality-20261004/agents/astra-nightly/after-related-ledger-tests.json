@@ -1,0 +1,51 @@
+{
+  "captured_at": "2026-10-04T09:09:45.414251+00:00",
+  "runtime": "3.11.17",
+  "modules": [
+    "backend.supabase.tests.test_local_seed_receipt_contract",
+    "backend.supabase.tests.test_local_replay_contract",
+    "backend.supabase.tests.test_local_migration_contract"
+  ],
+  "tests_run": 48,
+  "failures": 0,
+  "errors": 1,
+  "skipped": 0,
+  "successful": false,
+  "elapsed_seconds": 12.332,
+  "events": [
+    {
+      "test": "backend.supabase.tests.test_local_seed_receipt_contract.LocalSeedReceiptContractTests.test_two_reset_comparator_compares_ordered_ledger_and_digests",
+      "outcome": "error",
+      "exception": "LocalMigrationError",
+      "code": "details_omitted",
+      "trace_locations": [
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          57
+        ],
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          623
+        ],
+        [
+          "/opt/homebrew/Cellar/python@3.11/3.11.17/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/case.py",
+          579
+        ],
+        [
+          "backend/supabase/tests/test_local_seed_receipt_contract.py",
+          571
+        ],
+        [
+          "backend/supabase/scripts/local-migrate.py",
+          3775
+        ],
+        [
+          "backend/supabase/scripts/local-migrate.py",
+          1445
+        ]
+      ]
+    }
+  ],
+  "database_execution": false,
+  "note": "Existing offline fixtures are temporary test inputs, not real publication or runtime evidence."
+}

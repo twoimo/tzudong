@@ -1,0 +1,54 @@
+{
+  "files": [
+    {
+      "path": "REPORT.md",
+      "bytes": 2580,
+      "sha256": "b7841cd58c247fdd8b82225e6869c3e7637860434708f2e527d55589324baa75"
+    },
+    {
+      "path": "before.json",
+      "bytes": 1569,
+      "sha256": "73addf869e5d644ae27a57da371906e091be5c82ef870a88789abac597772fde"
+    },
+    {
+      "path": "fixture-binding-update.json",
+      "bytes": 988,
+      "sha256": "7253971ae060f4112266432f672a08dd27b0cbfd70b8925a747a6aee477f2fa5"
+    },
+    {
+      "path": "focused-contracts-initial.json",
+      "bytes": 875,
+      "sha256": "f57b9164c45adc41bbf61476db2362b0e6900e20b91c96a0e07ef617a27c1875"
+    },
+    {
+      "path": "layout-check-after.json",
+      "bytes": 689,
+      "sha256": "e4bd6484e99df1f41571c830ab4ec128fa4678544dabb61614bb75db6eb33224"
+    },
+    {
+      "path": "layout-fix.patch",
+      "bytes": 6644,
+      "sha256": "6800ba313febcfca2e9f2840ce32e9adb67a834de7a8346c6d0d4270650f0b2c"
+    },
+    {
+      "path": "manifest-fixture-impact.json",
+      "bytes": 514,
+      "sha256": "1d6c4841b38fe7079aab727a2b8784e3f6a1f91e6e6f3fb758cb7e20abab0f48"
+    },
+    {
+      "path": "recovery-contracts-after-fixture.json",
+      "bytes": 252,
+      "sha256": "dc80c8eb3e3d75856c3d26a551f806fdc11cbb4de4a2a51a16515355b46bbaa2"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 3669,
+      "sha256": "b8f368e6c5f95eb5b133a78aa852439d3cca02a8a3ab6094adc32c0ff79f0a18"
+    },
+    {
+      "path": "test-environment.json",
+      "bytes": 454,
+      "sha256": "a9faf891288ef586c61d436085a93ffe8fc5190d671bfeb752401264f1f0f453"
+    }
+  ]
+}

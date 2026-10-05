@@ -1,0 +1,103 @@
+{
+  "completed_at": "2026-10-04T09:11:04.077246+00:00",
+  "workspace": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+  "branch": "codex/nightly-quality-20261004",
+  "head": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "owned_changed_paths": [
+    "backend/layout-manifest.v1.json",
+    "backend/utils/tests/test_layout_naming_source_recovery.py",
+    "backend/bin/tests/test_check_layout_manifest_unittest.py",
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json"
+  ],
+  "working_tree_status": [
+    " M .github/scripts/verify-nightly-local-publication.py",
+    " M .kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+    " M backend/bin/tests/test_check_layout_manifest_unittest.py",
+    " M backend/layout-manifest.v1.json",
+    " M backend/supabase/scripts/local-migrate.py",
+    " M backend/supabase/tests/test_local_publication_verifier.py",
+    " M backend/supabase/tests/test_local_replay_contract.py",
+    " M backend/supabase/tests/test_local_seed_receipt_contract.py",
+    " M backend/utils/tests/test_layout_naming_source_recovery.py"
+  ],
+  "added_directory_entries": [
+    "assets",
+    "assets/source-fonts",
+    "docs/build-ship",
+    "docs/performance"
+  ],
+  "source_entry_count": 37,
+  "checks": {
+    "layout_rename_recovery_source_and_property_tests_passed": 80,
+    "platform_recovery_tests_passed_after_binding_update": 7,
+    "distinct_test_count": 87,
+    "layout_checker": {
+      "exit_code": 0,
+      "result": {
+        "checks": {
+          "alias": {
+            "errorCode": null,
+            "offenders": [],
+            "ok": true
+          },
+          "correspondence": {
+            "errorCode": null,
+            "missing": [],
+            "ok": true
+          },
+          "entries": {
+            "errorCode": null,
+            "issues": [],
+            "ok": true
+          },
+          "moves": [],
+          "ownership": {
+            "errorCode": null,
+            "ok": true,
+            "violations": []
+          },
+          "staleReferences": {
+            "errorCode": null,
+            "ok": true,
+            "unresolved": [],
+            "unresolvedCount": 0
+          }
+        },
+        "errorCode": null,
+        "ok": true,
+        "trackedDirectoryCount": 37
+      }
+    },
+    "diff_check_exit_code": 0,
+    "existing_manifest_entries_preserved": true,
+    "checker_implementation_preserved": true,
+    "excluded_directories_preserved": true,
+    "node_modules_present": false
+  },
+  "necessary_fixture_change": "Only two candidateGitBlobSha1 values and their aggregate candidateContentSha256 in the existing reconciliation fixture changed; all 207 entries and classifications preserved.",
+  "source_files": [
+    {
+      "path": "backend/layout-manifest.v1.json",
+      "sha256": "ab3a91c9621528aadad36e9acb9129b5a3004513876936f81bfcce5092f22c55"
+    },
+    {
+      "path": "backend/utils/tests/test_layout_naming_source_recovery.py",
+      "sha256": "8d02f06cc847fbcf75af86706a50f7963117ce9dda4b56c006d855ef461cc6dd"
+    },
+    {
+      "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
+      "sha256": "d543eaf4020e4857ca4c4d5c231de745353c0b4ef55a76678cd719082bc32714"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+      "sha256": "a686ce8b3d9408ffc6bced7662b018e089a804833729364c208ea5d1803d1945"
+    }
+  ],
+  "delivery": {
+    "commits": 0,
+    "pushes": 0,
+    "remote_writes": 0,
+    "prior_security_audit_changed": false,
+    "parent_review_and_protected_delivery_pending": true
+  }
+}

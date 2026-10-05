@@ -1,0 +1,30 @@
+{
+  "baseline": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "transport": "deterministic in-memory IDB transaction boundary; actual source save/get/validation/compare-delete, component handlers and controller",
+  "command": "bun test apps/web/tests-unit/review-save-submit.test.ts --test-name-pattern composer-owned draft revisions",
+  "exitCode": 1,
+  "passed": 0,
+  "failed": 3,
+  "assertions": 40,
+  "cases": [
+    {
+      "thread": "PRRT_kwDOQGRyNc6oxx7Y",
+      "case": "B saved before A captures",
+      "actual": "B row deleted after A succeeds",
+      "expected": "B unchanged"
+    },
+    {
+      "thread": "PRRT_kwDOQGRyNc6oxx7T",
+      "case": "fully compensated definite upload rejection, same form autosave, successful retry",
+      "actual": "submitted row remains",
+      "expected": "submitted row absent"
+    },
+    {
+      "thread": "PRRT_kwDOQGRyNc6oxx7T",
+      "case": "fully compensated definite insert rejection, same form autosave, successful retry",
+      "actual": "submitted row remains",
+      "expected": "submitted row absent"
+    }
+  ],
+  "rawLogsStored": false
+}

@@ -1,0 +1,94 @@
+{
+  "capturedAt": "2026-10-04T23:02:49.738Z",
+  "projectVerified": "aqlcofblfxdrjhhdmarw",
+  "queryMode": "read-only group counts; no raw users, buckets, request bodies or identifiers",
+  "totals": [
+    {
+      "metric": "CLS",
+      "samples": 8
+    },
+    {
+      "metric": "INP",
+      "samples": 4
+    },
+    {
+      "metric": "LCP",
+      "samples": 10
+    }
+  ],
+  "cohorts": [
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "CLS",
+      "samples": 3
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "INP",
+      "samples": 2
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "samples": 5
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "CLS",
+      "samples": 1
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "INP",
+      "samples": 1
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "LCP",
+      "samples": 1
+    },
+    {
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "CLS",
+      "samples": 1
+    },
+    {
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "LCP",
+      "samples": 1
+    },
+    {
+      "release_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "CLS",
+      "samples": 3
+    },
+    {
+      "release_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "INP",
+      "samples": 1
+    },
+    {
+      "release_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "LCP",
+      "samples": 3
+    }
+  ],
+  "distinctUsersNotMeasured": true,
+  "anonymousSelfReportsNotGuaranteedHumanOrIndependent": true,
+  "currentCA1CohortObserved": false,
+  "oldB901AfterCohortPresentButSmall": true,
+  "comparisonGainClaimed": false,
+  "adequateFieldComparisonPending": true,
+  "previousSerializationFailureOccurredBeforeAnyFileWrite": true
+}

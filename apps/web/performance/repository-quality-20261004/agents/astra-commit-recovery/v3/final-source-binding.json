@@ -1,0 +1,36 @@
+{
+  "source_set_sha256": "64152bb8891678b222942060408cd88431d36695230df6f8e388c595bdbabbb8",
+  "format": "sha256 of sorted SHA256-space-space-relative-path-newline records",
+  "verified_at": "2026-10-04T10:49:43.945682+00:00",
+  "files": [
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "sha256": "a72506853619b8bf0233b56df2e434aacbea1ec166a6fdbb18d77416128b617d"
+    },
+    {
+      "path": "apps/web/lib/reviewDraftDB.ts",
+      "sha256": "a2e36b225205fd6feaa1809dd9aa18781d5668326229491779eb50ce11585068"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "sha256": "eba156d87211e9e50eb930d91efdb0c6229d7ddf2dfda20c8aaba1736a05fa40"
+    },
+    {
+      "path": "apps/web/tests-unit/review-draft-deletion-browser.test.ts",
+      "sha256": "638899794c077cbb1c002eec1c9cae16ffa3c1f7073fe47a5c6183d06051f1ba"
+    },
+    {
+      "path": "apps/web/lib/reviews/review-save-operation.ts",
+      "sha256": "c6437f5ddabd8c2a949492b6252483ac3f16ad96d0e9abd70710911a896d3106"
+    }
+  ],
+  "tested_runtime_files_unchanged": true,
+  "parent_test_only_drift": [
+    {
+      "path": "apps/web/tests-unit/review-draft-deletion-browser.test.ts",
+      "previous_sha256": "829048c64e4bef5d1666c082fd3f9203b7d4e475f8e8b453ec17b59de4f260d5",
+      "final_sha256": "638899794c077cbb1c002eec1c9cae16ffa3c1f7073fe47a5c6183d06051f1ba",
+      "reason": "Parent added ninth browser case covering operation retry; diff read, browser not rerun."
+    }
+  ]
+}

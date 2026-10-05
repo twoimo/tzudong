@@ -1,0 +1,46 @@
+{
+  "createdAt": "2026-10-04T21:26:14.944435+00:00",
+  "baselineBuild": "readiness-v1",
+  "candidateBuild": "integrated-main-v1",
+  "baseSourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "changeScope": "Exact merged production web source retest, before optional Swift-only package promotion; source archive, no prototype patch",
+  "processPairs": 9,
+  "warmupPairs": 2,
+  "aaCounts": [
+    735,
+    2000
+  ],
+  "abCounts": [
+    735,
+    2000
+  ],
+  "cpuRate": 4,
+  "viewport": [
+    390,
+    844
+  ],
+  "network": "unthrottled actual remote Naver SDK and tiles; synthetic REST responses",
+  "cache": "fresh process/context per observation, HTTP cache disabled, service workers blocked/bypassed",
+  "heapEndpointAfterVisibleMs": 600,
+  "retentionMax": 1000,
+  "latencyRegressionTolerancePercent": 15,
+  "naturalHeapRegressionTolerancePercent": 20,
+  "noiseFloorRelativePercent": 15,
+  "aaNoise": "Fresh A/A9pairs for each735/2000 count immediately before A/B; same fixed tolerances, no result-selected noise floor",
+  "sameEndpoint": "trusted cluster click to first of two visible rAFs; natural heap +600ms before membership serialization",
+  "probe": "visible-marker scanning stops at the first display; does not scan retained offscreen markers throughout the endpoint window",
+  "forcedGC": false,
+  "p95": "not reported at n9",
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "warmMemory": "not measured by this cold protocol; preserve original warm evidence separately",
+  "thresholdsChangedAfterObservation": false,
+  "sourceCommit": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "beforeAndAfterSmallRetention": true,
+  "afterIndependentWarmRegression": "not established by this protocol",
+  "physicalDevice": "held by explicit user request; no phone use or extrapolation",
+  "currentPhysicalHold": true,
+  "newMeasuredClaim": "No automatic G003 or field admission; natural heap regression and correctness only until analysis",
+  "runtimeHelper": "real-sdk-runtime-portable-v3.mjs",
+  "runtimeHelperSHA256": "53f0a4f45c090c4c08f6b6f3409fe5e452c1c13f077a342ced2999c217e46719"
+}

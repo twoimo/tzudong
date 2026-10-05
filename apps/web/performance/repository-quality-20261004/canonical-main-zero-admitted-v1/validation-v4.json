@@ -1,0 +1,12 @@
+{
+  "scorerReplayExit": 0,
+  "replayedBytesEqualOriginal": true,
+  "validatorExit": 0,
+  "validatorMapSha256": "23cc3eb4f5b606671f3098915718451b902b1ee294470eeaf9821ff0be3dd85d",
+  "admittedCount": 0,
+  "releaseBlocked": true,
+  "boundedProjectError": null,
+  "inputBudgetUnchanged": true,
+  "previousInvalidMapsAndHarnessReceiptsPreserved": true,
+  "scope": "canonical performance admission only"
+}

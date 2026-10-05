@@ -1,0 +1,60 @@
+{
+  "command": [
+    "node",
+    "node_modules/@playwright/test/cli.js",
+    "test",
+    "tests/dependency-modernization.spec.ts",
+    "--project=chromium",
+    "--trace=off",
+    "--reporter=json",
+    "--output",
+    "/Users/twoimo/.codex/worktrees/node-dependency-quality-20261004/runtime/web/playwright-results"
+  ],
+  "exit_code": 0,
+  "seconds": 8.5,
+  "network_contract": "Existing spec fulfills synthetic fixture and aborts every non-loopback request; no live SDK",
+  "stats": {
+    "startTime": "2026-10-04T10:46:17.917Z",
+    "duration": 8093.408,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "cases": [
+    {
+      "title": "serves the npm-built application without network access",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration": 1034,
+          "error_message": ""
+        }
+      ]
+    },
+    {
+      "title": "commits a keyboard selection and restores focus in the production Radix select",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration": 1115,
+          "error_message": ""
+        }
+      ]
+    },
+    {
+      "title": "resizes real production percentage panels by pointer and keyboard within limits",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration": 1704,
+          "error_message": ""
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-04T23:40:17.717925+00:00",
+  "ownedUniqueQueryOnLegacyPublicFont": true,
+  "bodyRead": false,
+  "privateRequestHeadersOrQueryTokenStored": false,
+  "status": 200,
+  "finalHost": "assets.tzudong.app",
+  "finalPathContentAddressed": true,
+  "cacheStatus": "DYNAMIC",
+  "cacheControl": null,
+  "contentLength": "11420784"
+}

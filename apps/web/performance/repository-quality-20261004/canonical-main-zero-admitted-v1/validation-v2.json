@@ -1,0 +1,13 @@
+{
+  "validatorExit": 1,
+  "scorerProducedOriginalOutput": true,
+  "scorerSecondRunRefusedExistingOutput": true,
+  "eligibleCount": 0,
+  "admittedCount": 0,
+  "releaseBlocked": true,
+  "scope": "canonical timing admission only",
+  "validatorMapSha256": "d7b3df3f7096e5eeae6c1d4a024afb44144ebdf10fc5694364f42d962d419546",
+  "boundedProjectError": "performance backlog: unexpected map artifact",
+  "priorFailureCause": "validator needs separately pinned map including scored output; original scorer map correctly excludes its own output",
+  "inputsOrBudgetNotRelaxed": true
+}

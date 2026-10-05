@@ -1,0 +1,97 @@
+[
+  {
+    "name": "toolchain",
+    "command": [
+      "/opt/homebrew/opt/node@24/bin/node",
+      "scripts/verify-typescript-toolchain.mjs"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exit_code": 1,
+    "seconds": 0.372,
+    "raw_output_persisted": false,
+    "typescript_diagnostic_codes": [],
+    "diagnostics_empty": null
+  },
+  {
+    "name": "generated_native",
+    "command": [
+      "/opt/homebrew/opt/node@24/bin/node",
+      "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web/node_modules/@typescript/native/bin/tsc",
+      "--project",
+      "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-typegen/tsconfig.fixture.json",
+      "--pretty",
+      "false",
+      "--checkers",
+      "1"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong",
+    "exit_code": 0,
+    "seconds": 0.287,
+    "raw_output_persisted": false,
+    "typescript_diagnostic_codes": [],
+    "diagnostics_empty": true
+  },
+  {
+    "name": "generated_compat",
+    "command": [
+      "/opt/homebrew/opt/node@24/bin/node",
+      "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web/node_modules/typescript/bin/tsc6",
+      "--project",
+      "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-typegen/tsconfig.fixture.json",
+      "--pretty",
+      "false",
+      "--stableTypeOrdering"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong",
+    "exit_code": 0,
+    "seconds": 1.009,
+    "raw_output_persisted": false,
+    "typescript_diagnostic_codes": [],
+    "diagnostics_empty": true
+  },
+  {
+    "name": "source_parity",
+    "command": [
+      "/opt/homebrew/opt/node@24/bin/node",
+      "scripts/run-typecheck.mjs",
+      "--compiler",
+      "parity"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exit_code": 0,
+    "seconds": 21.251,
+    "raw_output_persisted": false,
+    "parity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 2379,
+      "logicalInputNamesSha256": "8b3e972fc699d26bf9139353ed241af9ea8667d095afb4f2e6e3317198ad8aa3",
+      "nonLibraryContentSha256": "476ddc9b44359252965aff68aa122df06b5214f0b8a49a53427cd40c892ef607",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    }
+  },
+  {
+    "name": "related_unit_source",
+    "command": [
+      "/Users/twoimo/.bun/bin/bun",
+      "test",
+      "tests-unit/supabase-gen-types-source.test.ts",
+      "tests-unit/local-supabase-runtime.test.ts",
+      "tests-unit/privacy-schema-types-source.test.ts",
+      "tests-unit/nightly-regression-workflow.test.ts",
+      "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-typegen/typegen-exact-output.test.ts"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exit_code": 0,
+    "seconds": 7.51,
+    "raw_output_persisted": false,
+    "pass": 55,
+    "fail": 0,
+    "expect_calls": 1135,
+    "files": 5,
+    "failed_test_titles": []
+  }
+]

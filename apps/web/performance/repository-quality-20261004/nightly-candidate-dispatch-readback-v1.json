@@ -1,0 +1,212 @@
+{
+  "conclusion": "failure",
+  "databaseId": 37193997256,
+  "headBranch": "codex/nightly-quality-20261004",
+  "headSha": "c1ac641bc6e2dccb74a77e5cee4b39895d4fc2f7",
+  "jobs": [
+    {
+      "name": "Local",
+      "status": "completed",
+      "conclusion": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify publication boundary implementation",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node 24",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Bun",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pinned Docker Compose",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Enable disposable runner user namespaces",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Linux containment and Python runtime",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Create scoped Docker socket admission",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Python runtime dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install web dependencies",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Install Chromium for the browser lane",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Pull pinned Compose images",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Probe Compose container creation",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Probe Compose service startup",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Reset disposable local stack",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Apply local migrations, close functions, and seed",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify generated Supabase types match the local catalog",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run local nightly unit regression",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run local nightly browser regression",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Aggregate local nightly lane outcomes",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Write bounded nightly lane diagnostics",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Capture bounded Compose runtime diagnostics",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Capture bounded local diagnostics",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build row-free local publication evidence",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Prepare allowlisted publication bundle",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify publication bundle before artifact persistence",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Upload verified sanitized local nightly artifacts",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Prepare bounded lifecycle diagnostic for failure persistence",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload bounded failed or partial local nightly diagnostics",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload allowlisted publication bundle",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Stop and remove disposable local stack",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Manage scheduled nightly incident",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Fail when disposable stack cleanup failed",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install Bun",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install Node 24",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Checkout source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Publish",
+      "status": "completed",
+      "conclusion": "skipped",
+      "steps": []
+    }
+  ],
+  "status": "completed"
+}

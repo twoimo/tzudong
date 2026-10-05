@@ -1,0 +1,3506 @@
+{
+  "allowlist": [
+    "local-stack-reset.json",
+    "local-image-pull-preflight.json",
+    "local-stack-status.json",
+    "local-migration-manifest.json",
+    "local-migration-summary.json",
+    "local-closure-rescan.json",
+    "local-closure-smoke.json",
+    "local-browser-route-diagnostics.json",
+    "publication-boundary.txt"
+  ],
+  "artifact": {
+    "actual_sha256": "70ee298dece546c6dcc493434c4a14ca39d061cd81429d4c77118f07520368b1",
+    "actual_size": 16589,
+    "created_at": "2026-10-04T21:03:39Z",
+    "digest": "sha256:70ee298dece546c6dcc493434c4a14ca39d061cd81429d4c77118f07520368b1",
+    "files": [
+      {
+        "bytes": 1275,
+        "name": "local-stack-reset.json",
+        "sha256": "f44ec0af0def868d12093b3a30359019ab991a79287c1fc2bad01c520cc1df3e"
+      },
+      {
+        "bytes": 1877,
+        "name": "local-image-pull-preflight.json",
+        "sha256": "6471cbd9cfecd35d2521f3ae0c9ac817c595296aeb7425c5e9fbe32ad464e44b"
+      },
+      {
+        "bytes": 1262,
+        "name": "local-stack-status.json",
+        "sha256": "ae3a7d8d5529cd982c844ef75d6e6f141062bfe8cd9a8c888bc13fa3c49f736a"
+      },
+      {
+        "bytes": 33114,
+        "name": "local-migration-manifest.json",
+        "sha256": "50b3fa6ea6f45959f6db5e36a6f0782fd59ca7fbca7827095d79995c0aefa412"
+      },
+      {
+        "bytes": 8029,
+        "name": "local-migration-summary.json",
+        "sha256": "9b9523d8f1ba0b9ab13b0472e203dfa07aab65c93fa6d568c70cd30c4aeae9ea"
+      },
+      {
+        "bytes": 1525,
+        "name": "local-closure-rescan.json",
+        "sha256": "4ea174d1b8775a540edb1bb8ecea74fd794519cc284825cdfb0a880011cf1d64"
+      },
+      {
+        "bytes": 18947,
+        "name": "local-closure-smoke.json",
+        "sha256": "2e9bd6a1f5b7bad4a086c96852a5bb4199ee73d11c80769ec242cab3151bbb9c"
+      },
+      {
+        "bytes": 13132,
+        "name": "local-browser-route-diagnostics.json",
+        "sha256": "0374cf508d8d8684ec3876a5e10d93bb3ce400c5a487b916816bd5afd5a870bd"
+      },
+      {
+        "bytes": 67,
+        "name": "publication-boundary.txt",
+        "sha256": "11872323546e0fa266677c4ff1ead72ad91a86b36b65fcdd22101b002dd78923"
+      }
+    ],
+    "id": 11315017178,
+    "name": "nightly-local-publication-37233565208-1",
+    "size_in_bytes": 16589,
+    "updated_at": "2026-10-04T21:03:39Z"
+  },
+  "artifact_inventory": [
+    {
+      "created_at": "2026-10-04T21:03:38Z",
+      "digest": "sha256:bf1b5d4f6eee5071f7a190ebb0ce5bbc77c2d5dc9ba428400ba077187baa7ce8",
+      "expired": false,
+      "id": 11315460774,
+      "name": "nightly-local-diagnostics-37233565208-1",
+      "size_in_bytes": 17612,
+      "updated_at": "2026-10-04T21:03:38Z"
+    },
+    {
+      "created_at": "2026-10-04T21:03:39Z",
+      "digest": "sha256:70ee298dece546c6dcc493434c4a14ca39d061cd81429d4c77118f07520368b1",
+      "expired": false,
+      "id": 11315017178,
+      "name": "nightly-local-publication-37233565208-1",
+      "size_in_bytes": 16589,
+      "updated_at": "2026-10-04T21:03:39Z"
+    }
+  ],
+  "bounded_receipt_summary": {
+    "browser_record_count": 128,
+    "browser_request_count": 403,
+    "browser_test_groups": 27,
+    "candidate_rpc_count": 48,
+    "candidate_rpc_passed": 48,
+    "closure_function_count": 365,
+    "closure_smoke_status": "passed",
+    "commit_sha256": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "ledger_count": 100,
+    "readback_row_count": 6395,
+    "rpc_failed": 0,
+    "rpc_passed": 4,
+    "sequence_count": 5,
+    "source_chain_sha256": "97bece6f9e28a7f231477aeaba9631e549ee8a25c63ab6ea6492629de95dd27f"
+  },
+  "checks": [
+    {
+      "check": "source_tree_equals_task_expected_tree",
+      "pass": true
+    },
+    {
+      "check": "current_protected_main_is_run_head",
+      "pass": true
+    },
+    {
+      "check": "entire_local_source_tree_equals_current_main",
+      "pass": true
+    },
+    {
+      "check": "canonical_complete_run_identity",
+      "pass": true
+    },
+    {
+      "check": "local_and_publish_completed_success",
+      "pass": true
+    },
+    {
+      "check": "step_success:Run local nightly unit regression",
+      "pass": true
+    },
+    {
+      "check": "step_success:Run local nightly browser regression",
+      "pass": true
+    },
+    {
+      "check": "step_success:Aggregate local nightly lane outcomes",
+      "pass": true
+    },
+    {
+      "check": "step_success:Build row-free local publication evidence",
+      "pass": true
+    },
+    {
+      "check": "step_success:Verify generated Supabase types match the local catalog",
+      "pass": true
+    },
+    {
+      "check": "step_success:Verify publication bundle before artifact persistence",
+      "pass": true
+    },
+    {
+      "check": "step_success:Stop and remove disposable local stack",
+      "pass": true
+    },
+    {
+      "check": "step_success:Verify trusted publication ref and artifact boundary",
+      "pass": true
+    },
+    {
+      "check": "step_success:Publish sanitized nightly prerelease",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/nightly-local-publication-allowlist.txt",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/scripts/build-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/workflows/nightly-local-regression.yml",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/workflows/nightly-regression.yml",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:docs/agents/verification.md",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:.github/scripts/verify-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:docs/agents/privacy.md",
+      "pass": true
+    },
+    {
+      "check": "policy_contents_base64:docs/agents/release.md",
+      "pass": true
+    },
+    {
+      "check": "current_main_policy_bytes_match_local",
+      "pass": true
+    },
+    {
+      "check": "unique_exact_publication_artifact",
+      "pass": true
+    },
+    {
+      "check": "artifact_valid_run_binding",
+      "pass": true
+    },
+    {
+      "check": "zip_download_size_bound",
+      "pass": true
+    },
+    {
+      "check": "github_artifact_zip_digest",
+      "pass": true
+    },
+    {
+      "check": "github_artifact_zip_size",
+      "pass": true
+    },
+    {
+      "check": "zip_exact_flat_allowlist",
+      "pass": true
+    },
+    {
+      "check": "zip_no_symlink_directory_or_encryption",
+      "pass": true
+    },
+    {
+      "check": "zip_uncompressed_size_bounds",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:publication-boundary.txt",
+      "pass": true
+    },
+    {
+      "check": "canonical_boundary",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "artifact_internal_verifier",
+      "pass": false
+    },
+    {
+      "check": "prerelease_identity",
+      "pass": true
+    },
+    {
+      "check": "release_tag_resolves_to_run_head",
+      "pass": true
+    },
+    {
+      "check": "release_body_exact_source_and_run_reference",
+      "pass": true
+    },
+    {
+      "check": "prerelease_exact_asset_allowlist",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-closure-smoke.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-browser-route-diagnostics.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-closure-rescan.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-image-pull-preflight.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-migration-manifest.json",
+      "pass": true
+    },
+    {
+      "check": "asset_uploaded_size_bound:publication-boundary.txt",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-stack-reset.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-migration-summary.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "top_level_schema:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "schema_marker:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "no_credential_shaped_values:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:local-stack-status.json",
+      "pass": true
+    },
+    {
+      "check": "size_bound:publication-boundary.txt",
+      "pass": true
+    },
+    {
+      "check": "canonical_boundary",
+      "pass": true
+    },
+    {
+      "check": "release_asset_size:publication-boundary.txt",
+      "pass": true
+    },
+    {
+      "check": "release_asset_api_digest:publication-boundary.txt",
+      "pass": true
+    },
+    {
+      "check": "release_asset_equals_artifact:publication-boundary.txt",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "write_within_authorized_root",
+      "pass": true
+    },
+    {
+      "check": "prerelease_internal_verifier",
+      "pass": false
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:.github/nightly-local-publication-allowlist.txt",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:.github/nightly-local-publication-allowlist.txt",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:.github/scripts/verify-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:.github/scripts/verify-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/baselines/local/application-prerequisites.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/baselines/local/application-prerequisites.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_create_document_embeddings_bge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_create_document_embeddings_bge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_create_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_create_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_fix_approved_name_sync.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_fix_approved_name_sync.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_update_embeddings_constraint.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_update_embeddings_constraint.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260131_fix_search_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260131_fix_search_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260213_create_announcements_table_and_seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260213_create_announcements_table_and_seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260214_fix_approve_edit_backup_stage.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260214_fix_approve_edit_backup_stage.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260214_fix_restaurant_rpcs_and_search.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260214_fix_restaurant_rpcs_and_search.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260214_fix_submission_item_target_to_backup.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260214_fix_submission_item_target_to_backup.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260405_add_google_name.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260405_add_google_name.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260405_deduplicate_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260405_deduplicate_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260410_add_admin_review_merge_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260410_add_admin_review_merge_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260417_harden_submission_identity_duplicate_checks.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260417_harden_submission_identity_duplicate_checks.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260417_prevent_active_restaurant_identity_duplicates.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260417_prevent_active_restaurant_identity_duplicates.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260425_add_ai_leaderboard_snapshots.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260425_add_ai_leaderboard_snapshots.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260425_create_admin_ai_settings.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260425_create_admin_ai_settings.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260509_drop_server_costs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260509_drop_server_costs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260514_00_admin_user_management_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260514_00_admin_user_management_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260514_admin_sidebar_preferences.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260514_admin_sidebar_preferences.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260514_admin_user_management_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260514_admin_user_management_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260516_tighten_admin_user_management_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260516_tighten_admin_user_management_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260531084217_harden_public_api_grants_and_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260531084217_harden_public_api_grants_and_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260531084516_tighten_public_table_data_api_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260531084516_tighten_public_table_data_api_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260612075100_storyboard_caption_provenance.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260612075100_storyboard_caption_provenance.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627080000_storyboard_custom_gpt_rag_documents.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627080000_storyboard_custom_gpt_rag_documents.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627150000_restrict_restaurants_public_select_approved.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627150000_restrict_restaurants_public_select_approved.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627153000_storyboard_documents_hybrid_v2_indexes.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627153000_storyboard_documents_hybrid_v2_indexes.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627154500_storyboard_documents_hybrid_rrf_type_fix.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627154500_storyboard_documents_hybrid_rrf_type_fix.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260702000100_restaurant_request_review_lifecycle.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260702000100_restaurant_request_review_lifecycle.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260702000200_restaurant_request_client_idempotency.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260702000200_restaurant_request_client_idempotency.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260704000100_restaurant_submission_submit_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260704000100_restaurant_submission_submit_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260704000200_restaurant_destructive_admin_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260704000200_restaurant_destructive_admin_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000100_admin_restaurant_map_overlays.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000100_admin_restaurant_map_overlays.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000200_admin_restaurant_map_overlay_audit_apply.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000200_admin_restaurant_map_overlay_audit_apply.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000300_admin_trend_schema_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000300_admin_trend_schema_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000400_admin_trend_job_request_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000400_admin_trend_job_request_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000500_admin_trend_proposal_review_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000500_admin_trend_proposal_review_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000600_admin_trend_proposal_approval_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000600_admin_trend_proposal_approval_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000700_admin_storyboard_jobs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000700_admin_storyboard_jobs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260711000100_release_auth_session_revocation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260711000100_release_auth_session_revocation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000100_g010_privacy_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000100_g010_privacy_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000200_g010_notification_marketing.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000200_g010_notification_marketing.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000300_g010_account_deletion.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000300_g010_account_deletion.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000400_g010_retention_separation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000400_g010_retention_separation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000500_g010_incident_workflow.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000500_g010_incident_workflow.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000600_g010_ocr_log_minimization.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000600_g010_ocr_log_minimization.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000100_g013_short_url_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000100_g013_short_url_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000200_g013_ocr_quota_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000200_g013_ocr_quota_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000400_g013_provider_budget_extension.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000400_g013_provider_budget_extension.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000450_g013_address_admin_approval.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000450_g013_address_admin_approval.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002500_g014_catalog_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002500_g014_catalog_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002600_g014_account_deletion_receipt_parity.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002600_g014_account_deletion_receipt_parity.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002700_g028_account_deletion_reauth_proof.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002700_g028_account_deletion_reauth_proof.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000100_g041_privacy_audit_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000100_g041_privacy_audit_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000200_g041_privacy_onboarding_workflow_privileges.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000200_g041_privacy_onboarding_workflow_privileges.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000300_g041_auth_boundary_runtime_repairs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000300_g041_auth_boundary_runtime_repairs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000400_g041_auth_boundary_closure.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000400_g041_auth_boundary_closure.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000100_local_runtime_schema_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000100_local_runtime_schema_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000200_local_public_read_policy_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000200_local_public_read_policy_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000600_local_profile_read_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000600_local_profile_read_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260817000100_restaurant_identity_helper_writer_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260817000100_restaurant_identity_helper_writer_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260817020000_pipeline_control.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260817020000_pipeline_control.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260820030000_pipeline_control_atomic.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260820030000_pipeline_control_atomic.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260820040000_pipeline_batch_upsert.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260820040000_pipeline_batch_upsert.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260820050000_pipeline_outbox.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260820050000_pipeline_outbox.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260825140000_pipeline_outbox_trusted_search_path.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260825140000_pipeline_outbox_trusted_search_path.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260827084200_g014_8_guardian_provider_verification.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260827084200_g014_8_guardian_provider_verification.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260901000100_local_analytics_schema.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260901000100_local_analytics_schema.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260920171524_public_profile_summary_read_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260920171524_public_profile_summary_read_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local-migrate.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local-migrate.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local-seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local-seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local_catalog_readback.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local_catalog_readback.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local_replay_contract.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local_replay_contract.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/verify_admin_user_ids_replay.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/verify_admin_user_ids_replay.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:.github/nightly-local-publication-allowlist.txt",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:.github/nightly-local-publication-allowlist.txt",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:.github/scripts/verify-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:.github/scripts/verify-nightly-local-publication.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/baselines/local/application-prerequisites.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/baselines/local/application-prerequisites.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_create_document_embeddings_bge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_create_document_embeddings_bge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_create_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_create_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_fix_approved_name_sync.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_fix_approved_name_sync.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260124_update_embeddings_constraint.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260124_update_embeddings_constraint.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260131_fix_search_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260131_fix_search_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260213_create_announcements_table_and_seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260213_create_announcements_table_and_seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260214_fix_approve_edit_backup_stage.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260214_fix_approve_edit_backup_stage.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260214_fix_restaurant_rpcs_and_search.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260214_fix_restaurant_rpcs_and_search.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260214_fix_submission_item_target_to_backup.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260214_fix_submission_item_target_to_backup.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260405_add_google_name.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260405_add_google_name.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260405_deduplicate_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260405_deduplicate_restaurants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260410_add_admin_review_merge_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260410_add_admin_review_merge_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260417_harden_submission_identity_duplicate_checks.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260417_harden_submission_identity_duplicate_checks.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260417_prevent_active_restaurant_identity_duplicates.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260417_prevent_active_restaurant_identity_duplicates.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260425_add_ai_leaderboard_snapshots.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260425_add_ai_leaderboard_snapshots.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260425_create_admin_ai_settings.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260425_create_admin_ai_settings.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260509_drop_server_costs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260509_drop_server_costs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260514_00_admin_user_management_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260514_00_admin_user_management_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260514_admin_sidebar_preferences.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260514_admin_sidebar_preferences.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260514_admin_user_management_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260514_admin_user_management_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260516_tighten_admin_user_management_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260516_tighten_admin_user_management_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260531084217_harden_public_api_grants_and_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260531084217_harden_public_api_grants_and_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260531084516_tighten_public_table_data_api_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260531084516_tighten_public_table_data_api_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260612075100_storyboard_caption_provenance.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260612075100_storyboard_caption_provenance.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627080000_storyboard_custom_gpt_rag_documents.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627080000_storyboard_custom_gpt_rag_documents.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627150000_restrict_restaurants_public_select_approved.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627150000_restrict_restaurants_public_select_approved.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627153000_storyboard_documents_hybrid_v2_indexes.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627153000_storyboard_documents_hybrid_v2_indexes.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260627154500_storyboard_documents_hybrid_rrf_type_fix.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260627154500_storyboard_documents_hybrid_rrf_type_fix.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260702000100_restaurant_request_review_lifecycle.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260702000100_restaurant_request_review_lifecycle.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260702000200_restaurant_request_client_idempotency.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260702000200_restaurant_request_client_idempotency.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260704000100_restaurant_submission_submit_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260704000100_restaurant_submission_submit_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260704000200_restaurant_destructive_admin_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260704000200_restaurant_destructive_admin_audit.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000100_admin_restaurant_map_overlays.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000100_admin_restaurant_map_overlays.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000200_admin_restaurant_map_overlay_audit_apply.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000200_admin_restaurant_map_overlay_audit_apply.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000300_admin_trend_schema_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000300_admin_trend_schema_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000400_admin_trend_job_request_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000400_admin_trend_job_request_rpcs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000500_admin_trend_proposal_review_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000500_admin_trend_proposal_review_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000600_admin_trend_proposal_approval_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000600_admin_trend_proposal_approval_rpc.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260707000700_admin_storyboard_jobs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260707000700_admin_storyboard_jobs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260711000100_release_auth_session_revocation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260711000100_release_auth_session_revocation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000100_g010_privacy_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000100_g010_privacy_foundation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000200_g010_notification_marketing.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000200_g010_notification_marketing.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000300_g010_account_deletion.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000300_g010_account_deletion.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000400_g010_retention_separation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000400_g010_retention_separation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000500_g010_incident_workflow.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000500_g010_incident_workflow.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260712000600_g010_ocr_log_minimization.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260712000600_g010_ocr_log_minimization.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000100_g013_short_url_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000100_g013_short_url_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000200_g013_ocr_quota_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000200_g013_ocr_quota_security.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000400_g013_provider_budget_extension.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000400_g013_provider_budget_extension.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713000450_g013_address_admin_approval.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713000450_g013_address_admin_approval.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002500_g014_catalog_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002500_g014_catalog_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002600_g014_account_deletion_receipt_parity.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002600_g014_account_deletion_receipt_parity.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260713002700_g028_account_deletion_reauth_proof.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260713002700_g028_account_deletion_reauth_proof.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000100_g041_privacy_audit_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000100_g041_privacy_audit_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000200_g041_privacy_onboarding_workflow_privileges.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000200_g041_privacy_onboarding_workflow_privileges.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000300_g041_auth_boundary_runtime_repairs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000300_g041_auth_boundary_runtime_repairs.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000400_g041_auth_boundary_closure.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000400_g041_auth_boundary_closure.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000100_local_runtime_schema_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000100_local_runtime_schema_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000200_local_public_read_policy_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000200_local_public_read_policy_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000600_local_profile_read_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000600_local_profile_read_boundary_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260817000100_restaurant_identity_helper_writer_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260817000100_restaurant_identity_helper_writer_grants.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260817020000_pipeline_control.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260817020000_pipeline_control.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260820030000_pipeline_control_atomic.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260820030000_pipeline_control_atomic.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260820040000_pipeline_batch_upsert.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260820040000_pipeline_batch_upsert.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260820050000_pipeline_outbox.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260820050000_pipeline_outbox.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260825140000_pipeline_outbox_trusted_search_path.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260825140000_pipeline_outbox_trusted_search_path.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260827084200_g014_8_guardian_provider_verification.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260827084200_g014_8_guardian_provider_verification.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260901000100_local_analytics_schema.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260901000100_local_analytics_schema.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260920171524_public_profile_summary_read_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260920171524_public_profile_summary_read_boundary.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local-migrate.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local-migrate.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local-seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local-seed.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local_catalog_readback.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local_catalog_readback.sql",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/local_replay_contract.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/local_replay_contract.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_read_matches_trusted_main:backend/supabase/scripts/verify_admin_user_ids_replay.py",
+      "pass": true
+    },
+    {
+      "check": "verifier_source_read_still_same:backend/supabase/scripts/verify_admin_user_ids_replay.py",
+      "pass": true
+    },
+    {
+      "check": "release_assets_stable_during_readback",
+      "pass": true
+    },
+    {
+      "check": "main_still_same_protected_head",
+      "pass": true
+    },
+    {
+      "check": "source_checkout_unchanged",
+      "pass": false
+    }
+  ],
+  "completed_at": "2026-10-04T21:19:12.128320+00:00",
+  "failure": {
+    "code": "source_checkout_unchanged",
+    "type": "RuntimeError"
+  },
+  "incident_management_step": {
+    "conclusion": "skipped",
+    "name": "Manage scheduled nightly incident",
+    "status": "completed"
+  },
+  "internal_verifier": {
+    "artifact": "fail",
+    "prerelease": "fail"
+  },
+  "issue": {
+    "body_mentions": {
+      "Local": true,
+      "cleanup": true,
+      "e2e": true,
+      "unit": true
+    },
+    "body_run_ids": [
+      "33135404626"
+    ],
+    "closed_at": null,
+    "created_at": "2026-08-28T02:17:01Z",
+    "html_url": "https://github.com/twoimo/tzudong/issues/2843",
+    "number": 2843,
+    "state": "open",
+    "title": "[nightly] Local regression incident",
+    "updated_at": "2026-10-03T21:39:32Z"
+  },
+  "jobs": [
+    {
+      "conclusion": "success",
+      "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "id": 111528128374,
+      "name": "Local",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout source",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify publication boundary implementation",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Node 24",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Bun",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install pinned Docker Compose",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Enable disposable runner user namespaces",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify Linux containment and Python runtime",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Create scoped Docker socket admission",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Python runtime dependencies",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install web dependencies",
+          "number": 11,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify Linux anonymous unit reporter custody",
+          "number": 12,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Chromium for the browser lane",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Pull pinned Compose images",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Probe Compose container creation",
+          "number": 15,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Probe Compose service startup",
+          "number": 16,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Reset disposable local stack",
+          "number": 17,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Apply local migrations, close functions, and seed",
+          "number": 18,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify generated Supabase types match the local catalog",
+          "number": 19,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run local nightly unit regression",
+          "number": 20,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run local nightly browser regression",
+          "number": 21,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Aggregate local nightly lane outcomes",
+          "number": 22,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Write bounded nightly lane diagnostics",
+          "number": 23,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Capture bounded Compose runtime diagnostics",
+          "number": 24,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Capture bounded local diagnostics",
+          "number": 25,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Build row-free local publication evidence",
+          "number": 26,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Prepare allowlisted publication bundle",
+          "number": 27,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify publication bundle before artifact persistence",
+          "number": 28,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload verified sanitized local nightly artifacts",
+          "number": 29,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Prepare bounded lifecycle diagnostic for failure persistence",
+          "number": 30,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Upload bounded failed or partial local nightly diagnostics",
+          "number": 31,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload allowlisted publication bundle",
+          "number": 32,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Stop and remove disposable local stack",
+          "number": 33,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Manage scheduled nightly incident",
+          "number": 34,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Fail when disposable stack cleanup failed",
+          "number": 35,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Install Bun",
+          "number": 68,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Install Node 24",
+          "number": 69,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout source",
+          "number": 70,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 71,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "id": 111530992036,
+      "name": "Publish",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout publication policy",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Download allowlisted local nightly artifacts",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify trusted publication ref and artifact boundary",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Publish sanitized nightly prerelease",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout publication policy",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "main_after": {
+    "protected": true,
+    "sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98"
+  },
+  "main_before": {
+    "protected": true,
+    "sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98"
+  },
+  "main_tree_sha": "84d8f211d372fab619f344152dc4405e8c37dc82",
+  "original_after": {
+    "clean": true,
+    "head": "73fd13a982e7a0851398a5f65735936c4a6b72c2",
+    "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tree": "c35da4f33e345019bb07167ce447fb4cea7c8d50"
+  },
+  "original_before": {
+    "clean": true,
+    "head": "73fd13a982e7a0851398a5f65735936c4a6b72c2",
+    "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tree": "c35da4f33e345019bb07167ce447fb4cea7c8d50"
+  },
+  "policy_files": [
+    {
+      "byte_length": 251,
+      "github_blob_sha": "8d96f3a1f6bc8acdb09ac3e587ec87c0d8e22fe6",
+      "github_sha256": "25fa74b6e66bfa586f4938b14448c52a8120642b0fefe48f38ad7bd4cf7dd7c5",
+      "local_sha256": "25fa74b6e66bfa586f4938b14448c52a8120642b0fefe48f38ad7bd4cf7dd7c5",
+      "match": true,
+      "path": ".github/nightly-local-publication-allowlist.txt"
+    },
+    {
+      "byte_length": 102420,
+      "github_blob_sha": "50b4901d062d6d1253509f420b7f37c62429cfe0",
+      "github_sha256": "e75441332f3f1128774915dd96e5fb5efcd55b79ae2a0f178c4e96aebf122454",
+      "local_sha256": "e75441332f3f1128774915dd96e5fb5efcd55b79ae2a0f178c4e96aebf122454",
+      "match": true,
+      "path": ".github/workflows/nightly-local-regression.yml"
+    },
+    {
+      "byte_length": 14443,
+      "github_blob_sha": "8dc5eab480c103deabbf5c9f0a42bb5e7d5fb1ca",
+      "github_sha256": "4ab853a010357f4165ce9b9afd8a0224eb82807043ba4f3ce0e157ec3cb61305",
+      "local_sha256": "4ab853a010357f4165ce9b9afd8a0224eb82807043ba4f3ce0e157ec3cb61305",
+      "match": true,
+      "path": ".github/workflows/nightly-regression.yml"
+    },
+    {
+      "byte_length": 15253,
+      "github_blob_sha": "6ce017a924e5025d75bd53bb29e921346a47096e",
+      "github_sha256": "fddedb91677ae298e51ae0f63ab108595e0e96f475bf9b05612a9769b270cd9c",
+      "local_sha256": "fddedb91677ae298e51ae0f63ab108595e0e96f475bf9b05612a9769b270cd9c",
+      "match": true,
+      "path": ".github/scripts/build-nightly-local-publication.py"
+    },
+    {
+      "byte_length": 50065,
+      "github_blob_sha": "7db89fe15522dbfc198cf926f7991e1adbba6f57",
+      "github_sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6",
+      "local_sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6",
+      "match": true,
+      "path": ".github/scripts/verify-nightly-local-publication.py"
+    },
+    {
+      "byte_length": 4080,
+      "github_blob_sha": "7b513cdea6f4cc0e6b531a3f132ece141c754712",
+      "github_sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f",
+      "local_sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f",
+      "match": true,
+      "path": "docs/agents/verification.md"
+    },
+    {
+      "byte_length": 2329,
+      "github_blob_sha": "21e8d9b036ce3ca814a076345b42ce1b07e7787f",
+      "github_sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+      "local_sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+      "match": true,
+      "path": "docs/agents/release.md"
+    },
+    {
+      "byte_length": 2955,
+      "github_blob_sha": "fd0ba2901c684023ddc3cf604802a8feb90e92b6",
+      "github_sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c",
+      "local_sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c",
+      "match": true,
+      "path": "docs/agents/privacy.md"
+    }
+  ],
+  "release": {
+    "assets": [
+      {
+        "actual_sha256": "0374cf508d8d8684ec3876a5e10d93bb3ce400c5a487b916816bd5afd5a870bd",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:0374cf508d8d8684ec3876a5e10d93bb3ce400c5a487b916816bd5afd5a870bd",
+        "id": 610671043,
+        "name": "local-browser-route-diagnostics.json",
+        "size": 13132,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      },
+      {
+        "actual_sha256": "4ea174d1b8775a540edb1bb8ecea74fd794519cc284825cdfb0a880011cf1d64",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:4ea174d1b8775a540edb1bb8ecea74fd794519cc284825cdfb0a880011cf1d64",
+        "id": 610671042,
+        "name": "local-closure-rescan.json",
+        "size": 1525,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      },
+      {
+        "actual_sha256": "2e9bd6a1f5b7bad4a086c96852a5bb4199ee73d11c80769ec242cab3151bbb9c",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:2e9bd6a1f5b7bad4a086c96852a5bb4199ee73d11c80769ec242cab3151bbb9c",
+        "id": 610671041,
+        "name": "local-closure-smoke.json",
+        "size": 18947,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      },
+      {
+        "actual_sha256": "6471cbd9cfecd35d2521f3ae0c9ac817c595296aeb7425c5e9fbe32ad464e44b",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:6471cbd9cfecd35d2521f3ae0c9ac817c595296aeb7425c5e9fbe32ad464e44b",
+        "id": 610671027,
+        "name": "local-image-pull-preflight.json",
+        "size": 1877,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "50b3fa6ea6f45959f6db5e36a6f0782fd59ca7fbca7827095d79995c0aefa412",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:50b3fa6ea6f45959f6db5e36a6f0782fd59ca7fbca7827095d79995c0aefa412",
+        "id": 610671026,
+        "name": "local-migration-manifest.json",
+        "size": 33114,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "9b9523d8f1ba0b9ab13b0472e203dfa07aab65c93fa6d568c70cd30c4aeae9ea",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:9b9523d8f1ba0b9ab13b0472e203dfa07aab65c93fa6d568c70cd30c4aeae9ea",
+        "id": 610671020,
+        "name": "local-migration-summary.json",
+        "size": 8029,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "f44ec0af0def868d12093b3a30359019ab991a79287c1fc2bad01c520cc1df3e",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:f44ec0af0def868d12093b3a30359019ab991a79287c1fc2bad01c520cc1df3e",
+        "id": 610671024,
+        "name": "local-stack-reset.json",
+        "size": 1275,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "ae3a7d8d5529cd982c844ef75d6e6f141062bfe8cd9a8c888bc13fa3c49f736a",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:18Z",
+        "digest": "sha256:ae3a7d8d5529cd982c844ef75d6e6f141062bfe8cd9a8c888bc13fa3c49f736a",
+        "id": 610671021,
+        "name": "local-stack-status.json",
+        "size": 1262,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:18Z"
+      },
+      {
+        "actual_sha256": "11872323546e0fa266677c4ff1ead72ad91a86b36b65fcdd22101b002dd78923",
+        "artifact_bytes_equal": true,
+        "created_at": "2026-10-04T21:04:19Z",
+        "digest": "sha256:11872323546e0fa266677c4ff1ead72ad91a86b36b65fcdd22101b002dd78923",
+        "id": 610671045,
+        "name": "publication-boundary.txt",
+        "size": 67,
+        "state": "uploaded",
+        "updated_at": "2026-10-04T21:04:19Z"
+      }
+    ],
+    "body_commit_reference_matches": true,
+    "body_run_reference_matches": true,
+    "created_at": "2026-10-04T20:47:12Z",
+    "draft": false,
+    "html_url": "https://github.com/twoimo/tzudong/releases/tag/v1.2.4-nightly.37233565208.gb90154e22e6b",
+    "id": 403208452,
+    "immutable": false,
+    "prerelease": true,
+    "published_at": "2026-10-04T21:04:19Z",
+    "tag_name": "v1.2.4-nightly.37233565208.gb90154e22e6b",
+    "tag_object": {
+      "sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "type": "commit"
+    },
+    "target_commitish": "b90154e22e6b4ba089275c7ae6d53e7274feae98"
+  },
+  "run": {
+    "conclusion": "success",
+    "created_at": "2026-10-04T20:49:17Z",
+    "event": "workflow_dispatch",
+    "head_branch": "main",
+    "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "html_url": "https://github.com/twoimo/tzudong/actions/runs/37233565208",
+    "id": 37233565208,
+    "name": "Nightly \u00b7 main",
+    "path": ".github/workflows/nightly-local-regression.yml",
+    "run_attempt": 1,
+    "status": "completed",
+    "updated_at": "2026-10-04T21:04:22Z"
+  },
+  "schema": "independent-nightly-publication-readback-v1",
+  "scope": {
+    "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "original_checkout": "/Users/twoimo/.codex/worktrees/179f/tzudong",
+    "raw_logs_env_bodies_user_rows_persisted": false,
+    "remote_methods": [
+      "GET"
+    ],
+    "repository": "twoimo/tzudong",
+    "run_id": 37233565208,
+    "source_checkout": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+    "write_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005/attempt-03"
+  },
+  "source_after": {
+    "clean": true,
+    "head": "79922b3b9cd4941d3b85dbb732fdfbbfb11ed810",
+    "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tree": "1650d3b97e8279e099238c01a06f023caa17f19e"
+  },
+  "source_before": {
+    "clean": false,
+    "head": "32f5336fa9af166b04fe191ff3a7e1294196e893",
+    "status_sha256": "d730ea83246f7e41ff734fe608394e83cb4dbcf0db34f4c8c01ef6e19f8e9247",
+    "tree": "84d8f211d372fab619f344152dc4405e8c37dc82"
+  },
+  "source_expected_head": "2f9460ab93de8705237e68480793578c096b3619",
+  "source_initial_assumption_changed": true,
+  "started_at": "2026-10-04T21:18:59.607255+00:00",
+  "technical_recovery_evidence_complete": false,
+  "verified_source_read_bindings": [
+    {
+      "path": ".github/nightly-local-publication-allowlist.txt",
+      "sha256": "25fa74b6e66bfa586f4938b14448c52a8120642b0fefe48f38ad7bd4cf7dd7c5"
+    },
+    {
+      "path": ".github/scripts/verify-nightly-local-publication.py",
+      "sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6"
+    },
+    {
+      "path": "backend/supabase/baselines/local/application-prerequisites.sql",
+      "sha256": "c4fce4f7ddaf6315474cb3a3d408eef1fb7ff538af7f39183ebdc46828630356"
+    },
+    {
+      "path": "backend/supabase/migrations/20260124_create_document_embeddings_bge.sql",
+      "sha256": "3f0f090a8e2d9de41221720cfe63afbb173e2264d2614263b34a53075a1806f9"
+    },
+    {
+      "path": "backend/supabase/migrations/20260124_create_restaurants.sql",
+      "sha256": "73b1453e2dbe70ff72f375e408b89e023c81a79d6931ccc48688d180013eb557"
+    },
+    {
+      "path": "backend/supabase/migrations/20260124_fix_approved_name_sync.sql",
+      "sha256": "9e85765dcb74cbce098a384ed08ef34a59b7b52ad753b283cc930b6f7e78c100"
+    },
+    {
+      "path": "backend/supabase/migrations/20260124_update_embeddings_constraint.sql",
+      "sha256": "a9487144c0c2a1a887fd0523a6a47a36a7810ba7e9bb677c209082c040a0caef"
+    },
+    {
+      "path": "backend/supabase/migrations/20260131_fix_search_rpc.sql",
+      "sha256": "cf3a8f0c282596f4fe3c6d4a9d670544c62ada8510e8df765a18d73062befa43"
+    },
+    {
+      "path": "backend/supabase/migrations/20260213_create_announcements_table_and_seed.sql",
+      "sha256": "bd102f106bda1d9aaaabe14edbd753ebd456031181b14dbbee10eb3815c4d785"
+    },
+    {
+      "path": "backend/supabase/migrations/20260214_fix_approve_edit_backup_stage.sql",
+      "sha256": "46e51b5fe80b5ae8f996de7c887ed1a6461e44f7563aa7185edf3e71ffb8a67e"
+    },
+    {
+      "path": "backend/supabase/migrations/20260214_fix_restaurant_rpcs_and_search.sql",
+      "sha256": "2557cd07c515e7ab37c24ed35743d6cc092d70f873ffc3ab5cc19af000425818"
+    },
+    {
+      "path": "backend/supabase/migrations/20260214_fix_submission_item_target_to_backup.sql",
+      "sha256": "550ac2c8b7c3de2b89386c02853c15d1560dc37c38a93cb1f80ef0b6252ab7a3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260405_add_google_name.sql",
+      "sha256": "bc43908346f28abfc71211b170ee18ea1958f643e6c4d52d8ceaef02f51d132e"
+    },
+    {
+      "path": "backend/supabase/migrations/20260405_deduplicate_restaurants.sql",
+      "sha256": "2d23c67de0a2089cf4bfec6ea1a430547f40e037de4348cc5a6fa4adab2bf95c"
+    },
+    {
+      "path": "backend/supabase/migrations/20260410_add_admin_review_merge_rpc.sql",
+      "sha256": "cc01f054ec981167ea386968a7e2ec16f819c7654008ef38fc8af6bad8a2f334"
+    },
+    {
+      "path": "backend/supabase/migrations/20260417_harden_submission_identity_duplicate_checks.sql",
+      "sha256": "d3a0068674d985cb0ba52b8f3d2d0d909bc0f684ce159f9642ff25105dfc7789"
+    },
+    {
+      "path": "backend/supabase/migrations/20260417_prevent_active_restaurant_identity_duplicates.sql",
+      "sha256": "f4ca9714b387cb1df9e6f2f2e9a7cb28d001289a72a156dcaf22431c52ce8133"
+    },
+    {
+      "path": "backend/supabase/migrations/20260425_add_ai_leaderboard_snapshots.sql",
+      "sha256": "f053b7eacea728115ec2e369928423e9b95abb35b5c175c97e6b02494f3c5e90"
+    },
+    {
+      "path": "backend/supabase/migrations/20260425_create_admin_ai_settings.sql",
+      "sha256": "9d313b6878b087309c30f4de9433fa84aad52aae8246903fe6d5d855d8a5a659"
+    },
+    {
+      "path": "backend/supabase/migrations/20260509_drop_server_costs.sql",
+      "sha256": "55360756d24574ecac2d08c67ac530cf73f193442c7a5f87faa99b84c74df7ff"
+    },
+    {
+      "path": "backend/supabase/migrations/20260514_00_admin_user_management_hardening.sql",
+      "sha256": "da60b7b3fdcd623213d204d076a26dba41d4d1d60486afe62d7a84e077e1445b"
+    },
+    {
+      "path": "backend/supabase/migrations/20260514_admin_sidebar_preferences.sql",
+      "sha256": "d3e5868b4dacb5a97b9cb64de962fac473f90068d6351373993dc65253833f7a"
+    },
+    {
+      "path": "backend/supabase/migrations/20260514_admin_user_management_audit.sql",
+      "sha256": "d8f9bf915b76f584d262763645fb89652cf27bef367c3854c2095afe023919af"
+    },
+    {
+      "path": "backend/supabase/migrations/20260516_tighten_admin_user_management_grants.sql",
+      "sha256": "e15600f1d17368c469528d04ca4666538d63f153cadb6178a902338de8e0b60d"
+    },
+    {
+      "path": "backend/supabase/migrations/20260531084217_harden_public_api_grants_and_rpcs.sql",
+      "sha256": "6125a782ab03dc74225fab26a9d0ef74e254a6c8164c859ad232813e3a4c2e3e"
+    },
+    {
+      "path": "backend/supabase/migrations/20260531084516_tighten_public_table_data_api_grants.sql",
+      "sha256": "f62d0fb95fd195ec105753d2529ecd350978f58a33712f4778e41dd852c8c036"
+    },
+    {
+      "path": "backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql",
+      "sha256": "64201f056af79128975045bb47b521fa99a211b3bdede4d0ea9277a33bceacd3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260612075100_storyboard_caption_provenance.sql",
+      "sha256": "78cac5367da39c15399528141c9602ef36e9c75de78d086988130e66c40bb118"
+    },
+    {
+      "path": "backend/supabase/migrations/20260627080000_storyboard_custom_gpt_rag_documents.sql",
+      "sha256": "c3e6ac9d41d0287e1c8208144a06918ed290bd3024ebc559e55912e881ae12d9"
+    },
+    {
+      "path": "backend/supabase/migrations/20260627150000_restrict_restaurants_public_select_approved.sql",
+      "sha256": "b514bb839f8a713c4492ca78e5bd793c17d315820be5ce284e5a4dd25a2eac30"
+    },
+    {
+      "path": "backend/supabase/migrations/20260627153000_storyboard_documents_hybrid_v2_indexes.sql",
+      "sha256": "d294cf00284cd0ec1ae8d64826d681db582c9f732ad309d0537fa536de37d8fb"
+    },
+    {
+      "path": "backend/supabase/migrations/20260627154500_storyboard_documents_hybrid_rrf_type_fix.sql",
+      "sha256": "151f858aa247a40e5bfeb6e272cb005c90eed4ae82fde0ab1d3f43fc987d3a71"
+    },
+    {
+      "path": "backend/supabase/migrations/20260702000100_restaurant_request_review_lifecycle.sql",
+      "sha256": "e99b7d83c9ce67dd6a3f654b71260e283d42456ead94e7d8927cd6d6cfd38bfd"
+    },
+    {
+      "path": "backend/supabase/migrations/20260702000200_restaurant_request_client_idempotency.sql",
+      "sha256": "efe4d2278a5cc01278f666a325683c20ee07d7da5bf236c6d3c77ffbf9304ae3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260704000100_restaurant_submission_submit_contract.sql",
+      "sha256": "14a7fa8b9ffbada38525ddebad027d5fc73cef34e6da66c6a7a9b029ef562606"
+    },
+    {
+      "path": "backend/supabase/migrations/20260704000200_restaurant_destructive_admin_audit.sql",
+      "sha256": "7fabab9815ac25a45c9d17e7d24af506fcbef16867b4f473b901a9155e4ddb56"
+    },
+    {
+      "path": "backend/supabase/migrations/20260707000100_admin_restaurant_map_overlays.sql",
+      "sha256": "8bc730a951d74c7c72b4804309713e0bd37ba23c4c679109a3d89083bbaeb1b3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260707000200_admin_restaurant_map_overlay_audit_apply.sql",
+      "sha256": "72c8c864eb9a5f2b72b25dea712f8e486b3cd81f2190096fa7e9db4914614020"
+    },
+    {
+      "path": "backend/supabase/migrations/20260707000300_admin_trend_schema_foundation.sql",
+      "sha256": "33c2df13bda3e1a96e3483eef8021332e4ab776b066ac040e9212d762a69a458"
+    },
+    {
+      "path": "backend/supabase/migrations/20260707000400_admin_trend_job_request_rpcs.sql",
+      "sha256": "e7effaed0264acbec70822ffca4c60f5dc123d495aab8f475a3107e831f4099c"
+    },
+    {
+      "path": "backend/supabase/migrations/20260707000500_admin_trend_proposal_review_rpc.sql",
+      "sha256": "7b6c301f7321f0da78f01b133ac3200019fe1675eeb6bfce1963ea7ac104ebb3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260707000600_admin_trend_proposal_approval_rpc.sql",
+      "sha256": "d97bd9c9984d715e5f7b243360fc9b8c8faa29bd5e2d96cb1033d058dfe2dcf5"
+    },
+    {
+      "path": "backend/supabase/migrations/20260707000700_admin_storyboard_jobs.sql",
+      "sha256": "77fc1cd90d77794a6342bd22120f5d124af7c7f80d6c325f73f1028a0a423271"
+    },
+    {
+      "path": "backend/supabase/migrations/20260711000100_release_auth_session_revocation.sql",
+      "sha256": "0791e1947b8900169efdc536ca44bc3651005f3d2c9052b82340229264b5c4ef"
+    },
+    {
+      "path": "backend/supabase/migrations/20260712000100_g010_privacy_foundation.sql",
+      "sha256": "153ad78c4061475fff32db7c2ef40041742569220ac5bb21fa534b0a1db07ed1"
+    },
+    {
+      "path": "backend/supabase/migrations/20260712000200_g010_notification_marketing.sql",
+      "sha256": "69b05b8a2b85e03f6749a808de2d6a73a0f95c6bb89da630f9a4ea027c7be013"
+    },
+    {
+      "path": "backend/supabase/migrations/20260712000300_g010_account_deletion.sql",
+      "sha256": "84b246be2506eb49cec6660d4e9c8f85454ce4aba2069ac6d8abc65086a23865"
+    },
+    {
+      "path": "backend/supabase/migrations/20260712000400_g010_retention_separation.sql",
+      "sha256": "e1881677d58017e7075b063190814a11ad0c77de9bf0c360f9bfe10eb484ec68"
+    },
+    {
+      "path": "backend/supabase/migrations/20260712000500_g010_incident_workflow.sql",
+      "sha256": "b4978cb87e9df2806e65a3180bfbe7eaf2473e17238a2d1aef2ef853447de15d"
+    },
+    {
+      "path": "backend/supabase/migrations/20260712000600_g010_ocr_log_minimization.sql",
+      "sha256": "ef7a867e34ee7a8188e0628502bb0fd3bcff58600f857c054cf5d75bb64df874"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713000100_g013_short_url_security.sql",
+      "sha256": "c51437c189521dc014f6208379b49838453de93ba8fe823ba96a476c1c087334"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713000200_g013_ocr_quota_security.sql",
+      "sha256": "df3caaa2c582f89f59d175996e269b8493056302c45ffb2700662e16de4f3a6e"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql",
+      "sha256": "05864ef9f088b51f4df7b504ad09a02f29303d9bf43350a4e0845b42afec2200"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713000400_g013_provider_budget_extension.sql",
+      "sha256": "496f2d73114c7e31e4a0c6a894d5da110b9b59821bf8bfd01f4951d2beea86be"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713000450_g013_address_admin_approval.sql",
+      "sha256": "f5d513aba329b3b1a6e12a76d8947f43c247257a379500d7ed5a45486f1c364a"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
+      "sha256": "b3bea6e4f4b1649d3f7eebd719386473a22534551cbff5f69cafc3a05844c6f9"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql",
+      "sha256": "0a06618bf56e426f3bfa671aa42b94195fa52fb50ccc6e3a4986f2c718336848"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql",
+      "sha256": "a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql",
+      "sha256": "6705f42b16cc3c9e5d25d5f9afebffc4be377c442aa0b90b737e22b333d0b36d"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql",
+      "sha256": "3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002500_g014_catalog_contract.sql",
+      "sha256": "808532b79fdc20d1c12a71c7988954188c7fe1d91bbfe4b7d47d9da458615838"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002600_g014_account_deletion_receipt_parity.sql",
+      "sha256": "1b26641587c3c4d47abed57403642cb631b79c068c548c37f8d5dfa59b83c904"
+    },
+    {
+      "path": "backend/supabase/migrations/20260713002700_g028_account_deletion_reauth_proof.sql",
+      "sha256": "ea2866a78e39a5a3d54c5ff5bb8f7517a3aeca38d8bae7c592750a6d58d223fc"
+    },
+    {
+      "path": "backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql",
+      "sha256": "7e08c6796dd47b12a7b28ea49fe45f2a4e95f884d3acfd7bebf50747b2e7a3fa"
+    },
+    {
+      "path": "backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
+      "sha256": "6e6c4a464d066947a0b89dbca791ed220febd4abde12d89a1b7136240bb2ad78"
+    },
+    {
+      "path": "backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+      "sha256": "a116b2d0a71304b0c6cd6ceca05344e198709384381451b250d7145d4fe12d3e"
+    },
+    {
+      "path": "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql",
+      "sha256": "2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260804000100_g041_privacy_audit_lock_privilege.sql",
+      "sha256": "58329cde1d7d10d4f1c50018491933da702dbe341af63fec444187db1aa02e11"
+    },
+    {
+      "path": "backend/supabase/migrations/20260804000200_g041_privacy_onboarding_workflow_privileges.sql",
+      "sha256": "bb51c3f527c5b960345b7341d220357eee33096ef224d5cb7bc3fc68d96155f4"
+    },
+    {
+      "path": "backend/supabase/migrations/20260804000300_g041_auth_boundary_runtime_repairs.sql",
+      "sha256": "f1d7c58ad7497afcc5a4ecf23f1ece2dd3f2ea28a5f50f829a7f2990099a8d34"
+    },
+    {
+      "path": "backend/supabase/migrations/20260804000400_g041_auth_boundary_closure.sql",
+      "sha256": "5bdef0eb4ea500c15c6675d82c5067e6c1d43cc3b94fd08730d9b58e90f37929"
+    },
+    {
+      "path": "backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql",
+      "sha256": "86151e6b8b974659df342c7ae927abc1d03e1f07f085148c2a907b7c049369ec"
+    },
+    {
+      "path": "backend/supabase/migrations/20260812000100_local_runtime_schema_convergence.sql",
+      "sha256": "47a0a8376479de44ed6b92d14403d2b6868ac357aa41005c595ad6f8a16d1f0d"
+    },
+    {
+      "path": "backend/supabase/migrations/20260812000200_local_public_read_policy_convergence.sql",
+      "sha256": "e847ea7898c9ff77748d65c94c3dc04747ef0b1bbf8ac12ed623bbfc8c5e6233"
+    },
+    {
+      "path": "backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql",
+      "sha256": "b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf"
+    },
+    {
+      "path": "backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+      "sha256": "f61595514b4218bfa47e3fb5c529f648fe4d16efef1f5ef02f216aff6dd08bcb"
+    },
+    {
+      "path": "backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql",
+      "sha256": "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7"
+    },
+    {
+      "path": "backend/supabase/migrations/20260812000600_local_profile_read_boundary_convergence.sql",
+      "sha256": "c8c0d2c0a4767b4e076cfe524fcba747e7cf8139bf768373f9329f4bce8e0da4"
+    },
+    {
+      "path": "backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql",
+      "sha256": "c03c0833294875be06d7cff6d513f7c7ddaf263514b7148bc3db22a29ac3bd17"
+    },
+    {
+      "path": "backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+      "sha256": "15f4d240222d4b7abdbfd0b27a5c36142a2f61c4cc9d9fdf4638588fee9b29e3"
+    },
+    {
+      "path": "backend/supabase/migrations/20260817000100_restaurant_identity_helper_writer_grants.sql",
+      "sha256": "776fbfc5b98fd2ae79254dfcd286af6207a9e6b9b7deae0a5b1ab3a6fc2970e7"
+    },
+    {
+      "path": "backend/supabase/migrations/20260817020000_pipeline_control.sql",
+      "sha256": "a30c3aa6ab3367deb1863e637ab4c55c4a7d40058e3bbc020413240f2ef7a149"
+    },
+    {
+      "path": "backend/supabase/migrations/20260820030000_pipeline_control_atomic.sql",
+      "sha256": "4ba425b66664479b9a20255006e44ad42ad1084af95a17ac97561464a997f171"
+    },
+    {
+      "path": "backend/supabase/migrations/20260820040000_pipeline_batch_upsert.sql",
+      "sha256": "9046f9e192b433b7e901f39577291b4dbe58714efe33113ad0c08f4856811dfc"
+    },
+    {
+      "path": "backend/supabase/migrations/20260820050000_pipeline_outbox.sql",
+      "sha256": "692dd16dbbb6dbc824a6e90ca99a63f0794065093825604a499a0af0f8701d46"
+    },
+    {
+      "path": "backend/supabase/migrations/20260825140000_pipeline_outbox_trusted_search_path.sql",
+      "sha256": "5ee540887deefaaf030339c3bcd14c8d8beb71d83cc0afe61838c478dfb2b8d0"
+    },
+    {
+      "path": "backend/supabase/migrations/20260827084200_g014_8_guardian_provider_verification.sql",
+      "sha256": "060bb9b6d27c08704ba1fad7a299c0599673dcfc177b227580dc1ceb921c0015"
+    },
+    {
+      "path": "backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql",
+      "sha256": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320"
+    },
+    {
+      "path": "backend/supabase/migrations/20260901000100_local_analytics_schema.sql",
+      "sha256": "52c656855878c892164a9f328d3a4b6a9b829092a58924fb0ec672d3bddc48c0"
+    },
+    {
+      "path": "backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
+      "sha256": "effe29e9e6b454256e35b7f2dde7de1f230b4eefea8ef494c73cc708b750c63a"
+    },
+    {
+      "path": "backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
+      "sha256": "ae834917e3f6c6653d570dacd27d3894d15fcac2a4f09db86f0f9d0f51815148"
+    },
+    {
+      "path": "backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
+      "sha256": "fb8233c7076cf77af0f6ce7cff95822ea55612a583c5e50f8285e9723997f064"
+    },
+    {
+      "path": "backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql",
+      "sha256": "96e376aad7f58d59196f86ffba699dc16443d3b83a5a39dcdf94a461ad08a41f"
+    },
+    {
+      "path": "backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql",
+      "sha256": "779fd778efea18907d46b31a46a8c939054777a7d2447abeecd5d772ab1d1763"
+    },
+    {
+      "path": "backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql",
+      "sha256": "2bec4a8e62ea92393ea2e7085fda0fa43114c88702086f809e27c36bc5b5d091"
+    },
+    {
+      "path": "backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql",
+      "sha256": "81db4a47149acfbf2662830950bd8c126065d5136d3bd147410541128502f5b0"
+    },
+    {
+      "path": "backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql",
+      "sha256": "f1b5a6878752c3004f74e057cf230bf26acca432271415f609c103b2bd1cb492"
+    },
+    {
+      "path": "backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "sha256": "4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00"
+    },
+    {
+      "path": "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "sha256": "8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483"
+    },
+    {
+      "path": "backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql",
+      "sha256": "3584d659ad253971771bc1a1f49e2f19e837e609e375c22c078673095105a5fa"
+    },
+    {
+      "path": "backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql",
+      "sha256": "6cd66d48f9fde8b86d89f089da3a5f4cc15dd85475fa0769e5724d40f68d2b95"
+    },
+    {
+      "path": "backend/supabase/migrations/20260920171524_public_profile_summary_read_boundary.sql",
+      "sha256": "d82e8339e777a9798548c11f995b53b57287198d32b4658391e1d68a99352bc1"
+    },
+    {
+      "path": "backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
+      "sha256": "e8d607f08dd78939504a37e2e24cf449241349e8182df98e4b4213d0741b68b0"
+    },
+    {
+      "path": "backend/supabase/scripts/local-migrate.py",
+      "sha256": "c78b90e45324f0fcc63b1fffd5b0d216e4056936c673ad63656a14a0ae090afe"
+    },
+    {
+      "path": "backend/supabase/scripts/local-seed.sql",
+      "sha256": "b45cdaa545925fa2fab1971713c902f1a406b7f2b743ff0ee3db41e39f9968db"
+    },
+    {
+      "path": "backend/supabase/scripts/local_catalog_readback.sql",
+      "sha256": "0e3058bb7c2df10513633dfb31d8271db388e53e72ff4a2ceb039f6300967240"
+    },
+    {
+      "path": "backend/supabase/scripts/local_replay_contract.py",
+      "sha256": "05274025fe166aadc950c1e702b56993a5d6f85775c362c07440b37534519c0b"
+    },
+    {
+      "path": "backend/supabase/scripts/verify_admin_user_ids_replay.py",
+      "sha256": "8e8168b6b13a4310b158cf13dc8e19f00b77a3ac45f2fd64555ed4f68bc8d739"
+    }
+  ]
+}

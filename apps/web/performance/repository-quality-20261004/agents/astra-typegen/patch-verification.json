@@ -1,0 +1,10 @@
+{
+  "before_comparison_exit": 1,
+  "after_patch_comparison_exit": 0,
+  "patch_apply_exit": 0,
+  "added_lines": 397,
+  "deleted_lines": 0,
+  "exact_generated_sha256": "36ffd9c0dda9a81eea7f693147fac7a47e677400a69dfcf70ffef815bac18854",
+  "source_checkout_modified": false,
+  "temporary_patch_test_cleaned": true
+}

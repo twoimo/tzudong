@@ -1,0 +1,121 @@
+{
+  "number": 2902,
+  "url": "https://github.com/twoimo/tzudong/pull/2902",
+  "title": "chore(deps): bump the npm_and_yarn group across 2 directories with 4 updates",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "baseSha": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+  "headRef": "dependabot/npm_and_yarn/backend/npm_and_yarn-23572d5168",
+  "headSha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+  "fileCount": 4,
+  "files": [
+    {
+      "path": "apps/web/package-lock.json",
+      "additions": 257,
+      "deletions": 226
+    },
+    {
+      "path": "apps/web/package.json",
+      "additions": 3,
+      "deletions": 3
+    },
+    {
+      "path": "backend/package-lock.json",
+      "additions": 4,
+      "deletions": 4
+    },
+    {
+      "path": "backend/package.json",
+      "additions": 1,
+      "deletions": 1
+    }
+  ],
+  "baseManifest": {
+    "name": "backend",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "dependencies": {
+      "@google/genai": "^2.18.0",
+      "@google/generative-ai": "^0.24.1",
+      "browser-image-compression": "^2.0.2",
+      "dotenv": "^16.6.1",
+      "ffmpeg-static": "^5.3.0",
+      "ffprobe-static": "^3.1.0",
+      "js-yaml": "^4.2.0",
+      "pg": "^8.20.0",
+      "puppeteer": "^25.8.0",
+      "puppeteer-extra": "^3.3.6",
+      "puppeteer-extra-plugin-stealth": "^2.11.2",
+      "winston": "^3.19.0"
+    }
+  },
+  "headManifest": {
+    "name": "backend",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "dependencies": {
+      "@google/genai": "^2.18.0",
+      "@google/generative-ai": "^0.24.1",
+      "browser-image-compression": "^2.0.2",
+      "dotenv": "^16.6.1",
+      "ffmpeg-static": "^5.3.0",
+      "ffprobe-static": "^3.1.0",
+      "js-yaml": "^4.3.2",
+      "pg": "^8.20.0",
+      "puppeteer": "^25.8.0",
+      "puppeteer-extra": "^3.3.6",
+      "puppeteer-extra-plugin-stealth": "^2.11.2",
+      "winston": "^3.19.0"
+    }
+  },
+  "manifestPatch": "@@ -10,7 +10,7 @@\n     \"dotenv\": \"^16.6.1\",\n     \"ffmpeg-static\": \"^5.3.0\",\n     \"ffprobe-static\": \"^3.1.0\",\n-    \"js-yaml\": \"^4.2.0\",\n+    \"js-yaml\": \"^4.3.2\",\n     \"pg\": \"^8.20.0\",\n     \"puppeteer\": \"^25.8.0\",\n     \"puppeteer-extra\": \"^3.3.6\",",
+  "changedLockPackages": [
+    {
+      "path": "",
+      "from": "1.0.0",
+      "to": "1.0.0",
+      "baseDependencies": {
+        "@google/genai": "^2.18.0",
+        "@google/generative-ai": "^0.24.1",
+        "browser-image-compression": "^2.0.2",
+        "dotenv": "^16.6.1",
+        "ffmpeg-static": "^5.3.0",
+        "ffprobe-static": "^3.1.0",
+        "js-yaml": "^4.2.0",
+        "pg": "^8.20.0",
+        "puppeteer": "^25.8.0",
+        "puppeteer-extra": "^3.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2",
+        "winston": "^3.19.0"
+      },
+      "headDependencies": {
+        "@google/genai": "^2.18.0",
+        "@google/generative-ai": "^0.24.1",
+        "browser-image-compression": "^2.0.2",
+        "dotenv": "^16.6.1",
+        "ffmpeg-static": "^5.3.0",
+        "ffprobe-static": "^3.1.0",
+        "js-yaml": "^4.3.2",
+        "pg": "^8.20.0",
+        "puppeteer": "^25.8.0",
+        "puppeteer-extra": "^3.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2",
+        "winston": "^3.19.0"
+      }
+    },
+    {
+      "path": "node_modules/js-yaml",
+      "from": "4.3.1",
+      "to": "4.3.2",
+      "baseDependencies": {
+        "argparse": "^2.0.1"
+      },
+      "headDependencies": {
+        "argparse": "^2.0.1"
+      }
+    }
+  ]
+}

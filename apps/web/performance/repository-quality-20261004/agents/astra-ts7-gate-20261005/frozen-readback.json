@@ -1,0 +1,24 @@
+{
+  "artifactId": 11306119367,
+  "artifactZipSha256": "b29d30fdc428cd1177f9d44c5e9b5797761e33486e3348832b3d93641863867c",
+  "preservedFileCount": 19,
+  "reportSchemaVersion": 4,
+  "command": [
+    "/opt/homebrew/opt/node@24/bin/node",
+    "apps/web/scripts/verify-typecheck-benchmark-report.mjs",
+    "--report",
+    "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-ts7-gate-20261005/frozen-windows-npm/c0d2cdbbda874e6b286b969d3bcd4a44f5336a7f/windows-npm/report.json",
+    "--tree",
+    "c0d2cdbbda874e6b286b969d3bcd4a44f5336a7f",
+    "--profile",
+    "windows-npm",
+    "--platform",
+    "win32-x64",
+    "--installer",
+    "npm"
+  ],
+  "exitCode": 0,
+  "output": "{\"status\":\"verified\",\"evidenceStatus\":\"conclusive\",\"admittedSlices\":2}",
+  "stderr": "",
+  "limitation": "Readback of old native Windows npm evidence only; not a new Windows Bun benchmark execution."
+}

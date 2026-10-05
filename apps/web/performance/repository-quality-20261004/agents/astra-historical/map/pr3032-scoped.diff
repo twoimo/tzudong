@@ -1,0 +1,155 @@
+diff --git a/apps/web/components/filters/CategoryFilter.tsx b/apps/web/components/filters/CategoryFilter.tsx
+index beb61884..ac744090 100644
+--- a/apps/web/components/filters/CategoryFilter.tsx
++++ b/apps/web/components/filters/CategoryFilter.tsx
+@@ -80,10 +80,9 @@ const CategoryFilter = ({
+ 
+             try {
+                 const data = await fetchSupabaseRows<Restaurant>('restaurants', params);
+-                // 병합 로직 적용하여 중복 제거
+                 return mergeRestaurants(data || []);
+-            } catch (error) {
+-                console.error('카테고리 데이터 조회 실패:');
++            } catch {
++                console.error('category_restaurant_query_failed');
+                 return [];
+             }
+         },
+diff --git a/apps/web/hooks/use-restaurants.tsx b/apps/web/hooks/use-restaurants.tsx
+index 440d8488..8c62ac79 100644
+--- a/apps/web/hooks/use-restaurants.tsx
++++ b/apps/web/hooks/use-restaurants.tsx
+@@ -303,15 +303,31 @@ function buildRestaurantQueryKey(
+     ];
+ }
+ 
+-function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
++function projectSingletonRestaurant(restaurant: DBRestaurant): Restaurant {
++    const categories = Array.from(new Set(restaurant.categories || []));
++    const youtubeLink = restaurant.youtube_link || null;
++    const review = restaurant.tzuyang_review || null;
++    const meta = (restaurant.youtube_meta as YoutubeMeta | null) || null;
++
+     return {
+-        ...dbData,
+-        address: dbData.road_address || dbData.jibun_address || '',
+-        category: dbData.categories,
++        ...restaurant,
++        name: getRestaurantName(restaurant as RestaurantWithOptionalName),
++        lat: restaurant.lat || 0,
++        lng: restaurant.lng || 0,
++        categories,
++        address: restaurant.road_address || restaurant.jibun_address || '',
++        category: categories,
++        youtube_link: youtubeLink,
++        tzuyang_review: review,
++        youtube_meta: meta,
++        mergedYoutubeLinks: youtubeLink ? [youtubeLink] : [],
++        mergedTzuyangReviews: review ? [review] : [],
++        mergedYoutubeMetas: meta ? [meta] : [],
++        review_count: restaurant.review_count || 0,
++        mergedRestaurants: [restaurant],
+     } as Restaurant;
+ }
+ 
+-
+ function getUniqueRestaurantNames(restaurants: RestaurantWithOptionalName[]): string[] {
+     return [...new Set(restaurants
+         .map((restaurant) => getRestaurantName(restaurant).trim())
+@@ -529,6 +545,9 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
+ 
+     const mergedResults: Restaurant[] = Array.from(groups.values()).map((indices) => {
+         const groupRestaurants = indices.map(idx => restaurants[idx]);
++        if (groupRestaurants.length === 1) {
++            return projectSingletonRestaurant(groupRestaurants[0]);
++        }
+ 
+         // 메인 레스토랑은 단일 패스 비교로 선택 (정렬 제거)
+         let mainRestaurant = groupRestaurants[0];
+@@ -678,22 +697,25 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
+                     const config = OVERSEAS_REGIONS[normalizedRegion as keyof typeof OVERSEAS_REGIONS];
+                     const conditions: string[] = [];
+                     config.keywords.forEach((keyword: string) => {
+-                        conditions.push(`road_address.ilike.*${keyword}*`);
+-                        conditions.push(`jibun_address.ilike.*${keyword}*`);
+-                        conditions.push(`english_address.ilike.*${keyword}*`);
++                        const term = sanitizePostgrestOrTerm(keyword);
++                        if (!term) return;
++                        conditions.push(`road_address.ilike.*${term}*`);
++                        conditions.push(`jibun_address.ilike.*${term}*`);
++                        conditions.push(`english_address.ilike.*${term}*`);
+                     });
+ 
+                     if (conditions.length > 0) {
+                         query.push(['or', `(${conditions.join(',')})`]);
+                     }
+-                } else if (buildOverseasCountryAddressOrFilter(normalizedRegion, '*')) {
+-                    query.push(['or', `(${buildOverseasCountryAddressOrFilter(normalizedRegion, '*')})`]);
+                 } else {
+-                    // address_elements의 SIDO에서 지역 필터링
+-                    // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
+-                    const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
+-                    if (regionTerm) {
+-                        query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
++                    const overseasAddressFilter = buildOverseasCountryAddressOrFilter(normalizedRegion, '*');
++                    if (overseasAddressFilter) {
++                        query.push(['or', `(${overseasAddressFilter})`]);
++                    } else {
++                        const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
++                        if (regionTerm) {
++                            query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
++                        }
+                     }
+                 }
+             }
+diff --git a/apps/web/tests-unit/use-restaurants-merge.test.ts b/apps/web/tests-unit/use-restaurants-merge.test.ts
+index f9880272..bb6ab597 100644
+--- a/apps/web/tests-unit/use-restaurants-merge.test.ts
++++ b/apps/web/tests-unit/use-restaurants-merge.test.ts
+@@ -101,6 +101,46 @@ describe('buildRestaurantSelectFields', () => {
+ });
+ 
+ describe('mergeRestaurants', () => {
++    test('returns an empty list for empty input', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        expect(mergeRestaurants([])).toEqual([]);
++    });
++
++    test('projects one restaurant without merging and fills empty media', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        const [merged] = mergeRestaurants([
++            makeRestaurant({
++                id: 'solo',
++                approved_name: '',
++                name: '',
++                lat: null,
++                lng: null,
++                categories: ['한식', '한식', '분식'],
++                youtube_link: '',
++                tzuyang_review: '',
++                youtube_meta: null,
++                review_count: null,
++                road_address: '',
++                jibun_address: '서울 중구 명동 1',
++            }),
++        ]) as Array<Record<string, unknown>>;
++
++        expect(merged.id).toBe('solo');
++        expect(merged.name).toBe('');
++        expect(merged.lat).toBe(0);
++        expect(merged.lng).toBe(0);
++        expect(merged.categories).toEqual(['한식', '분식']);
++        expect(merged.address).toBe('서울 중구 명동 1');
++        expect(merged.youtube_link).toBeNull();
++        expect(merged.tzuyang_review).toBeNull();
++        expect(merged.youtube_meta).toBeNull();
++        expect(merged.mergedYoutubeLinks).toEqual([]);
++        expect(merged.mergedTzuyangReviews).toEqual([]);
++        expect(merged.mergedYoutubeMetas).toEqual([]);
++        expect(merged.review_count).toBe(0);
++        expect(merged.mergedRestaurants).toHaveLength(1);
++    });
++
+     test('retains every member of a large already-connected address group', async () => {
+         const { mergeRestaurants } = await loadUseRestaurants();
+         const rows = Array.from({ length: 12000 }, (_, index) => makeRestaurant({

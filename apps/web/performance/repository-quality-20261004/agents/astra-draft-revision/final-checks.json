@@ -1,0 +1,46 @@
+{
+  "lint": {
+    "exitCode": 0,
+    "command": "/opt/homebrew/opt/node@24/bin/node node_modules/eslint/bin/eslint.js components/reviews/ReviewModal.tsx lib/reviewDraftDB.ts lib/reviews/review-save-operation.ts tests-unit/review-save-submit.test.ts tests-unit/review-save-owner-lifecycle.test.ts tests-unit/review-draft-deletion-browser.test.ts tests-unit/review-draft-revision-browser.test.ts"
+  },
+  "parity": {
+    "exitCode": 0,
+    "command": "/opt/homebrew/opt/node@24/bin/node scripts/run-typecheck.mjs --compiler parity",
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2379,
+    "logicalInputNamesSha256": "8b3e972fc699d26bf9139353ed241af9ea8667d095afb4f2e6e3317198ad8aa3",
+    "nonLibraryContentSha256": "ec61ea2460d53b6a74af8cb7290c82a397f31a52cb030c73c09126e397569512",
+    "standardLibraryContentSha256": {
+      "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  },
+  "browser": {
+    "processes": 1,
+    "baselineP2FailingOrderings": 3,
+    "afterPassedInternalCases": 7,
+    "assertions": 30,
+    "externalRequests": 0,
+    "pageErrors": 0,
+    "command": "TZUDONG_DRAFT_REVISION_BASELINE=/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-draft-revision/baseline/apps/web TZUDONG_DRAFT_REVISION_EVIDENCE=/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-draft-revision/real-idb-react.json /Users/twoimo/.bun/bin/bun test tests-unit/review-draft-revision-browser.test.ts",
+    "scope": "One Chromium launch, two fresh offline contexts: frozen baseline and final source. Seven internal observations per context; three baseline P2 ordering failures and all seven final invariants pass."
+  },
+  "rawLogsStored": false,
+  "notRun": [
+    "full build",
+    "full unit suite",
+    "existing owner-lifecycle Chrome test",
+    "existing nine-case IDB Chrome test",
+    "SDK A/B",
+    "hosted Auth/Storage",
+    "phone",
+    "commit/push"
+  ],
+  "focusedUnit": {
+    "exitCode": 0,
+    "pass": 126,
+    "fail": 0,
+    "assertions": 1655
+  }
+}

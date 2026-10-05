@@ -1,0 +1,24 @@
+{
+  "observed_at": "2026-10-04T09:08:15.422750+00:00",
+  "modules": [
+    "backend.utils.tests.test_layout_naming_source_recovery",
+    "backend.bin.tests.test_check_layout_manifest_unittest",
+    "backend.bin.tests.test_check_rename_ledger_unittest",
+    "backend.bin.tests.test_layout_move_pbt",
+    "backend.bin.tests.test_rename_scope_pbt",
+    "backend.utils.tests.test_platform_modernization_reconciliation"
+  ],
+  "exit_code": 1,
+  "test_count": 87,
+  "seconds": 8.323,
+  "failures": [
+    {
+      "test": "test_manifest_is_reproducible_from_current_candidate_blobs",
+      "class": "backend.utils.tests.test_platform_modernization_reconciliation.PlatformModernizationReconciliationTests.test_manifest_is_reproducible_from_current_candidate_blobs"
+    }
+  ],
+  "bounded_codes": [
+    "platform_modernization_reconciliation_stale"
+  ],
+  "raw_output_retained": false
+}

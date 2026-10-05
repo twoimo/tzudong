@@ -1,0 +1,869 @@
+{
+  "baseRefName": "refactor/admin-console-sidebar",
+  "baseRefOid": "0a8416d42a37a95e686c4d782e1ec73f6a15e37f",
+  "headRefName": "cursor/admin-console-module-panel-90fd",
+  "headRefOid": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 2857,
+  "state": "OPEN",
+  "title": "Admin console sidebar refactor: module panel through task 16 verification",
+  "url": "https://github.com/twoimo/tzudong/pull/2857",
+  "observed_at_utc": "2026-10-04T11:39:02.805843+00:00",
+  "commits": [
+    {
+      "sha": "cbc0156db88c9c822123d3e4423b698c3e7ace1b",
+      "subject": "feat(admin): extract console module skeleton and panel registry",
+      "parents": [
+        "0a8416d42a37a95e686c4d782e1ec73f6a15e37f"
+      ]
+    },
+    {
+      "sha": "80702bc08cf46f969d8280480020ab420b1aad90",
+      "subject": "test(admin): update console source contracts for the panel registry",
+      "parents": [
+        "cbc0156db88c9c822123d3e4423b698c3e7ace1b"
+      ]
+    },
+    {
+      "sha": "889f72a5afc86ef2d448d7e9ff700ec2f31c0c08",
+      "subject": "feat(admin): add common completeness states for 15 console panels",
+      "parents": [
+        "80702bc08cf46f969d8280480020ab420b1aad90"
+      ]
+    },
+    {
+      "sha": "80455887178774abd030b360fab4ce90b521a89f",
+      "subject": "feat(admin): add console module grid with search and section filters",
+      "parents": [
+        "889f72a5afc86ef2d448d7e9ff700ec2f31c0c08"
+      ]
+    },
+    {
+      "sha": "bd16fdceb7c72c6ecb7f6be6d8e7c9efbb892e25",
+      "subject": "feat(admin): add console data visualization layer",
+      "parents": [
+        "80455887178774abd030b360fab4ce90b521a89f"
+      ]
+    },
+    {
+      "sha": "4d1a20a738f8ee4c55e5263178a72d3e5c9327a0",
+      "subject": "test(admin): update dashboard card radius source contracts",
+      "parents": [
+        "bd16fdceb7c72c6ecb7f6be6d8e7c9efbb892e25"
+      ]
+    },
+    {
+      "sha": "78bbdb44e7e96cec4cdea7ea63f5f4df6e215552",
+      "subject": "feat(admin): connect llm/audit panels and console guardrails",
+      "parents": [
+        "4d1a20a738f8ee4c55e5263178a72d3e5c9327a0"
+      ]
+    },
+    {
+      "sha": "c39cfbde3bb9a36a4ce39105705ed922f094cbd8",
+      "subject": "test(admin): tighten task 11 guardrail and user-display assertions",
+      "parents": [
+        "78bbdb44e7e96cec4cdea7ea63f5f4df6e215552"
+      ]
+    },
+    {
+      "sha": "48774704771770e6d86cbc3c8dc6050d77c57ed6",
+      "subject": "feat(admin): apply stored brightness mode before first paint",
+      "parents": [
+        "c39cfbde3bb9a36a4ce39105705ed922f094cbd8"
+      ]
+    },
+    {
+      "sha": "c03fe9cebeca413f3e2a6936cb9944be426d593a",
+      "subject": "fix(admin): restore sidebar order session helper",
+      "parents": [
+        "48774704771770e6d86cbc3c8dc6050d77c57ed6"
+      ]
+    },
+    {
+      "sha": "faca8df8f147ea27b43db70bc02475de855d76f8",
+      "subject": "test(admin): stabilize brightness-mode tone-parity browser checks",
+      "parents": [
+        "c03fe9cebeca413f3e2a6936cb9944be426d593a"
+      ]
+    },
+    {
+      "sha": "19bf3342423368ca8410a6aed60f59b078e7779c",
+      "subject": "feat(admin): add insights visualizations to the registered panel",
+      "parents": [
+        "faca8df8f147ea27b43db70bc02475de855d76f8"
+      ]
+    },
+    {
+      "sha": "b7cffcb53f63246429c7fa22ff0e5cf9593e855f",
+      "subject": "test(admin): lock overview integration source contracts",
+      "parents": [
+        "19bf3342423368ca8410a6aed60f59b078e7779c"
+      ]
+    },
+    {
+      "sha": "8a23711ea96e8e60bbf8fddc12d77f79afac7263",
+      "subject": "test(admin): count registered completeness wrappers, not the helper",
+      "parents": [
+        "b7cffcb53f63246429c7fa22ff0e5cf9593e855f"
+      ]
+    },
+    {
+      "sha": "d082250aa4727b87f55b49cbe4b051ab496b3d0e",
+      "subject": "docs(admin): mark console integration checkpoint complete",
+      "parents": [
+        "8a23711ea96e8e60bbf8fddc12d77f79afac7263"
+      ]
+    },
+    {
+      "sha": "c6d128a0935976898310560496c961c90236ceb4",
+      "subject": "fix(admin): stop mutating viz cursors during render",
+      "parents": [
+        "d082250aa4727b87f55b49cbe4b051ab496b3d0e"
+      ]
+    },
+    {
+      "sha": "e10c6d82418bb52c90d27b7b95e4adb9002f764a",
+      "subject": "test(admin): add evidence-guard for console browser artifacts",
+      "parents": [
+        "c6d128a0935976898310560496c961c90236ceb4"
+      ]
+    },
+    {
+      "sha": "ff21915bfec6b3afc5c96c3517e61056652422e2",
+      "subject": "test(admin): add console sidebar browser specs for task 15",
+      "parents": [
+        "e10c6d82418bb52c90d27b7b95e4adb9002f764a"
+      ]
+    },
+    {
+      "sha": "60e71641f844aaffbfa1e1c6d306554d5bf4b383",
+      "subject": "fix(admin): honor IME composing and restore order-editor focus",
+      "parents": [
+        "ff21915bfec6b3afc5c96c3517e61056652422e2"
+      ]
+    },
+    {
+      "sha": "79d72a91e44de213de10dd762cdd7f1f1c3dcc92",
+      "subject": "test(admin): stabilize task 15 console browser specs",
+      "parents": [
+        "60e71641f844aaffbfa1e1c6d306554d5bf4b383"
+      ]
+    },
+    {
+      "sha": "dd89a83806c576c890b66010762e1687783c8112",
+      "subject": "docs(admin): record task 16 verification without claiming 0/0",
+      "parents": [
+        "79d72a91e44de213de10dd762cdd7f1f1c3dcc92"
+      ]
+    },
+    {
+      "sha": "b68761b7d9a90337d836f092ae483bf90dfc6376",
+      "subject": "docs(admin): mark completed parent tasks 7-10 in the spec",
+      "parents": [
+        "dd89a83806c576c890b66010762e1687783c8112"
+      ]
+    },
+    {
+      "sha": "1aec398206c611e1b0a1e3d389d01b08f4003da1",
+      "subject": "test(admin): point extracted-console source contracts at new owners",
+      "parents": [
+        "b68761b7d9a90337d836f092ae483bf90dfc6376"
+      ]
+    },
+    {
+      "sha": "801658a1683b68a5d0d9d54ca5648e2fbbc5c656",
+      "subject": "docs(admin): update task 16 record after PR-caused unit fixes",
+      "parents": [
+        "1aec398206c611e1b0a1e3d389d01b08f4003da1"
+      ]
+    },
+    {
+      "sha": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+      "subject": "docs(admin): record latest CI as baseline-only for task 16",
+      "parents": [
+        "801658a1683b68a5d0d9d54ca5648e2fbbc5c656"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "filename": ".kiro/specs/admin-console-sidebar-refactor/tasks.md",
+      "sha": "f4ac125e9b9f445281c9126b57cd937c54cca22d",
+      "status": "modified",
+      "additions": 46,
+      "deletions": 45,
+      "changes": 91
+    },
+    {
+      "filename": "apps/web/app/admin/banners/page.tsx",
+      "sha": "5b9abdef49711f32155b7677427b407f7e59ca20",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 1,
+      "changes": 5
+    },
+    {
+      "filename": "apps/web/app/admin/evaluations/page.tsx",
+      "sha": "e1f2d530de806fb498738dfa1653b34931eaa022",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 5,
+      "changes": 13
+    },
+    {
+      "filename": "apps/web/app/admin/layout.tsx",
+      "sha": "52a571b46f465b1497f47fd80904a4ecd6712531",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 2,
+      "changes": 17
+    },
+    {
+      "filename": "apps/web/app/api/admin/preferences/sidebar-order/route.ts",
+      "sha": "d904eb6448d26a21487d32b899cd159b92a27349",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 23,
+      "changes": 30
+    },
+    {
+      "filename": "apps/web/app/api/admin/system-status/route.ts",
+      "sha": "c8d6f223234bd469bc92dce7a92b4e99fd8ba55b",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 16,
+      "changes": 24
+    },
+    {
+      "filename": "apps/web/app/api/admin/users/route.ts",
+      "sha": "d29bba12808ea491c76c6ac3f30355394274d3a7",
+      "status": "modified",
+      "additions": 25,
+      "deletions": 27,
+      "changes": 52
+    },
+    {
+      "filename": "apps/web/app/globals.css",
+      "sha": "dc0492cbea6c715db72f61b8c4cc5da26d8d2cba",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 0,
+      "changes": 13
+    },
+    {
+      "filename": "apps/web/components/admin/AdminConsoleOverview.tsx",
+      "sha": "3fc9cdd8b248565b81f3be0f91a1e42937745c63",
+      "status": "modified",
+      "additions": 183,
+      "deletions": 1826,
+      "changes": 2009
+    },
+    {
+      "filename": "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+      "sha": "a40e12a484f5caa64118becebde3c3e22627b89f",
+      "status": "modified",
+      "additions": 49,
+      "deletions": 8,
+      "changes": 57
+    },
+    {
+      "filename": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+      "sha": "0f1e83df55d28086f1513efa4b266db4e0cd255f",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2
+    },
+    {
+      "filename": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+      "sha": "a2d8af740ee6bfe3256d77b9f4178aeb5bfbfffd",
+      "status": "modified",
+      "additions": 50,
+      "deletions": 0,
+      "changes": 50
+    },
+    {
+      "filename": "apps/web/components/admin/AdminUsersPanel.tsx",
+      "sha": "c5f7895f5f34b8aec01a26d21be7ee4ffd75e34b",
+      "status": "modified",
+      "additions": 25,
+      "deletions": 9,
+      "changes": 34
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminAuditEventsPanel.tsx",
+      "sha": "797d5705ced78b2ea371ac945aeeb5bab907359d",
+      "status": "added",
+      "additions": 283,
+      "deletions": 0,
+      "changes": 283
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminConsoleModuleCompleteness.tsx",
+      "sha": "d8a308400a04533b768cc23e32dbe7379fe2eff3",
+      "status": "added",
+      "additions": 153,
+      "deletions": 0,
+      "changes": 153
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminConsoleModuleGrid.tsx",
+      "sha": "5e3be16bf834a868dcad48e3289a4e2fbfbcc5e3",
+      "status": "added",
+      "additions": 194,
+      "deletions": 0,
+      "changes": 194
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminConsoleModuleSkeleton.tsx",
+      "sha": "fa786897c871ba54cb25998d880666953cecf44d",
+      "status": "added",
+      "additions": 1301,
+      "deletions": 0,
+      "changes": 1301
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminConsoleOverviewVisualizations.tsx",
+      "sha": "d2f8e6db18b0790776a86d3320c395e824dff731",
+      "status": "added",
+      "additions": 161,
+      "deletions": 0,
+      "changes": 161
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminConsoleSidebarOrderEditor.tsx",
+      "sha": "7347b6d7e64ca168e393a336264df2492226a522",
+      "status": "modified",
+      "additions": 12,
+      "deletions": 1,
+      "changes": 13
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminInsightsVisualizations.tsx",
+      "sha": "fbf3623bee843ebfe680f13392ab6aae32c77c45",
+      "status": "added",
+      "additions": 170,
+      "deletions": 0,
+      "changes": 170
+    },
+    {
+      "filename": "apps/web/components/admin/console/AdminOpsAssistPanel.tsx",
+      "sha": "01e965bc8003fe694b46ddffc4acb95121e60871",
+      "status": "added",
+      "additions": 332,
+      "deletions": 0,
+      "changes": 332
+    },
+    {
+      "filename": "apps/web/components/admin/console/RiskyWorkProcedureSteps.tsx",
+      "sha": "f98511fd9873e631c8a909ee7af871a18a364ccc",
+      "status": "added",
+      "additions": 49,
+      "deletions": 0,
+      "changes": 49
+    },
+    {
+      "filename": "apps/web/components/admin/console/module-panel-registry.tsx",
+      "sha": "436b266d3a8bf03c331695e1307b6f59b23be9e1",
+      "status": "added",
+      "additions": 583,
+      "deletions": 0,
+      "changes": 583
+    },
+    {
+      "filename": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha": "698d940ba161c093ebcad99ee2aabfd78dfd0533",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2
+    },
+    {
+      "filename": "apps/web/components/admin/viz/ActivityHeatmap.tsx",
+      "sha": "937405116ec453d810b1caf50a35b62c603aff1c",
+      "status": "added",
+      "additions": 96,
+      "deletions": 0,
+      "changes": 96
+    },
+    {
+      "filename": "apps/web/components/admin/viz/BulletBar.tsx",
+      "sha": "e87ebd673c069538676fa196533739a49271d8d6",
+      "status": "added",
+      "additions": 86,
+      "deletions": 0,
+      "changes": 86
+    },
+    {
+      "filename": "apps/web/components/admin/viz/CompactSparklineRow.tsx",
+      "sha": "c3b2efe31657531fc2c97de8b28ad6b323c3b75b",
+      "status": "added",
+      "additions": 70,
+      "deletions": 0,
+      "changes": 70
+    },
+    {
+      "filename": "apps/web/components/admin/viz/ConsoleCardMetaRow.tsx",
+      "sha": "13923b2096ef1150d3e176368612a7288c380270",
+      "status": "added",
+      "additions": 23,
+      "deletions": 0,
+      "changes": 23
+    },
+    {
+      "filename": "apps/web/components/admin/viz/ConsoleVizCard.tsx",
+      "sha": "bb7994b88f7609909fbf1ed51374a9cc6006863f",
+      "status": "added",
+      "additions": 94,
+      "deletions": 0,
+      "changes": 94
+    },
+    {
+      "filename": "apps/web/components/admin/viz/ConsoleVizSummary.tsx",
+      "sha": "cb3f9d32e41e7577b25a9fe610f2c6fd659678ff",
+      "status": "added",
+      "additions": 65,
+      "deletions": 0,
+      "changes": 65
+    },
+    {
+      "filename": "apps/web/components/admin/viz/KpiSparklineCard.tsx",
+      "sha": "ce35f1bdeed1f86b6b7cb1575e8eb53b3da3f893",
+      "status": "added",
+      "additions": 66,
+      "deletions": 0,
+      "changes": 66
+    },
+    {
+      "filename": "apps/web/components/admin/viz/RangeBandArea.tsx",
+      "sha": "b20d25a720c7b57282271c293f728e804b1df1cf",
+      "status": "added",
+      "additions": 84,
+      "deletions": 0,
+      "changes": 84
+    },
+    {
+      "filename": "apps/web/components/admin/viz/SemicircleGaugeArc.tsx",
+      "sha": "fd157fc4e15daf37d7a5a97690aded85018e12f0",
+      "status": "added",
+      "additions": 145,
+      "deletions": 0,
+      "changes": 145
+    },
+    {
+      "filename": "apps/web/components/admin/viz/StageFunnel.tsx",
+      "sha": "7774fe98ef87fa58ce5c75b7ffe3829cf481b1d4",
+      "status": "added",
+      "additions": 91,
+      "deletions": 0,
+      "changes": 91
+    },
+    {
+      "filename": "apps/web/components/admin/viz/ToneStackedBar.tsx",
+      "sha": "42206ae12cecee6a2f3535dc4b0c33aabe7db247",
+      "status": "added",
+      "additions": 72,
+      "deletions": 0,
+      "changes": 72
+    },
+    {
+      "filename": "apps/web/components/admin/viz/TreemapTile.tsx",
+      "sha": "de15ab94585a144e8afe1bf58f6da28ca6a687ee",
+      "status": "added",
+      "additions": 95,
+      "deletions": 0,
+      "changes": 95
+    },
+    {
+      "filename": "apps/web/components/admin/viz/WaterfallDeltaStep.tsx",
+      "sha": "450c2e5249b87c8ad34acd567035b082980df01c",
+      "status": "added",
+      "additions": 95,
+      "deletions": 0,
+      "changes": 95
+    },
+    {
+      "filename": "apps/web/components/admin/viz/console-viz-forms.tsx",
+      "sha": "6ed648ee7f5bee00d7a99e882f4c1bc2b2490221",
+      "status": "added",
+      "additions": 35,
+      "deletions": 0,
+      "changes": 35
+    },
+    {
+      "filename": "apps/web/components/admin/viz/use-viz-value-hint.ts",
+      "sha": "91dcd6adf67cd88a951e1806a09923ba95911894",
+      "status": "added",
+      "additions": 44,
+      "deletions": 0,
+      "changes": 44
+    },
+    {
+      "filename": "apps/web/components/admin/viz/viz-form-props.ts",
+      "sha": "b46fa52529dbf97635e9a0e0b043295ec4369ad5",
+      "status": "added",
+      "additions": 35,
+      "deletions": 0,
+      "changes": 35
+    },
+    {
+      "filename": "apps/web/components/admin/viz/viz-paint.ts",
+      "sha": "f111797acbafcd7032579d80665de8906ac3fe8e",
+      "status": "added",
+      "additions": 44,
+      "deletions": 0,
+      "changes": 44
+    },
+    {
+      "filename": "apps/web/hooks/use-console-tone-scale.ts",
+      "sha": "96c619c18d62b1084dfb53df69607f1a9e7e9b71",
+      "status": "added",
+      "additions": 69,
+      "deletions": 0,
+      "changes": 69
+    },
+    {
+      "filename": "apps/web/lib/admin/admin-api-status.ts",
+      "sha": "ee0bc70754b6ac1cbbe68e6af5ddc40223b10038",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3
+    },
+    {
+      "filename": "apps/web/lib/admin/admin-audit-events.ts",
+      "sha": "de7fc320315894c00eb8671d1f0cba9487afbd14",
+      "status": "added",
+      "additions": 242,
+      "deletions": 0,
+      "changes": 242
+    },
+    {
+      "filename": "apps/web/lib/admin/admin-client-error.ts",
+      "sha": "d8cbec9719d6cd5c67bcb52b9adba0c6761f8a19",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8
+    },
+    {
+      "filename": "apps/web/lib/admin/admin-json.ts",
+      "sha": "8311adf19cf95a0ee0415b12ae5758f466734425",
+      "status": "added",
+      "additions": 40,
+      "deletions": 0,
+      "changes": 40
+    },
+    {
+      "filename": "apps/web/lib/admin/admin-theme-prelude.ts",
+      "sha": "d8c1cf25abc3fe9e29c8595b91fe19cc80b7ccc9",
+      "status": "added",
+      "additions": 24,
+      "deletions": 0,
+      "changes": 24
+    },
+    {
+      "filename": "apps/web/lib/admin/admin-user-display.ts",
+      "sha": "b399c703f471077da7ea5ae680013e6d34a102fe",
+      "status": "added",
+      "additions": 30,
+      "deletions": 0,
+      "changes": 30
+    },
+    {
+      "filename": "apps/web/lib/admin/console-module-state.ts",
+      "sha": "070f4427a1aca3f8f9860d68139cec0fdaf07129",
+      "status": "added",
+      "additions": 216,
+      "deletions": 0,
+      "changes": 216
+    },
+    {
+      "filename": "apps/web/lib/admin/console-tone-scale.ts",
+      "sha": "b050e591969e3cc71fa1dcc2ec2cf5bcb8d94ce6",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2
+    },
+    {
+      "filename": "apps/web/lib/admin/console-viz-state.ts",
+      "sha": "950d27bcbb895ff9ee593fb36e848112dd6c64db",
+      "status": "added",
+      "additions": 130,
+      "deletions": 0,
+      "changes": 130
+    },
+    {
+      "filename": "apps/web/lib/admin/risky-work-procedure.ts",
+      "sha": "df10552322e8a55774bffd5f741cb8c3dbc36cbf",
+      "status": "added",
+      "additions": 257,
+      "deletions": 0,
+      "changes": 257
+    },
+    {
+      "filename": "apps/web/lib/admin/sidebar-order-session.ts",
+      "sha": "70c73be7efeeacd6028ec595155210b28bb0cfa2",
+      "status": "modified",
+      "additions": 113,
+      "deletions": 1,
+      "changes": 114
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-evidence-guard.test.ts",
+      "sha": "18a2074396ce884c4b0826b5b4d4bd3a7607cfdf",
+      "status": "added",
+      "additions": 97,
+      "deletions": 0,
+      "changes": 97
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-guardrail-source.test.ts",
+      "sha": "6b55b61d98bb075ad135d4a051141f89bd74bb54",
+      "status": "added",
+      "additions": 391,
+      "deletions": 0,
+      "changes": 391
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-menu-registry.test.ts",
+      "sha": "46e5062aba02117d021034791f76fdfd3898dcd0",
+      "status": "modified",
+      "additions": 107,
+      "deletions": 0,
+      "changes": 107
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-module-grid.test.ts",
+      "sha": "4adcf8761148bf55f7d60b862ffefc4c4da45dcf",
+      "status": "added",
+      "additions": 135,
+      "deletions": 0,
+      "changes": 135
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-module-panel-source.test.ts",
+      "sha": "2e28318194f01d1b7b16cb3182d51337d3212aea",
+      "status": "added",
+      "additions": 116,
+      "deletions": 0,
+      "changes": 116
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-module-state.test.ts",
+      "sha": "c51f7a1167343bd5929c919a7daf35f3c0b8cc04",
+      "status": "added",
+      "additions": 232,
+      "deletions": 0,
+      "changes": 232
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-theme-prelude-source.test.ts",
+      "sha": "e3ac04b1b258b78008ed2c3e9f1058a68286fd72",
+      "status": "added",
+      "additions": 138,
+      "deletions": 0,
+      "changes": 138
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "sha": "d692dbef40be306f58846992204a51a5a2391093",
+      "status": "modified",
+      "additions": 155,
+      "deletions": 34,
+      "changes": 189
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-viz-source.test.ts",
+      "sha": "148100df5028a7efab666ee50a88bc7a51b0b645",
+      "status": "added",
+      "additions": 174,
+      "deletions": 0,
+      "changes": 174
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-console-viz-state.test.ts",
+      "sha": "ee644e0e3577e19cd3f00770f36bc9d6a9edd88a",
+      "status": "added",
+      "additions": 157,
+      "deletions": 0,
+      "changes": 157
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+      "sha": "eafbbec4673ea96ddb6257faa49ca110c7f6555a",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 2,
+      "changes": 9
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-map-overlays-ia-contract.test.ts",
+      "sha": "e326146a52d35257368fd76a75fbb0915ce0d787",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 2,
+      "changes": 5
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-pipeline-control.test.ts",
+      "sha": "9b4f40e0d3656c580bbb2e65373cb9e314a1cae8",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 1,
+      "changes": 7
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+      "sha": "0ef9cc7062e07f0f12bd703c6044271bdb577e68",
+      "status": "modified",
+      "additions": 33,
+      "deletions": 2,
+      "changes": 35
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-storyboard-canvas-shell.test.ts",
+      "sha": "efa42e4aeee81c9dcdad81825331d3d06f134647",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-storyboard-generator.test.ts",
+      "sha": "8fd95e6bc008bcdc8e6935785b4e20fe6fae8e9a",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 4,
+      "changes": 17
+    },
+    {
+      "filename": "apps/web/tests-unit/admin-user-management-source.test.ts",
+      "sha": "67afd90449f74b756d533be6802e5a00ee477461",
+      "status": "modified",
+      "additions": 46,
+      "deletions": 5,
+      "changes": 51
+    },
+    {
+      "filename": "apps/web/tests-unit/design-contract-source.test.ts",
+      "sha": "affeae19520c8b71c00b8fc6545486e9ffc599cf",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 1,
+      "changes": 7
+    },
+    {
+      "filename": "apps/web/tests-unit/frontend-unused-route-compatibility.test.ts",
+      "sha": "864d6800817d51e6aa8e6e4f02559d9244cfccd1",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 1,
+      "changes": 6
+    },
+    {
+      "filename": "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+      "sha": "ae6c4f2b673410eb3cc0fe715d9ff7e2903b4134",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 1,
+      "changes": 6
+    },
+    {
+      "filename": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "sha": "6055f4400e2c455f29169f5db4f3bf2bf1e10229",
+      "status": "modified",
+      "additions": 32,
+      "deletions": 0,
+      "changes": 32
+    },
+    {
+      "filename": "apps/web/tests-unit/preference-trend-request-security.test.ts",
+      "sha": "39febcb67f1472f3d1e0d2304316919658db2115",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 3,
+      "changes": 8
+    },
+    {
+      "filename": "apps/web/tests-unit/privacy-incident-workflow.test.ts",
+      "sha": "80a3d08f00609f665f0c994bbbd277a643f6b8fe",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 1,
+      "changes": 5
+    },
+    {
+      "filename": "apps/web/tests/admin-console-keyboard.spec.ts",
+      "sha": "80cfc6cb8811676acf80a5db43502827bed61e05",
+      "status": "added",
+      "additions": 189,
+      "deletions": 0,
+      "changes": 189
+    },
+    {
+      "filename": "apps/web/tests/admin-console-module-grid.spec.ts",
+      "sha": "d934ea603f44006474947479225fda32d2800e87",
+      "status": "added",
+      "additions": 144,
+      "deletions": 0,
+      "changes": 144
+    },
+    {
+      "filename": "apps/web/tests/admin-console-module-hydration.spec.ts",
+      "sha": "3722cf4e5028aaa83d7614f5707975ff5637178b",
+      "status": "modified",
+      "additions": 120,
+      "deletions": 30,
+      "changes": 150
+    },
+    {
+      "filename": "apps/web/tests/admin-console-responsive.spec.ts",
+      "sha": "01efb994426bbe7ad12d2aa39203e784a6988915",
+      "status": "added",
+      "additions": 111,
+      "deletions": 0,
+      "changes": 111
+    },
+    {
+      "filename": "apps/web/tests/admin-console-sidebar-ia.spec.ts",
+      "sha": "2f66114f0707fda2f43e730ddd345ff15d20f65e",
+      "status": "added",
+      "additions": 139,
+      "deletions": 0,
+      "changes": 139
+    },
+    {
+      "filename": "apps/web/tests/admin-console-tone-parity.spec.ts",
+      "sha": "540315d0a7bc6ae3512d977bc10dabd771990996",
+      "status": "added",
+      "additions": 395,
+      "deletions": 0,
+      "changes": 395
+    },
+    {
+      "filename": "apps/web/tests/helpers/admin-console-e2e.ts",
+      "sha": "b36f66702cd2c0480325b7a6bd9fedc99eb53388",
+      "status": "added",
+      "additions": 300,
+      "deletions": 0,
+      "changes": 300
+    },
+    {
+      "filename": "apps/web/tests/helpers/evidence-guard.ts",
+      "sha": "f1727e451123c38f21fb8faf4d04e32adb76e5f0",
+      "status": "added",
+      "additions": 95,
+      "deletions": 0,
+      "changes": 95
+    }
+  ],
+  "headRefOid_local_available": true,
+  "baseRefOid_local_available": true,
+  "diff_merge_base": "0a8416d42a37a95e686c4d782e1ec73f6a15e37f",
+  "full_diff_sha256": "f5f1d572cf67343e74c6759b18f78cb8d1f872934a7eb3b144ea801173b357c8",
+  "full_diff_bytes": 506394
+}

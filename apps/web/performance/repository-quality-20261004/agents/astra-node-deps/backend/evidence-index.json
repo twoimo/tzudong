@@ -1,0 +1,149 @@
+{
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "e13f868f85a8dc0b37fe44873db9bfd9524eceb2fdd26073ecec750d21df04b7",
+      "bytes": 7382
+    },
+    {
+      "path": "advisories-and-resolution.json",
+      "sha256": "505ddfe8a2826af6b1c4398c0005f708111efb225361cb4d06099f0d4c4b1121",
+      "bytes": 9031
+    },
+    {
+      "path": "backend-source-state.json",
+      "sha256": "2086b3eaf16dfebf97214cf0a7edd00119c0da05af74af234a3c69189608e9da",
+      "bytes": 2617
+    },
+    {
+      "path": "baseline-audit.json",
+      "sha256": "b7e358095fe178710c9a5c7d07d1e7dd307fb4c12d5ed0799706bfe56de9c37d",
+      "bytes": 2736
+    },
+    {
+      "path": "baseline-callers-with-upgraded-deps.json",
+      "sha256": "049e4f62327cfed422948408ef84c398f977ff870a76d4296dc3ec8effa6ed3c",
+      "bytes": 1623
+    },
+    {
+      "path": "baseline-frozen-install.json",
+      "sha256": "8f53c264e70ba34699b5bde67ca614a5c90b9b235c2c711af7c620682c595fa0",
+      "bytes": 536
+    },
+    {
+      "path": "baseline-packages.json",
+      "sha256": "7d7bc6fa537d3fa849e10d4f5b54bb7f583415e4dc3d414ddb77d20fbf309520",
+      "bytes": 33363
+    },
+    {
+      "path": "baseline-yaml-parsing.json",
+      "sha256": "e1dfb98a42c501ea68303fec6195be30f0e080beb17fc394943fb7a0c34677de",
+      "bytes": 314
+    },
+    {
+      "path": "caller-tests.json",
+      "sha256": "1198558c675a7ec863bbcad537b3d5d6c875ad907453afc08d8c617e7fb9eb32",
+      "bytes": 1288
+    },
+    {
+      "path": "candidate-frozen-install.json",
+      "sha256": "c2798f72d44de46b4f25c932a41256b6636dfb854dcd83ba4d2d8a75ed413553",
+      "bytes": 537
+    },
+    {
+      "path": "dependency-tree-validation.json",
+      "sha256": "d7c9dba4f302240aa567d66a7047112cf2d4b612be4af136870db4df1fe11e19",
+      "bytes": 438
+    },
+    {
+      "path": "final-audit-moderate.json",
+      "sha256": "904381433c4d641085d43be23b8f917241a1c2cf0b94a17b57d5fba61f4443a1",
+      "bytes": 750
+    },
+    {
+      "path": "final-audit.json",
+      "sha256": "fb1e5c437791489a0924be75cdd33fb93bdb79c684a14d46b1cb91e12eac4911",
+      "bytes": 737
+    },
+    {
+      "path": "initial-caller-tests.json",
+      "sha256": "3e9aa6f7845c1ff32ffb53d06e6d451d8e5ac972724826c3c65f9ba02225dcd3",
+      "bytes": 1188
+    },
+    {
+      "path": "integrate-pr-targets.json",
+      "sha256": "5b90c99ea4bdf5bc642f0a83bbc2294f2008347f329b04ec85f0e1125c0392ed",
+      "bytes": 654
+    },
+    {
+      "path": "patch-brace-expansion.json",
+      "sha256": "dbae4053e94aa60a0e19f7b3e3fc74bf47662691d126c47aa48ba7ff67e44ee4",
+      "bytes": 582
+    },
+    {
+      "path": "pr-2902.json",
+      "sha256": "92c5eb03978e5fe28eb4b87508549ae95ce6ac21cbfde74cd26f6d072374f484",
+      "bytes": 3519
+    },
+    {
+      "path": "pr-2924.json",
+      "sha256": "c4e6e7ae7d9ddd16d51c9760750270d28c6d28f2fec314a4691478050cc9d210",
+      "bytes": 3302
+    },
+    {
+      "path": "pr-3061.json",
+      "sha256": "b3cfd71b2234f4673c65e55323bb2f57d1d4e0b18355be0a863b2b1f0f715a79",
+      "bytes": 3267
+    },
+    {
+      "path": "pr-3062.json",
+      "sha256": "d4864f8151da85058914dd1b2d2f492221a148be5ff5903458f855ff7ff558d9",
+      "bytes": 3525
+    },
+    {
+      "path": "pr-3064.json",
+      "sha256": "043d7040a295c86e2a66be87332b681d98a74d268a20df26584a612e077ccf8f",
+      "bytes": 5031
+    },
+    {
+      "path": "pr-baseline-selection-matrix.md",
+      "sha256": "fdc15c767cade331ee08f3995bbf8225f593b2fa3b2b28ed2b67472a5b7c03f3",
+      "bytes": 2061
+    },
+    {
+      "path": "pr-decisions.json",
+      "sha256": "6d93da67c272b8182c0220219b9d78c03dc74b047265a227b76bdd03d99a2315",
+      "bytes": 3855
+    },
+    {
+      "path": "pre-fix-caller-reproductions.json",
+      "sha256": "6036e09fc5f3fac56e29bb66ac59f25afbfcbbce9d97c12f1de23df6c302d79d",
+      "bytes": 709
+    },
+    {
+      "path": "relevant-unit-tests.json",
+      "sha256": "85d1a03b4a80dd7e58d3df60358f50da3dccf9dcdbc23f792dbf684ff579ceb8",
+      "bytes": 7164
+    },
+    {
+      "path": "session-metadata.json",
+      "sha256": "eb0d88b592de68c6f422c20525f166f96eb6763d00423e0ad6e0b30c518f606d",
+      "bytes": 1439
+    },
+    {
+      "path": "syntax-checks.json",
+      "sha256": "68692eb69340982dbf71388f630884b250092ad4e69ad489ea946bde9442a849",
+      "bytes": 989
+    },
+    {
+      "path": "verification-summary.json",
+      "sha256": "4947982baa5cf264ec070fb267b23c160d718f65d168d0f474c46a5282a3fcf9",
+      "bytes": 2176
+    },
+    {
+      "path": "yaml-parity.json",
+      "sha256": "1f23830ba4e12224d24e6231fbaacab90c2ae7d2659e07652c73ef6411b3b2b5",
+      "bytes": 433
+    }
+  ]
+}

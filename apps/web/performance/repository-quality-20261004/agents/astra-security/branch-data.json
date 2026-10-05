@@ -1,0 +1,27 @@
+{
+  "name": "branch-data",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/branches/data",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4981",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:31:09.694598+00:00",
+      "next_page": false
+    }
+  ],
+  "count": null,
+  "items": {
+    "commit": {
+      "sha": "4bda4aaebee8bffac723e09b35b0712e8b4adf6e"
+    },
+    "name": "data",
+    "protected": true
+  }
+}

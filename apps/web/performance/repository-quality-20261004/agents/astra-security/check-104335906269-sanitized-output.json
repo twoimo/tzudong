@@ -1,0 +1,17 @@
+{
+  "check_id": 104335906269,
+  "retrieved": true,
+  "referenced_source_paths": [
+    "backend/supabase/tests/test_g014_pg17_owner_contract.py"
+  ],
+  "code_scanning_alert_ids": [],
+  "categories_present": {
+    "secret_detected": true,
+    "generic_high_entropy": false,
+    "quota_limit": false,
+    "permission_denied": false,
+    "scan_failure": false,
+    "no_new_alerts": false
+  },
+  "summary_present": true
+}

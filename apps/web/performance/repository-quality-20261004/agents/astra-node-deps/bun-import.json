@@ -1,0 +1,6 @@
+{
+  "exit_code": 0,
+  "stdout": "bun install v1.4.0 (34cbb9a40)\n\nSaved bun.lock (821 packages) [8.00ms]\n",
+  "stderr": "[3.50ms] migrated lockfile from package-lock.json\nResolving dependencies\nResolved, downloaded and extracted [1]\nSaved lockfile\n",
+  "npm_lock_sha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694"
+}

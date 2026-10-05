@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-04T11:29:52.301558+00:00",
+  "source": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "command": "pinned Node24.21.0/npm11.6.2 ci --no-audit --no-fund; audit separate",
+  "exitCode": 0,
+  "ownDependencyTree": true,
+  "rawLogsStored": false,
+  "supplyChainReceiptGeneratedByCanonicalPostinstall": true
+}

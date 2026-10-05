@@ -1,0 +1,2992 @@
+[
+  {
+    "path": ".agents/skills/tzudong-guidance-audit/SKILL.md",
+    "historical_blob": "3d79c3d46008eb2da00d0b383f65dadee7d3b818",
+    "authority_blob": "3d79c3d46008eb2da00d0b383f65dadee7d3b818",
+    "active_owner_committed_blob": "3d79c3d46008eb2da00d0b383f65dadee7d3b818",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": ".github/scripts/build-nightly-local-publication.py",
+    "historical_blob": "131924d6815c1233483345ce567d321925c1f1f0",
+    "authority_blob": "b7b4615abcd1c594fd5346c244ddb8f9fafcfc0f",
+    "active_owner_committed_blob": "1b133d02bb7a0c8b2e5c53af0d9353274d4b6813",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": ".github/scripts/verify-nightly-local-publication.py",
+    "historical_blob": "79b373b960072097b6b5df053f0c3d2c6ff2b6f2",
+    "authority_blob": "e0361c09de68353ab6870ca01c5ca7f9200a576f",
+    "active_owner_committed_blob": "44b79d1b1606c9cdcd99428935b3473b04f6b624",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": ".github/workflows/g014-catalog-contract-baseline.yml",
+    "historical_blob": "0fb2f283c9b116361f426626933c0045368fb62e",
+    "authority_blob": "0fb2f283c9b116361f426626933c0045368fb62e",
+    "active_owner_committed_blob": "52be842a5749567b29cac0f8dd11c28a485ef87b",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": ".gitignore",
+    "historical_blob": "6966a8713348df8dc0775e6e677e4c84ae8e87c8",
+    "authority_blob": "6966a8713348df8dc0775e6e677e4c84ae8e87c8",
+    "active_owner_committed_blob": "6966a8713348df8dc0775e6e677e4c84ae8e87c8",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": ".kiro/specs/crawler-pipeline-operational-readiness/catalog-recovery-20260906.md",
+    "historical_blob": "4444eadfcccc45ad15907f71fd6860ca70f01067",
+    "authority_blob": "4444eadfcccc45ad15907f71fd6860ca70f01067",
+    "active_owner_committed_blob": "4444eadfcccc45ad15907f71fd6860ca70f01067",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260906.md",
+    "historical_blob": "882ff70319a8f5cc8de697e6a0087e563af3250c",
+    "authority_blob": "882ff70319a8f5cc8de697e6a0087e563af3250c",
+    "active_owner_committed_blob": "882ff70319a8f5cc8de697e6a0087e563af3250c",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.json",
+    "historical_blob": "795f524587deeb60f484125d4b927b4c0f55ee73",
+    "authority_blob": "795f524587deeb60f484125d4b927b4c0f55ee73",
+    "active_owner_committed_blob": "795f524587deeb60f484125d4b927b4c0f55ee73",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.md",
+    "historical_blob": "013a01ca5b18b22408b73314a5488dfe452ccaa3",
+    "authority_blob": "013a01ca5b18b22408b73314a5488dfe452ccaa3",
+    "active_owner_committed_blob": "013a01ca5b18b22408b73314a5488dfe452ccaa3",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": ".kiro/specs/crawler-pipeline-operational-readiness/tasks.md",
+    "historical_blob": "82a3a9a8db2d6ef247621d7a6b182c24fd527e85",
+    "authority_blob": "82a3a9a8db2d6ef247621d7a6b182c24fd527e85",
+    "active_owner_committed_blob": "82a3a9a8db2d6ef247621d7a6b182c24fd527e85",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": ".nvmrc",
+    "historical_blob": "a45fd52cc5891570d6299fab38643103c3955474",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "AGENTS.md",
+    "historical_blob": "c05a04cd66d6fd63cbaa21570335f0a601326d77",
+    "authority_blob": "c05a04cd66d6fd63cbaa21570335f0a601326d77",
+    "active_owner_committed_blob": "c05a04cd66d6fd63cbaa21570335f0a601326d77",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/admin/banners/page.tsx",
+    "historical_blob": "ea2911819a7127bf24757c7fc6f00a3b473fca1f",
+    "authority_blob": "e1259f314590992177cad7a3cf13625ac0b8a38c",
+    "active_owner_committed_blob": "9e191c2be5a71126d4d0ffe516c1fefa205cd1eb",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/admin/evaluations/page.tsx",
+    "historical_blob": "fa4d89ca471089e56b71b8ae0624530ebc868235",
+    "authority_blob": "f4061ba585fe0f71e376f2eb44fd0281166ddb7c",
+    "active_owner_committed_blob": "691b84fee7854115ea967759fd478e0e062b6cc5",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/admin/loading.tsx",
+    "historical_blob": "edb1b63d0fd042f0d68b6a15fe91c38522e576a6",
+    "authority_blob": "9459aaf870474dc76c95e80f86dcde37bbae1c21",
+    "active_owner_committed_blob": "9459aaf870474dc76c95e80f86dcde37bbae1c21",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/admin/page.tsx",
+    "historical_blob": "d95d927f9919443ba92c164336102404c88d2384",
+    "authority_blob": "75297e782db7793895549d1f8d96db9f02495197",
+    "active_owner_committed_blob": "75297e782db7793895549d1f8d96db9f02495197",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/admin/privacy-incidents/page.tsx",
+    "historical_blob": "4b24bda8699be73fa6d907bda003c24db7b0d0da",
+    "authority_blob": "064c90a32f037ceb598d80c2f67a8c7e7727c141",
+    "active_owner_committed_blob": "064c90a32f037ceb598d80c2f67a8c7e7727c141",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/api/admin/restaurant-refresh-history/route.ts",
+    "historical_blob": "60366c1409e8e67a5b1aa8dd30200d7cfa077d73",
+    "authority_blob": "60366c1409e8e67a5b1aa8dd30200d7cfa077d73",
+    "active_owner_committed_blob": "60366c1409e8e67a5b1aa8dd30200d7cfa077d73",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/api/admin/restaurants/[restaurantId]/local-edit/route.ts",
+    "historical_blob": "a403fd4ab68a8629a6febfa7c584fb6bbba11cab",
+    "authority_blob": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd:apps/web/app/api/admin/restaurants/[restaurantId]/local-edit/route.ts",
+    "active_owner_committed_blob": "a60ef70dba0bd32ea44d32218e2c66ef1b5410e1:apps/web/app/api/admin/restaurants/[restaurantId]/local-edit/route.ts",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/api/admin/youtube-kpis/route.ts",
+    "historical_blob": "889493898a9541defbc779bb77787ea5bd6fad28",
+    "authority_blob": "c7fdfab94e501a018023eefb3c13ce650fa7d3ce",
+    "active_owner_committed_blob": "c7fdfab94e501a018023eefb3c13ce650fa7d3ce",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/app-globals.css",
+    "historical_blob": "621bec5dc50aa53c259200efa92f1e2ebf6c1f56",
+    "authority_blob": "e43c560e61143907ec553ac2f24f5228c6424fbf",
+    "active_owner_committed_blob": "3a7b4647d61ae9c84009f81d4d06f5dcb6d1e29b",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/app-runtime-shell.tsx",
+    "historical_blob": "d744d5703a2d976e99fae5125ce61348b6f1ad4a",
+    "authority_blob": "aca8adf20191421837580ab70e067b7cc1d90c41",
+    "active_owner_committed_blob": "bc4c56be9b24aaf3b9d289af8e63d9007102049c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/auth/reset-password/loading.tsx",
+    "historical_blob": "623c9fa266d1ac4e12b0343e105ad0033d33a3aa",
+    "authority_blob": "4ddbcbfefd9e4906304b82708fcb38573d9b5f75",
+    "active_owner_committed_blob": "4ddbcbfefd9e4906304b82708fcb38573d9b5f75",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/auth/reset-password/page.tsx",
+    "historical_blob": "9475609125b9b5d3e105cc0eda9fc7105976346e",
+    "authority_blob": "bd8eda0e1760f7b6faf4b8e1885a9a5c3487c50f",
+    "active_owner_committed_blob": "bd8eda0e1760f7b6faf4b8e1885a9a5c3487c50f",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/feed/loading.tsx",
+    "historical_blob": "9bbe9e39240a436035eef594c56d9173485bddf6",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/feed/page.tsx",
+    "historical_blob": "83e4ac4a724e26ae0401defe9e771eb084c362e5",
+    "authority_blob": "780bbe990400269f78164079d85e479bba86d7aa",
+    "active_owner_committed_blob": "780bbe990400269f78164079d85e479bba86d7aa",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/global-map/loading.tsx",
+    "historical_blob": "cadbf5048caca0b4f7b106801d08f42bcaf39886",
+    "authority_blob": "1316dc895a4615a699dfc963c6fca739ddd3ee24",
+    "active_owner_committed_blob": "1316dc895a4615a699dfc963c6fca739ddd3ee24",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/global-map/page.tsx",
+    "historical_blob": "f4732109158e75cb1cf4e04fa84585e990270ee8",
+    "authority_blob": "e8007ecd3b82f1dcb530e55c8bf912a7fd657c0e",
+    "active_owner_committed_blob": "e8007ecd3b82f1dcb530e55c8bf912a7fd657c0e",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/home-client-effects.tsx",
+    "historical_blob": "b4e6b617eec049e11a35d6abc1bc30b4c1576045",
+    "authority_blob": "dc309606ceea93eda399358c2d79851d29570961",
+    "active_owner_committed_blob": "dc309606ceea93eda399358c2d79851d29570961",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/home-client-loader.tsx",
+    "historical_blob": "380ee5a9550a9ef57482bec2894283b9a34780a9",
+    "authority_blob": "47b68c1ce7cba0a9fe75a9388c8cbe07935964c5",
+    "active_owner_committed_blob": "47b68c1ce7cba0a9fe75a9388c8cbe07935964c5",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/home-client.tsx",
+    "historical_blob": "4c780aeed5316b5f591714c127146fce5dc3cd78",
+    "authority_blob": "d177cadb3e8f6763fb906d681795c3bf23861746",
+    "active_owner_committed_blob": "d177cadb3e8f6763fb906d681795c3bf23861746",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/home-runtime-shell.tsx",
+    "historical_blob": "aff05191582a48ec40d5c21b85f025b8d9c5f722",
+    "authority_blob": "ace6fb51ea3f99a582f07553989466f2391ace7a",
+    "active_owner_committed_blob": "a78a8131749f591397cb7dc9ccf5b0244307acc0",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/home-supabase-actions.ts",
+    "historical_blob": "778946e8139f2c66694e863326d8e53aead62ace",
+    "authority_blob": "29dba62151884b63a6e81b43507828c099fd6c4a",
+    "active_owner_committed_blob": "29dba62151884b63a6e81b43507828c099fd6c4a",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/insights/insights-client.tsx",
+    "historical_blob": "32db1e6864c7b3d893bb160d88d6107a68f77363",
+    "authority_blob": "4ba29ee889fd9adbda943530c54ac9e51e6a1b4c",
+    "active_owner_committed_blob": "8b9d0b1055780565fa52d60ff6aa7986f110dccb",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/layout.tsx",
+    "historical_blob": "aca544b12a5fb914143e10dcfb1d77ed39710240",
+    "authority_blob": "8f3e1bc7b89e3bfca58b5dea529dd636c61c6f37",
+    "active_owner_committed_blob": "8f3e1bc7b89e3bfca58b5dea529dd636c61c6f37",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/leaderboard/loading.tsx",
+    "historical_blob": "e44bee6ea24c9cbb62211550433139100ffcfa32",
+    "authority_blob": "a06e9b49a98169a6ab1ac5b8144d4b45360c00f9",
+    "active_owner_committed_blob": "a06e9b49a98169a6ab1ac5b8144d4b45360c00f9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/leaderboard/page.tsx",
+    "historical_blob": "ed214c4003a954d8c4007060e823f633493cc7ce",
+    "authority_blob": "d46c464547a29f921f80df7fd660410498a35122",
+    "active_owner_committed_blob": "649542d10f1c6d395de936371868e881aa41b43b",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/manifest.ts",
+    "historical_blob": "09d6319099282396d808d75a3b93251e23328a21",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/bookmarks/page.tsx",
+    "historical_blob": "2f3cae8801d103a680562f36e716e10593e13f9f",
+    "authority_blob": "09fc9b47c4371557d794186f591e95b5a17ec0cc",
+    "active_owner_committed_blob": "09fc9b47c4371557d794186f591e95b5a17ec0cc",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/loading.tsx",
+    "historical_blob": "c68c9e4ad15911c4e066415afad1f511c7430563",
+    "authority_blob": "130db25303590cef45f895192214a9c1fa5df4df",
+    "active_owner_committed_blob": "130db25303590cef45f895192214a9c1fa5df4df",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/my-page-data-region.tsx",
+    "historical_blob": "0015450f2e0a3058ab2d4c66383914d716deedc6",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/mypage-layout-content.tsx",
+    "historical_blob": "ba2b6c2806d0c1d0af3baa4ac222891f75c05757",
+    "authority_blob": "b3bdcbb31cb98f0df8a3beb42ed78d7d91f4fbf1",
+    "active_owner_committed_blob": "5b360ad5dda629f9715655d4e9a94b655a7ef203",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/mypage/reviews/page.tsx",
+    "historical_blob": "d002481fd834759e304102727218d402032ceca1",
+    "authority_blob": "0e762261f5d0325b28bdca1196ce2554f5e96073",
+    "active_owner_committed_blob": "0e762261f5d0325b28bdca1196ce2554f5e96073",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/route-presentation.ts",
+    "historical_blob": "5172fa5d71a8af84d2ca6f285817ee5e304d602c",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/submissions/edit/page.tsx",
+    "historical_blob": "2243126abec5389b5fe7e508bac1806be1ea1a39",
+    "authority_blob": "81b67e280e079e9d76ac9a1ab1f18f6a888bfd5c",
+    "active_owner_committed_blob": "81b67e280e079e9d76ac9a1ab1f18f6a888bfd5c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/submissions/new/page.tsx",
+    "historical_blob": "587ca4974008901bc46d982441df3e3643335c75",
+    "authority_blob": "58a7a414f03b9ba424e9a4699f6b187324f7e7b2",
+    "active_owner_committed_blob": "58a7a414f03b9ba424e9a4699f6b187324f7e7b2",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/mypage/submissions/recommend/page.tsx",
+    "historical_blob": "752a1943f9753bbf740fac8926ba5e6f2bc95e31",
+    "authority_blob": "0ddea0167156c5304bf08a90d15f7c53943509db",
+    "active_owner_committed_blob": "0ddea0167156c5304bf08a90d15f7c53943509db",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/robots.ts",
+    "historical_blob": "a4b1c1d51c911c35daa01b9d5b2bf3c46e4e110c",
+    "authority_blob": "16507f78c0ffeed5a062362ff4a210fd9e6fc828",
+    "active_owner_committed_blob": "16507f78c0ffeed5a062362ff4a210fd9e6fc828",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/sitemap.ts",
+    "historical_blob": "4b7e36ef2ef9aa526500c7fb3e710bdb2b35c1ba",
+    "authority_blob": "a99257ac0614dfbd9e2e1881d1a7d328c984f986",
+    "active_owner_committed_blob": "a99257ac0614dfbd9e2e1881d1a7d328c984f986",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/stamp/loading.tsx",
+    "historical_blob": "2056fd0c7cc103829625aad123ce7e17d76ce579",
+    "authority_blob": "2623fcb4093e9a387d12ba75a884f85ab50bb6b9",
+    "active_owner_committed_blob": "2623fcb4093e9a387d12ba75a884f85ab50bb6b9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/app/stamp/page.tsx",
+    "historical_blob": "d316ca13d247e88c9fc7abcd52b62bc647eef539",
+    "authority_blob": "15724d068c1b5aa928e0877eee9a25443a469ca8",
+    "active_owner_committed_blob": "3643f3ebc14bf7b9bbb2c075ab4e3c82adf283e4",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/app/user/[userId]/loading.tsx",
+    "historical_blob": "437999a47a42273d1f46dd958439e1974687971d",
+    "authority_blob": "13186dc257c2152ffc93a3074adf785ee1faafcc",
+    "active_owner_committed_blob": "13186dc257c2152ffc93a3074adf785ee1faafcc",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/bun.lock",
+    "historical_blob": "aba8894ea254d36ea225216d505e02b761daf65c",
+    "authority_blob": "19544aecafd9019412652204921e574fc35787d0",
+    "active_owner_committed_blob": "e140922ebc9032913e37013ced4b6ca80f14bf13",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminConsoleOverview.tsx",
+    "historical_blob": "b2414dff187861086a37ec69a1cf2fd02b52216e",
+    "authority_blob": "f16afde6d9e5a005b084b05a7b73c43845f3b91c",
+    "active_owner_committed_blob": "4270ec2a88c10f72bc8396ef57e2f6c1107dbe7d",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminDataPending.tsx",
+    "historical_blob": "86fcde0962831ea94e49cd3b49f139617c791245",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+    "historical_blob": "de1bd39fcbabbecec68c23a6e7a8708d28d8ca8c",
+    "authority_blob": "23d7d48bc0294308308687f1db0d35e5a56416ff",
+    "active_owner_committed_blob": "e79ff53d2df50d3c24879c89bffd82f5335d48c4",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+    "historical_blob": "265dcffd3b882a0a0f279360008930e6100d1c0a",
+    "authority_blob": "167e5a9afe224228d5cc729a6d6cf02f72597843",
+    "active_owner_committed_blob": "b2076683ee40774f36a827da41d9ed8e4ce09a48",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+    "historical_blob": "4971000c921fdc82076c33df710ed895bf953be2",
+    "authority_blob": "7356a24ae31578f63fd2d46f0c8d702340867f45",
+    "active_owner_committed_blob": "f02947727bc8bd7b932fd7d9ce0e49a346c9fb6a",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/AdminReviewPanel.tsx",
+    "historical_blob": "a35ce1102dc57df10834ea67e0d24b474c9a5e00",
+    "authority_blob": "7a7a1375e44a2bf37282b393336e1e79fae91692",
+    "active_owner_committed_blob": "7a7a1375e44a2bf37282b393336e1e79fae91692",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+    "historical_blob": "bfb2c1e9fc6d6118ac213ef1a5ec9d41c051af60",
+    "authority_blob": "11f25ea916147bf6f084a9ba110515543386000a",
+    "active_owner_committed_blob": "da6193f9a0a5e73105e37787775a632062a7c809",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/DashboardDataTable.tsx",
+    "historical_blob": "70102e2e00196b5252d6b016f2219c09bc2193df",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/EditRestaurantModal.tsx",
+    "historical_blob": "fb93e8a2fdbae436e51fa80f9b6ec4a37f32e7d2",
+    "authority_blob": "06f95036622617ec9aea866a120627b457042f43",
+    "active_owner_committed_blob": "06f95036622617ec9aea866a120627b457042f43",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/EvaluationTableNew.tsx",
+    "historical_blob": "17136265f075b29b0b905cf0d8d40f063d595001",
+    "authority_blob": "a8284f2026a0a927e8fc89effd66c9561e8743a0",
+    "active_owner_committed_blob": "280d1bfcf3bdbe2128423b7a7f388a608df4f6b9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/SemioticKpiSparkline.tsx",
+    "historical_blob": "85b49273258f592308b31fa2f78e0bf1cd88c9f9",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/SubmissionListView.tsx",
+    "historical_blob": "981e0f1c8a6c5f553b7a81c2c19dcb82058bf8d8",
+    "authority_blob": "bd521802dc06c6afb519694a9e89eeb39cf9c9c3",
+    "active_owner_committed_blob": "bd521802dc06c6afb519694a9e89eeb39cf9c9c3",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/TrendProposalQueue.tsx",
+    "historical_blob": "ec5f4cbf6d095109f06949af4df6a88e34cc8489",
+    "authority_blob": "f25a2c3aaa053b1517ff35f1eb0cc648abe819e9",
+    "active_owner_committed_blob": "f25a2c3aaa053b1517ff35f1eb0cc648abe819e9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+    "historical_blob": "af52a769621fe72ff21242ee053136504bb0c61e",
+    "authority_blob": "d3605db7cb9392ceccf6a3da83f4bf5c3f061e11",
+    "active_owner_committed_blob": "70e63c46d1755045b3f442361b274cf843a5b088",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+    "historical_blob": "2d2b39407fec59e6cf05f8c09c5bea717ce18073",
+    "authority_blob": "793bab55c5866867a9aeab4042ec407c565ea8c2",
+    "active_owner_committed_blob": "632d45f6e59d67937ca6ec43895b0d156d994c6c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx",
+    "historical_blob": "ca40a953796d8af4b4ddab6fb7ecdd67aa35255a",
+    "authority_blob": "b746f84de6ed694e9ec248c794599cb350d1656c",
+    "active_owner_committed_blob": "b746f84de6ed694e9ec248c794599cb350d1656c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+    "historical_blob": "db79553720793b885a19699f0b48bd8c80c28953",
+    "authority_blob": "d8beb5339fcddca2f0f213ee179ca35145f0cf89",
+    "active_owner_committed_blob": "d8beb5339fcddca2f0f213ee179ca35145f0cf89",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/auth/ResetPasswordProgressiveSkeleton.tsx",
+    "historical_blob": "b1712609e3c619d3db3b2901c18e0f490730633a",
+    "authority_blob": "b8353394a30172bd60ecc649895461fd9cf1b8fc",
+    "active_owner_committed_blob": "b8353394a30172bd60ecc649895461fd9cf1b8fc",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/feed/FeedContent.tsx",
+    "historical_blob": "4e2e3b23a467a991b3c71b65b8eb384a10a7b96c",
+    "authority_blob": "6724d643fbf29e3738e26e7df0eefb1590a9943e",
+    "active_owner_committed_blob": "211235ad7f98e4fce6cbb7072202b628d1d4b3f9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/feed/FeedReadCount.tsx",
+    "historical_blob": "01191afcc16e6b418815c42391b5f5026de57c91",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/filters/CategoryFilter.tsx",
+    "historical_blob": "7f5310f75491e1ddeee972eb020311165c710767",
+    "authority_blob": "511055aeced401f7ff20a7a52e02663bab45d402",
+    "active_owner_committed_blob": "511055aeced401f7ff20a7a52e02663bab45d402",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/home/DesktopLeftPanelMapHome.tsx",
+    "historical_blob": "cd4a7c033fb03349ffb03816f2587d5d74f991fb",
+    "authority_blob": "6230537031159f212de742293003389209d19dea",
+    "active_owner_committed_blob": "6230537031159f212de742293003389209d19dea",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/home/LocalWorkspaceBanner.tsx",
+    "historical_blob": "25e135a0cc2d765a77a0670089c2a187d771b99d",
+    "authority_blob": "3ccc59e2eb233d54595525e6ffce2f596e0f23d0",
+    "active_owner_committed_blob": "3ccc59e2eb233d54595525e6ffce2f596e0f23d0",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/home/MobileControlOverlay.tsx",
+    "historical_blob": "943726c14737e1336f262423b12e7a174385dc3e",
+    "authority_blob": "ace07451ab3c211f1d6d9639bb2a165ec7e3dd3b",
+    "active_owner_committed_blob": "ace07451ab3c211f1d6d9639bb2a165ec7e3dd3b",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/home/home-control-panel.tsx",
+    "historical_blob": "00e6114d6b68567cba05804c198c86db244a12c3",
+    "authority_blob": "3ca54ba1ee49b56cd4644552c40499fedf2fbdb4",
+    "active_owner_committed_blob": "3ca54ba1ee49b56cd4644552c40499fedf2fbdb4",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/home/home-desktop-control-panel.tsx",
+    "historical_blob": "5330c7b92d71cb79cb78149fe64f3a9947d5095a",
+    "authority_blob": "2cb2dd22ab698360b5a9db4f0adfe650c09220cf",
+    "active_owner_committed_blob": "2cb2dd22ab698360b5a9db4f0adfe650c09220cf",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/home/home-map-container.tsx",
+    "historical_blob": "399ccf9600a34c8ef2e7594d5f080230a87c0ba5",
+    "authority_blob": "6ff027f71f27e17620c5397f1f42553b28feee36",
+    "active_owner_committed_blob": "6ff027f71f27e17620c5397f1f42553b28feee36",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/home/use-overseas-country-counts.ts",
+    "historical_blob": "5b941d454ed7429e5db01c333fb3d3a968824c88",
+    "authority_blob": "533eb96862f9e93bacc2d839fcb6e541369cdbd2",
+    "active_owner_committed_blob": "533eb96862f9e93bacc2d839fcb6e541369cdbd2",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/layout/MainLayout.tsx",
+    "historical_blob": "287922f68b6a87ae4df10b02d88182e36f22ba72",
+    "authority_blob": "cb1ff480e20754211233b95e97710caf6ad6c92a",
+    "active_owner_committed_blob": "23f4a6a70845aa53d7a8fe5d18cb86adbb635c98",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/layout/NavigationPrefetcher.tsx",
+    "historical_blob": "d63a14b07b2a4dbfa809480b224636a96a583d6a",
+    "authority_blob": "76d3ba855ecbd9dc50d24d2fcf40d6271bff6ce9",
+    "active_owner_committed_blob": "76d3ba855ecbd9dc50d24d2fcf40d6271bff6ce9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/layout/OverlayLayout.tsx",
+    "historical_blob": "4338cc9912b1e89f39a08ceb752bda17200c48e3",
+    "authority_blob": "e2cfbb2ec67094f080e20cec67b5f47063776d53",
+    "active_owner_committed_blob": "e2cfbb2ec67094f080e20cec67b5f47063776d53",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/map/NaverMapView.tsx",
+    "historical_blob": "fdd0ccd4274bdd58f361dd0789580ff6ce48dcfd",
+    "authority_blob": "c1dc803486aa75bf576dba2c87234f40ac090be0",
+    "active_owner_committed_blob": "5f9637efa462fdd6a0bd9a869249138aa6837a93",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/map/OverseasMap.tsx",
+    "historical_blob": "fa9397e078874b0d55d355aa719a89070c1495a9",
+    "authority_blob": "44ee2dc4cc23ac3eb3fafc751f791eaa025b2266",
+    "active_owner_committed_blob": "44ee2dc4cc23ac3eb3fafc751f791eaa025b2266",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/profile/UserProfilePanel.tsx",
+    "historical_blob": "09afd45f2b951cc46ad6cd87c3f38945eace0f43",
+    "authority_blob": "eec14d12799aac1da08557e1239c18c95cb0a623",
+    "active_owner_committed_blob": "eec14d12799aac1da08557e1239c18c95cb0a623",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/profile/UserProfileProgressiveSkeleton.tsx",
+    "historical_blob": "7314868ea34d8698a79d7689c5928ab96878e417",
+    "authority_blob": "48010290c7a8252711c2e1bab3e17b10eb17435e",
+    "active_owner_committed_blob": "48010290c7a8252711c2e1bab3e17b10eb17435e",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/region/RegionSelector.tsx",
+    "historical_blob": "7d67cf2e1ecdd673d87b543eb10aad3a83398d5c",
+    "authority_blob": "babab963c99d69b69cdcb3d32d574d4d4ec6168a",
+    "active_owner_committed_blob": "babab963c99d69b69cdcb3d32d574d4d4ec6168a",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/search/RestaurantSearch.tsx",
+    "historical_blob": "5e4abe7b6490964f028e53c8ece3baadf07a0389",
+    "authority_blob": "bbe7f50daaec1ef1f70443e34bd4ae10b18a41ee",
+    "active_owner_committed_blob": "bbe7f50daaec1ef1f70443e34bd4ae10b18a41ee",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/ui/button.tsx",
+    "historical_blob": "826f61386fa00da8f2daf38c230ccfe60b671865",
+    "authority_blob": "04ecd1ab52302111a347420ae60b42b0384dc799",
+    "active_owner_committed_blob": "e072cb291e6b87fd2e0f58295c83a937656b09a2",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/ui/card.tsx",
+    "historical_blob": "e56aef5b7bfa004df8e7f17fd8a4188afa6639e8",
+    "authority_blob": "913c1d303eae4784a7b6abd5f4c0c361384cb4ee",
+    "active_owner_committed_blob": "83327904efe990212afd252529a0bf709f45539f",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/components/ui/data-pending.tsx",
+    "historical_blob": "4399616f19c01076ecc559bb467efdf2593bd7c5",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/components/ui/skeleton.tsx",
+    "historical_blob": "7cd6678918c6e0f7d1face7032f67958838174a6",
+    "authority_blob": "c67fbc4c693be70304e423172001f9747e8e8585",
+    "active_owner_committed_blob": "fbfefeda0688696e89e7bb2459a2b6d835c8bf52",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/constants/overseas-regions.ts",
+    "historical_blob": "a77c13ead73838d20e6c78419925438931e3caf3",
+    "authority_blob": "d06a7c93d7bec12252ae608e40252e605049a5a1",
+    "active_owner_committed_blob": "d06a7c93d7bec12252ae608e40252e605049a5a1",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/hooks/leaderboard-read-result.ts",
+    "historical_blob": "78864a44b95701ced2f749e649887dbda0edc2cb",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/hooks/use-announcements.tsx",
+    "historical_blob": "4e03268ff5cb5d86fd8511c2a08850d65f440392",
+    "authority_blob": "10a64608eba29230e02892613c58b3fac630bfea",
+    "active_owner_committed_blob": "10a64608eba29230e02892613c58b3fac630bfea",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/hooks/use-banner-announcements.tsx",
+    "historical_blob": "ec5428eb6bb3a374cc83f35a2228ed1b076eb765",
+    "authority_blob": "bf8461f5452545603d1a7bcf8eda02870448f439",
+    "active_owner_committed_blob": "bf8461f5452545603d1a7bcf8eda02870448f439",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/hooks/use-restaurants.tsx",
+    "historical_blob": "0e5735ce72b948519f2fddcf555c8aee457e55a5",
+    "authority_blob": "fca3ef5867ebb8f5cc36941fe98c1ec7205a4167",
+    "active_owner_committed_blob": "02d79053dcfa7969fe3909c982ccad162276e789",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/hooks/useLeaderboard.ts",
+    "historical_blob": "ae79f0d744fa4f5d39587483880455a3bff1fd21",
+    "authority_blob": "998d0ec49060301410e6aaeeb23d46c8255e9cdd",
+    "active_owner_committed_blob": "998d0ec49060301410e6aaeeb23d46c8255e9cdd",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/dashboard-visualization-data.ts",
+    "historical_blob": "382e7db4dd1318d74adc9cd470d13de13ffa35b0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/local-catalog-edit-client.ts",
+    "historical_blob": "5380d1c5bd725c997a1d65cdbdf83bf444ac84f5",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/local-catalog-edit.ts",
+    "historical_blob": "cc2b3b814e3a38049184b05744546849043f7343",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/local-catalog-evaluation-readback.ts",
+    "historical_blob": "1fe04d54b097c3bf10732bae709053d4e36fca78",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/admin/youtube-kpi-snapshots.ts",
+    "historical_blob": "76e0a62e6aa662e8e34b85b2197483d2e660c290",
+    "authority_blob": "34d8f6b2e5999af31175d0fc1ea411bb34bdec4d",
+    "active_owner_committed_blob": "34d8f6b2e5999af31175d0fc1ea411bb34bdec4d",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/announcement-localization.ts",
+    "historical_blob": "26f5f81b96441cf2fadcc1bfdfcb805031b70995",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/home-detail-route-state.ts",
+    "historical_blob": "08d2b0b5e91156a228a8e9efb1525fc300b255da",
+    "authority_blob": "93bc606a931bd5972e05868fd0403b03626c9120",
+    "active_owner_committed_blob": "93bc606a931bd5972e05868fd0403b03626c9120",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/home-map-theme-filters.ts",
+    "historical_blob": "5f321e5d5b1748850dbcc9266008dee5ea017a1c",
+    "authority_blob": "a371c505ef1b9dd08d12be34e8cbe0f472119213",
+    "active_owner_committed_blob": "a371c505ef1b9dd08d12be34e8cbe0f472119213",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/home-map-youtube-kpi.ts",
+    "historical_blob": "89fd91eb20d67f0763289cd0703417d537ce6e89",
+    "authority_blob": "da5aa3aba3cf5ddfb9c78a0966398db70586470e",
+    "active_owner_committed_blob": "da5aa3aba3cf5ddfb9c78a0966398db70586470e",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/map-query-helpers.ts",
+    "historical_blob": "86ae90583a6e028cdca76e4131205260f1e5559c",
+    "authority_blob": "33fc498b3c942b92dbfd73ca872992adff12bec0",
+    "active_owner_committed_blob": "33fc498b3c942b92dbfd73ca872992adff12bec0",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/overseas-region-matching.ts",
+    "historical_blob": "c05b57f7ba351721c7375afecfcefc4c2873f859",
+    "authority_blob": "9fef755950824ea7f8b8f0fbb713f9a562284fdf",
+    "active_owner_committed_blob": "9fef755950824ea7f8b8f0fbb713f9a562284fdf",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/popular-restaurants.ts",
+    "historical_blob": "2de993440a32ba0b865bfc22c1a99e2d1f67b336",
+    "authority_blob": "13675310614a7153a735bc51d449ffa9ede986a7",
+    "active_owner_committed_blob": "13675310614a7153a735bc51d449ffa9ede986a7",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/privacy/sanitize.ts",
+    "historical_blob": "c3dbe702b399505e1bbeea9332a0192fb4c83e0b",
+    "authority_blob": "db44a27ebc54b3fc4bdfa9af7f3902fea9c6b3f7",
+    "active_owner_committed_blob": "db44a27ebc54b3fc4bdfa9af7f3902fea9c6b3f7",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/restaurant-discovery-cache.ts",
+    "historical_blob": "ac3f601baa09462919d083480e07a65ad649d91d",
+    "authority_blob": "53ad715ce19745189753a8e145ffa99c34dffb82",
+    "active_owner_committed_blob": "53ad715ce19745189753a8e145ffa99c34dffb82",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/restaurant-popularity.ts",
+    "historical_blob": "1a16c1708f66894c31bb22b261abb9b533310db1",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/security/local-development-boundary.ts",
+    "historical_blob": "6e69bf3bcef38aa4a143a97e4492f0f776a58913",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/security/same-origin-mutation.ts",
+    "historical_blob": "879d8d5536c53280e65b5130b643c95559e81151",
+    "authority_blob": "afbd1ffefdd4c008e525039247955120fe57ee8e",
+    "active_owner_committed_blob": "afbd1ffefdd4c008e525039247955120fe57ee8e",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/lib/seo.ts",
+    "historical_blob": "50fb0110a2f0ac584f18b911efff7ecd4d32d1d0",
+    "authority_blob": "a5bb5a931cfe69eb28c455d28dc9bab1c8acc47e",
+    "active_owner_committed_blob": "a5bb5a931cfe69eb28c455d28dc9bab1c8acc47e",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/package-lock.json",
+    "historical_blob": "00b7f8d8feb4b55fb6d34459a2fc157c45af3175",
+    "authority_blob": "be289964c5e79c5d5f2ce9e9c05469565c9ca1b7",
+    "active_owner_committed_blob": "9057412e57e4d5cca753d79aff2c75eeb2634f1c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/package.json",
+    "historical_blob": "1cca3ab011e9154450eaddf9c4d0a195c5440380",
+    "authority_blob": "44d37c62fc9b8fcd106a2fcc24509f6a14304660",
+    "active_owner_committed_blob": "4fdb15ca75152d07cfb773436273621ee178eb6e",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/README.md",
+    "historical_blob": "def8c4cdfe850852de6021152e904b09fbb56ddf",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/artifact-map.json",
+    "historical_blob": "4e1186f62f733b583965764f725bc4f3623552aa",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-after/AdminConsoleOverview.tsx.txt",
+    "historical_blob": "d2f05a654f594ea61a5ffce8a4fa7837c900eb8d",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-after/DashboardDataTable.tsx.txt",
+    "historical_blob": "70102e2e00196b5252d6b016f2219c09bc2193df",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-after/dashboard-visualization-data.ts.txt",
+    "historical_blob": "382e7db4dd1318d74adc9cd470d13de13ffa35b0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-before/AdminConsoleOverview.tsx.txt",
+    "historical_blob": "ccb6fd9bcadac6ef1cf0013116d377173cd3c5e6",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/kpi-behavior-readback.json",
+    "historical_blob": "5f32e698092d1dac6df94648174a59ba11532e0a",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/layout-readback.json",
+    "historical_blob": "1c6048fdfd491548e0a4999d3f7a9982c9455d95",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/measure-table-render.tsx",
+    "historical_blob": "25f6a30ed74e519e1827c8fd5bbfebd4c3d822de",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/table-render-raw.json",
+    "historical_blob": "9bcfd03a9916099fcae4a29333f4747498bc69b8",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/table-render-scored.json",
+    "historical_blob": "dd00d4ac598552e444a39e8750a3a79681b0a5ec",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/verification.json",
+    "historical_blob": "a34ed145b0ed0286304d6ca084d0426563379643",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/address-exploratory.json",
+    "historical_blob": "26c417916f2600a374aaa792d9b779cd0f06ec1e",
+    "authority_blob": "26c417916f2600a374aaa792d9b779cd0f06ec1e",
+    "active_owner_committed_blob": "26c417916f2600a374aaa792d9b779cd0f06ec1e",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/count-cache-artifact-map.json",
+    "historical_blob": "f159976b4d0f6403e7d90708fb88e90480c0d28e",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/count-cache-functional-readback.json",
+    "historical_blob": "3a2432e0fa3417c5658e278723391e922ffc7ce0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/home-script-inventory.json",
+    "historical_blob": "3b6c1b0ebba55d338080538532aa1f53e82ebc25",
+    "authority_blob": "3b6c1b0ebba55d338080538532aa1f53e82ebc25",
+    "active_owner_committed_blob": "3b6c1b0ebba55d338080538532aa1f53e82ebc25",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/local-replay-acl-diagnosis.json",
+    "historical_blob": "6e54bab294ab3cd1df6b35ecc614c5ddb15d9a3e",
+    "authority_blob": "6e54bab294ab3cd1df6b35ecc614c5ddb15d9a3e",
+    "active_owner_committed_blob": "6e54bab294ab3cd1df6b35ecc614c5ddb15d9a3e",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/local-runtime-admission.json",
+    "historical_blob": "26442e7bf8c514037b2631e7b1186b571cef2c22",
+    "authority_blob": "26442e7bf8c514037b2631e7b1186b571cef2c22",
+    "active_owner_committed_blob": "26442e7bf8c514037b2631e7b1186b571cef2c22",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/local-runtime-functional-verification.json",
+    "historical_blob": "e0b6d8d7ec2548387fe280260e843e9a6ddc5c5f",
+    "authority_blob": "e0b6d8d7ec2548387fe280260e843e9a6ddc5c5f",
+    "active_owner_committed_blob": "e0b6d8d7ec2548387fe280260e843e9a6ddc5c5f",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/naver-browser-preparation.json",
+    "historical_blob": "75396a9f0a9cc9099ff222971cb2d0d1df1a4515",
+    "authority_blob": "75396a9f0a9cc9099ff222971cb2d0d1df1a4515",
+    "active_owner_committed_blob": "75396a9f0a9cc9099ff222971cb2d0d1df1a4515",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/naver-query-scheduling.json",
+    "historical_blob": "173a51c582474340f59057c06a76c1cb810d21bd",
+    "authority_blob": "173a51c582474340f59057c06a76c1cb810d21bd",
+    "active_owner_committed_blob": "173a51c582474340f59057c06a76c1cb810d21bd",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/replay-command-verification.json",
+    "historical_blob": "9775faf6e1cfa134ec7ca8ee217b795f404b87f1",
+    "authority_blob": "9775faf6e1cfa134ec7ca8ee217b795f404b87f1",
+    "active_owner_committed_blob": "9775faf6e1cfa134ec7ca8ee217b795f404b87f1",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/replay-v2-integration.json",
+    "historical_blob": "cac77803afd3568cd45e24a23cd34e2de68a56a9",
+    "authority_blob": "cac77803afd3568cd45e24a23cd34e2de68a56a9",
+    "active_owner_committed_blob": "cac77803afd3568cd45e24a23cd34e2de68a56a9",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/verification.json",
+    "historical_blob": "4f2fd1b0f2d9e037048688d48bc716d39e73d9dd",
+    "authority_blob": "4f2fd1b0f2d9e037048688d48bc716d39e73d9dd",
+    "active_owner_committed_blob": "4f2fd1b0f2d9e037048688d48bc716d39e73d9dd",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/README.md",
+    "historical_blob": "adad46f209d9e343d2be21d61c2db081e11e9d48",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/artifact-map.json",
+    "historical_blob": "effb10a7d62743fc60633031511b49cdfb2c5de0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/baseline.source",
+    "historical_blob": "56856cfb7a6f6085f2f7c620e21f7c024dd8ddf2",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/candidate.source",
+    "historical_blob": "76e0a62e6aa662e8e34b85b2197483d2e660c290",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/freeze.json",
+    "historical_blob": "833356c1da1d826679afd10fe5351d1fa51b545e",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/measure.mjs",
+    "historical_blob": "82d55775d03201955f7596b40605a8520310a6b6",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/raw.json",
+    "historical_blob": "9884f1b4b3ad6ca802455256561042cc35ead775",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/runtime-tests.source",
+    "historical_blob": "2b27f6cce7f00b368a35a7107fc819e0b16bcf7d",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/score.mjs",
+    "historical_blob": "d3d208222a9fd679b9b17eb93753082e6535b146",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/scored.json",
+    "historical_blob": "ff0aebf45d6ec32455268b300fd964dff72443da",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/treemap.source",
+    "historical_blob": "be3ecef63843738dfafa0796de40d4335fff774f",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/verification.json",
+    "historical_blob": "a682ca141a47cdd2cb25011dea0205ad8758872e",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/public/__local/naver-maps.js",
+    "historical_blob": "25940240cf0b055d62f70b0ce89a0efa684d5d28",
+    "authority_blob": "25940240cf0b055d62f70b0ce89a0efa684d5d28",
+    "active_owner_committed_blob": "25940240cf0b055d62f70b0ce89a0efa684d5d28",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/public/fonts/suit/LICENSE",
+    "historical_blob": "7ee44cf05fe09f5dc9293f40b96f3f9f66478d65",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/public/fonts/suit/README.md",
+    "historical_blob": "0d1e875a59d7801b1edff9f5b66876ec3e261ed9",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/public/fonts/suit/SUIT-Variable.woff2",
+    "historical_blob": "89d7e4c28fe8069a8110a79dc7ca3cd446745de9",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/public/llms-full.txt",
+    "historical_blob": "c18496504ef77328211cc16323bbdae704c9d64f",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/public/llms.txt",
+    "historical_blob": "fe15e63dcb4a30078bdb7646aaab1655ed4e3fb6",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/scripts/dev-prewarm.mjs",
+    "historical_blob": "7dc6eb71ae96fb50f19d9f60744f1a98be9f3cf1",
+    "authority_blob": "133a24752dc08c23298843e592e09d48c38a0a0c",
+    "active_owner_committed_blob": "133a24752dc08c23298843e592e09d48c38a0a0c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/scripts/local-supabase-runtime.mjs",
+    "historical_blob": "ccabddbb15e6fe5400fe4c182a00f12bf6ccc6c1",
+    "authority_blob": "5102b0da89f2ec5c529830c0ddb39d2ff03c1616",
+    "active_owner_committed_blob": "5102b0da89f2ec5c529830c0ddb39d2ff03c1616",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/scripts/run-local-dev.mjs",
+    "historical_blob": "47b285fcb26c90266e2c1786e0eec211a4a0a0fa",
+    "authority_blob": "f6f4b7b2f3b88f9b5f136dc82d1e91aa3f97a609",
+    "active_owner_committed_blob": "f6f4b7b2f3b88f9b5f136dc82d1e91aa3f97a609",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/scripts/run-nightly-regression.mjs",
+    "historical_blob": "49582c8a765a9c47a95e01991f079e0d075cd0cc",
+    "authority_blob": "c0e2f914de35eafa898ff79c9dcfafc7df42cc68",
+    "active_owner_committed_blob": "0a6123ddb7d6dfad2852174ea9561cc649c2d02d",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/scripts/sanitize-evaluation-evidence.ts",
+    "historical_blob": "ef10b1f8d7c268b90e52189a46a34062c704edbb",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+    "historical_blob": "3e61c61166d976dd3ca6ed37b221ad6944cf1589",
+    "authority_blob": "9e057d3c477541b37570624d4f2bfdc85eba1d8a",
+    "active_owner_committed_blob": "c825ac1385a0c649f0d2ceeee7b2a88485c422dc",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-evaluation-pending-layout.test.tsx",
+    "historical_blob": "d806cacd4d8875f155d7b5675ff0276f1806d245",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+    "historical_blob": "2ee9219d4d5deb21a8f551d8b603cd9b5e5ef7ce",
+    "authority_blob": "7fd4e29da2b6110e3ee7eaf725ceea1bd2450ad9",
+    "active_owner_committed_blob": "6049b6560982a9fbff83fe8de9f3d7e8845c74cd",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/admin-owned-pending-render.test.tsx",
+    "historical_blob": "44652273a70c4ed67e4419f7741e8637d5e3f76b",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-refresh-apply-route.test.ts",
+    "historical_blob": "865279215d4cfd3cff1dd23e8becdecfd5042f2f",
+    "authority_blob": "865279215d4cfd3cff1dd23e8becdecfd5042f2f",
+    "active_owner_committed_blob": "865279215d4cfd3cff1dd23e8becdecfd5042f2f",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+    "historical_blob": "50b34f8254c2f5388243e4c2c255fb90d71a5fd2",
+    "authority_blob": "50b34f8254c2f5388243e4c2c255fb90d71a5fd2",
+    "active_owner_committed_blob": "a0aca98fcd39cc85481289a63784e55be6646554",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/announcement-localization.test.ts",
+    "historical_blob": "5c0f24bb6515c247d32b68c2b8e73c5283c8c805",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/auth-profile-localized-pending.test.tsx",
+    "historical_blob": "65eeeda50de3423cc055fd8afdf2c555dd6bb509",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/category-count-state.test.tsx",
+    "historical_blob": "fe1659fbe332d14b484b648582f147996b7129a4",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/dashboard-data-table.test.tsx",
+    "historical_blob": "274ce0756ffea69d775ef85a6eaa69ca17c0bb60",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/dashboard-visualization-data.test.ts",
+    "historical_blob": "aec6bafc9070c2a9cecac3a4eca96bf9525069aa",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/home-detail-route-state.test.ts",
+    "historical_blob": "eadabcc5aedab0aeade7b28431c6a17814cd8278",
+    "authority_blob": "cc9216c276c6b0cabfb8f41118e9ddab0694b1e7",
+    "active_owner_committed_blob": "cc9216c276c6b0cabfb8f41118e9ddab0694b1e7",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/home-initial-layout-render.test.tsx",
+    "historical_blob": "7993ff054b7cbe8990f3a01d85447dc2670c22ce",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/home-map-theme-filters.test.ts",
+    "historical_blob": "13a9879f4bb29fa696d06f957c971bf4cc421b69",
+    "authority_blob": "9912ecd84c3c4b601eb93c4e586096a9da01d6ac",
+    "active_owner_committed_blob": "9912ecd84c3c4b601eb93c4e586096a9da01d6ac",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+    "historical_blob": "54e3a8d7ba8cdede7bbaab93609f8e483ef30f81",
+    "authority_blob": "5435d33930a84fe6096cc1bd3e3c035f4cdd7a7b",
+    "active_owner_committed_blob": "5435d33930a84fe6096cc1bd3e3c035f4cdd7a7b",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/home-root-lazy-boundary.test.ts",
+    "historical_blob": "2eb3d63a20eef5e85a9cc211ec28be4a50cd5ffb",
+    "authority_blob": "5f0a3a8dfb9bae767ddaa13b7e7712e50e3b0827",
+    "active_owner_committed_blob": "5f0a3a8dfb9bae767ddaa13b7e7712e50e3b0827",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/local-catalog-edit-client.test.ts",
+    "historical_blob": "33e15a02e329ab447d8da41681adee961b50b0d2",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/local-catalog-edit.test.ts",
+    "historical_blob": "cfaaafe781c67883cde87e612576db5c67bb5d43",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/local-catalog-evaluation-readback.test.ts",
+    "historical_blob": "2b18be3242986a77f1beac81260adeeb1f1aeeb0",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/local-dev-runtime-inheritance.test.ts",
+    "historical_blob": "bb2465d22cc2cfad4e535ce42dfacd54824a2c9c",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/local-naver-map-stub.test.ts",
+    "historical_blob": "eeb5f4aa646b548c2479ddd773d9e6ae50cae46b",
+    "authority_blob": "eeb5f4aa646b548c2479ddd773d9e6ae50cae46b",
+    "active_owner_committed_blob": "eeb5f4aa646b548c2479ddd773d9e6ae50cae46b",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/local-supabase-runtime.test.ts",
+    "historical_blob": "334bece0069ded61ee27e41873be2ee466c9aed3",
+    "authority_blob": "ac820334adab6c34da1261d035200310eed8cea9",
+    "active_owner_committed_blob": "67b2a46fca36842e7a6598d62dc1ca3df8df8dbb",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/local-youtube-kpi-refresh.test.ts",
+    "historical_blob": "267a438cfce46ccc68fb3eb0080a791080a0af89",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/map-query-helpers.test.ts",
+    "historical_blob": "b87845391a36ba32b4db4b34e5a91ca79583eae7",
+    "authority_blob": "aafd37331a3df54a10390563f2ee29949a2584c7",
+    "active_owner_committed_blob": "aafd37331a3df54a10390563f2ee29949a2584c7",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+    "historical_blob": "94616f425ad1546c435442d7c5bf324f212b67b1",
+    "authority_blob": "827d34fff5d3a57ca1453262ae103078f7f25aa4",
+    "active_owner_committed_blob": "404343a0b21fa11433c5cdb9eccdab12b57b7aa9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/mypage-mobile-cleanup-contract.test.ts",
+    "historical_blob": "fd67bb88ebdd224cd56d6fd4fc1dd0be7a9c32d8",
+    "authority_blob": "dc71d1e3f2006dbf9d181b523a25490983c89eb8",
+    "active_owner_committed_blob": "66d8ba45b3487c75de21991d36320e18de391829",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/naver-query-startup.test.ts",
+    "historical_blob": "dd0adff9aafd888e24e8752821416c9a10478484",
+    "authority_blob": "dd0adff9aafd888e24e8752821416c9a10478484",
+    "active_owner_committed_blob": "dd0adff9aafd888e24e8752821416c9a10478484",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+    "historical_blob": "7150640fc77e9d2658ab61413ee02cc2f6040ccb",
+    "authority_blob": "d2920aa5112b3524f8545e1cb30b5587b3f5aa80",
+    "active_owner_committed_blob": "2c773d4f1920f9e25fcf868b27f756e2d711d411",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/overseas-region-matching.test.ts",
+    "historical_blob": "fbca90ed7014704aa1934c126596e0704c7bd3cb",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/privacy-sanitize.test.ts",
+    "historical_blob": "f6b66f246f35932bb73f379ae2c5cdbccb58520f",
+    "authority_blob": "6ddf7e9d60bf2112fd39698b45eee64b42eb3d8a",
+    "active_owner_committed_blob": "6ddf7e9d60bf2112fd39698b45eee64b42eb3d8a",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/public-feed-leaderboard-state.test.tsx",
+    "historical_blob": "84bfa0f60944adeb57c827f62d783edc013f1bdc",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/public-route-data-layout.test.tsx",
+    "historical_blob": "e44eee9b5f90313996b928b2fae24458e60c000d",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/restaurant-discovery-cache.test.ts",
+    "historical_blob": "e0464cbe50e28850d0a5147ff8e49cde6ebe29a8",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/restaurant-popularity.test.ts",
+    "historical_blob": "26c3d75c6787624a931d32aaf11fded749748661",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/root-layout-local-runtime-contract.test.ts",
+    "historical_blob": "514008484ece6f826bc0309486bef1262beccba1",
+    "authority_blob": "f833659e4dae4407efc6ad7d09dc3ae1c9197d88",
+    "active_owner_committed_blob": "f833659e4dae4407efc6ad7d09dc3ae1c9197d88",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/same-origin-mutation.test.ts",
+    "historical_blob": "66ab11f4b8ede70d92d29124dd7155e87185f2ec",
+    "authority_blob": "48554e26c22a622cd6a5ef92c061ecfc53273745",
+    "active_owner_committed_blob": "48554e26c22a622cd6a5ef92c061ecfc53273745",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/seo-source.test.ts",
+    "historical_blob": "8f163927bad66be2ecd0e648812ee0ac7beb6247",
+    "authority_blob": "fc14742307219d67e57f619785cc0984708e3f6c",
+    "active_owner_committed_blob": "fc14742307219d67e57f619785cc0984708e3f6c",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+    "historical_blob": "f9880272050412e33ddd1bf6fa89cf6b62cbc2b4",
+    "authority_blob": "108efcd25080390775a9d31d04c1aa1df9bb631b",
+    "active_owner_committed_blob": "f9880272050412e33ddd1bf6fa89cf6b62cbc2b4",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": true,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/web-quality-performance-source.test.ts",
+    "historical_blob": "9de592e839469dc546871b41b9c69d0f5744dca4",
+    "authority_blob": "7450350bceae7e5a1d4b52f47edb8557c02cb705",
+    "active_owner_committed_blob": "fd846429588a370454d271888075d91f57c92b13",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "apps/web/tests-unit/youtube-kpi-snapshot-contract.test.ts",
+    "historical_blob": "db65d05c48281ee3d232af02e6ee26a73edebd06",
+    "authority_blob": "446cbb81b8dcd4255638e2ca8a770787a2f88ea2",
+    "active_owner_committed_blob": "446cbb81b8dcd4255638e2ca8a770787a2f88ea2",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests-unit/youtube-kpi-snapshots-runtime.test.ts",
+    "historical_blob": "2b27f6cce7f00b368a35a7107fc819e0b16bcf7d",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-kpi-dashboard-runtime.spec.ts",
+    "historical_blob": "63196bcf843fd421c9d0fd4cd7b19936b82aeb06",
+    "authority_blob": "256714065aa84466ddca280b716320aef1aa07dc",
+    "active_owner_committed_blob": "256714065aa84466ddca280b716320aef1aa07dc",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/admin-module-ready.ts",
+    "historical_blob": "9a3147505b434afe70e11b859bf0451df0cb45e7",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/home-map-contextual-discovery.spec.ts",
+    "historical_blob": "7272bdba4f48a712303070c3eef3fdbfd63b0817",
+    "authority_blob": "5bdbf5abc8ebc265f5718890243a00fd92d71ff3",
+    "active_owner_committed_blob": "5bdbf5abc8ebc265f5718890243a00fd92d71ff3",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/mobile-home-map-helpers.ts",
+    "historical_blob": "5a4c188347eea4cb9f9a6ff1ddbe8c34aca0ba4c",
+    "authority_blob": "b187cfbedf4fa5db49411ece8545b3ccfd5d23cb",
+    "active_owner_committed_blob": "b187cfbedf4fa5db49411ece8545b3ccfd5d23cb",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/mobile-home-map.spec.ts",
+    "historical_blob": "35587af4cfbbad2bafa75c9b5a36b44b7862abf7",
+    "authority_blob": "fb5cd56df7d48b365b50d81004d4f21c10f37512",
+    "active_owner_committed_blob": "fb5cd56df7d48b365b50d81004d4f21c10f37512",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/naver-query-startup.spec.ts",
+    "historical_blob": "c625d84a970fd9bcf3df7e9fdd1d3cb71c4928cb",
+    "authority_blob": "c625d84a970fd9bcf3df7e9fdd1d3cb71c4928cb",
+    "active_owner_committed_blob": "c625d84a970fd9bcf3df7e9fdd1d3cb71c4928cb",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/nightly/nightly-test.ts",
+    "historical_blob": "ef8e36a3cf7bb8f745841db625bc60da89c95130",
+    "authority_blob": "02c39b7fe029e9ca5318694060ab5636c3695b99",
+    "active_owner_committed_blob": "02c39b7fe029e9ca5318694060ab5636c3695b99",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "apps/web/tests/qa-integration.spec.ts",
+    "historical_blob": "f86e601c4027043f8b295d6122499ede1a379c6a",
+    "authority_blob": "15402f049f08c844d5b5647b0f2c0fa5577c5b6e",
+    "active_owner_committed_blob": "15402f049f08c844d5b5647b0f2c0fa5577c5b6e",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/bin/evaluate_new_youtube_videos.py",
+    "historical_blob": "c1e222ec7258a23021a663494dae4543e86582ec",
+    "authority_blob": "f2ab2b0ad280532fe2a57185ead06402aa653b54",
+    "active_owner_committed_blob": "f2ab2b0ad280532fe2a57185ead06402aa653b54",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/bin/run_trend_dry_run.py",
+    "historical_blob": "285805d4cbd856dc3367766e20a2db31cc09a7bf",
+    "authority_blob": "3cca514450aaef11de9ca5fda05d4dce9b97f4ea",
+    "active_owner_committed_blob": "3cca514450aaef11de9ca5fda05d4dce9b97f4ea",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+    "historical_blob": "c8becf4227b776ac5663bbcfb84d2d89bfcf954c",
+    "authority_blob": "e3ba0dfa1736f687eb7578f1e763e142e809fa42",
+    "active_owner_committed_blob": "1c774ade241de54cf7429f1c620f0af539853fa6",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/restaurant-crawling/scripts/split_video_chunks.mjs",
+    "historical_blob": "f1ccc0405876e10fd94a64b2f9047668de383a4a",
+    "authority_blob": "52b2ca1d2f4b762b68b0c2aa021158b0ae66fbf2",
+    "active_owner_committed_blob": "5005abfe969ef78420bc34a580409358fa3e6bad",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_BUNDLE.v4.json",
+    "historical_blob": "6233f6024ba63bfa77475ded26b65dff54f79285",
+    "authority_blob": "6233f6024ba63bfa77475ded26b65dff54f79285",
+    "active_owner_committed_blob": "6233f6024ba63bfa77475ded26b65dff54f79285",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json",
+    "historical_blob": "70d0087ca5b6ae0ea8b85fef0670c93c411262db",
+    "authority_blob": "70d0087ca5b6ae0ea8b85fef0670c93c411262db",
+    "active_owner_committed_blob": "70d0087ca5b6ae0ea8b85fef0670c93c411262db",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/baselines/local/application-prerequisites.sql",
+    "historical_blob": "039e7ce63f7f2ad25967ec72e277867ccbbc5191",
+    "authority_blob": "039e7ce63f7f2ad25967ec72e277867ccbbc5191",
+    "active_owner_committed_blob": "039e7ce63f7f2ad25967ec72e277867ccbbc5191",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/candidates/20260906064459_admin_restaurant_refresh_apply_boundary.sql",
+    "historical_blob": "d474704c7481887a4659b9eee2033bc9e9438522",
+    "authority_blob": "d474704c7481887a4659b9eee2033bc9e9438522",
+    "active_owner_committed_blob": "d474704c7481887a4659b9eee2033bc9e9438522",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/candidates/restaurant_catalog_edit_api.sql",
+    "historical_blob": "788f7699a2232048ab3648d31557be64b84cccea",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/candidates/restaurant_catalog_edit_core.sql",
+    "historical_blob": "e0be678c1c0e314822224af818f72a82a7b47b89",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/candidates/restaurant_catalog_publish_api.sql",
+    "historical_blob": "7157b87a22ecc1948ad6633f60330a1c3ca54007",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/candidates/restaurant_catalog_publish_core.sql",
+    "historical_blob": "8c5f8a514debca2fc57db290ca799ce306eb9421",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/docs/admin-management-group-catalog-slice.md",
+    "historical_blob": "f1394c6f7cc45cdbcfe422854b300c909495b4f6",
+    "authority_blob": "f1394c6f7cc45cdbcfe422854b300c909495b4f6",
+    "active_owner_committed_blob": "f1394c6f7cc45cdbcfe422854b300c909495b4f6",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/docs/catalog-generator-local-docker.md",
+    "historical_blob": "7c072d900e607886e49d0ca4ef1754542e5eeee4",
+    "authority_blob": "7c072d900e607886e49d0ca4ef1754542e5eeee4",
+    "active_owner_committed_blob": "7c072d900e607886e49d0ca4ef1754542e5eeee4",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/docs/g014-pg17-owner-recovery.md",
+    "historical_blob": "539955f9f0eb39096f5018c09db08c141b61934d",
+    "authority_blob": "539955f9f0eb39096f5018c09db08c141b61934d",
+    "active_owner_committed_blob": "539955f9f0eb39096f5018c09db08c141b61934d",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/docs/local-working-catalog.md",
+    "historical_blob": "cfab05dff27861fb0ad97aa20c1e8678f8511a96",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/docs/restaurant-refresh-apply-boundary.md",
+    "historical_blob": "a117cdcec446f3c12d7e99949db7db361c5e53db",
+    "authority_blob": "a117cdcec446f3c12d7e99949db7db361c5e53db",
+    "active_owner_committed_blob": "a117cdcec446f3c12d7e99949db7db361c5e53db",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+    "historical_blob": "da2f8cfbeb8dc1cbeeee0a2073d68bf21732a0ca",
+    "authority_blob": "da2f8cfbeb8dc1cbeeee0a2073d68bf21732a0ca",
+    "active_owner_committed_blob": "da2f8cfbeb8dc1cbeeee0a2073d68bf21732a0ca",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+    "historical_blob": "00add1fb199791c646539be8c95a842578d20013",
+    "authority_blob": "00add1fb199791c646539be8c95a842578d20013",
+    "active_owner_committed_blob": "00add1fb199791c646539be8c95a842578d20013",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/migrations/20260908000100_separate_ingestion_candidate_identity.sql",
+    "historical_blob": "4f5fef29aa1bf9a23e4bd9fb649f532573f774a1",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/admin_management_group_plan.py",
+    "historical_blob": "7d64ec2b272d8a9f115ff0373ad453a50a2c35a3",
+    "authority_blob": "7d64ec2b272d8a9f115ff0373ad453a50a2c35a3",
+    "active_owner_committed_blob": "7d64ec2b272d8a9f115ff0373ad453a50a2c35a3",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/admin_user_ids_slice_plan.py",
+    "historical_blob": "69ca2ae0628b75331a1c2782a8871a8034e076f0",
+    "authority_blob": "69ca2ae0628b75331a1c2782a8871a8034e076f0",
+    "active_owner_committed_blob": "69ca2ae0628b75331a1c2782a8871a8034e076f0",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/catalog_docker_endpoint.py",
+    "historical_blob": "56976c62b1569842ce553516d399839713171a11",
+    "authority_blob": "56976c62b1569842ce553516d399839713171a11",
+    "active_owner_committed_blob": "2ace64d7bf07a3f86adace9981f18139bdda2b35",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/scripts/catalog_publish_operator.py",
+    "historical_blob": "37ec2026202991f22d595ba57497c99f0998021f",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/catalog_publish_transport.py",
+    "historical_blob": "81387e236d10ce000c7c08b25e2b3af5886aa686",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/g014_catalog_diagnostic.py",
+    "historical_blob": "e37495af17cab1a952d9d56a8edcd12df97e9b96",
+    "authority_blob": "e37495af17cab1a952d9d56a8edcd12df97e9b96",
+    "active_owner_committed_blob": "e37495af17cab1a952d9d56a8edcd12df97e9b96",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+    "historical_blob": "904662d0863063b08da75e4eb84c070b53145755",
+    "authority_blob": "904662d0863063b08da75e4eb84c070b53145755",
+    "active_owner_committed_blob": "e29aa4b8243f34a81b3ddc36908470e2f8c39cee",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/scripts/hosted_data_plane.py",
+    "historical_blob": "9084e44c2cc7faa1e9802b378cc1a46e471905d9",
+    "authority_blob": "bd7f979713340adc41f840cf41815a3064505bcf",
+    "active_owner_committed_blob": "bd7f979713340adc41f840cf41815a3064505bcf",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local-function-runtime-scan.py",
+    "historical_blob": "b4ce06f2a0feddc2878b74310922dc6146248706",
+    "authority_blob": "b4ce06f2a0feddc2878b74310922dc6146248706",
+    "active_owner_committed_blob": "b4ce06f2a0feddc2878b74310922dc6146248706",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local-migrate.py",
+    "historical_blob": "70550f416560eeef74c24ff48a7bfd2cb41af9b8",
+    "authority_blob": "0e5a4b0fc28216ab8a8779038142947b06f1370b",
+    "active_owner_committed_blob": "9c68b38af1abc5e836948f4a7425b5a0a6620a34",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/scripts/local_catalog_edit_install.py",
+    "historical_blob": "9b21b669f3b6412761c9b643531050d9c6a7a6da",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local_catalog_publish.py",
+    "historical_blob": "3d5664062607db02fceae4c7d7cf00a0206c25c3",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local_catalog_publish_plan.py",
+    "historical_blob": "05dfb0a30dd7baa8848d89cd2724625ea6a42e62",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local_catalog_workspace.py",
+    "historical_blob": "2131100cad1caf103c43bd63f27c5e60c0e203b9",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local_evaluation_review.py",
+    "historical_blob": "862811ae8f8fa05c579415e5b656392c675d7078",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local_replay_contract.py",
+    "historical_blob": "48d6a59a983cce0f002a48e8dbea7ff1b7413353",
+    "authority_blob": "48d6a59a983cce0f002a48e8dbea7ff1b7413353",
+    "active_owner_committed_blob": "48d6a59a983cce0f002a48e8dbea7ff1b7413353",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local_review_place_evidence.py",
+    "historical_blob": "afc8164a54346d41feb98a891bd9e74de43e6830",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/local_working_schema.py",
+    "historical_blob": "9c36ff8f9605e13d824fc1840f1714eedd589b6a",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/recover_advisor_replay_prerequisites.py",
+    "historical_blob": "93a1c824be93249b986af40547234f170206e65e",
+    "authority_blob": "93a1c824be93249b986af40547234f170206e65e",
+    "active_owner_committed_blob": "93a1c824be93249b986af40547234f170206e65e",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/refresh-local-youtube-kpis.mjs",
+    "historical_blob": "9e6d7c4f782018e9372eb139d40a70b476d14744",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/test_catalog_publish_operator.py",
+    "historical_blob": "ff64ae3d56e93f549f57eb4a239ec00011f2a330",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/test_catalog_publish_transport.py",
+    "historical_blob": "4666ef8454715bacb797280ffefa05ff986c71db",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/test_hosted_data_plane.py",
+    "historical_blob": "b3d88774240dde5937d7cd51d7640c837c95565c",
+    "authority_blob": "15679661574eb71bdeda2ba25657eb345e7aca22",
+    "active_owner_committed_blob": "15679661574eb71bdeda2ba25657eb345e7aca22",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/test_local_catalog_edit_install.py",
+    "historical_blob": "77623cf1a23856f26269708cac23326b4eedbfbd",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/test_local_catalog_publish_plan.py",
+    "historical_blob": "1da13b477b19fa0e49288806f1e74bc0823e02cc",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/test_local_catalog_workspace.py",
+    "historical_blob": "467b56a88ce656ab970514e7afda09af7088c219",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/test_local_evaluation_review.py",
+    "historical_blob": "980e0d2ae09f806a40d4e84c84443d45fbde664c",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/verify_admin_management_group_replay.py",
+    "historical_blob": "11d4aad9126892451ef74bc94f828683f24a2d27",
+    "authority_blob": "11d4aad9126892451ef74bc94f828683f24a2d27",
+    "active_owner_committed_blob": "11d4aad9126892451ef74bc94f828683f24a2d27",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/verify_g014_pg17_owner_replay.py",
+    "historical_blob": "8d4abf8c5818ddb195a0a017fe16b3dc7affb8e0",
+    "authority_blob": "8d4abf8c5818ddb195a0a017fe16b3dc7affb8e0",
+    "active_owner_committed_blob": "8d4abf8c5818ddb195a0a017fe16b3dc7affb8e0",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/verify_g026_reconstruction_bundle.py",
+    "historical_blob": "6dbe3e08681b522879433ed85e5a4d5aad9d3e36",
+    "authority_blob": "6dbe3e08681b522879433ed85e5a4d5aad9d3e36",
+    "active_owner_committed_blob": "6dbe3e08681b522879433ed85e5a4d5aad9d3e36",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/scripts/verify_ingestion_identity.sql",
+    "historical_blob": "fa8a01ab1bfcd588596ec09a01e8d8627421d408",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_admin_management_group.py",
+    "historical_blob": "53d63c5b146d5d8095bc42bf3b133e47a4beb40d",
+    "authority_blob": "53d63c5b146d5d8095bc42bf3b133e47a4beb40d",
+    "active_owner_committed_blob": "53d63c5b146d5d8095bc42bf3b133e47a4beb40d",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_admin_management_group_replay.py",
+    "historical_blob": "4e71e31233d3d9b4b974a975a12ba28f3e2dfcc2",
+    "authority_blob": "4e71e31233d3d9b4b974a975a12ba28f3e2dfcc2",
+    "active_owner_committed_blob": "4e71e31233d3d9b4b974a975a12ba28f3e2dfcc2",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_admin_user_ids_catalog_slice.py",
+    "historical_blob": "6605451a6fddc0405e1716cab95456aa513a75eb",
+    "authority_blob": "6605451a6fddc0405e1716cab95456aa513a75eb",
+    "active_owner_committed_blob": "6605451a6fddc0405e1716cab95456aa513a75eb",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_admin_user_ids_replay.py",
+    "historical_blob": "43a7d6981c91bb903c8d5e8585d8a9e3cd487dbc",
+    "authority_blob": "43a7d6981c91bb903c8d5e8585d8a9e3cd487dbc",
+    "active_owner_committed_blob": "43a7d6981c91bb903c8d5e8585d8a9e3cd487dbc",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_catalog_docker_endpoint.py",
+    "historical_blob": "0098fcdb01979bf21d54242f007dde564bdea635",
+    "authority_blob": "0098fcdb01979bf21d54242f007dde564bdea635",
+    "active_owner_committed_blob": "ac4a8d68d7b3867102ffc3185762f59e2b30c2bb",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/tests/test_g014_diagnostic_admission.py",
+    "historical_blob": "1647a5dffc85beba57f28807189f3b4b7c90854a",
+    "authority_blob": "1647a5dffc85beba57f28807189f3b4b7c90854a",
+    "active_owner_committed_blob": "1647a5dffc85beba57f28807189f3b4b7c90854a",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_g014_pg17_owner_contract.py",
+    "historical_blob": "a5931dc4f9d44156e126c161ec1bf04da68f2bc7",
+    "authority_blob": "a5931dc4f9d44156e126c161ec1bf04da68f2bc7",
+    "active_owner_committed_blob": "a5931dc4f9d44156e126c161ec1bf04da68f2bc7",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_g026_reconstruction_bundle.py",
+    "historical_blob": "a7494c0da8cd77ba1c289a94887ba67ee6a74873",
+    "authority_blob": "a7494c0da8cd77ba1c289a94887ba67ee6a74873",
+    "active_owner_committed_blob": "a7494c0da8cd77ba1c289a94887ba67ee6a74873",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_local_function_runtime_contract.py",
+    "historical_blob": "9576e6e5f7354efca7584a7054988dc77c3138e0",
+    "authority_blob": "eba34186494bc751f0d6836a25dd5e424921b4e3",
+    "active_owner_committed_blob": "eba34186494bc751f0d6836a25dd5e424921b4e3",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_local_migration_contract.py",
+    "historical_blob": "22f9ad940f904ad42cc2ed1f9046c7edf7d7c40b",
+    "authority_blob": "22f9ad940f904ad42cc2ed1f9046c7edf7d7c40b",
+    "active_owner_committed_blob": "22f9ad940f904ad42cc2ed1f9046c7edf7d7c40b",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_local_publication_verifier.py",
+    "historical_blob": "323b70eeb27a4259e69d46a48a6f0b8582d2bd23",
+    "authority_blob": "5502e1058832adccd106a64aedb4b89b510b07a8",
+    "active_owner_committed_blob": "f577e707f89e5d8e508fe1b275cc301940dc5f31",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/tests/test_local_replay_contract.py",
+    "historical_blob": "8d71d9f4687b19aec2810db178713f3d550648fc",
+    "authority_blob": "d2dd89aa2b082ea4e27481b1c73ac0cd5130221a",
+    "active_owner_committed_blob": "88c520f85b2556e3f7eb0286b7fda48ab0b5d600",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/tests/test_local_seed_receipt_contract.py",
+    "historical_blob": "8e573eed04c8c6e456d8d32697adbcb542d1ae67",
+    "authority_blob": "5597f351c610139486921b6a99b80c28acc80dda",
+    "active_owner_committed_blob": "f494c8df96e371b60ff2c07182dcb6c2fab65cf9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": true
+  },
+  {
+    "path": "backend/supabase/tests/test_restaurant_catalog_edit_core.py",
+    "historical_blob": "afa5ab9601a6598861a4d2ec28412deb2e4704b4",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/supabase/tests/test_restaurant_refresh_apply_boundary.py",
+    "historical_blob": "8635649ad72feb65f81dc5911763c23ead499677",
+    "authority_blob": "8635649ad72feb65f81dc5911763c23ead499677",
+    "active_owner_committed_blob": "8635649ad72feb65f81dc5911763c23ead499677",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/trend/dry_run.py",
+    "historical_blob": "8fb0b8fcb51ad5c45b452f2653ba26e4c9e9b9fd",
+    "authority_blob": "c89e06cdc10aade439be9d951f5a352e93df4f17",
+    "active_owner_committed_blob": "c89e06cdc10aade439be9d951f5a352e93df4f17",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/trend/momentum.py",
+    "historical_blob": "09e5bf4582a0a8dc6fc03c620c8eb0cbdf68e928",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/trend/tests/test_momentum.py",
+    "historical_blob": "fecc3b3597070c0601214b93dcc13a781dfefbbe",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/video_evidence/__init__.py",
+    "historical_blob": "09f5c30398614d28aa8340629895984de27c971c",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/video_evidence/runner.py",
+    "historical_blob": "f72582d13f162779dbe86c47dcbc911703533d6e",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/video_evidence/test_runner.py",
+    "historical_blob": "bc31cdf84d753178590a72dc08d518c6af1c85e8",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/video_evidence/vendor/claude_video/LICENSE",
+    "historical_blob": "e23e30f7d71d3810bdc55f7ebf64272682480879",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/video_evidence/vendor/claude_video/NOTICE.md",
+    "historical_blob": "f37205b31293d697622f272535e1c91558b554c3",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/video_evidence/vendor/claude_video/frames.py",
+    "historical_blob": "c9495085be7b0acaed4994ab6ce88f4fe73313dc",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "backend/video_evidence/vendor/claude_video/transcribe.py",
+    "historical_blob": "7596cba3e2eaba0e5e437e84c29cf5e4d7b77ea8",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "docs/README.md",
+    "historical_blob": "9a0fb5f8f9ee59b96a8ed4b66503e6ceb0b3a817",
+    "authority_blob": "c081693c84d8250b473180356fc2e3be37bebdd9",
+    "active_owner_committed_blob": "c081693c84d8250b473180356fc2e3be37bebdd9",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "docs/agents/privacy.md",
+    "historical_blob": "eed25f7da486d8835206024785b24b6246dbb2f9",
+    "authority_blob": "fd0ba2901c684023ddc3cf604802a8feb90e92b6",
+    "active_owner_committed_blob": "fd0ba2901c684023ddc3cf604802a8feb90e92b6",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "docs/agents/release.md",
+    "historical_blob": "7b094b6fb4a20bef281c0dfef294e992959040ed",
+    "authority_blob": "21e8d9b036ce3ca814a076345b42ce1b07e7787f",
+    "active_owner_committed_blob": "21e8d9b036ce3ca814a076345b42ce1b07e7787f",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "docs/agents/verification.md",
+    "historical_blob": "7b513cdea6f4cc0e6b531a3f132ece141c754712",
+    "authority_blob": "7b513cdea6f4cc0e6b531a3f132ece141c754712",
+    "active_owner_committed_blob": "7b513cdea6f4cc0e6b531a3f132ece141c754712",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "docs/archive/handoffs/codex/2026-09-08-agent-guidance-audit.md",
+    "historical_blob": "7000169d8c9f6659e42dcb020df58654062ea63b",
+    "authority_blob": "7000169d8c9f6659e42dcb020df58654062ea63b",
+    "active_owner_committed_blob": "7000169d8c9f6659e42dcb020df58654062ea63b",
+    "authority_exists": true,
+    "authority_exact_historical": true,
+    "owner_exact_historical": true,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "docs/operations/local-first-readiness.md",
+    "historical_blob": "144b5c4174182bf20bd6c8b8e8de9b8ae2b1ed81",
+    "authority_blob": null,
+    "active_owner_committed_blob": null,
+    "authority_exists": false,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  },
+  {
+    "path": "docs/operations/nightly-regression.md",
+    "historical_blob": "2520dbe96b83768e909ff12b7df9bdc8193a25f0",
+    "authority_blob": "bb09ff0131c560c885f5a849b45ecadc9e713bb5",
+    "active_owner_committed_blob": "bb09ff0131c560c885f5a849b45ecadc9e713bb5",
+    "authority_exists": true,
+    "authority_exact_historical": false,
+    "owner_exact_historical": false,
+    "owner_differs_authority": false
+  }
+]

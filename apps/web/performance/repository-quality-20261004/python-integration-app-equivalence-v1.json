@@ -1,0 +1,15 @@
+{
+  "buildSource": "34ebbb21092ef7d3240897d048055fd12762b39b",
+  "candidateSource": "45b462af17c3640f26aa8828a304bac3f4186238",
+  "difference": [
+    "backend/pipeline-control/requirements.txt",
+    "backend/pipeline/nodes.py",
+    "backend/pipeline/requirements.txt",
+    "backend/pipeline/test_nodes_unittest.py",
+    "backend/restaurant-crawling/scripts/requirements.txt"
+  ],
+  "publicAppTreeIdentical": true,
+  "nightlyWorkflowIdentical": true,
+  "sourceSemanticTransfer": "Application measurement applies to identical apps/web tree only; final deployment SHA is verified separately",
+  "pythonPatchCommit": "0645d024"
+}

@@ -1,0 +1,19 @@
+{
+  "usableEvidence": "swift-codeql-six-language-proof-v2.png",
+  "capture": "original native JPEG viewport; pixel crop of config dialog and PNG encoding only; no generated or altered UI content",
+  "originalJPEGDimensions": [
+    1280,
+    720
+  ],
+  "pixelCrop": {
+    "left": 400,
+    "top": 60,
+    "width": 480,
+    "height": 600
+  },
+  "privacy": "repository settings dialog only; user navigation/avatar outside the crop; no full screenshot stored",
+  "v1Excluded": "screenshot adapter clip ignored origin and produced a fragment; JPEG bytes with PNG filename kept as invalid evidence, not overwritten",
+  "fullScreenshotEphemeralOnly": true,
+  "UIReadback": "6of6 selected, Default suite; API independently Standard runner and Remote threat model",
+  "modelExecutionNotInferredFromUI": true
+}

@@ -1,0 +1,49 @@
+{
+  "browserProcesses": 1,
+  "reports": [
+    {
+      "phase": "baseline",
+      "result": {
+        "preCaptureBPreserved": false,
+        "uploadRetryClearsOwnRevision": false,
+        "insertRetryClearsOwnRevision": false,
+        "saveScopeFence": true,
+        "loadScopeFence": true,
+        "committedBoundedTextOnly": false,
+        "persistedV3Unchanged": true
+      },
+      "counts": {
+        "uploads": 9,
+        "inserts": 4,
+        "removes": 3,
+        "success": 3,
+        "closes": 3
+      },
+      "cases": 7,
+      "externalRequests": 0,
+      "pageErrors": 0
+    },
+    {
+      "phase": "after",
+      "result": {
+        "preCaptureBPreserved": true,
+        "uploadRetryClearsOwnRevision": true,
+        "insertRetryClearsOwnRevision": true,
+        "saveScopeFence": true,
+        "loadScopeFence": true,
+        "committedBoundedTextOnly": true,
+        "persistedV3Unchanged": true
+      },
+      "counts": {
+        "uploads": 9,
+        "inserts": 4,
+        "removes": 3,
+        "success": 3,
+        "closes": 3
+      },
+      "cases": 7,
+      "externalRequests": 0,
+      "pageErrors": 0
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "nightly-location-handoff-source-hashes-v1",
+  "recorded_at_utc": "2026-10-04T14:09:55.037184+00:00",
+  "checkout": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+  "branch": "codex/nightly-failure-diagnostics-20261004",
+  "base_commit": "e39635a89a3d7e9570ca9f67cda4906af3816004",
+  "files": [
+    {
+      "path": "apps/web/scripts/nightly-playwright-failure-evidence.mjs",
+      "sha256": "5acad2cfc705694a546a616b0cf9464335350a384378c2e162f9250a5c80ee95",
+      "bytes": 18655,
+      "base_sha256": "4c97dda15e72a68053b95bab75446a10994738b5a825731f5b689125a9c78d38"
+    },
+    {
+      "path": "apps/web/tests-unit/nightly-playwright-failure-evidence.test.ts",
+      "sha256": "a145a31c1f3c2a66b502031b04aebe8e3233e90a97019bc58286b1f2f8912027",
+      "bytes": 27300,
+      "base_sha256": "541c961155a96a8146d8efbdbe98568069c3da363df2e7d3335beaf015cbc951"
+    },
+    {
+      "path": ".github/scripts/verify-nightly-local-publication.py",
+      "sha256": "fc3a9832bd0f7bd6cc4733e2f8afbc8d5376b8be54c722344cb31d7c731f89a6",
+      "bytes": 50065,
+      "base_sha256": "ac3517f88f228b32edcfee5fbb0819ca15d58b62902bf0dbdc3372c373e37674"
+    },
+    {
+      "path": "backend/supabase/tests/test_local_publication_verifier.py",
+      "sha256": "d466d52a9ca2ac88a113d31e2d32d828a63f46a53aa1b28a4fca241a7335a645",
+      "bytes": 69632,
+      "base_sha256": "9f1fa2778a0ce7d8da8c87b3de1bac7eb5bce5307e400e93f5cb027d789f9f7d"
+    }
+  ],
+  "read_only_source_inputs": [
+    {
+      "path": "apps/web/node_modules/playwright/package.json",
+      "sha256": "8bc2ddebe8d9b051b9ecb87d62c6c63877e59d08617f32c3215681ca8bb70998"
+    },
+    {
+      "path": "apps/web/node_modules/playwright/lib/runner/index.js",
+      "sha256": "7a2e4e1114d3237d61b87723b4d86a37944c9143f3ce2fb0b2e8867e0c612a5e"
+    },
+    {
+      "path": "apps/web/node_modules/playwright/types/testReporter.d.ts",
+      "sha256": "0304f69294f8221b82ec6b4c75511dd6d824f04b1a0999409c79931cd33219e3"
+    },
+    {
+      "path": "apps/web/tests/local-supabase-admin.spec.ts",
+      "sha256": "9f87e789f2fdddeca95693dd2b9f5a2f6467679f0675ff55f9c8faa88bba8a8f"
+    }
+  ]
+}

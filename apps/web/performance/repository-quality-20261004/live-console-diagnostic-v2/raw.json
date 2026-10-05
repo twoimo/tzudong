@@ -1,0 +1,18 @@
+{
+  "consoleClasses": {
+    "unclassified_console_error": 1,
+    "http_401": 2
+  },
+  "httpClasses": {
+    "supabase_rest:ad_banners:401": 1,
+    "supabase_rest:announcements:401": 1
+  },
+  "unclassifiedFlags": {
+    "sdk": 1,
+    "supabase": 1
+  },
+  "pageErrors": 0,
+  "customFieldPosts": 0,
+  "rawMessagesOrURLsStored": false,
+  "sdkReady": true
+}

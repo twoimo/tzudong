@@ -1,0 +1,177 @@
+[
+  {
+    "id": "2857-loading",
+    "classification": "fulfilled",
+    "intent": "메뉴별 로딩 shell·청크 preload·콘텐츠 준비까지 단일 skeleton",
+    "evidence": "AdminConsoleOverview.tsx:851,907,9406,10418,10835; app/admin/page.tsx",
+    "reason": "현재 14개 route의 실제 caller가 로딩 shell을 관리한다. dynamic loading:null만 보고 미구현으로 판단하지 않았다. 옛 15-panel 파일 추출 자체는 동등하지 않다."
+  },
+  {
+    "id": "2857-common-states",
+    "classification": "active-owner dependency",
+    "intent": "모든 모듈의 loading/empty/error/unauthorized/ready 및 같은 요청 retry",
+    "evidence": "components/admin/console/AdminConsoleModuleCompleteness.tsx (old); current AdminConsoleOverview.tsx:10425; owner AdminOperationsPanel.tsx",
+    "reason": "현재 감사 등 개별 상태는 있으나 전역 동일 계약은 없다. preload catch 이후 finally가 loaded로 표시한다. owner 16-route와 restaurantView=refresh 보존 후 통합 필요."
+  },
+  {
+    "id": "2857-grid-ime",
+    "classification": "active-owner dependency",
+    "intent": "메뉴 검색·섹션 필터·IME commit·aria-live·키보드 focus 복원",
+    "evidence": "old AdminConsoleModuleGrid.tsx; current AdminConsoleOverview.tsx:7994,8302; owner lib/admin/admin-module-routing.ts",
+    "reason": "현재 옛 검색 grid/console-menu-search가 없다. 모듈 15 고정과 옛 map-overlays를 새 16-route에 복원하면 안 된다. 미구현을 사용자 취소로 간주하지 않았다."
+  },
+  {
+    "id": "2857-viz",
+    "classification": "active-owner dependency",
+    "intent": "11종 공통 visualization·tone scale·light/dark 동일 값",
+    "evidence": "old components/admin/viz/*; current AdminConsoleOverview.tsx:55,4219,4442,4653,5018; owner styles/admin-ui.css",
+    "reason": "공통 viz 계층 없음. 현재 Recharts/inline bar 및 owner style 수정은 기능 전체 동등 증거가 아니다. 실제 사용 중 chart별 값·tooltip·empty/error 계약을 먼저 분리해야 한다."
+  },
+  {
+    "id": "2857-audit",
+    "classification": "fulfilled",
+    "intent": "실제 감사 endpoint·부분 범위 고지·retry·재로그인",
+    "evidence": "current AdminConsoleOverview.tsx:1475,9057,9096; lib/admin/audit-contract.ts",
+    "reason": "감사 메뉴는 이미 실제 feed를 읽고 coverage가 partial임을 표시한다. 옛 파일명 부재를 기능 부재로 보지 않았다. 실제 서버 응답/호스팅은 미검증."
+  },
+  {
+    "id": "2857-ops",
+    "classification": "active-owner dependency",
+    "intent": "실제 대기·시스템 상태 기반 읽기 전용 운영 보조",
+    "evidence": "authority AdminConsoleOverview.tsx:8962; owner AdminConsoleOverview.tsx:8972, AdminOperationsPanel.tsx, lib/admin/operations-view-model.ts, tests-unit/admin-operations-view-model.test.ts",
+    "reason": "authority의 LlmSessionWorkspace는 설명 카드. owner는 pending/pipeline/automation GET, 실패·권한·unknown 상태와 domain별 refetch를 구현. PR3114에 없음. owner 코드/테스트와 통합해야 하며 과거 패널 중복 복원 금지."
+  },
+  {
+    "id": "2857-guard",
+    "classification": "fulfilled",
+    "intent": "requireAdmin 선행 및 Preview→Confirm→Apply→Readback→Audit",
+    "evidence": "lib/admin/guarded-mutation-contract.ts:1; app/api/admin/restaurant-refresh-history/route.ts:393,524,545; tests-unit/admin-route-auth-contract.test.ts",
+    "reason": "검증한 source contracts 통과. 공통 RiskyWorkProcedureSteps UI가 모든 모듈에 있다는 뜻이나 실 DB mutation 검증은 아니다."
+  },
+  {
+    "id": "2857-user-mask",
+    "classification": "active-owner dependency",
+    "intent": "사용자 목록 이메일 마스킹·서버 검색·정제된 표시 계약",
+    "evidence": "app/api/admin/users/route.ts:79,85,139; components/admin/AdminUsersPanel.tsx:31; old lib/admin/admin-user-display.ts",
+    "reason": "현재 API는 email 원문 및 email local-part username fallback을 보유. 옛 emailMaskToken 의도는 충족하지 않음. owner AdminUsersPanel 변경과 API/DTO/검색/상세 조회를 함께 조정해야 한다."
+  },
+  {
+    "id": "2857-sidebar-order",
+    "classification": "fulfilled",
+    "intent": "서버에 저장된 사용자별 순서 및 안전한 기본값",
+    "evidence": "lib/admin/sidebar-order.ts; app/api/admin/preferences/sidebar-order/route.ts:22,32,65; current AdminConsoleOverview.tsx:8048,8090",
+    "reason": "현재 UUID 검증·정규화·requireAdmin·same-origin 및 bounded body가 존재. old sidebar-order-session 파일 추출은 필수 기능 증거가 아니며 현재 focused tests 통과."
+  },
+  {
+    "id": "2857-theme",
+    "classification": "active-owner dependency",
+    "intent": "저장된 밝기 모드를 첫 paint 전 적용",
+    "evidence": "app/admin/layout.tsx; AdminConsoleOverview.tsx:327,8135; old lib/admin/admin-theme-prelude.ts",
+    "reason": "현재는 light 초기값 후 effect에서 적용하며 prelude 없음. owner layout은 admin-ui.css를 추가한다. 기존 light 기본값/저장 설정 보존, CSP 및 hydration 검증이 필요; old invalid→system 기본값은 자동 복원하지 않는다."
+  },
+  {
+    "id": "2857-verification",
+    "classification": "intentionally excluded under user constraints",
+    "intent": "전체 unit/parity/Playwright·task16 완료 또는 evidence 재작성",
+    "evidence": "old .kiro/specs/admin-console-sidebar-refactor/tasks.md:320",
+    "reason": "old 16/16.1은 미완료를 명시한다. 이번 full build/full unit/Naver·기존 evidence 수정 금지 때문에 전체 완료를 선언하거나 historical 실패를 덮지 않는다."
+  },
+  {
+    "id": "2908-chart-interactions",
+    "classification": "fulfilled",
+    "intent": "정확한 값 표·tooltip·시리즈 토글·fullscreen·순서 저장",
+    "evidence": "AdminConsoleOverview.tsx:3365,3469,5018,5926; tests-unit/admin-console-uiux-source.test.ts:1325; lib/admin/dashboard-widget-order.ts",
+    "reason": "현재 다른 renderer로 해당 조작 source가 있다. source 검사 범위의 충족이며 렌더링 재검증이나 Semiotic 전환 완료는 아니다."
+  },
+  {
+    "id": "2908-semiotic",
+    "classification": "active-owner dependency",
+    "intent": "Semiotic 전환 및 sparkline renderer",
+    "evidence": "old SemioticKpiSparkline.tsx; current AdminConsoleOverview.tsx:55; apps/web/package.json",
+    "reason": "현재/owner 모두 Recharts이며 semiotic 의존성·컴포넌트 없다. 유지할 renderer 결정 및 owner dashboard 조정 필요; 30/32로 자동 제외 금지."
+  },
+  {
+    "id": "2908-proportions",
+    "classification": "still needed",
+    "intent": "TOP 5 작은 값·0값을 실제 비율로 표현",
+    "evidence": "AdminConsoleOverview.tsx:5159,5182,5187; owner same file:5222,5227",
+    "reason": "현재 8% 최소 CSS 폭과 Math.max(8, percent)가 남는다. proposal-01은 값 왜곡 제거·작은 라벨 숨김·조회수 exact tooltip 추가만 제안한다. owner 통합 시 재적용 검토 필요."
+  },
+  {
+    "id": "2908-bounded-table",
+    "classification": "active-owner dependency",
+    "intent": "50행 상한 pagination 및 전체 행 접근성",
+    "evidence": "old DashboardDataTable.tsx:8,26; current AdminConsoleOverview.tsx:1713,3469,6974",
+    "reason": "현재 progressive rows는 배치마다 증가해 결국 전부 DOM에 렌더한다. 초기 지연 분산은 있으나 50-row steady bound와 동등하지 않음. 사용자 조작/접근성 검증 후 owner에서 pagination/virtualization 결정."
+  },
+  {
+    "id": "2908-data-meaning",
+    "classification": "active-owner dependency",
+    "intent": "업로드 월 cohort 평균·중복 제거·비교 불가/음수 처리·구독자 인과 추론 배제",
+    "evidence": "old lib/admin/dashboard-visualization-data.ts; current AdminConsoleOverview.tsx:2223,2320,2675,2877",
+    "reason": "현재 trend는 각 영상 발행일별 raw metrics를 매핑하고 60/25/15 가중 기여 및 구독자 기여 후보를 표시. old monthly averages/median-filtered descriptive evidence와 의미가 다르다. 차이를 UI 단순화로 대체 완료라 주장하지 않는다."
+  },
+  {
+    "id": "2908-snapshot-correctness",
+    "classification": "still needed",
+    "intent": "동일 채널·출처 필터·15분 baseline 경계·최신 snapshot scope 유지",
+    "evidence": "lib/admin/youtube-kpi-snapshots.ts:291,376,397; app/api/admin/youtube-kpis/route.ts:345",
+    "reason": "현재 채널 latest/comparison에 identity/source 필터 없음; baseline 상한만 있고 15분 하한 없음; empty snapshot은 null; comparison 없는 channel-growth를 restaurant history로 대체 가능. owner 파일도 authority와 동일. 관련 unit 파일은 dependency 부재로 로드 실패. 적용 전 현행 fallback source test를 의도와 함께 갱신하고 mock runtime 검증 필요."
+  },
+  {
+    "id": "2908-snapshot-scheduling",
+    "classification": "still needed",
+    "intent": "최신 bucket 이후 독립 current rows/comparison bucket 읽기 병렬화",
+    "evidence": "lib/admin/youtube-kpi-snapshots.ts:297,300; historical youtube-kpi-read-scheduling-20260908",
+    "reason": "현재 sequential. 성능 재측정은 하지 않았으며 옛 합성 결과를 현재 latency/쿼터 절약으로 인용하지 않는다. 정확성 계약을 먼저 확정한 뒤 owner 통합 후보."
+  },
+  {
+    "id": "2908-local-edit",
+    "classification": "active-owner dependency",
+    "intent": "local catalog 편집·evaluation readback·검수 UI",
+    "evidence": "old lib/admin/local-catalog-edit*.ts; current app/api/admin/restaurants/[restaurantId]/local-edit/route.ts; owner RestaurantManagementWorkspace.tsx, lib/admin/evaluation-page-*.ts",
+    "reason": "helper 파일들은 현재 없고 owner는 검수·refresh URL과 workspace를 통합한다. old 로컬 쓰기 경로를 재활성화하지 않으며 API/저장/평가 readback을 owner 작업과 함께 판단."
+  },
+  {
+    "id": "2908-evidence",
+    "classification": "intentionally excluded under user constraints",
+    "intent": "과거 frozen source·raw/scored/layout evidence 보존 및 실행/성능 주장 제한",
+    "evidence": "old apps/web/performance/admin-console-20260908/*, youtube-kpi-read-scheduling-20260908/*",
+    "reason": "새 디렉터리들은 authority에 없으나 old commit objects에 존재하며 manifest에 blob/SHA-256 기록. 기존 증거 변경/새 Naver 측정 금지. old G003=0·deployment=false를 현재 통과 근거로 바꾸지 않음."
+  },
+  {
+    "id": "2908-30patches",
+    "classification": "fulfilled",
+    "intent": "30개 옛 commit과 authority ancestor의 동일 stable patch 확인",
+    "evidence": "pr2908-patch-equivalence.json; PATCH-MAPPING.md",
+    "reason": "patch history에 한정한 fulfilled. 아래 보고서의 핵심 caller/contract 대조를 별도로 읽어야 하며 PR 전체 또는 30개 기능 전체의 현행 동등 판정이 아님."
+  },
+  {
+    "id": "2908-seo-bot",
+    "classification": "fulfilled",
+    "intent": "공개 경로 허용 및 민감 경로 robots 차단",
+    "evidence": "apps/web/app/robots.ts:5",
+    "reason": "현재 wildcard rule이 같은 allow/disallow를 제공한다. 특정 AI bot의 실제 준수나 검색 노출을 증명하지 않음."
+  },
+  {
+    "id": "2908-seo-manifest",
+    "classification": "still needed",
+    "intent": "manifest·llms 문서 및 근거 기반 metadata",
+    "evidence": "old adea9304; apps/web/app/layout.tsx, lib/seo.ts; pr2908-file-matrix.json",
+    "reason": "manifest/llms 파일 부재; 기능 도입 여부와 사실 검증 필요. admin subtask 범위 밖의 남은 SEO intent로 명시하며 자동 supersession 하지 않는다."
+  },
+  {
+    "id": "2908-seo-claims",
+    "classification": "intentionally excluded under user constraints",
+    "intent": "미검증 4.9/1250 rating·750+ catalog·고정 lastModified·공식 조직 연결 복사",
+    "evidence": "adea9304 apps/web/lib/seo.ts, app/sitemap.ts",
+    "reason": "현재 사실을 검증할 권한/증거 없는 수치를 복사하지 않는다. 역사적 source 보존과 최신 사실 주장 분리 원칙 적용; SEO 전체 기능 삭제 승인이라는 뜻은 아니다."
+  },
+  {
+    "id": "2908-crawler",
+    "classification": "active-owner dependency",
+    "intent": "Python runtime 선택과 libx264 even-dimension 보정",
+    "evidence": "backend/bin/evaluate_new_youtube_videos.py:137; backend/restaurant-crawling/scripts/03-collect-transcript.js:38; scripts/split_video_chunks.mjs:853",
+    "reason": "현재 세 변경이 그대로 통합된 상태는 아니다. 실제 caller PYTHON_CMD fallback 및 ffmpeg scale 줄 대조. backend owner가 pinned runtime·명시적 override·영상 품질/크기 fixture를 확인해야 하며 이 worker는 실행/소스 수정 안 함."
+  }
+]

@@ -1,0 +1,37 @@
+bun test v1.4.0 (34cbb9a40)
+
+../../../../marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/v3/scratch/cleanup-retry.test.ts:
+(pass) v3 replacement completes saved composer without deleting B or recapturing [88.53ms]
+(pass) control: known success after unmounted clears snapshot and preserves objects [57.83ms]
+(pass) control: known success after owner-change clears snapshot and preserves objects [56.44ms]
+(pass) control: newer draft is protected when the original insert finishes after unmount [62.09ms]
+(pass) control: unanswered commit after unmount preserves draft and uploaded photos [45.26ms]
+(pass) control: failed snapshot does not authorize draft deletion after known commit [43.10ms]
+(pass) control: delete failure can retry without a second insert [49.34ms]
+(pass) v2 extra: owner change while native capture is pending cancels before upload [50.20ms]
+165 |     await s.submit();
+166 |     if (s.f.counts.closes === 0) await s.f.close()();
+167 |     retainExtra({ case: 'transient-snapshot-failure-retry-close', events: s.events,
+168 |         ...s.f.counts, draftRetained: Boolean(s.row()), recoveryStates: s.f.recoveryStates });
+169 |     expect(s.f.counts.inserts).toBe(1);
+170 |     expect(s.f.counts.closes).toBeGreaterThan(0);
+                                    ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 0
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/v3/scratch/cleanup-retry.test.ts:170:31)
+(fail) v2 extra: transient snapshot failure must permit completing the saved UI after storage recovers [45.88ms]
+(pass) v2 extra: autosave after an unanswered reply must not permanently block recovered commit completion [53.55ms]
+(pass) v3 exact snapshot deletion and repeated cleanup count only one delete [46.73ms]
+(pass) v3 true means original cleanup complete with preserved replacement: changed-text [48.70ms]
+(pass) v3 true means original cleanup complete with preserved replacement: same-text-new-timestamp [47.06ms]
+(pass) v3 true means original cleanup complete with preserved replacement: absent-then-replaced [44.30ms]
+(pass) v3 unknown operation retry preserves B with one capture and closes once on known readback [42.35ms]
+(pass) v3 invalid captured row returns false and never deletes [55.27ms]
+
+ 15 pass
+ 1 fail
+ 131 expect() calls
+Ran 16 tests across 1 file. [991.00ms]

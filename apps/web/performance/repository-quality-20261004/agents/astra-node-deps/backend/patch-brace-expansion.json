@@ -1,0 +1,27 @@
+{
+  "label": "patch-brace-expansion",
+  "command": [
+    "npm",
+    "update",
+    "brace-expansion",
+    "--package-lock-only",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund",
+    "--json"
+  ],
+  "exitCode": 0,
+  "seconds": 0.336,
+  "node": "v24.21.0",
+  "npm": "11.6.2",
+  "lockBefore": "7e4530e8316043c65f28919df42e7f165bd21d93c345e7d63744ce4ad3b813ee",
+  "lockAfter": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd",
+  "stdoutBytes": 126,
+  "stderrBytes": 0,
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "changed": 0,
+    "audited": 0
+  }
+}

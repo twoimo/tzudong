@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-04T10:46:58.394868+00:00",
+  "command": "bun test review-draft-deletion-browser review-draft-privacy draft-store-hardening-contract review-save-submit review-save-operation review-upload-uncertainty review-save-owner-lifecycle",
+  "sourceBase": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "exitCode": 0,
+  "passed": 113,
+  "failed": 0,
+  "assertions": 1535,
+  "failureCases": [],
+  "realIndexedDb": {
+    "processes": 1,
+    "internalScenarios": 9,
+    "synthetic": true,
+    "networkDelivery": 0
+  },
+  "knownCommitUnmountBefore": {
+    "executions": 2,
+    "successfulOldDraftCleanup": 0
+  },
+  "rawLogsStored": false,
+  "hostedAuthOrStorageExecuted": false,
+  "physicalPhoneUsed": false
+}

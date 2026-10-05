@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": [],
+    "skipLibCheck": false
+  },
+  "files": ["database.types.generated.ts", "typegen-contract.fixture.ts"]
+}

@@ -1,0 +1,36 @@
+{
+  "stage": "candidate_hook",
+  "command": [
+    "/Users/twoimo/.bun/bin/bun",
+    "test",
+    "--no-install",
+    "--tsconfig-override",
+    "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-remaining-pr-intents-20261005/implementation-v1/focused-unit.tsconfig.json",
+    "tests-unit/use-restaurants-merge.test.ts",
+    "tests-unit/overseas-region-filter.test.ts",
+    "-t",
+    "useRestaurants region queries|overseas country PostgREST filter",
+    "--timeout",
+    "10000"
+  ],
+  "cwd": "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong/apps/web",
+  "exit_code": 0,
+  "pass": 9,
+  "fail": 0,
+  "filtered_out": 16,
+  "assertions": 154,
+  "cases": [
+    "(pass) overseas country PostgREST filter > keeps ordinary keywords unchanged inside ilike terms",
+    "(pass) overseas country PostgREST filter > removes parentheses from a parenthesized country label before it reaches or()",
+    "(pass) overseas country PostgREST filter > returns null for an empty country, a non-string, or an unknown value",
+    "(pass) overseas country PostgREST filter > escapes like wildcards and drops or() separators",
+    "(pass) useRestaurants region queries > preserves every configured overseas query, source projection, filters and returned ID order",
+    "(pass) useRestaurants region queries > sanitizes overseas keywords and skips terms that become empty without changing keyword order",
+    "(pass) useRestaurants region queries > keeps empty keyword lists free of an empty OR or a country fallback",
+    "(pass) useRestaurants region queries > builds each country filter once inside the callback and reuses its exact result",
+    "(pass) useRestaurants region queries > preserves domestic island, ordinary, unknown and blank region boundaries"
+  ],
+  "runner_warning": "external tsconfig directory mismatch diagnostic; test cases still executed",
+  "raw_output_retained": false,
+  "performance_benchmark": false
+}

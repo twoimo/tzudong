@@ -1,0 +1,35 @@
+{
+  "capturedAt": "2026-10-04T23:43:06.939273+00:00",
+  "scope": "one fixed public font transfer, independent requests within one driver, not UI or field performance proof",
+  "independentDriverRuns": 1,
+  "requestsInDriver": 2,
+  "clientHttpCache": "urllib fresh request, no browser cache; edge not purged",
+  "rows": [
+    {
+      "trial": 0,
+      "method": "GET",
+      "status": 200,
+      "receivedBytes": 11420784,
+      "sha256MatchesName": true,
+      "ttfbWallMs": 704.2373339645565,
+      "completeWallMs": 1024.4310840498656,
+      "cacheStatus": "REVALIDATED",
+      "cacheControl": "max-age=14400",
+      "age": null,
+      "bodyStored": false
+    },
+    {
+      "trial": 1,
+      "method": "GET",
+      "status": 200,
+      "receivedBytes": 11420784,
+      "sha256MatchesName": true,
+      "ttfbWallMs": 123.95433406345546,
+      "completeWallMs": 421.8200840987265,
+      "cacheStatus": "HIT",
+      "cacheControl": "max-age=14400",
+      "age": "0",
+      "bodyStored": false
+    }
+  ]
+}

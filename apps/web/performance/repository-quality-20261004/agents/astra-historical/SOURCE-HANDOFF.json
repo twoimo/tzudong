@@ -1,0 +1,45 @@
+{
+  "captured_at": "2026-10-04T11:55:32.853376+00:00",
+  "repo": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+  "branch": "codex/historical-quality-20261004",
+  "base_head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "final_head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "source_stable": true,
+  "source_writers_finished": [
+    "ci coordinator",
+    "README subagent",
+    "map subagent (no edits)"
+  ],
+  "changed_paths": [
+    {
+      "path": ".github/workflows/security-audit.yml",
+      "sha256": "97d71d637cbb83f2a367412c74d071bab254e2ec84e51fa8a15e46ec582f68a8",
+      "base_blob": "8a64c0ee707b40efbc93faf0ff3c95612d1ee7bd"
+    },
+    {
+      "path": "README.ko.md",
+      "sha256": "3a72304bc2750852c9bf147b4346fa45ad83e3b73490e46474f41df8ef82dbb2",
+      "base_blob": "d4e95a4f03cbb02bc3a673014ef7bb43746cd146"
+    },
+    {
+      "path": "README.md",
+      "sha256": "53d1ffde52e65e77de9cc69ddb68cdb4f2a465a203c63e1a3e03829ee8b76361",
+      "base_blob": "fc28cecca403567c95dee4f4b0ece8a59825eb61"
+    }
+  ],
+  "source_patch_sha256": "a2135b80333870b16b41e4df233dad1bf38d4290415a2b3b8a586d6af678f75c",
+  "diff_numstat": [
+    "2\t2\t.github/workflows/security-audit.yml",
+    "23\t2\tREADME.ko.md",
+    "23\t2\tREADME.md"
+  ],
+  "diff_check": "passed",
+  "reverse_apply_check": "passed",
+  "untracked_source_files": [],
+  "outside_allowed_path_changes": [],
+  "forbidden_source_changes": [],
+  "existing_performance_evidence_changes": [],
+  "commit_push_remote_writes": false,
+  "serving_model_attestation": "not provided; see model-metadata.json",
+  "all_workers_finished": true
+}

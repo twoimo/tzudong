@@ -1,0 +1,755 @@
+{
+  "name": "jobs-36491966037",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/actions/runs/36491966037/jobs?filter=latest&per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4910",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:33:29.328617+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 11,
+  "items": [
+    {
+      "completed_at": "2026-09-28T22:22:24Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162461829,
+      "name": "secret-pattern-scan",
+      "started_at": "2026-09-28T22:22:17Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Scan tracked files for high-confidence secrets",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 7,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:26:46Z",
+      "conclusion": "failure",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162461988,
+      "name": "orchestration-readiness",
+      "started_at": "2026-09-28T22:22:19Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify retained provenance commits",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up exact Bun runtime",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install focused test dependencies",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Helm for actual local descriptor rendering",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install OpenTofu for provider-free local descriptor plans",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify crawler orchestration readiness",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify supply-chain source contracts",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify durable local publication queue and agent results",
+          "number": 11,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify Collector crash recovery with disposable fixtures",
+          "number": 12,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify recovered observability and readiness-agent boundaries",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify recovered local-foundation contracts",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify current-input phase gates",
+          "number": 15,
+          "status": "completed"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Verify current layout and rename ledger",
+          "number": 16,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Verify recovered web supply-chain contracts",
+          "number": 17,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Verify fail-closed publication recovery",
+          "number": 18,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Verify publication admin route boundary",
+          "number": 19,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Verify Supabase advisor, Auth hardening, and hosted DB access source",
+          "number": 20,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Post Set up exact Bun runtime",
+          "number": 38,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Post Set up Python",
+          "number": 39,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 40,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 41,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:29Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462015,
+      "name": "sbom",
+      "started_at": "2026-09-28T22:22:17Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Node.js",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Generate commit-bound CycloneDX SBOMs",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload bounded SBOM evidence",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Node.js",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:27Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462036,
+      "name": "npm-audit (apps/web)",
+      "started_at": "2026-09-28T22:22:17Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Node.js",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Audit npm dependencies",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Node.js",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 9,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:43Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462075,
+      "name": "pip-audit (backend/pipeline-control/requirements.txt)",
+      "started_at": "2026-09-28T22:22:19Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install pip-audit",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Audit Python requirements",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Python",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:23:24Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462120,
+      "name": "rust-recovery",
+      "started_at": "2026-09-28T22:22:17Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install exact Rust toolchain",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up canonical performance verifier runtime",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Verify formatting and locked Cargo workspace",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Build fresh Python extension and verify parity",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up canonical performance verifier runtime",
+          "number": 12,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Python",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 15,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:40Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462127,
+      "name": "pip-audit (backend/test-requirements.txt)",
+      "started_at": "2026-09-28T22:22:18Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install pip-audit",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Audit Python requirements",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Python",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:36Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462133,
+      "name": "pip-audit (backend/supabase/scripts/g037-hosted-closure-requirements.txt)",
+      "started_at": "2026-09-28T22:22:18Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install pip-audit",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Audit Python requirements",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Python",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:50Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462161,
+      "name": "pip-audit (backend/restaurant-crawling/scripts/requirements.txt)",
+      "started_at": "2026-09-28T22:22:17Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install pip-audit",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Audit Python requirements",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Python",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:46Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462163,
+      "name": "pip-audit (backend/pipeline/requirements.txt)",
+      "started_at": "2026-09-28T22:22:18Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install pip-audit",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Audit Python requirements",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Python",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "completed_at": "2026-09-28T22:22:29Z",
+      "conclusion": "success",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 109162462240,
+      "name": "npm-audit (backend)",
+      "started_at": "2026-09-28T22:22:18Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Node.js",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Audit npm dependencies",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Set up Node.js",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 9,
+          "status": "completed"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "artifact_id": 10971475374,
+  "retrieved": true,
+  "receipts": [
+    {
+      "path": "dependency-freshness-units.json",
+      "schema": "dependency-freshness-run-v1",
+      "units": [
+        {
+          "number": 1,
+          "ecosystem": "npm",
+          "directory": "/apps/web",
+          "candidateCount": 3
+        },
+        {
+          "number": 2,
+          "ecosystem": "npm",
+          "directory": "/backend",
+          "candidateCount": 4
+        },
+        {
+          "number": 3,
+          "ecosystem": "pip",
+          "directory": "/backend/pipeline",
+          "candidateCount": 3
+        },
+        {
+          "number": 4,
+          "ecosystem": "pip",
+          "directory": "/backend/restaurant-crawling/scripts",
+          "candidateCount": 5
+        },
+        {
+          "number": 5,
+          "ecosystem": "pip",
+          "directory": "/backend/pipeline-control",
+          "candidateCount": 1
+        },
+        {
+          "number": 6,
+          "ecosystem": "github-actions",
+          "directory": "/",
+          "candidateCount": 2
+        },
+        {
+          "number": 7,
+          "ecosystem": "cargo",
+          "directory": "/backend/rust",
+          "candidateCount": 0
+        }
+      ],
+      "candidates": [
+        {
+          "number": 3066,
+          "headSha": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1",
+          "unit": "/apps/web",
+          "code": null
+        },
+        {
+          "number": 3065,
+          "headSha": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6",
+          "unit": "/apps/web",
+          "code": null
+        },
+        {
+          "number": 3064,
+          "headSha": "966e114336620c71bbe5482c5a88e366f5c5caaa",
+          "unit": "/backend",
+          "code": null
+        },
+        {
+          "number": 3063,
+          "headSha": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+          "unit": "/backend/pipeline",
+          "code": null
+        },
+        {
+          "number": 3062,
+          "headSha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4",
+          "unit": "/backend",
+          "code": null
+        },
+        {
+          "number": 3061,
+          "headSha": "fa568c8ccf04a5e68b153c89033e9b08700f4286",
+          "unit": "/backend",
+          "code": null
+        },
+        {
+          "number": 3060,
+          "headSha": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+          "unit": "/backend/pipeline",
+          "code": null
+        },
+        {
+          "number": 2971,
+          "headSha": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+          "unit": "/backend/restaurant-crawling/scripts",
+          "code": null
+        },
+        {
+          "number": 2924,
+          "headSha": "40539ca35df591451ee3be8b8456001d72964fcb",
+          "unit": "/backend",
+          "code": null
+        },
+        {
+          "number": 2906,
+          "headSha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+          "unit": "/backend/pipeline-control",
+          "code": null
+        },
+        {
+          "number": 2902,
+          "headSha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+          "unit": "unknown",
+          "code": "target_branch_violation"
+        },
+        {
+          "number": 2896,
+          "headSha": "833ddd699e73f95bf84b2b80975fea1783998333",
+          "unit": "/backend/restaurant-crawling/scripts",
+          "code": null
+        },
+        {
+          "number": 2894,
+          "headSha": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+          "unit": "/backend/restaurant-crawling/scripts",
+          "code": null
+        },
+        {
+          "number": 2892,
+          "headSha": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d",
+          "unit": "/",
+          "code": null
+        },
+        {
+          "number": 2889,
+          "headSha": "e817c475ee9c38478deab156a36848eba4e8dffc",
+          "unit": "/backend/pipeline",
+          "code": null
+        },
+        {
+          "number": 2888,
+          "headSha": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+          "unit": "/backend/restaurant-crawling/scripts",
+          "code": null
+        },
+        {
+          "number": 2887,
+          "headSha": "3a10ae6e8004c1f1488861b3f7c118653e62f0da",
+          "unit": "/",
+          "code": null
+        },
+        {
+          "number": 2855,
+          "headSha": "338de43e80ffaa5cd703dacd7886017b5c219e31",
+          "unit": "/apps/web",
+          "code": null
+        },
+        {
+          "number": 2850,
+          "headSha": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+          "unit": "/backend/restaurant-crawling/scripts",
+          "code": null
+        }
+      ],
+      "verification_code": null
+    }
+  ],
+  "raw_zip_persisted": false
+}

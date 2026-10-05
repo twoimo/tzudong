@@ -1,0 +1,31 @@
+{
+  "stage": "before_hook_change",
+  "command": [
+    "/Users/twoimo/.bun/bin/bun",
+    "--no-install",
+    "test",
+    "tests-unit/use-restaurants-merge.test.ts",
+    "-t",
+    "useRestaurants region queries",
+    "--timeout",
+    "10000"
+  ],
+  "cwd": "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong/apps/web",
+  "exit_code": 1,
+  "pass": [
+    "0"
+  ],
+  "fail": [
+    "1"
+  ],
+  "skip": [],
+  "cases": [],
+  "runtime_dependency_resolution": "read-only NODE_PATH to existing pinned TypeScript 6.0.2; automatic install disabled",
+  "raw_output_retained": false,
+  "classification": "runner prerequisite failure, not a behavioral regression result",
+  "additional_setup_attempts": [
+    "Bun preload before test was interpreted as a script invocation",
+    "Runtime resolver/preload did not resolve the static TypeScript test import",
+    "Explicit test-only tsconfig alias resolved the existing pinned TypeScript package"
+  ]
+}

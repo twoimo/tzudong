@@ -1,0 +1,5 @@
+Read HANDOFF-integrated-20261005-v4.md first, then this delta.
+
+Latest source is519c88d183f161fabebb954eb0962613afcad693 on PR3117/primary branch. The latest whole Local run37223585147 at19a1 succeeded; Publish skipped on feature source. All CI at19a1 was successful, but one new reviewer correctly found the Linux reporter printed failure_count0 before checking nonzero runner exit. Shared derive now validates both directions before emitting any JSON, including the macOS path. Focused6tests/57assertions pass. Latest all run37225167508 and current-headCI are live and unproven. The new thread PRRT_kwDOQGRyNc6o1NHw was resolved only after source push/tests; re-read for any newly appearing reviews. Do not merge based on earlier head results.
+
+No production guard/deploy or hosted DB mutation was issued. Canonical GHA did write only its disposable local database. Production stilllast-readca235/READYD6wm/www alias. FieldLCP7/INP3/CLS5, no distinct-users or performance comparison proof. Phone stillheld. Evidence remainsunfrozen; no goalcomplete/blocked update.

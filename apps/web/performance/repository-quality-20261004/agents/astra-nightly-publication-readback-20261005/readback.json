@@ -1,0 +1,40 @@
+{
+  "checks": [
+    {
+      "check": "source_clean_expected_head",
+      "pass": false
+    }
+  ],
+  "completed_at": "2026-10-04T21:16:21.017025+00:00",
+  "failure": {
+    "code": "source_clean_expected_head",
+    "type": "RuntimeError"
+  },
+  "original_before": {
+    "clean": true,
+    "head": "73fd13a982e7a0851398a5f65735936c4a6b72c2",
+    "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tree": "c35da4f33e345019bb07167ce447fb4cea7c8d50"
+  },
+  "schema": "independent-nightly-publication-readback-v1",
+  "scope": {
+    "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "original_checkout": "/Users/twoimo/.codex/worktrees/179f/tzudong",
+    "raw_logs_env_bodies_user_rows_persisted": false,
+    "remote_methods": [
+      "GET"
+    ],
+    "repository": "twoimo/tzudong",
+    "run_id": 37233565208,
+    "source_checkout": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+    "write_root": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-nightly-publication-readback-20261005"
+  },
+  "source_before": {
+    "clean": false,
+    "head": "32f5336fa9af166b04fe191ff3a7e1294196e893",
+    "status_sha256": "d730ea83246f7e41ff734fe608394e83cb4dbcf0db34f4c8c01ef6e19f8e9247",
+    "tree": "84d8f211d372fab619f344152dc4405e8c37dc82"
+  },
+  "started_at": "2026-10-04T21:16:19.103878+00:00",
+  "technical_recovery_evidence_complete": false
+}

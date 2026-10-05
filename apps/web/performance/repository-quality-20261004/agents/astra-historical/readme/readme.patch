@@ -1,0 +1,120 @@
+diff --git a/README.ko.md b/README.ko.md
+index d4e95a4f03cbb02bc3a673014ef7bb43746cd146..75080bac0b1cf8e482ebc056d6f4b6868a169bb9 100644
+--- a/README.ko.md
++++ b/README.ko.md
+@@ -7,7 +7,7 @@
+   <p>
+     <a href="https://tzudong.app">라이브 앱</a>
+     ·
+-    <a href="https://github.com/twoimo/tzudong/releases/tag/v1.2.4">최신 릴리즈</a>
++    <a href="https://github.com/twoimo/tzudong/releases/latest">최신 릴리즈</a>
+     ·
+     <a href="README.md">English</a>
+     ·
+@@ -28,6 +28,8 @@
+ 
+ Tzudong Map은 먹방 영상의 장소 근거를 사용자용 지도, 운영자용 검수 콘솔, 콘텐츠 제작용 스토리보드 워크스페이스로 바꿉니다.
+ 
++[핵심 기능](#핵심-기능) · [스택](#스택) · [빠른 시작](#빠른-시작) · [제품 투어](#제품-투어)
++
+ ## 핵심 기능
+ 
+ | 제품 영역 | 역할 |
+@@ -40,12 +42,31 @@ Tzudong Map은 먹방 영상의 장소 근거를 사용자용 지도, 운영자
+ 
+ ## 스택
+ 
++- 프런트엔드: Next.js 16 (App Router), React 19, Tailwind CSS, Lucide 아이콘.
+ - 웹 런타임: Node 24.x. 일상 설치/유닛은 Bun을 쓸 수 있고, 릴리스 패키지 권위는 npm 11.6.2, `package.json`, `package-lock.json`입니다.
+ - TypeScript: 네이티브 CLI `@typescript/native` `7.0.2`, 안정 API/호환 브리지는 `6.0.2` (`npm run typecheck:parity`).
+ - 직렬 승격: `develop -> data -> main`. 이 트리는 hosted apply, 법령 준수, 라이브 URL 상태를 주장하지 않습니다.
+ - 변경 기록: [CHANGELOG.ko.md](CHANGELOG.ko.md) / [CHANGELOG.md](CHANGELOG.md).
+ - 문서 색인: [docs/README.md](docs/README.md). 제품 설계: [docs/product/DESIGN.md](docs/product/DESIGN.md).
+ 
++## 빠른 시작
++
++Node 24.x와 npm 11.6.2를 사용합니다. 웹 패키지는 `apps/web`에 있습니다.
++
++```bash
++git clone https://github.com/twoimo/tzudong.git
++cd tzudong/apps/web
++npm ci
++```
++
++저장소가 관리하는 [로컬 Supabase 스택](backend/supabase/README.md)을 준비하고 마이그레이션한 뒤, `apps/web`에서 실행합니다.
++
++```bash
++npm run dev -- --port 8080
++```
++
++[http://127.0.0.1:8080](http://127.0.0.1:8080)을 엽니다. 개발 실행기는 생성된 로컬 스택, 허용된 브라우저 origin, 마이그레이션 ledger를 검증한 뒤 webpack으로 Next.js를 시작합니다. Bun 명령과 명시적 hosted 디버깅은 [웹 개발 안내](apps/web/README.md)를 참고하세요.
++
+ ## 제품 투어
+ 
+ ### Desktop
+@@ -95,4 +116,4 @@ Tzudong Map은 먹방 영상의 장소 근거를 사용자용 지도, 운영자
+ 
+ 소스 보호는 fail-closed입니다. 회원 생성은 게시된 방침 확인에 묶이고, 검증된 보호자 경로가 있기 전까지 만 14세 미만 가입은 막히며, 광고 동의는 목적/채널/야간을 분리하고, 공용 필터와 메모리 전용 기기 위치, 삭제·보존·사고의 Preview → Confirm → Apply → Readback → Audit을 유지합니다.
+ 
+-법령 준수나 운영 증명이 아닙니다. `AGENTS.md`의 외부 게이트에 기명 근거가 있을 때까지 출시는 차단됩니다. 위 라이브 앱/릴리즈 링크는 상태 참조일 뿐입니다.
++이 보호 장치는 법령 준수나 운영 증명이 아닙니다. 외부 증거 게이트는 2026-09-22에 보류되었으며 제품 보호 장치는 계속 fail-closed로 유지됩니다. 현재 승격, 롤백, 배포 readback 요건은 [docs/agents/release.md](docs/agents/release.md)를 따릅니다. 위 라이브 앱/릴리즈 링크는 상태 참조일 뿐입니다.
+diff --git a/README.md b/README.md
+index fc28cecca403567c95dee4f4b0ece8a59825eb61..47bd12e7da457ead622271632a7073a99ac1380c 100644
+--- a/README.md
++++ b/README.md
+@@ -7,7 +7,7 @@
+   <p>
+     <a href="https://tzudong.app">Live app</a>
+     ·
+-    <a href="https://github.com/twoimo/tzudong/releases/tag/v1.2.4">Latest release</a>
++    <a href="https://github.com/twoimo/tzudong/releases/latest">Latest release</a>
+     ·
+     <a href="README.ko.md">한국어</a>
+     ·
+@@ -28,6 +28,8 @@
+ 
+ Tzudong Map turns mukbang video evidence into a usable restaurant map: users discover places on mobile, operators verify data in an admin console, and the storyboard workspace creates visual cuts for content production.
+ 
++[Highlights](#highlights) · [Stack](#stack) · [Quick start](#quick-start) · [Product tour](#product-tour)
++
+ ## Highlights
+ 
+ | Product surface | What it does |
+@@ -40,12 +42,31 @@ Tzudong Map turns mukbang video evidence into a usable restaurant map: users dis
+ 
+ ## Stack
+ 
++- Frontend: Next.js 16 (App Router), React 19, Tailwind CSS, and Lucide icons.
+ - Web runtime: Node 24.x. Day-to-day install/unit flows may use Bun; npm 11.6.2, `package.json`, and `package-lock.json` are the release package authority.
+ - TypeScript: native CLI `@typescript/native` `7.0.2`; stable API/compatibility bridge `6.0.2` via `npm run typecheck:parity`.
+ - Serialized content patches: `develop -> data -> main`. Hosted apply, legal compliance, and live URL state are not claimed by this tree.
+ - Change history: [CHANGELOG.md](CHANGELOG.md) / [CHANGELOG.ko.md](CHANGELOG.ko.md).
+ - Docs index: [docs/README.md](docs/README.md). Product design: [docs/product/DESIGN.md](docs/product/DESIGN.md).
+ 
++## Quick start
++
++Use Node 24.x and npm 11.6.2. The web package lives in `apps/web`:
++
++```bash
++git clone https://github.com/twoimo/tzudong.git
++cd tzudong/apps/web
++npm ci
++```
++
++Prepare and migrate the repository-owned [local Supabase stack](backend/supabase/README.md), then run from `apps/web`:
++
++```bash
++npm run dev -- --port 8080
++```
++
++Open [http://127.0.0.1:8080](http://127.0.0.1:8080). The development runner validates the generated local stack, allowed browser origin, and migration ledger before starting Next.js with webpack. See the [web development guide](apps/web/README.md) for Bun commands and explicit hosted debugging.
++
+ ## Product tour
+ 
+ ### Desktop
+@@ -179,4 +200,4 @@ On the Hobby team, commits must be authored by the team owner. Commits authored
+ 
+ Source safeguards stay fail-closed: challenge-bound account creation, no under-14 registration until a verified guardian path exists, purpose/channel marketing consent with a separate night grant, shared redaction, memory-only device location, and Preview → Confirm → Apply → Readback → Audit for deletion/retention/incidents.
+ 
+-These are not legal compliance or production proof. Release stays blocked until the external gates in `AGENTS.md` have named receipts. The live app and release links above are status references only.
++These safeguards are not legal compliance or production proof. The external evidence gates were parked on 2026-09-22; product safeguards remain fail-closed. Current promotion, rollback, and deployment readback requirements are in [docs/agents/release.md](docs/agents/release.md). The live app and release links above are status references only.

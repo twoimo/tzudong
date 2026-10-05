@@ -1,0 +1,28 @@
+bun test v1.4.0 (34cbb9a40)
+
+../../../../marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/scratch/cleanup-retry.test.ts:
+75 |     const result = { case: 'retry-newer-draft', events: s.events, inserts: s.f.counts.inserts,
+76 |         uploads: s.f.counts.uploads, deletes: s.events.filter(v => v === 'delete').length,
+77 |         newerDraftSurvives: Boolean(s.row()), recoveryStates: s.f.recoveryStates };
+78 |     observations.push(result); writeFileSync(output, JSON.stringify(observations, null, 2) + '\n');
+79 |     expect(s.f.counts.inserts).toBe(1);
+80 |     expect(s.row()?.content).toBe('Newer independent composer text, never submitted.');
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: "Newer independent composer text, never submitted."
+Received: undefined
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/scratch/cleanup-retry.test.ts:80:30)
+(fail) P2 regression: retry must preserve newer draft rejected by the first compare/delete [67.95ms]
+(pass) control: known success after unmounted clears snapshot and preserves objects [39.29ms]
+(pass) control: known success after owner-change clears snapshot and preserves objects [38.23ms]
+(pass) control: newer draft is protected when the original insert finishes after unmount [33.28ms]
+(pass) control: unanswered commit after unmount preserves draft and uploaded photos [37.93ms]
+(pass) control: failed snapshot does not authorize draft deletion after known commit [31.36ms]
+(pass) control: delete failure can retry without a second insert [28.91ms]
+
+ 6 pass
+ 1 fail
+ 63 expect() calls
+Ran 7 tests across 1 file. [396.00ms]

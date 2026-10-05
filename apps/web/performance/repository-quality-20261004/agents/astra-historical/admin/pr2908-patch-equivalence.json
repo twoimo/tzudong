@@ -1,0 +1,673 @@
+[
+  {
+    "historical_sha": "2f3e135a62ebd5e4a68bddf5443cf7652df47155",
+    "subject": "docs(kiro): reconcile retained completion evidence and open gates",
+    "stable_patch_id": "2b65ae268bf3f19c69a228c6052f7d16ee4fe653",
+    "equivalent_authority_ancestors": [
+      "f05a668360342b2d53cc1c18896998f3a31693a5"
+    ],
+    "changed_files": [
+      ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260906.md",
+      ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.json",
+      ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.md",
+      ".kiro/specs/crawler-pipeline-operational-readiness/tasks.md"
+    ]
+  },
+  {
+    "historical_sha": "c1c0f62cab2c50f517875e5104907d70581a0a42",
+    "subject": "Prepare bounded three-RPC admin catalog successor",
+    "stable_patch_id": "fd92e0b6932aa298cba925ca5c97d0b2e5ca3e2c",
+    "equivalent_authority_ancestors": [
+      "b7a0ad16bfff52d3f11674f7d73a20510553977e"
+    ],
+    "changed_files": [
+      "backend/supabase/docs/admin-management-group-catalog-slice.md",
+      "backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "backend/supabase/scripts/admin_management_group_plan.py",
+      "backend/supabase/scripts/verify_admin_management_group_replay.py",
+      "backend/supabase/tests/test_admin_management_group.py",
+      "backend/supabase/tests/test_admin_management_group_replay.py"
+    ]
+  },
+  {
+    "historical_sha": "1fd3f2aaa27d5094dc895f8397d8f6adf4c03254",
+    "subject": "Bind admin management group into canonical replay and CI",
+    "stable_patch_id": "e5bbe54ff81f5f005780e572f373b9abbf03ed21",
+    "equivalent_authority_ancestors": [
+      "2a6c76f44dad52c8ced7059099ca018d073386eb"
+    ],
+    "changed_files": [
+      ".github/workflows/g014-catalog-contract-baseline.yml",
+      "backend/supabase/docs/admin-management-group-catalog-slice.md",
+      "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "backend/supabase/tests/test_admin_management_group_replay.py"
+    ]
+  },
+  {
+    "historical_sha": "8a9a666df686f1bed278881a27b4a1d039977ab4",
+    "subject": "Select the pinned AMD64 replay variant explicitly",
+    "stable_patch_id": "d6ffb6a2a989cbefc0ad551307d42ee530760126",
+    "equivalent_authority_ancestors": [
+      "3476a5b91ba1a13a9c0738e3bc76f6b01b0f1ec1"
+    ],
+    "changed_files": [
+      "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "backend/supabase/tests/test_admin_management_group_replay.py"
+    ]
+  },
+  {
+    "historical_sha": "bbbd3a4fecdfac310b43d920cc1b9bf60ef7967e",
+    "subject": "Prepare strict PostgreSQL 17 workflow owner recovery",
+    "stable_patch_id": "f90349302008d2624d7af27cd6ebd359287060a4",
+    "equivalent_authority_ancestors": [
+      "9cf0b0f9c1304b943cbdfdb644e8a0eba1f547d3"
+    ],
+    "changed_files": [
+      ".github/workflows/g014-catalog-contract-baseline.yml",
+      "backend/supabase/docs/g014-pg17-owner-recovery.md",
+      "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "backend/supabase/scripts/verify_g014_pg17_owner_replay.py",
+      "backend/supabase/tests/test_g014_pg17_owner_contract.py"
+    ]
+  },
+  {
+    "historical_sha": "2b2e9a377142373bc9ce2237a46a4e35033f2a3a",
+    "subject": "fix(kiro): require fresh read-only G014 diagnostics before RPC plans",
+    "stable_patch_id": "7ef554bb8febd3a0dbb612e5100c55b1e4c53bc5",
+    "equivalent_authority_ancestors": [
+      "36eef4b78df07f787ffd8cfc199712f240be5dcb"
+    ],
+    "changed_files": [
+      ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.json",
+      ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.md",
+      "backend/supabase/scripts/admin_user_ids_slice_plan.py",
+      "backend/supabase/scripts/g014_catalog_diagnostic.py",
+      "backend/supabase/tests/test_admin_user_ids_catalog_slice.py",
+      "backend/supabase/tests/test_g014_diagnostic_admission.py"
+    ]
+  },
+  {
+    "historical_sha": "8af06fa19878bcc5fba0448e349b356fb1a13d93",
+    "subject": "Route restaurant refresh apply through bounded atomic RPC",
+    "stable_patch_id": "cc13ae08e8ff3c735cc6f7927be95429ea0b323c",
+    "equivalent_authority_ancestors": [
+      "ba6bf3c505401c6828060fccb32b33cfd30f89e6"
+    ],
+    "changed_files": [
+      "apps/web/app/api/admin/restaurant-refresh-history/route.ts",
+      "apps/web/tests-unit/admin-refresh-apply-route.test.ts",
+      "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+      "backend/supabase/docs/restaurant-refresh-apply-boundary.md",
+      "backend/supabase/migrations/20260906064459_admin_restaurant_refresh_apply_boundary.sql",
+      "backend/supabase/tests/test_restaurant_refresh_apply_boundary.py"
+    ]
+  },
+  {
+    "historical_sha": "cb0295ecbca68067f6572fd817d57ed003dec037",
+    "subject": "Remove refresh audit trigger inheritance dependency",
+    "stable_patch_id": "9e5f3afbbed82c70e13daf490e13a28cb4ddeba4",
+    "equivalent_authority_ancestors": [
+      "f277c4de5bba32a3425b7c0a3ea28827947c987a"
+    ],
+    "changed_files": [
+      "backend/supabase/docs/restaurant-refresh-apply-boundary.md",
+      "backend/supabase/migrations/20260906064459_admin_restaurant_refresh_apply_boundary.sql",
+      "backend/supabase/tests/test_restaurant_refresh_apply_boundary.py"
+    ]
+  },
+  {
+    "historical_sha": "37ff6a41fa84f9e0297e94e6e7d9e88465637c63",
+    "subject": "Close advisor receipt task with independently verified evidence",
+    "stable_patch_id": "3be9b5e01962cf72e3c7cb91214b065c95ad8dae",
+    "equivalent_authority_ancestors": [
+      "083e32a13a6ec2efa111403a813fc2d6795b9d22"
+    ],
+    "changed_files": [
+      ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260906.md",
+      ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.json",
+      ".kiro/specs/crawler-pipeline-operational-readiness/evidence-reconciliation-20260906.md",
+      ".kiro/specs/crawler-pipeline-operational-readiness/tasks.md"
+    ]
+  },
+  {
+    "historical_sha": "220fa1d48b4ee8290334600000b8b68da9c85cab",
+    "subject": "fix(catalog): admit owned local Colima socket and run boundary CI",
+    "stable_patch_id": "64fa6e777e1bf4140d1c87c578b1ed606d876542",
+    "equivalent_authority_ancestors": [
+      "34c9be86d2b9f8c93053adf5e7548eb4b45274ed"
+    ],
+    "changed_files": [
+      ".github/workflows/g014-catalog-contract-baseline.yml",
+      "backend/supabase/docs/catalog-generator-local-docker.md",
+      "backend/supabase/scripts/catalog_docker_endpoint.py",
+      "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "backend/supabase/tests/test_catalog_docker_endpoint.py"
+    ]
+  },
+  {
+    "historical_sha": "b483ec723b4b118e0eee484f22513169cb507bf7",
+    "subject": "Keep unbound refresh SQL outside canonical replay stream",
+    "stable_patch_id": "7ea12d71fd8fa0777af16086b92febc8fd85f0a8",
+    "equivalent_authority_ancestors": [
+      "f968719fd207a71d05ffe01ec7eb3211ae642a5e"
+    ],
+    "changed_files": [
+      "backend/supabase/candidates/20260906064459_admin_restaurant_refresh_apply_boundary.sql",
+      "backend/supabase/docs/restaurant-refresh-apply-boundary.md",
+      "backend/supabase/migrations/20260906064459_admin_restaurant_refresh_apply_boundary.sql",
+      "backend/supabase/tests/test_restaurant_refresh_apply_boundary.py"
+    ]
+  },
+  {
+    "historical_sha": "6af6ec46a161a3875580a606988f657cae2890eb",
+    "subject": "Record verified catalog recovery causes and remaining integration work",
+    "stable_patch_id": "66e1a9b4ef821c8890657457357d72d6239158c1",
+    "equivalent_authority_ancestors": [
+      "f83e13689dbddf2dd60310f484d022e957c5569b"
+    ],
+    "changed_files": [
+      ".kiro/specs/crawler-pipeline-operational-readiness/catalog-recovery-20260906.md"
+    ]
+  },
+  {
+    "historical_sha": "071552e064f286260c8a534b12b97a8d9a496231",
+    "subject": "Scope agent guidance, verification and autonomy to the requested work",
+    "stable_patch_id": "2a94155d381428ad6fbbe28b8af34603b40abc00",
+    "equivalent_authority_ancestors": [
+      "ff4731c8aa36a3c64467567df94e77c4196b1103"
+    ],
+    "changed_files": [
+      ".agents/skills/tzudong-guidance-audit/SKILL.md",
+      ".gitignore",
+      "AGENTS.md",
+      "docs/README.md",
+      "docs/agents/privacy.md",
+      "docs/agents/release.md",
+      "docs/agents/verification.md",
+      "docs/archive/handoffs/codex/2026-09-08-agent-guidance-audit.md"
+    ]
+  },
+  {
+    "historical_sha": "c7d6eb908ef367edc83cc5956caee41316467ff6",
+    "subject": "Keep large restaurant merge groups off the recursive call stack",
+    "stable_patch_id": "07f02f2a605f31545d0844f87d18b6e2f9c2f822",
+    "equivalent_authority_ancestors": [
+      "b0c0589602e6f0c6c161676d0da49f75a07f0b7e"
+    ],
+    "changed_files": [
+      "apps/web/hooks/use-restaurants.tsx",
+      "apps/web/performance/merge-scaling-20260908/verification.json",
+      "apps/web/tests-unit/use-restaurants-merge.test.ts"
+    ]
+  },
+  {
+    "historical_sha": "300482eb5e89983aba0239e91eba3ebb5280c87b",
+    "subject": "Cover large and mixed-name restaurant address groups",
+    "stable_patch_id": "6dd63fbda0a55d01ba15cce816733d2883970009",
+    "equivalent_authority_ancestors": [
+      "d9dabf8c0569e08306e4d5ed9dbbff6567c13226"
+    ],
+    "changed_files": [
+      "apps/web/tests-unit/use-restaurants-merge.test.ts"
+    ]
+  },
+  {
+    "historical_sha": "ee175dfa4a898bb716ff764730695684147f0e1d",
+    "subject": "Skip pair comparisons for fully connected address buckets",
+    "stable_patch_id": "ef8a9cda6874fb70ef0651af31b6f0726c782dce",
+    "equivalent_authority_ancestors": [
+      "ff5565bcc2ceb6a790f3a6e7dbe74bc133f97e9c"
+    ],
+    "changed_files": [
+      "apps/web/hooks/use-restaurants.tsx"
+    ]
+  },
+  {
+    "historical_sha": "a6076134b9b83636f5e45c3a7168e48bcd521d39",
+    "subject": "Retain bounded address-merge measurements and verification scope",
+    "stable_patch_id": "4ec90dde5329a8962b1b5e17eb15023c04b5adba",
+    "equivalent_authority_ancestors": [
+      "57c65ce80f3767b77f8e47c832e80ffad3e4d231"
+    ],
+    "changed_files": [
+      "apps/web/performance/merge-scaling-20260908/address-exploratory.json"
+    ]
+  },
+  {
+    "historical_sha": "90268c468290465552f70222a98b87d1f9d9100b",
+    "subject": "docs(perf): retain local home script inventory and runtime review hypotheses",
+    "stable_patch_id": "bbc141bc9e7e98724c1589af350cd3e2ee460917",
+    "equivalent_authority_ancestors": [
+      "0cd64856a37abe8947a08b2029fa6db4a8cce244"
+    ],
+    "changed_files": [
+      "apps/web/performance/merge-scaling-20260908/home-script-inventory.json"
+    ]
+  },
+  {
+    "historical_sha": "e8f2177f0c8dffd6388dfcd5b4158ff1a18e5133",
+    "subject": "perf(map): start restaurant queries independently of Naver SDK",
+    "stable_patch_id": "5b43aef9ad33866f2f8557b284eb13ae8540d8bf",
+    "equivalent_authority_ancestors": [
+      "1ca2f8835f564ee3cf12ac6e0c0caecd19f675f1"
+    ],
+    "changed_files": [
+      "apps/web/components/map/NaverMapView.tsx",
+      "apps/web/lib/map-query-helpers.ts",
+      "apps/web/performance/merge-scaling-20260908/naver-query-scheduling.json",
+      "apps/web/tests-unit/map-query-helpers.test.ts",
+      "apps/web/tests-unit/naver-query-startup.test.ts"
+    ]
+  },
+  {
+    "historical_sha": "03c9c7ca18e6038c2261e74652b63d96b89e718e",
+    "subject": "test(map): prepare delayed SDK browser startup regression",
+    "stable_patch_id": "717dddd1ba8d5e93060651297bf7f8a5fbf99f85",
+    "equivalent_authority_ancestors": [
+      "564fb9cd777cba5540f23953b2830245518ae919"
+    ],
+    "changed_files": [
+      "apps/web/performance/merge-scaling-20260908/naver-browser-preparation.json",
+      "apps/web/tests/mobile-home-map-helpers.ts",
+      "apps/web/tests/naver-query-startup.spec.ts"
+    ]
+  },
+  {
+    "historical_sha": "c8f479ebf0c3d0f12c0ba83d3d261924c65a7b3c",
+    "subject": "docs(perf): retain isolated runtime admission failure evidence",
+    "stable_patch_id": "9bb2b0368153476774f87d25761920c7e09f2f73",
+    "equivalent_authority_ancestors": [
+      "0caf4e56f651ea7fbb1348fd53a94df803e56076"
+    ],
+    "changed_files": [
+      "apps/web/performance/merge-scaling-20260908/local-runtime-admission.json"
+    ]
+  },
+  {
+    "historical_sha": "ed15867d0dd3c1ce0abe29b0a9af7d81262c6c4a",
+    "subject": "test(db): reject extra executor ACL in source overlap verification",
+    "stable_patch_id": "4b2bfd85e9b20204134a1b499c2d0c4858407573",
+    "equivalent_authority_ancestors": [
+      "5fc07edc07a8e5d72d901ebc193ee74565f42d8e"
+    ],
+    "changed_files": [
+      "apps/web/performance/merge-scaling-20260908/local-replay-acl-diagnosis.json",
+      "backend/supabase/tests/test_admin_user_ids_replay.py"
+    ]
+  },
+  {
+    "historical_sha": "76595300c40ca0f71dc6e533295f30d9763ead7a",
+    "subject": "feat(db): bind local replay proof shape to exact sources and verifiers",
+    "stable_patch_id": "fe9c45696ad76f06a46aaaf0f583098deb065fee",
+    "equivalent_authority_ancestors": [
+      "e6ece3f64113d535de30d6e7031cd00a26ee57bb"
+    ],
+    "changed_files": [
+      "backend/supabase/scripts/local_replay_contract.py",
+      "backend/supabase/tests/test_local_replay_contract.py"
+    ]
+  },
+  {
+    "historical_sha": "6cd3ccf98fe378e2ecf957f692980d07b795b602",
+    "subject": "feat(db): add read-only local replay verification command",
+    "stable_patch_id": "8b6b2747620ee9ee15c48aea13eed3e895cd91a9",
+    "equivalent_authority_ancestors": [
+      "2a080895df48ad518c5b959a09ff7f69fbb53b39"
+    ],
+    "changed_files": [
+      "apps/web/performance/merge-scaling-20260908/replay-command-verification.json",
+      "backend/supabase/scripts/local-migrate.py",
+      "backend/supabase/scripts/local_replay_contract.py",
+      "backend/supabase/tests/test_local_replay_contract.py",
+      "docs/operations/nightly-regression.md"
+    ]
+  },
+  {
+    "historical_sha": "561c7277deeb46df292ef5d448c29186bb4828fd",
+    "subject": "feat(db): integrate versioned source replay evidence across local admission",
+    "stable_patch_id": "48d8c1b023ccd2bbe522cc21eea77095013f6fb7",
+    "equivalent_authority_ancestors": [
+      "041da19f76328baaea4397e3d7d21db01114ba7e"
+    ],
+    "changed_files": [
+      ".github/scripts/build-nightly-local-publication.py",
+      ".github/scripts/verify-nightly-local-publication.py",
+      "apps/web/performance/merge-scaling-20260908/replay-v2-integration.json",
+      "apps/web/scripts/local-supabase-runtime.mjs",
+      "apps/web/scripts/run-nightly-regression.mjs",
+      "apps/web/tests-unit/local-supabase-runtime.test.ts",
+      "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "backend/supabase/scripts/local-function-runtime-scan.py",
+      "backend/supabase/scripts/local-migrate.py",
+      "backend/supabase/scripts/local_replay_contract.py",
+      "backend/supabase/tests/test_admin_user_ids_replay.py",
+      "backend/supabase/tests/test_local_function_runtime_contract.py",
+      "backend/supabase/tests/test_local_publication_verifier.py",
+      "backend/supabase/tests/test_local_replay_contract.py",
+      "backend/supabase/tests/test_local_seed_receipt_contract.py",
+      "docs/operations/nightly-regression.md"
+    ]
+  },
+  {
+    "historical_sha": "3553033bfde5ed3e8a2f7c2d395b5742846e518e",
+    "subject": "fix(local-db): normalize migration creator default function ACL",
+    "stable_patch_id": "8e3e834168b37d2bd707bf0836aa003f97777a4e",
+    "equivalent_authority_ancestors": [
+      "a153fa755700b71c15581ef0f49be092a993127a"
+    ],
+    "changed_files": [
+      "backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json",
+      "backend/supabase/baselines/local/application-prerequisites.sql",
+      "backend/supabase/scripts/local-migrate.py",
+      "backend/supabase/tests/test_admin_user_ids_replay.py",
+      "backend/supabase/tests/test_local_migration_contract.py"
+    ]
+  },
+  {
+    "historical_sha": "628a601efc0643a1188bc14f836ba6d16ebe8808",
+    "subject": "fix(local-db): bind owner replay verification to postgres login",
+    "stable_patch_id": "748c3bfe5a64704a3240b8740c627e1cb8107ed0",
+    "equivalent_authority_ancestors": [
+      "2d20638da84a37ff104174a029c08135bee5b11a"
+    ],
+    "changed_files": [
+      "backend/supabase/scripts/local-migrate.py",
+      "backend/supabase/tests/test_g014_pg17_owner_contract.py",
+      "backend/supabase/tests/test_local_migration_contract.py",
+      "backend/supabase/tests/test_local_replay_contract.py"
+    ]
+  },
+  {
+    "historical_sha": "e03423206c72f75605c7596b800eef87a79d0b37",
+    "subject": "fix(local-db): rebind reconstruction inputs to prerequisite v2",
+    "stable_patch_id": "103efb46264a43a5de59a0ac6afa70c93e785c8a",
+    "equivalent_authority_ancestors": [
+      "fb20565ce15f158b5b90ce84554f16d85fc11892"
+    ],
+    "changed_files": [
+      "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_BUNDLE.v4.json",
+      "backend/supabase/scripts/recover_advisor_replay_prerequisites.py",
+      "backend/supabase/scripts/verify_g026_reconstruction_bundle.py",
+      "backend/supabase/tests/test_g026_reconstruction_bundle.py"
+    ]
+  },
+  {
+    "historical_sha": "9b9485a387dd4bb5eb9749e1624109c365b24ae9",
+    "subject": "fix(local-dev): validate browser origins and keep offline map markers visible",
+    "stable_patch_id": "906a936e05ff7a59135150dce52bcd4157daee6d",
+    "equivalent_authority_ancestors": [
+      "8e129babf4ae09eab4e1984a16d5b6ea98fd34c8"
+    ],
+    "changed_files": [
+      "apps/web/performance/merge-scaling-20260908/local-runtime-functional-verification.json",
+      "apps/web/public/__local/naver-maps.js",
+      "apps/web/scripts/local-supabase-runtime.mjs",
+      "apps/web/scripts/run-local-dev.mjs",
+      "apps/web/tests-unit/local-naver-map-stub.test.ts",
+      "apps/web/tests-unit/local-supabase-runtime.test.ts",
+      "apps/web/tests/naver-query-startup.spec.ts",
+      "apps/web/tests/nightly/nightly-test.ts",
+      "docs/operations/nightly-regression.md"
+    ]
+  },
+  {
+    "historical_sha": "74d617111e6038375cddded6cb350eb4b45cd663",
+    "subject": "fix(local-dev): validate migration ledger for ordinary development",
+    "stable_patch_id": "2b2d05466ccb2f83f68c9164f20fa19bb02a6607",
+    "equivalent_authority_ancestors": [
+      "8c6cdd3a2894466b990546a32c4a4d94b036f08e"
+    ],
+    "changed_files": [
+      "apps/web/scripts/local-supabase-runtime.mjs"
+    ]
+  },
+  {
+    "historical_sha": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+    "subject": "feat(admin): adopt semiotic KPI dashboard, trend momentum, and evaluation review",
+    "stable_patch_id": "41660546ee3da0c26f08070eb418c800491016f6",
+    "equivalent_authority_ancestors": [],
+    "changed_files": [
+      ".github/scripts/build-nightly-local-publication.py",
+      ".github/scripts/verify-nightly-local-publication.py",
+      ".nvmrc",
+      "apps/web/app/admin/banners/page.tsx",
+      "apps/web/app/admin/evaluations/page.tsx",
+      "apps/web/app/admin/loading.tsx",
+      "apps/web/app/admin/page.tsx",
+      "apps/web/app/admin/privacy-incidents/page.tsx",
+      "apps/web/app/api/admin/restaurants/[restaurantId]/local-edit/route.ts",
+      "apps/web/app/api/admin/youtube-kpis/route.ts",
+      "apps/web/app/app-globals.css",
+      "apps/web/app/app-runtime-shell.tsx",
+      "apps/web/app/auth/reset-password/loading.tsx",
+      "apps/web/app/auth/reset-password/page.tsx",
+      "apps/web/app/feed/loading.tsx",
+      "apps/web/app/feed/page.tsx",
+      "apps/web/app/global-map/loading.tsx",
+      "apps/web/app/global-map/page.tsx",
+      "apps/web/app/home-client-effects.tsx",
+      "apps/web/app/home-client-loader.tsx",
+      "apps/web/app/home-client.tsx",
+      "apps/web/app/home-runtime-shell.tsx",
+      "apps/web/app/home-supabase-actions.ts",
+      "apps/web/app/insights/insights-client.tsx",
+      "apps/web/app/leaderboard/loading.tsx",
+      "apps/web/app/leaderboard/page.tsx",
+      "apps/web/app/mypage/bookmarks/page.tsx",
+      "apps/web/app/mypage/loading.tsx",
+      "apps/web/app/mypage/my-page-data-region.tsx",
+      "apps/web/app/mypage/mypage-layout-content.tsx",
+      "apps/web/app/mypage/reviews/page.tsx",
+      "apps/web/app/mypage/route-presentation.ts",
+      "apps/web/app/mypage/submissions/edit/page.tsx",
+      "apps/web/app/mypage/submissions/new/page.tsx",
+      "apps/web/app/mypage/submissions/recommend/page.tsx",
+      "apps/web/app/stamp/loading.tsx",
+      "apps/web/app/stamp/page.tsx",
+      "apps/web/app/user/[userId]/loading.tsx",
+      "apps/web/bun.lock",
+      "apps/web/components/admin/AdminConsoleOverview.tsx",
+      "apps/web/components/admin/AdminDataPending.tsx",
+      "apps/web/components/admin/AdminEmbeddedModuleShell.tsx",
+      "apps/web/components/admin/AdminOverviewDashboard.tsx",
+      "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+      "apps/web/components/admin/AdminReviewPanel.tsx",
+      "apps/web/components/admin/AdminUsersPanel.tsx",
+      "apps/web/components/admin/DashboardDataTable.tsx",
+      "apps/web/components/admin/EditRestaurantModal.tsx",
+      "apps/web/components/admin/EvaluationTableNew.tsx",
+      "apps/web/components/admin/SemioticKpiSparkline.tsx",
+      "apps/web/components/admin/SubmissionListView.tsx",
+      "apps/web/components/admin/TrendProposalQueue.tsx",
+      "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx",
+      "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+      "apps/web/components/auth/ResetPasswordProgressiveSkeleton.tsx",
+      "apps/web/components/feed/FeedContent.tsx",
+      "apps/web/components/feed/FeedReadCount.tsx",
+      "apps/web/components/filters/CategoryFilter.tsx",
+      "apps/web/components/home/DesktopLeftPanelMapHome.tsx",
+      "apps/web/components/home/LocalWorkspaceBanner.tsx",
+      "apps/web/components/home/MobileControlOverlay.tsx",
+      "apps/web/components/home/home-control-panel.tsx",
+      "apps/web/components/home/home-desktop-control-panel.tsx",
+      "apps/web/components/home/home-map-container.tsx",
+      "apps/web/components/home/use-overseas-country-counts.ts",
+      "apps/web/components/layout/MainLayout.tsx",
+      "apps/web/components/layout/NavigationPrefetcher.tsx",
+      "apps/web/components/layout/OverlayLayout.tsx",
+      "apps/web/components/map/OverseasMap.tsx",
+      "apps/web/components/profile/UserProfilePanel.tsx",
+      "apps/web/components/profile/UserProfileProgressiveSkeleton.tsx",
+      "apps/web/components/region/RegionSelector.tsx",
+      "apps/web/components/search/RestaurantSearch.tsx",
+      "apps/web/components/ui/button.tsx",
+      "apps/web/components/ui/card.tsx",
+      "apps/web/components/ui/data-pending.tsx",
+      "apps/web/components/ui/skeleton.tsx",
+      "apps/web/constants/overseas-regions.ts",
+      "apps/web/hooks/leaderboard-read-result.ts",
+      "apps/web/hooks/use-announcements.tsx",
+      "apps/web/hooks/use-banner-announcements.tsx",
+      "apps/web/hooks/useLeaderboard.ts",
+      "apps/web/lib/admin/dashboard-visualization-data.ts",
+      "apps/web/lib/admin/local-catalog-edit-client.ts",
+      "apps/web/lib/admin/local-catalog-edit.ts",
+      "apps/web/lib/admin/local-catalog-evaluation-readback.ts",
+      "apps/web/lib/admin/youtube-kpi-snapshots.ts",
+      "apps/web/lib/announcement-localization.ts",
+      "apps/web/lib/home-detail-route-state.ts",
+      "apps/web/lib/home-map-theme-filters.ts",
+      "apps/web/lib/home-map-youtube-kpi.ts",
+      "apps/web/lib/map-query-helpers.ts",
+      "apps/web/lib/overseas-region-matching.ts",
+      "apps/web/lib/popular-restaurants.ts",
+      "apps/web/lib/privacy/sanitize.ts",
+      "apps/web/lib/restaurant-discovery-cache.ts",
+      "apps/web/lib/restaurant-popularity.ts",
+      "apps/web/lib/security/local-development-boundary.ts",
+      "apps/web/lib/security/same-origin-mutation.ts",
+      "apps/web/package-lock.json",
+      "apps/web/package.json",
+      "apps/web/performance/admin-console-20260908/README.md",
+      "apps/web/performance/admin-console-20260908/artifact-map.json",
+      "apps/web/performance/admin-console-20260908/frozen-after/AdminConsoleOverview.tsx.txt",
+      "apps/web/performance/admin-console-20260908/frozen-after/DashboardDataTable.tsx.txt",
+      "apps/web/performance/admin-console-20260908/frozen-after/dashboard-visualization-data.ts.txt",
+      "apps/web/performance/admin-console-20260908/frozen-before/AdminConsoleOverview.tsx.txt",
+      "apps/web/performance/admin-console-20260908/kpi-behavior-readback.json",
+      "apps/web/performance/admin-console-20260908/layout-readback.json",
+      "apps/web/performance/admin-console-20260908/measure-table-render.tsx",
+      "apps/web/performance/admin-console-20260908/table-render-raw.json",
+      "apps/web/performance/admin-console-20260908/table-render-scored.json",
+      "apps/web/performance/admin-console-20260908/verification.json",
+      "apps/web/performance/merge-scaling-20260908/count-cache-artifact-map.json",
+      "apps/web/performance/merge-scaling-20260908/count-cache-functional-readback.json",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/README.md",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/artifact-map.json",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/baseline.source",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/candidate.source",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/freeze.json",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/measure.mjs",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/raw.json",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/runtime-tests.source",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/score.mjs",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/scored.json",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/treemap.source",
+      "apps/web/performance/youtube-kpi-read-scheduling-20260908/verification.json",
+      "apps/web/public/fonts/suit/LICENSE",
+      "apps/web/public/fonts/suit/README.md",
+      "apps/web/public/fonts/suit/SUIT-Variable.woff2",
+      "apps/web/scripts/dev-prewarm.mjs",
+      "apps/web/scripts/local-supabase-runtime.mjs",
+      "apps/web/scripts/run-local-dev.mjs",
+      "apps/web/scripts/run-nightly-regression.mjs",
+      "apps/web/scripts/sanitize-evaluation-evidence.ts",
+      "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "apps/web/tests-unit/admin-evaluation-pending-layout.test.tsx",
+      "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts",
+      "apps/web/tests-unit/admin-owned-pending-render.test.tsx",
+      "apps/web/tests-unit/announcement-localization.test.ts",
+      "apps/web/tests-unit/auth-profile-localized-pending.test.tsx",
+      "apps/web/tests-unit/category-count-state.test.tsx",
+      "apps/web/tests-unit/dashboard-data-table.test.tsx",
+      "apps/web/tests-unit/dashboard-visualization-data.test.ts",
+      "apps/web/tests-unit/home-detail-route-state.test.ts",
+      "apps/web/tests-unit/home-initial-layout-render.test.tsx",
+      "apps/web/tests-unit/home-map-theme-filters.test.ts",
+      "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+      "apps/web/tests-unit/home-root-lazy-boundary.test.ts",
+      "apps/web/tests-unit/local-catalog-edit-client.test.ts",
+      "apps/web/tests-unit/local-catalog-edit.test.ts",
+      "apps/web/tests-unit/local-catalog-evaluation-readback.test.ts",
+      "apps/web/tests-unit/local-dev-runtime-inheritance.test.ts",
+      "apps/web/tests-unit/local-supabase-runtime.test.ts",
+      "apps/web/tests-unit/local-youtube-kpi-refresh.test.ts",
+      "apps/web/tests-unit/map-query-helpers.test.ts",
+      "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+      "apps/web/tests-unit/mypage-mobile-cleanup-contract.test.ts",
+      "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "apps/web/tests-unit/overseas-region-matching.test.ts",
+      "apps/web/tests-unit/privacy-sanitize.test.ts",
+      "apps/web/tests-unit/public-feed-leaderboard-state.test.tsx",
+      "apps/web/tests-unit/public-route-data-layout.test.tsx",
+      "apps/web/tests-unit/restaurant-discovery-cache.test.ts",
+      "apps/web/tests-unit/restaurant-popularity.test.ts",
+      "apps/web/tests-unit/root-layout-local-runtime-contract.test.ts",
+      "apps/web/tests-unit/same-origin-mutation.test.ts",
+      "apps/web/tests-unit/web-quality-performance-source.test.ts",
+      "apps/web/tests-unit/youtube-kpi-snapshot-contract.test.ts",
+      "apps/web/tests-unit/youtube-kpi-snapshots-runtime.test.ts",
+      "apps/web/tests/admin-kpi-dashboard-runtime.spec.ts",
+      "apps/web/tests/admin-module-ready.ts",
+      "apps/web/tests/home-map-contextual-discovery.spec.ts",
+      "apps/web/tests/mobile-home-map.spec.ts",
+      "apps/web/tests/qa-integration.spec.ts",
+      "backend/bin/run_trend_dry_run.py",
+      "backend/supabase/candidates/restaurant_catalog_edit_api.sql",
+      "backend/supabase/candidates/restaurant_catalog_edit_core.sql",
+      "backend/supabase/candidates/restaurant_catalog_publish_api.sql",
+      "backend/supabase/candidates/restaurant_catalog_publish_core.sql",
+      "backend/supabase/docs/local-working-catalog.md",
+      "backend/supabase/migrations/20260908000100_separate_ingestion_candidate_identity.sql",
+      "backend/supabase/scripts/catalog_publish_operator.py",
+      "backend/supabase/scripts/catalog_publish_transport.py",
+      "backend/supabase/scripts/hosted_data_plane.py",
+      "backend/supabase/scripts/local-migrate.py",
+      "backend/supabase/scripts/local_catalog_edit_install.py",
+      "backend/supabase/scripts/local_catalog_publish.py",
+      "backend/supabase/scripts/local_catalog_publish_plan.py",
+      "backend/supabase/scripts/local_catalog_workspace.py",
+      "backend/supabase/scripts/local_evaluation_review.py",
+      "backend/supabase/scripts/local_review_place_evidence.py",
+      "backend/supabase/scripts/local_working_schema.py",
+      "backend/supabase/scripts/refresh-local-youtube-kpis.mjs",
+      "backend/supabase/scripts/test_catalog_publish_operator.py",
+      "backend/supabase/scripts/test_catalog_publish_transport.py",
+      "backend/supabase/scripts/test_hosted_data_plane.py",
+      "backend/supabase/scripts/test_local_catalog_edit_install.py",
+      "backend/supabase/scripts/test_local_catalog_publish_plan.py",
+      "backend/supabase/scripts/test_local_catalog_workspace.py",
+      "backend/supabase/scripts/test_local_evaluation_review.py",
+      "backend/supabase/scripts/verify_ingestion_identity.sql",
+      "backend/supabase/tests/test_local_function_runtime_contract.py",
+      "backend/supabase/tests/test_local_publication_verifier.py",
+      "backend/supabase/tests/test_local_replay_contract.py",
+      "backend/supabase/tests/test_local_seed_receipt_contract.py",
+      "backend/supabase/tests/test_restaurant_catalog_edit_core.py",
+      "backend/trend/dry_run.py",
+      "backend/trend/momentum.py",
+      "backend/trend/tests/test_momentum.py",
+      "backend/video_evidence/__init__.py",
+      "backend/video_evidence/runner.py",
+      "backend/video_evidence/test_runner.py",
+      "backend/video_evidence/vendor/claude_video/LICENSE",
+      "backend/video_evidence/vendor/claude_video/NOTICE.md",
+      "backend/video_evidence/vendor/claude_video/frames.py",
+      "backend/video_evidence/vendor/claude_video/transcribe.py",
+      "docs/operations/local-first-readiness.md",
+      "docs/operations/nightly-regression.md"
+    ]
+  },
+  {
+    "historical_sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "subject": "feat(seo): optimize AEO, SEO, and GEO with rich schema, llms.txt, manifest, and crawler pipeline fixes",
+    "stable_patch_id": "f2bab163ef252120bcc1ffaa6eec3c5fd2fd0842",
+    "equivalent_authority_ancestors": [],
+    "changed_files": [
+      "apps/web/app/layout.tsx",
+      "apps/web/app/manifest.ts",
+      "apps/web/app/robots.ts",
+      "apps/web/app/sitemap.ts",
+      "apps/web/lib/seo.ts",
+      "apps/web/public/llms-full.txt",
+      "apps/web/public/llms.txt",
+      "apps/web/tests-unit/seo-source.test.ts",
+      "backend/bin/evaluate_new_youtube_videos.py",
+      "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+      "backend/restaurant-crawling/scripts/split_video_chunks.mjs"
+    ]
+  }
+]

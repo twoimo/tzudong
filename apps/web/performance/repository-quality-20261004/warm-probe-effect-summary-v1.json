@@ -1,0 +1,70 @@
+{
+  "experiment": "same-source observer effect; not a product performance change",
+  "runs": [
+    {
+      "run": 0,
+      "probe": "full",
+      "medianMB": 64.868864,
+      "endMB": 86.8323,
+      "peakMB": 107.25764,
+      "afterDiagnosticGC_MB": 18.658656,
+      "requests": {
+        "restaurant": 2,
+        "otherFixture": 63
+      },
+      "exactMembership": true
+    },
+    {
+      "run": 1,
+      "probe": "minimal",
+      "medianMB": 34.913306,
+      "endMB": 32.526492,
+      "peakMB": 47.576328,
+      "afterDiagnosticGC_MB": 18.693176,
+      "requests": {
+        "restaurant": 2,
+        "otherFixture": 63
+      },
+      "exactMembership": true
+    },
+    {
+      "run": 2,
+      "probe": "minimal",
+      "medianMB": 34.772972,
+      "endMB": 32.499732,
+      "peakMB": 55.781684,
+      "afterDiagnosticGC_MB": 18.623512,
+      "requests": {
+        "restaurant": 2,
+        "otherFixture": 63
+      },
+      "exactMembership": true
+    },
+    {
+      "run": 3,
+      "probe": "full",
+      "medianMB": 63.340098000000005,
+      "endMB": 84.05734,
+      "peakMB": 105.20674,
+      "afterDiagnosticGC_MB": 18.642868,
+      "requests": {
+        "restaurant": 2,
+        "otherFixture": 63
+      },
+      "exactMembership": true
+    }
+  ],
+  "processesPerProbe": 2,
+  "dependentCyclesPerProcess": 60,
+  "postFinalGC": "diagnostic only; not used in any primary budget",
+  "primarySamplesForcedGC": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "confidenceInterval": null,
+  "limitations": [
+    "n2 per probe",
+    "no population or leak-absence claim",
+    "remote SDK/time/GC-phase confounding remains"
+  ],
+  "allExactMembership": true
+}

@@ -1,0 +1,26 @@
+{
+  "observedAt": "2026-10-04T12:18:51.623082+00:00",
+  "source": "3c3f35378387fc7d0520b8915f101efba2c7ab5f",
+  "exitCode": 0,
+  "runtime": "Bun1.4.0 Node24.21.0 own npm11.6.2 dependency tree",
+  "checks": [
+    "review-draft-deletion-browser",
+    "review-draft-revision-browser",
+    "review-save-owner-lifecycle",
+    "review-save-submit",
+    "review-save-operation",
+    "review-upload-uncertainty",
+    "review-draft-privacy",
+    "draft-store-hardening-contract",
+    "nightly-regression-workflow",
+    "dependency-install-compatibility",
+    "dashboard-route-contract",
+    "supabase-rest-client"
+  ],
+  "failedCases": [],
+  "rawLogsStored": false,
+  "passed": 185,
+  "failed": 0,
+  "skipped": 0,
+  "assertions": 2911
+}

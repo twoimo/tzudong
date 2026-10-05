@@ -1,0 +1,420 @@
+{
+  "started_at_utc": "2026-10-04T20:11:09.158483+00:00",
+  "workspace": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+  "expected_head": "e39635a89a3d7e9570ca9f67cda4906af3816004",
+  "evidence_directory": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-swift-codeql-20261005",
+  "owned_temp_directory": "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx",
+  "initial_commands": [
+    {
+      "argv": [
+        "git",
+        "status",
+        "--short",
+        "--untracked-files=all"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "?? .build/.buildSystem_debug\n?? .build/CACHEDIR.TAG\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "codex/swift-codeql-build-20261005\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "e39635a89a3d7e9570ca9f67cda4906af3816004\n",
+      "stderr": ""
+    }
+  ],
+  "initial_clean_observation": "Earlier git status --short --untracked-files=all was empty at the expected branch/head. After local swift package/build --help probes, only .build/.buildSystem_debug and .build/CACHEDIR.TAG appeared. A conservative clean-tree assertion stopped evidence initialization before any writes; readback confirmed only these build markers. They are preserved and the permitted root ignore will cover them.",
+  "source_files": {
+    ".gitignore": {
+      "before_sha256": "b780908e13081e2721d101e681c48ff28673dd9a8c129ec03728ba2cf9fa827d",
+      "head_sha256": "b780908e13081e2721d101e681c48ff28673dd9a8c129ec03728ba2cf9fa827d",
+      "after_sha256": "a40fbabaa51435c1a19f8637d7e8f7cbfa89018762b6497cb7203a00456b8324",
+      "unchanged": false
+    },
+    "backend/restaurant-crawling/scripts/03-2-visual-ocr.swift": {
+      "before_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+      "head_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+      "after_sha256": "c262b6e1df6ec5bd9f0184aa5aa2bc57e670579252be6d6cabd5425c5d86668e",
+      "unchanged": true
+    },
+    "backend/restaurant-crawling/scripts/03-2-visual-location.py": {
+      "before_sha256": "cb0c789756948c20eadee9beb20bdc948c40cb9bf7440cd63fd628345182077b",
+      "head_sha256": "cb0c789756948c20eadee9beb20bdc948c40cb9bf7440cd63fd628345182077b",
+      "after_sha256": "cb0c789756948c20eadee9beb20bdc948c40cb9bf7440cd63fd628345182077b",
+      "unchanged": true
+    },
+    "Package.swift": {
+      "after_sha256": "99115245db7410f33033ab63a9db5c9e6d5e5743ee127fcdecd9c3a529f73613",
+      "new_file": true
+    }
+  },
+  "local_model_evidence": {
+    "evidence_level": "Local session metadata only; no wire trace or server attestation. No model/provider change performed.",
+    "metadata_path": "/Users/twoimo/.codex/sessions/2026/10/05/rollout-2026-10-05T05-06-48-01a10886-b691-7843-a235-4932e7c8f8aa.jsonl",
+    "session_meta": {
+      "id": "01a10886-b691-7843-a235-4932e7c8f8aa",
+      "timestamp": "2026-10-04T20:06:48.742Z",
+      "cli_version": "0.160.0",
+      "model_provider": "openai"
+    },
+    "session_kind": "subagent",
+    "turn_context": {
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong"
+    }
+  },
+  "local_toolchain_commands": [
+    {
+      "argv": [
+        "/usr/bin/sw_vers"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/uname",
+        "-m"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "arm64\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/xcode-select",
+        "-p"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "/Applications/Xcode.app/Contents/Developer\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/xcrun",
+        "--find",
+        "swift"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/swift",
+        "--version"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0\n",
+      "stderr": "swift-driver version: 1.168.6 "
+    },
+    {
+      "argv": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "--show-sdk-path"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "--show-sdk-version"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "27.0\n",
+      "stderr": ""
+    }
+  ],
+  "primary_source_verification": {
+    "checked_at_utc": "2026-10-04T20:11:09.158542+00:00",
+    "supported_in_public_source": true,
+    "hosted_bundle_version_verified": false,
+    "sources": [
+      {
+        "repository": "github/codeql",
+        "commit": "7d04932ce03b907a4865daa2e633778f5650dc20",
+        "path": "swift/swift-autobuilder/ProjectParser.cpp",
+        "url": "https://raw.githubusercontent.com/github/codeql/7d04932ce03b907a4865daa2e633778f5650dc20/swift/swift-autobuilder/ProjectParser.cpp",
+        "permalink": "https://github.com/github/codeql/blob/7d04932ce03b907a4865daa2e633778f5650dc20/swift/swift-autobuilder/ProjectParser.cpp",
+        "sha256": "21864a9dff0b16e742d27d2ecb160009d70aa9c8d3cd82bef2b249f90eaf63c0",
+        "line_ranges": [
+          [
+            208,
+            218
+          ],
+          [
+            269,
+            279
+          ]
+        ],
+        "finding": "Recursive discovery records Package.swift and exposes Swift packages even when no Xcode workspace exists."
+      },
+      {
+        "repository": "github/codeql",
+        "commit": "7d04932ce03b907a4865daa2e633778f5650dc20",
+        "path": "swift/swift-autobuilder/swift-autobuilder.cpp",
+        "url": "https://raw.githubusercontent.com/github/codeql/7d04932ce03b907a4865daa2e633778f5650dc20/swift/swift-autobuilder/swift-autobuilder.cpp",
+        "permalink": "https://github.com/github/codeql/blob/7d04932ce03b907a4865daa2e633778f5650dc20/swift/swift-autobuilder/swift-autobuilder.cpp",
+        "sha256": "85d16a1f5519244e5ef10aa45d64d9391b2ffaea78ab1bbaa416dff9dc021303",
+        "line_ranges": [
+          [
+            48,
+            55
+          ],
+          [
+            74,
+            95
+          ]
+        ],
+        "finding": "When there are Swift packages and no Xcode targets, autobuild tries packages; missing-project diagnostic explicitly mentions Swift packages."
+      },
+      {
+        "repository": "github/codeql",
+        "commit": "7d04932ce03b907a4865daa2e633778f5650dc20",
+        "path": "swift/swift-autobuilder/BuildRunner.cpp",
+        "url": "https://raw.githubusercontent.com/github/codeql/7d04932ce03b907a4865daa2e633778f5650dc20/swift/swift-autobuilder/BuildRunner.cpp",
+        "permalink": "https://github.com/github/codeql/blob/7d04932ce03b907a4865daa2e633778f5650dc20/swift/swift-autobuilder/BuildRunner.cpp",
+        "sha256": "43970ca3d11e4fe418d71ecfaf7f53d82b703c4af661e7341eed7aa4c648a816",
+        "line_ranges": [
+          [
+            88,
+            92
+          ]
+        ],
+        "finding": "The Swift-package branch runs /usr/bin/swift build --package-path with the manifest parent directory."
+      },
+      {
+        "repository": "github/codeql",
+        "commit": "7d04932ce03b907a4865daa2e633778f5650dc20",
+        "path": "swift/tools/autobuild.sh",
+        "url": "https://raw.githubusercontent.com/github/codeql/7d04932ce03b907a4865daa2e633778f5650dc20/swift/tools/autobuild.sh",
+        "permalink": "https://github.com/github/codeql/blob/7d04932ce03b907a4865daa2e633778f5650dc20/swift/tools/autobuild.sh",
+        "sha256": "a95439cd356f971595f4b07c2f06e9ea79ffd08085bd164eb63550a8c96ce068",
+        "line_ranges": [
+          [
+            1,
+            9
+          ]
+        ],
+        "finding": "macOS dispatches to the Swift autobuilder."
+      }
+    ],
+    "docs_url": "https://docs.github.com/en/code-security/reference/code-scanning/codeql/build-options-for-compiled-languages#building-swift",
+    "docs_limit": "Overview describes Xcode autobuild and supports swift build for manual builds; package autodetection is established from the pinned public implementation, not inferred from manual-build documentation."
+  },
+  "build_commands": [
+    {
+      "label": "describe",
+      "argv": [
+        "/usr/bin/swift",
+        "package",
+        "--package-path",
+        "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+        "--scratch-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build",
+        "--cache-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/cache",
+        "--config-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/config",
+        "--security-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/security",
+        "describe",
+        "--type",
+        "json"
+      ],
+      "shell_command": "/usr/bin/swift package --package-path /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong --scratch-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build --cache-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/cache --config-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/config --security-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/security describe --type json",
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "environment_overrides": {
+        "TMPDIR": "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/tmp/",
+        "CLANG_MODULE_CACHE_PATH": "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/module-cache",
+        "SWIFTPM_MODULECACHE_OVERRIDE": "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/manifest-module-cache"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 8.698,
+      "stdout": "{\n  \"dependencies\" : [\n\n  ],\n  \"manifest_display_name\" : \"TzudongVisualOCR\",\n  \"name\" : \"TzudongVisualOCR\",\n  \"path\" : \"/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong\",\n  \"platforms\" : [\n    {\n      \"name\" : \"macos\",\n      \"version\" : \"10.15\"\n    }\n  ],\n  \"products\" : [\n    {\n      \"name\" : \"TzudongVisualOCR\",\n      \"targets\" : [\n        \"TzudongVisualOCR\"\n      ],\n      \"type\" : {\n        \"executable\" : null\n      }\n    }\n  ],\n  \"targets\" : [\n    {\n      \"c99name\" : \"TzudongVisualOCR\",\n      \"module_type\" : \"SwiftTarget\",\n      \"name\" : \"TzudongVisualOCR\",\n      \"path\" : \"backend/restaurant-crawling/scripts\",\n      \"product_memberships\" : [\n        \"TzudongVisualOCR\"\n      ],\n      \"sources\" : [\n        \"03-2-visual-ocr.swift\"\n      ],\n      \"type\" : \"executable\"\n    }\n  ],\n  \"tools_version\" : \"5.5\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "build",
+      "argv": [
+        "/usr/bin/swift",
+        "build",
+        "--package-path",
+        "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+        "--scratch-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build",
+        "--cache-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/cache",
+        "--config-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/config",
+        "--security-path",
+        "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/security",
+        "--jobs",
+        "2"
+      ],
+      "shell_command": "/usr/bin/swift build --package-path /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong --scratch-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build --cache-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/cache --config-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/config --security-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/security --jobs 2",
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "environment_overrides": {
+        "TMPDIR": "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/tmp/",
+        "CLANG_MODULE_CACHE_PATH": "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/module-cache",
+        "SWIFTPM_MODULECACHE_OVERRIDE": "/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/manifest-module-cache"
+      },
+      "exit_code": 1,
+      "elapsed_seconds": 7.881,
+      "stdout": "Building for debugging...\n[Planning deferred tasks]\n[19\u2009/\u200924]\n[20\u2009/\u200925] TzudongVisualOCR-product\n[26\u2009/\u200994]\n[30\u2009/\u200994]\n[32\u2009/\u200994]\n[39\u2009/\u200994]\n[41\u2009/\u200994]\n[43\u2009/\u200994]\n[47\u2009/\u200994]\n[50\u2009/\u200994]\n[52\u2009/\u200994]\n[56\u2009/\u200994]\n[60\u2009/\u200994]\n[63\u2009/\u200994]\n[65\u2009/\u200994]\n[66\u2009/\u200994]\n[72\u2009/\u200994]\n[75\u2009/\u200994]\n[76\u2009/\u200994]\n[80\u2009/\u200994]\n[81\u2009/\u200994]\n[82\u2009/\u200994]\n[86\u2009/\u200994]\n[87\u2009/\u200994]\n[89\u2009/\u200994] TzudongVisualOCR-product\n",
+      "stderr": "warning: 'tzudong': found 47 file(s) which are unhandled; explicitly declare them as resources or exclude from the target\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/01-collect-urls.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/02-1-migrate-meta-to-supabase.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/02-5-cleanup-orphans.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/02-collect-meta.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-1-generate-transcript-context.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-location.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-collect-transcript.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/05-map-url-crawling.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/06-1-transcript-document-with-meta.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/06-frame-caption.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/07-gemini-crawling.sh\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/chunk_planner.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/colab-generate-context-optimized.ipynb\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/colab-migrate_documents.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/colab_frame_captioning.ipynb\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/collect_heatmap.log\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/collect_multimodal.log\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/final_merge_chunk.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/gemini_api_request.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/get_optimal_jobs.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/kaggle-context-generation-git.ipynb\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/login_and_save_cookies.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/merge_chunk_results.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/parse_result.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/requirements.txt\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/split_video_chunks.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/map-url-network-policy.test.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_chunk_download_retry.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_cleanup_orphans_safety.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_gemini_chunk_error_class.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_gemini_chunk_upload_timeout.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_gemini_scrapling_fallback_regression.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_merge_chunk_visual.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_parse_result_regression.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_privileged_supabase_client_trust.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_split_video_chunks_timeout.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_visual_location.py\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/tests/transcript-command.test.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/transcript-command.mjs\n    /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/url-extractor.js\nerror: SwiftCompile normal arm64 failed with a nonzero exit code. Command line:     cd /Users/twoimo/.codex/worktrees/promotion-sync-20261004\n    \n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:15:1: error: statements are not allowed at the top level\n13 | }\n14 | \n15 | guard CommandLine.arguments.count == 2 else { fail(\"ocr_args\") }\n   | `- error: statements are not allowed at the top level\n16 | let path = CommandLine.arguments[1]\n17 | let url = URL(fileURLWithPath: path)\n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:18:1: error: statements are not allowed at the top level\n16 | let path = CommandLine.arguments[1]\n17 | let url = URL(fileURLWithPath: path)\n18 | guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),\n   | `- error: statements are not allowed at the top level\n19 |       let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {\n20 |     fail(\"ocr_image\")\n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:24:1: error: expressions are not allowed at the top level\n22 | \n23 | let request = VNRecognizeTextRequest()\n24 | request.recognitionLevel = .accurate\n   | `- error: expressions are not allowed at the top level\n25 | request.usesLanguageCorrection = false\n26 | request.recognitionLanguages = [\"ko-KR\", \"en-US\"]\n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:25:1: error: expressions are not allowed at the top level\n23 | let request = VNRecognizeTextRequest()\n24 | request.recognitionLevel = .accurate\n25 | request.usesLanguageCorrection = false\n   | `- error: expressions are not allowed at the top level\n26 | request.recognitionLanguages = [\"ko-KR\", \"en-US\"]\n27 | \n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:26:1: error: expressions are not allowed at the top level\n24 | request.recognitionLevel = .accurate\n25 | request.usesLanguageCorrection = false\n26 | request.recognitionLanguages = [\"ko-KR\", \"en-US\"]\n   | `- error: expressions are not allowed at the top level\n27 | \n28 | let handler = VNImageRequestHandler(cgImage: image, options: [:])\n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:29:1: error: statements are not allowed at the top level\n27 | \n28 | let handler = VNImageRequestHandler(cgImage: image, options: [:])\n29 | do {\n   | `- error: statements are not allowed at the top level\n30 |     try handler.perform([request])\n31 | } catch {\n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:40:1: error: expressions are not allowed at the top level\n38 | \n39 | let data = try JSONEncoder().encode(Payload(texts: texts))\n40 | FileHandle.standardOutput.write(data)\n   | `- error: expressions are not allowed at the top level\n41 | FileHandle.standardOutput.write(Data(\"\\n\".utf8))\n42 | \n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:41:1: error: expressions are not allowed at the top level\n39 | let data = try JSONEncoder().encode(Payload(texts: texts))\n40 | FileHandle.standardOutput.write(data)\n41 | FileHandle.standardOutput.write(Data(\"\\n\".utf8))\n   | `- error: expressions are not allowed at the top level\n42 | \n\n/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift:39:16: error: call can throw, but errors cannot be thrown out of a global variable initializer\n37 | }.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }\n38 | \n39 | let data = try JSONEncoder().encode(Payload(texts: texts))\n   |                `- error: call can throw, but errors cannot be thrown out of a global variable initializer\n40 | FileHandle.standardOutput.write(data)\n41 | FileHandle.standardOutput.write(Data(\"\\n\".utf8))\nFailed frontend command:\n/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -emit-module -experimental-skip-non-inlinable-function-bodies-without-types /Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/backend/restaurant-crawling/scripts/03-2-visual-ocr.swift -target arm64-apple-macos12.0 -disable-cross-import-overlay-search -swift-module-cross-import Vision /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/Vision.framework/Modules/Vision.swiftcrossimport/FoundationModels.swiftoverlay -swift-module-cross-import Vision /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk/System/Library/Frameworks/Vision.framework/Modules/Vision.swiftcrossimport/FoundationModels.swiftoverlay -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins/libFoundationMacros.dylib\\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server\\#FoundationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins/libObservationMacros.dylib\\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server\\#ObservationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins/libSwiftMacros.dylib\\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server\\#SwiftMacros -disable-implicit-swift-modules -Xcc -fno-implicit-modules -Xcc -fno-implicit-module-maps -explicit-swift-module-map-file /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR-dependencies-1.json -Xllvm -aarch64-use-tbi -enable-objc-interop -stack-check -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -I /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -module-cache-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/SwiftExplicitPrecompiledModules -no-color-diagnostics -Xcc -fno-color-diagnostics -enable-testing -g -debug-info-format\\=dwarf -dwarf-version\\=4 -swift-version 5 -Onone -D SWIFT_PACKAGE -D DEBUG -D Xcode -serialize-debugging-options -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/twoimo/.codex/worktrees/promotion-sync-20261004 -enable-anonymous-context-mangled-names -file-compilation-dir /Users/twoimo/.codex/worktrees/promotion-sync-20261004 -Xcc -D_LIBCPP_HARDENING_MODE\\=_LIBCPP_HARDENING_MODE_DEBUG -Xcc -ivfsstatcache -Xcc /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/SDKStatCaches.noindex/macosx27.0-26A425-a0facfad118c1a7a18f0aad9463f65497231f6df4def33e022ae2eb8f782df1a.sdkstatcache -Xcc -fmodules-prune-interval\\=86400 -Xcc -fmodules-prune-after\\=345600 -Xcc -I/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Products/Debug/include -Xcc -I/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/DerivedSources-normal/arm64 -Xcc -I/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/DerivedSources/arm64 -Xcc -I/private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\\=1 -no-auto-bridging-header-chaining -module-name TzudongVisualOCR -const-gather-protocols-file /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR_const_extract_protocols.json -disable-clang-spi -clang-target arm64-apple-macos27.0 -target-sdk-version 27.0 -target-sdk-name macosx27.0 -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -emit-module-doc-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.swiftdoc -emit-module-source-info-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.swiftsourceinfo -serialize-diagnostics-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR-primary-emit-module.dia -emit-dependencies-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR-primary-emit-module.d -parse-as-library -o /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.swiftmodule -emit-abi-descriptor-path /private/tmp/tzudong-swift-codeql-20261005-tqp9yxfx/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.abi.json\nerror: Build failed\n"
+    }
+  ],
+  "hosted_codeql_success_verified": false,
+  "package_scope_check": {
+    "pass": true,
+    "targets": 1,
+    "sources": [
+      "03-2-visual-ocr.swift"
+    ],
+    "external_dependencies": 0,
+    "target_type": "executable"
+  },
+  "final_checks": [
+    {
+      "argv": [
+        "git",
+        "status",
+        "--short",
+        "--untracked-files=all"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": " M .gitignore\n?? Package.swift\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "codex/swift-codeql-build-20261005\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "e39635a89a3d7e9570ca9f67cda4906af3816004\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--",
+        ".gitignore"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": "diff --git a/.gitignore b/.gitignore\nindex 6966a871..a1600b2a 100644\n--- a/.gitignore\n+++ b/.gitignore\n@@ -6,6 +6,7 @@ venv/\n backend/bun.lock\n \n # \u2500\u2500 \ube4c\ub4dc / \ucd9c\ub825 / Build & Output \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n+/.build/\n .next/\n .next-stale-*/\n .turbo/\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--",
+        "/dev/null",
+        "Package.swift"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 1,
+      "stdout": "diff --git a/Package.swift b/Package.swift\nnew file mode 100644\nindex 00000000..3c7cb952\n--- /dev/null\n+++ b/Package.swift\n@@ -0,0 +1,14 @@\n+// swift-tools-version: 5.5\n+import PackageDescription\n+\n+let package = Package(\n+    name: \"TzudongVisualOCR\",\n+    platforms: [.macOS(.v10_15)],\n+    targets: [\n+        .executableTarget(\n+            name: \"TzudongVisualOCR\",\n+            path: \"backend/restaurant-crawling/scripts\",\n+            sources: [\"03-2-visual-ocr.swift\"]\n+        )\n+    ]\n+)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "check-ignore",
+        "-v",
+        ".build/.buildSystem_debug",
+        ".build/CACHEDIR.TAG"
+      ],
+      "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+      "exit_code": 0,
+      "stdout": ".gitignore:9:/.build/\t.build/.buildSystem_debug\n.gitignore:9:/.build/\t.build/CACHEDIR.TAG\n",
+      "stderr": ""
+    }
+  ],
+  "result": {
+    "status": "blocked_build_failure_preserved",
+    "ready_for_source_delivery": false,
+    "package_describe_exit_code": 0,
+    "package_build_exit_code": 1,
+    "build_attempt_count": 1,
+    "failure": "Installed Swift frontend received -parse-as-library and rejected the existing non-main.swift script top-level statements/expressions; it also rejected throwing from the global initializer. No executable build succeeded.",
+    "nonfatal_warning": "SwiftPM reported 47 unhandled neighboring files; the describe source list still contains exactly the OCR Swift file. No exclusions were added to scanners.",
+    "observed_build_language_mode": "-swift-version 5",
+    "observed_build_target": "arm64-apple-macos12.0 (manifest requests macOS 10.15; installed toolchain command used 12.0)",
+    "worktree_source_changes": [
+      "Package.swift",
+      ".gitignore"
+    ],
+    "ocr_source_and_python_caller_byte_identical_to_head": true,
+    "ocr_executed": false,
+    "codeql_database_or_hosted_scan_executed": false,
+    "source_changes_staged_committed_pushed": false,
+    "future_main_readback": "After an authorized buildable fix reaches main, verify a fresh language:swift analysis for the delivered main SHA and default configuration46be7d0..., successful package discovery/build/extraction/upload, scanned OCR source coverage, and all five other languages still scanned. Preserve historical Aug24 cc4a1bfd evidence."
+  },
+  "finished_at_utc": "2026-10-04T20:13:09.610778+00:00",
+  "evidence_file_hashes": {
+    "source.patch": "17f85d539fb0b77dbf462b7c5e687ac5710623f74efc4326ff23022e22fe0580"
+  }
+}

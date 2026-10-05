@@ -1,0 +1,14 @@
+[
+  {
+    "compiler": "native",
+    "exit_code": 0,
+    "seconds": 3.53,
+    "diagnostics": "\n> web@1.2.4 typecheck:native\n> node scripts/run-typecheck.mjs --compiler native\n\n"
+  },
+  {
+    "compiler": "compat",
+    "exit_code": 0,
+    "seconds": 22.17,
+    "diagnostics": "\n> web@1.2.4 typecheck:compat\n> node scripts/run-typecheck.mjs --compiler compat\n\n"
+  }
+]

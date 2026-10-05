@@ -1,0 +1,7 @@
+{
+  "checked_tracked_source_files": 1136,
+  "excluded": "retained performance evidence and non-code files",
+  "next_og_or_vercel_og_references": [],
+  "assessment": "No source import/reference of the vulnerable ImageResponse API observed; package remains vulnerable until next 16.3.6. This is static source evidence, not deployed exposure proof.",
+  "source": "https://github.com/advisories/GHSA-vcvr-r3jv-pc5j"
+}

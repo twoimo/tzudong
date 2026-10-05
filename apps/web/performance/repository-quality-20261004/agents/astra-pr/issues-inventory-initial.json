@@ -1,0 +1,21 @@
+{
+  "captured_at": "2026-10-04T08:28:56.335745+00:00",
+  "repository": "twoimo/tzudong",
+  "pages": 1,
+  "page_sizes": [
+    27
+  ],
+  "item_count": 1,
+  "items": [
+    {
+      "number": 2843,
+      "title": "[nightly] Local regression incident",
+      "html_url": "https://github.com/twoimo/tzudong/issues/2843",
+      "state": "open",
+      "created_at": "2026-08-28T02:17:01Z",
+      "updated_at": "2026-10-03T21:39:32Z",
+      "author_role": "automation",
+      "labels": []
+    }
+  ]
+}

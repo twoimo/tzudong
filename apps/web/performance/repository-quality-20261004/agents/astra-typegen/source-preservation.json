@@ -1,0 +1,49 @@
+{
+  "branch": "codex/local-type-catalog-quality-20261004",
+  "head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "status_porcelain": "",
+  "source_changed_files": [],
+  "readback": "source_clean_patch_prepared_not_applied",
+  "source_files": {
+    "apps/web/integrations/supabase/types.ts": {
+      "sha256": "dbf3ee99885a7fe14e99ece75fb078928c72d0ce9a9c46a6096b0287f97c3c77",
+      "equals_baseline": true
+    },
+    "apps/web/integrations/supabase/database.types.ts": {
+      "sha256": "7c10eb1ba07e9d1532f241e17f245c3fc9fb6cd3d23f5ba816a22a1189d53e6d",
+      "equals_baseline": true
+    },
+    "apps/web/scripts/supabase-gen-types.mjs": {
+      "sha256": "2d087a6062fb7af88582c1b25fd664690d15086e0302b244aa86ffd1ef63039f",
+      "equals_baseline": true
+    },
+    "apps/web/scripts/run-local-supabase-types.mjs": {
+      "sha256": "10178fc851bbe45ba2691310b436afcac1145508cad28d05117c5d4fa3b600b3",
+      "equals_baseline": true
+    },
+    "apps/web/scripts/local-supabase-runtime.mjs": {
+      "sha256": "750b4e63dba34013e328950a933f248cb329d57f5444c512c053f3bd21c60fc9",
+      "equals_baseline": true
+    },
+    ".github/workflows/nightly-local-regression.yml": {
+      "sha256": "77dffc298ba839591ccddc71f47e14ff4cfb9bd72e5f782cc7ae525fa3a0707a",
+      "equals_baseline": true
+    },
+    "apps/web/package.json": {
+      "sha256": "b81254a4389fca87fa443be4857655b5351880aed1d8644f121152216434d65c",
+      "equals_baseline": true
+    },
+    "apps/web/package-lock.json": {
+      "sha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694",
+      "equals_baseline": true
+    },
+    "apps/web/bun.lock": {
+      "sha256": "28b37410059368fe4433592989bb7337ccfa16dd2d97f0fa4f89bc763da20800",
+      "equals_baseline": true
+    },
+    "apps/web/tests-unit/nightly-regression-workflow.test.ts": {
+      "sha256": "dccb5e46e36987af94d4f4b1c590a41e8bfc3726aead209b3d0e2d104e842c61",
+      "equals_baseline": true
+    }
+  }
+}

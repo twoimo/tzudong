@@ -1,0 +1,6 @@
+{
+  "baseline": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "cases": 400,
+  "mismatches": 0,
+  "scope": "Real baseline source versus candidate summary, paging and selected rows for valid IDs, including null/invalid/tied dates; no timings"
+}

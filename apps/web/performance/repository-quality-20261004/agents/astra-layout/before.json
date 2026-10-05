@@ -1,0 +1,65 @@
+{
+  "branch": "codex/nightly-quality-20261004",
+  "head": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "status": [],
+  "runtime": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "source": "current session_meta and latest turn_context",
+    "thread_id": "01a10606-c2a4-7c90-a8be-65fdc39d124f"
+  },
+  "node_modules_present": false,
+  "checker_exit_code": 1,
+  "checker_result": {
+    "checks": {
+      "alias": {
+        "errorCode": null,
+        "offenders": [],
+        "ok": true
+      },
+      "correspondence": {
+        "errorCode": "layout_manifest_missing_entry",
+        "missing": [
+          {
+            "direction": "tree_without_entry",
+            "path": "assets"
+          },
+          {
+            "direction": "tree_without_entry",
+            "path": "assets/source-fonts"
+          },
+          {
+            "direction": "tree_without_entry",
+            "path": "docs/build-ship"
+          },
+          {
+            "direction": "tree_without_entry",
+            "path": "docs/performance"
+          }
+        ],
+        "ok": false
+      },
+      "entries": {
+        "errorCode": null,
+        "issues": [],
+        "ok": true
+      },
+      "moves": [],
+      "ownership": {
+        "errorCode": null,
+        "ok": true,
+        "violations": []
+      },
+      "staleReferences": {
+        "errorCode": null,
+        "ok": true,
+        "unresolved": [],
+        "unresolvedCount": 0
+      }
+    },
+    "errorCode": "layout_manifest_missing_entry",
+    "ok": false,
+    "trackedDirectoryCount": 37
+  }
+}

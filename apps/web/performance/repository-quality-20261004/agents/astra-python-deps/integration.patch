@@ -1,0 +1,48 @@
+diff --git a/backend/pipeline-control/requirements.txt b/backend/pipeline-control/requirements.txt
+index f924a7cc..26135068 100644
+--- a/backend/pipeline-control/requirements.txt
++++ b/backend/pipeline-control/requirements.txt
+@@ -1,5 +1,5 @@
+ kafka-python==3.0.11
+-psycopg2-binary==2.9.11
++psycopg2-binary==2.9.13
+ opentelemetry-api==1.44.0
+ opentelemetry-sdk==1.44.0
+ opentelemetry-exporter-otlp-proto-http==1.44.0
+diff --git a/backend/pipeline/requirements.txt b/backend/pipeline/requirements.txt
+index 2a982d2d..b8da6a49 100644
+--- a/backend/pipeline/requirements.txt
++++ b/backend/pipeline/requirements.txt
+@@ -1,3 +1,3 @@
+-langgraph==1.2.1
+-langchain-core==1.6.0
+-pydantic==2.13.4
++langgraph==1.2.12
++langchain-core==1.6.5
++pydantic==2.13.5
+diff --git a/backend/restaurant-crawling/scripts/requirements.txt b/backend/restaurant-crawling/scripts/requirements.txt
+index 350d111c..24e90afd 100644
+--- a/backend/restaurant-crawling/scripts/requirements.txt
++++ b/backend/restaurant-crawling/scripts/requirements.txt
+@@ -1,14 +1,15 @@
+-google-api-python-client==2.196.0
++google-api-python-client==2.200.0
+ python-dotenv==1.2.3
+-yt-dlp[default]==2026.7.4
++yt-dlp[default]==2026.8.19
+ pyyaml==6.0.3
+-openai==3.3.1
++tqdm==4.70.1
++openai==3.16.1
+ requests==2.34.2
+ langchain==1.3.9
+ langchain-community==0.4.2
+ langchain-ollama==1.1.0
+ langchain-openai==1.6.0
+ supabase==2.30.0
+-curl_cffi==0.15.0
+-scrapling[fetchers]==0.4.8
+-playwright==1.59.0
++curl_cffi==0.16.3
++scrapling[fetchers]==0.4.15
++playwright==1.62.0

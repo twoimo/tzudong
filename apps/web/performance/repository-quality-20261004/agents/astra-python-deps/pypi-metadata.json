@@ -1,0 +1,859 @@
+[
+  {
+    "name": "curl-cffi",
+    "version": "0.15.0",
+    "url": "https://pypi.org/pypi/curl_cffi/0.15.0/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "cffi>=2.0.0",
+      "certifi>=2024.2.2",
+      "rich",
+      "readability-lxml>=0.8.1; extra == \"extra\"",
+      "markdownify>=1.1.0; extra == \"extra\"",
+      "lxml_html_clean; extra == \"extra\"",
+      "charset_normalizer<4.0,>=3.3.2; extra == \"dev\"",
+      "coverage<7.0,>=6.4.1; extra == \"dev\"",
+      "cryptography<47.0,>=46.0.4; extra == \"dev\"",
+      "httpx==0.23.1; extra == \"dev\"",
+      "mypy<2.0,>=1.9.0; extra == \"dev\"",
+      "pytest<9.0,>=8.1.1; extra == \"dev\"",
+      "pytest-asyncio<1.0,>=0.23.6; extra == \"dev\"",
+      "pytest-trio<1.0,>=0.8.0; extra == \"dev\"",
+      "ruff<1.0,>=0.3.5; extra == \"dev\"",
+      "trio<1.0,>=0.25.0; extra == \"dev\"",
+      "trustme<2.0,>=1.1.0; extra == \"dev\"",
+      "uvicorn<1.0,>=0.29.0; extra == \"dev\"",
+      "websockets>=14.0; extra == \"dev\"",
+      "typing_extensions; extra == \"dev\"",
+      "cibuildwheel; extra == \"build\"",
+      "wheel; extra == \"build\"",
+      "charset_normalizer<4.0,>=3.3.2; extra == \"test\"",
+      "cryptography<47.0,>=46.0.4; extra == \"test\"",
+      "litestar<3.0,>=2.19.0; extra == \"test\"",
+      "httpx==0.23.1; extra == \"test\"",
+      "proxy.py<3.0,>=2.4.3; extra == \"test\"",
+      "pytest<9.0,>=8.1.1; extra == \"test\"",
+      "pytest-asyncio<1.0,>=0.23.6; extra == \"test\"",
+      "pytest-trio<1.0,>=0.8.0; extra == \"test\"",
+      "python-multipart<1.0,>=0.0.9; extra == \"test\"",
+      "trio<1.0,>=0.25.0; extra == \"test\"",
+      "trustme<2.0,>=1.1.0; extra == \"test\"",
+      "uvicorn<1.0,>=0.29.0; extra == \"test\"",
+      "websockets>=14.0; extra == \"test\"",
+      "typing_extensions; extra == \"test\""
+    ],
+    "project_urls": {
+      "repository": "https://github.com/lexiforest/curl_cffi"
+    },
+    "yanked": false,
+    "first_upload": "2026-04-03T11:11:46.480412Z"
+  },
+  {
+    "name": "curl-cffi",
+    "version": "0.16.3",
+    "url": "https://pypi.org/pypi/curl_cffi/0.16.3/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "cffi>=2.0.0",
+      "certifi>=2024.2.2",
+      "readability-lxml>=0.8.1; extra == \"extra\"",
+      "markdownify>=1.1.0; extra == \"extra\"",
+      "lxml_html_clean; extra == \"extra\"",
+      "rich; extra == \"cli\"",
+      "charset_normalizer<4.0,>=3.3.2; extra == \"dev\"",
+      "coverage<7.0,>=6.4.1; extra == \"dev\"",
+      "cryptography<47.0,>=46.0.4; extra == \"dev\"",
+      "httpx==0.23.1; extra == \"dev\"",
+      "pytest<9.0,>=8.1.1; extra == \"dev\"",
+      "pytest-asyncio<1.0,>=0.23.6; extra == \"dev\"",
+      "pytest-trio<1.0,>=0.8.0; extra == \"dev\"",
+      "ruff<1.0,>=0.3.5; extra == \"dev\"",
+      "trio<1.0,>=0.25.0; extra == \"dev\"",
+      "trustme<2.0,>=1.1.0; extra == \"dev\"",
+      "uvicorn<1.0,>=0.29.0; extra == \"dev\"",
+      "websockets>=14.0; extra == \"dev\"",
+      "typing_extensions; extra == \"dev\"",
+      "cibuildwheel; extra == \"build\"",
+      "wheel; extra == \"build\"",
+      "charset_normalizer<4.0,>=3.3.2; extra == \"test\"",
+      "cryptography<47.0,>=46.0.4; extra == \"test\"",
+      "litestar<3.0,>=2.19.0; extra == \"test\"",
+      "httpx==0.23.1; extra == \"test\"",
+      "proxy.py<3.0,>=2.4.3; extra == \"test\"",
+      "pytest<9.0,>=8.1.1; extra == \"test\"",
+      "pytest-asyncio<1.0,>=0.23.6; extra == \"test\"",
+      "pytest-trio<1.0,>=0.8.0; extra == \"test\"",
+      "python-multipart<1.0,>=0.0.9; extra == \"test\"",
+      "trio<1.0,>=0.25.0; extra == \"test\"",
+      "trustme<2.0,>=1.1.0; extra == \"test\"",
+      "uvicorn<1.0,>=0.29.0; extra == \"test\"",
+      "websockets>=14.0; extra == \"test\"",
+      "typing_extensions; extra == \"test\""
+    ],
+    "project_urls": {
+      "repository": "https://github.com/lexiforest/curl_cffi"
+    },
+    "yanked": false,
+    "first_upload": "2026-09-02T11:57:39.326230Z"
+  },
+  {
+    "name": "google-api-python-client",
+    "version": "2.196.0",
+    "url": "https://pypi.org/pypi/google-api-python-client/2.196.0/json",
+    "requires_python": ">=3.7",
+    "requires_dist": [
+      "httplib2<1.0.0,>=0.19.0",
+      "google-auth!=2.24.0,!=2.25.0,<3.0.0,>=1.32.0",
+      "google-auth-httplib2<1.0.0,>=0.2.0",
+      "google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.0,<3.0.0,>=1.31.5",
+      "uritemplate<5,>=3.0.1"
+    ],
+    "project_urls": {
+      "Homepage": "https://github.com/googleapis/google-api-python-client/"
+    },
+    "yanked": false,
+    "first_upload": "2026-05-06T23:47:32.886498Z"
+  },
+  {
+    "name": "google-api-python-client",
+    "version": "2.200.0",
+    "url": "https://pypi.org/pypi/google-api-python-client/2.200.0/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "httplib2<1.0.0,>=0.19.0",
+      "google-auth!=2.24.0,!=2.25.0,<3.0.0,>=1.32.0",
+      "google-auth-httplib2<1.0.0,>=0.2.0",
+      "google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.0,<3.0.0,>=1.31.5",
+      "uritemplate<5,>=3.0.1"
+    ],
+    "project_urls": {
+      "Homepage": "https://github.com/googleapis/google-api-python-client/"
+    },
+    "yanked": false,
+    "first_upload": "2026-09-01T00:04:22.839680Z"
+  },
+  {
+    "name": "kafka-python",
+    "version": "3.0.11",
+    "url": "https://pypi.org/pypi/kafka-python/3.0.11/json",
+    "requires_python": ">=3.8",
+    "requires_dist": [
+      "crc32c; extra == \"crc32c\"",
+      "lz4; extra == \"lz4\"",
+      "python-snappy; extra == \"snappy\"",
+      "zstandard; extra == \"zstd\"",
+      "pytest; extra == \"testing\"",
+      "pytest-mock; extra == \"testing\"",
+      "pytest-timeout; extra == \"testing\"",
+      "pyperf; extra == \"benchmarks\""
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/dpkp/kafka-python/blob/master/CHANGES.md",
+      "Documentation": "https://kafka-python.readthedocs.io",
+      "Homepage": "https://github.com/dpkp/kafka-python",
+      "Issues": "https://github.com/dpkp/kafka-python/issues",
+      "Repository": "https://github.com/dpkp/kafka-python"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-16T16:46:13.540999Z"
+  },
+  {
+    "name": "langchain",
+    "version": "1.3.9",
+    "url": "https://pypi.org/pypi/langchain/1.3.9/json",
+    "requires_python": "<4.0.0,>=3.10.0",
+    "requires_dist": [
+      "langchain-core<2.0.0,>=1.4.6",
+      "langgraph<1.3.0,>=1.2.4",
+      "pydantic<3.0.0,>=2.7.4",
+      "langchain-anthropic; extra == \"anthropic\"",
+      "langchain-aws; extra == \"aws\"",
+      "langchain-azure-ai; extra == \"azure-ai\"",
+      "langchain-baseten>=0.2.0; extra == \"baseten\"",
+      "langchain-community; extra == \"community\"",
+      "langchain-deepseek; extra == \"deepseek\"",
+      "langchain-fireworks; extra == \"fireworks\"",
+      "langchain-google-genai; extra == \"google-genai\"",
+      "langchain-google-vertexai; extra == \"google-vertexai\"",
+      "langchain-groq; extra == \"groq\"",
+      "langchain-huggingface; extra == \"huggingface\"",
+      "langchain-mistralai; extra == \"mistralai\"",
+      "langchain-ollama; extra == \"ollama\"",
+      "langchain-openai; extra == \"openai\"",
+      "langchain-perplexity; extra == \"perplexity\"",
+      "langchain-together; extra == \"together\"",
+      "langchain-xai; extra == \"xai\""
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/langchain-ai/langchain/releases?q=tag%3A%22langchain%3D%3D1%22",
+      "Documentation": "https://reference.langchain.com/python/langchain/langchain/",
+      "Homepage": "https://docs.langchain.com/",
+      "Issues": "https://github.com/langchain-ai/langchain/issues",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Repository": "https://github.com/langchain-ai/langchain",
+      "Slack": "https://www.langchain.com/join-community",
+      "Twitter": "https://x.com/langchain_oss"
+    },
+    "yanked": false,
+    "first_upload": "2026-06-12T16:53:25.489345Z"
+  },
+  {
+    "name": "langchain-community",
+    "version": "0.4.2",
+    "url": "https://pypi.org/pypi/langchain-community/0.4.2/json",
+    "requires_python": "<4.0.0,>=3.10.0",
+    "requires_dist": [
+      "aiohttp<4.0.0,>=3.8.3",
+      "httpx-sse<1.0.0,>=0.4.0",
+      "langchain-classic<2.0.0,>=1.0.7",
+      "langchain-core<2.0.0,>=1.4.0",
+      "langsmith<1.0.0,>=0.1.125",
+      "numpy>=1.26.2; python_version < \"3.13\"",
+      "numpy>=2.1.0; python_version >= \"3.13\"",
+      "pydantic-settings<3.0.0,>=2.10.1",
+      "pyyaml<7.0.0,>=5.3.0",
+      "requests<3.0.0,>=2.32.5",
+      "sqlalchemy<3.0.0,>=1.4.0",
+      "tenacity!=8.4.0,<10.0.0,>=8.1.0"
+    ],
+    "project_urls": {
+      "Documentation": "https://reference.langchain.com/python/langchain_community/",
+      "Homepage": "https://docs.langchain.com/",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Slack": "https://www.langchain.com/join-community",
+      "Source": "https://github.com/langchain-ai/langchain-community/tree/main/libs/community",
+      "Twitter": "https://x.com/LangChainAI"
+    },
+    "yanked": false,
+    "first_upload": "2026-05-22T19:42:57.103325Z"
+  },
+  {
+    "name": "langchain-core",
+    "version": "1.6.0",
+    "url": "https://pypi.org/pypi/langchain-core/1.6.0/json",
+    "requires_python": "<4.0.0,>=3.10.0",
+    "requires_dist": [
+      "httpx<1.0.0,>=0.23.0",
+      "jsonpatch<2.0.0,>=1.33.0",
+      "langchain-protocol>=0.0.17",
+      "langsmith<1.0.0,>=0.3.45",
+      "packaging>=23.2.0",
+      "pydantic<3.0.0,>=2.7.4",
+      "pyyaml<7.0.0,>=5.3.0",
+      "tenacity!=8.4.0,<10.0.0,>=8.1.0",
+      "typing-extensions<5.0.0,>=4.7.0",
+      "uuid-utils<1.0,>=0.12.0"
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/langchain-ai/langchain/releases?q=%22langchain-core%3D%3D1%22",
+      "Documentation": "https://reference.langchain.com/python/langchain_core/",
+      "Homepage": "https://docs.langchain.com/",
+      "Issues": "https://github.com/langchain-ai/langchain/issues",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Repository": "https://github.com/langchain-ai/langchain",
+      "Slack": "https://www.langchain.com/join-community",
+      "Twitter": "https://x.com/langchain_oss"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-19T15:55:38.935606Z"
+  },
+  {
+    "name": "langchain-core",
+    "version": "1.6.5",
+    "url": "https://pypi.org/pypi/langchain-core/1.6.5/json",
+    "requires_python": "<4.0.0,>=3.10.0",
+    "requires_dist": [
+      "httpx<1.0.0,>=0.23.0",
+      "jsonpatch<2.0.0,>=1.33.0",
+      "langchain-protocol>=0.0.17",
+      "langsmith<1.0.0,>=0.3.45",
+      "packaging>=23.2.0",
+      "pydantic<3.0.0,>=2.7.4",
+      "pyyaml<7.0.0,>=5.3.0",
+      "tenacity!=8.4.0,<10.0.0,>=8.1.0",
+      "typing-extensions<5.0.0,>=4.7.0",
+      "uuid-utils<1.0,>=0.12.0"
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/langchain-ai/langchain/releases?q=%22langchain-core%3D%3D1%22",
+      "Documentation": "https://reference.langchain.com/python/langchain_core/",
+      "Homepage": "https://docs.langchain.com/",
+      "Issues": "https://github.com/langchain-ai/langchain/issues",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Repository": "https://github.com/langchain-ai/langchain",
+      "Slack": "https://www.langchain.com/join-community",
+      "Twitter": "https://x.com/langchain_oss"
+    },
+    "yanked": false,
+    "first_upload": "2026-09-24T18:11:04.837956Z"
+  },
+  {
+    "name": "langchain-ollama",
+    "version": "1.1.0",
+    "url": "https://pypi.org/pypi/langchain-ollama/1.1.0/json",
+    "requires_python": "<4.0.0,>=3.10.0",
+    "requires_dist": [
+      "langchain-core<2.0.0,>=1.2.21",
+      "ollama<1.0.0,>=0.6.1"
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/langchain-ai/langchain/releases?q=%22langchain-ollama%22",
+      "Documentation": "https://reference.langchain.com/python/integrations/langchain_ollama/",
+      "Homepage": "https://docs.langchain.com/oss/python/integrations/providers/ollama",
+      "Issues": "https://github.com/langchain-ai/langchain/issues",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Repository": "https://github.com/langchain-ai/langchain",
+      "Slack": "https://www.langchain.com/join-community",
+      "Twitter": "https://x.com/LangChain"
+    },
+    "yanked": false,
+    "first_upload": "2026-04-07T02:47:59.642151Z"
+  },
+  {
+    "name": "langchain-openai",
+    "version": "1.6.0",
+    "url": "https://pypi.org/pypi/langchain-openai/1.6.0/json",
+    "requires_python": "<4.0.0,>=3.10.0",
+    "requires_dist": [
+      "certifi>=2024.6.2",
+      "langchain-core<2.0.0,>=1.6.0",
+      "openai<4.0.0,>=2.45.0",
+      "tiktoken<1.0.0,>=0.7.0"
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/langchain-ai/langchain/releases?q=%22langchain-openai%22",
+      "Documentation": "https://reference.langchain.com/python/integrations/langchain_openai/",
+      "Homepage": "https://docs.langchain.com/oss/python/integrations/providers/openai",
+      "Issues": "https://github.com/langchain-ai/langchain/issues",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Repository": "https://github.com/langchain-ai/langchain",
+      "Slack": "https://www.langchain.com/join-community",
+      "Twitter": "https://x.com/langchain_oss"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-19T21:44:44.242662Z"
+  },
+  {
+    "name": "langgraph",
+    "version": "1.2.1",
+    "url": "https://pypi.org/pypi/langgraph/1.2.1/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "langchain-core<2,>=1.4.0",
+      "langgraph-checkpoint<5.0.0,>=4.1.0",
+      "langgraph-prebuilt<1.2.0,>=1.1.0",
+      "langgraph-sdk<0.4.0,>=0.3.0",
+      "pydantic>=2.7.4",
+      "xxhash>=3.5.0"
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/langchain-ai/langgraph/releases",
+      "Documentation": "https://reference.langchain.com/python/langgraph/",
+      "Homepage": "https://docs.langchain.com/oss/python/langgraph/overview",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Slack": "https://www.langchain.com/join-community",
+      "Source": "https://github.com/langchain-ai/langgraph/tree/main/libs/langgraph",
+      "Twitter": "https://x.com/langchain_oss"
+    },
+    "yanked": false,
+    "first_upload": "2026-05-21T18:33:05.687234Z"
+  },
+  {
+    "name": "langgraph",
+    "version": "1.2.12",
+    "url": "https://pypi.org/pypi/langgraph/1.2.12/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "langchain-core<2,>=1.4.7",
+      "langgraph-checkpoint<5.0.0,>=4.1.0",
+      "langgraph-prebuilt<1.2.0,>=1.1.0",
+      "langgraph-sdk<0.5.0,>=0.4.2",
+      "pydantic>=2.7.4",
+      "xxhash>=3.5.0"
+    ],
+    "project_urls": {
+      "Changelog": "https://github.com/langchain-ai/langgraph/releases",
+      "Documentation": "https://reference.langchain.com/python/langgraph/",
+      "Homepage": "https://docs.langchain.com/oss/python/langgraph/overview",
+      "Reddit": "https://www.reddit.com/r/LangChain/",
+      "Slack": "https://www.langchain.com/join-community",
+      "Source": "https://github.com/langchain-ai/langgraph/tree/main/libs/langgraph",
+      "Twitter": "https://x.com/langchain_oss"
+    },
+    "yanked": false,
+    "first_upload": "2026-09-21T14:43:28.196799Z"
+  },
+  {
+    "name": "openai",
+    "version": "3.16.1",
+    "url": "https://pypi.org/pypi/openai/3.16.1/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "anyio<5,>=4.10.0",
+      "httpx2<3,>=2.7.0",
+      "jiter<1,>=0.16.0",
+      "pydantic!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,<3,>=1.10.13",
+      "sniffio",
+      "typing-extensions<5,>=4.14",
+      "aiohttp>=3.14.3; extra == \"aiohttp\"",
+      "botocore<2,>=1.40.0; extra == \"bedrock\"",
+      "urllib3<3,>=2.7.0; extra == \"bedrock\"",
+      "numpy>=1; extra == \"datalib\"",
+      "pandas>=1.2.3; extra == \"datalib\"",
+      "websockets<16,>=13; extra == \"realtime\"",
+      "numpy>=2.0.2; extra == \"voice-helpers\"",
+      "sounddevice>=0.5.1; extra == \"voice-helpers\""
+    ],
+    "project_urls": {
+      "Homepage": "https://github.com/openai/openai-python",
+      "Repository": "https://github.com/openai/openai-python"
+    },
+    "yanked": false,
+    "first_upload": "2026-09-18T19:01:50.096830Z"
+  },
+  {
+    "name": "openai",
+    "version": "3.3.1",
+    "url": "https://pypi.org/pypi/openai/3.3.1/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "anyio<5,>=4.10.0",
+      "httpx2<3,>=2.7.0",
+      "jiter<1,>=0.16.0",
+      "pydantic!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,<3,>=1.10.13",
+      "sniffio",
+      "typing-extensions<5,>=4.14",
+      "aiohttp>=3.14.3; extra == \"aiohttp\"",
+      "botocore<2,>=1.40.0; extra == \"bedrock\"",
+      "urllib3<3,>=2.7.0; extra == \"bedrock\"",
+      "numpy>=1; extra == \"datalib\"",
+      "pandas>=1.2.3; extra == \"datalib\"",
+      "websockets<16,>=13; extra == \"realtime\"",
+      "numpy>=2.0.2; extra == \"voice-helpers\"",
+      "sounddevice>=0.5.1; extra == \"voice-helpers\""
+    ],
+    "project_urls": {
+      "Homepage": "https://github.com/openai/openai-python",
+      "Repository": "https://github.com/openai/openai-python"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-19T16:31:32.812757Z"
+  },
+  {
+    "name": "opentelemetry-api",
+    "version": "1.44.0",
+    "url": "https://pypi.org/pypi/opentelemetry-api/1.44.0/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "typing-extensions>=4.5.0"
+    ],
+    "project_urls": {
+      "Homepage": "https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api",
+      "Repository": "https://github.com/open-telemetry/opentelemetry-python"
+    },
+    "yanked": false,
+    "first_upload": "2026-07-16T15:25:11.657202Z"
+  },
+  {
+    "name": "opentelemetry-exporter-otlp-proto-http",
+    "version": "1.44.0",
+    "url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-http/1.44.0/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "googleapis-common-protos~=1.52",
+      "opentelemetry-api~=1.15",
+      "opentelemetry-exporter-otlp-proto-common==1.44.0",
+      "opentelemetry-proto==1.44.0",
+      "opentelemetry-sdk~=1.44.0",
+      "requests~=2.7",
+      "typing-extensions>=4.5.0",
+      "opentelemetry-exporter-credential-provider-gcp>=0.59b0; extra == \"gcp-auth\""
+    ],
+    "project_urls": {
+      "Homepage": "https://github.com/open-telemetry/opentelemetry-python/tree/main/exporter/opentelemetry-exporter-otlp-proto-http",
+      "Repository": "https://github.com/open-telemetry/opentelemetry-python"
+    },
+    "yanked": false,
+    "first_upload": "2026-07-16T15:25:20.006653Z"
+  },
+  {
+    "name": "opentelemetry-sdk",
+    "version": "1.44.0",
+    "url": "https://pypi.org/pypi/opentelemetry-sdk/1.44.0/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "opentelemetry-api==1.44.0",
+      "opentelemetry-semantic-conventions==0.65b0",
+      "typing-extensions>=4.5.0",
+      "opentelemetry-configuration==0.65b0; extra == \"file-configuration\""
+    ],
+    "project_urls": {
+      "Homepage": "https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-sdk",
+      "Repository": "https://github.com/open-telemetry/opentelemetry-python"
+    },
+    "yanked": false,
+    "first_upload": "2026-07-16T15:25:29.534271Z"
+  },
+  {
+    "name": "playwright",
+    "version": "1.59.0",
+    "url": "https://pypi.org/pypi/playwright/1.59.0/json",
+    "requires_python": ">=3.9",
+    "requires_dist": [
+      "pyee<14,>=13",
+      "greenlet<4.0.0,>=3.1.1"
+    ],
+    "project_urls": {
+      "Release notes": "https://github.com/microsoft/playwright-python/releases",
+      "homepage": "https://github.com/Microsoft/playwright-python"
+    },
+    "yanked": false,
+    "first_upload": "2026-04-29T08:11:08.921814Z"
+  },
+  {
+    "name": "psycopg2-binary",
+    "version": "2.9.11",
+    "url": "https://pypi.org/pypi/psycopg2-binary/2.9.11/json",
+    "requires_python": ">=3.9",
+    "requires_dist": null,
+    "project_urls": {
+      "Changes": "https://www.psycopg.org/docs/news.html",
+      "Code": "https://github.com/psycopg/psycopg2",
+      "Documentation": "https://www.psycopg.org/docs/",
+      "Download": "https://pypi.org/project/psycopg2/",
+      "Homepage": "https://psycopg.org/",
+      "Issue Tracker": "https://github.com/psycopg/psycopg2/issues"
+    },
+    "yanked": false,
+    "first_upload": "2025-10-10T11:10:30.144904Z"
+  },
+  {
+    "name": "psycopg2-binary",
+    "version": "2.9.13",
+    "url": "https://pypi.org/pypi/psycopg2-binary/2.9.13/json",
+    "requires_python": ">=3.10",
+    "requires_dist": null,
+    "project_urls": {
+      "Changes": "https://www.psycopg.org/docs/news.html",
+      "Code": "https://github.com/psycopg/psycopg2",
+      "Documentation": "https://www.psycopg.org/docs/",
+      "Download": "https://pypi.org/project/psycopg2/",
+      "Homepage": "https://psycopg.org/",
+      "Issue Tracker": "https://github.com/psycopg/psycopg2/issues"
+    },
+    "yanked": false,
+    "first_upload": "2026-09-09T23:54:05.509581Z"
+  },
+  {
+    "name": "pydantic",
+    "version": "2.13.4",
+    "url": "https://pypi.org/pypi/pydantic/2.13.4/json",
+    "requires_python": ">=3.9",
+    "requires_dist": [
+      "annotated-types>=0.6.0",
+      "pydantic-core==2.46.4",
+      "typing-extensions>=4.14.1",
+      "typing-inspection>=0.4.2",
+      "email-validator>=2.0.0; extra == \"email\"",
+      "tzdata; (python_version >= \"3.9\" and platform_system == \"Windows\") and extra == \"timezone\""
+    ],
+    "project_urls": {
+      "Changelog": "https://docs.pydantic.dev/latest/changelog/",
+      "Documentation": "https://docs.pydantic.dev",
+      "Funding": "https://github.com/sponsors/samuelcolvin",
+      "Homepage": "https://github.com/pydantic/pydantic",
+      "Source": "https://github.com/pydantic/pydantic"
+    },
+    "yanked": false,
+    "first_upload": "2026-05-06T13:43:02.641507Z"
+  },
+  {
+    "name": "pydantic",
+    "version": "2.13.5",
+    "url": "https://pypi.org/pypi/pydantic/2.13.5/json",
+    "requires_python": ">=3.9",
+    "requires_dist": [
+      "annotated-types>=0.6.0",
+      "pydantic-core==2.46.5",
+      "typing-extensions>=4.14.1",
+      "typing-inspection>=0.4.2",
+      "email-validator>=2.0.0; extra == \"email\"",
+      "tzdata; (python_version >= \"3.9\" and platform_system == \"Windows\") and extra == \"timezone\""
+    ],
+    "project_urls": {
+      "Changelog": "https://docs.pydantic.dev/latest/changelog/",
+      "Documentation": "https://docs.pydantic.dev",
+      "Funding": "https://github.com/sponsors/samuelcolvin",
+      "Homepage": "https://github.com/pydantic/pydantic",
+      "Source": "https://github.com/pydantic/pydantic"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-28T14:03:59.136157Z"
+  },
+  {
+    "name": "python-dotenv",
+    "version": "1.2.3",
+    "url": "https://pypi.org/pypi/python-dotenv/1.2.3/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "click>=5.0; extra == \"cli\""
+    ],
+    "project_urls": {
+      "Source": "https://github.com/theskumar/python-dotenv"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-16T16:54:52.473346Z"
+  },
+  {
+    "name": "PyYAML",
+    "version": "6.0.3",
+    "url": "https://pypi.org/pypi/pyyaml/6.0.3/json",
+    "requires_python": ">=3.8",
+    "requires_dist": null,
+    "project_urls": {
+      "Bug Tracker": "https://github.com/yaml/pyyaml/issues",
+      "CI": "https://github.com/yaml/pyyaml/actions",
+      "Documentation": "https://pyyaml.org/wiki/PyYAMLDocumentation",
+      "Download": "https://pypi.org/project/PyYAML/",
+      "Homepage": "https://pyyaml.org/",
+      "Mailing lists": "http://lists.sourceforge.net/lists/listinfo/yaml-core",
+      "Source Code": "https://github.com/yaml/pyyaml"
+    },
+    "yanked": false,
+    "first_upload": "2025-09-25T21:31:46.040932Z"
+  },
+  {
+    "name": "requests",
+    "version": "2.34.2",
+    "url": "https://pypi.org/pypi/requests/2.34.2/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "charset_normalizer<4,>=2",
+      "idna<4,>=2.5",
+      "urllib3<3,>=1.26",
+      "certifi>=2023.5.7",
+      "PySocks!=1.5.7,>=1.5.6; extra == \"socks\"",
+      "chardet<8,>=3.0.2; extra == \"use-chardet-on-py3\""
+    ],
+    "project_urls": {
+      "Documentation": "https://requests.readthedocs.io",
+      "Source": "https://github.com/psf/requests"
+    },
+    "yanked": false,
+    "first_upload": "2026-05-14T19:25:26.443000Z"
+  },
+  {
+    "name": "scrapling",
+    "version": "0.4.15",
+    "url": "https://pypi.org/pypi/scrapling/0.4.15/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "lxml>=6.1.1",
+      "cssselect>=1.5.0",
+      "orjson>=3.11.8",
+      "tld>=0.13.2",
+      "w3lib>=2.4.1",
+      "typing_extensions",
+      "click>=8.3.0; extra == \"fetchers\"",
+      "curl_cffi>=0.16.1; extra == \"fetchers\"",
+      "playwright>=1.62.0; extra == \"fetchers\"",
+      "patchright>=1.62.1; extra == \"fetchers\"",
+      "browserforge>=1.2.4; extra == \"fetchers\"",
+      "apify-fingerprint-datapoints>=0.15.0; extra == \"fetchers\"",
+      "msgspec>=0.21.1; extra == \"fetchers\"",
+      "anyio>=4.14.0; extra == \"fetchers\"",
+      "protego>=0.6.2; extra == \"fetchers\"",
+      "markdownify>=1.2.0; extra == \"rag\"",
+      "scrapling[fetchers]; extra == \"rag\"",
+      "mcp>=2.0.0; extra == \"ai\"",
+      "markdownify>=1.2.0; extra == \"ai\"",
+      "scrapling[fetchers]; extra == \"ai\"",
+      "IPython>=8.37; extra == \"shell\"",
+      "markdownify>=1.2.0; extra == \"shell\"",
+      "scrapling[fetchers]; extra == \"shell\"",
+      "scrapling[ai,shell]; extra == \"all\""
+    ],
+    "project_urls": {
+      "Bug Tracker": "https://github.com/D4Vinci/Scrapling/issues",
+      "Changelog": "https://github.com/D4Vinci/Scrapling/releases",
+      "Discord": "https://discord.gg/EMgGbDceNQ",
+      "Documentation": "https://scrapling.readthedocs.io/en/latest/",
+      "Homepage": "https://github.com/D4Vinci/Scrapling",
+      "Release Notes": "https://github.com/D4Vinci/Scrapling/releases",
+      "Repository": "https://github.com/D4Vinci/Scrapling"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-23T19:43:47.569905Z"
+  },
+  {
+    "name": "scrapling",
+    "version": "0.4.8",
+    "url": "https://pypi.org/pypi/scrapling/0.4.8/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "lxml>=6.1.0",
+      "cssselect>=1.4.0",
+      "orjson>=3.11.8",
+      "tld>=0.13.2",
+      "w3lib>=2.4.1",
+      "typing_extensions",
+      "click>=8.3.0; extra == \"fetchers\"",
+      "curl_cffi>=0.15.0; extra == \"fetchers\"",
+      "playwright==1.59.0; extra == \"fetchers\"",
+      "patchright==1.59.1; extra == \"fetchers\"",
+      "browserforge>=1.2.4; extra == \"fetchers\"",
+      "apify-fingerprint-datapoints>=0.13.0; extra == \"fetchers\"",
+      "msgspec>=0.21.1; extra == \"fetchers\"",
+      "anyio>=4.13.0; extra == \"fetchers\"",
+      "protego>=0.6.0; extra == \"fetchers\"",
+      "mcp>=1.27.0; extra == \"ai\"",
+      "markdownify>=1.2.0; extra == \"ai\"",
+      "scrapling[fetchers]; extra == \"ai\"",
+      "IPython>=8.37; extra == \"shell\"",
+      "markdownify>=1.2.0; extra == \"shell\"",
+      "scrapling[fetchers]; extra == \"shell\"",
+      "scrapling[ai,shell]; extra == \"all\""
+    ],
+    "project_urls": {
+      "Bug Tracker": "https://github.com/D4Vinci/Scrapling/issues",
+      "Changelog": "https://github.com/D4Vinci/Scrapling/releases",
+      "Discord": "https://discord.gg/EMgGbDceNQ",
+      "Documentation": "https://scrapling.readthedocs.io/en/latest/",
+      "Homepage": "https://github.com/D4Vinci/Scrapling",
+      "Release Notes": "https://github.com/D4Vinci/Scrapling/releases",
+      "Repository": "https://github.com/D4Vinci/Scrapling"
+    },
+    "yanked": false,
+    "first_upload": "2026-05-11T02:00:46.704646Z"
+  },
+  {
+    "name": "supabase",
+    "version": "2.30.0",
+    "url": "https://pypi.org/pypi/supabase/2.30.0/json",
+    "requires_python": ">=3.9",
+    "requires_dist": [
+      "realtime==2.30.0",
+      "supabase-functions==2.30.0",
+      "storage3==2.30.0",
+      "supabase-auth==2.30.0",
+      "postgrest==2.30.0",
+      "httpx<0.29,>=0.26",
+      "yarl>=1.22.0"
+    ],
+    "project_urls": {
+      "changelog": "https://github.com/supabase/supabase-py/tree/main/CHANGELOG.md",
+      "documentation": "https://github.com/supabase/supabase-py/src/supabase",
+      "homepage": "https://github.com/supabase/supabase-py",
+      "repository": "https://github.com/supabase/supabase-py"
+    },
+    "yanked": false,
+    "first_upload": "2026-05-06T17:35:26.696484Z"
+  },
+  {
+    "name": "yt-dlp",
+    "version": "2026.7.4",
+    "url": "https://pypi.org/pypi/yt-dlp/2026.7.4/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "curl-cffi!=0.6.*,!=0.7.*,!=0.8.*,!=0.9.*,<0.16,>=0.5.10; implementation_name == \"cpython\" and extra == \"curl-cffi\"",
+      "brotli; (implementation_name == \"cpython\" and sys_platform != \"ios\") and extra == \"default\"",
+      "brotlicffi; implementation_name != \"cpython\" and extra == \"default\"",
+      "certifi; extra == \"default\"",
+      "mutagen; extra == \"default\"",
+      "pycryptodomex; extra == \"default\"",
+      "requests<3,>=2.32.2; extra == \"default\"",
+      "urllib3<3,>=2.0.2; extra == \"default\"",
+      "websockets>=13.0; extra == \"default\"",
+      "yt-dlp-ejs==0.8.0; extra == \"default\"",
+      "deno>=2.6.6; extra == \"deno\"",
+      "brotli==1.2.0; (implementation_name == \"cpython\" and sys_platform != \"ios\") and extra == \"pin\"",
+      "brotlicffi==1.2.0.1; implementation_name != \"cpython\" and extra == \"pin\"",
+      "certifi==2026.6.17; extra == \"pin\"",
+      "charset-normalizer==3.4.7; extra == \"pin\"",
+      "idna==3.18; extra == \"pin\"",
+      "mutagen==1.48.1; extra == \"pin\"",
+      "pycryptodomex==3.23.0; extra == \"pin\"",
+      "requests==2.34.2; extra == \"pin\"",
+      "urllib3==2.7.0; extra == \"pin\"",
+      "websockets==16.0; extra == \"pin\"",
+      "yt-dlp-ejs==0.8.0; extra == \"pin\"",
+      "certifi==2026.6.17; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "cffi==2.0.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "curl-cffi==0.15.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "markdown-it-py==4.2.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "mdurl==0.1.2; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "pycparser==3.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "pygments==2.20.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "rich==15.0.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "deno==2.8.3; extra == \"pin-deno\"",
+      "cffi==2.0.0; platform_python_implementation != \"PyPy\" and extra == \"pin-secretstorage\"",
+      "cryptography==49.0.0; extra == \"pin-secretstorage\"",
+      "jeepney==0.9.0; extra == \"pin-secretstorage\"",
+      "pycparser==3.0; (implementation_name != \"PyPy\" and platform_python_implementation != \"PyPy\") and extra == \"pin-secretstorage\"",
+      "secretstorage==3.5.0; extra == \"pin-secretstorage\"",
+      "typing-extensions==4.15.0; python_full_version < \"3.11\" and extra == \"pin-secretstorage\"",
+      "secretstorage; extra == \"secretstorage\""
+    ],
+    "project_urls": {
+      "Documentation": "https://github.com/yt-dlp/yt-dlp#readme",
+      "Funding": "https://github.com/yt-dlp/yt-dlp/blob/master/Maintainers.md#maintainers",
+      "Repository": "https://github.com/yt-dlp/yt-dlp",
+      "Tracker": "https://github.com/yt-dlp/yt-dlp/issues"
+    },
+    "yanked": false,
+    "first_upload": "2026-07-04T22:42:12.989494Z"
+  },
+  {
+    "name": "yt-dlp",
+    "version": "2026.8.19",
+    "url": "https://pypi.org/pypi/yt-dlp/2026.8.19/json",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "curl-cffi!=0.6.*,!=0.7.*,!=0.8.*,!=0.9.*,<0.17,>=0.5.10; implementation_name == \"cpython\" and extra == \"curl-cffi\"",
+      "typing-extensions; python_full_version < \"3.11\" and extra == \"curl-cffi\"",
+      "brotli; (implementation_name == \"cpython\" and sys_platform != \"ios\") and extra == \"default\"",
+      "brotlicffi; implementation_name != \"cpython\" and extra == \"default\"",
+      "certifi; extra == \"default\"",
+      "mutagen; extra == \"default\"",
+      "pycryptodomex; extra == \"default\"",
+      "requests<3,>=2.32.2; extra == \"default\"",
+      "urllib3<3,>=2.0.2; extra == \"default\"",
+      "websockets>=13.0; extra == \"default\"",
+      "yt-dlp-ejs==0.8.0; extra == \"default\"",
+      "deno>=2.6.6; extra == \"deno\"",
+      "brotli==1.2.0; (implementation_name == \"cpython\" and sys_platform != \"ios\") and extra == \"pin\"",
+      "brotlicffi==1.2.0.1; implementation_name != \"cpython\" and extra == \"pin\"",
+      "certifi==2026.7.22; extra == \"pin\"",
+      "charset-normalizer==3.5.0; extra == \"pin\"",
+      "idna==3.18; extra == \"pin\"",
+      "mutagen==1.48.1; extra == \"pin\"",
+      "pycryptodomex==3.23.0; extra == \"pin\"",
+      "requests==2.34.2; extra == \"pin\"",
+      "urllib3==2.7.0; extra == \"pin\"",
+      "websockets==16.1.1; python_full_version < \"3.11\" and extra == \"pin\"",
+      "websockets==17.0.1; python_full_version >= \"3.11\" and extra == \"pin\"",
+      "yt-dlp-ejs==0.8.0; extra == \"pin\"",
+      "certifi==2026.7.22; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "cffi==2.1.1; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "curl-cffi==0.16.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "pycparser==3.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+      "typing-extensions==4.16.0; python_full_version < \"3.11\" and extra == \"pin-curl-cffi\"",
+      "deno==2.9.5; extra == \"pin-deno\"",
+      "cffi==2.1.1; platform_python_implementation != \"PyPy\" and extra == \"pin-secretstorage\"",
+      "cryptography==50.0.0; extra == \"pin-secretstorage\"",
+      "jeepney==0.9.0; extra == \"pin-secretstorage\"",
+      "pycparser==3.0; (implementation_name != \"PyPy\" and platform_python_implementation != \"PyPy\") and extra == \"pin-secretstorage\"",
+      "secretstorage==3.5.0; extra == \"pin-secretstorage\"",
+      "typing-extensions==4.16.0; python_full_version < \"3.11\" and extra == \"pin-secretstorage\"",
+      "secretstorage; extra == \"secretstorage\""
+    ],
+    "project_urls": {
+      "Documentation": "https://github.com/yt-dlp/yt-dlp#readme",
+      "Funding": "https://github.com/yt-dlp/yt-dlp/blob/master/Maintainers.md#maintainers",
+      "Repository": "https://github.com/yt-dlp/yt-dlp",
+      "Tracker": "https://github.com/yt-dlp/yt-dlp/issues"
+    },
+    "yanked": false,
+    "first_upload": "2026-08-19T23:48:56.925874Z"
+  }
+]

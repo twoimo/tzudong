@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-10-04T18:42:03.551715+00:00",
+  "source": "519c88d183f161fabebb954eb0962613afcad693",
+  "pr": 3117,
+  "latestNightly": 37225167508,
+  "lastConfirmedWholeLocalSuccess": {
+    "run": 37223585147,
+    "source": "19a1e1d0cab443b7386c3d489986cbb1d7f6a9d3",
+    "local": "success",
+    "publish": "skipped"
+  },
+  "finalDelta": "Runner exit/report relationship checked in both directions before printing JSON; Mac and Linux share derive validation; nonzero runner with zero represented test failures yields bounded-unavailable rather than clean-looking evidence",
+  "tests": {
+    "focusedUnit": 6,
+    "failures": 0,
+    "assertions": 57
+  },
+  "goalComplete": false,
+  "hostedMutationIssued": false,
+  "phoneHoldStillApplies": true
+}

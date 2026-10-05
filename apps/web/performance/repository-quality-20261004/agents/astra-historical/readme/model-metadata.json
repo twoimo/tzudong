@@ -1,0 +1,25 @@
+{
+  "local_observation": {
+    "source": "current session latest turn_context selected fields only",
+    "session_id": "01a106b4-6cb9-78b1-8e50-d3cb35f34934",
+    "configured_model": "gpt-6-astra",
+    "configured_effort": "xhigh",
+    "provider_field_in_inspected_turn_context": null
+  },
+  "coordinator_user_readback": {
+    "configured_model": "gpt-6-astra",
+    "configured_effort": "xhigh",
+    "configured_provider": "openai",
+    "scope": "parent and three subagents per user follow-up",
+    "central_artifact": "model-metadata.json (reported by user; not overwritten by this worker)"
+  },
+  "actual_serving_model_attestation": null,
+  "conclusion": "Local configuration metadata only; actual serving model not independently attested.",
+  "runtime_notes_from_user": {
+    "checkout_node_modules": "absent",
+    "global_node_major": 26,
+    "available_pinned_node": "/opt/homebrew/opt/node@24/bin/node",
+    "bun_version": "1.4.0"
+  },
+  "runtime_used_for_validation": "python3 standard library, git and bash -n only; no Node/Bun test or server invocation"
+}

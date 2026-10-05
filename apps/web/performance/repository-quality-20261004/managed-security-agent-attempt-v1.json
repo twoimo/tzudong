@@ -1,0 +1,9 @@
+{
+  "configuredModel": "gpt-6-astra",
+  "reasoningEffort": "xhigh",
+  "agent": "01a106df-fe93-7751-9e8d-fe7e04de4300",
+  "terminal": "429 Too Many Requests after retry limit",
+  "completedAudit": false,
+  "closed": true,
+  "unchangedRetryIssued": false
+}

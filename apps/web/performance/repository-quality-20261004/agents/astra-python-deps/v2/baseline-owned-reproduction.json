@@ -1,0 +1,345 @@
+{
+  "network": "macOS sandbox deny network*",
+  "observation": "Exact registered fixture PIDs only; no command lines/environment/process-wide enumeration.",
+  "cases": [
+    {
+      "mode": "NORMAL_TERM",
+      "reason_code": "SUBPROCESS_CLEANUP_FAILED",
+      "returncode": 126,
+      "seconds": 2.331,
+      "owned_targets": {
+        "parent": {
+          "pid": 61311,
+          "ppid": 61281,
+          "pgid": 61311,
+          "sid": 61311
+        },
+        "child": {
+          "pid": 61312,
+          "ppid": 61311,
+          "pgid": 61311,
+          "sid": 61311
+        },
+        "grandchild": {
+          "pid": 61313,
+          "ppid": 61312,
+          "pgid": 61311,
+          "sid": 61311
+        }
+      },
+      "events": [
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "SIGNAL_SENT",
+          "signal": "SIGTERM"
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": false
+        },
+        {
+          "phase": "SIGNAL_OS_ERROR",
+          "signal": "SIGKILL",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "HELPER_RESULT",
+          "signal": "SIGKILL",
+          "success": false
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": false
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    },
+    {
+      "mode": "FIRST_TERM_FAIL",
+      "reason_code": "SUBPROCESS_CLEANUP_FAILED",
+      "returncode": 126,
+      "seconds": 2.517,
+      "owned_targets": {
+        "parent": {
+          "pid": 61524,
+          "ppid": 61281,
+          "pgid": 61524,
+          "sid": 61524
+        },
+        "child": {
+          "pid": 61527,
+          "ppid": 61524,
+          "pgid": 61524,
+          "sid": 61524
+        },
+        "grandchild": {
+          "pid": 61528,
+          "ppid": 61527,
+          "pgid": 61524,
+          "sid": 61524
+        }
+      },
+      "events": [
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "MOCK_SIGNAL_FAILURE",
+          "signal": "TERM"
+        },
+        {
+          "phase": "HELPER_RESULT",
+          "signal": "SIGTERM",
+          "success": true
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": false
+        },
+        {
+          "phase": "SIGNAL_OS_ERROR",
+          "signal": "SIGKILL",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "HELPER_RESULT",
+          "signal": "SIGKILL",
+          "success": false
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": false
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    },
+    {
+      "mode": "TERM_HELPER_FAIL",
+      "reason_code": "SUBPROCESS_CLEANUP_FAILED",
+      "returncode": 126,
+      "seconds": 5.316,
+      "owned_targets": {
+        "parent": {
+          "pid": 61729,
+          "ppid": 61281,
+          "pgid": 61729,
+          "sid": 61729
+        },
+        "child": {
+          "pid": 61732,
+          "ppid": 61729,
+          "pgid": 61729,
+          "sid": 61729
+        },
+        "grandchild": {
+          "pid": 61733,
+          "ppid": 61732,
+          "pgid": 61729,
+          "sid": 61729
+        }
+      },
+      "events": [
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "MOCK_SIGNAL_FAILURE",
+          "signal": "TERM"
+        },
+        {
+          "phase": "MOCK_HELPER_FAILURE",
+          "signal": "SIGTERM"
+        },
+        {
+          "phase": "SIGNAL_SENT",
+          "signal": "SIGKILL"
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": false
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": null
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": false
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        },
+        {
+          "phase": "OWNED_PID_OBSERVATION_UNAVAILABLE",
+          "errno": "EPERM"
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    }
+  ]
+}

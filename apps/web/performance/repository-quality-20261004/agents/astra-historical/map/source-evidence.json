@@ -1,0 +1,144 @@
+{
+  "observedAt": "2026-10-04T11:41:47.095818+00:00",
+  "sourceAuthority": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "prs": {
+    "3031": {
+      "base": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+      "head": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+      "diffSha256": "84c2f3cae9cbc3288f573b40e60ed137427cf3444629a64f98266455fbad82cb",
+      "changedPaths": [
+        "README.md",
+        "apps/web/app/api/dashboard/restaurants/route.ts",
+        "apps/web/app/api/dashboard/summary/route.ts",
+        "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+        "apps/web/components/map/NaverMapView.tsx",
+        "apps/web/hooks/use-restaurants.tsx",
+        "apps/web/lib/dashboard/helpers.ts",
+        "apps/web/lib/dashboard/summary.ts",
+        "apps/web/lib/home-map-youtube-kpi.ts",
+        "apps/web/lib/map-restaurant-lookup.ts",
+        "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs",
+        "apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json",
+        "apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs",
+        "apps/web/performance/dashboard-video-id-20260923/benchmark.json",
+        "apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs",
+        "apps/web/performance/map-restaurant-lookup-20260923/benchmark.json",
+        "apps/web/tests-unit/dashboard-aggregation.test.ts",
+        "apps/web/tests-unit/dashboard-public-visibility-source.test.ts",
+        "apps/web/tests-unit/home-map-youtube-kpi.test.ts",
+        "apps/web/tests-unit/map-restaurant-lookup.test.ts",
+        "apps/web/tests-unit/use-restaurants-merge.test.ts",
+        "apps/web/tests-unit/youtube-link-helpers.test.ts"
+      ],
+      "g037ChangedPaths": [],
+      "commits": [
+        "23420570e71d2cfb4d04e0210444afc6be783acf",
+        "3338b6c155f575aeb1b49e1bb19caacc53a89cac",
+        "12b453811f3a31e80f5d338e32e03c7dddd0bfba",
+        "cd86c106b468c40e83a2e2edf39b49c3b9529937"
+      ],
+      "commitParents": {
+        "23420570e71d2cfb4d04e0210444afc6be783acf": [
+          "d75e3360f393038a64846a3c6b0a4daa56b4d38a"
+        ],
+        "3338b6c155f575aeb1b49e1bb19caacc53a89cac": [
+          "23420570e71d2cfb4d04e0210444afc6be783acf"
+        ],
+        "12b453811f3a31e80f5d338e32e03c7dddd0bfba": [
+          "3338b6c155f575aeb1b49e1bb19caacc53a89cac"
+        ],
+        "cd86c106b468c40e83a2e2edf39b49c3b9529937": [
+          "12b453811f3a31e80f5d338e32e03c7dddd0bfba"
+        ]
+      }
+    },
+    "3032": {
+      "base": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+      "head": "76afb0634b6710581aa296a9644929313e24b36f",
+      "diffSha256": "2c7c1859f4c26a808bfbceae199002d13281258b6f0c053411c5b41939a8cd61",
+      "changedPaths": [
+        "apps/web/components/filters/CategoryFilter.tsx",
+        "apps/web/components/ui/alert-dialog.tsx",
+        "apps/web/components/ui/dialog.tsx",
+        "apps/web/hooks/use-restaurants.tsx",
+        "apps/web/lib/supabase-rest-client.ts",
+        "apps/web/tests-unit/dialog-content-inset.test.ts",
+        "apps/web/tests-unit/supabase-rest-failure.test.ts",
+        "apps/web/tests-unit/use-restaurants-merge.test.ts"
+      ],
+      "g037ChangedPaths": [],
+      "commits": [
+        "a187fc4b7082385f136e8c557b8417a06418f78a",
+        "76afb0634b6710581aa296a9644929313e24b36f"
+      ],
+      "commitParents": {
+        "a187fc4b7082385f136e8c557b8417a06418f78a": [
+          "d75e3360f393038a64846a3c6b0a4daa56b4d38a"
+        ],
+        "76afb0634b6710581aa296a9644929313e24b36f": [
+          "a187fc4b7082385f136e8c557b8417a06418f78a"
+        ]
+      }
+    }
+  },
+  "remoteMainIntegration": "not inspected or claimed",
+  "sourceHashesBefore": {
+    "apps/web/components/filters/CategoryFilter.tsx": "8e5cf36934a9a7d3239cab97503c374be83248f361dc248c87dd203025beb8b9",
+    "apps/web/lib/map-restaurant-lookup.ts": "147f787c5fbad3e2a60ae15f1f64f8f528a1f2d08245aad5d27166bfa14fb8d1",
+    "apps/web/lib/naver-map-selection-helpers.ts": "a4ee40bcdc76f923014d93614dc7a2ab769d7e90d5d8164c374ccd7c7666f83d",
+    "apps/web/components/map/NaverMapView.tsx": "1f1c322ce58214732ae3a88dc35f5fa1f796501da1a53924416ec6f468bb8a7e",
+    "apps/web/lib/home-map-youtube-kpi.ts": "9d97b99bb48e9b7a4c25bdfb2658af869a2f76628b824b3ff5ba45b12143620a",
+    "apps/web/hooks/use-restaurants.tsx": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+    "apps/web/lib/popular-restaurants.ts": "c76aea565b1b389b0a443b1572984c88409150dcf900c64decc2c8859e96cb6c",
+    "apps/web/lib/overseas-region-matching.ts": "94894e9b8117137f0b8150405aab137ceb192d84156d4811e1144d6e628f1be0",
+    "apps/web/constants/overseas-regions.ts": "4d986e8cb4b9166ec56ed9d12b3d8d32db2ed63b861a772888c7e8b319fde4af",
+    "apps/web/tests-unit/map-restaurant-lookup.test.ts": "278d26429cf6401420a549d2b8d70c62607bb4a42188dda65725662a4793ce75",
+    "apps/web/tests-unit/naver-map-selection-helpers.test.ts": "0ac5a2413a98031d3193e0086777b5c22cce5824aad5ec16f542acdcf23314a1",
+    "apps/web/tests-unit/home-map-youtube-kpi.test.ts": "9629155b31425ed0935cfbdae85a5dcb7a00b8844084112364e0e429367cfdab",
+    "apps/web/tests-unit/overseas-region-filter.test.ts": "62248370deaaf2eaf827574a64ccd5e79a9c3da5de034e1382d0c8e61e80a2e9",
+    ".github/workflows/g037-hosted-closure.yml": "007b84768af0b9ffcf5548de992e7104e392c8c811771976b18ec7970ff69289",
+    "backend/supabase/scripts/g037_hosted_closure_executor.py": "fe908fad3738ad520f99955fae88b74076e149c044eb7f32aeebf5e33be13836",
+    "backend/supabase/scripts/g037_production_controller.py": "05ff10b9d920b115ad24a2cf3734dec76d26c25d1320d2322b9b18f7d9bbe5ae",
+    "backend/supabase/scripts/g037_write_freeze.py": "341a810e14afa900c9617345b2f8802b01a64f67e4b6951175823c83cfe58fcf",
+    "backend/supabase/tests/test_g037_write_freeze.py": "eff47da6c15eafecf182425762b901c48396b5552408fbbd07ff049bd729dfd9",
+    "backend/supabase/tests/test_g037_hosted_closure_workflow.py": "97660555dfffe609dbc059cf7e5d6e4112f8663bc500d091d17c60f31499b323"
+  },
+  "g037Comparison": {
+    ".github/workflows/g037-hosted-closure.yml": {
+      "oldBase": "d6b16abe48d3ea219d9137baee83da1314b75910",
+      "pr3031": "d6b16abe48d3ea219d9137baee83da1314b75910",
+      "pr3032": "d6b16abe48d3ea219d9137baee83da1314b75910",
+      "parent": "d6b16abe48d3ea219d9137baee83da1314b75910"
+    },
+    "backend/supabase/scripts/g037_hosted_closure_executor.py": {
+      "oldBase": "6efe44569c1e8125ffa6d4817567986f7d04bba4",
+      "pr3031": "6efe44569c1e8125ffa6d4817567986f7d04bba4",
+      "pr3032": "6efe44569c1e8125ffa6d4817567986f7d04bba4",
+      "parent": "6efe44569c1e8125ffa6d4817567986f7d04bba4"
+    },
+    "backend/supabase/scripts/g037_production_controller.py": {
+      "oldBase": "83d061d065453898181d3055f9fce2f1a3fe6973",
+      "pr3031": "83d061d065453898181d3055f9fce2f1a3fe6973",
+      "pr3032": "83d061d065453898181d3055f9fce2f1a3fe6973",
+      "parent": "83d061d065453898181d3055f9fce2f1a3fe6973"
+    },
+    "backend/supabase/scripts/g037_write_freeze.py": {
+      "oldBase": "6ed9541cb14c2ab0f9adfba683d614e87c7625fa",
+      "pr3031": "6ed9541cb14c2ab0f9adfba683d614e87c7625fa",
+      "pr3032": "6ed9541cb14c2ab0f9adfba683d614e87c7625fa",
+      "parent": "6ed9541cb14c2ab0f9adfba683d614e87c7625fa"
+    },
+    "backend/supabase/tests/test_g037_write_freeze.py": {
+      "oldBase": "515940ce4f00d1a672fc2dfd0a29b080f516787d",
+      "pr3031": "515940ce4f00d1a672fc2dfd0a29b080f516787d",
+      "pr3032": "515940ce4f00d1a672fc2dfd0a29b080f516787d",
+      "parent": "515940ce4f00d1a672fc2dfd0a29b080f516787d"
+    },
+    "backend/supabase/tests/test_g037_hosted_closure_workflow.py": {
+      "oldBase": "bbbd6da9e70b686e13f5c63a55f11c0678e758fb",
+      "pr3031": "bbbd6da9e70b686e13f5c63a55f11c0678e758fb",
+      "pr3032": "bbbd6da9e70b686e13f5c63a55f11c0678e758fb",
+      "parent": "bbbd6da9e70b686e13f5c63a55f11c0678e758fb"
+    }
+  }
+}

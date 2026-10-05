@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-10-04T22:12:08.706728+00:00",
+  "candidate": {
+    "workspace": "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong",
+    "base_head": "93fa1131595508b5b324a88101bbdaf1b0e77b03",
+    "current_head": "93fa1131595508b5b324a88101bbdaf1b0e77b03",
+    "head_mode": "detached",
+    "managed_worktree_operation_id": "d258a14b-88cd-46f9-bb84-0ddddda47a7b",
+    "creation": "app list_artifacts 확인 후 동일 작업용 적합 candidate가 없어 app create_worktree(ref=base_head), 실제 반환 workspace 사용",
+    "source_commit_created": false
+  },
+  "session": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh"
+  },
+  "changed_files": [
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "absolute_path": "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong/apps/web/hooks/use-restaurants.tsx",
+      "base_sha256": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+      "candidate_sha256": "6022cdaab44070de278557e5e181c16630a5b135f23532055455b95eadd58d74",
+      "added_lines": 14,
+      "removed_lines": 10
+    },
+    {
+      "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+      "absolute_path": "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong/apps/web/tests-unit/use-restaurants-merge.test.ts",
+      "base_sha256": "4a43c2e80d373835717122f85d5ef877a3833912ff2932d11e3607913ba23178",
+      "candidate_sha256": "1e34d8c9c71d0bb96ca90637054f05d57927bf0aaf7fa43f892a163282e41143",
+      "added_lines": 169,
+      "removed_lines": 0
+    }
+  ],
+  "semantic_matrix": [
+    {
+      "intent": "3032-C05",
+      "change": "각 해외 keyword에 기존 sanitizePostgrestOrTerm 적용; 빈 term은 callback에서 제외",
+      "evidence": "기존 12개 지역의 query 순서/내용 동일; %, _, 괄호·comma, 빈/공백 term 및 중복 keyword 순서 검증",
+      "status": "implemented_and_focused_unit_passed"
+    },
+    {
+      "intent": "3032-C06",
+      "change": "국가 주소 builder 결과를 지역 변수로 저장하고 1회 호출",
+      "evidence": "initializer에서 호출 없음; 실제 query callback의 8개 국가에서 각각 helper 1회와 결과 그대로 재사용 관찰",
+      "status": "implemented_and_focused_unit_passed"
+    },
+    {
+      "intent": "source_scope",
+      "change": "선택한 지역 분기 외 hook 텍스트는 기준 HEAD와 byte-equivalent",
+      "evidence": "두 경계 밖 문자열 동등성 확인; 변경 파일은 hook 및 기존 unit 두 개",
+      "status": "verified_static"
+    },
+    {
+      "intent": "filters_order_targets",
+      "change": "approved status, approved_name.asc, source_type 포함 compact projection, 원본 bounds 및 정규화 category/minReviews 유지",
+      "evidence": "12개 지역의 완전한 query 배열을 원래 keyword 순서로 대조; query key rounding/flags와 fixture ID 순서 검증",
+      "status": "verified_unit_not_hosted"
+    },
+    {
+      "intent": "domestic_and_country_boundaries",
+      "change": "울릉도·욕지도 전용 조건, 국내/미지 지역 fallback 및 공백 분기 유지",
+      "evidence": "8개 국내/blank/unknown/구분자 fixture, 8개 국가 callback, 빈 keyword 2개 fixture",
+      "status": "verified_unit"
+    },
+    {
+      "intent": "security",
+      "change": "기존 sanitizer만 연결; 현재 dataset·helper·REST client 변경 없음",
+      "evidence": "%/_ escape와 OR syntax 구분자 제거, 빈 OR 및 국가 fallback 미발생, 승인 필터 유지",
+      "status": "verified_unit_and_static"
+    },
+    {
+      "intent": "performance",
+      "change": "실측 성능 주장 없음",
+      "evidence": "순수 helper 호출 횟수만 fixture에서 관찰; 네트워크/CPU/메모리/지연 측정 없음",
+      "status": "not_measured"
+    }
+  ],
+  "focused_unit_result": {
+    "pass": 9,
+    "fail": 0,
+    "assertions": 154,
+    "filtered_out": 16,
+    "runtime": "Bun 1.4.0",
+    "transpiler": "existing project-pinned TypeScript 6.0.2",
+    "test_dependency_setup": "evidence-only tsconfig alias; no installs, dependency links, package/lock/config changes in candidate",
+    "warning": "external tsconfig directory mismatch diagnostic; test cases still executed",
+    "before_hook_change": {
+      "pass": 2,
+      "fail": 3,
+      "expected_regressions": true
+    }
+  },
+  "theoretical_work": {
+    "direct_overseas": "K keyword 순회는 그대로이며 기존 조건 배열 외 keyword 배열을 추가하지 않는다. 각 keyword에서 기존 문자열 sanitizer를 실행하므로 전체 문자 수 L에 대한 O(L) 정제 작업이 추가된다. 빈 term의 3개 조건 문자열을 생성하지 않는다. 실측 비용 주장은 아니다.",
+    "country": "성공 국가 분기에서 builder 중복 평가 한 벌을 제거한다. R개 config와 T개 수집 term에 대한 O(R+T) 순회/배열 생성의 상수 반복을 줄이며 점근 복잡도는 같다. 실제 allocation/CPU/네트워크 감소는 계측하지 않았다."
+  },
+  "remaining_verification": [
+    {
+      "check": "targeted lint",
+      "owner": "parent after source integration",
+      "cwd": "<integration workspace>/apps/web",
+      "command": "node scripts/run-web-tool.mjs eslint hooks/use-restaurants.tsx tests-unit/use-restaurants-merge.test.ts --max-warnings=0",
+      "executed_here": false
+    },
+    {
+      "check": "mandatory TypeScript parity",
+      "owner": "parent after source integration",
+      "cwd": "<integration workspace>/apps/web",
+      "command": "npm run typecheck:parity",
+      "executed_here": false
+    },
+    {
+      "check": "focused units in integrated dependency environment",
+      "owner": "parent after source integration",
+      "cwd": "<integration workspace>/apps/web",
+      "command": "bun test --no-install tests-unit/use-restaurants-merge.test.ts tests-unit/overseas-region-filter.test.ts -t \"useRestaurants region queries|overseas country PostgREST filter\" --timeout 10000",
+      "executed_here": false,
+      "note": "candidate 자체의 같은 대상은 evidence tsconfig alias로 9 pass; 통합 tree 대상 실행은 별개"
+    }
+  ],
+  "preservation": {
+    "original_reports_sha256": {
+      "REPORT.md": "ddee2ae52cc5945b83c764777ab5372abff0b205dbf3c6c6d9cc998019596fb5",
+      "intent-matrix.json": "6d93d3b102490561c9ba6225d1994fc44a971bce0eb763d6b03fbd498e308fae"
+    },
+    "original_reports_unchanged": true,
+    "outside_selected_hook_block_identical": true,
+    "protected_source_files_unchanged": [
+      "apps/web/lib/supabase-rest-client.ts",
+      "apps/web/constants/overseas-regions.ts",
+      "apps/web/lib/overseas-region-matching.ts",
+      "apps/web/components/ui/dialog.tsx",
+      "apps/web/components/ui/alert-dialog.tsx"
+    ],
+    "original179f_written": false,
+    "nightly_quality_written": false,
+    "original3031_weakmap_or_logging_restored": false
+  },
+  "not_performed": [
+    "heavy install",
+    "build",
+    "typecheck",
+    "lint",
+    "browser",
+    "hosted write",
+    "remote mutation",
+    "phone",
+    "commit",
+    "push",
+    "PR closure"
+  ]
+}

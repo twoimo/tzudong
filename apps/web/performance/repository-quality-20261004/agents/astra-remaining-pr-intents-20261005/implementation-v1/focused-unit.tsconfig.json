@@ -1,0 +1,13 @@
+{
+  "extends": "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong/apps/web/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong/apps/web/*"
+      ],
+      "typescript": [
+        "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/node_modules/typescript/lib/typescript.js"
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-04T12:26:50.710890+00:00",
+  "head": "34ebbb21092ef7d3240897d048055fd12762b39b",
+  "sourceReconciliationChanged": true,
+  "reconciliationTests": {
+    "passed": 7,
+    "failed": 0
+  },
+  "sourceChangesInclude": "own-draft revision, canonical generated types, CI test wiring, Next/ledger contracts, action pins/readmes",
+  "protectedMergeOrProductionDeploy": false
+}

@@ -1,0 +1,458 @@
+{
+  "captured_at": "2026-10-04T08:28:56.973859+00:00",
+  "repository": "twoimo/tzudong",
+  "pages": 1,
+  "page_sizes": [
+    26
+  ],
+  "item_count": 26,
+  "items": [
+    {
+      "number": 3111,
+      "title": "fix(web): restore onboarding and make review retries consistent",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3111",
+      "state": "open",
+      "created_at": "2026-10-04T07:00:03Z",
+      "updated_at": "2026-10-04T07:05:36Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "99f91157190058ac4691ec10046d3f520466ebd8",
+      "head_ref": "codex/readiness-core-20261004",
+      "base_ref": "develop",
+      "base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a"
+    },
+    {
+      "number": 3099,
+      "title": "Optimize pipeline and review, renew UI, and integrate Gemini and Sentry",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3099",
+      "state": "open",
+      "created_at": "2026-10-03T03:34:39Z",
+      "updated_at": "2026-10-04T04:11:56Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+      "head_ref": "codex/pipeline-performance-restart-20261002",
+      "base_ref": "develop",
+      "base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a"
+    },
+    {
+      "number": 3066,
+      "title": "build(deps): bump the web-runtime group across 1 directory with 17 updates",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3066",
+      "state": "open",
+      "created_at": "2026-09-27T19:45:22Z",
+      "updated_at": "2026-09-27T19:49:16Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1",
+      "head_ref": "dependabot/npm_and_yarn/apps/web/develop/web-runtime-bce562e1bc",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560"
+    },
+    {
+      "number": 3065,
+      "title": "build(deps-dev): bump the web-development group across 1 directory with 8 updates",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3065",
+      "state": "open",
+      "created_at": "2026-09-27T19:44:02Z",
+      "updated_at": "2026-09-27T19:47:00Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6",
+      "head_ref": "dependabot/npm_and_yarn/apps/web/develop/web-development-0983b03d38",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560"
+    },
+    {
+      "number": 3064,
+      "title": "build(deps): bump puppeteer from 25.8.0 to 25.12.0 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3064",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:57Z",
+      "updated_at": "2026-09-27T19:43:35Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "966e114336620c71bbe5482c5a88e366f5c5caaa",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/puppeteer-25.12.0",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560"
+    },
+    {
+      "number": 3063,
+      "title": "build(deps): bump langchain-core from 1.6.0 to 1.6.5 in /backend/pipeline",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3063",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:50Z",
+      "updated_at": "2026-09-27T19:43:26Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "ac44f4c3a6be3ee73e9a4f40ec49a95ff1c2381d",
+      "head_ref": "dependabot/pip/backend/pipeline/develop/langchain-core-1.6.5",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560"
+    },
+    {
+      "number": 3062,
+      "title": "build(deps): bump @google/genai from 2.18.0 to 2.24.0 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3062",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:50Z",
+      "updated_at": "2026-09-27T19:43:11Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "7ce49f47d24842079a88b2954692acc6b0b6d6f4",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/google/genai-2.24.0",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560"
+    },
+    {
+      "number": 3061,
+      "title": "build(deps): bump dotenv from 16.6.1 to 18.0.3 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3061",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:41Z",
+      "updated_at": "2026-09-27T19:46:37Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "fa568c8ccf04a5e68b153c89033e9b08700f4286",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/dotenv-18.0.3",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560"
+    },
+    {
+      "number": 3060,
+      "title": "build(deps): bump langgraph from 1.2.1 to 1.2.12 in /backend/pipeline",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3060",
+      "state": "open",
+      "created_at": "2026-09-27T19:42:40Z",
+      "updated_at": "2026-09-27T19:42:54Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "561bed977f436d64f5a3bfcd5dec1c5050a4e2c2",
+      "head_ref": "dependabot/pip/backend/pipeline/develop/langgraph-1.2.12",
+      "base_ref": "develop",
+      "base_sha": "84b0e8f640e7c773d1f9881182b40ce9a51d2560"
+    },
+    {
+      "number": 3032,
+      "title": "fix: 단일 맛집 병합과 모달 너비를 정리한다",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3032",
+      "state": "open",
+      "created_at": "2026-09-23T11:19:04Z",
+      "updated_at": "2026-09-23T11:22:51Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "76afb0634b6710581aa296a9644929313e24b36f",
+      "head_ref": "codex/goal-perf-harden-20260923",
+      "base_ref": "develop",
+      "base_sha": "d75e3360f393038a64846a3c6b0a4daa56b4d38a"
+    },
+    {
+      "number": 3031,
+      "title": "perf(web): 같은 영상 링크의 ID 추출과 재조회를 한 번만 한다",
+      "html_url": "https://github.com/twoimo/tzudong/pull/3031",
+      "state": "open",
+      "created_at": "2026-09-23T08:51:45Z",
+      "updated_at": "2026-09-23T09:13:50Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+      "head_ref": "codex/perf-guard-20260923",
+      "base_ref": "develop",
+      "base_sha": "d75e3360f393038a64846a3c6b0a4daa56b4d38a"
+    },
+    {
+      "number": 2971,
+      "title": "chore(deps): bump openai from 3.3.1 to 3.16.1 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2971",
+      "state": "open",
+      "created_at": "2026-09-21T20:44:03Z",
+      "updated_at": "2026-09-21T20:44:12Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "0063bc00e85b1d9f0c24631203c057c53a3eef75",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/openai-3.16.1",
+      "base_ref": "develop",
+      "base_sha": "fd96ed917e91c07ff6d913af949512f7a1a1c014"
+    },
+    {
+      "number": 2924,
+      "title": "build(deps): bump js-yaml from 4.3.2 to 5.4.2 in /backend",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2924",
+      "state": "open",
+      "created_at": "2026-09-20T19:43:01Z",
+      "updated_at": "2026-09-21T08:49:32Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "40539ca35df591451ee3be8b8456001d72964fcb",
+      "head_ref": "dependabot/npm_and_yarn/backend/develop/js-yaml-5.4.2",
+      "base_ref": "develop",
+      "base_sha": "d60ff0faf163647a4a51f1b63095b0ac3d041ec5"
+    },
+    {
+      "number": 2908,
+      "title": "feat(admin): adopt semiotic KPI dashboard, trend momentum, and evaluation review",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2908",
+      "state": "open",
+      "created_at": "2026-09-15T08:25:40Z",
+      "updated_at": "2026-09-15T09:57:55Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+      "head_ref": "codex/local-replay-v2-20260908",
+      "base_ref": "develop",
+      "base_sha": "e5bfd74eda0050c93b9370187d5e4be84bed24e6"
+    },
+    {
+      "number": 2906,
+      "title": "chore(deps): bump psycopg2-binary from 2.9.11 to 2.9.13 in /backend/pipeline-control",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2906",
+      "state": "open",
+      "created_at": "2026-09-13T19:44:32Z",
+      "updated_at": "2026-09-13T19:44:43Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+      "head_ref": "dependabot/pip/backend/pipeline-control/develop/psycopg2-binary-2.9.13",
+      "base_ref": "develop",
+      "base_sha": "e5bfd74eda0050c93b9370187d5e4be84bed24e6"
+    },
+    {
+      "number": 2903,
+      "title": "docs: clean up README with concise features and visual product tour",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2903",
+      "state": "open",
+      "created_at": "2026-09-09T04:03:59Z",
+      "updated_at": "2026-09-09T04:04:13Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "da096e04baf979ac35531172c7a1de95090aa649",
+      "head_ref": "docs/clean-readme-1788926635",
+      "base_ref": "main",
+      "base_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03"
+    },
+    {
+      "number": 2902,
+      "title": "chore(deps): bump the npm_and_yarn group across 2 directories with 4 updates",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2902",
+      "state": "open",
+      "created_at": "2026-09-09T03:31:58Z",
+      "updated_at": "2026-09-09T03:32:10Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+      "head_ref": "dependabot/npm_and_yarn/backend/npm_and_yarn-23572d5168",
+      "base_ref": "main",
+      "base_sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03"
+    },
+    {
+      "number": 2896,
+      "title": "Bump google-api-python-client from 2.196.0 to 2.200.0 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2896",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:59Z",
+      "updated_at": "2026-09-06T19:43:52Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "833ddd699e73f95bf84b2b80975fea1783998333",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/google-api-python-client-2.200.0",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93"
+    },
+    {
+      "number": 2894,
+      "title": "Bump curl-cffi from 0.15.0 to 0.16.3 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2894",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:53Z",
+      "updated_at": "2026-09-06T19:43:36Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "f286446ff1000d67fdf780c57cc2714b2fb820e7",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/curl-cffi-0.16.3",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93"
+    },
+    {
+      "number": 2892,
+      "title": "chore(deps): bump Azure/setup-helm from 4.3.1 to 5.0.1",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2892",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:45Z",
+      "updated_at": "2026-09-22T13:43:56Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "github_actions"
+      ],
+      "draft": false,
+      "head_sha": "b5fca0502d99809e4f300c054c7ec8b30c46cf2d",
+      "head_ref": "dependabot/github_actions/develop/Azure/setup-helm-5.0.1",
+      "base_ref": "develop",
+      "base_sha": "e777691191ae21eaed611a8c8d24b80ca68b7419"
+    },
+    {
+      "number": 2889,
+      "title": "Bump pydantic from 2.13.4 to 2.13.5 in /backend/pipeline",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2889",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:36Z",
+      "updated_at": "2026-09-06T19:42:53Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "e817c475ee9c38478deab156a36848eba4e8dffc",
+      "head_ref": "dependabot/pip/backend/pipeline/develop/pydantic-2.13.5",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93"
+    },
+    {
+      "number": 2888,
+      "title": "Bump scrapling from 0.4.8 to 0.4.15 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2888",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:34Z",
+      "updated_at": "2026-09-06T19:42:45Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "7333b4877dc077ed936a93f5fdd82694b1f304a8",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/scrapling-0.4.15",
+      "base_ref": "develop",
+      "base_sha": "0ebb898c708dd2c966fd72dd43172a0cf843cf93"
+    },
+    {
+      "number": 2887,
+      "title": "chore(deps): bump opentofu/setup-opentofu from 1.0.8 to 2.0.2",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2887",
+      "state": "open",
+      "created_at": "2026-09-06T19:42:26Z",
+      "updated_at": "2026-09-22T13:43:48Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "github_actions"
+      ],
+      "draft": false,
+      "head_sha": "3a10ae6e8004c1f1488861b3f7c118653e62f0da",
+      "head_ref": "dependabot/github_actions/develop/opentofu/setup-opentofu-2.0.2",
+      "base_ref": "develop",
+      "base_sha": "e777691191ae21eaed611a8c8d24b80ca68b7419"
+    },
+    {
+      "number": 2857,
+      "title": "Admin console sidebar refactor: module panel through task 16 verification",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2857",
+      "state": "open",
+      "created_at": "2026-09-03T10:50:32Z",
+      "updated_at": "2026-09-03T14:28:05Z",
+      "author_role": "repository-owner",
+      "labels": [],
+      "draft": false,
+      "head_sha": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+      "head_ref": "cursor/admin-console-module-panel-90fd",
+      "base_ref": "refactor/admin-console-sidebar",
+      "base_sha": "0a8416d42a37a95e686c4d782e1ec73f6a15e37f"
+    },
+    {
+      "number": 2855,
+      "title": "chore(deps): bump framer-motion from 12.42.2 to 13.4.0 in /apps/web",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2855",
+      "state": "open",
+      "created_at": "2026-08-30T19:45:23Z",
+      "updated_at": "2026-09-24T08:20:48Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "javascript"
+      ],
+      "draft": false,
+      "head_sha": "338de43e80ffaa5cd703dacd7886017b5c219e31",
+      "head_ref": "dependabot/npm_and_yarn/apps/web/develop/framer-motion-13.1.1",
+      "base_ref": "develop",
+      "base_sha": "47e9342b76c3203e58184e05b9cc06f256d867e9"
+    },
+    {
+      "number": 2850,
+      "title": "chore(deps): bump yt-dlp from 2026.7.4 to 2026.8.19 in /backend/restaurant-crawling/scripts",
+      "html_url": "https://github.com/twoimo/tzudong/pull/2850",
+      "state": "open",
+      "created_at": "2026-08-30T19:42:53Z",
+      "updated_at": "2026-09-04T23:44:07Z",
+      "author_role": "automation",
+      "labels": [
+        "dependencies",
+        "python"
+      ],
+      "draft": false,
+      "head_sha": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+      "head_ref": "dependabot/pip/backend/restaurant-crawling/scripts/develop/yt-dlp-2026.8.19",
+      "base_ref": "develop",
+      "base_sha": "f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f"
+    }
+  ]
+}

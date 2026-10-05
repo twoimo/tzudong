@@ -1,0 +1,32 @@
+[
+  {
+    "source": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T20-53-55-01a106c3-77a7-7400-b84f-da83de56cb2e.jsonl",
+    "line": 1,
+    "type": "session_meta",
+    "fields": {
+      "id": "01a106c3-77a7-7400-b84f-da83de56cb2e",
+      "model_provider": "openai",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a0f119-3142-7fe1-b600-e436feaedc75",
+            "depth": 1,
+            "agent_path": null,
+            "agent_nickname": "Euclid",
+            "agent_role": null
+          }
+        }
+      },
+      "cli_version": "0.160.0"
+    }
+  },
+  {
+    "source": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T20-53-55-01a106c3-77a7-7400-b84f-da83de56cb2e.jsonl",
+    "line": 6,
+    "type": "turn_context",
+    "fields": {
+      "model": "gpt-6-astra",
+      "effort": "xhigh"
+    }
+  }
+]

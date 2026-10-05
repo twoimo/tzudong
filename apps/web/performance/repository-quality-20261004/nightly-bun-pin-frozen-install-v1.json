@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-04T10:18:35.660150+00:00",
+  "runtime": "Bun1.4.0 Node24.21.0",
+  "command": "bun install --frozen-lockfile",
+  "exitCode": 0,
+  "knownFrozenFailure": false,
+  "manifestOrLockUpdated": false,
+  "sourceCandidate": "c1ac641bc6e2dccb74a77e5cee4b39895d4fc2f7",
+  "baselineRemoteRun": 37193997256,
+  "baselineBunVersion": "1.3.14",
+  "baselineFailureCode": "BUN_FROZEN_LOCK_OUTDATED",
+  "rawLogsStored": false
+}

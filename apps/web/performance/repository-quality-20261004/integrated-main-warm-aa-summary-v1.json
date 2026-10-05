@@ -1,0 +1,87 @@
+{
+  "planSha256": "00eecf2fbfb968da87d3ffee80eef65be98f85ce191d5dbef0689495cfc2516e",
+  "rawSha256": "af0d095e24bad3f477b1af9b0aca545ead24ed98a5ba2df7e8bade1ab76ea84f",
+  "sameSourceAll": true,
+  "freshProcesses": 4,
+  "dependentCyclesPerFreshProcess": 60,
+  "positionGroupsNotProductVariants": true,
+  "runs": [
+    {
+      "run": 0,
+      "positionGroup": "a",
+      "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "medianMB": 32.175202,
+      "peakMB": 48.272304,
+      "endpointMB": 48.272304,
+      "postFinalDiagnosticGCMB": 18.720904,
+      "all60MembershipPassed": true
+    },
+    {
+      "run": 1,
+      "positionGroup": "b",
+      "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "medianMB": 31.857556000000002,
+      "peakMB": 48.202108,
+      "endpointMB": 36.853252,
+      "postFinalDiagnosticGCMB": 18.667444,
+      "all60MembershipPassed": true
+    },
+    {
+      "run": 2,
+      "positionGroup": "b",
+      "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "medianMB": 32.173103999999995,
+      "peakMB": 49.377784,
+      "endpointMB": 34.624204,
+      "postFinalDiagnosticGCMB": 18.680468,
+      "all60MembershipPassed": true
+    },
+    {
+      "run": 3,
+      "positionGroup": "a",
+      "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "medianMB": 31.820991999999997,
+      "peakMB": 47.721316,
+      "endpointMB": 43.539796,
+      "postFinalDiagnosticGCMB": 18.62294,
+      "all60MembershipPassed": true
+    }
+  ],
+  "metrics": {
+    "medianMB": {
+      "groupA": 31.998096999999998,
+      "groupB": 32.01533,
+      "absoluteDifference": -0.017233000000000942,
+      "relativeDifferencePercent": -0.05385632776849493,
+      "processRange": [
+        31.820991999999997,
+        32.175202
+      ]
+    },
+    "peakMB": {
+      "groupA": 47.996809999999996,
+      "groupB": 48.789946,
+      "absoluteDifference": -0.7931360000000041,
+      "relativeDifferencePercent": -1.6524764874999072,
+      "processRange": [
+        47.721316,
+        49.377784
+      ]
+    },
+    "endpointMB": {
+      "groupA": 45.90605,
+      "groupB": 35.738727999999995,
+      "absoluteDifference": 10.167322000000006,
+      "relativeDifferencePercent": 22.148109018310237,
+      "processRange": [
+        34.624204,
+        48.272304
+      ]
+    }
+  },
+  "primaryFailureRemains": "integrated-warm-minimal-summary-main-v1.json endpoint guard false",
+  "doesNotEstablishNoRegression": true,
+  "oneAAExecutionOnlyNoCI": true,
+  "notAProductOptimizationClaim": true,
+  "fieldAdmission": 0
+}

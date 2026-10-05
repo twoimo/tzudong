@@ -1,0 +1,60 @@
+{
+  "baseRefName": "develop",
+  "baseRefOid": "d75e3360f393038a64846a3c6b0a4daa56b4d38a",
+  "files": [
+    {
+      "path": "apps/web/components/filters/CategoryFilter.tsx",
+      "additions": 2,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/components/ui/alert-dialog.tsx",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/components/ui/dialog.tsx",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "additions": 37,
+      "deletions": 15,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/supabase-rest-client.ts",
+      "additions": 40,
+      "deletions": 23,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/dialog-content-inset.test.ts",
+      "additions": 16,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-rest-failure.test.ts",
+      "additions": 145,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+      "additions": 40,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefName": "codex/goal-perf-harden-20260923",
+  "headRefOid": "76afb0634b6710581aa296a9644929313e24b36f",
+  "number": 3032,
+  "state": "OPEN",
+  "url": "https://github.com/twoimo/tzudong/pull/3032",
+  "comparisonMergeBase": "d75e3360f393038a64846a3c6b0a4daa56b4d38a"
+}

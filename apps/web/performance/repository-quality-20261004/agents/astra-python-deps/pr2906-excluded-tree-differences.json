@@ -1,0 +1,50 @@
+{
+  "pr_head": "600a75d5cf57c51941f67abbdcaeebc099676cb6",
+  "policy": "Only control psycopg2 pin transplanted. No checkout/cherry-pick/merge of PR tree. Other changed package versions are excluded evidence, not audited vulnerability findings.",
+  "files": [
+    {
+      "path": "apps/web/package.json",
+      "differences": [
+        {
+          "name": "maplibre-gl",
+          "pr2906_head": "^5.24.0",
+          "current": "^6.10.0"
+        },
+        {
+          "name": "next",
+          "pr2906_head": "16.2.12",
+          "current": "16.3.5"
+        },
+        {
+          "name": "sharp",
+          "pr2906_head": "^0.35.3",
+          "current": "^0.35.4"
+        },
+        {
+          "name": "@next/bundle-analyzer",
+          "pr2906_head": "16.2.12",
+          "current": "16.3.5"
+        },
+        {
+          "name": "eslint-config-next",
+          "pr2906_head": "^16.2.12",
+          "current": "^16.3.5"
+        }
+      ]
+    },
+    {
+      "path": "backend/package.json",
+      "differences": []
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/requirements.txt",
+      "head_content": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n",
+      "current_content": "google-api-python-client==2.200.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.8.19\npyyaml==6.0.3\ntqdm==4.70.1\nopenai==3.16.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.16.3\nscrapling[fetchers]==0.4.15\nplaywright==1.62.0\n"
+    },
+    {
+      "path": "backend/pipeline/requirements.txt",
+      "head_content": "langgraph==1.2.1\nlangchain-core==1.6.0\npydantic==2.13.4\n",
+      "current_content": "langgraph==1.2.12\nlangchain-core==1.6.5\npydantic==2.13.5\n"
+    }
+  ]
+}

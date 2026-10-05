@@ -1,0 +1,160 @@
+diff --git a/.github/scripts/verify-nightly-local-publication.py b/.github/scripts/verify-nightly-local-publication.py
+index 44b79d1b..e0361c09 100644
+--- a/.github/scripts/verify-nightly-local-publication.py
++++ b/.github/scripts/verify-nightly-local-publication.py
+@@ -126,7 +126,7 @@ STACK_SERVICES = {
+     "supavisor",
+     "vector",
+ }
+-EXPECTED_LEDGER_UNITS = 99
++EXPECTED_LEDGER_UNITS = 100
+ SEQUENCE_MARKERS = (
+     "prerequisite",
+     "migration",
+diff --git a/backend/supabase/scripts/local-migrate.py b/backend/supabase/scripts/local-migrate.py
+index 9c68b38a..0e5a4b0f 100644
+--- a/backend/supabase/scripts/local-migrate.py
++++ b/backend/supabase/scripts/local-migrate.py
+@@ -116,7 +116,7 @@ MIGRATION_ORDER_OVERRIDES = {
+ }
+ SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
+ READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
+-EXPECTED_LEDGER_UNITS = 99
++EXPECTED_LEDGER_UNITS = 100
+ EXPECTED_SERVICES = (
+     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
+     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
+diff --git a/backend/supabase/tests/test_local_publication_verifier.py b/backend/supabase/tests/test_local_publication_verifier.py
+index f577e707..5502e105 100644
+--- a/backend/supabase/tests/test_local_publication_verifier.py
++++ b/backend/supabase/tests/test_local_publication_verifier.py
+@@ -933,9 +933,35 @@ complete_lifecycle_stage
+             self._write_bundle(root)
+             verifier.verify(root)
+ 
+-    def test_publication_uses_the_current_99_unit_manifest(self) -> None:
+-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 99)
+-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 99)
++    def test_publication_uses_the_current_100_unit_manifest(self) -> None:
++        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 100)
++        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 100)
++        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 100)
++        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 100)
++
++    def test_rejects_missing_or_extra_manifest_units_with_recomputed_chain(self) -> None:
++        manifest = local_migrate.verify_manifest()
++        for mutation in ("missing", "extra"):
++            bad = copy.deepcopy(manifest)
++            files = bad["source"]["files"]
++            if mutation == "missing":
++                files.pop()
++            else:
++                extra = copy.deepcopy(files[-1])
++                extra["ordinal"] += 1
++                extra["path"] = "backend/supabase/migrations/20990101000000_extra.sql"
++                files.append(extra)
++            bad["source"]["migrationCount"] = len(files)
++            bad["source"]["chainSha256"] = verifier.sha256_bytes(b"".join(
++                item["path"].encode("utf-8") + b"\0"
++                + item["sha256"].encode("ascii") + b"\n"
++                for item in files
++            ))
++            with self.subTest(mutation=mutation):
++                with self.assertRaisesRegex(SystemExit, "manifest contract mismatch"):
++                    verifier.verify_manifest(bad)
++                with self.assertRaisesRegex(local_migrate.LocalMigrationError, "receipt_ledger_state"):
++                    local_migrate._expected_ledger_records(bad)
+ 
+     def test_rejects_missing_extra_swapped_or_digest_only_replay_proofs(self) -> None:
+         with tempfile.TemporaryDirectory() as raw:
+diff --git a/backend/supabase/tests/test_local_replay_contract.py b/backend/supabase/tests/test_local_replay_contract.py
+index 88c520f8..d2dd89aa 100644
+--- a/backend/supabase/tests/test_local_replay_contract.py
++++ b/backend/supabase/tests/test_local_replay_contract.py
+@@ -177,11 +177,11 @@ class LocalReplayContractTests(unittest.TestCase):
+             self.assertNotIn(b'INSERT INTO _tzudong_local', sql)
+             self.assertNotIn(b'GRANT privacy_workflow_owner', sql)
+ 
+-    def test_full_snapshot_requires_all_99_exact_sources_and_distinct_terminal_states(self):
++    def test_full_snapshot_requires_all_100_exact_sources_and_distinct_terminal_states(self):
+         from backend.supabase.tests.test_local_migration_contract import local_migrate
+         rows = [local_migrate._expected_snapshot_row(item) for item in local_migrate.build_manifest()['source']['files']]
+-        self.assertEqual(len(rows), 99)
+-        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 96)
++        self.assertEqual(len(rows), 100)
++        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 97)
+         self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 2)
+         self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 1)
+         local_migrate._validate_ledger_snapshot(rows)
+diff --git a/backend/supabase/tests/test_local_seed_receipt_contract.py b/backend/supabase/tests/test_local_seed_receipt_contract.py
+index f494c8df..5597f351 100644
+--- a/backend/supabase/tests/test_local_seed_receipt_contract.py
++++ b/backend/supabase/tests/test_local_seed_receipt_contract.py
+@@ -6,6 +6,7 @@ import tempfile
+ import unittest
+ import unicodedata
+ from pathlib import Path
++from unittest import mock
+ 
+ 
+ ROOT = Path(__file__).resolve().parents[3]
+@@ -468,21 +469,55 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
+                     local_migrate.parse_readback(_receipt_ndjson(rows))
+                 self.assertEqual(error.exception.code, expected_code)
+ 
+-    def test_manifest_contains_exactly_ninety_nine_immutable_units(self) -> None:
++    def test_manifest_contains_exactly_one_hundred_immutable_units(self) -> None:
+         manifest = local_migrate.build_manifest()
+-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 99)
+-        self.assertEqual(len(manifest["source"]["files"]), 99)
++        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 100)
++        self.assertEqual(len(manifest["source"]["files"]), 100)
+         self.assertEqual(
+             manifest["source"]["files"][-1]["path"],
+-            "backend/supabase/migrations/20260920171524_public_profile_summary_read_boundary.sql",
++            "backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
+         )
+         self.assertEqual(
+             manifest["source"]["files"][-1]["transaction"]["class"],
+             "self_committing",
+         )
+ 
++    def test_receipt_ledger_rejects_missing_extra_or_changed_current_units(self) -> None:
++        manifest = local_migrate.build_manifest()
++        ledger = local_migrate._expected_ledger_records(manifest)
++        service = [["service", "150008", "UTF8", "UTC"]]
++        records = _receipt_rows()
++        local_migrate._receipt_payload_digests(records, ledger, service, manifest)
++        for mutation in ("missing", "extra", "duplicate", "reordered", "checksum", "status", "evidence"):
++            changed = [list(row) for row in ledger]
++            if mutation == "missing":
++                changed.pop()
++            elif mutation == "extra":
++                changed.append(list(changed[-1]))
++            elif mutation == "duplicate":
++                changed[-1] = list(changed[-2])
++            elif mutation == "reordered":
++                changed[-1], changed[-2] = changed[-2], changed[-1]
++            elif mutation == "checksum":
++                changed[-1][3] = "0" * 64
++            elif mutation == "status":
++                changed[-1][6] = "verified-existing"
++            else:
++                changed[-1][7] = "0" * 64
++            with self.subTest(mutation=mutation):
++                with self.assertRaisesRegex(local_migrate.LocalMigrationError, "receipt_ledger_state"):
++                    local_migrate._receipt_payload_digests(records, changed, service, manifest)
++
+     def test_two_reset_comparator_compares_ordered_ledger_and_digests(self) -> None:
+         project = local_stack._project_name(ROOT)
++        # This offline comparator fixture owns no stack or operator secrets.
++        # Keep tracked source bindings real; isolate only the runtime env digest.
++        self.enterContext(mock.patch.object(
++            local_migrate.PsqlExecutor, "_binding", return_value=(project, ROOT, {}),
++        ))
++        self.enterContext(mock.patch.object(
++            local_migrate, "_environment_contract_sha256", return_value="8" * 64,
++        ))
+         ledger = [
+             [
+                 "ledger",

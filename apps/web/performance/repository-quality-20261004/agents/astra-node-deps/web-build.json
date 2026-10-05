@@ -1,0 +1,7 @@
+{
+  "command": "npm run build",
+  "exit_code": 0,
+  "seconds": 63.62,
+  "stdout": "\n> web@1.2.4 build\n> node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs\n\n\u25b2 Next.js 16.3.6 (webpack) \u2713 Running next.config.mjs took 57ms - Experiments (use with caution):   \u00b7 optimizePackageImports   \u00b7 staleTimes    Creating an optimized production build ... \u2713 Compiled successfully in 23.6s   Running TypeScript ...   Finished TypeScript in 20.6s ...   Collecting page data using 17 workers ...   Generating static pages using 17 workers (0/49) ...   Generating static pages using 17 workers (12/49)     Generating static pages using 17 workers (24/49)     Generating static pages using 17 workers (36/49)   \u2713 Generating static pages using 17 workers (49/49) in 1322ms   Finalizing page optimization ...   Collecting build traces ...  [REDACTED:bounded] \u25cb  (Static)   prerendered as static content \u0192  (Dynamic)  server-rendered on demand  Verified route CSS boundaries: home 192795 bytes; general app 370376 bytes; admin 370376 bytes; deferred 192795 bytes.\n",
+  "stderr": "  Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3...   Retrying 1/3... "
+}

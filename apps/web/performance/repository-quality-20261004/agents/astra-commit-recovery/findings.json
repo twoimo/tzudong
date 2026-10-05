@@ -1,0 +1,22 @@
+{
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "provider": "openai",
+  "findings": [
+    {
+      "priority": "P2",
+      "title": "같은 저장 작업의 재시도에서 삭제 스냅샷을 교체하지 마세요",
+      "file": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web/components/reviews/ReviewModal.tsx",
+      "line_start": 1426,
+      "line_end": 1428,
+      "body": "같은 owner/restaurant의 다른 composer가 최초 snapshot 이후 새 draft B를 저장하면 첫 compare/delete는 B를 보존하고 draft-cleanup 재시도를 표시합니다. 그러나 이 줄은 재시도에서 B를 새 삭제 snapshot으로 캡처합니다. ReviewSaveOperation은 원래 입력 A에 대해 이미 saved인 결과를 반환하므로 insert 없이 clearDraft가 B를 삭제합니다. 삭제 capability는 저장 작업의 최초 snapshot과 결합해 유지하고, 확인된 다른 draft와 IDB 실패를 구분해야 합니다.",
+      "reproduction": "snapshot(A) -> insert(A) succeeds -> another composer autosaves B -> compare(A,B)=false -> retry same mounted A -> snapshot(B) -> existing operation returns saved -> compare(B,B) -> delete(B)",
+      "observed": {
+        "insert_count": 1,
+        "upload_count": 2,
+        "newer_draft_deleted": true
+      },
+      "proof": "scratch/cleanup-retry.test.ts; repro-output.txt; repro-results.json"
+    }
+  ]
+}

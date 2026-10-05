@@ -1,0 +1,25 @@
+{
+  "build_id": "C_Z05zH9wjByPx_i-arba",
+  "generated_in": "/Users/twoimo/.codex/worktrees/node-dependency-quality-20261004/tzudong/apps/web/.next",
+  "source_manifest_sha256": "83ea762d4c811ce94cd4cb4f0fa9f98905efdd831c9af5a578f5572e5730f3ec",
+  "next": "16.3.6",
+  "keys": [
+    {
+      "path": "BUILD_ID",
+      "sha256": "657ac2ef7d179b0f65333329c034e5f9c41fbf356833e8381fba83d1c93bbee5"
+    },
+    {
+      "path": "build-manifest.json",
+      "sha256": "f50dc472c2c5448d48489b1f364c2e6d07c29c8bccf121672f66a2e5ca9da096"
+    },
+    {
+      "path": "routes-manifest.json",
+      "sha256": "fd01a14feb6ca31200c1d004c51fbbf1354cc0653087517cea555f70578f96a9"
+    },
+    {
+      "path": "required-server-files.json",
+      "sha256": "7f8598293accf6379efda18eeba76c8f818bd0d2350b992412a18e05aa1f79f1"
+    }
+  ],
+  "actual_naver_sdk": "not executed; parent serial integration gate"
+}

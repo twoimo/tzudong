@@ -1,0 +1,6 @@
+{
+  "command": "npm ci --no-audit --no-fund",
+  "exit_code": 0,
+  "stdout": "\nadded 719 packages in 11s\n",
+  "stderr": "npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead\n"
+}

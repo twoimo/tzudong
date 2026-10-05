@@ -1,0 +1,389 @@
+{
+  "baseRefName": "develop",
+  "baseRefOid": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "commits": [
+    {
+      "committedDate": "2026-10-04T09:57:07Z",
+      "messageHeadline": "fix(quality): align nightly ledger and tracked layout contracts",
+      "oid": "a01e148a2288ad61fd626ebf6035ea546a2f3880"
+    },
+    {
+      "committedDate": "2026-10-04T09:57:07Z",
+      "messageHeadline": "Merge remote-tracking branch 'origin/develop' into codex/nightly-qual\u2026",
+      "oid": "c1ac641bc6e2dccb74a77e5cee4b39895d4fc2f7"
+    },
+    {
+      "committedDate": "2026-10-04T10:50:23Z",
+      "messageHeadline": "fix(nightly): align frozen Bun and browser ledger admission",
+      "oid": "b12fc956de63e1b9d73ac812098107f5b3578903"
+    },
+    {
+      "committedDate": "2026-10-04T11:19:07Z",
+      "messageHeadline": "fix(reviews): preserve committed draft cleanup through unmount and re\u2026",
+      "oid": "b1a359ee21913a06922d359f7f747cb74bc2cc69"
+    },
+    {
+      "committedDate": "2026-10-04T11:19:09Z",
+      "messageHeadline": "fix(web): align video IDs, REST errors and modal inset contracts",
+      "oid": "12e1ca38a836f17d64c3940fa5be474913ecb9e8"
+    },
+    {
+      "committedDate": "2026-10-04T11:19:57Z",
+      "messageHeadline": "fix(deps): patch supported advisories and reconcile Node runtime updates",
+      "oid": "b6eebc0e5819d6ee591264b868c10abbf75bc6f8"
+    },
+    {
+      "committedDate": "2026-10-04T11:19:58Z",
+      "messageHeadline": "Merge branch 'codex/review-commit-recovery-20261004' into codex/night\u2026",
+      "oid": "8688686be1a2e3051f87407b3cee10bce8eafeb3"
+    },
+    {
+      "committedDate": "2026-10-04T11:19:58Z",
+      "messageHeadline": "Merge branch 'codex/review-contract-quality-20261004' into codex/nigh\u2026",
+      "oid": "d6f1491b55249ff2fd6e750187bfab2199b42f08"
+    },
+    {
+      "committedDate": "2026-10-04T11:19:58Z",
+      "messageHeadline": "Merge branch 'codex/node-dependency-quality-20261004' into codex/nigh\u2026",
+      "oid": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/scripts/build-nightly-local-publication.py",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": ".github/scripts/verify-nightly-local-publication.py",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": ".github/workflows/nightly-local-regression.yml",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+      "additions": 3,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/app/api/dashboard/restaurants/route.ts",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/app/api/dashboard/summary/route.ts",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/app/api/dashboard/video/[videoId]/route.ts",
+      "additions": 13,
+      "deletions": 4,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/bun.lock",
+      "additions": 440,
+      "deletions": 480,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "additions": 4,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "additions": 15,
+      "deletions": 6,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/components/ui/alert-dialog.tsx",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/components/ui/dialog.tsx",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "additions": 24,
+      "deletions": 4,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/cluster-marker.ts",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/clustering.ts",
+      "additions": 5,
+      "deletions": 5,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/dashboard/helpers.ts",
+      "additions": 26,
+      "deletions": 12,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/dashboard/summary.ts",
+      "additions": 20,
+      "deletions": 9,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+      "additions": 3,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/naver-map-render-plan.ts",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/reviewDraftDB.ts",
+      "additions": 53,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/reviews/review-save-operation.ts",
+      "additions": 16,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/lib/supabase-rest-client.ts",
+      "additions": 88,
+      "deletions": 41,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "additions": 336,
+      "deletions": 403,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/package.json",
+      "additions": 30,
+      "deletions": 30,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/scripts/run-nightly-regression.mjs",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/dashboard-aggregation.test.ts",
+      "additions": 92,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/dashboard-route-contract.test.ts",
+      "additions": 109,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/tests-unit/dependency-install-compatibility.test.ts",
+      "additions": 18,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/dialog-content-inset.test.ts",
+      "additions": 25,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "additions": 10,
+      "deletions": 10,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/review-draft-deletion-browser.test.ts",
+      "additions": 110,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "additions": 41,
+      "deletions": 5,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-rest-client.test.ts",
+      "additions": 161,
+      "deletions": 17,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/supercluster-runtime-compatibility.test.ts",
+      "additions": 43,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+      "additions": 82,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "apps/web/tests-unit/youtube-link-helpers.test.ts",
+      "additions": 37,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/bin/apply_tzuyang_address_evidence_ledger.mjs",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/bin/build_google_maps_browser_review_queue.mjs",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/bin/build_supabase_address_consistency_guarded_plan.mjs",
+      "additions": 2,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/bin/build_tzuyang_address_evidence_ledger.mjs",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/bin/tests/node-dependency-compatibility.test.mjs",
+      "additions": 187,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/bin/validate_supabase_review_queue_live.mjs",
+      "additions": 3,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/bin/validate_supabase_same_origin_candidates.mjs",
+      "additions": 2,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/layout-manifest.v1.json",
+      "additions": 37,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/package-lock.json",
+      "additions": 51,
+      "deletions": 44,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/package.json",
+      "additions": 4,
+      "deletions": 4,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/url-extractor.js",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/supabase/scripts/local-migrate.py",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/supabase/tests/test_local_publication_verifier.py",
+      "additions": 29,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/supabase/tests/test_local_replay_contract.py",
+      "additions": 3,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/supabase/tests/test_local_seed_receipt_contract.py",
+      "additions": 39,
+      "deletions": 4,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "backend/utils/tests/test_layout_naming_source_recovery.py",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefName": "codex/nightly-quality-20261004",
+  "headRefOid": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "number": 3114,
+  "state": "OPEN",
+  "title": "fix(readiness): recover review lifecycle, nightly contracts and dependency safety",
+  "url": "https://github.com/twoimo/tzudong/pull/3114"
+}

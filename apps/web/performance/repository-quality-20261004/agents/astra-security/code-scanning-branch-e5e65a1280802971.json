@@ -1,0 +1,21 @@
+{
+  "name": "code-scanning-branch-e5e65a1280802971",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-scanning/alerts?state=open&ref=refs%2Fheads%2Fdependabot%2Fpip%2Fbackend%2Fpipeline-control%2Fdevelop%2Fpsycopg2-binary-2.9.13&per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "admin:repo_hook, delete_repo, read:repo_hook, repo, repo:invite, repo:status, repo_deployment, security_events, write:repo_hook",
+        "x-ratelimit-remaining": "4747",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:46:38.088346+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 0,
+  "items": []
+}

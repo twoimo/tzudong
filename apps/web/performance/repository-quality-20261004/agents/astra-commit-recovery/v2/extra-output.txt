@@ -1,0 +1,38 @@
+bun test v1.4.0 (34cbb9a40)
+
+../../../../marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/v2/scratch/cleanup-retry.test.ts:
+(pass) v2 extra: owner change while native capture is pending cancels before upload [115.64ms]
+161 |     await s.submit();
+162 |     await s.f.close()();
+163 |     retainExtra({ case: 'transient-snapshot-failure-retry-close', events: s.events,
+164 |         ...s.f.counts, draftRetained: Boolean(s.row()), recoveryStates: s.f.recoveryStates });
+165 |     expect(s.f.counts.inserts).toBe(1);
+166 |     expect(s.f.counts.closes).toBeGreaterThan(0);
+                                    ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 0
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/v2/scratch/cleanup-retry.test.ts:166:31)
+(fail) v2 extra: transient snapshot failure must permit completing the saved UI after storage recovers [86.23ms]
+183 |     await s.f.close()();
+184 |     retainExtra({ case: 'unanswered-then-own-autosave-then-recovered-commit', events: s.events,
+185 |         ...s.f.counts, draftRetained: Boolean(s.row()), recoveryStates: s.f.recoveryStates });
+186 |     expect(s.f.counts.inserts).toBe(1); expect(s.f.counts.uploads).toBe(2);
+187 |     expect(s.events.filter(v => v === 'snapshot')).toHaveLength(1);
+188 |     expect(s.f.counts.closes).toBeGreaterThan(0);
+                                    ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 0
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-commit-recovery/v2/scratch/cleanup-retry.test.ts:188:31)
+(fail) v2 extra: autosave after an unanswered reply must not permanently block recovered commit completion [76.59ms]
+
+ 1 pass
+ 7 filtered out
+ 2 fail
+ 29 expect() calls
+Ran 3 tests across 1 file. [511.00ms]

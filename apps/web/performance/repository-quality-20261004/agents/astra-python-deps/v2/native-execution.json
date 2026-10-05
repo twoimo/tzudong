@@ -1,0 +1,102 @@
+{
+  "evidence_boundary": "Persisted native OpenAI session/turn metadata plus actual tool calls/results and usage events; no independent provider wire trace claimed. Inherited turn contexts excluded.",
+  "sessions": [
+    {
+      "role": "owner",
+      "session_id": "01a10657-0201-7350-a73d-88dd8ce446ca",
+      "rollout_path": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T18-55-27-01a10657-0201-7350-a73d-88dd8ce446ca.jsonl",
+      "turn_id": "01a10678-ae52-7e22-b654-8b270215316f",
+      "turn_context_lines": [
+        344,
+        456
+      ],
+      "tool_calls": [
+        {
+          "line": 349,
+          "name": "exec"
+        },
+        {
+          "line": 358,
+          "name": "exec"
+        },
+        {
+          "line": 370,
+          "name": "exec"
+        }
+      ],
+      "tool_result_lines": [
+        354,
+        363,
+        374
+      ],
+      "usage_event_lines": [
+        355,
+        364,
+        375
+      ],
+      "session_meta_line": 1,
+      "provider": "openai",
+      "native_parent_id": "01a0f119-3142-7fe1-b600-e436feaedc75",
+      "depth": 1,
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "tool_calls_count": 20,
+      "tool_result_lines_count": 19,
+      "usage_event_lines_count": 17,
+      "matching_usage_record_lines": [
+        352,
+        362,
+        371
+      ],
+      "matching_usage_record_count": 21
+    },
+    {
+      "role": "reviewer",
+      "session_id": "01a10679-5312-7d21-adbc-2147215fd37a",
+      "rollout_path": "/Users/twoimo/.codex/sessions/2026/10/04/rollout-2026-10-04T19-32-56-01a10679-5312-7d21-adbc-2147215fd37a.jsonl",
+      "turn_id": "01a10684-491f-75f2-bf6f-ecfc0e3f2510",
+      "turn_context_lines": [
+        170
+      ],
+      "tool_calls": [
+        {
+          "line": 175,
+          "name": "exec"
+        },
+        {
+          "line": 183,
+          "name": "exec"
+        },
+        {
+          "line": 193,
+          "name": "exec"
+        }
+      ],
+      "tool_result_lines": [
+        179,
+        187,
+        196
+      ],
+      "usage_event_lines": [
+        180,
+        188,
+        197
+      ],
+      "session_meta_line": 1,
+      "provider": "openai",
+      "native_parent_id": "01a10657-0201-7350-a73d-88dd8ce446ca",
+      "depth": 2,
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "tool_calls_count": 3,
+      "tool_result_lines_count": 3,
+      "usage_event_lines_count": 4,
+      "matching_usage_record_lines": [
+        178,
+        186,
+        195
+      ],
+      "matching_usage_record_count": 4
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-04T23:37:25.401322+00:00",
+  "knownPublicObjectOnly": true,
+  "rawBodyStored": false,
+  "hashOfPotentialPrivateContentStored": false,
+  "maxReadBytes": 1024,
+  "status": 200,
+  "byteCount": 228,
+  "validJSON": true,
+  "emailPatternHits": 0,
+  "jwtPatternHits": 0,
+  "privateKeyMarkers": false,
+  "sensitiveFieldNamesPresent": false
+}

@@ -1,0 +1,11 @@
+{
+  "artifactId": 11306508253,
+  "runId": 37212205347,
+  "jobId": 111465506075,
+  "headCommit": "c2c61614574927390f4ea4d90ccc3373ec7a1358",
+  "artifactZipSha256": "7e46ebd82851ab5a68cf7c70127909ee8ab4db8505d58749d30e971b608cb7fc",
+  "members": [
+    "c0d2cdbbda874e6b286b969d3bcd4a44f5336a7f/windows-bun/failure-receipt.json"
+  ],
+  "receiptSha256": "fb15d32590bd1b26b2bd990490be99aba09e429b28715ad16cb5037acc358203"
+}

@@ -1,0 +1,101 @@
+{
+  "observed_at_utc": "2026-10-04T11:46:22.776025+00:00",
+  "authority_head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "authority_status": [
+    "M .github/workflows/security-audit.yml",
+    " M README.ko.md",
+    " M README.md"
+  ],
+  "owner_branch": "codex/pipeline-performance-restart-20261002",
+  "owner_head": "a60ef70dba0bd32ea44d32218e2c66ef1b5410e1",
+  "owner_status": [
+    "M apps/web/tsconfig.json",
+    " M backend/supabase/.temp/cli-latest",
+    " M backend/supabase/scripts/materialize_migration_workspace.py",
+    "?? apps/web/performance/rollout-preflight/hosted-migration-ledger-20261004.json",
+    "?? backend/supabase/supabase/.temp/cli-latest",
+    "?? backend/supabase/tests/test_selected_migration_workspace.py"
+  ],
+  "owner_first_observation": {
+    "head": "a60ef70dba0bd32ea44d32218e2c66ef1b5410e1",
+    "status": [
+      " M apps/web/tsconfig.json",
+      " M backend/supabase/.temp/cli-latest",
+      "?? backend/supabase/supabase/.temp/cli-latest"
+    ]
+  },
+  "owner_relevant_files": [
+    {
+      "path": "apps/web/components/admin/AdminConsoleOverview.tsx",
+      "sha256": "4c7add0f499b1802e9d5cda3b6356c3f87e83fbb6ccec814e72d1b28dfcff625",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/components/admin/AdminOperationsPanel.tsx",
+      "sha256": "ec4c904c2fd2a109f037a710da4e12a7d395aaf02b5e5f3a99628412e78dfc9d",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/lib/admin/operations-view-model.ts",
+      "sha256": "b506e6747a9eee6383fe7b55263561b714550bda547667a3b6ba72f5c93ed727",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/tests-unit/admin-operations-view-model.test.ts",
+      "sha256": "3e6c61ba71c202a8f9315d1e8cd0f8c7046979890ffbb4b05456b4233f13e1e1",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/components/admin/RestaurantManagementWorkspace.tsx",
+      "sha256": "5c238e6e9ebc826b698bd5286082a819f6c889250e27cdc32bc9a0f9ba042f47",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/lib/admin/admin-module-routing.ts",
+      "sha256": "878c7dc8e5fc8a2bf29c4b17a9fe4544c548c1b95c8aa76a53abdb138981c22a",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+      "sha256": "20e3d0eff46f40839e2192b8e32012368570731088629b6e953acdad63d9b5e6",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/app/admin/layout.tsx",
+      "sha256": "b9263c7a9583237bdc78662718e2f48c7607e78dce245c1f4d4363612b8006b1",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/styles/admin-ui.css",
+      "sha256": "8864f6d2dee538f55639efdda73d0d7d20b3d4cfeeb8b31a4bf0703cd2a7b666",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/lib/admin/youtube-kpi-snapshots.ts",
+      "sha256": "581c5224e0a98ef7db73488530ff7e82909db506bcbfcd39488b5eb9faf14f62",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/app/api/admin/youtube-kpis/route.ts",
+      "sha256": "1be09d2f8ab854a3d25aa605d66ba9e016e5d04f1330fb58d1174998d90e1198",
+      "git_status": "",
+      "source_read_only": true
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "sha256": "7ce0322617eb6c6157f6a80a94cda4fd3747de3f0bd8b07754255e7dc1b825aa",
+      "git_status": "M apps/web/tsconfig.json",
+      "source_read_only": true
+    }
+  ]
+}

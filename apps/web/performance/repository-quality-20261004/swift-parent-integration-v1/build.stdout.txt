@@ -1,0 +1,107 @@
+Building for debugging...
+Planning build
+Compute target dependency graph
+Gather provisioning inputs
+Planning complete
+Discovering version info for clang
+Discovering version info for swiftc
+Discovering version info for ld
+[Planning deferred tasks]
+Create build description
+Create build directory $(OBJROOT)
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex
+
+Create build directory $(DERIVED_DATA_DIR)/CompilationCache.noindex
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/CompilationCache.noindex
+
+Create build directory $(DERIVED_DATA_DIR)/ModuleCache.noindex
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/ModuleCache.noindex
+
+Create build directory $(DERIVED_DATA_DIR)/SDKExplicitPrecompiledModules
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/SDKExplicitPrecompiledModules
+
+Create build directory $(DERIVED_DATA_DIR)/PCH
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/PCH
+
+Create build directory $(TARGET_BUILD_DIR)
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Products
+
+Create build directory $(OBJROOT)/SwiftExplicitPrecompiledModules
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+Create build directory $(OBJROOT)/ExplicitPrecompiledModules
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/ExplicitPrecompiledModules
+
+Create build directory $(OBJROOT)/EagerLinkingTBDs/Debug
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/EagerLinkingTBDs/Debug
+
+Create build directory $(TARGET_BUILD_DIR)/Debug
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Products/Debug
+
+Create build directory $(TARGET_BUILD_DIR)/Debug/PackageFrameworks
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-create-build-directory /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Products/Debug/PackageFrameworks
+
+Write Entitlements.plist
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong
+    write-file /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/DerivedSources/Entitlements.plist
+
+Write TzudongVisualOCR-OutputFileMap.json (arm64)
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong
+    write-file /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR-OutputFileMap.json
+
+Write TzudongVisualOCR.SwiftFileList (arm64)
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong
+    write-file /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.SwiftFileList
+
+Write TzudongVisualOCR.LinkFileList (arm64)
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong
+    write-file /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.LinkFileList
+
+Write TzudongVisualOCR_const_extract_protocols.json (arm64)
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong
+    write-file /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR_const_extract_protocols.json
+
+Process product packaging
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong
+    
+    Entitlements:
+    
+    {
+    "com.apple.security.get-task-allow" = 1;
+}
+    
+    builtin-productPackagingUtility -entitlements -format xml -o /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/TzudongVisualOCR.xcent
+
+Generate DER entitlements
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong
+    /usr/bin/derq query -f xml -i /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/TzudongVisualOCR.xcent -o /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/TzudongVisualOCR.xcent.der --raw
+
+Build stat cache for /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -o /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/SDKStatCaches.noindex/macosx27.0-26A425-a0facfad118c1a7a18f0aad9463f65497231f6df4def33e022ae2eb8f782df1a.sdkstatcache
+
+[19 / 24]
+Planning Swift module TzudongVisualOCR (arm64)
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name TzudongVisualOCR -Onone @/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DXcode -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos12.0 -g -module-cache-path /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/SDKStatCaches.noindex/macosx27.0-26A425-a0facfad118c1a7a18f0aad9463f65497231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/ModuleCache.noindex -sdk-module-cache-path /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/Objects-normal/arm64/TzudongVisualOCR_const_extract_protocols.json -Xcc -I/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Products/Debug/include -Xcc -I/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/DerivedSources-normal/arm64 -Xcc -I/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/DerivedSources/arm64 -Xcc -I/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-swift-parent-h5opcklf/build/out/Intermediates.noindex/TzudongVisualOCR.build/Debug/TzudongVisualOCR-p.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -working-directory /Users/twoimo/.codex/worktrees/nightly-quality-20261004 -experimental-emit-module-separately -disable-cmo
+
+[20 / 25] TzudongVisualOCR-product
+Compiling Clang module _SwiftConcurrencyShims
+Compiling Clang module SwiftShims
+Compile
+    cd /Users/twoimo/.codex/worktrees/nightly-quality-20261004
+    
+
+Emitting module for TzudongVisualOCR
+[24 / 29] TzudongVisualOCR-product

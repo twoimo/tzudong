@@ -1,0 +1,15 @@
+{
+  "issuedAt": "2026-10-04T21:28:43.121771+00:00",
+  "exitCode": 0,
+  "readback": {
+    "closedAt": "2026-10-04T21:28:41Z",
+    "number": 2843,
+    "state": "CLOSED",
+    "url": "https://github.com/twoimo/tzudong/issues/2843"
+  },
+  "fixedSourceMain": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "canonicalRun": 37233565208,
+  "independentPublicationVerification": "agents/astra-nightly-publication-readback-20261005/verification.json",
+  "scheduledAutoClosureObserved": false,
+  "manualClosure": true
+}

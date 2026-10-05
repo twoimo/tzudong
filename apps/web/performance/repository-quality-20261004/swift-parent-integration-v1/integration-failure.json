@@ -1,0 +1,7 @@
+{
+  "status": "failed",
+  "cause": "git_apply_materialized_symlink_as_plain_file",
+  "receiptProbeError": "not_symlink",
+  "sourceBuildPassed": false,
+  "globalGitConfigChanged": false
+}

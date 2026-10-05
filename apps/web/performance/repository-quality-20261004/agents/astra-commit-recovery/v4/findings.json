@@ -1,0 +1,14 @@
+{
+  "version": 4,
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "provider": "openai",
+  "source_set_sha256": "1c346b60c9a35e5afc77ede4e4a3c56980bcc16aa7b49e1fb9589b3020d93398",
+  "findings": [],
+  "resolved": [
+    "v1 retry recapture deletes replacement draft",
+    "v2 replacement/own-autosave blocks saved composer completion",
+    "v2-v3 transient capture failure retains permanent false closure"
+  ],
+  "conclusion": "No remaining reproducible P1/P2 in the requested recovery and replacement-preservation scope."
+}

@@ -1,0 +1,21 @@
+{
+  "name": "annotations-111356762340",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/check-runs/111356762340/annotations?per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4950",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:39:44.741847+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 0,
+  "items": []
+}

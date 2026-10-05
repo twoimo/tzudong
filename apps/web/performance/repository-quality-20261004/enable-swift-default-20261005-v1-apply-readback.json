@@ -1,0 +1,31 @@
+{
+  "observedAt": "2026-10-04T22:04:25.258109+00:00",
+  "approvedSourceMain": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "applyError": {
+    "exitCode": 1,
+    "fixedCode": "github_default_setup_operation_failed",
+    "requiresIndependentReadbackBeforeRetry": true
+  },
+  "readbackError": null,
+  "validationRunId": null,
+  "after": {
+    "state": "configured",
+    "languages": [
+      "actions",
+      "go",
+      "javascript",
+      "javascript-typescript",
+      "python",
+      "rust",
+      "typescript"
+    ],
+    "query_suite": "default",
+    "threat_model": "remote",
+    "runner_type": "standard",
+    "schedule": "weekly",
+    "updated_at": "2026-09-05T01:18:53Z"
+  },
+  "requestAccepted": false,
+  "allRequiredLanguagesEnabled": false,
+  "remainingProof": "wait this validation handle, then exact main Swift analysis and original five language analysis readback"
+}

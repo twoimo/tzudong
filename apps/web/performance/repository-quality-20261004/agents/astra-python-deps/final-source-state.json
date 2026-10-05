@@ -1,0 +1,39 @@
+{
+  "verified_at": "2026-10-04T10:13:09.546033+00:00",
+  "worktree": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong",
+  "branch": "codex/python-dependency-quality-20261004",
+  "head": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "changed_paths": [
+    "backend/pipeline-control/requirements.txt",
+    "backend/pipeline/requirements.txt",
+    "backend/restaurant-crawling/scripts/requirements.txt"
+  ],
+  "untracked_paths": [],
+  "diff_check_exit": 0,
+  "patch_sha256": "51b571918187fe318f6244cd503079fb3de46195b4b53eb690c7d9c3b98eb0af",
+  "manifests": [
+    {
+      "path": "backend/pipeline/requirements.txt",
+      "baseline_sha256": "6b1f940af9be08797c09ccbbb07e484c8e1ee2f9e64a9d8dd67004a8b922fb8b",
+      "after_sha256": "f9aec63ba51e3320e3376fb9845e60fb808c4568ff8bb4570203041352e58348",
+      "baseline": "langgraph==1.2.1\nlangchain-core==1.6.0\npydantic==2.13.4\n",
+      "after": "langgraph==1.2.12\nlangchain-core==1.6.5\npydantic==2.13.5\n"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/requirements.txt",
+      "baseline_sha256": "d26e29e36e201e6d01304d73e0b6e522f561fec52fb46d3608db453ae6de7361",
+      "after_sha256": "8f0a1587485d3eb240f78a9a8b17af841491c92b6946f2f339aa7d5fc267f2ba",
+      "baseline": "google-api-python-client==2.196.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.7.4\npyyaml==6.0.3\nopenai==3.3.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.15.0\nscrapling[fetchers]==0.4.8\nplaywright==1.59.0\n",
+      "after": "google-api-python-client==2.200.0\npython-dotenv==1.2.3\nyt-dlp[default]==2026.8.19\npyyaml==6.0.3\ntqdm==4.70.1\nopenai==3.16.1\nrequests==2.34.2\nlangchain==1.3.9\nlangchain-community==0.4.2\nlangchain-ollama==1.1.0\nlangchain-openai==1.6.0\nsupabase==2.30.0\ncurl_cffi==0.16.3\nscrapling[fetchers]==0.4.15\nplaywright==1.62.0\n"
+    },
+    {
+      "path": "backend/pipeline-control/requirements.txt",
+      "baseline_sha256": "866f6cae2a4b96aa9b6c70a7f5c34bda91434562253941a4fc678682206d8135",
+      "after_sha256": "1b2e5e889820c7d18f9c72ca859859d8905dda49104e7b62e5e455583e300603",
+      "baseline": "kafka-python==3.0.11\npsycopg2-binary==2.9.11\nopentelemetry-api==1.44.0\nopentelemetry-sdk==1.44.0\nopentelemetry-exporter-otlp-proto-http==1.44.0\n",
+      "after": "kafka-python==3.0.11\npsycopg2-binary==2.9.13\nopentelemetry-api==1.44.0\nopentelemetry-sdk==1.44.0\nopentelemetry-exporter-otlp-proto-http==1.44.0\n"
+    }
+  ],
+  "source_commit_created": false,
+  "remote_mutations": false
+}

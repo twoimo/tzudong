@@ -1,0 +1,22 @@
+{
+  "name": "code-quality-setup",
+  "complete": false,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-quality/setup",
+      "http_status": 404,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "repo",
+        "x-ratelimit-remaining": "4995",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 1,
+      "observed_at": "2026-10-04T08:30:21.976297+00:00",
+      "limitation": "not_found_or_not_exposed"
+    }
+  ],
+  "count": null,
+  "items": [],
+  "absence_claim": false
+}

@@ -1,0 +1,13 @@
+{
+  "exit_code": 0,
+  "lock_sha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694",
+  "counts": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "packages": []
+}

@@ -1,0 +1,159 @@
+{
+  "authority_sha": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "current_head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "checks": {
+    "head_matches_authority": true,
+    "README.md:new_links_resolve": true,
+    "README.md:historical_sections_unchanged": true,
+    "README.md:six_gifs_preserved": true,
+    "README.md:shell_syntax": true,
+    "README.ko.md:new_links_resolve": true,
+    "README.ko.md:historical_sections_unchanged": true,
+    "README.ko.md:six_gifs_preserved": true,
+    "README.ko.md:shell_syntax": true,
+    "package_lock_agrees_with_manifest": true,
+    "documented_dev_command_resolves": true,
+    "exact_old_diff_matches_github": true,
+    "direct_base_and_merge_base_match": true,
+    "git_diff_check": true
+  },
+  "readmes": {
+    "README.md": {
+      "before_sha256": "a602aeabb60ddfb62c4b7f259c3d8436549d71c8bb1ca7493ba54e8eadf2c64c",
+      "after_sha256": "53d1ffde52e65e77de9cc69ddb68cdb4f2a465a203c63e1a3e03829ee8b76361",
+      "before_links": {
+        "local_path_references": 36,
+        "same_document_anchors": 0,
+        "external_references_not_requested": 7,
+        "missing": []
+      },
+      "after_links": {
+        "local_path_references": 39,
+        "same_document_anchors": 4,
+        "external_references_not_requested": 8,
+        "missing": []
+      },
+      "introduced_missing_references": [],
+      "tour_architecture_performance_and_historical_release_text_unchanged": true,
+      "preserved_section_sha256": "c946725422ec45a4c4ac74c59b0a949ae6156c97fa021213fdec56a879f9c73e",
+      "gifs": [
+        {
+          "path": "apps/web/public/images/readme-product-tour.gif",
+          "matches_integration": true,
+          "sha256": "fb6f2be0fe6dae416563f5fae3bcd0144431e8652fb5d764d8bfa5f35ed5af38",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-storyboard-demo.gif",
+          "matches_integration": true,
+          "sha256": "b37fb1f8953b0e9b56109a966bfef7e8fdbbfb7e0dc3a136abe73631073b8181",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-home-map.gif",
+          "matches_integration": true,
+          "sha256": "189e9de12bd6f8f59a6b1eae5e0c2209bd595be2627c09b187e6ef967df4cd79",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-reviews-feed.gif",
+          "matches_integration": true,
+          "sha256": "359c76b70e867966069df9239f2d64836991326e6edfa02917e6857c4be48f0f",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-stamp-passport.gif",
+          "matches_integration": true,
+          "sha256": "b6a1399dc26581b28e337a71f256823729d4b1edb62b8b538fd43463ce934b7d",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-leaderboard-ranking.gif",
+          "matches_integration": true,
+          "sha256": "b815cdaea0a245399e5afeaf786752ab9906762dd7e9f7f9db963a6a9b78f189",
+          "gif_signature": "GIF89a"
+        }
+      ]
+    },
+    "README.ko.md": {
+      "before_sha256": "7bb905ac0f6a7ff1b33cb9b02359f0eb1c43a3cb5cab1288075e3da3bdc72c74",
+      "after_sha256": "3a72304bc2750852c9bf147b4346fa45ad83e3b73490e46474f41df8ef82dbb2",
+      "before_links": {
+        "local_path_references": 20,
+        "same_document_anchors": 0,
+        "external_references_not_requested": 7,
+        "missing": []
+      },
+      "after_links": {
+        "local_path_references": 23,
+        "same_document_anchors": 4,
+        "external_references_not_requested": 8,
+        "missing": []
+      },
+      "introduced_missing_references": [],
+      "tour_architecture_performance_and_historical_release_text_unchanged": true,
+      "preserved_section_sha256": "b12be8aa99198f4d3ddac29e319f018a08030a30fa326c376a00f6a3406fc845",
+      "gifs": [
+        {
+          "path": "apps/web/public/images/readme-product-tour.gif",
+          "matches_integration": true,
+          "sha256": "fb6f2be0fe6dae416563f5fae3bcd0144431e8652fb5d764d8bfa5f35ed5af38",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-storyboard-demo.gif",
+          "matches_integration": true,
+          "sha256": "b37fb1f8953b0e9b56109a966bfef7e8fdbbfb7e0dc3a136abe73631073b8181",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-home-map.gif",
+          "matches_integration": true,
+          "sha256": "189e9de12bd6f8f59a6b1eae5e0c2209bd595be2627c09b187e6ef967df4cd79",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-reviews-feed.gif",
+          "matches_integration": true,
+          "sha256": "359c76b70e867966069df9239f2d64836991326e6edfa02917e6857c4be48f0f",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-stamp-passport.gif",
+          "matches_integration": true,
+          "sha256": "b6a1399dc26581b28e337a71f256823729d4b1edb62b8b538fd43463ce934b7d",
+          "gif_signature": "GIF89a"
+        },
+        {
+          "path": "apps/web/public/images/readme-mobile-leaderboard-ranking.gif",
+          "matches_integration": true,
+          "sha256": "b815cdaea0a245399e5afeaf786752ab9906762dd7e9f7f9db963a6a9b78f189",
+          "gif_signature": "GIF89a"
+        }
+      ]
+    }
+  },
+  "source_contract": {
+    "root_package_exists": false,
+    "root_env_example_exists": false,
+    "web_package_exists": true,
+    "web_env_example_exists": true,
+    "node_engine": "24.x",
+    "package_manager": "npm@11.6.2",
+    "dev_script": "node scripts/run-local-dev.mjs --port 3000",
+    "default_port": 3000,
+    "documented_explicit_port": 8080,
+    "versions": {
+      "next": "16.3.6",
+      "react": "^19.3.0",
+      "tailwindcss": "^4.3.3",
+      "lucide-react": "^1.48.0",
+      "@typescript/native": "npm:typescript@7.0.2",
+      "typescript": "npm:@typescript/typescript6@6.0.2"
+    }
+  },
+  "old_patch_id": "e4f61f5aeb36c5f37ff7f16f464f39df16071b9d",
+  "github_patch_id": "e4f61f5aeb36c5f37ff7f16f464f39df16071b9d",
+  "validation_scope": "Static documentation, source/package/lock contract, local links, original diff identity, preserved history/assets, shell syntax. No npm install/ci/dev, unit suite, build, provider, hosted, deployment, or browser validation executed.",
+  "passed": true
+}

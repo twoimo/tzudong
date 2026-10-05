@@ -1,0 +1,80 @@
+{
+  "observedAt": "2026-10-04T22:09:02.121004+00:00",
+  "state": {
+    "state": "configured",
+    "languages": [
+      "actions",
+      "go",
+      "javascript",
+      "javascript-typescript",
+      "python",
+      "rust",
+      "typescript"
+    ],
+    "query_suite": "default",
+    "threat_model": "remote",
+    "runner_type": "standard",
+    "schedule": "weekly",
+    "updated_at": "2026-09-05T01:18:53Z"
+  },
+  "recentRuns": [
+    {
+      "id": 37238858201,
+      "name": "CodeQL Setup",
+      "event": "dynamic",
+      "head_sha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+      "status": "queued",
+      "conclusion": null,
+      "created_at": "2026-10-04T22:08:20Z"
+    },
+    {
+      "id": 37238556465,
+      "name": "Release \u00b7 main",
+      "event": "push",
+      "head_sha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-04T22:03:48Z"
+    },
+    {
+      "id": 37238556416,
+      "name": "CI \u00b7 main",
+      "event": "push",
+      "head_sha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-10-04T22:03:48Z"
+    },
+    {
+      "id": 37238555616,
+      "name": "Push on main",
+      "event": "dynamic",
+      "head_sha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-04T22:03:48Z"
+    },
+    {
+      "id": 37238177534,
+      "name": "Refresh \u00b7 main",
+      "event": "schedule",
+      "head_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-04T21:57:59Z"
+    },
+    {
+      "id": 37237655650,
+      "name": "Code scanning AI findings on PR #3134",
+      "event": "dynamic",
+      "head_sha": "d78161caeaf189258ab54e142156b236fc20b9ff",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-04T21:49:52Z"
+    }
+  ],
+  "sourceExpected": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "UIOnlySwiftAdded": true,
+  "fiveExistingLanguageSelectionsPreserved": true,
+  "noDisableNoBillingChange": true
+}

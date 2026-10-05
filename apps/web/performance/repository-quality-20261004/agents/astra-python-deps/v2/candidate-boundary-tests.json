@@ -1,0 +1,26 @@
+{
+  "target": "backend.pipeline.test_nodes_unittest",
+  "tests_run": 18,
+  "failures": 0,
+  "errors": 0,
+  "skips": [
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_taskkill_failure_closes_job_without_descendant_leak",
+      "reason": "Windows job-object fallback"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_windows_job_is_empty_after_ordinary_exit",
+      "reason": "Windows job-object supervision"
+    }
+  ],
+  "issues": [],
+  "successful": true,
+  "seconds": 3.691,
+  "network_policy": "macOS sandbox deny network*",
+  "command": [
+    "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/pipeline-candidate/bin/python",
+    "-m",
+    "unittest",
+    "backend.pipeline.test_nodes_unittest"
+  ]
+}

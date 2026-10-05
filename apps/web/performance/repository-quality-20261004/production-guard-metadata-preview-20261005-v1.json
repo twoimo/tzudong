@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-10-04T20:43:13.057013+00:00",
+  "exactProjectVerified": true,
+  "guard": {
+    "id": "i4fHH6tbzAA1jtCM",
+    "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+    "type": "sensitive",
+    "target": [
+      "production"
+    ]
+  },
+  "guardKeptEnabled": true,
+  "otherEnvValuesNotRetained": true,
+  "MCPGetInterface": "404; no write via mismatched interface",
+  "authenticatedCLIReadSucceeded": true,
+  "mutationIssued": false
+}

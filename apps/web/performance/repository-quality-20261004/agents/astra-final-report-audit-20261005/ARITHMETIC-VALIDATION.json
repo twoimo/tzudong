@@ -1,0 +1,2425 @@
+{
+  "schemaVersion": 1,
+  "auditKind": "offline_existing_evidence_arithmetic_and_interpretation",
+  "generatedAt": "2026-10-04T21:33:33.718103+00:00",
+  "evidenceRoot": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004",
+  "outputDirectory": "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-final-report-audit-20261005",
+  "inputFiles": [
+    {
+      "path": "PROGRESS-integrated-v2.md",
+      "sha256": "f2635026c2c8896462ff06fd1282017b283931082dfc0c132af87398ce7ceda5",
+      "bytes": 7888,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "REPRODUCE-integrated-v1.md",
+      "sha256": "90636c575cb88c06594187973c91fe852560860d4f47523a725450828212764f",
+      "bytes": 4803,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "integrated-regression-summary-v2.json",
+      "sha256": "ff96598779df5a9b0426a4dcf7805ca91b09d229c062c37cba8bdfe0cbf2698b",
+      "bytes": 9133,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "integrated-regression-plan-v2.json",
+      "sha256": "40b1e21e8ab8c51c07e9467b4c61031b76edc8d3a86ca8dcf9fdcc420696e7cb",
+      "bytes": 1744,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "readiness-mobile-ui-integrated-v2-aa/raw.json",
+      "sha256": "4cef6a10daf8720cb808c2e85a845725ff593c4d0ce429924902a0da4c65fe25",
+      "bytes": 148345,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "readiness-mobile-ui-integrated-v2-ab/raw.json",
+      "sha256": "86006db008392fca99952f1091b773b210a0e25933d9e15a5e369a94f87b5979",
+      "bytes": 320951,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "integrated-warm-minimal-summary-v1.json",
+      "sha256": "34ea56941539ecfbd31a23ee847a4609a9d7f8cde9a422c5c12a42d945004519",
+      "bytes": 6107,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "integrated-warm-minimal-plan-v1.json",
+      "sha256": "848be5fa0023f90de3d1f0c28ce1e7fa69b4a08ec94d574328561f679072b00e",
+      "bytes": 1866,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "integrated-warm-minimal-v1/raw.json",
+      "sha256": "f9cfead5f0c1d6a41c56d0e72a01a4ddfea580150b832bd003520e2b32117c55",
+      "bytes": 2474666,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "warm-probe-effect-summary-v1.json",
+      "sha256": "91dbe19b26d75454bb825f26491dc5dc5145fec966c0ea2b2609181994b57297",
+      "bytes": 1672,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "warm-probe-effect-plan-v1.json",
+      "sha256": "e9e605737f05a437a5d8d164a6e7e8362e7c895fb27a44b458f5496973a8e99e",
+      "bytes": 1721,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "warm-probe-effect-v1/raw.json",
+      "sha256": "367bd6ed2573ce002b66a78c248314430e57ef8a353b021ed40cdea7f0c88395",
+      "bytes": 2506128,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "integrated-final-interactions-v1/raw.json",
+      "sha256": "addec9e5da8fc76972d68a09f0ee0a2639b5eef6fe1dc420af0f759418ad93b4",
+      "bytes": 10083,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "integrated-final-responsive-v1/raw.json",
+      "sha256": "55a19e003d220ad80ae7ccccf8a8bb66d17e97f354d54dcfc73a0d036a047eb8",
+      "bytes": 2627,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "live-quality-production-v1/raw.json",
+      "sha256": "711930a0fa8788e32f52c621b2879194e341d03d80e40c92653133fd63c4f44e",
+      "bytes": 5922,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "live-console-triage-v1.json",
+      "sha256": "645caa6d9ff487d6f5152e224fae44c3d8668f705fd45649ff26f5bbd42bd7ac",
+      "bytes": 1163,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "live-console-diagnostic-v7/raw.json",
+      "sha256": "222df60cadb2143a3dfa8eda8f21d88c158b26fd8db62f0d97627253e70c0241",
+      "bytes": 569,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "quality-production-ready-status-v1.json",
+      "sha256": "fdbf92a606451ac0a8a9142a8dbdf388fd2b972f1e60957d9f0a2689b2c6fa6a",
+      "bytes": 699,
+      "unchangedAtAuditEnd": true
+    },
+    {
+      "path": "field-aggregate-readback-20261005-v1.json",
+      "sha256": "ee67360cd54461a8407620aacb3703b75a04c0b65ff1437806437d4a10604e06",
+      "bytes": 398,
+      "unchangedAtAuditEnd": true
+    }
+  ],
+  "reportSha256": "968619c96e0cd33dcd6e89cc8b98d2ec8b8c67984581986d962fae5443223846",
+  "formulas": {
+    "absoluteReduction": "before - after",
+    "relativeReductionPercent": "(before - after) / before * 100; null when before is zero or below reporting resolution",
+    "guard": "after <= before * (1 + fixed_tolerance_percent / 100)",
+    "MB": "usedSize bytes / 1000000",
+    "warmAggregation": "compute each process statistic from its 60 dependent cycles; then median across two process statistics per variant",
+    "quantile": "sorted linear interpolation at (n-1)*p"
+  },
+  "scope": {
+    "newMeasurements": 0,
+    "physicalDevicesOperated": 0,
+    "remoteMutations": 0,
+    "canonicalG003Admission": 0,
+    "fieldAdmission": 0,
+    "canonicalTimingAdmission": 0,
+    "finalFreezeClaimed": false,
+    "finalPushClaimed": false,
+    "worldRankingClaimed": false,
+    "mainNightlyBundle": "separate agent in progress; not audited here",
+    "swift3132SourceConfigPromotion": "in progress per task boundary; not complete here",
+    "newB901Measurements": "parent in progress; no absent results inferred"
+  },
+  "sourceBoundaries": {
+    "regressionBefore": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+    "regressionAfter": "34ebbb21092ef7d3240897d048055fd12762b39b",
+    "laterFunctionalSourcePrefix": "519c88d1",
+    "laterFunctionalSourceBinding": "REPRODUCE document plus matching raw buildId; full source SHA absent in those raws",
+    "recordedProduction": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "deploymentObservedAt": "2026-10-04T20:57:40.266152+00:00"
+  },
+  "cold": {
+    "metrics": [
+      {
+        "count": 735,
+        "metric": "clickMs",
+        "unit": "ms",
+        "before": 486.5,
+        "after": 470.39999985694885,
+        "absoluteReduction": 16.100000143051147,
+        "relativeReductionPercent": 3.309352547389753,
+        "tolerancePercent": 15,
+        "guardCeiling": 559.4749999999999,
+        "guardPassed": true,
+        "beforeStats": {
+          "n": 9,
+          "median": 486.5,
+          "mad": 36.700000047683716,
+          "range": [
+            397.69999980926514,
+            741
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 470.39999985694885,
+          "mad": 14.699999809265137,
+          "range": [
+            414.5,
+            572
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -39.40000009536743,
+              30.899999856948853
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 8.098663945604818
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -20.59999990463257,
+              31.399999856948853
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 4.23432680465212
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      },
+      {
+        "count": 735,
+        "metric": "naturalHeapMB",
+        "unit": "MB",
+        "before": 19.10604,
+        "after": 19.118724,
+        "absoluteReduction": -0.01268400000000014,
+        "relativeReductionPercent": -0.06638738325681376,
+        "tolerancePercent": 20,
+        "guardCeiling": 22.927248,
+        "guardPassed": true,
+        "beforeStats": {
+          "n": 9,
+          "median": 19.10604,
+          "mad": 0.016003999999998797,
+          "range": [
+            17.388796,
+            23.197164
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 19.118724,
+          "mad": 0.11429599999999951,
+          "range": [
+            19.004428,
+            23.037072
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -3.7880080000000014,
+              0.0479680000000009
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 19.826232960885676
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -2.4607680000000016,
+              2.2316119999999984
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 12.879529196002949
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      },
+      {
+        "count": 735,
+        "metric": "longTaskMs",
+        "unit": "ms",
+        "before": 642,
+        "after": 604,
+        "absoluteReduction": 38,
+        "relativeReductionPercent": 5.919003115264798,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "beforeStats": {
+          "n": 9,
+          "median": 642,
+          "mad": 39,
+          "range": [
+            509,
+            1020
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 604,
+          "mad": 32,
+          "range": [
+            555,
+            699
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -63.0,
+              79.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 9.813084112149532
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -20.5,
+              75.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 3.1931464174454827
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      },
+      {
+        "count": 735,
+        "metric": "domNodes",
+        "unit": "nodes",
+        "before": 5119,
+        "after": 5116,
+        "absoluteReduction": 3,
+        "relativeReductionPercent": 0.0586051963274077,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "beforeStats": {
+          "n": 9,
+          "median": 5119,
+          "mad": 2,
+          "range": [
+            5116,
+            5122
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 5116,
+          "mad": 1,
+          "range": [
+            5115,
+            5122
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -5.0,
+              4.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 0.09767532721234617
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -5.0,
+              4.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 0.09767532721234617
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      },
+      {
+        "count": 2000,
+        "metric": "clickMs",
+        "unit": "ms",
+        "before": 471.7999999523163,
+        "after": 485.7000000476837,
+        "absoluteReduction": -13.900000095367432,
+        "relativeReductionPercent": -2.9461636491675014,
+        "tolerancePercent": 15,
+        "guardCeiling": 542.5699999451637,
+        "guardPassed": true,
+        "beforeStats": {
+          "n": 9,
+          "median": 471.7999999523163,
+          "mad": 16.09999990463257,
+          "range": [
+            424.2999999523163,
+            541.5
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 485.7000000476837,
+          "mad": 21.40000009536743,
+          "range": [
+            433.90000009536743,
+            547.7000000476837
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -53.09999990463257,
+              13.299999952316284
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 11.254768950826465
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -35.69999980926514,
+              23.40000009536743
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 7.566765538972711
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      },
+      {
+        "count": 2000,
+        "metric": "naturalHeapMB",
+        "unit": "MB",
+        "before": 18.626264,
+        "after": 18.59434,
+        "absoluteReduction": 0.03192400000000006,
+        "relativeReductionPercent": 0.1713923951684571,
+        "tolerancePercent": 20,
+        "guardCeiling": 22.3515168,
+        "guardPassed": true,
+        "beforeStats": {
+          "n": 9,
+          "median": 18.626264,
+          "mad": 0.01049199999999928,
+          "range": [
+            18.615772,
+            25.164988
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 18.59434,
+          "mad": 0.016227999999998133,
+          "range": [
+            18.577244,
+            24.872512
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -0.0014399999999987756,
+              6.494900000000001
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 0.007731018952586389
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -6.221883999999999,
+              6.503276
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 33.40382161446869
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      },
+      {
+        "count": 2000,
+        "metric": "longTaskMs",
+        "unit": "ms",
+        "before": 568,
+        "after": 614,
+        "absoluteReduction": -46,
+        "relativeReductionPercent": -8.098591549295776,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "beforeStats": {
+          "n": 9,
+          "median": 568,
+          "mad": 25,
+          "range": [
+            527,
+            693
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 614,
+          "mad": 33,
+          "range": [
+            524,
+            735
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -96.0,
+              20.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 16.901408450704224
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -80.0,
+              24.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 14.084507042253522
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      },
+      {
+        "count": 2000,
+        "metric": "domNodes",
+        "unit": "nodes",
+        "before": 3494,
+        "after": 3492,
+        "absoluteReduction": 2,
+        "relativeReductionPercent": 0.05724098454493417,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "beforeStats": {
+          "n": 9,
+          "median": 3494,
+          "mad": 2,
+          "range": [
+            3490,
+            3496
+          ]
+        },
+        "afterStats": {
+          "n": 9,
+          "median": 3492,
+          "mad": 2,
+          "range": [
+            3489,
+            3495
+          ]
+        },
+        "existingCIInterpretation": {
+          "paired": {
+            "endpoints": [
+              -3.0,
+              4.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 0.08586147681740126
+          },
+          "abbaBlock": {
+            "endpoints": [
+              -1.0,
+              3.0
+            ],
+            "includesZero": true,
+            "lowerBoundAsRegressionPercentOfBefore": 0.028620492272467084
+          }
+        },
+        "independentlyRegeneratedBootstrapEndpoints": false,
+        "improvementProven": false
+      }
+    ],
+    "aaNoise": {
+      "clickMs": {
+        "pairs": 9,
+        "p95AbsolutePairedDelta": 96.75999989509583
+      },
+      "naturalHeapMB": {
+        "pairs": 9,
+        "p95AbsolutePairedDelta": 3.393712
+      }
+    },
+    "resourceObservations": {
+      "AA": {
+        "measuredProcesses": 18,
+        "processesWithHeavyOverlapInEitherResourceSnapshot": 9,
+        "processesWithSaturationInEitherResourceSnapshot": 0
+      },
+      "AB": {
+        "measuredProcesses": 36,
+        "processesWithHeavyOverlapInEitherResourceSnapshot": 25,
+        "processesWithSaturationInEitherResourceSnapshot": 0
+      }
+    },
+    "freshProcesses": {
+      "AA": 22,
+      "AB": 44
+    },
+    "measuredProcesses": {
+      "AA": 18,
+      "AB": 36
+    },
+    "processPairsPerABCell": 9,
+    "warmupProcessesPerVariantPerCell": 2,
+    "datasetRowsAndObservedMarkers": [
+      {
+        "fixtureRows": 735,
+        "beforeMarkers": 735,
+        "afterMarkers": 735
+      },
+      {
+        "fixtureRows": 2000,
+        "beforeMarkers": 464,
+        "afterMarkers": 464
+      }
+    ],
+    "twoThousandHeapCIAllowsRegressionBeyond20Percent": true
+  },
+  "warm": {
+    "metrics": [
+      {
+        "metric": "medianHeapMB",
+        "before": 32.298261999999994,
+        "after": 32.550954000000004,
+        "absoluteReduction": -0.25269200000001035,
+        "relativeReductionPercent": -0.7823702711929528,
+        "tolerancePercent": 20,
+        "guardCeiling": 38.75791439999999,
+        "guardPassed": true,
+        "beforeProcessRange": [
+          31.989311999999998,
+          32.607212
+        ],
+        "afterProcessRange": [
+          32.524454000000006,
+          32.577454
+        ],
+        "belowReportingResolution": false,
+        "freshProcessesPerVariant": 2,
+        "dependentCyclesPerProcess": 60,
+        "populationCI": null,
+        "improvementProven": false
+      },
+      {
+        "metric": "peakHeapMB",
+        "before": 47.323384,
+        "after": 52.912392,
+        "absoluteReduction": -5.589008,
+        "relativeReductionPercent": -11.810245860693309,
+        "tolerancePercent": 20,
+        "guardCeiling": 56.7880608,
+        "guardPassed": true,
+        "beforeProcessRange": [
+          46.488488,
+          48.15828
+        ],
+        "afterProcessRange": [
+          47.147172,
+          58.677612
+        ],
+        "belowReportingResolution": false,
+        "freshProcessesPerVariant": 2,
+        "dependentCyclesPerProcess": 60,
+        "populationCI": null,
+        "improvementProven": false
+      },
+      {
+        "metric": "endpointHeapMB",
+        "before": 37.1797,
+        "after": 24.081466,
+        "absoluteReduction": 13.098233999999998,
+        "relativeReductionPercent": 35.229531168890546,
+        "tolerancePercent": 20,
+        "guardCeiling": 44.61563999999999,
+        "guardPassed": true,
+        "beforeProcessRange": [
+          36.09902,
+          38.26038
+        ],
+        "afterProcessRange": [
+          20.76218,
+          27.400752
+        ],
+        "belowReportingResolution": false,
+        "freshProcessesPerVariant": 2,
+        "dependentCyclesPerProcess": 60,
+        "populationCI": null,
+        "improvementProven": false
+      },
+      {
+        "metric": "frameGapP95Ms",
+        "before": 16.799999999997453,
+        "after": 16.79999999999948,
+        "absoluteReduction": -2.0250467969162855e-12,
+        "relativeReductionPercent": null,
+        "tolerancePercent": 15,
+        "guardCeiling": 19.31999999999707,
+        "guardPassed": true,
+        "beforeProcessRange": [
+          16.799999999995634,
+          16.799999999999272
+        ],
+        "afterProcessRange": [
+          16.799999999999272,
+          16.79999999999968
+        ],
+        "belowReportingResolution": true,
+        "freshProcessesPerVariant": 2,
+        "dependentCyclesPerProcess": 60,
+        "populationCI": null,
+        "improvementProven": false
+      },
+      {
+        "metric": "frameGapMaxMs",
+        "before": 50.0,
+        "after": 91.59999999999854,
+        "absoluteReduction": -41.599999999998545,
+        "relativeReductionPercent": -83.19999999999709,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "beforeProcessRange": [
+          50,
+          50
+        ],
+        "afterProcessRange": [
+          83.19999999999709,
+          100
+        ],
+        "belowReportingResolution": false,
+        "freshProcessesPerVariant": 2,
+        "dependentCyclesPerProcess": 60,
+        "populationCI": null,
+        "improvementProven": false
+      },
+      {
+        "metric": "gapsAbove50Ms",
+        "before": 0.0,
+        "after": 10.0,
+        "absoluteReduction": -10.0,
+        "relativeReductionPercent": null,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "beforeProcessRange": [
+          0,
+          0
+        ],
+        "afterProcessRange": [
+          9,
+          11
+        ],
+        "belowReportingResolution": false,
+        "freshProcessesPerVariant": 2,
+        "dependentCyclesPerProcess": 60,
+        "populationCI": null,
+        "improvementProven": false
+      },
+      {
+        "metric": "longTaskMs",
+        "before": 0.0,
+        "after": 242.5,
+        "absoluteReduction": -242.5,
+        "relativeReductionPercent": null,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "beforeProcessRange": [
+          0,
+          0
+        ],
+        "afterProcessRange": [
+          209,
+          276
+        ],
+        "belowReportingResolution": false,
+        "freshProcessesPerVariant": 2,
+        "dependentCyclesPerProcess": 60,
+        "populationCI": null,
+        "improvementProven": false
+      }
+    ],
+    "runs": [
+      {
+        "run": 0,
+        "kind": "baseline",
+        "medianHeapMB": 32.607212,
+        "peakHeapMB": 48.15828,
+        "endpointHeapMB": 36.09902,
+        "initialHeapMB": 19.653804,
+        "endpointGrowthMB": 16.445216000000002,
+        "frameSamples": 5014,
+        "frameGapP95Ms": 16.799999999995634,
+        "frameGapMaxMs": 50,
+        "gapsAbove50Ms": 0,
+        "longTaskMs": 0,
+        "allExactMembership": true
+      },
+      {
+        "run": 1,
+        "kind": "candidate",
+        "medianHeapMB": 32.577454,
+        "peakHeapMB": 58.677612,
+        "endpointHeapMB": 20.76218,
+        "initialHeapMB": 17.925064,
+        "endpointGrowthMB": 2.8371160000000017,
+        "frameSamples": 5002,
+        "frameGapP95Ms": 16.799999999999272,
+        "frameGapMaxMs": 100,
+        "gapsAbove50Ms": 9,
+        "longTaskMs": 276,
+        "allExactMembership": true
+      },
+      {
+        "run": 2,
+        "kind": "candidate",
+        "medianHeapMB": 32.524454000000006,
+        "peakHeapMB": 47.147172,
+        "endpointHeapMB": 27.400752,
+        "initialHeapMB": 19.651532,
+        "endpointGrowthMB": 7.749220000000001,
+        "frameSamples": 4992,
+        "frameGapP95Ms": 16.79999999999968,
+        "frameGapMaxMs": 83.19999999999709,
+        "gapsAbove50Ms": 11,
+        "longTaskMs": 209,
+        "allExactMembership": true
+      },
+      {
+        "run": 3,
+        "kind": "baseline",
+        "medianHeapMB": 31.989311999999998,
+        "peakHeapMB": 46.488488,
+        "endpointHeapMB": 38.26038,
+        "initialHeapMB": 19.656764,
+        "endpointGrowthMB": 18.603616,
+        "frameSamples": 5002,
+        "frameGapP95Ms": 16.799999999999272,
+        "frameGapMaxMs": 50,
+        "gapsAbove50Ms": 0,
+        "longTaskMs": 0,
+        "allExactMembership": true
+      }
+    ],
+    "individualPeakComparisons": [
+      {
+        "beforeIndividualPeakMB": 48.15828,
+        "candidateMaximumPeakMB": 58.677612,
+        "increasePercent": 21.843246893369116,
+        "exceeds20Percent": true
+      },
+      {
+        "beforeIndividualPeakMB": 46.488488,
+        "candidateMaximumPeakMB": 58.677612,
+        "increasePercent": 26.219661091150147,
+        "exceeds20Percent": true
+      }
+    ],
+    "freshProcessesPerVariant": 2,
+    "dependentCyclesPerProcess": 60,
+    "totalDependentCycles": 240,
+    "independentPhysicalDevices": 0,
+    "diagnosticAfterGC_MB": [
+      {
+        "run": 0,
+        "kind": "baseline",
+        "value": 18.66966
+      },
+      {
+        "run": 1,
+        "kind": "candidate",
+        "value": 18.689372
+      },
+      {
+        "run": 2,
+        "kind": "candidate",
+        "value": 18.63236
+      },
+      {
+        "run": 3,
+        "kind": "baseline",
+        "value": 18.667664
+      }
+    ],
+    "diagnosticGCUsedForPrimaryGuard": false
+  },
+  "observer": {
+    "runs": [
+      {
+        "run": 0,
+        "probe": "full",
+        "medianMB": 64.868864,
+        "endMB": 86.8323,
+        "peakMB": 107.25764,
+        "afterDiagnosticGC_MB": 18.658656,
+        "requests": {
+          "restaurant": 2,
+          "otherFixture": 63
+        },
+        "exactMembership": true
+      },
+      {
+        "run": 1,
+        "probe": "minimal",
+        "medianMB": 34.913306,
+        "endMB": 32.526492,
+        "peakMB": 47.576328,
+        "afterDiagnosticGC_MB": 18.693176,
+        "requests": {
+          "restaurant": 2,
+          "otherFixture": 63
+        },
+        "exactMembership": true
+      },
+      {
+        "run": 2,
+        "probe": "minimal",
+        "medianMB": 34.772972,
+        "endMB": 32.499732,
+        "peakMB": 55.781684,
+        "afterDiagnosticGC_MB": 18.623512,
+        "requests": {
+          "restaurant": 2,
+          "otherFixture": 63
+        },
+        "exactMembership": true
+      },
+      {
+        "run": 3,
+        "probe": "full",
+        "medianMB": 63.340098000000005,
+        "endMB": 84.05734,
+        "peakMB": 105.20674,
+        "afterDiagnosticGC_MB": 18.642868,
+        "requests": {
+          "restaurant": 2,
+          "otherFixture": 63
+        },
+        "exactMembership": true
+      }
+    ],
+    "contrasts": [
+      {
+        "metric": "medianMB",
+        "before": 64.104481,
+        "after": 34.843139,
+        "absoluteReduction": 29.261342000000006,
+        "relativeReductionPercent": 45.64632853045016,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "fullProcessRange": [
+          63.340098000000005,
+          64.868864
+        ],
+        "minimalProcessRange": [
+          34.772972,
+          34.913306
+        ],
+        "productImprovementClaimAllowed": false,
+        "populationCI": null,
+        "diagnosticOnly": false
+      },
+      {
+        "metric": "endMB",
+        "before": 85.44481999999999,
+        "after": 32.513112,
+        "absoluteReduction": 52.93170799999999,
+        "relativeReductionPercent": 61.94841068188802,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "fullProcessRange": [
+          84.05734,
+          86.8323
+        ],
+        "minimalProcessRange": [
+          32.499732,
+          32.526492
+        ],
+        "productImprovementClaimAllowed": false,
+        "populationCI": null,
+        "diagnosticOnly": false
+      },
+      {
+        "metric": "peakMB",
+        "before": 106.23219,
+        "after": 51.679006,
+        "absoluteReduction": 54.553184,
+        "relativeReductionPercent": 51.3527811108855,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "fullProcessRange": [
+          105.20674,
+          107.25764
+        ],
+        "minimalProcessRange": [
+          47.576328,
+          55.781684
+        ],
+        "productImprovementClaimAllowed": false,
+        "populationCI": null,
+        "diagnosticOnly": false
+      },
+      {
+        "metric": "afterDiagnosticGC_MB",
+        "before": 18.650762,
+        "after": 18.658344,
+        "absoluteReduction": -0.0075819999999993115,
+        "relativeReductionPercent": -0.04065249452005935,
+        "tolerancePercent": null,
+        "guardCeiling": null,
+        "guardPassed": null,
+        "fullProcessRange": [
+          18.642868,
+          18.658656
+        ],
+        "minimalProcessRange": [
+          18.623512,
+          18.693176
+        ],
+        "productImprovementClaimAllowed": false,
+        "populationCI": null,
+        "diagnosticOnly": true
+      }
+    ],
+    "productImprovementClaimAllowed": false
+  },
+  "operations": {
+    "productionCases": [
+      {
+        "viewportLabel": "desktop",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "checks": 6,
+        "passedChecks": 6,
+        "pageErrors": 0,
+        "consoleErrors": 3,
+        "navigationCaptures": 0
+      },
+      {
+        "viewportLabel": "mobile",
+        "viewport": {
+          "width": 384,
+          "height": 824
+        },
+        "checks": 7,
+        "passedChecks": 7,
+        "pageErrors": 0,
+        "consoleErrors": 2,
+        "navigationCaptures": 4
+      },
+      {
+        "viewportLabel": "tablet",
+        "viewport": {
+          "width": 768,
+          "height": 1024
+        },
+        "checks": 7,
+        "passedChecks": 7,
+        "pageErrors": 0,
+        "consoleErrors": 2,
+        "navigationCaptures": 4
+      }
+    ],
+    "productionTotalChecks": 20,
+    "totalConsoleEventsAcrossCases": 7,
+    "consoleEventTotalIsUniqueDefectCount": false,
+    "localFinalChecks": 10,
+    "localFinalTrustedEmulatedSwipes": 4,
+    "localFinalViewportTransitions": 6,
+    "fieldMetricSamples": {
+      "CLS": 5,
+      "INP": 3,
+      "LCP": 7
+    },
+    "fieldTotalMetricSamples": 15,
+    "fieldCapturedAt": "2026-10-04T17:51:24.902Z",
+    "fieldDistinctUsers": null,
+    "fieldPredatesRecordedB901Ready": true,
+    "fieldAssignedToProductionSha": false,
+    "fieldComparisonAvailable": false,
+    "physicalPhoneHumanHold": true
+  },
+  "findings": [
+    {
+      "id": "browser_version_document_mismatch",
+      "documentation": "Chrome151",
+      "coldRaw": "HeadlessChrome154",
+      "warmObserverProductionRaw": "154.0.8037.97",
+      "resolution": "report raw versions; original evidence unchanged"
+    },
+    {
+      "id": "guard_is_not_improvement",
+      "fixedGuardsPassed": true,
+      "improvementProven": false
+    },
+    {
+      "id": "warm_secondary_increases",
+      "metrics": [
+        "frameGapMaxMs",
+        "gapsAbove50Ms",
+        "longTaskMs"
+      ],
+      "fixedGuardAvailable": false
+    },
+    {
+      "id": "individual_peak_above_twenty_percent",
+      "peakMB": 58.677612
+    },
+    {
+      "id": "two_thousand_heap_ci_limit",
+      "lowerBoundAsRegressionPercent": 33.40382161446869
+    },
+    {
+      "id": "flicker_capture_limit",
+      "navigationCropsPerMobileOrTablet": 4,
+      "minimumSpacingMs": 150,
+      "screenshotOverheadAdditional": true,
+      "mapAreaOutsideCrop": true,
+      "newVisualInspectionPerformed": false
+    }
+  ],
+  "verificationLimits": [
+    "Existing bootstrap CI endpoint generation and exact RNG consumption order were not independently replayed; endpoints retained and their sign/threshold interpretation checked.",
+    "No current deployment, new build, runtime environment, phone, field cohort or browser readback performed.",
+    "No full source/build receipt chain or original earlier full-probe warm packet independently audited.",
+    "Input hashes are audit provenance, not a canonical artifact map or evidence freeze."
+  ],
+  "checks": [
+    {
+      "check": "coldAA.planSha256",
+      "passed": true
+    },
+    {
+      "check": "coldAA.fieldAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "coldAA.canonicalTimingAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "coldAB.planSha256",
+      "passed": true
+    },
+    {
+      "check": "coldAB.fieldAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "coldAB.canonicalTimingAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "warm.planSha256",
+      "passed": true
+    },
+    {
+      "check": "warm.fieldAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "warm.canonicalTimingAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "observer.planSha256",
+      "passed": true
+    },
+    {
+      "check": "observer.fieldAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "observer.canonicalTimingAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "cold.summaryPlanBinding",
+      "passed": true
+    },
+    {
+      "check": "fixed.latency15",
+      "passed": true
+    },
+    {
+      "check": "fixed.naturalHeap20",
+      "passed": true
+    },
+    {
+      "check": "fixed.warmFrame15",
+      "passed": true
+    },
+    {
+      "check": "fixed.notChangedAfterObservation",
+      "passed": true
+    },
+    {
+      "check": "sources.initialBefore",
+      "passed": true
+    },
+    {
+      "check": "sources.initialAfter",
+      "passed": true
+    },
+    {
+      "check": "sources.production",
+      "passed": true
+    },
+    {
+      "check": "sources.localFinalBuildBinding",
+      "passed": true
+    },
+    {
+      "check": "sources.final519DocumentAssociation",
+      "passed": true
+    },
+    {
+      "check": "cold.AA.totalFreshProcesses",
+      "passed": true
+    },
+    {
+      "check": "cold.AA.actualSdk",
+      "passed": true
+    },
+    {
+      "check": "cold.AA.validMembership",
+      "passed": true
+    },
+    {
+      "check": "cold.AA.pageErrorsZero",
+      "passed": true
+    },
+    {
+      "check": "cold.AB.totalFreshProcesses",
+      "passed": true
+    },
+    {
+      "check": "cold.AB.actualSdk",
+      "passed": true
+    },
+    {
+      "check": "cold.AB.validMembership",
+      "passed": true
+    },
+    {
+      "check": "cold.AB.pageErrorsZero",
+      "passed": true
+    },
+    {
+      "check": "cold.735.baseline.ninePairs",
+      "passed": true
+    },
+    {
+      "check": "cold.735.baseline.twoWarmups",
+      "passed": true
+    },
+    {
+      "check": "cold.735.candidate.ninePairs",
+      "passed": true
+    },
+    {
+      "check": "cold.735.candidate.twoWarmups",
+      "passed": true
+    },
+    {
+      "check": "cold.735.markerCounts",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "cold.735.clickMs.aaNoise",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "cold.735.naturalHeapMB.aaNoise",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.735.longTaskMs.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.735.domNodes.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.baseline.ninePairs",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.baseline.twoWarmups",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.candidate.ninePairs",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.candidate.twoWarmups",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.markerCounts",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.clickMs.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.naturalHeapMB.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.longTaskMs.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.before.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.before.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.before.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.before.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.after.n",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.after.median",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.after.mad",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.after.range",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.guard",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.tolerance",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.domNodes.noImprovementClaim",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.run",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.kind",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.medianHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.peakHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.endpointHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.initialHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.endpointGrowthMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.frameSamples",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.frameGapP95Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.frameGapMaxMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.gapsAbove50Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.longTaskMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run0.allExactMembership",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.run",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.kind",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.medianHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.peakHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.endpointHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.initialHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.endpointGrowthMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.frameSamples",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.frameGapP95Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.frameGapMaxMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.gapsAbove50Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.longTaskMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run1.allExactMembership",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.run",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.kind",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.medianHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.peakHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.endpointHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.initialHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.endpointGrowthMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.frameSamples",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.frameGapP95Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.frameGapMaxMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.gapsAbove50Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.longTaskMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run2.allExactMembership",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.run",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.kind",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.medianHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.peakHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.endpointHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.initialHeapMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.endpointGrowthMB",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.frameSamples",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.frameGapP95Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.frameGapMaxMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.gapsAbove50Ms",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.longTaskMs",
+      "passed": true
+    },
+    {
+      "check": "warm.run3.allExactMembership",
+      "passed": true
+    },
+    {
+      "check": "warm.fourFreshProcesses",
+      "passed": true
+    },
+    {
+      "check": "warm.sixtyDependentCycles",
+      "passed": true
+    },
+    {
+      "check": "warm.actualSdk",
+      "passed": true
+    },
+    {
+      "check": "warm.order",
+      "passed": true
+    },
+    {
+      "check": "warm.primarySamplesNoForcedGC",
+      "passed": true
+    },
+    {
+      "check": "observer.fourFreshProcesses",
+      "passed": true
+    },
+    {
+      "check": "observer.sixtyDependentCycles",
+      "passed": true
+    },
+    {
+      "check": "observer.actualSdk",
+      "passed": true
+    },
+    {
+      "check": "observer.order",
+      "passed": true
+    },
+    {
+      "check": "observer.primarySamplesNoForcedGC",
+      "passed": true
+    },
+    {
+      "check": "warm.twoProcessesPerVariant",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.before",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.after",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.guard",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.tolerance",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.beforeRange",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.afterRange",
+      "passed": true
+    },
+    {
+      "check": "warm.medianHeapMB.noPopulationCI",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.before",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.after",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.guard",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.tolerance",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.beforeRange",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.afterRange",
+      "passed": true
+    },
+    {
+      "check": "warm.peakHeapMB.noPopulationCI",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.before",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.after",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.guard",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.tolerance",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.beforeRange",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.afterRange",
+      "passed": true
+    },
+    {
+      "check": "warm.endpointHeapMB.noPopulationCI",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.before",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.after",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.guard",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.tolerance",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.beforeRange",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.afterRange",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapP95Ms.noPopulationCI",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.before",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.after",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.guard",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.tolerance",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.beforeRange",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.afterRange",
+      "passed": true
+    },
+    {
+      "check": "warm.frameGapMaxMs.noPopulationCI",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.before",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.after",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.guard",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.tolerance",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.beforeRange",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.afterRange",
+      "passed": true
+    },
+    {
+      "check": "warm.gapsAbove50Ms.noPopulationCI",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.before",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.after",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.absoluteReduction",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.relativeReductionPercent",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.guard",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.tolerance",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.beforeRange",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.afterRange",
+      "passed": true
+    },
+    {
+      "check": "warm.longTaskMs.noPopulationCI",
+      "passed": true
+    },
+    {
+      "check": "warm.disclosedIndividualPeak",
+      "passed": true
+    },
+    {
+      "check": "warm.individualPeakAboveBothBy20Percent",
+      "passed": true
+    },
+    {
+      "check": "observer.run0.medianMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run0.endMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run0.peakMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run0.afterDiagnosticGC_MB",
+      "passed": true
+    },
+    {
+      "check": "observer.run0.requests",
+      "passed": true
+    },
+    {
+      "check": "observer.run0.membership",
+      "passed": true
+    },
+    {
+      "check": "observer.run1.medianMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run1.endMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run1.peakMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run1.afterDiagnosticGC_MB",
+      "passed": true
+    },
+    {
+      "check": "observer.run1.requests",
+      "passed": true
+    },
+    {
+      "check": "observer.run1.membership",
+      "passed": true
+    },
+    {
+      "check": "observer.run2.medianMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run2.endMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run2.peakMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run2.afterDiagnosticGC_MB",
+      "passed": true
+    },
+    {
+      "check": "observer.run2.requests",
+      "passed": true
+    },
+    {
+      "check": "observer.run2.membership",
+      "passed": true
+    },
+    {
+      "check": "observer.run3.medianMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run3.endMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run3.peakMB",
+      "passed": true
+    },
+    {
+      "check": "observer.run3.afterDiagnosticGC_MB",
+      "passed": true
+    },
+    {
+      "check": "observer.run3.requests",
+      "passed": true
+    },
+    {
+      "check": "observer.run3.membership",
+      "passed": true
+    },
+    {
+      "check": "observer.sameSourceAndBuild",
+      "passed": true
+    },
+    {
+      "check": "observer.noBudgetWaiver",
+      "passed": true
+    },
+    {
+      "check": "warm.coldBuildIdLink",
+      "passed": true
+    },
+    {
+      "check": "live.twentyChecks",
+      "passed": true
+    },
+    {
+      "check": "live.checkDistribution",
+      "passed": true
+    },
+    {
+      "check": "live.fieldAdmissionZero",
+      "passed": true
+    },
+    {
+      "check": "live.noPhysicalDeviceClaim",
+      "passed": true
+    },
+    {
+      "check": "deployment.recordedReadyAndAlias",
+      "passed": true
+    },
+    {
+      "check": "console.triageMatchesDiagnostic",
+      "passed": true
+    },
+    {
+      "check": "console.securityPolicyNotRelaxed",
+      "passed": true
+    },
+    {
+      "check": "console.rawMessagesNotStored",
+      "passed": true
+    },
+    {
+      "check": "localFinal.tenChecks",
+      "passed": true
+    },
+    {
+      "check": "localFinal.fourTrustedEmulatedSwipes",
+      "passed": true
+    },
+    {
+      "check": "localFinal.sixViewportTransitions",
+      "passed": true
+    },
+    {
+      "check": "localFinal.notPhysicalDevice",
+      "passed": true
+    },
+    {
+      "check": "field.existingCounts",
+      "passed": true
+    },
+    {
+      "check": "field.distinctUsersNotMeasured",
+      "passed": true
+    },
+    {
+      "check": "field.noGainClaim",
+      "passed": true
+    },
+    {
+      "check": "field.predatesRecordedB901Ready",
+      "passed": true
+    },
+    {
+      "check": "field.noSourceShaBinding",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.heapCIAllowsOver20PercentRegression",
+      "passed": true
+    },
+    {
+      "check": "cold.2000.noAA",
+      "passed": true
+    },
+    {
+      "check": "report.threeRequestedTenColumnTables",
+      "passed": true
+    },
+    {
+      "check": "report.allTablesExpectedWidth",
+      "passed": true
+    },
+    {
+      "check": "report.noRemoteURLOrEmail",
+      "passed": true
+    },
+    {
+      "check": "report.noPrivateKeyOrJWT",
+      "passed": true
+    },
+    {
+      "check": "inputs.unchangedDuringAudit",
+      "passed": true
+    }
+  ],
+  "verificationSummary": {
+    "total": 325,
+    "passed": 325,
+    "failed": 0,
+    "status": "PASS_WITH_DISCLOSED_LIMITS"
+  }
+}

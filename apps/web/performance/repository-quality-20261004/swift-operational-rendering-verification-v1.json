@@ -1,0 +1,42 @@
+{
+  "sourceSha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "validResult": "live-swift-production-v4/raw.json",
+  "cases": [
+    {
+      "name": "desktop",
+      "checks": 6,
+      "pageErrors": 0,
+      "consoleErrors": 3,
+      "overlayReadinessWaitWallMs": 15
+    },
+    {
+      "name": "mobile",
+      "checks": 7,
+      "pageErrors": 0,
+      "consoleErrors": 2,
+      "overlayReadinessWaitWallMs": 10
+    },
+    {
+      "name": "tablet",
+      "checks": 7,
+      "pageErrors": 0,
+      "consoleErrors": 2,
+      "overlayReadinessWaitWallMs": 11
+    }
+  ],
+  "checksPassed": 20,
+  "realSDKRealWWWNoInterception": true,
+  "physicalPhone": false,
+  "fieldPerformanceClaim": false,
+  "priorAttemptsPreserved": [
+    "live-swift-browser-setup-failure-v1.json",
+    "live-swift-production-v2/raw.json",
+    "live-swift-production-v3/raw.json"
+  ],
+  "testCorrections": [
+    "use new approved deployment receipt",
+    "wait decoded visible PNG/control",
+    "desktop and mobile have different existing control selectors"
+  ],
+  "notFlickerAbsenceProof": true
+}

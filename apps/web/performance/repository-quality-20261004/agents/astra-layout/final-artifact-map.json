@@ -1,0 +1,21 @@
+{
+  "additive_checkpoint": true,
+  "files": [
+    {
+      "path": "final-verification.json",
+      "sha256": "5e4c12b660e7ecef3b94b73119a44909b7026f4ae3c4019ec6a1ff09726f684b"
+    },
+    {
+      "path": "final-handoff.md",
+      "sha256": "774c10906c877fab9b672568d0522166f79f9ad1d15bb103ef64ae8c7814c9b9"
+    },
+    {
+      "path": "layout-fix.patch",
+      "sha256": "6800ba313febcfca2e9f2840ce32e9adb67a834de7a8346c6d0d4270650f0b2c"
+    },
+    {
+      "path": "artifact-map.json",
+      "sha256": "29ce805c7491c1c5f81e57705b1f210901c7ce2c8e451dc0797b41bd6eb250df"
+    }
+  ]
+}

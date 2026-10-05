@@ -1,0 +1,98 @@
+[
+  {
+    "name": "affected-unit-tests",
+    "command": [
+      "bun",
+      "test",
+      "tests-unit/typecheck-benchmark-source.test.ts",
+      "tests-unit/typecheck-benchmark-fixtures.test.ts",
+      "tests-unit/typescript-toolchain-source.test.ts",
+      "tests-unit/typescript-toolchain-command.test.ts"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exitCode": 0,
+    "durationMs": 127,
+    "summary": [
+      "(pass) toolchain command protocol and diagnostic boundary > redacts and bounds failed command diagnostics with signal null [0.09ms]",
+      "(pass) toolchain command protocol and diagnostic boundary > redacts and bounds failed command diagnostics with signal SIGTERM [0.02ms]",
+      "(pass) warm-up retry eligibility excludes setup, protocol, pressure, identity and compiler failures [0.15ms]",
+      "(pass) warm-up exhaustion retains all failed raw files and stops at the existing retry and invalid-run caps [8.44ms]",
+      "(pass) warm-up setup failure is not retried and untrusted failure bytes stay outside publication [2.37ms]",
+      "(pass) TypeScript 7 dual-toolchain and benchmark contract > fails closed on provenance, malformed evidence, and immutable publication hazards [0.12ms]",
+      " 51 pass",
+      " 0 fail",
+      " 1516 expect() calls",
+      "Ran 51 tests across 4 files. [119.00ms]"
+    ]
+  },
+  {
+    "name": "targeted-eslint",
+    "command": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "scripts/measure-typecheck.mjs",
+      "scripts/verify-typecheck-benchmark-report.mjs",
+      "tests-unit/typecheck-benchmark-source.test.ts",
+      "--max-warnings=0"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exitCode": 0,
+    "durationMs": 1760
+  },
+  {
+    "name": "producer-syntax",
+    "command": [
+      "node",
+      "--check",
+      "scripts/measure-typecheck.mjs"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exitCode": 0,
+    "durationMs": 30
+  },
+  {
+    "name": "validator-syntax",
+    "command": [
+      "node",
+      "--check",
+      "scripts/verify-typecheck-benchmark-report.mjs"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exitCode": 0,
+    "durationMs": 31
+  },
+  {
+    "name": "parity",
+    "command": [
+      "node",
+      "scripts/run-typecheck.mjs",
+      "--compiler",
+      "parity"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web",
+    "exitCode": 0,
+    "durationMs": 15845,
+    "receipt": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 2379,
+      "logicalInputNamesSha256": "8b3e972fc699d26bf9139353ed241af9ea8667d095afb4f2e6e3317198ad8aa3",
+      "nonLibraryContentSha256": "ab7c6ad4cc70643502096f7c9c39e375a18b62c0a845de8f6b240bfa44d37f0b",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    }
+  },
+  {
+    "name": "diff-check",
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "cwd": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong",
+    "exitCode": 0,
+    "durationMs": 31
+  }
+]

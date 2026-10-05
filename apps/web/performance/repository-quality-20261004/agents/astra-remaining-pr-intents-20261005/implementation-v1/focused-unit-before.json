@@ -1,0 +1,30 @@
+{
+  "stage": "base_hook_with_new_regressions",
+  "base_head": "93fa1131595508b5b324a88101bbdaf1b0e77b03",
+  "command": [
+    "/Users/twoimo/.bun/bin/bun",
+    "test",
+    "--no-install",
+    "--tsconfig-override",
+    "/Users/twoimo/.codex/worktrees/marker-memory-lifetime-20261001/tzudong/apps/web/performance/repository-quality-20261004/agents/astra-remaining-pr-intents-20261005/implementation-v1/focused-unit.tsconfig.json",
+    "tests-unit/use-restaurants-merge.test.ts",
+    "-t",
+    "useRestaurants region queries",
+    "--timeout",
+    "10000"
+  ],
+  "cwd": "/Users/twoimo/.codex/worktrees/astra-3032-hook-intents-20261005/tzudong/apps/web",
+  "exit_code": 1,
+  "pass": 2,
+  "fail": 3,
+  "filtered_out": 16,
+  "assertions": 108,
+  "expected_failures": [
+    "keyword sanitizer and empty-term skip not connected",
+    "all blank keyword list emits an OR",
+    "country filter helper invoked twice"
+  ],
+  "source": "observed immediately before the hook patch",
+  "runner_warning": "external tsconfig directory mismatch diagnostic; test cases still executed",
+  "raw_output_retained": false
+}

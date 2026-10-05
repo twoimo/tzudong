@@ -1,0 +1,55 @@
+{
+  "baseline": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "branch": "codex/review-draft-revision-quality-20261004",
+  "checkout": "/Users/twoimo/.codex/worktrees/review-contract-quality-20261004/tzudong",
+  "observedAt": "2026-10-04T12:06:51.292439+00:00",
+  "files": [
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "beforeSha256": "a72506853619b8bf0233b56df2e434aacbea1ec166a6fdbb18d77416128b617d",
+      "afterSha256": "98d8749f08bedd458b400c6ebda65a6d0a466240d483ef0193a9e81b3eccb233",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/lib/reviewDraftDB.ts",
+      "beforeSha256": "2461dd8a29e59360aeaeb48e3647ea42adbca22244af54c8e8f05398914f275f",
+      "afterSha256": "9a8f35f5cc7c7bb829437d3973286bb5db6262ef244a5a419543f1ba58a3eba3",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/lib/reviews/review-save-operation.ts",
+      "beforeSha256": "c6437f5ddabd8c2a949492b6252483ac3f16ad96d0e9abd70710911a896d3106",
+      "afterSha256": "7381cc559fbc1d9b6339756d0f44cd1684f973d57d918358c7e050cb75eb6371",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/tests-unit/review-draft-deletion-browser.test.ts",
+      "beforeSha256": "638899794c077cbb1c002eec1c9cae16ffa3c1f7073fe47a5c6183d06051f1ba",
+      "afterSha256": "dbac8a0833425597654e5e6acbc252f6cbca3c745207b481f7b71e0df8f25b2e",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-owner-lifecycle.test.ts",
+      "beforeSha256": "4209a9df8ff8c490a54f8ab3979c22d7065bbbe926ff903d01c2c141260c28c4",
+      "afterSha256": "fd4329450d4a1d271612a0d6c4816fee6407f67217bebf92810686655824b575",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "beforeSha256": "eba156d87211e9e50eb930d91efdb0c6229d7ddf2dfda20c8aaba1736a05fa40",
+      "afterSha256": "8349d84204da4934bdeb9fa8b8376455610541174821de4da3ee25c36a596886",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/tests-unit/review-draft-revision-browser.test.ts",
+      "beforeSha256": null,
+      "afterSha256": "b20fc33c35565d44ac372f13e21640fb206ae631df686be6a3f2f7cbcb2bea2c",
+      "status": "added"
+    }
+  ],
+  "patchSha256": "3d073d0340a288972c07ac143d5d4c220f69777018cdf7a622f5d2672a5ec2b7",
+  "priorV4FilesChecked": 20,
+  "priorV4Unchanged": true,
+  "diffCheckExitCode": 0,
+  "commitPushHostedPhoneActions": 0
+}

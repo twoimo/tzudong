@@ -1,0 +1,12 @@
+{
+  "captured_at": "2026-10-04T09:13:25.024992+00:00",
+  "module": "backend.supabase.tests.test_local_seed_receipt_contract",
+  "runtime": "3.11.17",
+  "tests_run": 21,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "elapsed_seconds": 26.119,
+  "failed_test_ids": [],
+  "database_execution": false
+}

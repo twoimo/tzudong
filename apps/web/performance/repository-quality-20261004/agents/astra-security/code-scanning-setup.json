@@ -1,0 +1,34 @@
+{
+  "name": "code-scanning-setup",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-scanning/default-setup",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "admin:repo_hook, delete_repo, read:repo_hook, repo, repo:invite, repo:status, repo_deployment, security_events, write:repo_hook",
+        "x-ratelimit-remaining": "4994",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:30:22.225803+00:00",
+      "next_page": false
+    }
+  ],
+  "count": null,
+  "items": {
+    "languages": [
+      "actions",
+      "go",
+      "javascript-typescript",
+      "python",
+      "rust"
+    ],
+    "query_suite": "default",
+    "runner_type": "standard",
+    "schedule": "weekly",
+    "state": "configured",
+    "updated_at": "2026-09-05T01:18:53Z"
+  }
+}

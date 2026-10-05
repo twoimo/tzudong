@@ -1,0 +1,118 @@
+{
+  "observed_at": "2026-10-04T11:40:18.204568+00:00",
+  "metadata": [
+    {
+      "session_id": "01a106b3-5ba5-7c51-9ca8-cf34fee42a6a",
+      "role": "coordinator",
+      "requested_model": null,
+      "requested_effort": null,
+      "actual_serving_model_attestation": "unavailable; session metadata is configuration and not a provider response attestation",
+      "local_session_metadata": {
+        "id": "01a106b3-5ba5-7c51-9ca8-cf34fee42a6a",
+        "model_provider": "openai",
+        "originator": "Codex Desktop",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a0f119-3142-7fe1-b600-e436feaedc75",
+              "depth": 1,
+              "agent_path": null,
+              "agent_nickname": "Raman",
+              "agent_role": null
+            }
+          }
+        }
+      },
+      "latest_local_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong"
+      }
+    },
+    {
+      "session_id": "01a106b4-6c13-72e2-9f24-e392718ab3ce",
+      "role": "subagent",
+      "requested_model": "gpt-6-astra",
+      "requested_effort": "xhigh",
+      "actual_serving_model_attestation": "unavailable; session metadata is configuration and not a provider response attestation",
+      "local_session_metadata": {
+        "id": "01a106b4-6c13-72e2-9f24-e392718ab3ce",
+        "model_provider": "openai",
+        "originator": "Codex Desktop",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a106b3-5ba5-7c51-9ca8-cf34fee42a6a",
+              "depth": 2,
+              "agent_path": null,
+              "agent_nickname": "Carver",
+              "agent_role": null
+            }
+          }
+        }
+      },
+      "latest_local_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong"
+      }
+    },
+    {
+      "session_id": "01a106b4-6c68-7330-9fc2-e7645062089e",
+      "role": "subagent",
+      "requested_model": "gpt-6-astra",
+      "requested_effort": "xhigh",
+      "actual_serving_model_attestation": "unavailable; session metadata is configuration and not a provider response attestation",
+      "local_session_metadata": {
+        "id": "01a106b4-6c68-7330-9fc2-e7645062089e",
+        "model_provider": "openai",
+        "originator": "Codex Desktop",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a106b3-5ba5-7c51-9ca8-cf34fee42a6a",
+              "depth": 2,
+              "agent_path": null,
+              "agent_nickname": "Jason",
+              "agent_role": null
+            }
+          }
+        }
+      },
+      "latest_local_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong"
+      }
+    },
+    {
+      "session_id": "01a106b4-6cb9-78b1-8e50-d3cb35f34934",
+      "role": "subagent",
+      "requested_model": "gpt-6-astra",
+      "requested_effort": "xhigh",
+      "actual_serving_model_attestation": "unavailable; session metadata is configuration and not a provider response attestation",
+      "local_session_metadata": {
+        "id": "01a106b4-6cb9-78b1-8e50-d3cb35f34934",
+        "model_provider": "openai",
+        "originator": "Codex Desktop",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a106b3-5ba5-7c51-9ca8-cf34fee42a6a",
+              "depth": 2,
+              "agent_path": null,
+              "agent_nickname": "Huygens",
+              "agent_role": null
+            }
+          }
+        }
+      },
+      "latest_local_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "cwd": "/Users/twoimo/.codex/worktrees/179f/tzudong"
+      }
+    }
+  ],
+  "settings_changed": false
+}

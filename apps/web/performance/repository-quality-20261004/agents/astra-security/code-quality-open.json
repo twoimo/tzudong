@@ -1,0 +1,22 @@
+{
+  "name": "code-quality-open",
+  "complete": false,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-quality/findings?state=open&per_page=100",
+      "http_status": 404,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4988",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 1,
+      "observed_at": "2026-10-04T08:30:21.995572+00:00",
+      "limitation": "not_found_or_not_exposed"
+    }
+  ],
+  "count": null,
+  "items": [],
+  "absence_claim": false
+}

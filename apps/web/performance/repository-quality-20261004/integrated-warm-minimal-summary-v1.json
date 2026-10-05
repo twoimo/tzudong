@@ -1,0 +1,216 @@
+{
+  "raw": "integrated-warm-minimal-v1/raw.json",
+  "runs": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "medianHeapMB": 32.607212,
+      "peakHeapMB": 48.15828,
+      "endpointHeapMB": 36.09902,
+      "initialHeapMB": 19.653804,
+      "endpointGrowthMB": 16.445216000000002,
+      "frameSamples": 5014,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 50,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "allExactMembership": true
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "medianHeapMB": 32.577454,
+      "peakHeapMB": 58.677612,
+      "endpointHeapMB": 20.76218,
+      "initialHeapMB": 17.925064,
+      "endpointGrowthMB": 2.8371160000000017,
+      "frameSamples": 5002,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 100,
+      "gapsAbove50Ms": 9,
+      "longTaskMs": 276,
+      "allExactMembership": true
+    },
+    {
+      "run": 2,
+      "kind": "candidate",
+      "medianHeapMB": 32.524454000000006,
+      "peakHeapMB": 47.147172,
+      "endpointHeapMB": 27.400752,
+      "initialHeapMB": 19.651532,
+      "endpointGrowthMB": 7.749220000000001,
+      "frameSamples": 4992,
+      "frameGapP95Ms": 16.79999999999968,
+      "frameGapMaxMs": 83.19999999999709,
+      "gapsAbove50Ms": 11,
+      "longTaskMs": 209,
+      "allExactMembership": true
+    },
+    {
+      "run": 3,
+      "kind": "baseline",
+      "medianHeapMB": 31.989311999999998,
+      "peakHeapMB": 46.488488,
+      "endpointHeapMB": 38.26038,
+      "initialHeapMB": 19.656764,
+      "endpointGrowthMB": 18.603616,
+      "frameSamples": 5002,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "allExactMembership": true
+    }
+  ],
+  "metrics": {
+    "medianHeapMB": {
+      "before": 32.298261999999994,
+      "after": 32.550954000000004,
+      "beforeProcessRange": [
+        31.989311999999998,
+        32.607212
+      ],
+      "afterProcessRange": [
+        32.524454000000006,
+        32.577454
+      ],
+      "absoluteReduction": -0.25269200000001035,
+      "absoluteDifferenceBelowReportingResolution": false,
+      "relativeReductionPercent": -0.7823702711929528,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "peakHeapMB": {
+      "before": 47.323384,
+      "after": 52.912392,
+      "beforeProcessRange": [
+        46.488488,
+        48.15828
+      ],
+      "afterProcessRange": [
+        47.147172,
+        58.677612
+      ],
+      "absoluteReduction": -5.589008,
+      "absoluteDifferenceBelowReportingResolution": false,
+      "relativeReductionPercent": -11.810245860693309,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "endpointHeapMB": {
+      "before": 37.1797,
+      "after": 24.081466,
+      "beforeProcessRange": [
+        36.09902,
+        38.26038
+      ],
+      "afterProcessRange": [
+        20.76218,
+        27.400752
+      ],
+      "absoluteReduction": 13.098233999999998,
+      "absoluteDifferenceBelowReportingResolution": false,
+      "relativeReductionPercent": 35.229531168890546,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "frameGapP95Ms": {
+      "before": 16.799999999997453,
+      "after": 16.79999999999948,
+      "beforeProcessRange": [
+        16.799999999995634,
+        16.799999999999272
+      ],
+      "afterProcessRange": [
+        16.799999999999272,
+        16.79999999999968
+      ],
+      "absoluteReduction": -2.0250467969162855e-12,
+      "absoluteDifferenceBelowReportingResolution": true,
+      "relativeReductionPercent": null,
+      "guardTolerancePercent": 15,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "frameGapMaxMs": {
+      "before": 50.0,
+      "after": 91.59999999999854,
+      "beforeProcessRange": [
+        50,
+        50
+      ],
+      "afterProcessRange": [
+        83.19999999999709,
+        100
+      ],
+      "absoluteReduction": -41.599999999998545,
+      "absoluteDifferenceBelowReportingResolution": false,
+      "relativeReductionPercent": -83.19999999999709,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "gapsAbove50Ms": {
+      "before": 0.0,
+      "after": 10.0,
+      "beforeProcessRange": [
+        0,
+        0
+      ],
+      "afterProcessRange": [
+        9,
+        11
+      ],
+      "absoluteReduction": -10.0,
+      "absoluteDifferenceBelowReportingResolution": false,
+      "relativeReductionPercent": null,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    },
+    "longTaskMs": {
+      "before": 0.0,
+      "after": 242.5,
+      "beforeProcessRange": [
+        0,
+        0
+      ],
+      "afterProcessRange": [
+        209,
+        276
+      ],
+      "absoluteReduction": -242.5,
+      "absoluteDifferenceBelowReportingResolution": false,
+      "relativeReductionPercent": null,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null
+    }
+  },
+  "freshProcessesPerVariant": 2,
+  "dependentCyclesPerProcess": 60,
+  "independentDevices": 0,
+  "mobileEmulation": true,
+  "cpuRate": 4,
+  "actualSdk": true,
+  "forcedGC": false,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "regressionGuardsPassed": true,
+  "limitations": [
+    "no independently matched warm A/A; n2 processes per variant, no population confidence interval",
+    "positive within-process natural-heap growth remains visible and is not evidence of a resolved leak",
+    "rAF p95 refers to thousands of frame gaps within each finite process window, not user latency p95",
+    "production builds use exact git source with identical small-set retention; later type-only output equivalence is separate from a final deployment readback"
+  ]
+}

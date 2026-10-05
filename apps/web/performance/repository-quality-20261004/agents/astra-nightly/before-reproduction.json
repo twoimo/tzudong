@@ -1,0 +1,37 @@
+{
+  "captured_at": "2026-10-04T09:07:17.862584+00:00",
+  "stage": "before",
+  "base_sha": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "runtime": {
+    "executable": "/opt/homebrew/opt/python@3.11/bin/python3.11",
+    "version": "3.11.17",
+    "selection": "Matches pinned Python 3.11 major/minor in repository security-audit workflow; nightly itself uses runner python3."
+  },
+  "canonical_source_count": 100,
+  "canonical_chain_sha256": "97bece6f9e28a7f231477aeaba9631e549ee8a25c63ab6ea6492629de95dd27f",
+  "last_migration_path": "backend/supabase/migrations/20260921123000_g041_privacy_consent_lock_privilege.sql",
+  "constants": {
+    "local_migrate": 99,
+    "verifier": 99,
+    "builder": 99
+  },
+  "tests_run": 2,
+  "failures": 1,
+  "errors": 1,
+  "events": [
+    {
+      "test": "backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_publication_uses_the_current_99_unit_manifest",
+      "outcome": "failure",
+      "exception": "AssertionError",
+      "code": "100 != 99"
+    },
+    {
+      "test": "backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_accepts_only_the_exact_healthy_sanitized_bundle",
+      "outcome": "error",
+      "exception": "LocalMigrationError",
+      "code": "receipt_ledger_state"
+    }
+  ],
+  "database_executions": 0,
+  "publication_artifacts_created": false
+}

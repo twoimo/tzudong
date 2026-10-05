@@ -1,0 +1,56 @@
+{
+  "ok": false,
+  "errorCode": "layout_manifest_missing_entry",
+  "trackedDirectoryCount": 37,
+  "checks": {
+    "entries": {
+      "ok": true,
+      "errorCode": null,
+      "issues": []
+    },
+    "correspondence": {
+      "ok": false,
+      "errorCode": "layout_manifest_missing_entry",
+      "missing": [
+        {
+          "direction": "tree_without_entry",
+          "path": "assets"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "assets/source-fonts"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "docs/build-ship"
+        },
+        {
+          "direction": "tree_without_entry",
+          "path": "docs/performance"
+        }
+      ]
+    },
+    "ownership": {
+      "ok": true,
+      "errorCode": null,
+      "violations": []
+    },
+    "alias": {
+      "ok": false,
+      "errorCode": "alias_path_not_admitted",
+      "offenders": [
+        {
+          "kind": "directory_symlink",
+          "path": "apps/web/node_modules"
+        }
+      ]
+    },
+    "moves": [],
+    "staleReferences": {
+      "ok": true,
+      "errorCode": null,
+      "unresolvedCount": 0,
+      "unresolved": []
+    }
+  }
+}

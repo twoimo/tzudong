@@ -1,0 +1,62 @@
+{
+  "observedAt": "2026-10-04T21:46:07.153469+00:00",
+  "agents": [
+    {
+      "agent": "01a10886-b691-7843-a235-4932e7c8f8aa",
+      "metadata": {
+        "id": "01a10886-b691-7843-a235-4932e7c8f8aa",
+        "model_provider": "openai",
+        "cli_version": "0.160.0"
+      },
+      "turn": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      },
+      "matchesRequestedNativeAstraXhigh": true,
+      "evidenceLimit": "local session metadata, not server attestation; no conversation payload retained"
+    },
+    {
+      "agent": "01a108c0-a793-7e43-a5a0-bf289f949ca6",
+      "metadata": {
+        "id": "01a108c0-a793-7e43-a5a0-bf289f949ca6",
+        "model_provider": "openai",
+        "cli_version": "0.160.0"
+      },
+      "turn": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      },
+      "matchesRequestedNativeAstraXhigh": true,
+      "evidenceLimit": "local session metadata, not server attestation; no conversation payload retained"
+    },
+    {
+      "agent": "01a108cd-836e-7700-a434-c6d44d6543f4",
+      "metadata": {
+        "id": "01a108cd-836e-7700-a434-c6d44d6543f4",
+        "model_provider": "openai",
+        "cli_version": "0.160.0"
+      },
+      "turn": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      },
+      "matchesRequestedNativeAstraXhigh": true,
+      "evidenceLimit": "local session metadata, not server attestation; no conversation payload retained"
+    },
+    {
+      "agent": "01a108e0-36e8-7ce3-803a-42b3a78d3b7c",
+      "metadata": {
+        "id": "01a108e0-36e8-7ce3-803a-42b3a78d3b7c",
+        "model_provider": "openai",
+        "cli_version": "0.160.0"
+      },
+      "turn": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      },
+      "matchesRequestedNativeAstraXhigh": true,
+      "evidenceLimit": "local session metadata, not server attestation; no conversation payload retained"
+    }
+  ],
+  "unavailableModelNotSubstituted": true
+}

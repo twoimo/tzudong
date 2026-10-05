@@ -1,0 +1,52 @@
+{
+  "run_id": 37203397175,
+  "attempt": 1,
+  "run_sha": "45b462af17c3640f26aa8828a304bac3f4186238",
+  "baseline": "f06365d668111f8c32815e019b51f8eb81c27a2d",
+  "generated_target": "apps/web/integrations/supabase/database.types.ts",
+  "result": "generated_success_diff_exit_1",
+  "old_git_blob": "09b4a405292cfd705303fe11f0c7bc72f0cdd159",
+  "new_git_blob": "64a9faa7b2b1707b9abd34d638c0875c92c94a3f",
+  "old_sha256": "36ffd9c0dda9a81eea7f693147fac7a47e677400a69dfcf70ffef815bac18854",
+  "new_sha256": "f74af6f12b6925c02b20b20fc7058b02da06e0683cc2ffaa0094d5a6f8b1f11a",
+  "run_source_equals_baseline": true,
+  "hunks": [
+    {
+      "old_start": 7621,
+      "old_count": 12,
+      "new_start": 7621,
+      "new_count": 12
+    },
+    {
+      "old_start": 7650,
+      "old_count": 11,
+      "new_start": 7650,
+      "new_count": 11
+    },
+    {
+      "old_start": 7675,
+      "old_count": 11,
+      "new_start": 7675,
+      "new_count": 11
+    },
+    {
+      "old_start": 7700,
+      "old_count": 11,
+      "new_start": 7700,
+      "new_count": 11
+    },
+    {
+      "old_start": 7717,
+      "old_count": 11,
+      "new_start": 7717,
+      "new_count": 11
+    }
+  ],
+  "added_lines": 10,
+  "deleted_lines": 10,
+  "added_schema_objects": [],
+  "raw_logs_persisted": false,
+  "source_modified": false,
+  "generated_bytes_recovered_from_exact_diff": true,
+  "secondary_failures": "lane_aggregate_and_diagnostics_follow_typegen_failure_not_independent_findings"
+}

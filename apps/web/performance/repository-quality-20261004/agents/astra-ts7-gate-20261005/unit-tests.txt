@@ -1,0 +1,65 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/typescript-toolchain-command.test.ts:
+(pass) toolchain command protocol and diagnostic boundary > preserves a date-bearing manifest path and JSON beyond the diagnostic limit [0.43ms]
+(pass) toolchain command protocol and diagnostic boundary > redacts and bounds failed command diagnostics with signal null [0.09ms]
+(pass) toolchain command protocol and diagnostic boundary > redacts and bounds failed command diagnostics with signal SIGTERM [0.02ms]
+(pass) toolchain command protocol and diagnostic boundary > does not propagate a launch error body [0.03ms]
+
+tests-unit/typecheck-benchmark-fixtures.test.ts:
+(pass) process-tree RSS fixture core > win32 > short-lived-child [0.37ms]
+(pass) process-tree RSS fixture core > win32 > non-root-pid-reused [0.03ms]
+(pass) process-tree RSS fixture core > win32 > malformed-inaccessible-exited-child-records [0.05ms]
+(pass) process-tree RSS fixture core > win32 > root-identity-reused [0.02ms]
+(pass) process-tree RSS fixture core > win32 > missing-root-identity [0.01ms]
+(pass) process-tree RSS fixture core > win32 > monotonic-gap-and-host-pressure [0.02ms]
+(pass) process-tree RSS fixture core > win32 > terminal-requires-three-clean-samples
+(pass) process-tree RSS fixture core > win32 > root-access-failure-is-not-clean-exit
+(pass) process-tree RSS fixture core > linux > short-lived-child
+(pass) process-tree RSS fixture core > linux > non-root-pid-reused [0.02ms]
+(pass) process-tree RSS fixture core > linux > malformed-inaccessible-exited-child-records
+(pass) process-tree RSS fixture core > linux > root-identity-reused
+(pass) process-tree RSS fixture core > linux > missing-root-identity [0.01ms]
+(pass) process-tree RSS fixture core > linux > monotonic-gap-and-host-pressure [0.07ms]
+(pass) process-tree RSS fixture core > linux > terminal-requires-three-clean-samples [0.01ms]
+(pass) process-tree RSS fixture core > linux > root-access-failure-is-not-clean-exit [0.01ms]
+(pass) cannot mark a clean sample set valid before terminal root disappearance is observed [0.06ms]
+(pass) rejects a reused root identity before the first accepted sample [0.02ms]
+(pass) collector errors remain invalid evidence and do not become terminal success [0.02ms]
+(pass) parses only bounded Linux task children and rejects malformed records [0.18ms]
+(pass) uses cumulative monotonic deadlines without snapshot-duration drift [0.02ms]
+(pass) summary aggregates are derived from every accepted raw sample [0.09ms]
+
+tests-unit/typescript-toolchain-source.test.ts:
+(pass) TypeScript 7 dual-toolchain manifest contract > release, nightly, and benchmark lanes use the current Bun contract [1.23ms]
+(pass) TypeScript 7 dual-toolchain manifest contract > pins the native CLI, bridge, stable API, and ESLint owner exactly [0.29ms]
+(pass) TypeScript 7 dual-toolchain manifest contract > keeps TS7 config valid without weakening the app [0.08ms]
+(pass) TypeScript 7 dual-toolchain manifest contract > reconciles exact npm and Bun dependency graphs [2.70ms]
+(pass) TypeScript 7 dual-toolchain manifest contract > verifier owns package, CLI, API, and native binary provenance [0.09ms]
+(pass) TypeScript 7 dual-toolchain manifest contract > classifies parity inputs with canonical platform-aware containment and rejects unusable collections [0.22ms]
+
+tests-unit/typecheck-benchmark-source.test.ts:
+(pass) benchmark admits only the declared installer versions and rejects ambiguous versions [0.13ms]
+(pass) warm-up cadence recovery checkpoints both attempts without changing rejected bytes [3.90ms]
+(pass) warm-up retry eligibility excludes setup, protocol, pressure, identity and compiler failures [0.15ms]
+(pass) warm-up exhaustion retains all failed raw files and stops at the existing retry and invalid-run caps [8.44ms]
+(pass) schema 5 readback binds recovered warm-ups, rejected raw bytes, ordering and shared invalid counts [20.39ms]
+(pass) warm-up setup failure is not retried and untrusted failure bytes stay outside publication [2.37ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > pins independent TS7 CLI and exact stable TS6 bridge [0.04ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > requires zero diagnostics and actual logical-input parity [0.03ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > prewarms the sampler before spawning either compiler [0.29ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > retries a bounded pre-compiler sampler exit but aborts a true evidence timeout [0.03ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > yields the high-priority Windows sampler when an overloaded snapshot misses its deadline
+(pass) TypeScript 7 dual-toolchain and benchmark contract > isolates caches and uses release-seeded seven plus noise-only nine samples [0.14ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > locks exact time, RSS, noise, and nearest-rank semantics [0.04ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > treats bounded aggregate noise as zero admitted slices without hiding an observed regression [0.43ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > verifies conclusive and zero-admitted inconclusive reports while rejecting false claims [2.19ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > readbacks every raw hash and rejects any cache or extra publication file [15.72ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > uses only approved Windows and Linux process sources [0.08ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > persists identity evidence and invalidates bad samples [0.04ms]
+(pass) TypeScript 7 dual-toolchain and benchmark contract > fails closed on provenance, malformed evidence, and immutable publication hazards [0.12ms]
+
+ 51 pass
+ 0 fail
+ 1516 expect() calls
+Ran 51 tests across 4 files. [119.00ms]

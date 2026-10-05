@@ -1,0 +1,13 @@
+{
+  "baseRefName": "develop",
+  "baseRefOid": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "headRefName": "codex/nightly-quality-20261004",
+  "headRefOid": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 3114,
+  "state": "OPEN",
+  "title": "fix(readiness): recover review lifecycle, nightly contracts and dependency safety",
+  "url": "https://github.com/twoimo/tzudong/pull/3114",
+  "observed_at_utc": "2026-10-04T11:39:08.774659+00:00"
+}

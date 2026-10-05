@@ -1,0 +1,8 @@
+{
+  "priorReceipt": "quality-consumers-source-commit-v1.json",
+  "correctedField": "backendLocalFunction.passed",
+  "priorValue": 20,
+  "actualModuleTestCases": 19,
+  "explanation": "earlier 20 total included one separate failed SupplyChain import loader; local function tests themselves all passed",
+  "sourceChanged": false
+}

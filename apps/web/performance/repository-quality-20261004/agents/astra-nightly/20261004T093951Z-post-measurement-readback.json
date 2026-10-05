@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-10-04T09:39:51.324058+00:00",
+  "measurement_hold_released_by_user": true,
+  "session_route_verified": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "xhigh"
+  },
+  "preserved_worktree_base": "d0e38f333a8d9dbd9ed4e14d3e113732ad58ef9a",
+  "current_origin_develop": "eb6852bd1bd6f98bcacc128c6df185a29bfd7d67",
+  "owned_files_changed_since_validation": [],
+  "paths_changed_by_parent_promotion_among_owned_scope_and_builder": [],
+  "integration_comparison": "Exact tracked file equality between prior base and current develop for owned five files plus builder; no rebase or merge performed.",
+  "required_next_change": ".github/scripts/build-nightly-local-publication.py:20 exact count pin 99 -> 100",
+  "permission_gap": "Initial explicit source write scope excludes the builder; later instruction releases measurement hold but does not name or authorize that source extension.",
+  "prepared_patch": "proposed-builder-scope-extension.patch",
+  "validation_state_preserved": {
+    "passed": 86,
+    "failed_cases": 2,
+    "skipped": 0
+  },
+  "tests_repeated": 0,
+  "database_or_browser_processes_launched": 0,
+  "next_verification_after_authorized_change": "Full backend.supabase.tests.test_local_publication_verifier module; no unrelated passed suites need repetition."
+}

@@ -1,0 +1,15 @@
+{
+  "completed_at": "2026-10-04T11:55:32.861825+00:00",
+  "authorized_scope_complete": true,
+  "all_subagents_finished": true,
+  "source_stable": true,
+  "changed_source_files": 3,
+  "focused_tests_passed": 99,
+  "dependency_load_blocks": 2,
+  "documentation_checks_passed": 14,
+  "source_committed": false,
+  "remote_mutations": 0,
+  "active_owner_mutations": 0,
+  "model_actual_serving_attestation": "unavailable",
+  "sanitized_metadata_check": "passed"
+}

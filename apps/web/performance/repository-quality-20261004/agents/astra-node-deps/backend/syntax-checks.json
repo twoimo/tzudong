@@ -1,0 +1,42 @@
+[
+  {
+    "file": "backend/bin/apply_tzuyang_address_evidence_ledger.mjs",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/bin/build_google_maps_browser_review_queue.mjs",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/bin/build_supabase_address_consistency_guarded_plan.mjs",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/bin/build_tzuyang_address_evidence_ledger.mjs",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/bin/validate_supabase_review_queue_live.mjs",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/bin/validate_supabase_same_origin_candidates.mjs",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/restaurant-crawling/scripts/url-extractor.js",
+    "exitCode": 0
+  },
+  {
+    "file": "backend/bin/tests/node-dependency-compatibility.test.mjs",
+    "exitCode": 0
+  }
+]

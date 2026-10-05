@@ -1,0 +1,56 @@
+[
+  {
+    "baseRefName": "develop",
+    "baseRefOid": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+    "files": [
+      "apps/web/package-lock.json",
+      "apps/web/package.json"
+    ],
+    "headRefOid": "8ed5035144255c110d5d66f5672c8bfe6bcc15c1",
+    "number": 3066,
+    "state": "OPEN",
+    "title": "build(deps): bump the web-runtime group across 1 directory with 17 updates",
+    "dependency_patches": [
+      {
+        "path": "apps/web/package.json",
+        "patch": "@@ -60,7 +60,7 @@\n     \"@emnapi/runtime\": \"^1.11.3\",\n     \"@ffmpeg/ffmpeg\": \"^0.12.15\",\n     \"@ffmpeg/util\": \"^0.12.2\",\n-    \"@google/genai\": \"^2.18.0\",\n+    \"@google/genai\": \"^2.24.0\",\n     \"@radix-ui/react-accordion\": \"^1.2.20\",\n     \"@radix-ui/react-alert-dialog\": \"^1.1.23\",\n     \"@radix-ui/react-aspect-ratio\": \"^1.1.15\",\n@@ -88,9 +88,9 @@\n     \"@radix-ui/react-toggle\": \"^1.1.18\",\n     \"@radix-ui/react-toggle-group\": \"^1.1.19\",\n     \"@radix-ui/react-tooltip\": \"^1.2.16\",\n-    \"@supabase/ssr\": \"^0.12.4\",\n+    \"@supabase/ssr\": \"^0.12.7\",\n     \"@supabase/supabase-js\": \"^2.110.2\",\n-    \"@tanstack/react-query\": \"^5.101.4\",\n+    \"@tanstack/react-query\": \"^5.103.2\",\n     \"@vercel/speed-insights\": \"^2.0.0\",\n     \"browser-image-compression\": \"^2.0.2\",\n     \"class-variance-authority\": \"^0.7.1\",\n@@ -103,25 +103,25 @@\n     \"framer-motion\": \"^12.42.2\",\n     \"idb\": \"^8.0.3\",\n     \"input-otp\": \"^1.5.0\",\n-    \"lucide-react\": \"^1.33.0\",\n-    \"maplibre-gl\": \"^6.10.0\",\n-    \"next\": \"16.3.5\",\n-    \"openai\": \"^7.4.0\",\n-    \"react\": \"^19.2.8\",\n+    \"lucide-react\": \"^1.48.0\",\n+    \"maplibre-gl\": \"^6.11.2\",\n+    \"next\": \"16.3.6\",\n+    \"openai\": \"^7.23.0\",\n+    \"react\": \"^19.3.0\",\n     \"react-day-picker\": \"^10.0.1\",\n-    \"react-dom\": \"^19.2.8\",\n-    \"react-error-boundary\": \"^6.1.3\",\n-    \"react-hook-form\": \"^7.85.0\",\n+    \"react-dom\": \"^19.3.0\",\n+    \"react-error-boundary\": \"^6.1.6\",\n+    \"react-hook-form\": \"^7.88.0\",\n     \"react-markdown\": \"^10.1.0\",\n-    \"react-resizable-panels\": \"^4.12.3\",\n+    \"react-resizable-panels\": \"^4.13.3\",\n     \"recharts\": \"^3.10.1\",\n     \"remark-gfm\": \"^4.0.1\",\n     \"sharp\": \"^0.35.4\",\n-    \"supercluster\": \"^9.0.0\",\n+    \"supercluster\": \"^9.1.0\",\n     \"swr\": \"^2.5.1\",\n-    \"tailwind-merge\": \"^3.6.0\",\n-    \"web-vitals\": \"^6.1.1\",\n-    \"zod\": \"^4.4.3\"\n+    \"tailwind-merge\": \"^3.7.0\",\n+    \"web-vitals\": \"^6.2.2\",\n+    \"zod\": \"^4.6.5\"\n   },\n   \"devDependencies\": {\n     \"@next/bundle-analyzer\": \"16.3.5\",\n@@ -132,8 +132,8 @@\n     \"@types/d3-hierarchy\": \"^3.1.7\",\n     \"@types/google.maps\": \"^3.65.5\",\n     \"@types/node\": \"^24.13.3\",\n-    \"@types/react\": \"^19.2.18\",\n-    \"@types/react-dom\": \"^19.2.4\",\n+    \"@types/react\": \"^19.3.0\",\n+    \"@types/react-dom\": \"^19.3.0\",\n     \"@types/supercluster\": \"^7.1.3\",\n     \"@typescript/native\": \"npm:typescript@7.0.2\",\n     \"@typescript/old\": \"npm:typescript@6.0.2\","
+      }
+    ]
+  },
+  {
+    "baseRefName": "develop",
+    "baseRefOid": "84b0e8f640e7c773d1f9881182b40ce9a51d2560",
+    "files": [
+      "apps/web/package-lock.json",
+      "apps/web/package.json"
+    ],
+    "headRefOid": "a64f9dae53145c5eaf3e63104c841f1d3a2338f6",
+    "number": 3065,
+    "state": "OPEN",
+    "title": "build(deps-dev): bump the web-development group across 1 directory with 8 updates",
+    "dependency_patches": [
+      {
+        "path": "apps/web/package.json",
+        "patch": "@@ -124,31 +124,31 @@\n     \"zod\": \"^4.4.3\"\n   },\n   \"devDependencies\": {\n-    \"@next/bundle-analyzer\": \"16.3.5\",\n-    \"@playwright/test\": \"^1.62.1\",\n+    \"@next/bundle-analyzer\": \"16.3.6\",\n+    \"@playwright/test\": \"^1.63.0\",\n     \"@tailwindcss/cli\": \"^4.3.3\",\n     \"@tailwindcss/postcss\": \"^4.3.3\",\n     \"@types/d3-cloud\": \"^1.2.9\",\n     \"@types/d3-hierarchy\": \"^3.1.7\",\n-    \"@types/google.maps\": \"^3.65.5\",\n-    \"@types/node\": \"^24.13.3\",\n+    \"@types/google.maps\": \"^3.66.4\",\n+    \"@types/node\": \"^24.13.6\",\n     \"@types/react\": \"^19.2.18\",\n     \"@types/react-dom\": \"^19.2.4\",\n     \"@types/supercluster\": \"^7.1.3\",\n     \"@typescript/native\": \"npm:typescript@7.0.2\",\n     \"@typescript/old\": \"npm:typescript@6.0.2\",\n-    \"baseline-browser-mapping\": \"2.11.14\",\n+    \"baseline-browser-mapping\": \"2.11.26\",\n     \"dotenv\": \"^17.4.2\",\n     \"eslint\": \"^9.39.5\",\n-    \"eslint-config-next\": \"^16.3.5\",\n-    \"postcss\": \"^8.5.26\",\n-    \"supabase\": \"^2.115.0\",\n+    \"eslint-config-next\": \"^16.3.6\",\n+    \"postcss\": \"^8.5.28\",\n+    \"supabase\": \"^2.117.0\",\n     \"tailwindcss\": \"^4.3.3\",\n     \"typescript\": \"npm:@typescript/typescript6@6.0.2\",\n     \"typescript-eslint\": \"8.63.0\"\n   },\n   \"overrides\": {\n-    \"baseline-browser-mapping\": \"2.11.14\",\n+    \"baseline-browser-mapping\": \"2.11.26\",\n     \"browserslist\": \"4.28.8\",\n     \"brace-expansion\": \"5.0.9\",\n     \"nanoid\": \"3.3.18\","
+      }
+    ]
+  },
+  {
+    "baseRefName": "develop",
+    "baseRefOid": "47e9342b76c3203e58184e05b9cc06f256d867e9",
+    "files": [
+      "apps/web/package-lock.json",
+      "apps/web/package.json"
+    ],
+    "headRefOid": "338de43e80ffaa5cd703dacd7886017b5c219e31",
+    "number": 2855,
+    "state": "OPEN",
+    "title": "chore(deps): bump framer-motion from 12.42.2 to 13.4.0 in /apps/web",
+    "dependency_patches": [
+      {
+        "path": "apps/web/package.json",
+        "patch": "@@ -100,7 +100,7 @@\n     \"d3-hierarchy\": \"^3.1.2\",\n     \"date-fns\": \"^4.4.0\",\n     \"embla-carousel-react\": \"^8.6.0\",\n-    \"framer-motion\": \"^12.42.2\",\n+    \"framer-motion\": \"^13.4.0\",\n     \"idb\": \"^8.0.3\",\n     \"input-otp\": \"^1.5.0\",\n     \"lucide-react\": \"^1.33.0\","
+      }
+    ]
+  }
+]

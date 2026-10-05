@@ -1,0 +1,52 @@
+{
+  "baseline": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "three_original_failures": [
+    {
+      "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_timeout_terminates_descendant_process_tree",
+      "before": "FAIL",
+      "after": "PASS",
+      "disposition": "LOCALLY_REPAIRED_AND_VERIFIED"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_killpg_failure_uses_full_group_helper_without_descendant_leak",
+      "before": "FAIL",
+      "after": "PASS",
+      "disposition": "LOCALLY_REPAIRED_AND_VERIFIED"
+    },
+    {
+      "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_tree_helper_term_failure_escalates_to_full_group_kill",
+      "before": "FAIL",
+      "after": "PASS",
+      "disposition": "LOCALLY_REPAIRED_AND_VERIFIED"
+    }
+  ],
+  "candidate_boundary": {
+    "python": "3.12.13",
+    "tests_run": 19,
+    "passed": 17,
+    "failures": 0,
+    "errors": 0,
+    "skips": 2,
+    "elapsed_seconds": 3.602,
+    "network_policy": "MACOS_SANDBOX_DENY_NETWORK",
+    "launcher_exit_code": 0
+  },
+  "new_regression_tests": 6,
+  "existing_test_assertions_changed": 0,
+  "missing_secret_skips_added": 0,
+  "v1_preserved_files": 25,
+  "requirements_changed_in_v2": 0,
+  "production_files_changed_in_v2": [
+    "backend/pipeline/nodes.py"
+  ],
+  "test_files_changed_in_v2": [
+    "backend/pipeline/test_nodes_unittest.py"
+  ],
+  "not_claimed": [
+    "NATIVE_WINDOWS_EXECUTION",
+    "LINUX_EXECUTION",
+    "PR3099_NESTED_SESSION_CONTAINMENT",
+    "FULL_PIPELINE_SUITE_RERUN",
+    "COMMIT_PUSH_OR_REMOTE_CLOSE"
+  ]
+}

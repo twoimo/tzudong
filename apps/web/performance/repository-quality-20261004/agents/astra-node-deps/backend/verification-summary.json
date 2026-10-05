@@ -1,0 +1,44 @@
+{
+  "audit": "npm audit --json --audit-level=moderate: exit 0, all severity counts 0; Security gate threshold matched. Earlier high-threshold evidence is retained in final-audit.json.",
+  "frozenInstall": "npm ci --ignore-scripts --no-audit --no-fund --json exit 0; lock SHA unchanged before/after. Lifecycle/browser/media binary downloads intentionally not exercised to keep caches task-owned.",
+  "dependencyTree": "npm ls --all --json exit 0; no problems.",
+  "unitTests": {
+    "tests": 88,
+    "pass": 80,
+    "fail": 0,
+    "skip": 8,
+    "newCompatibilityCases": 12
+  },
+  "syntax": "node --check on 9 changed callers + new test file: 10/10 pass.",
+  "diffCheck": "git diff --check -- backend exit 0.",
+  "notApplicable": [
+    "Backend manifest has no lint/build/typecheck scripts and no backend ESLint configuration. No backend lint/native TypeScript/build claim.",
+    "Web native/compat parity, frozen Bun install, build, rendering and Naver SDK measurement are parent/B5 scope."
+  ],
+  "limits": [
+    "No real browser launch, Gemini/Naver/production API request, phone operation or DB read/write occurred; DB dependencies were local empty SELECT-only doubles.",
+    "Five CLI JSON cases use staged real source with synthetic inputs and network/process-spawn guards; private apply environment loader was exposed only in the staged copy, and apply was not executed.",
+    "Windows coverage remains unverified on macOS. One pre-existing Windows test calls t.skip without returning, ran its body and reported not ok # SKIP; final Node summary is fail 0/skip 8. Its fixture PID was absent at process readback. Source left unchanged as unrelated to dependencies.",
+    "No commit/push/PR/comment/alert/status/release/deployment operation performed."
+  ],
+  "securityGateAudit": {
+    "command": [
+      "npm",
+      "audit",
+      "--json",
+      "--audit-level=moderate"
+    ],
+    "evidence": "final-audit-moderate.json",
+    "exitCode": 0,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "checkedAt": "2026-10-04T10:51:01.187809+00:00",
+    "lockUnchanged": true
+  }
+}

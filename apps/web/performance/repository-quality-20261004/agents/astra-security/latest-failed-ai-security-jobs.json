@@ -1,0 +1,177 @@
+{
+  "name": "latest-failed-ai-security-jobs",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/actions/runs/37175368348/jobs?filter=latest&per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4960",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:32:27.083512+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 1,
+  "items": [
+    {
+      "completed_at": "2026-10-04T03:54:21Z",
+      "conclusion": "failure",
+      "head_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+      "id": 111356774262,
+      "name": "github-advanced-security",
+      "started_at": "2026-10-04T03:53:42Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Initialize",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Validate runner OS",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Validate firewall settings (Linux)",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Validate firewall settings (Windows)",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Pre-cache Playwright MCP server in the background (Linux)",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Pre-cache Playwright MCP server in the background (Windows)",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Prepare Copilot (Linux)",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Prepare Copilot (Windows)",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Download Autofind (Linux)",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Download Autofind (Windows)",
+          "number": 11,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Generate agent firewall CA (Linux)",
+          "number": 12,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Start MCP Servers (Linux)",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Start MCP Servers (Windows)",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Setup Agent (Linux)",
+          "number": 15,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Setup Agent (Windows)",
+          "number": 16,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Download git-proxy (Linux)",
+          "number": 17,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Download git-proxy (Windows)",
+          "number": 18,
+          "status": "completed"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Processing Request (Linux)",
+          "number": 19,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Processing Request (Windows)",
+          "number": 20,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Clean Up (Linux)",
+          "number": 21,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Clean Up (Windows)",
+          "number": 22,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "[Optional] Archive Details",
+          "number": 23,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 24,
+          "status": "completed"
+        }
+      ]
+    }
+  ]
+}

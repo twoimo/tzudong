@@ -1,0 +1,56 @@
+{
+  "observedAt": "2026-10-04T23:29:37.181945+00:00",
+  "bucket": "tzudong-pipeline-artifacts",
+  "scope": "read-only authenticated UI; no raw page/screenshot or account display email retained",
+  "settings": {
+    "customDomain": "assets.tzudong.app",
+    "customDomainActive": true,
+    "minimumTLS": "1.2",
+    "publicDevURL": {
+      "enabled": true,
+      "exactURLNotRetained": true
+    },
+    "cors": {
+      "origins": [
+        "https://www.tzudong.app",
+        "https://tzudong.app"
+      ],
+      "methods": [
+        "GET",
+        "HEAD"
+      ],
+      "headers": [
+        "Range"
+      ]
+    },
+    "defaultStorageClass": "Standard",
+    "infrequentAccessBytes": 0,
+    "defaultIncompleteMultipartAbortDays": 7,
+    "bucketLockRules": 0,
+    "newLifecycleOrRetentionRuleAdded": false,
+    "paidEventNotificationsNotEnabled": true,
+    "localUploadsDisabled": true
+  },
+  "last24Hours": {
+    "averageStorageDisplayMB": 11.42,
+    "dataRetrievedDisplayBytes": 0,
+    "classAOperationSummary": 6,
+    "classBOperationSummary": 117,
+    "chartTotals": {
+      "classA": 3,
+      "classB": 113
+    },
+    "summaryAndChartMismatchNotHidden": true
+  },
+  "latestOfficialFreeAllowance": {
+    "standardStorageGBMonthPerMonth": 10,
+    "classAPerMonth": 1000000,
+    "classBPerMonth": 10000000,
+    "egressFree": true,
+    "infrequentAccessNotCovered": true,
+    "source": "https://developers.cloudflare.com/r2/pricing/"
+  },
+  "cannotInferFullMonthlyOrAccountFreeUsageFrom24hSingleBucket": true,
+  "privateVsPublicObjectContentsUnverified": true,
+  "changesApplied": false
+}

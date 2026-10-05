@@ -1,0 +1,722 @@
+{
+  "network_policy": "All tests executed with macOS sandbox-exec (version 1)(allow default)(deny network*). Clean child environment; no live crawler, paid API, or DB connection. No raw test/provider output retained.",
+  "baseline_definition": "Same unchanged caller source, separately installed baseline direct pins resolved on task date. Baseline crawler initially lacks tqdm; subsequent transcript and SDK tests include explicitly recorded task-only tqdm==4.70.1 prerequisite.",
+  "summary": {
+    "component_existing_after": {
+      "run": 106,
+      "passed": 100,
+      "failed": 3,
+      "skipped": 3
+    },
+    "component_real_sdk_before_and_after_each": {
+      "run": 18,
+      "passed": 18
+    },
+    "combined_final_crawler": {
+      "run": 21,
+      "passed": 21
+    },
+    "baseline_initial_crawler": "24 passed; transcript module import failed before test collection (missing tqdm).",
+    "baseline_crawler_after_prerequisite": "7 additional transcript tests passed; 31 selected existing tests now comparable to candidate."
+  },
+  "unchanged_baseline_failures": {
+    "ids": [
+      "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_killpg_failure_uses_full_group_helper_without_descendant_leak",
+      "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_tree_helper_term_failure_escalates_to_full_group_kill",
+      "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_timeout_terminates_descendant_process_tree"
+    ],
+    "observed_direct_reproduction": "test_timeout_terminates_descendant_process_tree expected SUBPROCESS_TIMEOUT but observed SUBPROCESS_CLEANUP_FAILED in baseline; process cleanup path nodes.py:449-479 and 858-861. Same three failure IDs in candidate; underlying OS/process cause not isolated.",
+    "next_action": "Parent investigates process supervision independently; no process code edits authorized as dependency-induced regression here."
+  },
+  "harness_correction": "Initial supplementary crawler helper restored all sys.modules and created duplicate LangChain class identities. Corrected harness to isolate only utils modules; reran affected crawler contracts successfully on baseline/candidate. No production caller change was needed.",
+  "runs": {
+    "pipeline-baseline-existing-tests": [
+      {
+        "target": "backend.pipeline.test_validators_unittest",
+        "tests_run": 17,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.11,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline.test_data_contracts_unittest",
+        "tests_run": 20,
+        "failures": 0,
+        "errors": 0,
+        "skips": [
+          {
+            "test": "backend.pipeline.test_data_contracts_unittest.RecoveryDataReconciliationManifestTests.test_reconciliation_manifest_binds_inventory_results_and_privacy",
+            "reason": "local recovery reconciliation evidence is not present in this checkout"
+          }
+        ],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.14,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline.test_nodes_unittest",
+        "tests_run": 13,
+        "failures": 3,
+        "errors": 0,
+        "skips": [
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_taskkill_failure_closes_job_without_descendant_leak",
+            "reason": "Windows job-object fallback"
+          },
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_windows_job_is_empty_after_ordinary_exit",
+            "reason": "Windows job-object supervision"
+          }
+        ],
+        "issues": [
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_killpg_failure_uses_full_group_helper_without_descendant_leak",
+            "kind": "failure",
+            "type": "AssertionError",
+            "frames": [
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 493,
+                "function": "test_killpg_failure_uses_full_group_helper_without_descendant_leak"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 456,
+                "function": "_assert_descendant_tree_stopped"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 885,
+                "function": "assertEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 1251,
+                "function": "assertMultiLineEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 715,
+                "function": "fail"
+              }
+            ]
+          },
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_tree_helper_term_failure_escalates_to_full_group_kill",
+            "kind": "failure",
+            "type": "AssertionError",
+            "frames": [
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 526,
+                "function": "test_tree_helper_term_failure_escalates_to_full_group_kill"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 456,
+                "function": "_assert_descendant_tree_stopped"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 885,
+                "function": "assertEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 1251,
+                "function": "assertMultiLineEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 715,
+                "function": "fail"
+              }
+            ]
+          },
+          {
+            "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_timeout_terminates_descendant_process_tree",
+            "kind": "failure",
+            "type": "AssertionError",
+            "frames": [
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 589,
+                "function": "_callTestMethod"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 254,
+                "function": "test_timeout_terminates_descendant_process_tree"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 885,
+                "function": "assertEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 1251,
+                "function": "assertMultiLineEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 715,
+                "function": "fail"
+              }
+            ]
+          }
+        ],
+        "successful": false,
+        "exit_code": 1,
+        "seconds": 9.92,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline.test_pending_geocoding_backlog_unittest",
+        "tests_run": 4,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.06,
+        "network_policy": "macOS sandbox deny network*"
+      }
+    ],
+    "pipeline-baseline-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::PipelineContracts",
+      "tests_run": 2,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "pipeline-candidate-existing-tests": [
+      {
+        "target": "backend.pipeline.test_validators_unittest",
+        "tests_run": 17,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.1,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline.test_data_contracts_unittest",
+        "tests_run": 20,
+        "failures": 0,
+        "errors": 0,
+        "skips": [
+          {
+            "test": "backend.pipeline.test_data_contracts_unittest.RecoveryDataReconciliationManifestTests.test_reconciliation_manifest_binds_inventory_results_and_privacy",
+            "reason": "local recovery reconciliation evidence is not present in this checkout"
+          }
+        ],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.15,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline.test_nodes_unittest",
+        "tests_run": 13,
+        "failures": 3,
+        "errors": 0,
+        "skips": [
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_taskkill_failure_closes_job_without_descendant_leak",
+            "reason": "Windows job-object fallback"
+          },
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_windows_job_is_empty_after_ordinary_exit",
+            "reason": "Windows job-object supervision"
+          }
+        ],
+        "issues": [
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_killpg_failure_uses_full_group_helper_without_descendant_leak",
+            "kind": "failure",
+            "type": "AssertionError",
+            "frames": [
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 493,
+                "function": "test_killpg_failure_uses_full_group_helper_without_descendant_leak"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 456,
+                "function": "_assert_descendant_tree_stopped"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 885,
+                "function": "assertEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 1251,
+                "function": "assertMultiLineEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 715,
+                "function": "fail"
+              }
+            ]
+          },
+          {
+            "test": "backend.pipeline.test_nodes_unittest.ProcessTreeFallbackTests.test_tree_helper_term_failure_escalates_to_full_group_kill",
+            "kind": "failure",
+            "type": "AssertionError",
+            "frames": [
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 526,
+                "function": "test_tree_helper_term_failure_escalates_to_full_group_kill"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 456,
+                "function": "_assert_descendant_tree_stopped"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 885,
+                "function": "assertEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 1251,
+                "function": "assertMultiLineEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 715,
+                "function": "fail"
+              }
+            ]
+          },
+          {
+            "test": "backend.pipeline.test_nodes_unittest.RunCommandBoundaryTests.test_timeout_terminates_descendant_process_tree",
+            "kind": "failure",
+            "type": "AssertionError",
+            "frames": [
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 589,
+                "function": "_callTestMethod"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/pipeline/test_nodes_unittest.py",
+                "line": 254,
+                "function": "test_timeout_terminates_descendant_process_tree"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 885,
+                "function": "assertEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 1251,
+                "function": "assertMultiLineEqual"
+              },
+              {
+                "file": "/Users/twoimo/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/unittest/case.py",
+                "line": 715,
+                "function": "fail"
+              }
+            ]
+          }
+        ],
+        "successful": false,
+        "exit_code": 1,
+        "seconds": 10.6,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline.test_pending_geocoding_backlog_unittest",
+        "tests_run": 4,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.08,
+        "network_policy": "macOS sandbox deny network*"
+      }
+    ],
+    "pipeline-candidate-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::PipelineContracts",
+      "tests_run": 2,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "crawler-baseline-existing-tests": [
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py",
+        "tests_run": 0,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [
+          {
+            "test": "backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py",
+            "kind": "import",
+            "type": "ModuleNotFoundError",
+            "frames": [
+              {
+                "file": "<frozen importlib._bootstrap>",
+                "line": 488,
+                "function": "_call_with_frames_removed"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py",
+                "line": 11,
+                "function": "<module>"
+              },
+              {
+                "file": "<frozen importlib._bootstrap_external>",
+                "line": 999,
+                "function": "exec_module"
+              },
+              {
+                "file": "<frozen importlib._bootstrap>",
+                "line": 488,
+                "function": "_call_with_frames_removed"
+              },
+              {
+                "file": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/tzudong/backend/restaurant-crawling/scripts/03-1-generate-transcript-context.py",
+                "line": 27,
+                "function": "<module>"
+              }
+            ]
+          }
+        ],
+        "successful": false,
+        "exit_code": 1,
+        "seconds": 0.92,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py",
+        "tests_run": 7,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 3.68,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_gemini_scrapling_fallback_regression.py",
+        "tests_run": 5,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.05,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_visual_location.py",
+        "tests_run": 6,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.05,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_chunk_download_retry.py",
+        "tests_run": 6,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.04,
+        "network_policy": "macOS sandbox deny network*"
+      }
+    ],
+    "crawler-baseline-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::CrawlerContracts",
+      "tests_run": 10,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "crawler-baseline-additional-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::CrawlerAdditionalContracts",
+      "tests_run": 4,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "crawler-candidate-existing-tests": [
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py",
+        "tests_run": 7,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 1.93,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py",
+        "tests_run": 7,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 2.6,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_gemini_scrapling_fallback_regression.py",
+        "tests_run": 5,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.07,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_visual_location.py",
+        "tests_run": 6,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.08,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend/restaurant-crawling/scripts/tests/test_chunk_download_retry.py",
+        "tests_run": 6,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.07,
+        "network_policy": "macOS sandbox deny network*"
+      }
+    ],
+    "crawler-candidate-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::CrawlerContracts",
+      "tests_run": 10,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "crawler-candidate-additional-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::CrawlerAdditionalContracts",
+      "tests_run": 4,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "control-baseline-existing-tests": [
+      {
+        "target": "backend.pipeline_control.tests.test_postgres_control.PoolFailClosedTests",
+        "tests_run": 3,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.21,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline_control.tests.test_postgres_control.AtomicSqlContractTests",
+        "tests_run": 2,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.19,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline_control.tests.test_batch_upsert",
+        "tests_run": 6,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.1,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline_control.tests.test_slice0_control_plane.PersistSoTTests",
+        "tests_run": 10,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.18,
+        "network_policy": "macOS sandbox deny network*"
+      }
+    ],
+    "control-baseline-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::ControlContracts",
+      "tests_run": 2,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "control-candidate-existing-tests": [
+      {
+        "target": "backend.pipeline_control.tests.test_postgres_control.PoolFailClosedTests",
+        "tests_run": 3,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.22,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline_control.tests.test_postgres_control.AtomicSqlContractTests",
+        "tests_run": 2,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.19,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline_control.tests.test_batch_upsert",
+        "tests_run": 6,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.1,
+        "network_policy": "macOS sandbox deny network*"
+      },
+      {
+        "target": "backend.pipeline_control.tests.test_slice0_control_plane.PersistSoTTests",
+        "tests_run": 10,
+        "failures": 0,
+        "errors": 0,
+        "skips": [],
+        "issues": [],
+        "successful": true,
+        "exit_code": 0,
+        "seconds": 0.2,
+        "network_policy": "macOS sandbox deny network*"
+      }
+    ],
+    "control-candidate-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::ControlContracts",
+      "tests_run": 2,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "crawler-baseline-transcript-with-prerequisite": {
+      "target": "backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py",
+      "tests_run": 7,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true,
+      "prerequisite": "tqdm==4.70.1 installed in task-only baseline environment; absent from unmodified baseline manifest."
+    },
+    "combined-final-crawler-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::CrawlerContracts",
+      "tests_run": 10,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "combined-final-additional-sdk-tests": {
+      "target": "/Users/twoimo/.codex/worktrees/python-dependency-quality-20261004/runtime/offline_sdk_contracts.py::CrawlerAdditionalContracts",
+      "tests_run": 4,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    },
+    "combined-final-transcript-tests": {
+      "target": "backend/restaurant-crawling/scripts/tests/test_transcript_context_backend.py",
+      "tests_run": 7,
+      "failures": 0,
+      "errors": 0,
+      "skips": [],
+      "issues": [],
+      "successful": true
+    }
+  }
+}

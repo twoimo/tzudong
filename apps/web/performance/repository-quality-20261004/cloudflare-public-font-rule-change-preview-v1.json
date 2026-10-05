@@ -1,0 +1,40 @@
+{
+  "preparedAt": "2026-10-04T23:46:19.294317+00:00",
+  "ruleId": "2e05ace8286f414f89125c8eca336859",
+  "name": "Tzudong public hashed font",
+  "zone": "tzudong.app",
+  "zonePlanObserved": "free",
+  "matching": {
+    "host": "assets.tzudong.app",
+    "path": "/sha256-8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7--ChosunCentennial_otf.otf",
+    "methods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  "before": {
+    "cacheEligible": true,
+    "edgeTTLMode": "origin_if_present_else_default_status_ttl",
+    "explicitEdgeTTL": null,
+    "browserTTLRuleOverride": null,
+    "observedGETBrowserMaxAgeSeconds": 14400,
+    "cacheKeyAndVaryUntouched": true
+  },
+  "proposed": {
+    "cacheEligible": true,
+    "edgeTTLMode": "override_origin_for_this_one_immutable_public_font",
+    "edgeTTLSeconds": 31536000,
+    "browserTTLMode": "override_origin_for_this_one_immutable_public_font",
+    "browserTTLSeconds": 31536000
+  },
+  "contentIdentityValidatedByBeforeGET": {
+    "bytes": 11420784,
+    "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+    "rawFontBodyStored": false
+  },
+  "otherRulesPrivateRoutesOtherBucketObjectsUnchanged": true,
+  "billingUpgrade": false,
+  "newPublicExposure": false,
+  "rollback": "restore saved origin/default Edge TTL mode and remove Browser TTL override; no zone-wide purge",
+  "changeApplied": false
+}

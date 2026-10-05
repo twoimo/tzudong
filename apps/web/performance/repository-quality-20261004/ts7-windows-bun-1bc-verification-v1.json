@@ -1,0 +1,17 @@
+{
+  "run": 37226906340,
+  "source": "1bc4d06611bffb62bf64e364b1e99a9b6b520f29",
+  "tree": "683caeff6b8cdb125b800cd2f1b0a8c404f87a45",
+  "artifact": 11312696249,
+  "zipDigest": "00d59255db94136c3ad5751c3f5a053f9248fcd1f1f900c9d58288c3238b7097",
+  "externalDigestMatched": true,
+  "schemaVersion": 5,
+  "verification": {
+    "status": "verified",
+    "evidenceStatus": "conclusive",
+    "admittedSlices": 2
+  },
+  "rejectedWarmupCount": 0,
+  "allRejectedWarmupsHaveBoundSummary": true,
+  "UIOrFieldGainClaimed": false
+}

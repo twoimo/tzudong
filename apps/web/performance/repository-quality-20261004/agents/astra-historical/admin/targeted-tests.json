@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/Users/twoimo/.bun/bin/bun",
+    "test",
+    "./tests-unit/admin-console-uiux-source.test.ts",
+    "./tests-unit/admin-dashboard-widget-order.test.ts",
+    "./tests-unit/admin-sidebar-order.test.ts",
+    "./tests-unit/admin-guarded-mutation-contract.test.ts",
+    "./tests-unit/admin-route-auth-contract.test.ts",
+    "./tests-unit/admin-user-management-source.test.ts",
+    "./tests-unit/admin-pending-counts-source.test.ts",
+    "./tests-unit/youtube-kpi-snapshot-contract.test.ts",
+    "./tests-unit/admin-restaurant-refresh-history-source.test.ts"
+  ],
+  "cwd": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong/apps/web",
+  "exit_code": 1,
+  "timestamp_utc": "2026-10-04T11:43:00.768535+00:00",
+  "scope": "9 existing focused unit/source-contract files; no full suite, build, provider or DB calls"
+}

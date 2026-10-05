@@ -1,0 +1,147 @@
+{
+  "name": "latest-failed-freshness-jobs",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/actions/runs/36424190192/jobs?filter=latest&per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "",
+        "x-ratelimit-remaining": "4959",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:32:27.099164+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 1,
+  "items": [
+    {
+      "completed_at": "2026-09-28T12:49:14Z",
+      "conclusion": "failure",
+      "head_sha": "157ced98a2414d434132c99f74c72bbe5f796ca4",
+      "id": 108933986330,
+      "name": "Freshness",
+      "started_at": "2026-09-28T12:48:19Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout source",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Node 24",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install Bun",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Pin npm authority",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Authoritative clean install",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Collect current Dependabot candidates",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Assert governance invariants and enumerate the seven units",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Preserve dependabot holds",
+          "number": 9,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Verify Rust toolchain pin is a three-digit fixed version",
+          "number": 10,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Verify Pin_Contract (reuse task 30 verifier)",
+          "number": 11,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Run the four verification commands with a 30-minute per-command budget",
+          "number": 12,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Record run receipt and classify verification",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload dependency freshness run receipt",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Fail closed on verification verdict",
+          "number": 15,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Post Install Bun",
+          "number": 28,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Post Install Node 24",
+          "number": 29,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout source",
+          "number": 30,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 31,
+          "status": "completed"
+        }
+      ]
+    }
+  ]
+}

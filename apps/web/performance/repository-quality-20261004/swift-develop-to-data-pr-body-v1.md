@@ -1,0 +1,3 @@
+既存OCRのSwift package・相対リンクによるコンパイル入口をdevelopからdataへ通常の保護ルールで昇格します。既存5言語のスキャン、OCRロジック、Python呼び出し、webソースは維持します。
+
+PR #3132の全検査成功、Swift6.4/macOS SDK27でfresh compile/link成功。main昇格後に既存設定を維持してSwiftスキャンを追加し、実結果を確認します。

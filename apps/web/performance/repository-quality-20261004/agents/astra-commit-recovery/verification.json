@@ -1,0 +1,17 @@
+{
+  "source_read_only": true,
+  "source_hashes_unchanged_at_completion": true,
+  "scratch_tests": {
+    "pass": 6,
+    "fail": 1,
+    "failure": "newer independent draft deleted on unchanged same-mounted retry",
+    "runner": "bun 1.4.0 (34cbb9a40)",
+    "limitation": "deterministic IDB transport, no browser rerun"
+  },
+  "findings": {
+    "P1": 0,
+    "P2": 1
+  },
+  "review_kind": "independent native source review",
+  "conclusion": "Original known-success unmount cleanup repaired; retry snapshot replacement leaves reproducible P2 newer-draft loss."
+}

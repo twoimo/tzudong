@@ -1,0 +1,229 @@
+{
+  "count": 735,
+  "pair": 5,
+  "position": 0,
+  "kind": "candidate",
+  "warmup": false,
+  "buildId": "kr62S0ZI5TXnfymt_PEBT",
+  "inputs": [
+    {
+      "original": "lib/naver-map-mobile-offset-helpers.ts",
+      "sha256": "cc72d2ce8fb94a574cb605cc7962ecb036855aba7df8a94d94d012e3f24c21ea"
+    },
+    {
+      "original": "components/home/MobileControlOverlay.tsx",
+      "sha256": "a9dcf1291296377cf84be512e87473d9d7b4bb9b1c6da964b9494bd15cebefe4"
+    },
+    {
+      "original": "app/home-runtime-shell.tsx",
+      "sha256": "7fdfd2cec739e5fbc14791b247e8c907ec1af6ac530b50323d94db28ecccf602"
+    },
+    {
+      "original": "app/home-app-globals.css",
+      "sha256": "6755130f075ce73901c105491544fed256d7dea9315b3f8b9fcbfb9959c03368"
+    },
+    {
+      "original": "components/home/home-control-panel.tsx",
+      "sha256": "0464cece38ddcbbc156b963244d0631f72498ebe554d6ee01e35da36acdf66da"
+    },
+    {
+      "original": "components/layout/MobileBottomNav.tsx",
+      "sha256": "8619057c625f84f78eaf3f1f96fc29327313cd90a0c6980aec5d0b3153737977"
+    },
+    {
+      "original": "components/map/NaverMapView.tsx",
+      "sha256": "1f1c322ce58214732ae3a88dc35f5fa1f796501da1a53924416ec6f468bb8a7e"
+    },
+    {
+      "original": "lib/naver-map-render-plan.ts",
+      "sha256": "bd42a2d78bc1ee5a7d1170e446f72b49082f3b8a7cc88667381541847027182f"
+    },
+    {
+      "original": "lib/marker-pool.ts",
+      "sha256": "31125a1f08c73f2425182fd5b8f7a609e21654b895da89fad24a888734399ed2"
+    },
+    {
+      "original": "package-lock.json",
+      "sha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694"
+    },
+    {
+      "original": "lib/web-vitals.tsx",
+      "sha256": "a01482fa8b5f4bc828890cbd10f16efaaf739cf4194e926cb0c87ea54ba206ac"
+    },
+    {
+      "original": "lib/performance/field-vitals.ts",
+      "sha256": "b539fd1bd32e5d8ddb703c6a409e74a881d27843840dbd398cd6e3c54f037854"
+    },
+    {
+      "original": "next.config.mjs",
+      "sha256": "7030bd17e667d75834325fc028897c57479a840917848e0a69ab99ff1c7d43f0"
+    },
+    {
+      "original": "lib/cluster-marker.ts",
+      "sha256": "355b326966b49b56e4b9c80935d21d56410ac9076ffb5e65d0b3d07c648ed692"
+    },
+    {
+      "original": "components/legal/PrivacyPolicyContent.tsx",
+      "sha256": "ca89ccbdcd7230d468c6a79e1a9b8bff8e0a283587ffb6351ecf193ee02810f6"
+    },
+    {
+      "original": "components/legal/HydratedContactEmail.tsx",
+      "sha256": "fc7d2571e9a8799e80d868bfdf9d08bc85861796b0070944392831142f1fda1c"
+    },
+    {
+      "original": "components/admin/AdminOverviewDashboard.tsx",
+      "sha256": "8e44714ee3e6a46bd11dce35d745bcaffc7f93fbe5b374b952606629015efc6a"
+    },
+    {
+      "original": "lib/reviewDraftDB.ts",
+      "sha256": "9a8f35f5cc7c7bb829437d3973286bb5db6262ef244a5a419543f1ba58a3eba3"
+    },
+    {
+      "original": "lib/clustering.ts",
+      "sha256": "c837a7904858dc437bf21decac1d8fb215039ee62ea4b41e5fa6fdf5394a4571"
+    },
+    {
+      "original": "lib/naver-map-cluster-visuals.ts",
+      "sha256": "832012924d812f87c52cc701ba9dac6d7a8a8606b70e991750e6b1bf43aa5db3"
+    },
+    {
+      "original": "lib/dashboard/helpers.ts",
+      "sha256": "cb8fe6708a4496e9ba8f4954e27b124f60326c9dc5d66017dcfeb174a0947943"
+    },
+    {
+      "original": "lib/supabase-rest-client.ts",
+      "sha256": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27"
+    },
+    {
+      "original": "components/map/marker-icons.css",
+      "sha256": "d77c2f5ee74e3035f17e6f08ba5df557a0d2844633178481c26215c04969c258"
+    },
+    {
+      "original": "lib/deferred-marker-renders.ts",
+      "sha256": "5b16f00f4960f24b9a811177704378d5775bc0ba968f4ac348aac93f7ca39a7b"
+    },
+    {
+      "original": "hooks/use-restaurants.tsx",
+      "sha256": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9"
+    },
+    {
+      "original": "lib/privacy/onboarding.ts",
+      "sha256": "43f1a0d7c8a425ecde5cdb01b17bc096f0c06400e2d7bd9a0c56e09316d09e8d"
+    },
+    {
+      "original": "app/api/privacy/onboarding/route.ts",
+      "sha256": "56fe1a5b54e2af83c84d57189b1e31cc5fea724f236e937545ad2ddc0b4ac747"
+    },
+    {
+      "original": "app/mypage/reviews/page.tsx",
+      "sha256": "f5d123dc11b030f5893354cc8090e84576589f4bf6162f553fa75b458e083f4f"
+    },
+    {
+      "original": "components/reviews/ReviewModal.tsx",
+      "sha256": "9db3e70b40996b7bd6873120c217cff065c297cb6aec6a6100ebb7a337b2c6ad"
+    },
+    {
+      "original": "lib/verified-review-count-rows.ts",
+      "sha256": "3a31a9ad9b60d3916b8244af94b1c423b2fd2d00ebc6c7ac4f4992162b752af3"
+    },
+    {
+      "original": "lib/reviews/review-save-operation.ts",
+      "sha256": "7381cc559fbc1d9b6339756d0f44cd1684f973d57d918358c7e050cb75eb6371"
+    }
+  ],
+  "valid": true,
+  "sourceCommit": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+  "sdk": {
+    "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+    "loaded": true,
+    "stub": false,
+    "remoteScript": true,
+    "mapCaptured": true,
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "dpr": 1
+    },
+    "tiles": 75
+  },
+  "resourceBefore": {
+    "observedAt": "2026-10-04T21:32:55.252Z",
+    "logicalCores": 18,
+    "hostCpuPercent": 602.6000000000005,
+    "otherCpuPercent": 519.3000000000002,
+    "maxOtherProcessCpuPercent": 75.8,
+    "otherProcessesOver80Percent": 0,
+    "loadAverage": [
+      12.45263671875,
+      12.0283203125,
+      11.1689453125
+    ],
+    "heavyOverlap": false,
+    "saturated": false,
+    "gpuLoad": "unavailable"
+  },
+  "heap": {
+    "usedSize": 19212276,
+    "totalSize": 39583744,
+    "embedderHeapUsedSize": 15431616,
+    "backingStorageSize": 1943052
+  },
+  "state": {
+    "clickMs": 423.60000014305115,
+    "click": 2122.699999809265,
+    "observedAt": 3572.899999856949,
+    "expectedViewport": 464,
+    "markers": 735,
+    "missingViewport": 0,
+    "unexpectedIds": 0,
+    "duplicates": 0,
+    "mapCreates": 1,
+    "zoom": 14,
+    "visibility": "visible",
+    "overflow": 0,
+    "longTaskCount": 3,
+    "longTaskMs": 540,
+    "shifts": [
+      {
+        "start": 2834.2999999523163,
+        "value": 0.001197115852559351,
+        "recentInput": false
+      },
+      {
+        "start": 2865.2999999523163,
+        "value": 0.03672985781990521,
+        "recentInput": false
+      },
+      {
+        "start": 2963.5999999046326,
+        "value": 0.04248441674600116,
+        "recentInput": false
+      }
+    ],
+    "domNodes": 5117
+  },
+  "resourceAfter": {
+    "observedAt": "2026-10-04T21:32:56.791Z",
+    "logicalCores": 18,
+    "hostCpuPercent": 483.1000000000002,
+    "otherCpuPercent": 380.2000000000002,
+    "maxOtherProcessCpuPercent": 68.1,
+    "otherProcessesOver80Percent": 0,
+    "loadAverage": [
+      12.45263671875,
+      12.0283203125,
+      11.1689453125
+    ],
+    "heavyOverlap": false,
+    "saturated": false,
+    "gpuLoad": "unavailable"
+  },
+  "errors": {
+    "page": 0,
+    "console": 2
+  },
+  "requests": {
+    "restaurant": 2,
+    "otherFixture": 3
+  }
+}

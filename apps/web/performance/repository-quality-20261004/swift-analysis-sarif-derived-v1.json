@@ -1,0 +1,13 @@
+{
+  "exitCode": 0,
+  "rawSARIFStored": false,
+  "schemaVersion": "2.1.0",
+  "runCount": 1,
+  "artifactCount": 0,
+  "knownRepositoryArtifacts": [],
+  "propertiesKeys": [
+    [
+      "codeqlConfigSummary"
+    ]
+  ]
+}

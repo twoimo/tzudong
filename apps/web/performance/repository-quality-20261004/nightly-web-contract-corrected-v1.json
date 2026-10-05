@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-04T10:37:01.389096+00:00",
+  "command": "bun test tests-unit/nightly-regression-workflow.test.ts",
+  "exitCode": 0,
+  "pass": 30,
+  "fail": 0,
+  "failureCases": [],
+  "runtime": "Bun1.4.0 Node24.21.0",
+  "scope": "source-boundary/runtime-fixture tests; no real hosted database or publication",
+  "rawLogsStored": false
+}

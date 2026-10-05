@@ -1,0 +1,34 @@
+[
+  {
+    "name": "map-yaml-caller",
+    "exitCode": 1,
+    "stdoutJson": false,
+    "stdoutBytes": 39,
+    "stderrBytes": 0,
+    "stdoutHasDotenvBanner": false,
+    "stderrHasDotenvBanner": false,
+    "fixedCodes": [
+      "MAP_MAIN_FAILED"
+    ]
+  },
+  {
+    "name": "dotenv-preload-caller",
+    "exitCode": 0,
+    "stdoutJson": false,
+    "stdoutBytes": 98,
+    "stderrBytes": 31,
+    "stdoutHasDotenvBanner": false,
+    "stderrHasDotenvBanner": true,
+    "fixedCodes": []
+  },
+  {
+    "name": "dotenv-default-banner",
+    "exitCode": 0,
+    "stdoutJson": true,
+    "stdoutBytes": 12,
+    "stderrBytes": 82,
+    "stdoutHasDotenvBanner": false,
+    "stderrHasDotenvBanner": true,
+    "fixedCodes": []
+  }
+]

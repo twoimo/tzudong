@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-10-04T22:16:47.639733+00:00",
+  "chain": {
+    "feature": "79922b3b9cd4941d3b85dbb732fdfbbfb11ed810",
+    "develop": "93fa1131595508b5b324a88101bbdaf1b0e77b03",
+    "data": "d78161caeaf189258ab54e142156b236fc20b9ff",
+    "main": "ca1fcf4440ffd564c425422cdd373b1d4a233daa"
+  },
+  "trees": {
+    "79922b3b9cd4941d3b85dbb732fdfbbfb11ed810": "1650d3b97e8279e099238c01a06f023caa17f19e",
+    "93fa1131595508b5b324a88101bbdaf1b0e77b03": "1650d3b97e8279e099238c01a06f023caa17f19e",
+    "d78161caeaf189258ab54e142156b236fc20b9ff": "1650d3b97e8279e099238c01a06f023caa17f19e",
+    "ca1fcf4440ffd564c425422cdd373b1d4a233daa": "1650d3b97e8279e099238c01a06f023caa17f19e"
+  },
+  "webTrees": {
+    "79922b3b9cd4941d3b85dbb732fdfbbfb11ed810": "4705249af61e2a69175336fd94d78eb43ba13725",
+    "93fa1131595508b5b324a88101bbdaf1b0e77b03": "4705249af61e2a69175336fd94d78eb43ba13725",
+    "d78161caeaf189258ab54e142156b236fc20b9ff": "4705249af61e2a69175336fd94d78eb43ba13725",
+    "ca1fcf4440ffd564c425422cdd373b1d4a233daa": "4705249af61e2a69175336fd94d78eb43ba13725",
+    "b90154e22e6b4ba089275c7ae6d53e7274feae98": "4705249af61e2a69175336fd94d78eb43ba13725"
+  },
+  "changedPathsFromPriorMain": [
+    ".gitignore",
+    "Package.swift",
+    "backend/restaurant-crawling/scripts/main.swift"
+  ],
+  "guardApprovedMain": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "sourceNotPhysicalFieldOrMemoryResolution": true
+}

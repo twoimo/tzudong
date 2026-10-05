@@ -1,0 +1,61 @@
+{
+  "baseline": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "branch": "codex/node-dependency-quality-20261004",
+  "head": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+  "recordedAt": "2026-10-04T10:48:27.409478+00:00",
+  "sourceStable": true,
+  "files": [
+    {
+      "path": "backend/bin/apply_tzuyang_address_evidence_ledger.mjs",
+      "sha256": "2a5bc2a69f890c4a0c0e20f6bcad3149f6af80cb696f3f85523f6ff1224a13a9"
+    },
+    {
+      "path": "backend/bin/build_google_maps_browser_review_queue.mjs",
+      "sha256": "59e20d7b18cd8b31c960226f2be1437e21d7f6bda4c332352dff31ced91cfa75"
+    },
+    {
+      "path": "backend/bin/build_supabase_address_consistency_guarded_plan.mjs",
+      "sha256": "69ae10d7bb42ccbf460747c5fb37ed9589054e3ab69c4f41d16702676271193b"
+    },
+    {
+      "path": "backend/bin/build_tzuyang_address_evidence_ledger.mjs",
+      "sha256": "ccec3a3f6be5c08bc032704386fa1ab03b8a68981dbaa53e400f6d43ae43ac43"
+    },
+    {
+      "path": "backend/bin/validate_supabase_review_queue_live.mjs",
+      "sha256": "eb722856fe673eea79949d6c6d14b68fac63917571bf47920a9104f61e64b5b7"
+    },
+    {
+      "path": "backend/bin/validate_supabase_same_origin_candidates.mjs",
+      "sha256": "be612f755c6c0334cd25ccdc89170dc7a953c306df7cc2d66ca95357619d5c59"
+    },
+    {
+      "path": "backend/package-lock.json",
+      "sha256": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd"
+    },
+    {
+      "path": "backend/package.json",
+      "sha256": "7b32079bd7b063365903593308db9f1d93a2b8ff18a68732910902c55237aaeb"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+      "sha256": "1e5a9d80d08b842aca4b612e1c61d8546ade304c7ee903c750a503ecd64fbf95"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+      "sha256": "9a1e12445d63b05d223e52fcc4092d057203d883c7a248df16a77680794806cb"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/url-extractor.js",
+      "sha256": "104164b66d070a2a2bdfc3344092ef10929aafe68c49dbf96185f743caf38363"
+    },
+    {
+      "path": "backend/bin/tests/node-dependency-compatibility.test.mjs",
+      "sha256": "f03a6cd81f8e1c9d79c7642dfbaf4bfb7e6fcf09047ce0145e0250f0fd3248e5"
+    }
+  ],
+  "aggregateSha256": "4c78d5b583f2196cd5cca216cd57be101863b495e19b651a80ba2907af1d8f88",
+  "readbackAt": "2026-10-04T10:51:01.187809+00:00",
+  "stability": "Final Security gate threshold verification changed reports only. All 12 source/test hashes still match the verified backend candidate; no further source edits are planned.",
+  "securityGateEvidence": "final-audit-moderate.json"
+}

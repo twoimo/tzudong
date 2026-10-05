@@ -1,0 +1,119 @@
+{
+  "sourceHashesBefore": {
+    "apps/web/app/api/dashboard/restaurants/route.ts": "26744505c3de07dd8b86d6a9442fa5ff155a3c127c85d3845026394607f665b8",
+    "apps/web/app/api/dashboard/summary/route.ts": "8f373465c2193c6c72d36d79befcf6d2e7b78a6c39c0d91942ee4c7b33279551",
+    "apps/web/app/api/dashboard/video/[videoId]/route.ts": "bd27725081433e3bc93837f9b7fa3cfd5446fe262b65f62bf587ec10820d18da",
+    "apps/web/components/ui/alert-dialog.tsx": "8fbd1080d341f8927947b3a77adb13ca9dd7cddf70a02df0634a57e34549100c",
+    "apps/web/components/ui/dialog.tsx": "131a1e1a4bb49b011c08e664516ac60c112f4567b3154c9b95a7959da63ef820",
+    "apps/web/hooks/use-restaurants.tsx": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+    "apps/web/lib/dashboard/helpers.ts": "cb8fe6708a4496e9ba8f4954e27b124f60326c9dc5d66017dcfeb174a0947943",
+    "apps/web/lib/dashboard/summary.ts": "a714eb474871a021d3c16ce1d9f62d50885df01c3b7179e3807dfb8a3ebe3faf",
+    "apps/web/lib/supabase-rest-client.ts": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27",
+    "apps/web/tests-unit/dashboard-aggregation.test.ts": "93aef611c21dd40ac1163e8a7ed916bc946aa74d97eb15d7c47d0c8653369192",
+    "apps/web/tests-unit/supabase-rest-client.test.ts": "5c16753b5b267cbb6efb1b5ca0876a3a4e948fdf68880c2247fbb21cb0255fd8",
+    "apps/web/tests-unit/use-restaurants-merge.test.ts": "4a43c2e80d373835717122f85d5ef877a3833912ff2932d11e3607913ba23178",
+    "apps/web/tests-unit/youtube-link-helpers.test.ts": "f7c129d4067da361fac637f99641507882844a5607ce7c9e1fc03ee1a4a4eab5",
+    "apps/web/tests-unit/dashboard-route-contract.test.ts": "0b69df5cee0d5d3c20d7e8bb10fb887e02e66d0e1e8848be414f359cb46e25b8",
+    "apps/web/tests-unit/dialog-content-inset.test.ts": "9bfa110a852eb81c03d30eaf4afb79390c721d6b641315b291082f54ad0dfbdb"
+  },
+  "checks": [
+    {
+      "name": "affected-unit",
+      "command": [
+        "bun",
+        "test",
+        "tests-unit/youtube-link-helpers.test.ts",
+        "tests-unit/dashboard-aggregation.test.ts",
+        "tests-unit/dashboard-route-contract.test.ts",
+        "tests-unit/dashboard-public-visibility-source.test.ts",
+        "tests-unit/dashboard-classifiers.test.ts",
+        "tests-unit/home-map-youtube-kpi.test.ts",
+        "tests-unit/admin-restaurant-update-conflict.test.ts",
+        "tests-unit/admin-restaurant-identity-warning.test.ts",
+        "tests-unit/admin-same-video-duplicate-warning.test.ts"
+      ],
+      "exitCode": 0,
+      "outputSha256": "c2bf7679c3128ae9d3b4194558f6a933daf0ad72d8c77f8009dfb045eba416ad",
+      "passed": 54,
+      "failed": 0,
+      "assertions": 668
+    },
+    {
+      "name": "isolated-db-conflict",
+      "command": [
+        "bun",
+        "test",
+        "tests-unit/db-conflict-checker.test.ts"
+      ],
+      "exitCode": 0,
+      "outputSha256": "e47e2ab210ad3b071ec611a2912ca2442345ab4fbf22af7f6eb65b553bbcec6f",
+      "passed": 9,
+      "failed": 0,
+      "assertions": 28
+    },
+    {
+      "name": "eslint",
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "scripts/run-web-tool.mjs",
+        "eslint",
+        "lib/dashboard/helpers.ts",
+        "lib/dashboard/summary.ts",
+        "tests-unit/dashboard-aggregation.test.ts",
+        "tests-unit/youtube-link-helpers.test.ts",
+        "--max-warnings=0"
+      ],
+      "exitCode": 0,
+      "outputSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "native-compat-parity",
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "scripts/run-typecheck.mjs",
+        "--compiler",
+        "parity"
+      ],
+      "exitCode": 0,
+      "outputSha256": "dd7fb6c8ee0aaa4644d59d9058a59e5a06b784f4164dbe6465f7926fbed179f8",
+      "receipt": {
+        "status": "passed",
+        "diagnostics": 0,
+        "logicalInputs": 2379,
+        "logicalInputNamesSha256": "8b3e972fc699d26bf9139353ed241af9ea8667d095afb4f2e6e3317198ad8aa3",
+        "nonLibraryContentSha256": "3975d34e0a02f93ceef12a41d8a2e7114dfc544b1566123724aac4a939ff4da8",
+        "standardLibraryContentSha256": {
+          "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+          "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+        }
+      }
+    },
+    {
+      "name": "diff-whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exitCode": 0,
+      "outputSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    }
+  ],
+  "sourceHashesAfter": {
+    "apps/web/app/api/dashboard/restaurants/route.ts": "26744505c3de07dd8b86d6a9442fa5ff155a3c127c85d3845026394607f665b8",
+    "apps/web/app/api/dashboard/summary/route.ts": "8f373465c2193c6c72d36d79befcf6d2e7b78a6c39c0d91942ee4c7b33279551",
+    "apps/web/app/api/dashboard/video/[videoId]/route.ts": "bd27725081433e3bc93837f9b7fa3cfd5446fe262b65f62bf587ec10820d18da",
+    "apps/web/components/ui/alert-dialog.tsx": "8fbd1080d341f8927947b3a77adb13ca9dd7cddf70a02df0634a57e34549100c",
+    "apps/web/components/ui/dialog.tsx": "131a1e1a4bb49b011c08e664516ac60c112f4567b3154c9b95a7959da63ef820",
+    "apps/web/hooks/use-restaurants.tsx": "c7460bbdf26a347c814e6ce0fe7526fb0df7c334eb2550f9230a8939322b29f9",
+    "apps/web/lib/dashboard/helpers.ts": "cb8fe6708a4496e9ba8f4954e27b124f60326c9dc5d66017dcfeb174a0947943",
+    "apps/web/lib/dashboard/summary.ts": "a714eb474871a021d3c16ce1d9f62d50885df01c3b7179e3807dfb8a3ebe3faf",
+    "apps/web/lib/supabase-rest-client.ts": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27",
+    "apps/web/tests-unit/dashboard-aggregation.test.ts": "93aef611c21dd40ac1163e8a7ed916bc946aa74d97eb15d7c47d0c8653369192",
+    "apps/web/tests-unit/supabase-rest-client.test.ts": "5c16753b5b267cbb6efb1b5ca0876a3a4e948fdf68880c2247fbb21cb0255fd8",
+    "apps/web/tests-unit/use-restaurants-merge.test.ts": "4a43c2e80d373835717122f85d5ef877a3833912ff2932d11e3607913ba23178",
+    "apps/web/tests-unit/youtube-link-helpers.test.ts": "f7c129d4067da361fac637f99641507882844a5607ce7c9e1fc03ee1a4a4eab5",
+    "apps/web/tests-unit/dashboard-route-contract.test.ts": "0b69df5cee0d5d3c20d7e8bb10fb887e02e66d0e1e8848be414f359cb46e25b8",
+    "apps/web/tests-unit/dialog-content-inset.test.ts": "9bfa110a852eb81c03d30eaf4afb79390c721d6b641315b291082f54ad0dfbdb"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "exit_code": 0,
+  "result": {
+    "status": "passed",
+    "checks": [
+      {
+        "owner": "eslint",
+        "minimatch": "3.1.5",
+        "braceExpansion": "2.1.7"
+      },
+      {
+        "owner": "@eslint/config-array",
+        "minimatch": "3.1.5",
+        "braceExpansion": "2.1.7"
+      },
+      {
+        "owner": "@eslint/eslintrc",
+        "minimatch": "3.1.5",
+        "braceExpansion": "2.1.7"
+      },
+      {
+        "owner": "eslint-config-next",
+        "minimatch": "3.1.5",
+        "braceExpansion": "2.1.7"
+      }
+    ]
+  }
+}

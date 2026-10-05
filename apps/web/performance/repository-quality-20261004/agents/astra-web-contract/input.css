@@ -1,0 +1,8 @@
+@import "tailwindcss" source(none);
+@source "../../../components/ui/dialog.tsx";
+@source "../../../components/ui/alert-dialog.tsx";
+@source "../../../components/ui/button.tsx";
+@source "./entry.jsx";
+@theme { --color-background: #ffffff; --color-foreground: #111827; }
+
+@source inline("w-full");

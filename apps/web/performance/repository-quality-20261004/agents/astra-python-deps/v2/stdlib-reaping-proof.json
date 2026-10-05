@@ -1,0 +1,7 @@
+{
+  "python": "3.12.13",
+  "internal_poll_waits_specific_pid": true,
+  "poll_calls_internal_poll": true,
+  "internal_poll_sha256": "16193e372b7d358776e85af35d58ca17045ea87e04e93638e60927978ae7080e",
+  "poll_sha256": "2f9c25acf0a5aac316600af15708528beb9f68095550ff2b0b11849bca963b62"
+}

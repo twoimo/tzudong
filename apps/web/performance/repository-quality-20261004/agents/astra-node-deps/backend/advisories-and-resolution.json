@@ -1,0 +1,325 @@
+{
+  "observedAt": "2026-10-04T10:44:49.566907+00:00",
+  "officialAdvisories": [
+    {
+      "ghsa_id": "GHSA-6j4f-fj2g-mc7p",
+      "cve_id": "CVE-2026-102276",
+      "html_url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+      "summary": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+      "severity": "high",
+      "published_at": "2026-09-29T23:44:58Z",
+      "updated_at": "2026-09-29T23:44:59Z",
+      "vulnerabilities": [
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 4.0.0, < 5.0.10",
+          "first_patched_version": "5.0.10",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 3.0.0, < 3.0.7",
+          "first_patched_version": "3.0.7",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 2.0.0, < 2.1.5",
+          "first_patched_version": "2.1.5",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": "< 1.1.19",
+          "first_patched_version": "1.1.19",
+          "vulnerable_functions": []
+        }
+      ]
+    },
+    {
+      "ghsa_id": "GHSA-q2hr-2g5m-vwhr",
+      "cve_id": "CVE-2026-102277",
+      "html_url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+      "summary": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+      "severity": "medium",
+      "published_at": "2026-09-29T23:45:39Z",
+      "updated_at": "2026-09-29T23:45:39Z",
+      "vulnerabilities": [
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 4.0.0, < 5.0.12",
+          "first_patched_version": "5.0.12",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 3.0.0, < 3.0.9",
+          "first_patched_version": "3.0.9",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 2.0.0, < 2.1.7",
+          "first_patched_version": "2.1.7",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": "< 1.1.21",
+          "first_patched_version": "1.1.21",
+          "vulnerable_functions": []
+        }
+      ]
+    },
+    {
+      "ghsa_id": "GHSA-qhr7-859c-m2p7",
+      "cve_id": "CVE-2026-102278",
+      "html_url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+      "summary": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+      "severity": "high",
+      "published_at": "2026-09-29T23:45:17Z",
+      "updated_at": "2026-09-29T23:45:19Z",
+      "vulnerabilities": [
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 4.0.0, < 5.0.11",
+          "first_patched_version": "5.0.11",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 3.0.0, < 3.0.8",
+          "first_patched_version": "3.0.8",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": ">= 2.0.0, < 2.1.6",
+          "first_patched_version": "2.1.6",
+          "vulnerable_functions": []
+        },
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "brace-expansion"
+          },
+          "vulnerable_version_range": "< 1.1.20",
+          "first_patched_version": "1.1.20",
+          "vulnerable_functions": []
+        }
+      ]
+    }
+  ],
+  "ownership": [
+    {
+      "lockPath": "node_modules/brace-expansion",
+      "baseline": "1.1.18",
+      "resolved": "1.1.21",
+      "paths": [
+        [
+          "node_modules/puppeteer-extra-plugin-stealth",
+          "node_modules/puppeteer-extra-plugin-user-preferences",
+          "node_modules/puppeteer-extra-plugin-user-data-dir",
+          "node_modules/rimraf",
+          "node_modules/glob",
+          "node_modules/minimatch",
+          "node_modules/brace-expansion"
+        ]
+      ],
+      "fix": "range-compatible patch update; no overrides or direct dependency added"
+    },
+    {
+      "lockPath": "node_modules/gaxios/node_modules/brace-expansion",
+      "baseline": "2.1.4",
+      "resolved": "2.1.7",
+      "paths": [
+        [
+          "node_modules/@google/genai",
+          "node_modules/google-auth-library",
+          "node_modules/gaxios",
+          "node_modules/gaxios/node_modules/rimraf",
+          "node_modules/gaxios/node_modules/glob",
+          "node_modules/gaxios/node_modules/minimatch",
+          "node_modules/gaxios/node_modules/brace-expansion"
+        ],
+        [
+          "node_modules/@google/genai",
+          "node_modules/google-auth-library",
+          "node_modules/gcp-metadata",
+          "node_modules/gaxios",
+          "node_modules/gaxios/node_modules/rimraf",
+          "node_modules/gaxios/node_modules/glob",
+          "node_modules/gaxios/node_modules/minimatch",
+          "node_modules/gaxios/node_modules/brace-expansion"
+        ]
+      ],
+      "fix": "range-compatible patch update; no overrides or direct dependency added"
+    }
+  ],
+  "allChangedPackages": [
+    {
+      "path": "",
+      "baselineVersion": "1.0.0",
+      "resolvedVersion": "1.0.0",
+      "changedFields": [
+        "dependencies"
+      ]
+    },
+    {
+      "path": "node_modules/@google/genai",
+      "baselineVersion": "2.18.0",
+      "resolvedVersion": "2.24.0",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@puppeteer/browsers",
+      "baselineVersion": "3.2.1",
+      "resolvedVersion": "3.2.3",
+      "changedFields": [
+        "dependencies",
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/brace-expansion",
+      "baselineVersion": "1.1.18",
+      "resolvedVersion": "1.1.21",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/devtools-protocol",
+      "baselineVersion": "0.0.1666840",
+      "resolvedVersion": "0.0.1687809",
+      "changedFields": [
+        "integrity",
+        "peer",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/dotenv",
+      "baselineVersion": "16.6.1",
+      "resolvedVersion": "18.0.3",
+      "changedFields": [
+        "bin",
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/gaxios/node_modules/brace-expansion",
+      "baselineVersion": "2.1.4",
+      "resolvedVersion": "2.1.7",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/js-yaml",
+      "baselineVersion": "4.3.2",
+      "resolvedVersion": "5.4.2",
+      "changedFields": [
+        "bin",
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/pg",
+      "baselineVersion": "8.20.0",
+      "resolvedVersion": "8.20.0",
+      "changedFields": [
+        "peer"
+      ]
+    },
+    {
+      "path": "node_modules/puppeteer",
+      "baselineVersion": "25.8.0",
+      "resolvedVersion": "25.12.0",
+      "changedFields": [
+        "dependencies",
+        "integrity",
+        "peer",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/puppeteer-core",
+      "baselineVersion": "25.8.0",
+      "resolvedVersion": "25.12.0",
+      "changedFields": [
+        "dependencies",
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/puppeteer-extra",
+      "baselineVersion": "3.3.6",
+      "resolvedVersion": "3.3.6",
+      "changedFields": [
+        "peer"
+      ]
+    },
+    {
+      "path": "node_modules/webdriver-bidi-protocol",
+      "baselineVersion": "0.4.2",
+      "resolvedVersion": "0.4.3",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    }
+  ]
+}

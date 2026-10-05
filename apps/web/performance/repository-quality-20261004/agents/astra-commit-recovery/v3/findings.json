@@ -1,0 +1,35 @@
+{
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "provider": "openai",
+  "source_set_sha256": "64152bb8891678b222942060408cd88431d36695230df6f8e388c595bdbabbb8",
+  "resolved": [
+    "v1 retry recapture deletes replacement draft",
+    "v2 valid replacement or own autosave prevents saved composer completion"
+  ],
+  "remaining": [
+    {
+      "id": "v2-P2-transient-capture-failure",
+      "priority": "P2",
+      "status": "previously reported; unchanged residual",
+      "title": "최초 snapshot 오류를 영구 false closure로 보존하지 마세요",
+      "file": "/Users/twoimo/.codex/worktrees/review-commit-recovery-20261004/tzudong/apps/web/lib/reviewDraftDB.ts",
+      "line_start": 422,
+      "line_end": 423,
+      "body": "최초 snapshot get의 일시 오류가 항상 false인 closure로 바뀌고 operation에 고정됩니다. 이후 insert 성공과 저장소 복구 후에도 동일 입력 submit/close는 이 closure만 호출하여 draft-cleanup으로 반환합니다. 오류 중 fail-closed false 자체가 아닌, 오류가 사라진 뒤에도 안전한 완료 경로가 없는 것이 잔여 P2입니다. 다른 row를 재캡처해 삭제하지 않고 capture 실패를 write 전 차단하거나 안전한 보존 완료 정책이 필요합니다.",
+      "observed": {
+        "snapshot_attempts": 1,
+        "inserts": 1,
+        "deletes": 0,
+        "success_callbacks": 0,
+        "close_callbacks": 0,
+        "draft_preserved": true
+      },
+      "evidence": [
+        "scratch/cleanup-retry.test.ts",
+        "extra-results.json",
+        "repro-output.txt"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-10-04T11:40:49.374447+00:00",
+  "checkout": "/Users/twoimo/.codex/worktrees/promotion-sync-20261004/tzudong",
+  "branch": "codex/historical-quality-20261004",
+  "integration_sha": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "pr2903_base": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+  "pr2903_head": "da096e04baf979ac35531172c7a1de95090aa649",
+  "pr2903_direct_parent": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+  "pr2903_merge_base": "67df460dee73f90b93eee203ebcbe7bd9976cb03",
+  "pr2903_changed_paths": [
+    "README.md"
+  ],
+  "worktree_status_before_readme_edits": [
+    " M .github/workflows/security-audit.yml"
+  ],
+  "model_evidence": {
+    "session_id": "01a106b4-6cb9-78b1-8e50-d3cb35f34934",
+    "source": "current session latest turn_context, selected fields only",
+    "configured_model": "gpt-6-astra",
+    "configured_effort": "xhigh",
+    "actual_serving_model_attestation": "unavailable; configured metadata is not provider attestation"
+  },
+  "remote_operations": "GitHub PR metadata and diff GET only; no remote writes"
+}

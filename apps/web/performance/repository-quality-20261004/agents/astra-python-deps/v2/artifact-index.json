@@ -1,0 +1,100 @@
+{
+  "version": 2,
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "cb78f7b1d4a416cd86e0f89a6686fc8ad8e962e4f9487416ddb12b6aa81bb2f7",
+      "bytes": 10012
+    },
+    {
+      "path": "baseline-original-three-tests.json",
+      "sha256": "ba9f67d791587ae403997e3e7ce5d1d2c42c320098878e87aabe5b68d3eda053",
+      "bytes": 1444
+    },
+    {
+      "path": "baseline-owned-os-observation.json",
+      "sha256": "f19a2509a9f3e8ff695c597d2f0d91ce9cf4f5cd68cc8196f96b5a6cb65d4481",
+      "bytes": 9128
+    },
+    {
+      "path": "baseline-owned-reproduction.json",
+      "sha256": "a66159cc7292fd0b68a700c687faf96c3942ecb836cfbb9f1fd66d9954757b6d",
+      "bytes": 8262
+    },
+    {
+      "path": "candidate-boundary-tests.json",
+      "sha256": "7af2befba36fd792142c7d334e3dad773b0c2ffc4d951c41a9398c7c6ef0d1c5",
+      "bytes": 814
+    },
+    {
+      "path": "candidate-final-boundary-tests.json",
+      "sha256": "c1d29498b083cb088da32291f46aea90070884a66f4185a263ce1aa128a1055e",
+      "bytes": 3771
+    },
+    {
+      "path": "candidate-owned-os-observation.json",
+      "sha256": "d354befaf319789abfb62b2d40679e40065f0e78d93366a5bdb45bebd13e19f5",
+      "bytes": 7717
+    },
+    {
+      "path": "cleanup-fix.patch",
+      "sha256": "33f012328b59ad2130fd9ce2ead6f15f26cbd30b776318d2550b6ab0376c1e08",
+      "bytes": 11782
+    },
+    {
+      "path": "final-sidecar-review.md",
+      "sha256": "ec429f7ed568b79a22fa6f0750045dce28dd48201ef4b4afe8702b2e378dcadc",
+      "bytes": 2646
+    },
+    {
+      "path": "final-source-state.json",
+      "sha256": "d99ab9b776aa863cb594321d4e15706f303e96e7c10f6c548a0f220afcbbdc35",
+      "bytes": 1168
+    },
+    {
+      "path": "native-execution.json",
+      "sha256": "1caf6203dee5bcbe8b570702c2ebacc6c93164a146a35c7e18f0eeae56c8880d",
+      "bytes": 2548
+    },
+    {
+      "path": "preserved-v1-and-start.json",
+      "sha256": "cdeaac0c0db1b33fe269828912addeef824d386990fd7ebd146c427d36a91872",
+      "bytes": 4245
+    },
+    {
+      "path": "reproduce_owned_groups.py",
+      "sha256": "ddf96dbf0b7723e0e23f4cd9407c5b52a0af80dbdd724a6ce6f25309dcf10462",
+      "bytes": 7017
+    },
+    {
+      "path": "run_boundary_tests.py",
+      "sha256": "530b3646c1de6397cd88c776d96b124ef3d8841cc2293648a17de5874bb5f5d4",
+      "bytes": 1986
+    },
+    {
+      "path": "sidecar-review.md",
+      "sha256": "9bf0517b43ca002203a3255a5aa5c6d142658ab801dae6462f32206b9cfda2e6",
+      "bytes": 10164
+    },
+    {
+      "path": "sources.md",
+      "sha256": "d11dc509d430dd562e48442e2b840c3495646965805609b7f0d27bc76cb8cb1f",
+      "bytes": 1380
+    },
+    {
+      "path": "stdlib-reaping-proof.json",
+      "sha256": "b4e676888a60529f55963b9f8b1aafcd6e7ae777c29379b44c6e8f7c830152c7",
+      "bytes": 285
+    },
+    {
+      "path": "structural-scope-check.json",
+      "sha256": "8d5dd263b084f327bc0d4751a416efe8679e9333ab6736d11eeb41aacce724d8",
+      "bytes": 1093
+    },
+    {
+      "path": "verification-summary.json",
+      "sha256": "bef283f875e4f59582704a90a593b48c041ee39beb00c2fbb1297a689818bcf2",
+      "bytes": 1615
+    }
+  ]
+}

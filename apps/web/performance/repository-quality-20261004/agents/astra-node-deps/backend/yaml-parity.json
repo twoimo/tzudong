@@ -1,0 +1,17 @@
+{
+  "baseline": "js-yaml 4.3.2",
+  "candidate": "js-yaml 5.4.2",
+  "equal": true,
+  "parsing": [
+    {
+      "path": "config/channels.yaml",
+      "jsonSha256": "91ddc0cac9b2316b87667760f9dc8e15a2c573416cd3d3b28f7b0dabb7c39e3e",
+      "channelCount": 2
+    },
+    {
+      "path": "config/channels-test.yaml",
+      "jsonSha256": "59ee6645fa4e9f14565a6c65199a47a644bb023fad49987418a0cc5dca1e10d5",
+      "channelCount": 2
+    }
+  ]
+}

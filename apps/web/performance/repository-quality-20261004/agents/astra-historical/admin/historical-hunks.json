@@ -1,0 +1,98 @@
+[
+  {
+    "pr": 2857,
+    "commit": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+    "path": "apps/web/lib/admin/console-module-state.ts",
+    "first_line": 105,
+    "last_line": 127,
+    "source_excerpt": "export function resolveAdminConsoleModuleState(\n  input: AdminConsoleModuleStateInput,\n): AdminConsoleModuleState {\n  if (input.isUnauthorized) {\n    return \"unauthorized\";\n  }\n  if (input.hasError) {\n    return \"error\";\n  }\n  if (input.isLoading) {\n    return \"loading\";\n  }\n  if (input.isEmpty) {\n    return \"empty\";\n  }\n  return \"ready\";\n}\n\nexport function getAdminConsoleModuleEmptyCopy(\n  menuId: AdminConsoleMenuId,\n): AdminConsoleModuleEmptyCopy {\n  return ADMIN_CONSOLE_MODULE_EMPTY_COPY[menuId];\n}"
+  },
+  {
+    "pr": 2857,
+    "commit": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+    "path": "apps/web/components/admin/console/AdminConsoleModuleGrid.tsx",
+    "first_line": 72,
+    "last_line": 93,
+    "source_excerpt": "            onCompositionStart={() => {\n              isComposingRef.current = true;\n            }}\n            onCompositionEnd={(event) => {\n              isComposingRef.current = false;\n              setCommittedQuery(event.currentTarget.value);\n            }}\n            onChange={(event) => {\n              setRawValue(event.target.value);\n              if (\n                !isComposingRef.current &&\n                !event.nativeEvent.isComposing\n              ) {\n                setCommittedQuery(event.target.value);\n              }\n            }}\n          />\n        </div>\n        <div className=\"min-w-0 sm:w-40\">\n          <Label\n            htmlFor={SECTION_FILTER_ID}\n            className=\"text-xs text-muted-foreground\""
+  },
+  {
+    "pr": 2857,
+    "commit": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+    "path": "apps/web/lib/admin/admin-theme-prelude.ts",
+    "first_line": 7,
+    "last_line": 24,
+    "source_excerpt": "export const ADMIN_THEME_PRELUDE_SOURCE = `(() => {\n  var key = \"tzudong-admin-theme\";\n  var theme = null;\n  try {\n    theme = window.localStorage.getItem(key);\n  } catch (error) {}\n  if (theme !== \"light\" && theme !== \"dark\" && theme !== \"system\") {\n    theme = \"system\";\n    try {\n      window.localStorage.setItem(key, theme);\n    } catch (error) {}\n  }\n  var resolved = theme === \"system\"\n    ? (window.matchMedia(\"(prefers-color-scheme: dark)\").matches ? \"dark\" : \"light\")\n    : theme;\n  document.documentElement.classList.toggle(\"dark\", resolved === \"dark\");\n})();\n`;"
+  },
+  {
+    "pr": 2857,
+    "commit": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+    "path": "apps/web/app/api/admin/users/route.ts",
+    "first_line": 78,
+    "last_line": 107,
+    "source_excerpt": "function buildManagedUser(user: User, metadata: AdminUserManagementMetadataRow | undefined) {\n  const userMetadata = (user.user_metadata ?? {}) as Record<string, unknown>;\n  const nickname = toStringValue(metadata?.nickname) || toStringValue(userMetadata.nickname) || '닉네임 없음';\n  const username = toStringValue(metadata?.username) || toStringValue(userMetadata.username) || 'unknown';\n  const isAdmin = metadata?.is_admin === true;\n  const isDisabled = metadata ? metadata.account_status !== 'active' || isDisabledUser(user) : true;\n  const emailMaskToken = buildAdminUserEmailMaskToken(user.email ?? '');\n\n  return {\n    id: user.id,\n    emailMaskToken,\n    username,\n    nickname,\n    avatarUrl: metadata?.avatar_url ?? null,\n    profileRole: metadata?.profile_role ?? (isAdmin ? 'admin' : 'user'),\n    isAdmin,\n    isDisabled,\n    bannedUntil: user.banned_until ?? null,\n    createdAt: user.created_at ?? null,\n    lastSignInAt: user.last_sign_in_at ?? null,\n    emailConfirmedAt: user.email_confirmed_at ?? null,\n    statusLabel: isDisabled ? '비활성' : '활성',\n    roleLabel: isAdmin ? '관리자' : '일반 사용자',\n    searchHaystack: [user.email ?? '', nickname, username, user.id].join(' ').toLowerCase(),\n  };\n}\n\nexport async function GET(request: NextRequest) {\n  try {\n    const auth = await requireAdmin();"
+  },
+  {
+    "pr": 2857,
+    "commit": "8d6b3671325e4a13f85f3e1ed6a297bd8f7a7446",
+    "path": ".kiro/specs/admin-console-sidebar-refactor/tasks.md",
+    "first_line": 320,
+    "last_line": 324,
+    "source_excerpt": "- [ ] 16. 최종 검증\n  - [ ] 16.1 세 검증 실행으로 실패 0·건너뜀 0 확인\n    - `apps/web`에서 `bun run test:unit`과 `npm run typecheck:parity`를, 저장소 루트/`apps/web`에서 `npx playwright test`를 실행하고 실패 0건·건너뜀 0건을 확인한다. 선택(`*`) 시험 작업과 작업 10.3을 완료하지 않으면 요구사항 10-9·21-10의 전체 통과 형태에 도달하지 못하므로, 전체 통과를 주장하기 전 그 작업들이 완료되어 있어야 한다. 이 실행은 호스팅 프로덕션 상태나 법적 준수를 증명하지 않는다.\n    - 실행 기록: 요구사항 21-10의 실패 0·건너뜀 0 형태는 도달하지 않았다. 최신 GitHub CI `33760102273`(`801658a1`) 6적색(Install, Ubuntu npm/Bun, Windows npm/Bun, Admin)은 전부 베이스와 동일 SHA인 `guardian.ts`(`{\"type\":\"exit\"}` TS1005), `bun install --frozen-lockfile`, `supabase-gen-types.mjs` 파싱이며 이 PR diff에 없다. Admin eslint는 통과했고 tsc만 `guardian.ts`에서 멈췄다. 로컬 재실행 `bun run test:unit` 1944 pass / 12 fail / 1 error / 0 skip. `npm run typecheck:parity` exit 1(native는 `guardian.ts`만). `npx playwright test`는 시험 시작 전 exit 1(`:3000` 점유). 16·16.1은 체크하지 않는다.\n    - _요구사항 21.10_"
+  },
+  {
+    "pr": 2908,
+    "commit": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+    "path": "apps/web/components/admin/AdminConsoleOverview.tsx",
+    "first_line": 3849,
+    "last_line": 3881,
+    "source_excerpt": "                data-admin-dashboard-top-content-stacks=\"semiotic\"\n              >\n                <SemioticStackedBarChart\n                  data={visibleRows.map((row, index) => ({\n                    category: metric.label, rank: String(index + 1), title: row.label,\n                    value: row[metric.key], percent: total > 0 ? row[metric.key] / total * 100 : 0,\n                    benchmark: row.viewBenchmark,\n                  }))}\n                  categoryAccessor=\"category\" valueAccessor=\"percent\" stackBy=\"rank\" colorBy=\"rank\"\n                  colorScheme={{ \"1\": \"#14b8a6\", \"2\": \"#4ec8ba\", \"3\": \"#80d8ce\", \"4\": \"#a1a1aa\", \"5\": \"#d4d4d8\" }}\n                  orientation=\"horizontal\" mode=\"sparkline\" valueExtent={[0, 100]}\n                  width={500} height={36} responsiveWidth responsiveHeight maxDevicePixelRatio={2}\n                  margin={0} barPadding={0} showLegend={false} showGrid={false} showCategoryTicks={false}\n                  accessibleTable={false} frameProps={{ accessibleTable: false, showAxes: false }} animate={false}\n                  tooltip={point => <AdminDashboardTooltipLinesPanel\n                    lines={metric.key === \"viewCount\" ? [String(point.title), `막대 비중: ${formatDashboardPercent(Number(point.percent))}`, `성과 기여: ${String(point.benchmark)}`]\n                      : [String(point.title), `${metric.label}: ${formatNumber(Number(point.value))}`, `막대 비중: ${formatDashboardPercent(Number(point.percent))}`, formatDashboardAverageComparison(Number(point.value), average)]}\n                    dataAttribute=\"top-content-share\"\n                  />}\n                />\n                <div className=\"absolute inset-0 flex\">\n                  {visibleRows.map((row, index) => {\n                    const percent = total > 0 ? row[metric.key] / total * 100 : 0;\n                    if (percent <= 0) return null;\n                    return <AdminDashboardInlineTooltip key={index} rankSegment={index + 1}\n                      label={`${row.label} ${metric.label} 비중`}\n                      lines={metric.key === \"viewCount\" ? [row.label, `막대 비중: ${formatDashboardPercent(percent)}`, `성과 기여: ${row.viewBenchmark}`]\n                        : [row.label, `${metric.label}: ${formatNumber(row[metric.key])}`, `막대 비중: ${formatDashboardPercent(percent)}`, formatDashboardAverageComparison(row[metric.key], average)]}\n                      className=\"flex min-w-0 items-center justify-center overflow-hidden text-[13px] font-black tabular-nums text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary\"\n                      style={{ width: `${percent}%` }}>{percent >= 8 ? `${percent.toFixed(0)}%` : \"\"}</AdminDashboardInlineTooltip>;\n                  })}\n                </div>\n              </div>"
+  },
+  {
+    "pr": 2908,
+    "commit": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+    "path": "apps/web/components/admin/DashboardDataTable.tsx",
+    "first_line": 23,
+    "last_line": 40,
+    "source_excerpt": "  const [page, setPage] = useState(0);\n  const scrollRef = useRef<HTMLDivElement>(null);\n  const pageCount = Math.max(1, Math.ceil(rows.length / DASHBOARD_TABLE_PAGE_SIZE));\n  const currentPage = Math.min(page, pageCount - 1);\n  const start = currentPage * DASHBOARD_TABLE_PAGE_SIZE;\n  const visibleRows = rows.slice(start, start + DASHBOARD_TABLE_PAGE_SIZE);\n\n  useEffect(() => { setPage(0); }, [rows]);\n  const selectPage = (next: number) => {\n    setPage(next);\n    scrollRef.current?.scrollTo({ top: 0 });\n  };\n\n  if (!rows.length) return <div className=\"flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-border/80 bg-background text-xs text-muted-foreground\" data-admin-dashboard-table-view=\"true\">{emptyText}</div>;\n\n  return (\n    <div className=\"flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-background\" data-admin-dashboard-table-view=\"true\" data-admin-dashboard-table-pagination=\"bounded\">\n      <div ref={scrollRef} className=\"min-h-0 flex-1 overflow-auto\">"
+  },
+  {
+    "pr": 2908,
+    "commit": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+    "path": "apps/web/lib/admin/dashboard-visualization-data.ts",
+    "first_line": 28,
+    "last_line": 57,
+    "source_excerpt": "export function buildDashboardMonthlyPerformance(videos: InsightTreemapVideoRow[], mode: DashboardMetricMode): DashboardMonthlyPerformance[] {\n  const months = new Map<string, { count: number; views: number; engagement: number }>();\n  const seen = new Set<string>();\n  for (const video of videos) {\n    if (seen.has(video.id)) continue;\n    seen.add(video.id);\n    const timestamp = video.publishedAt ? Date.parse(video.publishedAt) : NaN;\n    if (!Number.isFinite(timestamp)) continue;\n    const metrics = dashboardVideoMetrics(video, mode);\n    if (metrics.views === null || metrics.engagement === null) continue;\n    const month = new Date(timestamp).toISOString().slice(0, 7);\n    const bucket = months.get(month) ?? { count: 0, views: 0, engagement: 0 };\n    bucket.count += 1;\n    bucket.views += metrics.views;\n    bucket.engagement += metrics.engagement;\n    months.set(month, bucket);\n  }\n  return [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, bucket]) => ({\n    label: month.replace('-', '.'),\n    videoCount: bucket.count,\n    value: bucket.engagement / bucket.count,\n    secondaryValue: bucket.views / bucket.count,\n    totalViews: bucket.views,\n    totalEngagement: bucket.engagement,\n  }));\n}\n\nfunction median(values: number[]) {\n  if (!values.length) return null;\n  const sorted = [...values].sort((a, b) => a - b);"
+  },
+  {
+    "pr": 2908,
+    "commit": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+    "path": "apps/web/lib/admin/dashboard-visualization-data.ts",
+    "first_line": 63,
+    "last_line": 96,
+    "source_excerpt": "export function buildDashboardEvidence(videos: InsightTreemapVideoRow[], mode: DashboardMetricMode) {\n  const seen = new Set<string>();\n  const uniqueVideos = videos.filter(video => {\n    if (seen.has(video.id)) return false;\n    seen.add(video.id);\n    return true;\n  });\n  const rows = uniqueVideos.map(video => ({ video, ...dashboardVideoMetrics(video, mode) }))\n    .filter((row): row is typeof row & { views: number; engagement: number } => row.views !== null && row.engagement !== null);\n  const medianViews = median(rows.map(row => row.views));\n  const positiveRows = rows.filter(row => row.views > 0);\n  const totalPositiveViews = positiveRows.reduce((sum, row) => sum + row.views, 0);\n  const ranked = [...positiveRows].sort((a, b) => b.views - a.views);\n  const topCount = Math.min(5, ranked.length);\n  const topShare = totalPositiveViews > 0\n    ? ranked.slice(0, topCount).reduce((sum, row) => sum + row.views, 0) / totalPositiveViews * 100 : null;\n  // A tiny-view video cannot win solely because one reaction makes a large percentage.\n  const engagementCandidates = positiveRows.filter(row => row.views >= (medianViews ?? 0) && row.engagement >= 0);\n  const strongestEngagement = [...engagementCandidates].sort((a, b) => b.engagement / b.views - a.engagement / a.views)[0] ?? null;\n  const latestVideo = uniqueVideos.filter(video => video.publishedAt && Number.isFinite(Date.parse(video.publishedAt)))\n    .sort((a, b) => Date.parse(b.publishedAt!) - Date.parse(a.publishedAt!))[0] ?? null;\n  return {\n    count: rows.length,\n    medianViews,\n    meanViews: rows.length ? rows.reduce((sum, row) => sum + row.views, 0) / rows.length : null,\n    topShare,\n    topCount,\n    topVideo: ranked[0]?.video ?? null,\n    strongestEngagement,\n    engagementCandidateCount: engagementCandidates.length,\n    latestVideo,\n    negativeCount: rows.filter(row => row.views < 0 || row.engagement < 0).length,\n  };\n}"
+  },
+  {
+    "pr": 2908,
+    "commit": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+    "path": "apps/web/lib/admin/youtube-kpi-snapshots.ts",
+    "first_line": 23,
+    "last_line": 45,
+    "source_excerpt": "const COMPARISON_BUCKET_TOLERANCE_MS = 15 * MINUTE_MS;\n// Reserved nightly fixture, source LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:youtube-channel-snapshot-v1.\nconst LOCAL_FIXTURE_CHANNEL_ID = 'local-nightly-channel';\n// Production collector and the local API-v3 collector use these respective tags.\nconst CHANNEL_API_SOURCES = ['youtube-data-api', 'youtube-data-api-v3'];\n\nfunction getConfiguredChannelFilter() {\n  const channelId = process.env.YOUTUBE_CHANNEL_ID?.trim()\n    || process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID?.trim();\n  if (channelId) return { channelId, handlePattern: null };\n\n  const configuredHandle = process.env.YOUTUBE_CHANNEL_HANDLE?.trim()\n    || process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_HANDLE?.trim()\n    || '@tzuyang6145';\n  const handle = `@${configuredHandle.replace(/^@/, '').normalize('NFC').toLowerCase()}`;\n  if (!/^@[\\p{L}\\p{M}\\p{N}_.-]+$/u.test(handle)) return null;\n  // Escape LIKE metacharacters so configured handles remain exact identities.\n  return { channelId: null, handlePattern: handle.replace(/[\\\\%_]/g, '\\\\$&') };\n}\n\nconst snapshotPeriodToMilliseconds: Record<Exclude<InsightTreemapPeriod, 'ALL'>, number> = {\n  '30MIN': 30 * MINUTE_MS,\n  '1H': HOUR_MS,"
+  },
+  {
+    "pr": 2908,
+    "commit": "0bb61220b1d408a22f0cf81f1cc1e1d31148ada1",
+    "path": "apps/web/lib/admin/youtube-kpi-snapshots.ts",
+    "first_line": 319,
+    "last_line": 327,
+    "source_excerpt": "  const [rows, comparisonBucket] = await Promise.all([\n    fetchVideoSnapshotRows(latestBucket, period, options),\n    fetchComparisonBucket(latestBucket, period),\n  ]);\n  const previousMap = await fetchPreviousSnapshotMap(\n    comparisonBucket,\n    rows.map((row) => row.video_id),\n  );\n  const videos = enrichInsightTreemapVideosWithQuality("
+  },
+  {
+    "pr": 2908,
+    "commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "path": "apps/web/lib/seo.ts",
+    "first_line": 178,
+    "last_line": 185,
+    "source_excerpt": "        aggregateRating: {\n            '@type': 'AggregateRating',\n            ratingValue: '4.9',\n            reviewCount: '1250',\n            bestRating: '5',\n            worstRating: '1',\n        },\n    },"
+  }
+]

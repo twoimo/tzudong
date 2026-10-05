@@ -1,0 +1,17 @@
+{
+  "purpose": "V2 local contract quality evidence integrity; no performance acceptance",
+  "files": {
+    "REPORT.md": "a54c4cbc6b69b9966cae05139dfc12440677b2cc36f5af92ad6f3ad5383f71fc",
+    "dashboard-equivalence.json": "5a8bcced5105847c150a986d1e7797e65907cb7269295988c74472cb0aa98a6c",
+    "pr3031-reproduction.json": "80545f5eaa373ede44a84dc00da45b69b028c8400f1dcc195d8ee76a652d89d9",
+    "reproduce.mjs": "6af5abeb86a61a86e499ca97436216d5bf37346cc8f29fe44ea1be86cbcd5932",
+    "scope-and-preservation.json": "85206a41e2bc2f7944726360b5cf4b04053e71bbf95f99dab0a078b652ef7895",
+    "source-before-text.json": "7b80cec406843ce7df36de0128178b99cd0821d856c84dfa6721661f152c3d6f",
+    "source-before.json": "93718bef24c6094bdf92e2c54a23ee1d745b8a900bf4450e3e25ce04706444ec",
+    "source.diff": "c0f45cda0ce02261cece852d4f865d19bd386eb9982b7e8a2aadc2cfd4a04b78",
+    "v1-evidence-before.json": "a94a0de0e969a406d2345820eba43e43dc59b7e008a314b09a0fba41c7880411",
+    "v1-to-v2.diff": "c2bf3089c980ed80335551a0bc23b7c7c52ed08a2fc86e5dde28bfa3e0fffe20",
+    "validate.py": "be78b87219854c640cfe2f2f54f27f22c94421d354bb826406242485a0653d9a",
+    "validation.json": "f9b3dc56f35328105dad461b79a107b56bfa1539d57e5db978e7670f867ba349"
+  }
+}

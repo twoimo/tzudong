@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-10-05T00:28:34.394580+00:00",
+  "scope": "semantic follow-up of pattern matches without recording values",
+  "syntheticReservedDomainSourceLiterals": {
+    "count": 26,
+    "paths": [
+      "local_catalog_readback.sql",
+      "local-migrate.py",
+      "local-seed.sql"
+    ],
+    "meaning": "Pinned repository local-database fixtures under reserved test/invalid/example domains; no live user addresses or runtime rows. Preserve source hash for verifier reproduction."
+  },
+  "falseEmailPatterns": [
+    {
+      "path": "agents/astra-node-deps/source.patch",
+      "count": 2,
+      "meaning": "Dependency patch filename containing package-version notation"
+    },
+    {
+      "path": "agents/astra-python-deps/v2/cleanup-fix.patch",
+      "count": 1,
+      "meaning": "Python test decorator in a patch"
+    }
+  ],
+  "actualUserEmailValuesPersisted": false,
+  "jwtPrivateKeyDeviceAddressPatternHits": 0,
+  "CFAccountDisplayTextAndFullScreenshotsNotRetained": true,
+  "privacyScanLimit": "Pattern and targeted semantic audit, not a legal/privacy certification or exhaustive content guarantee"
+}

@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-04T10:50:25.632833+00:00",
+  "sourceCommit": "b12fc956de63e1b9d73ac812098107f5b3578903",
+  "pullRequest": 3114,
+  "changedPaths": [
+    ".github/workflows/nightly-local-regression.yml",
+    "apps/web/scripts/run-nightly-regression.mjs",
+    "apps/web/tests-unit/nightly-regression-workflow.test.ts"
+  ],
+  "baselineFailedRun": 37193997256,
+  "baselineInstallCode": "BUN_FROZEN_LOCK_OUTDATED",
+  "afterOwnFrozenBunInstallExit": 0,
+  "pairedRuntimeSourceTests": {
+    "passed": 30,
+    "failed": 0
+  },
+  "ledgerUnits": 100,
+  "additionalMigrationsOrFrozenArtifactsChanged": false,
+  "sourcePromotionPerformed": false
+}

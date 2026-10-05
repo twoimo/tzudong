@@ -1,0 +1,33 @@
+{
+  "name": "freshness-pr2902-current",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/pulls/2902",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "repo",
+        "x-ratelimit-remaining": "4865",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:37:49.745629+00:00",
+      "next_page": false
+    }
+  ],
+  "count": null,
+  "items": {
+    "base": {
+      "ref": "main",
+      "sha": "67df460dee73f90b93eee203ebcbe7bd9976cb03"
+    },
+    "head": {
+      "ref": "dependabot/npm_and_yarn/backend/npm_and_yarn-23572d5168",
+      "sha": "db118759bc403743d1c0f376fd5d3a8e2bad182b"
+    },
+    "merged": false,
+    "number": 2902,
+    "state": "open"
+  }
+}

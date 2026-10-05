@@ -1,0 +1,15 @@
+{
+  "exit_code": 1,
+  "command": "bun test tests-unit/nightly-regression-workflow.test.ts --test-name-pattern \"reconstructs local Docker nightly\"",
+  "failure_context": [
+    "1202 |     expect(failedDiagnosticsUploadBlock).not.toContain(\"local-receipt-v1.json\");",
+    "1203 |     expect(failedDiagnosticsUploadBlock).not.toContain(\"local-migration-summary.json\");",
+    "1204 |     expect(failedDiagnosticsUploadBlock).toContain(",
+    "1207 |     expect(packageLockSource).toContain('\"node_modules/supabase\": {\\n      \"version\": \"2.115.0\"');",
+    "error: expect(received).toContain(expected)",
+    "Expected to contain: \"\\\"node_modules/supabase\\\": {\\n      \\\"version\\\": \\\"2.115.0\\\"\"",
+    "      at <anonymous> (/Users/twoimo/.codex/worktrees/node-dependency-quality-20261004/tzudong/apps/web/tests-unit/nightly-regression-workflow.test.ts:1207:31)",
+    "(fail) nightly regression package and source contracts > reconstructs local Docker nightly and uploads only sanitized artifacts [8.53ms]",
+    " 272 expect() calls"
+  ]
+}

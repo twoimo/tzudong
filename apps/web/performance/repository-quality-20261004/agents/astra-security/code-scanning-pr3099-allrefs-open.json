@@ -1,0 +1,84 @@
+{
+  "name": "code-scanning-pr3099-allrefs-open",
+  "complete": true,
+  "pages": [
+    {
+      "endpoint": "repos/twoimo/tzudong/code-scanning/alerts?state=open&pr=3099&per_page=100",
+      "http_status": 200,
+      "headers": {
+        "x-oauth-scopes": "gist, read:org, repo, workflow",
+        "x-accepted-oauth-scopes": "admin:repo_hook, delete_repo, read:repo_hook, repo, repo:invite, repo:status, repo_deployment, security_events, write:repo_hook",
+        "x-ratelimit-remaining": "4909",
+        "x-github-api-version-selected": "2026-03-10"
+      },
+      "exit_code": 0,
+      "observed_at": "2026-10-04T08:43:58.049346+00:00",
+      "next_page": false
+    }
+  ],
+  "count": 2,
+  "items": [
+    {
+      "created_at": "2026-10-03T03:37:04Z",
+      "dismissed_reason": null,
+      "fixed_at": null,
+      "most_recent_instance": {
+        "analysis_key": "dynamic/github-code-scanning/codeql:analyze",
+        "category": "/language:javascript-typescript",
+        "commit_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+        "location": {
+          "end_column": 143,
+          "end_line": 214,
+          "path": "apps/web/scripts/preview-design-fixtures.mjs",
+          "start_column": 26,
+          "start_line": 213
+        },
+        "ref": "refs/pull/3099/head",
+        "state": "open"
+      },
+      "number": 79,
+      "rule": {
+        "id": "js/request-forgery",
+        "security_severity_level": "critical",
+        "severity": "error"
+      },
+      "state": "open",
+      "tool": {
+        "name": "CodeQL",
+        "version": "2.27.1"
+      },
+      "updated_at": "2026-10-03T03:37:04Z"
+    },
+    {
+      "created_at": "2026-10-03T03:36:47Z",
+      "dismissed_reason": null,
+      "fixed_at": null,
+      "most_recent_instance": {
+        "analysis_key": "dynamic/github-code-scanning/codeql:analyze",
+        "category": "/language:python",
+        "commit_sha": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+        "location": {
+          "end_column": 70,
+          "end_line": 359,
+          "path": "apps/web/scripts/codex-imagegen-provider-core.py",
+          "start_column": 45,
+          "start_line": 359
+        },
+        "ref": "refs/pull/3099/head",
+        "state": "open"
+      },
+      "number": 78,
+      "rule": {
+        "id": "py/weak-sensitive-data-hashing",
+        "security_severity_level": "high",
+        "severity": "warning"
+      },
+      "state": "open",
+      "tool": {
+        "name": "CodeQL",
+        "version": "2.27.1"
+      },
+      "updated_at": "2026-10-03T03:36:47Z"
+    }
+  ]
+}

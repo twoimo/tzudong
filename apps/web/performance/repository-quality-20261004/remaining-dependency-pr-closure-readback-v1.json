@@ -1,0 +1,36 @@
+[
+  {
+    "before": {
+      "headRefOid": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+      "number": 2902,
+      "state": "OPEN"
+    },
+    "closureExit": 0,
+    "after": {
+      "closedAt": "2026-10-04T21:24:46Z",
+      "headRefOid": "db118759bc403743d1c0f376fd5d3a8e2bad182b",
+      "number": 2902,
+      "state": "CLOSED"
+    },
+    "deliveredIntentReceipt": "remaining-dependency-pr-closure-intents-v1.json",
+    "sourceMain": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "branchDeleted": false
+  },
+  {
+    "before": {
+      "headRefOid": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+      "number": 2850,
+      "state": "OPEN"
+    },
+    "closureExit": 0,
+    "after": {
+      "closedAt": "2026-10-04T21:24:49Z",
+      "headRefOid": "ae2d394a470ec2a0ac582200235b30e695eeaaee",
+      "number": 2850,
+      "state": "CLOSED"
+    },
+    "deliveredIntentReceipt": "remaining-dependency-pr-closure-intents-v1.json",
+    "sourceMain": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+    "branchDeleted": false
+  }
+]

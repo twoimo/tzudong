@@ -1,0 +1,29 @@
+{
+  "verifiedAt": "2026-10-04T23:55:46.608751+00:00",
+  "ruleId": "2e05ace8286f414f89125c8eca336859",
+  "sameMatchingExpressionAndActiveRuleCount": true,
+  "activeRuleCount": 1,
+  "UIReopenedReadback": {
+    "cacheEligibility": "eligible",
+    "edgeMode": "override",
+    "edgeTTL": "1 year",
+    "browserMode": "override",
+    "browserTTL": "1 year"
+  },
+  "actualGETBeforeBrowserMaxAgeSeconds": 14400,
+  "actualGETAfterBrowserMaxAgeSeconds": 31536000,
+  "baselineEvidence": "cloudflare-font-get-baseline-v1.json",
+  "afterEvidence": "cloudflare-font-get-after-v1.json",
+  "afterGETCacheStatus": [
+    "HIT",
+    "HIT"
+  ],
+  "exactContentBytes": 11420784,
+  "beforeAndAfterContentSHAAllMatched": true,
+  "absoluteFileByteChange": 0,
+  "originPrivateAPIOrOtherObjectsRuleMatch": false,
+  "runtimeSpeedOrActualMonthlyCostSavingProven": false,
+  "whySpeedNotClaimed": "n2 requests within one driver each; before includes REVALIDATED/HIT and after HIT/HIT, cache states are different; no matched A/A or UI LCP retest",
+  "paidPlanOrNewPublicExposureAdded": false,
+  "rollbackPreview": "cloudflare-public-font-rule-change-preview-v1.json"
+}

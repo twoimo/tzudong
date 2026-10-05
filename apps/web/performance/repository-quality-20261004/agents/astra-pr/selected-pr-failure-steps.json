@@ -1,0 +1,75 @@
+{
+  "captured_at": "2026-10-04T08:36:38.494163+00:00",
+  "items": [
+    {
+      "pr": 3032,
+      "job": 107157525496,
+      "name": "Ubuntu npm",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/35853829171/job/107157525496",
+      "conclusion": "failure",
+      "failed_steps": [
+        {
+          "name": "Run npm run test:unit",
+          "number": 16,
+          "conclusion": "failure"
+        }
+      ]
+    },
+    {
+      "pr": 3066,
+      "job": 108693772681,
+      "name": "Install",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/36345518069/job/108693772681",
+      "conclusion": "failure",
+      "failed_steps": [
+        {
+          "name": "Authoritative npm clean install, Node production probes, and browser behavior",
+          "number": 7,
+          "conclusion": "failure"
+        }
+      ]
+    },
+    {
+      "pr": 3066,
+      "job": 108693772728,
+      "name": "Admin",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/36345518069/job/108693772728",
+      "conclusion": "failure",
+      "failed_steps": [
+        {
+          "name": "Run npx tsc --noEmit --pretty false",
+          "number": 10,
+          "conclusion": "failure"
+        }
+      ]
+    },
+    {
+      "pr": 3065,
+      "job": 108693546301,
+      "name": "Install",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/36345435037/job/108693546301",
+      "conclusion": "failure",
+      "failed_steps": [
+        {
+          "name": "Supplemental Bun clean install and Node production probes",
+          "number": 8,
+          "conclusion": "failure"
+        }
+      ]
+    },
+    {
+      "pr": 2903,
+      "job": 102333077631,
+      "name": "Promotion Path",
+      "html_url": "https://github.com/twoimo/tzudong/actions/runs/34309516501/job/102333077631",
+      "conclusion": "failure",
+      "failed_steps": [
+        {
+          "name": "Verify the event using protected policy code",
+          "number": 4,
+          "conclusion": "failure"
+        }
+      ]
+    }
+  ]
+}

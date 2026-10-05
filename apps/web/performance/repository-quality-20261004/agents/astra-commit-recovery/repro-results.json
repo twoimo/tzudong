@@ -1,0 +1,22 @@
+[
+  {
+    "case": "retry-newer-draft",
+    "events": [
+      "snapshot",
+      "insert-known-success",
+      "new-composer-autosave",
+      "compare",
+      "retry-same-mounted-submitted-inputs",
+      "snapshot",
+      "compare",
+      "delete"
+    ],
+    "inserts": 1,
+    "uploads": 2,
+    "deletes": 1,
+    "newerDraftSurvives": false,
+    "recoveryStates": [
+      "draft-cleanup"
+    ]
+  }
+]

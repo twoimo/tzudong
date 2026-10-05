@@ -1,0 +1,120 @@
+{
+  "buildId": "GEWs1x0XmGXgvn1-BJd6D",
+  "scope": "actual SDK with synthetic735; owned viewport changes in one browser, no physical orientation or performance claim",
+  "fieldAdmitted": 0,
+  "cases": [
+    {
+      "name": "portrait",
+      "width": 390,
+      "height": 844,
+      "mobile": true,
+      "state": {
+        "markers": 735,
+        "paddedExpected": 464,
+        "missingPadded": 0,
+        "duplicates": 0,
+        "maskedInside": 0,
+        "unmaskedOutside": 0,
+        "totalMasked": 271,
+        "mapCreates": 1,
+        "overflow": 0
+      },
+      "passed": true
+    },
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900,
+      "mobile": false,
+      "state": {
+        "markers": 735,
+        "paddedExpected": 571,
+        "missingPadded": 0,
+        "duplicates": 0,
+        "maskedInside": 0,
+        "unmaskedOutside": 164,
+        "totalMasked": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      },
+      "passed": true
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "height": 1024,
+      "mobile": true,
+      "state": {
+        "markers": 735,
+        "paddedExpected": 645,
+        "missingPadded": 0,
+        "duplicates": 0,
+        "maskedInside": 0,
+        "unmaskedOutside": 0,
+        "totalMasked": 90,
+        "mapCreates": 1,
+        "overflow": 0
+      },
+      "passed": true
+    },
+    {
+      "name": "landscape",
+      "width": 1024,
+      "height": 768,
+      "mobile": true,
+      "state": {
+        "markers": 735,
+        "paddedExpected": 478,
+        "missingPadded": 0,
+        "duplicates": 0,
+        "maskedInside": 0,
+        "unmaskedOutside": 0,
+        "totalMasked": 257,
+        "mapCreates": 1,
+        "overflow": 0
+      },
+      "passed": true
+    },
+    {
+      "name": "desktop-return",
+      "width": 1440,
+      "height": 900,
+      "mobile": false,
+      "state": {
+        "markers": 735,
+        "paddedExpected": 571,
+        "missingPadded": 0,
+        "duplicates": 0,
+        "maskedInside": 0,
+        "unmaskedOutside": 164,
+        "totalMasked": 0,
+        "mapCreates": 1,
+        "overflow": 0
+      },
+      "passed": true
+    },
+    {
+      "name": "portrait-return",
+      "width": 390,
+      "height": 844,
+      "mobile": true,
+      "state": {
+        "markers": 735,
+        "paddedExpected": 464,
+        "missingPadded": 0,
+        "duplicates": 0,
+        "maskedInside": 0,
+        "unmaskedOutside": 0,
+        "totalMasked": 271,
+        "mapCreates": 1,
+        "overflow": 0
+      },
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 3
+  }
+}

@@ -1,0 +1,290 @@
+[
+  {
+    "path": "apps/web/performance/admin-console-20260908/README.md",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "def8c4cdfe850852de6021152e904b09fbb56ddf",
+    "sha256": "55e760108444d72aa5701c0b12fe036d37360c64782b76d025582d8eb738049f",
+    "bytes": 2207,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/artifact-map.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "4e1186f62f733b583965764f725bc4f3623552aa",
+    "sha256": "12c2ef7b0d490fba30805b4f22a5f1398db084f164c0aae3317b48b9fdc74cdc",
+    "bytes": 1188,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-after/AdminConsoleOverview.tsx.txt",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "d2f05a654f594ea61a5ffce8a4fa7837c900eb8d",
+    "sha256": "cb1e78b245d2a7e3580af298973a593666101d646e02cb95eea956d201d8c062",
+    "bytes": 388286,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-after/DashboardDataTable.tsx.txt",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "70102e2e00196b5252d6b016f2219c09bc2193df",
+    "sha256": "abaccae59749095a33891e842cd2ee82e0486d215b02be6e241d074d64dbb0da",
+    "bytes": 3625,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-after/dashboard-visualization-data.ts.txt",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "382e7db4dd1318d74adc9cd470d13de13ffa35b0",
+    "sha256": "cc65a85a745bd98e0cc0594038f3e87d7483115394a07fe862085557d7820ccc",
+    "bytes": 4638,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/frozen-before/AdminConsoleOverview.tsx.txt",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "ccb6fd9bcadac6ef1cf0013116d377173cd3c5e6",
+    "sha256": "a47692af421f551162ff16b0c09ecbc4c243f88ee6d817427f7cac82604718ad",
+    "bytes": 392767,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/kpi-behavior-readback.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "5f32e698092d1dac6df94648174a59ba11532e0a",
+    "sha256": "ed0a4ff619d5bb57fde4f4be0d412d2e956658028f59cb59dfa98a7360921c8d",
+    "bytes": 1906,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/layout-readback.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "1c6048fdfd491548e0a4999d3f7a9982c9455d95",
+    "sha256": "b781071e076594bb852664970ff4c790e8bd99d266838a8b2045037882743621",
+    "bytes": 15069,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/measure-table-render.tsx",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "25f6a30ed74e519e1827c8fd5bbfebd4c3d822de",
+    "sha256": "17d945d75e592c8872aa76c9244dfacb171e69bca64f1d6ea274b1cd90254fc1",
+    "bytes": 4870,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/table-render-raw.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "9bcfd03a9916099fcae4a29333f4747498bc69b8",
+    "sha256": "735ec9db1bf24682be233ce0467642244d4eec32c2bd17b87953d35402a98c63",
+    "bytes": 9145,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/table-render-scored.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "dd00d4ac598552e444a39e8750a3a79681b0a5ec",
+    "sha256": "125b4d054f4303efd72a430b869648e1bd35b586c63d5fbc721e33ac2402dd76",
+    "bytes": 840,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/admin-console-20260908/verification.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "a34ed145b0ed0286304d6ca084d0426563379643",
+    "sha256": "8d25cdfb6ee360195a8537dea3b6e6687e8a9ab2d95355c8f492b01593233d06",
+    "bytes": 747,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/address-exploratory.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "26c417916f2600a374aaa792d9b779cd0f06ec1e",
+    "sha256": "b079221d5063eafb6e5c1d24c3d20583a84cccea0fefa2b3f51673e2a3d5c93d",
+    "bytes": 1764,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/count-cache-artifact-map.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "f159976b4d0f6403e7d90708fb88e90480c0d28e",
+    "sha256": "f5890da675b8988dc9ca7b25ccbe3c62468db5c7e5b07c52b69e222a2cac9ebf",
+    "bytes": 262,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/count-cache-functional-readback.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "3a2432e0fa3417c5658e278723391e922ffc7ce0",
+    "sha256": "860756733771cd014fded725a684f58838717e3abb7f95ee760ff4ad1300c434",
+    "bytes": 1804,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/home-script-inventory.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "3b6c1b0ebba55d338080538532aa1f53e82ebc25",
+    "sha256": "a11ed425d1bba43c493be0f72d48e19d358b8b5a110c155e986d7153b563e2ce",
+    "bytes": 5037,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/local-replay-acl-diagnosis.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "6e54bab294ab3cd1df6b35ecc614c5ddb15d9a3e",
+    "sha256": "397d5ed9926f7f407e5cc1ca33fa8458ab3283e0b53e8781ca911f4425666d41",
+    "bytes": 2338,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/local-runtime-admission.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "26442e7bf8c514037b2631e7b1186b571cef2c22",
+    "sha256": "afc77aa06846e6fba5c5868efeacde14a4be218c22c8f022ce80f52eec9bcdc1",
+    "bytes": 1848,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/local-runtime-functional-verification.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "e0b6d8d7ec2548387fe280260e843e9a6ddc5c5f",
+    "sha256": "0272b60e7e6e09f44bd79f058a5d58e095673e5b9f5bedd2164b9b2b28c3bb12",
+    "bytes": 3773,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/naver-browser-preparation.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "75396a9f0a9cc9099ff222971cb2d0d1df1a4515",
+    "sha256": "d037703fad860f789be9140d5ccfa20c207c14c01ee4db9cbf0feaa0ba220b9b",
+    "bytes": 1213,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/naver-query-scheduling.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "173a51c582474340f59057c06a76c1cb810d21bd",
+    "sha256": "476d93345cc48dbdb96f7b3258bd0f9d3f77629b5c98ab3a6f4cd2925fbe1c6f",
+    "bytes": 1746,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/replay-command-verification.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "9775faf6e1cfa134ec7ca8ee217b795f404b87f1",
+    "sha256": "cc29be05c43842dbfb9b4ccf7b4863c4a50307dc1127e5ea56c8b8d16ba2b80d",
+    "bytes": 693,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/replay-v2-integration.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "cac77803afd3568cd45e24a23cd34e2de68a56a9",
+    "sha256": "7c7de947dff5951ccf6b0c477b61d51d922d800c8df6fe85a235f85bdf09903b",
+    "bytes": 4297,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/merge-scaling-20260908/verification.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "4f2fd1b0f2d9e037048688d48bc716d39e73d9dd",
+    "sha256": "9f28ad0eebdb67fefe349a3a35ab372c281937ba2c3b62a079c268c62365e404",
+    "bytes": 1646,
+    "authority_exists": true
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/README.md",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "adad46f209d9e343d2be21d61c2db081e11e9d48",
+    "sha256": "f4ef55e84fe4c8a687d4ba2496aca7bcd1fa831a8ed9db5f878e9121a0ad6f47",
+    "bytes": 3447,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/artifact-map.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "effb10a7d62743fc60633031511b49cdfb2c5de0",
+    "sha256": "aefaa5b4192f1e31f41283d6e1d68d9d2c90f4f64cd7b19ff56bef737962dec2",
+    "bytes": 1055,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/baseline.source",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "56856cfb7a6f6085f2f7c620e21f7c024dd8ddf2",
+    "sha256": "a641d31702daff0370258dbee5bc5f0b2f55e835fe75588a2f8ee028c01eb1c9",
+    "bytes": 21037,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/candidate.source",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "76e0a62e6aa662e8e34b85b2197483d2e660c290",
+    "sha256": "aaf0a0390db14e86212aabf0eb16d599128a1fb254a1491d2022423a2fbaf764",
+    "bytes": 21126,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/freeze.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "833356c1da1d826679afd10fe5351d1fa51b545e",
+    "sha256": "7d6e53b1cff98e25485ca023d6d700ce780f0f970f7774056cc12851eaf0db65",
+    "bytes": 583,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/measure.mjs",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "82d55775d03201955f7596b40605a8520310a6b6",
+    "sha256": "b89b1045430ae349d3a5d61c249576568a8314885115c91808c7b2f020c94141",
+    "bytes": 6966,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/raw.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "9884f1b4b3ad6ca802455256561042cc35ead775",
+    "sha256": "6ed44cf0de0f96e0ad9d50e513a4126dd36a4b957f5c1598b36a02615629c7d1",
+    "bytes": 346374,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/runtime-tests.source",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "2b27f6cce7f00b368a35a7107fc819e0b16bcf7d",
+    "sha256": "041c22d365591cc3d9f129a7792fed12e224be88ffc4a5d75ade043df05f81f4",
+    "bytes": 14132,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/score.mjs",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "d3d208222a9fd679b9b17eb93753082e6535b146",
+    "sha256": "338a4297d14b68311dddc975d3c3f82fd0105510661232de2d5f42c6b57afb65",
+    "bytes": 4228,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/scored.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "ff0aebf45d6ec32455268b300fd964dff72443da",
+    "sha256": "71efc21984ff3a21df8f40dfe21ddca3ea532c967cbb3df0c5d6f28e233fcfad",
+    "bytes": 3657,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/treemap.source",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "be3ecef63843738dfafa0796de40d4335fff774f",
+    "sha256": "21cc004f998a2d4bd3846ea22b9a07097c66f0c36eb29a86bbbc2d0a4aec0d21",
+    "bytes": 53731,
+    "authority_exists": false
+  },
+  {
+    "path": "apps/web/performance/youtube-kpi-read-scheduling-20260908/verification.json",
+    "historical_commit": "adea93042c0bd27f2015ba3200639be9c4b9fa11",
+    "git_blob": "a682ca141a47cdd2cb25011dea0205ad8758872e",
+    "sha256": "3a5ebd53e07b99991fc86a7f31f52fabc853a006b6b849a13f4af0c4eb61e2aa",
+    "bytes": 663,
+    "authority_exists": false
+  }
+]

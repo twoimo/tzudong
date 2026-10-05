@@ -1,0 +1,44 @@
+{
+  "observed_at": "2026-10-04T11:40:18.033317+00:00",
+  "head": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "changed_steps": [
+    {
+      "step": "Install Helm for actual local descriptor rendering",
+      "before": "Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4",
+      "after": "Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310",
+      "inputs": {
+        "version": "v4.2.4"
+      }
+    },
+    {
+      "step": "Install OpenTofu for provider-free local descriptor plans",
+      "before": "opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f",
+      "after": "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4",
+      "inputs": {
+        "tofu_version": "1.12.6",
+        "tofu_wrapper": false
+      }
+    }
+  ],
+  "yaml_parse": "passed",
+  "all_other_workflow_fields_unchanged": true,
+  "upstream_tag_and_input_schema_validation": "passed",
+  "workflow_source_tests": {
+    "command": "bun test apps/web/tests-unit/security-workflow-source.test.ts",
+    "runtime": "bun 1.4.0 (34cbb9a40)",
+    "pass": 3,
+    "fail": 0,
+    "assertions": 128,
+    "exit_code": 0
+  },
+  "patch_sha256": "46bd90c053d33b8af2f9794cdc0bb160f31906701b82949416aaef338c6bde49",
+  "hosted_execution": "not run; parent owns remote writes and CI dispatch",
+  "targeted_supply_chain_tests": {
+    "command": "python3 -m unittest backend.utils.tests.test_supply_chain_contract.SupplyChainContractTests.test_security_audit_covers_only_exact_python_requirements backend.utils.tests.test_supply_chain_contract.SupplyChainContractTests.test_nullable_cas_migration_alone_triggers_its_real_postgres_suite -v",
+    "pass": 2,
+    "fail": 0,
+    "exit_code": 0,
+    "PyYAML": "6.0.3"
+  },
+  "actionlint": "not installed; parsed YAML and exact semantic delta validated using PyYAML"
+}

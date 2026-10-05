@@ -1,0 +1,24 @@
+{
+  "pr": 2902,
+  "web_manifest_patch": "@@ -104,8 +104,8 @@\n     \"idb\": \"^8.0.3\",\n     \"input-otp\": \"^1.5.0\",\n     \"lucide-react\": \"^1.33.0\",\n-    \"maplibre-gl\": \"^5.24.0\",\n-    \"next\": \"16.2.12\",\n+    \"maplibre-gl\": \"^6.4.1\",\n+    \"next\": \"16.3.4\",\n     \"openai\": \"^7.4.0\",\n     \"react\": \"^19.2.8\",\n     \"react-day-picker\": \"^10.0.1\",\n@@ -116,7 +116,7 @@\n     \"react-resizable-panels\": \"^4.12.3\",\n     \"recharts\": \"^3.10.1\",\n     \"remark-gfm\": \"^4.0.1\",\n-    \"sharp\": \"^0.35.3\",\n+    \"sharp\": \"^0.35.4\",\n     \"supercluster\": \"^9.0.0\",\n     \"swr\": \"^2.5.1\",\n     \"tailwind-merge\": \"^3.6.0\",",
+  "baseline": [
+    {
+      "package": "maplibre-gl",
+      "pr_target": "^6.4.1",
+      "baseline_manifest": "^6.10.0",
+      "baseline_resolved": "6.10.0"
+    },
+    {
+      "package": "next",
+      "pr_target": "16.3.4",
+      "baseline_manifest": "16.3.5",
+      "baseline_resolved": "16.3.5"
+    },
+    {
+      "package": "sharp",
+      "pr_target": "^0.35.4",
+      "baseline_manifest": "^0.35.4",
+      "baseline_resolved": "0.35.4"
+    }
+  ]
+}

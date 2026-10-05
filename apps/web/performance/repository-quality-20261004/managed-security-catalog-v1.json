@@ -1,0 +1,642 @@
+{
+  "capturedAt": "2026-10-04T12:54:22.401Z",
+  "groups": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 27,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+      "findings": [
+        {
+          "schema": "pipeline_control",
+          "name": "admin_evaluation_catalog_revision",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "pipeline_control",
+          "name": "admin_evaluation_read_index",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "pipeline_control",
+          "name": "restaurant_review_items",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "pipeline_control",
+          "name": "restaurant_review_policy",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "pipeline_control",
+          "name": "restaurant_review_policy_events",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "pipeline_control",
+          "name": "restaurant_review_runs",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_restaurant_map_overlay_audit_events",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_restaurant_map_overlay_proposal_review_events",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_restaurant_map_overlay_proposals",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_restaurant_map_overlays",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_storyboard_production_assets",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_storyboard_production_events",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_storyboard_production_jobs",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_storyboard_production_projects",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_storyboard_production_restores",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_storyboard_production_revisions",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_storyboard_production_workers",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_trend_job_requests",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_trend_signal_observations",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "admin_trend_signal_runs",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "app_web_vitals_histogram",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "app_web_vitals_ingest_budget",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "release_auth_revocation_receipts",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "restaurant_admin_destructive_audit_events",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "restaurants_duplicate",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "youtube_channel_kpi_snapshots",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "youtube_video_kpi_snapshots",
+          "type": "table",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        }
+      ]
+    },
+    {
+      "name": "security_definer_view",
+      "level": "ERROR",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0010_security_definer_view",
+      "findings": [
+        {
+          "schema": "public",
+          "name": "privacy_consent_state",
+          "type": "view",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        }
+      ]
+    },
+    {
+      "name": "extension_in_public",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public",
+      "findings": [
+        {
+          "schema": "public",
+          "name": "vector",
+          "type": "extension",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        }
+      ]
+    },
+    {
+      "name": "anon_security_definer_function_executable",
+      "level": "WARN",
+      "count": 2,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable",
+      "findings": [
+        {
+          "schema": "public",
+          "name": "read_public_profile_summaries",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "read_release_auth_revocation_by_operation",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        }
+      ]
+    },
+    {
+      "name": "authenticated_security_definer_function_executable",
+      "level": "WARN",
+      "count": 19,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable",
+      "findings": [
+        {
+          "schema": "public",
+          "name": "approve_edit_submission_item",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "approve_submission_item",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "begin_account_deletion_apply_with_reauth",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "create_user_notification",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "delete_notification",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "get_current_auth_session_id",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "get_current_privacy_eligibility",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "get_current_privacy_policy_version",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "get_ocr_daily_quota_status",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "is_current_auth_session_active",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "issue_account_deletion_reauth_proof",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "mark_all_notifications_read",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "mark_notification_read",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "merge_restaurant_records_for_admin_review",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "read_current_account_deletion_status",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "read_public_profile_summaries",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "read_release_auth_revocation_by_operation",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "reserve_ocr_daily_quota",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        },
+        {
+          "schema": "public",
+          "name": "submit_privacy_consent",
+          "observedAt": "2026-10-04T12:51:35.845Z"
+        }
+      ]
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+      "findings": [
+        {
+          "type": "auth"
+        }
+      ]
+    }
+  ],
+  "totalGroupedFindings": 51,
+  "groupCount": 6,
+  "uniqueFindingCountNotAsserted": true,
+  "acl": [
+    {
+      "schema": "pipeline_control",
+      "name": "admin_evaluation_catalog_revision",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": false
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "admin_evaluation_read_index",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": false
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_items",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_policy",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_policy_events",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_runs",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlay_audit_events",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlay_proposal_review_events",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlay_proposals",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlays",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_production_assets",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_production_events",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_production_jobs",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_production_projects",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_production_restores",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_production_revisions",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_production_workers",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_trend_job_requests",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_trend_signal_observations",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "admin_trend_signal_runs",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "app_web_vitals_histogram",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "app_web_vitals_ingest_budget",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "release_auth_revocation_receipts",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": false,
+      "service_write": false
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_admin_destructive_audit_events",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "restaurants_duplicate",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "youtube_channel_kpi_snapshots",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    },
+    {
+      "schema": "public",
+      "name": "youtube_video_kpi_snapshots",
+      "rls": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_select": false,
+      "auth_select": false,
+      "service_select": true,
+      "service_write": true
+    }
+  ],
+  "readOnly": true,
+  "hostedMutations": 0,
+  "parserCorrection": "Read result.lints from nested MCP JSON. The earlier root.lints lookup was invalid; 0 findings was not a valid result. Row envelope parser now matches line-delimited untrusted-data markers.",
+  "interpretation": "27 no-policy tables have RLS and neither anon nor authenticated SELECT grants. Server-only denial is preserved; no blanket public policy or grant is added.",
+  "remaining": "SECURITY DEFINER callers and view guarded contracts, vector schema placement, password protection and managed Postgres maintenance need separate decisions; advisor count alone does not demonstrate a vulnerability or its resolution."
+}

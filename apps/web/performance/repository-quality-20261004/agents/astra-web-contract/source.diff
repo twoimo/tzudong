@@ -1,0 +1,1219 @@
+diff --git a/apps/web/app/api/dashboard/restaurants/route.ts b/apps/web/app/api/dashboard/restaurants/route.ts
+index dd1f77af..28de183c 100644
+--- a/apps/web/app/api/dashboard/restaurants/route.ts
++++ b/apps/web/app/api/dashboard/restaurants/route.ts
+@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
+         });
+ 
+         return NextResponse.json(data);
+-    } catch (error) {
+-        console.error('[dashboard/restaurants] failed:');
++    } catch {
++        console.error('DASHBOARD_RESTAURANTS_FAILED');
+         return NextResponse.json(
+             { error: 'Failed to build dashboard restaurants.' },
+             { status: 500 },
+diff --git a/apps/web/app/api/dashboard/summary/route.ts b/apps/web/app/api/dashboard/summary/route.ts
+index c5357245..719a56c0 100644
+--- a/apps/web/app/api/dashboard/summary/route.ts
++++ b/apps/web/app/api/dashboard/summary/route.ts
+@@ -21,8 +21,8 @@ export async function GET() {
+                     : {}),
+             },
+         });
+-    } catch (error) {
+-        console.error('[dashboard/summary] failed:');
++    } catch {
++        console.error('DASHBOARD_SUMMARY_FAILED');
+         return NextResponse.json(
+             { error: 'Failed to build dashboard summary.' },
+             { status: 500 },
+diff --git a/apps/web/app/api/dashboard/video/[videoId]/route.ts b/apps/web/app/api/dashboard/video/[videoId]/route.ts
+index 87e385dc..44ca2a9f 100644
+--- a/apps/web/app/api/dashboard/video/[videoId]/route.ts
++++ b/apps/web/app/api/dashboard/video/[videoId]/route.ts
+@@ -1,4 +1,5 @@
+ import { NextResponse } from 'next/server';
++import { classifyDashboardVideoId } from '@/lib/dashboard/helpers';
+ import { getDashboardVideoDetail } from '@/lib/dashboard/summary';
+ 
+ export const runtime = 'nodejs';
+@@ -12,15 +13,23 @@ type Context = {
+ export async function GET(_request: Request, context: Context) {
+     try {
+         const { videoId } = await context.params;
+-        const safeVideoId = videoId?.trim();
++        const classified = classifyDashboardVideoId(videoId);
+ 
+-        if (!safeVideoId) {
++        if (classified.status === 'required') {
+             return NextResponse.json(
+                 { error: 'videoId is required.' },
+                 { status: 400 },
+             );
+         }
+ 
++        if (classified.status === 'invalid') {
++            return NextResponse.json(
++                { error: 'Video not found.' },
++                { status: 404 },
++            );
++        }
++
++        const safeVideoId = classified.videoId;
+         const data = await getDashboardVideoDetail(safeVideoId);
+         if (!data) {
+             return NextResponse.json(
+@@ -30,8 +39,8 @@ export async function GET(_request: Request, context: Context) {
+         }
+ 
+         return NextResponse.json(data);
+-    } catch (error) {
+-        console.error('[dashboard/video] failed:');
++    } catch {
++        console.error('DASHBOARD_VIDEO_FAILED');
+         return NextResponse.json(
+             { error: 'Failed to build dashboard video detail.' },
+             { status: 500 },
+diff --git a/apps/web/components/ui/alert-dialog.tsx b/apps/web/components/ui/alert-dialog.tsx
+index d44598fb..394aa500 100644
+--- a/apps/web/components/ui/alert-dialog.tsx
++++ b/apps/web/components/ui/alert-dialog.tsx
+@@ -34,7 +34,7 @@ const AlertDialogContent = React.forwardRef<
+     <AlertDialogPrimitive.Content
+       ref={ref}
+       className={cn(
+-        "fixed left-[50%] top-[50%] z-[110] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg",
++        "fixed left-[50%] top-[50%] z-[110] grid w-[calc(100vw-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg",
+         className,
+       )}
+       {...props}
+diff --git a/apps/web/components/ui/dialog.tsx b/apps/web/components/ui/dialog.tsx
+index 7d2b70f2..a64248ce 100644
+--- a/apps/web/components/ui/dialog.tsx
++++ b/apps/web/components/ui/dialog.tsx
+@@ -77,7 +77,7 @@ const DialogContent = React.forwardRef<
+         // sheet-based modals do; callers can still override it through props.
+         aria-modal="true"
+         className={cn(
+-          "fixed left-[50%] top-[50%] z-[100] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-xl",
++          "fixed left-[50%] top-[50%] z-[100] grid w-[calc(100vw-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-xl",
+           className,
+         )}
+         onPointerDownOutside={handlePointerDownOutside}
+diff --git a/apps/web/hooks/use-restaurants.tsx b/apps/web/hooks/use-restaurants.tsx
+index 02d79053..fca3ef58 100644
+--- a/apps/web/hooks/use-restaurants.tsx
++++ b/apps/web/hooks/use-restaurants.tsx
+@@ -304,11 +304,28 @@ function buildRestaurantQueryKey(
+     ];
+ }
+ 
+-function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
++function projectSingletonRestaurant(restaurant: DBRestaurant): Restaurant {
++    const categories = Array.from(new Set(restaurant.categories || []));
++    const youtubeLink = restaurant.youtube_link || null;
++    const review = restaurant.tzuyang_review || null;
++    const meta = (restaurant.youtube_meta as YoutubeMeta | null) || null;
++
+     return {
+-        ...dbData,
+-        address: dbData.road_address || dbData.jibun_address || '',
+-        category: dbData.categories,
++        ...restaurant,
++        name: getRestaurantName(restaurant as RestaurantWithOptionalName),
++        lat: restaurant.lat || 0,
++        lng: restaurant.lng || 0,
++        categories,
++        address: restaurant.road_address || restaurant.jibun_address || '',
++        category: categories,
++        youtube_link: youtubeLink,
++        tzuyang_review: review,
++        youtube_meta: meta,
++        mergedYoutubeLinks: youtubeLink ? [youtubeLink] : [],
++        mergedTzuyangReviews: review ? [review] : [],
++        mergedYoutubeMetas: meta ? [meta] : [],
++        review_count: restaurant.review_count || 0,
++        mergedRestaurants: [restaurant],
+     } as Restaurant;
+ }
+ 
+@@ -525,6 +542,9 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
+     }
+ 
+     const mergedResults: Restaurant[] = Array.from(groups.values()).map((indices) => {
++        if (indices.length === 1) {
++            return projectSingletonRestaurant(restaurants[indices[0]]);
++        }
+         const groupRestaurants = indices.map(idx => restaurants[idx]);
+ 
+         // 메인 레스토랑은 단일 패스 비교로 선택 (정렬 제거)
+diff --git a/apps/web/lib/dashboard/helpers.ts b/apps/web/lib/dashboard/helpers.ts
+index 1d48e51f..31169ccc 100644
+--- a/apps/web/lib/dashboard/helpers.ts
++++ b/apps/web/lib/dashboard/helpers.ts
+@@ -1,22 +1,50 @@
+ import type { Json } from '@/integrations/supabase/types';
+ 
+-export function extractVideoIdFromYoutubeLink(link: string | null | undefined): string | null {
+-    if (!link) return null;
+-
+-    const patterns = [
+-        /[?&]v=([A-Za-z0-9_-]{6,})/,
+-        /youtu\.be\/([A-Za-z0-9_-]{6,})/,
+-        /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
+-        /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
+-        /youtube\.com\/live\/([A-Za-z0-9_-]{6,})/,
+-    ];
++const VIDEO_ID_TOKEN = '[A-Za-z0-9_-]{6,128}';
++const DASHBOARD_VIDEO_ID_PATTERN = new RegExp(`^${VIDEO_ID_TOKEN}$`);
++// Reject the whole overlong token instead of exposing its first 128 characters.
++const YOUTUBE_VIDEO_ID_PATTERNS = [
++    '[?&]v=',
++    'youtu\\.be/',
++    'youtube\\.com/shorts/',
++    'youtube\\.com/embed/',
++    'youtube\\.com/live/',
++].map((prefix) => new RegExp(`${prefix}(${VIDEO_ID_TOKEN})(?![A-Za-z0-9_-])`));
++const VIDEO_ID_CACHE_LIMIT = 4096;
++const VIDEO_ID_CACHE_MAX_LINK_LENGTH = 2048;
++const videoIdByLink = new Map<string, string | null>();
+ 
+-    for (const pattern of patterns) {
+-        const match = link.match(pattern);
+-        if (match?.[1]) return match[1];
++export function classifyDashboardVideoId(videoId: string | null | undefined):
++    | { status: 'required' }
++    | { status: 'invalid'; length: number }
++    | { status: 'ok'; videoId: string } {
++    if (typeof videoId !== 'string') return { status: 'required' };
++    const trimmed = videoId.trim();
++    if (trimmed.length === 0) return { status: 'required' };
++    if (!DASHBOARD_VIDEO_ID_PATTERN.test(trimmed)) {
++        return { status: 'invalid', length: trimmed.length };
+     }
++    return { status: 'ok', videoId: trimmed };
++}
+ 
+-    return null;
++export function extractVideoIdFromYoutubeLink(link: string | null | undefined): string | null {
++    if (typeof link !== 'string' || link.length === 0) return null;
++    const cached = videoIdByLink.get(link);
++    if (cached !== undefined) return cached;
++
++    let videoId: string | null = null;
++    for (const pattern of YOUTUBE_VIDEO_ID_PATTERNS) {
++        const match = pattern.exec(link);
++        if (match?.[1]) {
++            videoId = match[1];
++            break;
++        }
++    }
++    if (link.length <= VIDEO_ID_CACHE_MAX_LINK_LENGTH) {
++        if (videoIdByLink.size >= VIDEO_ID_CACHE_LIMIT) videoIdByLink.clear();
++        videoIdByLink.set(link, videoId);
++    }
++    return videoId;
+ }
+ 
+ export function canonicalizeYoutubeLink(link: string | null | undefined): string | null {
+diff --git a/apps/web/lib/dashboard/summary.ts b/apps/web/lib/dashboard/summary.ts
+index d53e53e7..164b2a28 100644
+--- a/apps/web/lib/dashboard/summary.ts
++++ b/apps/web/lib/dashboard/summary.ts
+@@ -6,7 +6,7 @@ import type {
+     DashboardVideoDetailResponse,
+     DashboardVideoSummary,
+ } from '@/types/dashboard';
+-import { extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
++import { classifyDashboardVideoId, extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
+ import {
+     getDashboardRestaurantRowsPage,
+     getRestaurantRows,
+@@ -35,10 +35,8 @@ type RestaurantsFilter = {
+ };
+ 
+ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaurantItem {
+-    const normalizedName =
+-        row.name?.trim() ||
+-        extractVideoIdFromYoutubeLink(row.youtube_link) ||
+-        '미승인 맛집';
++    const videoId = extractVideoIdFromYoutubeLink(row.youtube_link);
++    const normalizedName = row.name?.trim() || videoId || '미승인 맛집';
+ 
+     return {
+         id: row.id,
+@@ -48,7 +46,7 @@ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaura
+         lat: row.lat,
+         lng: row.lng,
+         youtubeLink: row.youtube_link,
+-        videoId: extractVideoIdFromYoutubeLink(row.youtube_link),
++        videoId,
+         sourceType: row.source_type,
+         status: row.status,
+         geocodingSuccess: row.geocoding_success,
+@@ -59,19 +57,21 @@ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaura
+ }
+ 
+ function sortByUpdatedDesc<T extends { updatedAt: string | null }>(items: T[]): T[] {
+-    return [...items].sort((a, b) => {
+-        const aMs = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+-        const bMs = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+-        return bMs - aMs;
+-    });
++    return items
++        .map((item) => ({ item, ms: item.updatedAt ? new Date(item.updatedAt).getTime() : 0 }))
++        .sort((left, right) => right.ms - left.ms)
++        .map((entry) => entry.item);
++}
++
++function updatedAtMs(value: string | null | undefined): number {
++    return value ? new Date(value).getTime() : 0;
+ }
+ 
+ function sortRowsByUpdatedDesc(rows: DashboardRestaurantRow[]): DashboardRestaurantRow[] {
+-    return [...rows].sort((a, b) => {
+-        const aMs = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+-        const bMs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+-        return bMs - aMs;
+-    });
++    return rows
++        .map((row) => ({ row, ms: updatedAtMs(row.updated_at) }))
++        .sort((left, right) => right.ms - left.ms)
++        .map((entry) => entry.row);
+ }
+ 
+ function buildDashboardSummaryChecksum(rows: DashboardRestaurantRow[]): string {
+@@ -257,6 +257,7 @@ export function buildDashboardSummaryFromRows(
+ 
+     let withCoordinates = 0;
+     let latestUpdatedAt: string | null = null;
++    let latestUpdatedMs = Number.NEGATIVE_INFINITY;
+ 
+     for (const row of rows) {
+         if (typeof row.lat === 'number' && typeof row.lng === 'number') {
+@@ -272,7 +273,9 @@ export function buildDashboardSummaryFromRows(
+         if (videoId) videoIds.add(videoId);
+ 
+         if (row.updated_at) {
+-            if (!latestUpdatedAt || new Date(row.updated_at).getTime() > new Date(latestUpdatedAt).getTime()) {
++            const updatedMs = updatedAtMs(row.updated_at);
++            if (latestUpdatedAt === null || updatedMs > latestUpdatedMs) {
++                latestUpdatedMs = updatedMs;
+                 latestUpdatedAt = row.updated_at;
+             }
+         }
+@@ -415,11 +418,51 @@ export function buildDashboardRestaurantsFromRows(
+     return buildDashboardRestaurantsPageFromRows(paged, sortedRows.length, normalizedFilter, now);
+ }
+ 
++type VideoRowIndex = {
++    snapshot: { row: DashboardRestaurantRow; link: string | null }[];
++    byVideoId: Map<string, DashboardRestaurantRow[]>;
++};
++const rowsByVideoId = new WeakMap<readonly DashboardRestaurantRow[], VideoRowIndex>();
++
++export function selectDashboardRowsForVideoId(
++    rows: readonly DashboardRestaurantRow[],
++    videoId: string,
++): DashboardRestaurantRow[] {
++    const classified = classifyDashboardVideoId(videoId);
++    if (classified.status !== 'ok') return [];
++
++    let cached = rowsByVideoId.get(rows);
++    // The fetch cache replaces snapshots, but callers may edit a row or its array.
++    // Validate membership before reusing the parsed/grouped index.
++    if (!cached || cached.snapshot.length !== rows.length ||
++        !cached.snapshot.every((entry, index) => entry.row === rows[index] && entry.link === rows[index].youtube_link)) {
++        const byVideoId = new Map<string, DashboardRestaurantRow[]>();
++        for (const row of rows) {
++            const id = extractVideoIdFromYoutubeLink(row.youtube_link);
++            if (!id) continue;
++            const bucket = byVideoId.get(id);
++            if (bucket) {
++                bucket.push(row);
++            } else {
++                byVideoId.set(id, [row]);
++            }
++        }
++        cached = { snapshot: rows.map((row) => ({ row, link: row.youtube_link })), byVideoId };
++        rowsByVideoId.set(rows, cached);
++    }
++
++    // Preserve the previous filter result's ownership: consumers cannot mutate the cache.
++    return cached.byVideoId.get(classified.videoId)?.slice() ?? [];
++}
++
+ export async function getDashboardVideoDetail(
+     videoId: string,
+ ): Promise<DashboardVideoDetailResponse | null> {
++    const classified = classifyDashboardVideoId(videoId);
++    if (classified.status !== 'ok') return null;
++
+     const rows = await getRestaurantRows(false, 'anon');
+-    const targetRows = rows.filter((row) => extractVideoIdFromYoutubeLink(row.youtube_link) === videoId);
++    const targetRows = selectDashboardRowsForVideoId(rows, classified.videoId);
+ 
+     if (targetRows.length === 0) return null;
+ 
+@@ -431,9 +474,9 @@ export async function getDashboardVideoDetail(
+     return {
+         asOf: new Date().toISOString(),
+         video: {
+-            videoId,
++            videoId: classified.videoId,
+             youtubeLink: first.youtube_link,
+-            title: meta.title || videoId,
++            title: meta.title || classified.videoId,
+             publishedAt: meta.publishedAt,
+             restaurantCount: restaurants.length,
+         },
+diff --git a/apps/web/lib/supabase-rest-client.ts b/apps/web/lib/supabase-rest-client.ts
+index be6237e6..4a1428d6 100644
+--- a/apps/web/lib/supabase-rest-client.ts
++++ b/apps/web/lib/supabase-rest-client.ts
+@@ -1,6 +1,3 @@
+-const SUPABASE_REST_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+-const SUPABASE_PUBLIC_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+-
+ type SupabaseRestQuery = Array<[string, string | number | boolean]>;
+ 
+ type SupabaseRestRpcResponse = Readonly<{
+@@ -8,9 +5,38 @@ type SupabaseRestRpcResponse = Readonly<{
+     error: null | Readonly<{ status: number }>;
+ }>;
+ 
+-function assertSupabaseRestConfig() {
+-    if (!SUPABASE_REST_URL || !SUPABASE_PUBLIC_KEY) {
+-        throw new Error('Supabase REST client requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
++function readSupabaseRestConfig(): { url: string; key: string } {
++    const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? '';
++    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
++    if (!url || !key) {
++        throw new Error('supabase_rest_config_missing');
++    }
++    let endpoint: URL;
++    try {
++        endpoint = new URL(url);
++    } catch {
++        throw new Error('supabase_rest_config_invalid');
++    }
++    if (endpoint.protocol !== 'https:' && endpoint.protocol !== 'http:') {
++        throw new Error('supabase_rest_config_invalid');
++    }
++    return { url, key };
++}
++
++export function supabaseRestFailureCode(kind: 'rows' | 'count' | 'rpc', status: number): string {
++    const safeStatus = Number.isInteger(status) && status >= 100 && status <= 599 ? status : 0;
++    return kind === 'rows'
++        ? `supabase_rest_rows_failed:${safeStatus}`
++        : kind === 'rpc'
++            ? `supabase_rest_rpc_failed:${safeStatus}`
++            : `supabase_rest_count_failed:${safeStatus}`;
++}
++
++async function discardResponseBody(response: Response) {
++    try {
++        await response.body?.cancel();
++    } catch {
++        // The status code is the trace. Body text stays out of logs and errors.
+     }
+ }
+ 
+@@ -23,32 +49,42 @@ export function postgrestArrayOverlap(values: readonly string[]) {
+ }
+ 
+ export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQuery): Promise<T[]> {
+-    assertSupabaseRestConfig();
++    const config = readSupabaseRestConfig();
+ 
+-    const url = new URL(`${SUPABASE_REST_URL}/rest/v1/${table}`);
++    const url = new URL(`${config.url}/rest/v1/${table}`);
+     for (const [key, value] of query) {
+         url.searchParams.append(key, String(value));
+     }
+ 
+-    const response = await fetch(url.toString(), {
+-        headers: {
+-            apikey: SUPABASE_PUBLIC_KEY!,
+-            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
+-        },
+-    });
++    let response: Response;
++    try {
++        response = await fetch(url.toString(), {
++            headers: {
++                apikey: config.key,
++                Authorization: `Bearer ${config.key}`,
++            },
++        });
++    } catch {
++        throw new Error(supabaseRestFailureCode('rows', 0));
++    }
+ 
+     if (!response.ok) {
+         if (
+             (table === 'announcements' || table === 'ad_banners')
+             && (response.status === 401 || response.status === 403)
+         ) {
++            await discardResponseBody(response);
+             return [];
+         }
+-        const body = await response.text().catch(() => '');
+-        throw new Error(`Supabase REST ${table} failed: ${response.status} ${body}`.trim());
++        await discardResponseBody(response);
++        throw new Error(supabaseRestFailureCode('rows', response.status));
+     }
+ 
+-    return response.json() as Promise<T[]>;
++    try {
++        return await response.json() as T[];
++    } catch {
++        throw new Error(supabaseRestFailureCode('rows', 0));
++    }
+ }
+ 
+ export const supabaseRestRpcClient = {
+@@ -56,22 +92,28 @@ export const supabaseRestRpcClient = {
+         functionName: string,
+         args: Readonly<Record<string, unknown>>,
+     ): Promise<SupabaseRestRpcResponse> {
+-        assertSupabaseRestConfig();
++        const config = readSupabaseRestConfig();
+ 
+         const url = new URL(
+-            `${SUPABASE_REST_URL}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
++            `${config.url}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
+         );
+-        const response = await fetch(url.toString(), {
+-            method: 'POST',
+-            headers: {
+-                apikey: SUPABASE_PUBLIC_KEY!,
+-                Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
+-                'Content-Type': 'application/json',
+-            },
+-            body: JSON.stringify(args),
+-        });
++        let response: Response;
++        try {
++            response = await fetch(url.toString(), {
++                method: 'POST',
++                headers: {
++                    apikey: config.key,
++                    Authorization: `Bearer ${config.key}`,
++                    'Content-Type': 'application/json',
++                },
++                body: JSON.stringify(args),
++            });
++        } catch {
++            throw new Error(supabaseRestFailureCode('rpc', 0));
++        }
+ 
+         if (!response.ok) {
++            await discardResponseBody(response);
+             return { data: null, error: { status: response.status } };
+         }
+ 
+@@ -81,32 +123,37 @@ export const supabaseRestRpcClient = {
+ };
+ 
+ export async function fetchSupabaseExactCount(table: string, query: SupabaseRestQuery): Promise<number> {
+-    assertSupabaseRestConfig();
++    const config = readSupabaseRestConfig();
+ 
+-    const url = new URL(`${SUPABASE_REST_URL}/rest/v1/${table}`);
++    const url = new URL(`${config.url}/rest/v1/${table}`);
+     for (const [key, value] of query) {
+         url.searchParams.append(key, String(value));
+     }
+ 
+-    const response = await fetch(url.toString(), {
+-        method: 'HEAD',
+-        headers: {
+-            apikey: SUPABASE_PUBLIC_KEY!,
+-            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
+-            Prefer: 'count=exact',
+-        },
+-    });
++    let response: Response;
++    try {
++        response = await fetch(url.toString(), {
++            method: 'HEAD',
++            headers: {
++                apikey: config.key,
++                Authorization: `Bearer ${config.key}`,
++                Prefer: 'count=exact',
++            },
++        });
++    } catch {
++        throw new Error(supabaseRestFailureCode('count', 0));
++    }
+ 
+     if (!response.ok) {
+-        const body = await response.text().catch(() => '');
+-        throw new Error(`Supabase REST ${table} count failed: ${response.status} ${body}`.trim());
++        await discardResponseBody(response);
++        throw new Error(supabaseRestFailureCode('count', response.status));
+     }
+ 
+     const range = response.headers.get('content-range');
+     const total = range?.split('/').at(1);
+     const count = total ? Number(total) : NaN;
+     if (!Number.isFinite(count)) {
+-        throw new Error(`Supabase REST ${table} count missing content-range.`);
++        throw new Error('supabase_rest_count_missing');
+     }
+ 
+     return count;
+diff --git a/apps/web/tests-unit/dashboard-aggregation.test.ts b/apps/web/tests-unit/dashboard-aggregation.test.ts
+index 7e239ac4..1029762d 100644
+--- a/apps/web/tests-unit/dashboard-aggregation.test.ts
++++ b/apps/web/tests-unit/dashboard-aggregation.test.ts
+@@ -1,7 +1,7 @@
+ import { describe, expect, test } from 'bun:test';
+ 
+ import type { DashboardRestaurantRow } from '../lib/dashboard/supabase';
+-import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows } from '../lib/dashboard/summary';
++import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows, selectDashboardRowsForVideoId } from '../lib/dashboard/summary';
+ import { buildDashboardFunnelFromRows, buildDashboardFailuresFromRows } from '../lib/dashboard/evaluation';
+ import { buildDashboardQualityFromRows } from '../lib/dashboard/quality';
+ 
+@@ -30,6 +30,42 @@ function makeRow(overrides: Partial<DashboardRestaurantRow>): DashboardRestauran
+ }
+ 
+ describe('dashboard aggregations', () => {
++    test('never advertises an overlong video token or a truncated detail link', () => {
++        const allowed = 'a'.repeat(128);
++        const rows = [
++            makeRow({ id: 'allowed', youtube_link: `https://youtu.be/${allowed}` }),
++            makeRow({ id: 'overlong', youtube_link: `https://youtu.be/${allowed}a` }),
++        ];
++        const summary = buildDashboardSummaryFromRows(rows);
++        expect(summary.totals.videos).toBe(1);
++        expect(summary.videos.map((video) => video.videoId)).toEqual([allowed]);
++        expect(summary.videos[0].restaurantCount).toBe(1);
++        const page = buildDashboardRestaurantsFromRows(rows, { onlyWithCoordinates: false });
++        expect(page.items.map((item) => item.videoId)).toEqual([allowed, null]);
++        expect(selectDashboardRowsForVideoId(rows, allowed).map((row) => row.id)).toEqual(['allowed']);
++        expect(selectDashboardRowsForVideoId(rows, `${allowed}a`)).toEqual([]);
++    });
++
++    test('keeps index results current after array and link edits without exposing cached arrays', () => {
++        const first = makeRow({ id: 'first', youtube_link: 'https://youtu.be/vidAAA111' });
++        const second = makeRow({ id: 'second', youtube_link: 'https://youtu.be/vidBBB222' });
++        const rows = [first, second];
++        selectDashboardRowsForVideoId(rows, 'vidAAA111').length = 0;
++        expect(selectDashboardRowsForVideoId(rows, 'vidAAA111')).toEqual([first]);
++        first.youtube_link = 'https://youtu.be/vidBBB222';
++        expect(selectDashboardRowsForVideoId(rows, 'vidAAA111')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([first, second]);
++        rows.reverse();
++        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([second, first]);
++        const replacement = makeRow({ id: 'replacement', youtube_link: second.youtube_link });
++        rows[0] = replacement;
++        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')[0]).toBe(replacement);
++        rows.pop();
++        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([replacement]);
++        rows.push(second);
++        expect(selectDashboardRowsForVideoId(rows, 'vidBBB222')).toEqual([replacement, second]);
++    });
++
+     test('buildDashboardSummaryFromRows aggregates totals/categories/videos', () => {
+         const rows: DashboardRestaurantRow[] = [
+             makeRow({
+@@ -103,6 +139,20 @@ describe('dashboard aggregations', () => {
+         expect(result.freshness?.checksum).toMatch(/^[a-f0-9]{24}$/);
+     });
+ 
++    test('keeps equal updated times in input order when paging restaurants', () => {
++        const rows = [
++            makeRow({ id: 'tie-a', name: '앞', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
++            makeRow({ id: 'newer', name: '최신', lat: 37, lng: 127, updated_at: '2026-03-01T00:00:00.000Z' }),
++            makeRow({ id: 'tie-b', name: '뒤', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
++            makeRow({ id: 'blank', name: '', lat: 37, lng: 127, youtube_link: null, updated_at: '2026-01-01T00:00:00.000Z' }),
++        ];
++
++        const page = buildDashboardRestaurantsFromRows(rows, { onlyWithCoordinates: true, limit: 10 }, new Date('2026-04-01T00:00:00.000Z'));
++        expect(page.items.map((item) => item.id)).toEqual(['newer', 'tie-a', 'tie-b', 'blank']);
++        expect(page.items[3]?.name).toBe('미승인 맛집');
++        expect(buildDashboardRestaurantsFromRows([], { onlyWithCoordinates: true }, new Date('2026-04-01T00:00:00.000Z')).items).toEqual([]);
++    });
++
+     test('buildDashboardRestaurantsFromRows filters raw rows before paging and normalization', () => {
+         const rows: DashboardRestaurantRow[] = [
+             makeRow({
+@@ -347,4 +397,45 @@ describe('dashboard aggregations', () => {
+         expect(result.reviewFaithfulness.min).toBe(0.8);
+         expect(result.reviewFaithfulness.max).toBe(0.8);
+     });
++
++    test('selectDashboardRowsForVideoId keeps encounter order and rejects unsafe ids', () => {
++        const rows = [
++            makeRow({ id: 'first', youtube_link: 'https://youtu.be/vidAAA111' }),
++            makeRow({ id: 'other', youtube_link: 'https://www.youtube.com/watch?v=vidBBB222' }),
++            makeRow({ id: 'second', youtube_link: 'https://www.youtube.com/shorts/vidAAA111' }),
++            makeRow({ id: 'blank-name', name: '   ', youtube_link: 'https://youtu.be/vidAAA111' }),
++        ];
++
++        const selected = selectDashboardRowsForVideoId(rows, ' vidAAA111 ');
++        expect(selected.map((row) => row.id)).toEqual(['first', 'second', 'blank-name']);
++        expect(selectDashboardRowsForVideoId(rows, ' vidAAA111 ').map((row) => row.id)).toEqual([
++            'first',
++            'second',
++            'blank-name',
++        ]);
++        expect(selectDashboardRowsForVideoId(rows, 'missing999')).toEqual([]);
++        expect(selectDashboardRowsForVideoId([], 'vidAAA111')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '   ')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, "' OR 1=1 --")).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '<script>alert(1)</script>')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, '../etc/passwd')).toEqual([]);
++        expect(selectDashboardRowsForVideoId(rows, 'a'.repeat(129))).toEqual([]);
++
++        const named = buildDashboardRestaurantsFromRows(
++            [makeRow({ id: 'unnamed', name: '', youtube_link: 'https://youtu.be/vidAAA111' })],
++            { onlyWithCoordinates: false },
++            new Date('2026-02-10T00:00:00.000Z'),
++        );
++        expect(named.items[0]?.name).toBe('vidAAA111');
++        expect(named.items[0]?.videoId).toBe('vidAAA111');
++
++        const emptyName = buildDashboardRestaurantsFromRows(
++            [makeRow({ id: 'empty', name: '   ', youtube_link: null })],
++            { onlyWithCoordinates: false },
++            new Date('2026-02-10T00:00:00.000Z'),
++        );
++        expect(emptyName.items[0]?.name).toBe('미승인 맛집');
++        expect(emptyName.total).toBe(1);
++    });
+ });
+diff --git a/apps/web/tests-unit/supabase-rest-client.test.ts b/apps/web/tests-unit/supabase-rest-client.test.ts
+index 8656326e..51c76f46 100644
+--- a/apps/web/tests-unit/supabase-rest-client.test.ts
++++ b/apps/web/tests-unit/supabase-rest-client.test.ts
+@@ -1,4 +1,4 @@
+-import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
++import { afterAll, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+ 
+ const SUPABASE_URL = 'https://project-ref.supabase.co';
+ const SUPABASE_KEY = 'anon-test-key';
+@@ -31,6 +31,7 @@ const {
+   fetchSupabaseRows,
+   postgrestArrayOverlap,
+   postgrestIn,
++  supabaseRestFailureCode,
+   supabaseRestRpcClient,
+ } = await import('../lib/supabase-rest-client.ts?unit-contract-valid');
+ 
+@@ -93,9 +94,9 @@ describe('Supabase REST client', () => {
+     }
+ 
+     fetchImplementation = async () => new Response('RLS denied', { status: 403 });
+-    await expect(fetchSupabaseRows('restaurants', [])).rejects.toThrow(
+-      'Supabase REST restaurants failed: 403 RLS denied',
+-    );
++    await expect(fetchSupabaseRows('restaurants', [])).rejects.toMatchObject({
++      message: 'supabase_rest_rows_failed:403',
++    });
+   });
+ 
+   test('passes through successful JSON without runtime row-shape validation', async () => {
+@@ -160,28 +161,171 @@ describe('Supabase REST client', () => {
+     });
+ 
+     fetchImplementation = async () => new Response(null, { status: 200 });
+-    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toThrow(
+-      'Supabase REST restaurants count missing content-range.',
+-    );
++    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toMatchObject({
++      message: 'supabase_rest_count_missing',
++    });
+ 
+     fetchImplementation = async () => new Response('denied', { status: 403 });
+-    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toThrow(
+-      'Supabase REST restaurants count failed: 403 denied',
+-    );
++    await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toMatchObject({
++      message: 'supabase_rest_count_failed:403',
++    });
+   });
+ 
+-  test('rejects requests when either public Supabase setting is missing at module initialization', async () => {
+-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
++  test('rejects missing or blank public settings for every operation before fetch', async () => {
+     try {
+-      const missingConfigClient = await import('../lib/supabase-rest-client.ts?unit-contract-missing');
+-      await expect(missingConfigClient.fetchSupabaseRows('restaurants', [])).rejects.toThrow(
+-        'Supabase REST client requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+-      );
++      for (const missing of ['url', 'key'] as const) {
++        for (const blank of [undefined, '', '   ']) {
++          process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
++          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = SUPABASE_KEY;
++          const name = missing === 'url' ? 'NEXT_PUBLIC_SUPABASE_URL' : 'NEXT_PUBLIC_SUPABASE_ANON_KEY';
++          if (blank === undefined) delete process.env[name];
++          else process.env[name] = blank;
++
++          for (const request of [
++            () => fetchSupabaseRows('restaurants', []),
++            () => fetchSupabaseExactCount('restaurants', []),
++            () => supabaseRestRpcClient.rpc('bounded_rpc', {}),
++          ]) {
++            await expect(request()).rejects.toMatchObject({ message: 'supabase_rest_config_missing' });
++          }
++        }
++      }
+       expect(requests).toHaveLength(0);
+     } finally {
+       process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
+       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = SUPABASE_KEY;
+     }
+   });
++
++  test('bounds failure codes to the operation and a valid integer HTTP status', () => {
++    for (const kind of ['rows', 'count', 'rpc'] as const) {
++      for (const status of [100, 200, 403, 500, 599]) {
++        expect(supabaseRestFailureCode(kind, status)).toBe(`supabase_rest_${kind}_failed:${status}`);
++      }
++      for (const status of [-1, 0, 99, 600, 200.5, Number.NaN, Infinity, -Infinity]) {
++        expect(supabaseRestFailureCode(kind, status)).toBe(`supabase_rest_${kind}_failed:0`);
++      }
++    }
++  });
++
++  test('bounds transport rejections for rows, counts and RPC without changing rejection semantics', async () => {
++    const failure = new Error('untrusted-error');
++    failure.name = 'untrusted-name';
++    for (const rejected of [failure, 'untrusted-value', undefined]) {
++      fetchImplementation = async () => { throw rejected; };
++      for (const table of ['restaurants', 'announcements', 'ad_banners']) {
++        await expect(fetchSupabaseRows(table, [])).rejects.toMatchObject({
++          name: 'Error', message: 'supabase_rest_rows_failed:0',
++        });
++      }
++      await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toMatchObject({
++        name: 'Error', message: 'supabase_rest_count_failed:0',
++      });
++      await expect(supabaseRestRpcClient.rpc('bounded_rpc', {})).rejects.toMatchObject({
++        name: 'Error', message: 'supabase_rest_rpc_failed:0',
++      });
++    }
++  });
++
++  test('bounds malformed or unreadable row JSON and preserves the RPC null fallback', async () => {
++    fetchImplementation = async () => new Response('not-json', { status: 200 });
++    await expect(fetchSupabaseRows('restaurants', [])).rejects.toMatchObject({
++      name: 'Error', message: 'supabase_rest_rows_failed:0',
++    });
++    await expect(supabaseRestRpcClient.rpc('nullable_rpc', {})).resolves.toEqual({
++      data: null, error: null,
++    });
++
++    const response = new Response('[]', { status: 200 });
++    const json = spyOn(response, 'json').mockRejectedValue(new Error('untrusted-error'));
++    fetchImplementation = async () => response;
++    try {
++      await expect(fetchSupabaseRows('restaurants', [])).rejects.toMatchObject({
++        name: 'Error', message: 'supabase_rest_rows_failed:0',
++      });
++      await expect(supabaseRestRpcClient.rpc('nullable_rpc', {})).resolves.toEqual({
++        data: null, error: null,
++      });
++    } finally {
++      json.mockRestore();
++    }
++  });
++
++  test('bounds RPC argument serialization failures before fetch', async () => {
++    const args: Record<string, unknown> = {};
++    args.self = args;
++    await expect(supabaseRestRpcClient.rpc('bounded_rpc', args)).rejects.toMatchObject({
++      name: 'Error', message: 'supabase_rest_rpc_failed:0',
++    });
++    expect(requests).toHaveLength(0);
++  });
++
++  test('rejects malformed and non-HTTP config URLs with a fixed code before fetch', async () => {
++    try {
++      for (const url of ['not-a-url', 'https://', 'ftp://example.test', 'data:text/plain,local']) {
++        process.env.NEXT_PUBLIC_SUPABASE_URL = url;
++        for (const request of [
++          () => fetchSupabaseRows('restaurants', []),
++          () => fetchSupabaseExactCount('restaurants', []),
++          () => supabaseRestRpcClient.rpc('bounded_rpc', {}),
++        ]) {
++          await expect(request()).rejects.toMatchObject({
++            name: 'Error', message: 'supabase_rest_config_invalid',
++          });
++        }
++      }
++      expect(requests).toHaveLength(0);
++    } finally {
++      process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
++    }
++  });
++
++  test('keeps HTTP failures exact and rejects other public announcement/banner failures', async () => {
++    for (const status of [400, 404, 429, 500, 503]) {
++      fetchImplementation = async () => new Response('untrusted-response', { status });
++      for (const table of ['restaurants', 'announcements', 'ad_banners', 'untrusted-table']) {
++        await expect(fetchSupabaseRows(table, [])).rejects.toMatchObject({
++          message: `supabase_rest_rows_failed:${status}`,
++        });
++        await expect(fetchSupabaseExactCount(table, [])).rejects.toMatchObject({
++          message: `supabase_rest_count_failed:${status}`,
++        });
++      }
++    }
++  });
++
++  test('discards failed response streams without reading them even when cancellation rejects', async () => {
++    for (const cancelRejects of [false, true]) {
++      for (const kind of ['rows', 'count', 'rpc', 'public-rows'] as const) {
++        const response = new Response('untrusted-response', { status: 403 });
++        const cancel = spyOn(response.body!, 'cancel');
++        const text = spyOn(response, 'text');
++        const json = spyOn(response, 'json');
++        if (cancelRejects) cancel.mockRejectedValue(new Error('discard-test'));
++        fetchImplementation = async () => response;
++
++        try {
++          if (kind === 'rpc') {
++            await expect(supabaseRestRpcClient.rpc('bounded_rpc', {})).resolves.toEqual({
++              data: null, error: { status: 403 },
++            });
++          } else if (kind === 'public-rows') {
++            await expect(fetchSupabaseRows('announcements', [])).resolves.toEqual([]);
++          } else {
++            const request = kind === 'rows' ? fetchSupabaseRows : fetchSupabaseExactCount;
++            await expect(request('untrusted-table', [])).rejects.toMatchObject({
++              message: `supabase_rest_${kind}_failed:403`,
++            });
++          }
++          expect(cancel).toHaveBeenCalledTimes(1);
++          expect(text).not.toHaveBeenCalled();
++          expect(json).not.toHaveBeenCalled();
++        } finally {
++          cancel.mockRestore();
++          text.mockRestore();
++          json.mockRestore();
++        }
++      }
++    }
++  });
+ });
+diff --git a/apps/web/tests-unit/use-restaurants-merge.test.ts b/apps/web/tests-unit/use-restaurants-merge.test.ts
+index f9880272..108efcd2 100644
+--- a/apps/web/tests-unit/use-restaurants-merge.test.ts
++++ b/apps/web/tests-unit/use-restaurants-merge.test.ts
+@@ -1,4 +1,4 @@
+-import { describe, expect, mock, test } from 'bun:test';
++import { describe, expect, mock, spyOn, test } from 'bun:test';
+ 
+ type MergeInput = Array<Record<string, unknown>>;
+ 
+@@ -101,6 +101,87 @@ describe('buildRestaurantSelectFields', () => {
+ });
+ 
+ describe('mergeRestaurants', () => {
++    test('returns an empty list for empty input', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        expect(mergeRestaurants([])).toEqual([]);
++    });
++
++    test('projects a singleton with empty media, fallback address and deduplicated categories', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        const row = makeRestaurant({
++            id: 'solo', approved_name: '', name: '', lat: null, lng: null,
++            categories: ['한식', '한식', '분식'], youtube_link: '', tzuyang_review: '',
++            youtube_meta: null, review_count: null, road_address: '', jibun_address: '단일 주소',
++        });
++        const before = structuredClone(row);
++        const [merged] = mergeRestaurants([row]) as Array<Record<string, unknown>>;
++
++        expect(merged).toMatchObject({
++            id: 'solo', name: '', lat: 0, lng: 0, categories: ['한식', '분식'],
++            category: ['한식', '분식'], address: '단일 주소', youtube_link: null,
++            tzuyang_review: null, youtube_meta: null, review_count: 0,
++            mergedYoutubeLinks: [], mergedTzuyangReviews: [], mergedYoutubeMetas: [],
++            mergedRestaurants: [row],
++        });
++        expect(merged).not.toBe(row);
++        expect((merged.mergedRestaurants as unknown[])[0]).toBe(row);
++        expect(row).toEqual(before);
++    });
++
++    test('preserves alias names and populated media without sorting singleton groups', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        const meta = { title: '단일 영상', publishedAt: '2026-01-01T00:00:00Z' };
++        const row = makeRestaurant({
++            id: 'solo-media', approved_name: null, name: '별칭 식당',
++            youtube_link: 'https://www.youtube.com/watch?v=abcdefghijk',
++            tzuyang_review: '영상 리뷰', youtube_meta: meta, review_count: 7,
++        });
++        const sort = spyOn(Array.prototype, 'sort');
++        let result: unknown[];
++        let sorts: number;
++        try {
++            result = mergeRestaurants([row]);
++            sorts = sort.mock.calls.length;
++        } finally {
++            sort.mockRestore();
++        }
++
++        expect(sorts).toBe(0);
++        expect(result).toHaveLength(1);
++        expect(result[0]).toMatchObject({
++            name: '별칭 식당', lat: row.lat, lng: row.lng, address: row.road_address,
++            youtube_link: row.youtube_link, tzuyang_review: row.tzuyang_review,
++            youtube_meta: meta, review_count: 7,
++            mergedYoutubeLinks: [row.youtube_link], mergedTzuyangReviews: [row.tzuyang_review],
++            mergedYoutubeMetas: [meta], mergedRestaurants: [row],
++        });
++    });
++
++    test('keeps singleton and multi-row group order and sorts only the multi-row media', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        const rows = [
++            makeRestaurant({ id: 'solo', approved_name: '단독', road_address: '', jibun_address: '' }),
++            makeRestaurant({ id: 'old', approved_name: '병합', youtube_link: 'old', youtube_meta: { publishedAt: '2026-01-01' } }),
++            makeRestaurant({ id: 'new', approved_name: '병합', youtube_link: 'new', youtube_meta: { publishedAt: '2026-02-01' } }),
++        ];
++        const sort = spyOn(Array.prototype, 'sort');
++        let result: Array<{ mergedRestaurants: Array<{ id: string }>; mergedYoutubeLinks: string[]; review_count: number }>;
++        let sorts: number;
++        try {
++            result = mergeRestaurants(rows) as typeof result;
++            sorts = sort.mock.calls.length;
++        } finally {
++            sort.mockRestore();
++        }
++
++        expect(sorts).toBe(1);
++        expect(result.map(group => group.mergedRestaurants.map(row => row.id))).toEqual([
++            ['solo'], ['old', 'new'],
++        ]);
++        expect(result[1].mergedYoutubeLinks).toEqual(['new', 'old']);
++        expect(result[1].review_count).toBe(2);
++    });
++
+     test('retains every member of a large already-connected address group', async () => {
+         const { mergeRestaurants } = await loadUseRestaurants();
+         const rows = Array.from({ length: 12000 }, (_, index) => makeRestaurant({
+diff --git a/apps/web/tests-unit/youtube-link-helpers.test.ts b/apps/web/tests-unit/youtube-link-helpers.test.ts
+index 17afda0a..9624dfe3 100644
+--- a/apps/web/tests-unit/youtube-link-helpers.test.ts
++++ b/apps/web/tests-unit/youtube-link-helpers.test.ts
+@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
+ import { readFileSync } from 'node:fs';
+ import { resolve } from 'node:path';
+ 
+-import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
++import { canonicalizeYoutubeLink, classifyDashboardVideoId, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+ import {
+   getYoutubeThumbnailCandidates,
+   resolveYoutubeThumbnailCeiling,
+@@ -14,6 +14,54 @@ const source = (relativePath: string) =>
+   readFileSync(resolve(import.meta.dir, '..', relativePath), 'utf8');
+ 
+ describe('YouTube link helpers', () => {
++  test('uses the same complete 6-to-128-character token in extraction and routing', () => {
++    const prefixes = [
++      'https://www.youtube.com/watch?v=',
++      'https://www.youtube.com/watch?feature=share&v=',
++      'https://youtu.be/',
++      'https://www.youtube.com/shorts/',
++      'https://www.youtube.com/embed/',
++      'https://www.youtube.com/live/',
++    ];
++    for (const prefix of prefixes) {
++      for (const length of [5, 6, 11, 128, 129, 4096]) {
++        const id = 'a'.repeat(length);
++        const valid = length >= 6 && length <= 128;
++        for (const suffix of ['', '?t=10', '&t=10', '#fragment']) {
++          const link = `${prefix}${id}${suffix}`;
++          expect(extractVideoIdFromYoutubeLink(link)).toBe(valid ? id : null);
++          expect(extractVideoIdFromYoutubeLink(link)).toBe(valid ? id : null);
++        }
++        expect(classifyDashboardVideoId(id).status).toBe(valid ? 'ok' : 'invalid');
++      }
++    }
++  });
++
++  test('classifies blank, padded, mixed-alphabet and unsafe ids without relaxing the route bound', () => {
++    for (const value of [null, undefined, '', '   ']) {
++      expect(extractVideoIdFromYoutubeLink(value)).toBeNull();
++      expect(classifyDashboardVideoId(value)).toEqual({ status: 'required' });
++    }
++    expect(classifyDashboardVideoId('  Ab_12-  ')).toEqual({ status: 'ok', videoId: 'Ab_12-' });
++    for (const value of ['abc', 'abc def', '../path', '<script>', 'a'.repeat(129)]) {
++      expect(classifyDashboardVideoId(value)).toEqual({ status: 'invalid', length: value.length });
++    }
++    expect(extractVideoIdFromYoutubeLink('https://youtu.be/Ab_12-')).toBe('Ab_12-');
++    expect(extractVideoIdFromYoutubeLink('https://example.com/watch?v=abc123DEF45')).toBe('abc123DEF45');
++  });
++
++  test('keeps extraction results after the bounded link cache rotates', () => {
++    const valid = 'https://youtu.be/abc123DEF45';
++    const invalid = `https://youtu.be/${'a'.repeat(129)}`;
++    expect(extractVideoIdFromYoutubeLink(valid)).toBe('abc123DEF45');
++    expect(extractVideoIdFromYoutubeLink(invalid)).toBeNull();
++    for (let index = 0; index < 4100; index++) {
++      expect(extractVideoIdFromYoutubeLink(`${valid}?t=${index}`)).toBe('abc123DEF45');
++    }
++    expect(extractVideoIdFromYoutubeLink(valid)).toBe('abc123DEF45');
++    expect(extractVideoIdFromYoutubeLink(invalid)).toBeNull();
++  });
++
+   test('extracts a video id from supported YouTube URLs', () => {
+     expect(extractVideoIdFromYoutubeLink('https://www.youtube.com/watch?v=abc123DEF45&t=10')).toBe('abc123DEF45');
+     expect(extractVideoIdFromYoutubeLink('https://youtu.be/abc123DEF45?feature=share')).toBe('abc123DEF45');
+diff --git a/apps/web/tests-unit/dashboard-route-contract.test.ts b/apps/web/tests-unit/dashboard-route-contract.test.ts
+new file mode 100644
+index 00000000..f18663a3
+--- /dev/null
++++ b/apps/web/tests-unit/dashboard-route-contract.test.ts
+@@ -0,0 +1,109 @@
++import { describe, expect, test } from 'bun:test';
++import { readFileSync } from 'node:fs';
++import { createRequire } from 'node:module';
++import { resolve } from 'node:path';
++import vm from 'node:vm';
++import ts from 'typescript';
++import * as helpers from '../lib/dashboard/helpers';
++
++// Isolated module scopes keep route doubles out of other suites; no env or network.
++const require = createRequire(import.meta.url);
++const next = require('next/server') as typeof import('next/server');
++const routes = [
++    { path: 'summary', method: 'getDashboardSummary', code: 'DASHBOARD_SUMMARY_FAILED', message: 'Failed to build dashboard summary.' },
++    { path: 'restaurants', method: 'getDashboardRestaurants', code: 'DASHBOARD_RESTAURANTS_FAILED', message: 'Failed to build dashboard restaurants.' },
++    { path: 'video/[videoId]', method: 'getDashboardVideoDetail', code: 'DASHBOARD_VIDEO_FAILED', message: 'Failed to build dashboard video detail.' },
++] as const;
++
++function routeFixture(route: typeof routes[number], options: { failure?: unknown; result?: unknown } = {}) {
++    const calls: unknown[][] = [];
++    const logs: unknown[][] = [];
++    const summary = { [route.method]: async (...args: unknown[]) => {
++        calls.push(args);
++        if ('failure' in options) throw options.failure;
++        return 'result' in options ? options.result : { marker: 'fixture' };
++    } };
++    const source = readFileSync(resolve(import.meta.dir, `../app/api/dashboard/${route.path}/route.ts`), 'utf8');
++    const compiled = ts.transpileModule(source, { compilerOptions: {
++        module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
++    } }).outputText;
++    const exports: { GET?: (request: Request, context: { params: Promise<{ videoId: string }> }) => Promise<Response> } = {};
++    vm.runInNewContext(compiled, {
++        exports, console: { error: (...args: unknown[]) => logs.push(args) },
++        require: (name: string) => {
++            if (name === 'next/server') return next;
++            if (name === '@/lib/dashboard/summary') return summary;
++            if (name === '@/lib/dashboard/helpers') return helpers;
++            throw new Error('UNEXPECTED_TEST_DEPENDENCY');
++        },
++    });
++    return { calls, logs, get: (videoId = 'abc123DEF45', query = '') => exports.GET!(
++        new next.NextRequest(`https://fixture.invalid/api/dashboard/${route.path}${query}`),
++        { params: Promise.resolve({ videoId }) },
++    ) };
++}
++
++describe('dashboard route contracts', () => {
++    for (const route of routes) {
++        test(`${route.path} fixes responses and logs even for hostile error names`, async () => {
++            const namedError = new Error('UNTRUSTED_FIXTURE');
++            namedError.name = 'UNTRUSTED_FIXTURE'.repeat(512);
++            const unreadableError = Object.defineProperty(new Error(), 'name', {
++                get() { throw new Error('ERROR_NAME_MUST_NOT_BE_READ'); },
++            });
++            for (const failure of [namedError, unreadableError, 'UNTRUSTED_FIXTURE', null]) {
++                const fixture = routeFixture(route, { failure });
++                const response = await fixture.get();
++                expect(response.status).toBe(500);
++                expect(await response.json()).toEqual({ error: route.message });
++                expect(fixture.logs).toEqual([[route.code]]);
++                expect(fixture.calls).toHaveLength(1);
++            }
++        });
++    }
++    test('rejects missing and invalid IDs before loading any rows', async () => {
++        for (const id of ['', '   ', 'short', '../path', '<script>', 'a'.repeat(129), 'a'.repeat(8192)]) {
++            const fixture = routeFixture(routes[2]);
++            const response = await fixture.get(id);
++            const missing = id.trim().length === 0;
++            expect(response.status).toBe(missing ? 400 : 404);
++            expect(await response.json()).toEqual({ error: missing ? 'videoId is required.' : 'Video not found.' });
++            expect(fixture.calls).toHaveLength(0);
++            expect(fixture.logs).toEqual([]);
++        }
++    });
++    test('serves allowed boundaries with a trimmed lookup key', async () => {
++        for (const id of ['Ab_12-', 'a'.repeat(128)]) {
++            const fixture = routeFixture(routes[2]);
++            const response = await fixture.get(`  ${id}  `);
++            expect(response.status).toBe(200);
++            expect(fixture.calls).toEqual([[id]]);
++            expect(await response.json()).toEqual({ marker: 'fixture' });
++        }
++    });
++    test('retains the fixed 404 for an absent stored video', async () => {
++        const fixture = routeFixture(routes[2], { result: null });
++        const response = await fixture.get();
++        expect(response.status).toBe(404);
++        expect(await response.json()).toEqual({ error: 'Video not found.' });
++    });
++    test('retains summary freshness headers', async () => {
++        const data = { freshness: { source: 'row-derived-cache', generatedAt: '2026-10-04T00:00:00.000Z',
++            checksum: 'fixture-checksum', cacheStatus: 'hit', videoLimit: 2 } };
++        const fixture = routeFixture(routes[0], { result: data });
++        const response = await fixture.get();
++        expect(response.status).toBe(200);
++        expect(fixture.calls).toEqual([[false]]);
++        expect(response.headers.get('Cache-Control')).toBe('private, max-age=60, stale-while-revalidate=240');
++        expect(response.headers.get('X-Dashboard-Summary-Checksum')).toBe('fixture-checksum');
++        expect(response.headers.get('X-Dashboard-Summary-Video-Limit')).toBe('2');
++        expect(await response.json()).toEqual(data);
++    });
++    test('retains restaurant filter and paging arguments', async () => {
++        const fixture = routeFixture(routes[1]);
++        const response = await fixture.get('', '?q=fixture&category=food&sourceType=fixture&status=approved&limit=5&offset=2&onlyWithCoordinates=false');
++        expect(response.status).toBe(200);
++        expect(fixture.calls).toEqual([[{ q: 'fixture', category: 'food', sourceType: 'fixture',
++            status: 'approved', limit: 5, offset: 2, onlyWithCoordinates: false }]]);
++    });
++});
+diff --git a/apps/web/tests-unit/dialog-content-inset.test.ts b/apps/web/tests-unit/dialog-content-inset.test.ts
+new file mode 100644
+index 00000000..0a1d97ec
+--- /dev/null
++++ b/apps/web/tests-unit/dialog-content-inset.test.ts
+@@ -0,0 +1,25 @@
++import { describe, expect, test } from 'bun:test';
++import { readFileSync } from 'node:fs';
++import { join } from 'node:path';
++import { cn } from '../lib/utils';
++
++describe('dialog content inset', () => {
++    for (const path of ['components/ui/dialog.tsx', 'components/ui/alert-dialog.tsx']) {
++        const source = readFileSync(join(import.meta.dir, '..', path), 'utf8');
++        const contentClasses = source.match(/"(fixed left-\[50%\][^"]+)"/)?.[1] ?? '';
++
++        test(`${path} leaves viewport gutters with the default width cap`, () => {
++            expect(contentClasses.split(' ')).toContain('w-[calc(100vw-2rem)]');
++            expect(contentClasses.split(' ')).toContain('max-w-lg');
++            expect(contentClasses.split(' ')).not.toContain('w-full');
++        });
++
++        test(`${path} preserves callers that change only the width cap`, () => {
++            const classes = cn(contentClasses, 'max-w-2xl').split(' ');
++            expect(classes).toContain('w-[calc(100vw-2rem)]');
++            expect(classes).toContain('max-w-2xl');
++            expect(classes).not.toContain('max-w-lg');
++            expect(classes).not.toContain('w-[min(32rem,calc(100vw-2rem))]');
++        });
++    }
++});

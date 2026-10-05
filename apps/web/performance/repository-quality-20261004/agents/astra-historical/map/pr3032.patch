@@ -1,0 +1,500 @@
+diff --git a/apps/web/components/filters/CategoryFilter.tsx b/apps/web/components/filters/CategoryFilter.tsx
+index beb61884..ac744090 100644
+--- a/apps/web/components/filters/CategoryFilter.tsx
++++ b/apps/web/components/filters/CategoryFilter.tsx
+@@ -80,10 +80,9 @@ const CategoryFilter = ({
+ 
+             try {
+                 const data = await fetchSupabaseRows<Restaurant>('restaurants', params);
+-                // 병합 로직 적용하여 중복 제거
+                 return mergeRestaurants(data || []);
+-            } catch (error) {
+-                console.error('카테고리 데이터 조회 실패:');
++            } catch {
++                console.error('category_restaurant_query_failed');
+                 return [];
+             }
+         },
+diff --git a/apps/web/components/ui/alert-dialog.tsx b/apps/web/components/ui/alert-dialog.tsx
+index 98c42cc9..f557a424 100644
+--- a/apps/web/components/ui/alert-dialog.tsx
++++ b/apps/web/components/ui/alert-dialog.tsx
+@@ -34,7 +34,7 @@ const AlertDialogContent = React.forwardRef<
+     <AlertDialogPrimitive.Content
+       ref={ref}
+       className={cn(
+-        "fixed left-[50%] top-[50%] z-[110] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
++        "fixed left-[50%] top-[50%] z-[110] grid w-[min(32rem,calc(100vw-2rem))] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+         className,
+       )}
+       {...props}
+diff --git a/apps/web/components/ui/dialog.tsx b/apps/web/components/ui/dialog.tsx
+index 0032f273..d65eb805 100644
+--- a/apps/web/components/ui/dialog.tsx
++++ b/apps/web/components/ui/dialog.tsx
+@@ -77,7 +77,7 @@ const DialogContent = React.forwardRef<
+         // sheet-based modals do; callers can still override it through props.
+         aria-modal="true"
+         className={cn(
+-          "fixed left-[50%] top-[50%] z-[100] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
++          "fixed left-[50%] top-[50%] z-[100] grid w-[min(32rem,calc(100vw-2rem))] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+           className,
+         )}
+         onPointerDownOutside={handlePointerDownOutside}
+diff --git a/apps/web/hooks/use-restaurants.tsx b/apps/web/hooks/use-restaurants.tsx
+index 440d8488..8c62ac79 100644
+--- a/apps/web/hooks/use-restaurants.tsx
++++ b/apps/web/hooks/use-restaurants.tsx
+@@ -303,15 +303,31 @@ function buildRestaurantQueryKey(
+     ];
+ }
+ 
+-function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
++function projectSingletonRestaurant(restaurant: DBRestaurant): Restaurant {
++    const categories = Array.from(new Set(restaurant.categories || []));
++    const youtubeLink = restaurant.youtube_link || null;
++    const review = restaurant.tzuyang_review || null;
++    const meta = (restaurant.youtube_meta as YoutubeMeta | null) || null;
++
+     return {
+-        ...dbData,
+-        address: dbData.road_address || dbData.jibun_address || '',
+-        category: dbData.categories,
++        ...restaurant,
++        name: getRestaurantName(restaurant as RestaurantWithOptionalName),
++        lat: restaurant.lat || 0,
++        lng: restaurant.lng || 0,
++        categories,
++        address: restaurant.road_address || restaurant.jibun_address || '',
++        category: categories,
++        youtube_link: youtubeLink,
++        tzuyang_review: review,
++        youtube_meta: meta,
++        mergedYoutubeLinks: youtubeLink ? [youtubeLink] : [],
++        mergedTzuyangReviews: review ? [review] : [],
++        mergedYoutubeMetas: meta ? [meta] : [],
++        review_count: restaurant.review_count || 0,
++        mergedRestaurants: [restaurant],
+     } as Restaurant;
+ }
+ 
+-
+ function getUniqueRestaurantNames(restaurants: RestaurantWithOptionalName[]): string[] {
+     return [...new Set(restaurants
+         .map((restaurant) => getRestaurantName(restaurant).trim())
+@@ -529,6 +545,9 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
+ 
+     const mergedResults: Restaurant[] = Array.from(groups.values()).map((indices) => {
+         const groupRestaurants = indices.map(idx => restaurants[idx]);
++        if (groupRestaurants.length === 1) {
++            return projectSingletonRestaurant(groupRestaurants[0]);
++        }
+ 
+         // 메인 레스토랑은 단일 패스 비교로 선택 (정렬 제거)
+         let mainRestaurant = groupRestaurants[0];
+@@ -678,22 +697,25 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
+                     const config = OVERSEAS_REGIONS[normalizedRegion as keyof typeof OVERSEAS_REGIONS];
+                     const conditions: string[] = [];
+                     config.keywords.forEach((keyword: string) => {
+-                        conditions.push(`road_address.ilike.*${keyword}*`);
+-                        conditions.push(`jibun_address.ilike.*${keyword}*`);
+-                        conditions.push(`english_address.ilike.*${keyword}*`);
++                        const term = sanitizePostgrestOrTerm(keyword);
++                        if (!term) return;
++                        conditions.push(`road_address.ilike.*${term}*`);
++                        conditions.push(`jibun_address.ilike.*${term}*`);
++                        conditions.push(`english_address.ilike.*${term}*`);
+                     });
+ 
+                     if (conditions.length > 0) {
+                         query.push(['or', `(${conditions.join(',')})`]);
+                     }
+-                } else if (buildOverseasCountryAddressOrFilter(normalizedRegion, '*')) {
+-                    query.push(['or', `(${buildOverseasCountryAddressOrFilter(normalizedRegion, '*')})`]);
+                 } else {
+-                    // address_elements의 SIDO에서 지역 필터링
+-                    // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
+-                    const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
+-                    if (regionTerm) {
+-                        query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
++                    const overseasAddressFilter = buildOverseasCountryAddressOrFilter(normalizedRegion, '*');
++                    if (overseasAddressFilter) {
++                        query.push(['or', `(${overseasAddressFilter})`]);
++                    } else {
++                        const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
++                        if (regionTerm) {
++                            query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
++                        }
+                     }
+                 }
+             }
+diff --git a/apps/web/lib/supabase-rest-client.ts b/apps/web/lib/supabase-rest-client.ts
+index be6237e6..52d774f8 100644
+--- a/apps/web/lib/supabase-rest-client.ts
++++ b/apps/web/lib/supabase-rest-client.ts
+@@ -1,6 +1,3 @@
+-const SUPABASE_REST_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+-const SUPABASE_PUBLIC_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+-
+ type SupabaseRestQuery = Array<[string, string | number | boolean]>;
+ 
+ type SupabaseRestRpcResponse = Readonly<{
+@@ -8,9 +5,27 @@ type SupabaseRestRpcResponse = Readonly<{
+     error: null | Readonly<{ status: number }>;
+ }>;
+ 
+-function assertSupabaseRestConfig() {
+-    if (!SUPABASE_REST_URL || !SUPABASE_PUBLIC_KEY) {
+-        throw new Error('Supabase REST client requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
++function readSupabaseRestConfig(): { url: string; key: string } {
++    const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? '';
++    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
++    if (!url || !key) {
++        throw new Error('supabase_rest_config_missing');
++    }
++    return { url, key };
++}
++
++export function supabaseRestFailureCode(kind: 'rows' | 'count', status: number): string {
++    const safeStatus = Number.isInteger(status) && status >= 100 && status <= 599 ? status : 0;
++    return kind === 'rows'
++        ? `supabase_rest_rows_failed:${safeStatus}`
++        : `supabase_rest_count_failed:${safeStatus}`;
++}
++
++async function discardResponseBody(response: Response) {
++    try {
++        await response.body?.cancel();
++    } catch {
++        // The status code is the trace. Body text stays out of logs and errors.
+     }
+ }
+ 
+@@ -23,17 +38,17 @@ export function postgrestArrayOverlap(values: readonly string[]) {
+ }
+ 
+ export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQuery): Promise<T[]> {
+-    assertSupabaseRestConfig();
++    const config = readSupabaseRestConfig();
+ 
+-    const url = new URL(`${SUPABASE_REST_URL}/rest/v1/${table}`);
++    const url = new URL(`${config.url}/rest/v1/${table}`);
+     for (const [key, value] of query) {
+         url.searchParams.append(key, String(value));
+     }
+ 
+     const response = await fetch(url.toString(), {
+         headers: {
+-            apikey: SUPABASE_PUBLIC_KEY!,
+-            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
++            apikey: config.key,
++            Authorization: `Bearer ${config.key}`,
+         },
+     });
+ 
+@@ -42,10 +57,11 @@ export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQue
+             (table === 'announcements' || table === 'ad_banners')
+             && (response.status === 401 || response.status === 403)
+         ) {
++            await discardResponseBody(response);
+             return [];
+         }
+-        const body = await response.text().catch(() => '');
+-        throw new Error(`Supabase REST ${table} failed: ${response.status} ${body}`.trim());
++        await discardResponseBody(response);
++        throw new Error(supabaseRestFailureCode('rows', response.status));
+     }
+ 
+     return response.json() as Promise<T[]>;
+@@ -56,22 +72,23 @@ export const supabaseRestRpcClient = {
+         functionName: string,
+         args: Readonly<Record<string, unknown>>,
+     ): Promise<SupabaseRestRpcResponse> {
+-        assertSupabaseRestConfig();
++        const config = readSupabaseRestConfig();
+ 
+         const url = new URL(
+-            `${SUPABASE_REST_URL}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
++            `${config.url}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
+         );
+         const response = await fetch(url.toString(), {
+             method: 'POST',
+             headers: {
+-                apikey: SUPABASE_PUBLIC_KEY!,
+-                Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
++                apikey: config.key,
++                Authorization: `Bearer ${config.key}`,
+                 'Content-Type': 'application/json',
+             },
+             body: JSON.stringify(args),
+         });
+ 
+         if (!response.ok) {
++            await discardResponseBody(response);
+             return { data: null, error: { status: response.status } };
+         }
+ 
+@@ -81,9 +98,9 @@ export const supabaseRestRpcClient = {
+ };
+ 
+ export async function fetchSupabaseExactCount(table: string, query: SupabaseRestQuery): Promise<number> {
+-    assertSupabaseRestConfig();
++    const config = readSupabaseRestConfig();
+ 
+-    const url = new URL(`${SUPABASE_REST_URL}/rest/v1/${table}`);
++    const url = new URL(`${config.url}/rest/v1/${table}`);
+     for (const [key, value] of query) {
+         url.searchParams.append(key, String(value));
+     }
+@@ -91,22 +108,22 @@ export async function fetchSupabaseExactCount(table: string, query: SupabaseRest
+     const response = await fetch(url.toString(), {
+         method: 'HEAD',
+         headers: {
+-            apikey: SUPABASE_PUBLIC_KEY!,
+-            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
++            apikey: config.key,
++            Authorization: `Bearer ${config.key}`,
+             Prefer: 'count=exact',
+         },
+     });
+ 
+     if (!response.ok) {
+-        const body = await response.text().catch(() => '');
+-        throw new Error(`Supabase REST ${table} count failed: ${response.status} ${body}`.trim());
++        await discardResponseBody(response);
++        throw new Error(supabaseRestFailureCode('count', response.status));
+     }
+ 
+     const range = response.headers.get('content-range');
+     const total = range?.split('/').at(1);
+     const count = total ? Number(total) : NaN;
+     if (!Number.isFinite(count)) {
+-        throw new Error(`Supabase REST ${table} count missing content-range.`);
++        throw new Error('supabase_rest_count_missing');
+     }
+ 
+     return count;
+diff --git a/apps/web/tests-unit/dialog-content-inset.test.ts b/apps/web/tests-unit/dialog-content-inset.test.ts
+new file mode 100644
+index 00000000..3f1278cc
+--- /dev/null
++++ b/apps/web/tests-unit/dialog-content-inset.test.ts
+@@ -0,0 +1,16 @@
++import { describe, expect, test } from 'bun:test';
++import { readFileSync } from 'node:fs';
++import { join } from 'node:path';
++
++const source = (path: string) => readFileSync(join(import.meta.dir, '..', path), 'utf8');
++
++describe('dialog content inset', () => {
++    test('keeps modal and alert widths inside the viewport gutter', () => {
++        for (const path of ['components/ui/dialog.tsx', 'components/ui/alert-dialog.tsx']) {
++            const file = source(path);
++            expect(file).toContain('w-[min(32rem,calc(100vw-2rem))]');
++            expect(file).toContain('max-w-lg');
++            expect(file).not.toContain('grid w-full max-w-lg');
++        }
++    });
++});
+diff --git a/apps/web/tests-unit/supabase-rest-failure.test.ts b/apps/web/tests-unit/supabase-rest-failure.test.ts
+new file mode 100644
+index 00000000..dcd63a82
+--- /dev/null
++++ b/apps/web/tests-unit/supabase-rest-failure.test.ts
+@@ -0,0 +1,145 @@
++import { afterEach, describe, expect, test } from 'bun:test';
++
++import {
++    fetchSupabaseExactCount,
++    fetchSupabaseRows,
++    supabaseRestFailureCode,
++    supabaseRestRpcClient,
++} from '../lib/supabase-rest-client';
++
++const originalFetch = globalThis.fetch;
++const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
++const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
++
++function restoreEnv(name: 'NEXT_PUBLIC_SUPABASE_URL' | 'NEXT_PUBLIC_SUPABASE_ANON_KEY', value: string | undefined) {
++    if (value === undefined) {
++        delete process.env[name];
++        return;
++    }
++    process.env[name] = value;
++}
++
++afterEach(() => {
++    globalThis.fetch = originalFetch;
++    restoreEnv('NEXT_PUBLIC_SUPABASE_URL', originalUrl);
++    restoreEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', originalKey);
++});
++
++describe('supabaseRestFailureCode', () => {
++    test('keeps http status codes and collapses invalid status to 0', () => {
++        expect(supabaseRestFailureCode('rows', 500)).toBe('supabase_rest_rows_failed:500');
++        expect(supabaseRestFailureCode('count', 404)).toBe('supabase_rest_count_failed:404');
++        expect(supabaseRestFailureCode('rows', 99)).toBe('supabase_rest_rows_failed:0');
++        expect(supabaseRestFailureCode('rows', 600)).toBe('supabase_rest_rows_failed:0');
++        expect(supabaseRestFailureCode('rows', 200.5)).toBe('supabase_rest_rows_failed:0');
++        expect(supabaseRestFailureCode('count', Number.NaN)).toBe('supabase_rest_count_failed:0');
++    });
++});
++
++describe('supabase rest failure boundaries', () => {
++    test('rejects missing or blank credentials before calling fetch', async () => {
++        let calls = 0;
++        globalThis.fetch = (async () => {
++            calls += 1;
++            return new Response('[]', { status: 200 });
++        }) as typeof fetch;
++
++        delete process.env.NEXT_PUBLIC_SUPABASE_URL;
++        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
++        await expect(fetchSupabaseRows('restaurants', [])).rejects.toThrow('supabase_rest_config_missing');
++
++        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.test';
++        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = '   ';
++        await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toThrow('supabase_rest_config_missing');
++        await expect(supabaseRestRpcClient.rpc('match_rows', {})).rejects.toThrow('supabase_rest_config_missing');
++        expect(calls).toBe(0);
++    });
++
++    test('returns rows for a successful payload and an empty list', async () => {
++        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.test';
++        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
++        globalThis.fetch = (async () => new Response('[]', {
++            status: 200,
++            headers: { 'content-type': 'application/json' },
++        })) as typeof fetch;
++
++        await expect(fetchSupabaseRows('restaurants', [['select', 'id']])).resolves.toEqual([]);
++    });
++
++    test('hides provider body text when a row query fails', async () => {
++        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.test';
++        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
++        globalThis.fetch = (async () => new Response('secret-schema-detail permission denied for table restaurants', {
++            status: 500,
++            headers: { 'content-type': 'application/json' },
++        })) as typeof fetch;
++
++        await expect(fetchSupabaseRows('restaurants', [])).rejects.toThrow('supabase_rest_rows_failed:500');
++        try {
++            await fetchSupabaseRows('restaurants', []);
++        } catch (error) {
++            expect(error).toBeInstanceOf(Error);
++            expect((error as Error).message).not.toContain('secret-schema-detail');
++            expect((error as Error).message).not.toContain('permission denied');
++        }
++    });
++
++    test('uses an empty fallback for restricted public announcement reads', async () => {
++        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.test';
++        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
++        globalThis.fetch = (async () => new Response('raw-auth-error', { status: 401 })) as typeof fetch;
++
++        await expect(fetchSupabaseRows('announcements', [])).resolves.toEqual([]);
++        globalThis.fetch = (async () => new Response('raw-auth-error', { status: 403 })) as typeof fetch;
++        await expect(fetchSupabaseRows('ad_banners', [])).resolves.toEqual([]);
++        globalThis.fetch = (async () => new Response('raw-auth-error', { status: 401 })) as typeof fetch;
++        await expect(fetchSupabaseRows('restaurants', [])).rejects.toThrow('supabase_rest_rows_failed:401');
++    });
++
++    test('reads an exact count and fails closed without a content range', async () => {
++        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.test';
++        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
++        globalThis.fetch = (async () => new Response(null, {
++            status: 200,
++            headers: { 'content-range': '0-0/12' },
++        })) as typeof fetch;
++        await expect(fetchSupabaseExactCount('restaurants', [])).resolves.toBe(12);
++
++        globalThis.fetch = (async () => new Response(null, { status: 200 })) as typeof fetch;
++        await expect(fetchSupabaseExactCount('restaurants', [])).rejects.toThrow('supabase_rest_count_missing');
++
++        globalThis.fetch = (async () => new Response('count-secret', { status: 503 })) as typeof fetch;
++        try {
++            await fetchSupabaseExactCount('restaurants', []);
++        } catch (error) {
++            expect((error as Error).message).toBe('supabase_rest_count_failed:503');
++            expect((error as Error).message).not.toContain('count-secret');
++        }
++    });
++
++    test('returns a status-only rpc failure and encodes unsafe function names', async () => {
++        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.test';
++        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
++        const calls: string[] = [];
++        globalThis.fetch = (async (input: RequestInfo | URL) => {
++            calls.push(String(input));
++            return new Response('rpc-secret', { status: 403 });
++        }) as typeof fetch;
++
++        await expect(supabaseRestRpcClient.rpc('../secrets', { q: 'unused' })).resolves.toEqual({
++            data: null,
++            error: { status: 403 },
++        });
++        expect(calls[0]).toContain(encodeURIComponent('../secrets'));
++        expect(calls[0]).not.toContain('/rpc/../');
++
++        globalThis.fetch = (async () => new Response('not-json', {
++            status: 200,
++            headers: { 'content-type': 'application/json' },
++        })) as typeof fetch;
++        await expect(supabaseRestRpcClient.rpc('match_rows', {})).resolves.toEqual({
++            data: null,
++            error: null,
++        });
++    });
++});
+diff --git a/apps/web/tests-unit/use-restaurants-merge.test.ts b/apps/web/tests-unit/use-restaurants-merge.test.ts
+index f9880272..bb6ab597 100644
+--- a/apps/web/tests-unit/use-restaurants-merge.test.ts
++++ b/apps/web/tests-unit/use-restaurants-merge.test.ts
+@@ -101,6 +101,46 @@ describe('buildRestaurantSelectFields', () => {
+ });
+ 
+ describe('mergeRestaurants', () => {
++    test('returns an empty list for empty input', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        expect(mergeRestaurants([])).toEqual([]);
++    });
++
++    test('projects one restaurant without merging and fills empty media', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        const [merged] = mergeRestaurants([
++            makeRestaurant({
++                id: 'solo',
++                approved_name: '',
++                name: '',
++                lat: null,
++                lng: null,
++                categories: ['한식', '한식', '분식'],
++                youtube_link: '',
++                tzuyang_review: '',
++                youtube_meta: null,
++                review_count: null,
++                road_address: '',
++                jibun_address: '서울 중구 명동 1',
++            }),
++        ]) as Array<Record<string, unknown>>;
++
++        expect(merged.id).toBe('solo');
++        expect(merged.name).toBe('');
++        expect(merged.lat).toBe(0);
++        expect(merged.lng).toBe(0);
++        expect(merged.categories).toEqual(['한식', '분식']);
++        expect(merged.address).toBe('서울 중구 명동 1');
++        expect(merged.youtube_link).toBeNull();
++        expect(merged.tzuyang_review).toBeNull();
++        expect(merged.youtube_meta).toBeNull();
++        expect(merged.mergedYoutubeLinks).toEqual([]);
++        expect(merged.mergedTzuyangReviews).toEqual([]);
++        expect(merged.mergedYoutubeMetas).toEqual([]);
++        expect(merged.review_count).toBe(0);
++        expect(merged.mergedRestaurants).toHaveLength(1);
++    });
++
+     test('retains every member of a large already-connected address group', async () => {
+         const { mergeRestaurants } = await loadUseRestaurants();
+         const rows = Array.from({ length: 12000 }, (_, index) => makeRestaurant({

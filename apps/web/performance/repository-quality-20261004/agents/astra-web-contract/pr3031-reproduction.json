@@ -1,0 +1,101 @@
+{
+  "purpose": "Behavior reproduction only; no performance acceptance or timing claim",
+  "results": [
+    {
+      "label": "baseline",
+      "revision": "4295fd54411ac8a4c304dce89efbb6f96e90935c",
+      "extractedLength": 129,
+      "advertisedVideos": 1,
+      "classifier": "absent",
+      "detailStatus": 200,
+      "detailLoads": 1,
+      "failureLogs": [
+        {
+          "route": "summary",
+          "status": 500,
+          "argumentCount": 1,
+          "maxStringLength": 27,
+          "untrustedNameLogged": false
+        },
+        {
+          "route": "restaurants",
+          "status": 500,
+          "argumentCount": 1,
+          "maxStringLength": 31,
+          "untrustedNameLogged": false
+        },
+        {
+          "route": "video/[videoId]",
+          "status": 500,
+          "argumentCount": 1,
+          "maxStringLength": 25,
+          "untrustedNameLogged": false
+        }
+      ]
+    },
+    {
+      "label": "pr3031",
+      "revision": "cd86c106b468c40e83a2e2edf39b49c3b9529937",
+      "extractedLength": 129,
+      "advertisedVideos": 1,
+      "classifier": "invalid",
+      "detailStatus": 404,
+      "detailLoads": 0,
+      "failureLogs": [
+        {
+          "route": "summary",
+          "status": 500,
+          "argumentCount": 2,
+          "maxStringLength": 8704,
+          "untrustedNameLogged": true
+        },
+        {
+          "route": "restaurants",
+          "status": 500,
+          "argumentCount": 2,
+          "maxStringLength": 8704,
+          "untrustedNameLogged": true
+        },
+        {
+          "route": "video/[videoId]",
+          "status": 500,
+          "argumentCount": 2,
+          "maxStringLength": 8704,
+          "untrustedNameLogged": true
+        }
+      ]
+    },
+    {
+      "label": "candidate",
+      "revision": null,
+      "extractedLength": null,
+      "advertisedVideos": 0,
+      "classifier": "invalid",
+      "detailStatus": 404,
+      "detailLoads": 0,
+      "failureLogs": [
+        {
+          "route": "summary",
+          "status": 500,
+          "argumentCount": 1,
+          "maxStringLength": 24,
+          "untrustedNameLogged": false
+        },
+        {
+          "route": "restaurants",
+          "status": 500,
+          "argumentCount": 1,
+          "maxStringLength": 28,
+          "untrustedNameLogged": false
+        },
+        {
+          "route": "video/[videoId]",
+          "status": 500,
+          "argumentCount": 1,
+          "maxStringLength": 22,
+          "untrustedNameLogged": false
+        }
+      ]
+    }
+  ]
+}

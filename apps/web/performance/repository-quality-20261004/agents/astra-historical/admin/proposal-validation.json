@@ -1,0 +1,63 @@
+{
+  "base": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "patch_applied": false,
+  "git_apply_check": {
+    "exit_code": 0,
+    "output": ""
+  },
+  "changed_source_files": [],
+  "proposed_source_files": [
+    "apps/web/components/admin/AdminConsoleOverview.tsx"
+  ],
+  "render_verified": false,
+  "typecheck": "not run: no node_modules; source files not edited",
+  "example": [
+    {
+      "values": [
+        96,
+        1,
+        1,
+        1,
+        1
+      ],
+      "current_requested_percent_widths": [
+        96,
+        8,
+        8,
+        8,
+        8
+      ],
+      "proposed_requested_percent_widths": [
+        96,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "values": [
+        100,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_requested_percent_widths": [
+        100,
+        8,
+        8,
+        8,
+        8
+      ],
+      "proposed_requested_percent_widths": [
+        100,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "example_limit": "Requested CSS widths only. Current flex shrink and overflow can further alter rendered sizes; no pixel/performance measurement."
+}

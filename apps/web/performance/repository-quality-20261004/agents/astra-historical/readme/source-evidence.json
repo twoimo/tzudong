@@ -1,0 +1,177 @@
+{
+  "authority_sha": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "files": {
+    "apps/web/package.json": {
+      "git_blob": "44d37c62fc9b8fcd106a2fcc24509f6a14304660",
+      "sha256": "b81254a4389fca87fa443be4857655b5351880aed1d8644f121152216434d65c",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 5,
+          "end_line": 39,
+          "text": "  \"type\": \"module\",\n  \"engines\": {\n    \"node\": \"24.x\"\n  },\n  \"packageManager\": \"npm@11.6.2\",\n  \"scripts\": {\n    \"dev\": \"node scripts/run-local-dev.mjs --port 3000\",\n    \"dev:local\": \"node scripts/run-local-dev.mjs --port 3000\",\n    \"dev:hosted\": \"node scripts/dev-prewarm.mjs --port 3000 --hosted\",\n    \"dev:clean\": \"node scripts/run-local-dev.mjs --port 3000 --clean\",\n    \"dev:playwright\": \"node scripts/run-local-dev.mjs --port 3000\",\n    \"dev:playwright:naver-live\": \"node scripts/run-local-dev.mjs --port 3000 --live-naver-provider-smoke\",\n    \"build\": \"node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs\",\n    \"start\": \"node scripts/start-standalone.mjs\",\n    \"start:playwright\": \"node scripts/start-standalone.mjs --port 3000 --hostname localhost\",\n    \"lint\": \"node scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0\",\n    \"lint:fix\": \"node scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --fix\",\n    \"analyze\": \"node scripts/run-web-tool.mjs next-analyze\",\n    \"supabase:gen-types\": \"node scripts/supabase-gen-types.mjs\",\n    \"supabase:gen-types:local\": \"node scripts/run-local-supabase-types.mjs\",\n    \"typecheck:verify\": \"node scripts/verify-typescript-toolchain.mjs\",\n    \"typecheck:native\": \"node scripts/run-typecheck.mjs --compiler native\",\n    \"typecheck:compat\": \"node scripts/run-typecheck.mjs --compiler compat\",\n    \"typecheck:parity\": \"node scripts/run-typecheck.mjs --compiler parity\",\n    \"typecheck:benchmark\": \"node scripts/measure-typecheck.mjs\",\n    \"bench:typecheck\": \"node scripts/measure-typecheck.mjs\",\n    \"release-performance:score\": \"node scripts/score-performance-backlog.mjs\",\n    \"release-performance:validate\": \"node scripts/validate-performance-backlog.mjs\",\n    \"release-auth:smoke\": \"node scripts/run-auth-release-smoke.mjs\",\n    \"release-visual:run\": \"node scripts/run-release-visual-evidence.mjs\",\n    \"release-visual:assemble\": \"node scripts/assemble-release-visual-evidence.mjs\",\n    \"release-visual:verify\": \"node scripts/verify-release-visual-evidence.mjs\",\n    \"test:unit\": \"node scripts/run-unit-tests.mjs\",\n    \"test:nightly\": \"node scripts/run-nightly-regression.mjs\",\n    \"test:dependency-modernization\": \"node scripts/run-dependency-modernization-browser.mjs --package-only\","
+        },
+        {
+          "start_line": 109,
+          "end_line": 129,
+          "text": "    \"openai\": \"^7.23.0\",\n    \"react\": \"^19.3.0\",\n    \"react-day-picker\": \"^10.0.1\",\n    \"react-dom\": \"^19.3.0\",\n    \"react-error-boundary\": \"^6.1.6\",\n    \"react-hook-form\": \"^7.88.0\",\n    \"react-markdown\": \"^10.1.0\",\n    \"react-resizable-panels\": \"^4.13.3\",\n    \"recharts\": \"^3.10.1\",\n    \"remark-gfm\": \"^4.0.1\",\n    \"sharp\": \"^0.35.4\",\n    \"supercluster\": \"^9.1.0\",\n    \"swr\": \"^2.5.1\",\n    \"tailwind-merge\": \"^3.7.0\",\n    \"web-vitals\": \"^6.2.2\",\n    \"zod\": \"^4.6.5\"\n  },\n  \"devDependencies\": {\n    \"@next/bundle-analyzer\": \"16.3.6\",\n    \"@playwright/test\": \"^1.63.0\",\n    \"@tailwindcss/cli\": \"^4.3.3\","
+        },
+        {
+          "start_line": 139,
+          "end_line": 143,
+          "text": "    \"@typescript/old\": \"npm:typescript@6.0.2\",\n    \"baseline-browser-mapping\": \"2.11.26\",\n    \"dotenv\": \"^17.4.2\",\n    \"eslint\": \"^9.39.5\",\n    \"eslint-config-next\": \"^16.3.6\","
+        }
+      ]
+    },
+    "apps/web/scripts/run-local-dev.mjs": {
+      "git_blob": "f6f4b7b2f3b88f9b5f136dc82d1e91aa3f97a609",
+      "sha256": "f3bf0b8534cb37c92c95ef794266595b55728498bfd64409c5493860a6f8c093",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 14,
+          "end_line": 31,
+          "text": "const args = process.argv.slice(2).filter((arg) => arg !== '--');\nlet rawPort = '3000';\nlet operatorEnvFile;\nlet turbopack = false;\nlet skipClean = true;\nlet liveNaverProviderSmoke = false;\nfor (let index = 0; index < args.length; index += 1) {\n  const name = args[index];\n  const value = args[index + 1];\n  if (name === '--port' && value) {\n    rawPort = value;\n    index += 1;\n    continue;\n  }\n  if (name === '--turbopack' || name === '--turbo') {\n    turbopack = true;\n    continue;\n  }"
+        },
+        {
+          "start_line": 62,
+          "end_line": 85,
+          "text": "let local;\ntry {\n  local = loadLocalSupabaseEnvironment();\n  assertLocalWebOrigin(local, port);\n  assertLocalSupabaseReady(local);\n} catch (error) {\n  const message = error instanceof Error ? error.message : '[local-supabase] admission_failed';\n  process.stderr.write(`${message}\\n`);\n  process.exit(2);\n}\n\nprocess.stdout.write(\n  `[local-dev] admitted project=${local.projectName} app=http://127.0.0.1:${port} supabase=${local.supabaseOrigin}\\n`,\n);\nconst child = spawn(\n  'node',\n  [\n    'scripts/dev-prewarm.mjs',\n    '--port',\n    String(port),\n    '--host',\n    '127.0.0.1',\n    ...(turbopack ? ['--turbopack'] : []),\n    ...(skipClean ? [] : ['--clean']),"
+        }
+      ]
+    },
+    "apps/web/scripts/dev-prewarm.mjs": {
+      "git_blob": "133a24752dc08c23298843e592e09d48c38a0a0c",
+      "sha256": "80f807019c6308e375c41c869a906dc59a8833dc74b387ffa79fed95268285ad",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 19,
+          "end_line": 25,
+          "text": "const host = readArg('--host', 'localhost');\nconst hosted = hasFlag('--hosted');\nconst shouldUseWebpackDev = !hasFlag('--turbopack') && !hasFlag('--turbo');\nconst shouldPrewarm = !hasFlag('--no-prewarm') && !['0', 'false', 'no', 'off'].includes(String(process.env.TZUDONG_DEV_PREWARM ?? '1').toLowerCase());\nif (hosted && !shouldUseWebpackDev) {\n  process.stderr.write('[dev-prewarm] error=HostedTurbopackConflict\\n');\n  process.exit(2);"
+        },
+        {
+          "start_line": 40,
+          "end_line": 49,
+          "text": "    'node',\n    'node_modules/next/dist/bin/next',\n    'dev',\n    ...(shouldUseWebpackDev ? ['--webpack'] : []),\n    '--port',\n    String(port),\n    '--hostname',\n    host,\n  ],\n  {"
+        }
+      ]
+    },
+    "apps/web/scripts/local-supabase-runtime.mjs": {
+      "git_blob": "5102b0da89f2ec5c529830c0ddb39d2ff03c1616",
+      "sha256": "750b4e63dba34013e328950a933f248cb329d57f5444c512c053f3bd21c60fc9",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 479,
+          "end_line": 486,
+          "text": "export function assertLocalWebOrigin(local, port) {\n  const origin = `http://127.0.0.1:${port}`;\n  const admittedOrigins = local.values.ADDITIONAL_REDIRECT_URLS?.split(',') ?? [];\n  if (!Number.isInteger(port) || !admittedOrigins.includes(origin)) {\n    fail('browser_origin');\n  }\n  return origin;\n}"
+        },
+        {
+          "start_line": 488,
+          "end_line": 500,
+          "text": "export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = false } = {}) {\n  const serviceRows = spawnSync(\n    'docker',\n    [\n      'ps',\n      '--filter', `label=com.docker.compose.project=${local.projectName}`,\n      '--format', '{{.Label \"com.docker.compose.service\"}} {{.Status}}',\n    ],\n    {\n      cwd: local.repositoryRoot,\n      env: safeProcessEnvironment(),\n      encoding: 'utf8',\n      stdio: ['ignore', 'pipe', 'pipe'],"
+        },
+        {
+          "start_line": 560,
+          "end_line": 594,
+          "text": "  const schema = readCurrentMigrationLedger(local, containers[0]);\n  let migrationReceipt;\n  if (requireDeterministicReceipt) {\n    const binding = [\n      '--container', containers[0],\n      '--allow-local',\n      '--project', local.projectName,\n      '--state-dir', local.stateRoot,\n      '--env-file', local.envFile,\n    ];\n    migrationReceipt = runJson(\n      'python3',\n      [\n        path.join(local.repositoryRoot, 'backend', 'supabase', 'scripts', 'local-migrate.py'),\n        'receipt',\n        ...binding,\n      ],\n      { cwd: local.repositoryRoot, code: 'migration_receipt', timeout: 300_000 },\n    );\n    if (\n      migrationReceipt?.schema !== 'local-receipt-v2'\n      || migrationReceipt.serializer !== 'receipt-v1'\n      || migrationReceipt.project_name !== local.projectName\n      || !Array.isArray(migrationReceipt.ledger)\n      || migrationReceipt.ledger.length !== schema.ledger.length\n      || !/^[a-f0-9]{64}$/.test(migrationReceipt.catalog_sha256 ?? '')\n    ) {\n      fail('migration_receipt');\n    }\n  }\n  return { migrationReceipt, schema, databaseContainer: containers[0] };\n}\n\nexport function buildLocalWebEnvironment(local, inherited = process.env) {\n  const environment = { ...inherited };"
+        }
+      ]
+    },
+    "backend/supabase/scripts/local-stack.py": {
+      "git_blob": "2066d988e1a77965e1a1d1a6d14f08b5c8b25a01",
+      "sha256": "ef1aa6dfc0b5f477667dcf2618c0334f5c900246201abc6c9f65527c1e9e81b6",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 151,
+          "end_line": 164,
+          "text": "LOCAL_URL_KEYS = (\"SITE_URL\", \"API_EXTERNAL_URL\", \"SUPABASE_PUBLIC_URL\")\nLOCAL_BROWSER_ORIGINS = (\n    \"http://127.0.0.1:3000\",\n    \"http://localhost:3000\",\n    \"http://127.0.0.1:8080\",\n    \"http://localhost:8080\",\n    \"http://127.0.0.1:18080\",\n    \"http://localhost:18080\",\n)\nLOCAL_ADDITIONAL_REDIRECT_URLS = \",\".join(LOCAL_BROWSER_ORIGINS)\nPREVIOUS_LOCAL_ADDITIONAL_REDIRECT_URLS = (\n    \"http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:18080\"\n)\nLOCAL_CORS_TARGET_HOSTS = (\"127.0.0.1\", \"localhost\")"
+        }
+      ]
+    },
+    "backend/supabase/README.md": {
+      "git_blob": "e4fc69dfac3f1a4c702b5da2d8d897ba5b3dd69d",
+      "sha256": "8f22c35eaaaaf65e9f317636adacd3fa3f9821014c4dfa10a638882633d95d80",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 1,
+          "end_line": 14,
+          "text": "# Tzudong local Supabase\n\nThis directory contains Tzudong's pinned, local-only 14-service Supabase stack.\nFor the repository-owned lifecycle, migration, seed, receipt, schema-type, and\nnightly commands, use [the nightly operations runbook](../../docs/operations/nightly-regression.md).\n\nThe generic files below came from the upstream self-hosted Compose distribution,\nbut `docker compose up` by itself is not the supported Tzudong entry point.\n`scripts/local-stack.py` binds the project to the repository path, generates\nowner-only credentials, rejects remote Docker contexts and cloud URLs, and\nchecks every service before admission. The stack is for local development and\nsynthetic regression fixtures; it is not a production deployment or a hosted\ndata backup.\n"
+        }
+      ]
+    },
+    "apps/web/README.md": {
+      "git_blob": "8e62c1ec4c1f5d2b1b5da0392e30632fd656702f",
+      "sha256": "cc241daf67d5c06b4000155c390ac12f84898a38b5213109b4763edd3b827f7b",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 15,
+          "end_line": 37,
+          "text": "## 🚀 시작하기\n\n### 1. 설치\n\n```bash\n# 의존성 설치\nbun install\n```\n\n### 2. 로컬 Supabase 준비\n\n기본 개발 명령은 저장소가 생성한 로컬 Supabase 스택만 사용합니다. 먼저\n저장소 루트의 [`backend/supabase/README.md`](../../backend/supabase/README.md)에\n따라 스택을 생성·마이그레이션하세요. `bun run dev`는 owner-only\n`stack.env`와 provenance, 서비스 readiness, 현재 migration ledger를 검증한 뒤\nloopback 값만 자식 프로세스에 전달합니다. 검증에 실패하면 hosted 자격 증명으로\nfallback하지 않고 종료합니다.\n\n로컬 DB를 유지하면서 GitHub 나이틀리 상태 같은 비-DB 운영 설정도 확인해야 하면,\n복사나 자동 탐색 대신 owner-only 파일의 절대 경로를 그 실행에만 명시합니다. 이\n파일의 Supabase/Postgres/DB 연결 값은 제거되고 생성된 loopback 값으로 교체됩니다:\n\n```bash"
+        }
+      ]
+    },
+    "apps/web/tests-unit/local-supabase-runtime.test.ts": {
+      "git_blob": "ac820334adab6c34da1261d035200310eed8cea9",
+      "sha256": "de06b6fa13a02aa2db0ea9d0e5e3f36c04397adb6dbd9823ccdebc647574f5df",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 280,
+          "end_line": 290,
+          "text": "    const runner = readFileSync(path.resolve(import.meta.dir, '../scripts/local-supabase-runtime.mjs'), 'utf8');\n    const packageSource = readFileSync(path.resolve(import.meta.dir, '../package.json'), 'utf8');\n    const nextConfig = readFileSync(path.resolve(import.meta.dir, '../next.config.mjs'), 'utf8');\n    const localDevRunner = readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-dev.mjs'), 'utf8');\n    const gitignore = readFileSync(path.resolve(import.meta.dir, '../.gitignore'), 'utf8');\n    const eslintConfig = readFileSync(path.resolve(import.meta.dir, '../eslint.config.mjs'), 'utf8');\n    expect(packageSource).toContain('\"dev\": \"node scripts/run-local-dev.mjs --port 3000\"');\n    expect(packageSource).toContain('\"dev:local\": \"node scripts/run-local-dev.mjs --port 3000\"');\n    expect(packageSource).toContain('\"dev:hosted\": \"node scripts/dev-prewarm.mjs --port 3000 --hosted\"');\n    expect(packageSource).toContain('\"supabase:gen-types:local\": \"node scripts/run-local-supabase-types.mjs\"');\n    const localTypeRunner = readFileSync("
+        },
+        {
+          "start_line": 389,
+          "end_line": 404,
+          "text": "    const cleanNext = readFileSync(path.resolve(import.meta.dir, '../scripts/clean-next.mjs'), 'utf8');\n    const prewarm = readFileSync(path.resolve(import.meta.dir, '../scripts/dev-prewarm.mjs'), 'utf8');\n    const localDev = readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-dev.mjs'), 'utf8');\n    expect(prewarm).toContain(\"const hosted = hasFlag('--hosted')\");\n    expect(prewarm).toContain(\"TZUDONG_HOSTED_DEV: '1'\");\n    expect(cleanNext).toContain(\"error=NextDevAdmissionRequired\");\n    expect(cleanNext).toContain('TZUDONG_HOSTED_DEV');\n    expect(cleanNext).not.toContain('npm_lifecycle_event');\n    expect(localDev).toContain(\"name === '--turbopack'\");\n    expect(localDev).toContain(\"name === '--clean'\");\n    expect(packageSource).not.toContain('next dev --webpack --port 8080');\n  });\n\n  test('rejects malformed GitHub repository inputs while keeping status fail closed', () => {\n    const environment = buildLocalWebEnvironment({\n      supabaseOrigin: 'http://127.0.0.1:8000',"
+        }
+      ]
+    },
+    "docs/agents/verification.md": {
+      "git_blob": "7b513cdea6f4cc0e6b531a3f132ece141c754712",
+      "sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 1,
+          "end_line": 12,
+          "text": "# Select verification by impact\n\nChoose checks for the affected behavior, its callers and credible failure paths. Expand when a shared contract changes or a failure reveals wider impact. Passing relevant checks ends local verification unless a new change or unresolved risk justifies more. Required CI/release checks remain required; do not rerun all suites after every edit.\n\n| Change | First useful verification | Broaden when |\n| --- | --- | --- |\n| Guidance/docs only | Resolve local links, compare preserved requirements, inspect diff; validate skill metadata if changed | Runnable examples, configuration or CI behavior changed |\n| Copy/style/component | Existing affected Bun assertions, if any; inspect rendered states when appearance changes. Do not add wording-only tests | Shared components, navigation or accessibility behavior changed |\n| TS/route/auth/data shape | Related unit/source contracts, targeted ESLint, `npm run typecheck:parity` | Shared entrypoints/build config require build; user flow needs focused Playwright |\n| Python crawler/validator | Affected unittest modules and data-contract cases | Orchestration or shared contracts affect the broader daily flow |\n| SQL/RLS/grants/RPC | Exact-version isolated database checks of permissions, failures, idempotency and rollback/readback | Migration/replay contracts require canonical replay and protected CI |\n| Performance claim | Canonical retained measurements, scorer, validator and detached artifact-map hash | Claim spans further environments or observation windows |"
+        },
+        {
+          "start_line": 25,
+          "end_line": 33,
+          "text": "bun run lint\nbun run test:unit\nnpm run typecheck:parity\nnpm run typecheck:benchmark\nnpm run build\nnpx playwright test\n```\n\nThe web runtime is Node 24.x. npm 11.6.2, `package.json`, and `package-lock.json` are the release package authority; reconcile `bun.lock` with them rather than treating it as release authority. The native TypeScript CLI is the exact `@typescript/native` alias at `7.0.2`; the stable API/compatibility bridge is TypeScript `6.0.2`. Use the explicit `npm run typecheck:parity` and `npm run typecheck:benchmark` scripts for compiler parity and benchmark evidence. Never substitute a global compiler."
+        }
+      ]
+    },
+    "docs/agents/release.md": {
+      "git_blob": "21e8d9b036ce3ca814a076345b42ce1b07e7787f",
+      "sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 3,
+          "end_line": 13,
+          "text": "Read before any Vercel action (including inspection), hosted DB mutations, producer/freeze changes, protected promotion, deployment/rollback, DNS, or security configuration. Existing explicit authorization for the same action and scope remains valid; do not ask again. A blocked technical check does not block independent local implementation, tests, or read-only diagnosis. For a read-only Vercel query, verify the exact project and sanitize evidence.\n\nThe dirty original worktree is immutable. Work only in an isolated recovery candidate; never reset, stash, or clean either worktree. Content patches start from a fresh head and move as serialized PRs `develop -> data -> main` under branch protection. Tzudong has one operator, the GitHub repository owner. That person's explicit request is the operator approval. A second reviewer is not required, and this file must not invent one.\n\nOn 2026-09-22 the operator parked the external evidence gates for schema, RLS, grants, RPCs, hosted catalog and key management, retention periods, policy publication, marketing send approval, precise-location filing, under-14 guardian verification, incident submission receipts, and Korean privacy-owner review. They are not release blockers. The parked text is [2026-09-22-parked-external-gates.md](../archive/release-gates/2026-09-22-parked-external-gates.md). Restore that file before enforcing those gates again. Parking them does not enable the product features and does not create the missing evidence.\n\nA production deploy still needs no force push, the protected PR order, a named rollback SHA taken from the current production deployment, and a post-deploy readback of the Vercel deployment SHA and live URL. Local tests are not that readback.\n\nBefore any Vercel action, verify the exact Git-integrated `tzudong` project. Do not use a stale `web` project or mutate DNS. This source tree makes no claim that a merge or deployment occurred.\n\nDo not fabricate receipts, commit credentials, bypass branch protection, or claim that local tests prove legal compliance or hosted production state. Application code stays fail-closed for under-14 registration, precise device location, marketing send, and retention activation until the operator restores the parked gates and changes the product on purpose."
+        }
+      ]
+    },
+    "docs/agents/privacy.md": {
+      "git_blob": "fd0ba2901c684023ddc3cf604802a8feb90e92b6",
+      "sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c",
+      "current_matches_integration": true,
+      "excerpts": [
+        {
+          "start_line": 1,
+          "end_line": 6,
+          "text": "# Privacy and communications\n\nRead for auth, consent, location, retention/deletion, notifications, or personal-data changes. These requirements also govern backend and tooling work that handles such data.\n\nG010/G013/G014 source safeguards reduce risk but do not certify statutory compliance, policy publication, filing, deployment, or legal approval. The release gates that required that evidence before deploy were parked on 2026-09-22 in [2026-09-22-parked-external-gates.md](../archive/release-gates/2026-09-22-parked-external-gates.md). The behavior below stays fail-closed until the operator restores those gates and changes the product on purpose.\n"
+        }
+      ]
+    }
+  }
+}

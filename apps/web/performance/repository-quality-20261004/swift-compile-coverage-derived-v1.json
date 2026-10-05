@@ -1,0 +1,18 @@
+{
+  "observedAt": "2026-10-04T22:32:35.776517+00:00",
+  "sourceSHA": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+  "jobId": 111543320656,
+  "jobConclusion": "success",
+  "logReadExit": 0,
+  "rawLogStored": false,
+  "knownSourceIndicators": {
+    "main.swift": 1,
+    "03-2-visual-ocr.swift": 1,
+    "TzudongVisualOCR": 5,
+    "Package.swift": 0
+  },
+  "coverageNotInferredFromScannerColor": true,
+  "mainSwiftCompileCommandObserved": true,
+  "actualPackageBuildObserved": false,
+  "sourceFileCoverageCount": 2
+}

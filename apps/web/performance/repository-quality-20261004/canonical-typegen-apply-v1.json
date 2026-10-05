@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-04T11:57:10.908946+00:00",
+  "sourceHeadBefore": "7a430454cf90a4d9f1ba0ce35ad3ffd5022ceebd",
+  "patchSha256": "9a7a2faf0e5559a075c6c252c3ee7a4282be85f3584fa9ae9fe9356c3937f8c0",
+  "typegenSourceRun": 37197431551,
+  "generatedSnapshot": "apps/web/integrations/supabase/database.types.ts",
+  "addedPublicSchemaLines": 397,
+  "sourceSqlChanged": false,
+  "hostedDbMutation": false,
+  "parentScopeDecision": "actual generated snapshot correction within authorized all quality scope; wrapper types.ts remains unchanged"
+}

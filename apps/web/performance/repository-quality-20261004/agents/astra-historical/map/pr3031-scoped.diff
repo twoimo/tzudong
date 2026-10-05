@@ -1,0 +1,244 @@
+diff --git a/README.md b/README.md
+index a4ad3b6b..e09d1c4e 100644
+--- a/README.md
++++ b/README.md
+@@ -181,6 +181,20 @@ The copy is gone. The snapshot now keeps those ids and drops the rest, and a loo
+ 
+ Against a frozen copy of the previous full sort, 200 / 1,000 / 4,000 candidates at limit 5 return identical targets (0 mismatches). Related-id sets per call drop from 205 / 1,005 / 4,005 to 5. Rank objects drop from the full candidate count to at most 5. Median wall-clock ratios were 1.85x / 2.24x / 3.57x, but combined MAD / median was 0.22–0.46 against a 0.15 relative noise budget, so the time ratio is not claimed. Samples stay under the 16 ms frame budget. Retained evidence: [benchmark.json](apps/web/performance/visible-marker-review-bubbles-20260922/benchmark.json). Local measurement does not establish hosted or production behaviour.
+ 
++### Dashboard video id reuse (2026-09-23)
++
++`extractVideoIdFromYoutubeLink` used to compile five regular expressions on every call, and dashboard summary, search, and video detail each parsed the same `youtube_link` again. The patterns now live once per process, and a 4,096-entry map remembers the id for that exact string. A link that is not a string returns null instead of throwing. Public video detail still answers `{ error: 'Video not found.' }` with status 404 for an id that cannot match the extractor (`[A-Za-z0-9_-]{6,128}`); the raw id is not written to the log, only `invalid-shape` and the length. The same cached restaurant array then keeps a `WeakMap` from video id to rows, so a later detail request on that array does not scan every row.
++
++On this machine, 4,000 links × 6 passes (24,000 extractions) moved from a 1.455 ms median to 0.227 ms (6.41x). Combined MAD / median is 0.133 against a 0.15 noise budget, both sides stay under the 16 ms frame budget, and id mismatches are 0. Hoisting the expressions without the map was 1.79x, but that pair's noise exceeded 0.15, so the accepted claim is the cached result. Six repeated lookups on one 4,000-row array moved from 1.416 ms to 0.001 ms after the map existed; that after-time is on the timer floor, so 1416x is only the repeat-hit figure. A cold single pass that rebuilds the map was 0.176 ms versus 0.230 ms (0.77x) and its noise exceeded 0.15, so the first lookup is not claimed as faster. A merged restaurant that is alone skips the date-sort copy. Retained evidence: [benchmark.json](apps/web/performance/dashboard-video-id-20260923/benchmark.json) with the [repro script](apps/web/performance/dashboard-video-id-20260923/benchmark-dashboard-video-id.mjs). Local measurement does not establish hosted or production behaviour.
++
++### Map selection id matching (2026-09-23)
++
++`findMatchingRestaurantInList` checked merged ids with `Array.includes` for every candidate and every child id. It now uses one set per search and still returns the earliest candidate, including a name-and-coordinate match that appears before an id match. Empty and missing lists return null. On 4,000 candidates with 8 target ids and 4 child ids each, the median moved from 0.260 ms to 0.171 ms (1.52x) with the same matched id, but combined MAD / median was 0.217 against the 0.15 noise budget, so the time ratio is not claimed. Both medians stay under the 16 ms frame budget. Retained evidence: [benchmark.json](apps/web/performance/map-restaurant-lookup-20260923/benchmark.json) with the [repro script](apps/web/performance/map-restaurant-lookup-20260923/benchmark-map-restaurant-lookup.mjs). Local measurement does not establish hosted or production behaviour.
++
++### Dashboard updated-at sort (2026-09-23)
++
++Dashboard restaurant paging and the summary checksum sorted every row by parsing `updated_at` inside the comparator, so a 4,000-row sort parsed the same strings about `n log n` times. Each row is now parsed once, then the numeric timestamps are sorted. Tie order stays the input order, and an empty page stays empty. On this machine the median moved from 4.423 ms to 0.533 ms (8.30x). Combined MAD / median is 0.142 against the 0.15 noise budget, both sides stay under the 16 ms frame budget, and the ordered ids match with 0 mismatches. Retained evidence: [benchmark.json](apps/web/performance/dashboard-updated-at-sort-20260923/benchmark.json) with the [repro script](apps/web/performance/dashboard-updated-at-sort-20260923/benchmark-dashboard-updated-at-sort.mjs). Local measurement does not establish hosted or production behaviour.
++
+ ### Deployment and release path (verified 2026-09-21)
+ 
+ `apps/web/scripts/vercel-ignore-build.mjs` is the build gate: preview builds run only for `develop`, every other branch preview is skipped, and a `main` production build additionally requires `TZUDONG_APPROVED_PRODUCTION_SHA` to equal the commit being deployed. Branch-specific preview URLs therefore do not appear for feature branches by design; a CLI deployment of the branch head (`vercel deploy` from `apps/web`, project `tzudong`) is what produces a reviewable preview.
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index c8a92604..5d5e2905 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -93,7 +93,6 @@ import {
+ } from "@/lib/expanded-cluster-restaurant-snapshot";
+ import {
+     buildRestaurantLookup,
+-    findMatchingRestaurantInList,
+ } from "@/lib/map-restaurant-lookup";
+ import {
+     buildPostSearchSwipeCandidates,
+diff --git a/apps/web/hooks/use-restaurants.tsx b/apps/web/hooks/use-restaurants.tsx
+index 440d8488..af7c869e 100644
+--- a/apps/web/hooks/use-restaurants.tsx
++++ b/apps/web/hooks/use-restaurants.tsx
+@@ -551,8 +551,10 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
+             groupRestaurants.flatMap(r => r.categories || [])
+         ));
+ 
+-        // 최신 영상 순으로 정렬
+-        const sortedByDate = [...groupRestaurants].sort((a, b) => {
++        // 최신 영상 순으로 정렬. 단독 행은 복사와 정렬을 생략한다.
++        const sortedByDate = groupRestaurants.length === 1
++            ? groupRestaurants
++            : [...groupRestaurants].sort((a, b) => {
+             const dateA = (a.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+             const dateB = (b.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+             return dateB.localeCompare(dateA);
+diff --git a/apps/web/lib/home-map-youtube-kpi.ts b/apps/web/lib/home-map-youtube-kpi.ts
+index cfd56ea6..deb8d0f4 100644
+--- a/apps/web/lib/home-map-youtube-kpi.ts
++++ b/apps/web/lib/home-map-youtube-kpi.ts
+@@ -27,7 +27,9 @@ function collectRestaurantYoutubeLinks(restaurant: Restaurant): string[] {
+     ].filter((link): link is string => typeof link === 'string' && link.trim().length > 0);
+ }
+ 
+-export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[]): string[] {
++export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[] | null | undefined): string[] {
++    if (!restaurants || restaurants.length === 0) return [];
++
+     const videoIds = new Set<string>();
+ 
+     for (const restaurant of restaurants) {
+diff --git a/apps/web/lib/map-restaurant-lookup.ts b/apps/web/lib/map-restaurant-lookup.ts
+index 010f127d..1b2ac10e 100644
+--- a/apps/web/lib/map-restaurant-lookup.ts
++++ b/apps/web/lib/map-restaurant-lookup.ts
+@@ -39,25 +39,35 @@ export const buildRestaurantLookup = (restaurants: Restaurant[]): RestaurantLook
+ };
+ 
+ export const findMatchingRestaurantInList = (
+-    target: Restaurant,
+-    candidates: Restaurant[],
++    target: Restaurant | null | undefined,
++    candidates: Restaurant[] | null | undefined,
+ ): Restaurant | null => {
+-    if (target.mergedRestaurants && target.mergedRestaurants.length > 0) {
+-        const mergedIds = target.mergedRestaurants.map((restaurant) => restaurant.id);
+-        return (
+-            candidates.find((candidate) =>
+-                mergedIds.includes(candidate.id) ||
+-                candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.includes(mergedRestaurant.id)) ||
++    if (!target || !candidates || candidates.length === 0) return null;
++
++    const mergedRestaurants = target.mergedRestaurants;
++    if (mergedRestaurants && mergedRestaurants.length > 0) {
++        const mergedIds = new Set(mergedRestaurants.map((restaurant) => restaurant.id));
++        for (const candidate of candidates) {
++            if (
++                mergedIds.has(candidate.id) ||
++                candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.has(mergedRestaurant.id)) ||
+                 hasSameNameAndCoordinate(candidate, target)
+-            ) ?? null
+-        );
++            ) {
++                return candidate;
++            }
++        }
++        return null;
+     }
+ 
+-    return (
+-        candidates.find((candidate) =>
+-            candidate.id === target.id ||
+-            candidate.mergedRestaurants?.some((mergedRestaurant) => mergedRestaurant.id === target.id) ||
++    const targetId = target.id;
++    for (const candidate of candidates) {
++        if (
++            candidate.id === targetId ||
++            candidate.mergedRestaurants?.some((mergedRestaurant) => mergedRestaurant.id === targetId) ||
+             hasSameNameAndCoordinate(candidate, target)
+-        ) ?? null
+-    );
++        ) {
++            return candidate;
++        }
++    }
++    return null;
+ };
+diff --git a/apps/web/tests-unit/home-map-youtube-kpi.test.ts b/apps/web/tests-unit/home-map-youtube-kpi.test.ts
+index 5435d339..1a37f2e6 100644
+--- a/apps/web/tests-unit/home-map-youtube-kpi.test.ts
++++ b/apps/web/tests-unit/home-map-youtube-kpi.test.ts
+@@ -36,6 +36,24 @@ describe('home map youtube KPI enrichment', () => {
+         ])).toEqual(['abcdefghijk', 'lmnopqrstuv', 'wxyzABCDE12']);
+     });
+ 
++    test('ignores empty links and re-reads a link after it changes', () => {
++        expect(collectHomeMapYoutubeVideoIds(null)).toEqual([]);
++        expect(collectHomeMapYoutubeVideoIds([])).toEqual([]);
++        const row = restaurant('blank', {
++            youtube_link: '   ',
++            mergedYoutubeLinks: ['', 'https://youtu.be/abcdefghijk'],
++            mergedRestaurants: [
++                { youtube_link: null } as Restaurant,
++            ],
++        });
++        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['abcdefghijk']);
++        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['abcdefghijk']);
++        row.youtube_link = 'https://www.youtube.com/watch?v=zzzzzzzzzzz';
++        expect(collectHomeMapYoutubeVideoIds([row])).toEqual(['zzzzzzzzzzz', 'abcdefghijk']);
++        expect(chunkHomeMapYoutubeVideoIds([], 0)).toEqual([]);
++        expect(chunkHomeMapYoutubeVideoIds(['abcdefghijk'], Number.NaN)).toEqual([['abcdefghijk']]);
++    });
++
+ 
+     test('chunks video ids so home KPI requests stay under the bounded POST limit', () => {
+         const videoIds = Array.from({ length: 250 }, (_, index) => `id${String(index).padStart(4, '0')}`);
+diff --git a/apps/web/tests-unit/map-restaurant-lookup.test.ts b/apps/web/tests-unit/map-restaurant-lookup.test.ts
+index 4fb9d439..737377ae 100644
+--- a/apps/web/tests-unit/map-restaurant-lookup.test.ts
++++ b/apps/web/tests-unit/map-restaurant-lookup.test.ts
+@@ -68,4 +68,43 @@ describe('map restaurant lookup helpers', () => {
+ 
+         expect(findMatchingRestaurantInList(selectedRestaurant, [visibleRestaurant])).toEqual(visibleRestaurant);
+     });
++
++    test('keeps the earliest candidate when several rows could match', () => {
++        const earlierByName = makeRestaurant({
++            id: 'earlier-name',
++            name: '같은 식당',
++            lat: 37.5665,
++            lng: 126.978,
++        });
++        const laterById = makeRestaurant({ id: 'target-id', name: '다른 식당' });
++        const target = makeRestaurant({
++            id: 'target-id',
++            name: '같은 식당',
++            lat: 37.5665,
++            lng: 126.978,
++        });
++
++        expect(findMatchingRestaurantInList(target, [earlierByName, laterById])).toEqual(earlierByName);
++        expect(findMatchingRestaurantInList(target, [laterById, earlierByName])).toEqual(laterById);
++    });
++
++    test('returns null for empty, missing, and non-matching input', () => {
++        const target = makeRestaurant({ id: 'missing', name: '없음', lat: 1, lng: 2 });
++        expect(findMatchingRestaurantInList(null, [target])).toBeNull();
++        expect(findMatchingRestaurantInList(undefined, [target])).toBeNull();
++        expect(findMatchingRestaurantInList(target, [])).toBeNull();
++        expect(findMatchingRestaurantInList(target, null)).toBeNull();
++        expect(findMatchingRestaurantInList(target, undefined)).toBeNull();
++        expect(findMatchingRestaurantInList(
++            makeRestaurant({ id: "'; drop table restaurants;--" }),
++            [target],
++        )).toBeNull();
++        expect(findMatchingRestaurantInList(
++            makeRestaurant({
++                id: 'wrapped',
++                mergedRestaurants: [],
++            }),
++            [makeRestaurant({ id: 'wrapped' })],
++        )?.id).toBe('wrapped');
++    });
+ });
+diff --git a/apps/web/tests-unit/use-restaurants-merge.test.ts b/apps/web/tests-unit/use-restaurants-merge.test.ts
+index f9880272..83fc5a21 100644
+--- a/apps/web/tests-unit/use-restaurants-merge.test.ts
++++ b/apps/web/tests-unit/use-restaurants-merge.test.ts
+@@ -356,6 +356,37 @@ describe('mergeRestaurants', () => {
+         expect(detail?.mergedTzuyangReviews).toEqual([]);
+     });
+ 
++    test('keeps a singleton restaurant without merging unrelated rows', async () => {
++        const { mergeRestaurants } = await loadUseRestaurants();
++        const only = makeRestaurant({
++            id: 'solo',
++            approved_name: '혼자식당',
++            categories: ['한식', '한식', '분식'],
++            youtube_link: 'https://youtu.be/soloVideo1',
++            tzuyang_review: '혼밥',
++            youtube_meta: { publishedAt: '2026-04-01T00:00:00Z', title: 'solo' },
++            review_count: 4,
++            lat: 0,
++            lng: 127,
++        });
++
++        const [merged] = mergeRestaurants([only]) as Array<Record<string, unknown>>;
++        expect(merged.id).toBe('solo');
++        expect(merged.name).toBe('혼자식당');
++        expect(merged.categories).toEqual(['한식', '분식']);
++        expect(merged.youtube_link).toBe('https://youtu.be/soloVideo1');
++        expect(merged.mergedYoutubeLinks).toEqual(['https://youtu.be/soloVideo1']);
++        expect(merged.tzuyang_review).toBe('혼밥');
++        expect(merged.mergedTzuyangReviews).toEqual(['혼밥']);
++        expect(merged.review_count).toBe(4);
++        expect(merged.lat).toBe(0);
++        expect(merged.lng).toBe(127);
++        expect(merged.mergedRestaurants).toEqual([only]);
++
++        const empty = mergeRestaurants([]);
++        expect(empty).toEqual([]);
++    });
++
+     test('mergeRestaurants exposes merge performance counters when available', async () => {
+         const { mergeRestaurants, ...maybePerfHelpers } = await import('../hooks/use-restaurants') as Record<string, unknown>;
+ 

@@ -1,0 +1,331 @@
+{
+  "network": "socket audit guard; controlled fixture-only children; sandbox status supplied by launcher",
+  "observation": "Exact registered fixture PIDs only; no command lines/environment/process-wide enumeration.",
+  "cases": [
+    {
+      "mode": "NORMAL_TERM",
+      "reason_code": "SUBPROCESS_TIMEOUT",
+      "returncode": 124,
+      "seconds": 0.312,
+      "owned_targets": {
+        "parent": {
+          "pid": 72407,
+          "ppid": 72403,
+          "pgid": 72407,
+          "sid": 72407
+        },
+        "child": {
+          "pid": 72430,
+          "ppid": 72407,
+          "pgid": 72407,
+          "sid": 72407
+        },
+        "grandchild": {
+          "pid": 72431,
+          "ppid": 72430,
+          "pgid": 72407,
+          "sid": 72407
+        }
+      },
+      "events": [
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 72407,
+              "ppid": 72403,
+              "pgid": 72407,
+              "state": "S"
+            },
+            {
+              "pid": 72430,
+              "ppid": 72407,
+              "pgid": 72407,
+              "state": "S"
+            },
+            {
+              "pid": 72431,
+              "ppid": 72430,
+              "pgid": 72407,
+              "state": "S"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "SIGNAL_SENT",
+          "signal": "SIGTERM"
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 72407,
+              "ppid": 72403,
+              "pgid": 72407,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": true
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": true
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    },
+    {
+      "mode": "FIRST_TERM_FAIL",
+      "reason_code": "SUBPROCESS_TIMEOUT",
+      "returncode": 124,
+      "seconds": 0.333,
+      "owned_targets": {
+        "parent": {
+          "pid": 72451,
+          "ppid": 72403,
+          "pgid": 72451,
+          "sid": 72451
+        },
+        "child": {
+          "pid": 72453,
+          "ppid": 72451,
+          "pgid": 72451,
+          "sid": 72451
+        },
+        "grandchild": {
+          "pid": 72456,
+          "ppid": 72453,
+          "pgid": 72451,
+          "sid": 72451
+        }
+      },
+      "events": [
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 72451,
+              "ppid": 72403,
+              "pgid": 72451,
+              "state": "S"
+            },
+            {
+              "pid": 72453,
+              "ppid": 72451,
+              "pgid": 72451,
+              "state": "S"
+            },
+            {
+              "pid": 72456,
+              "ppid": 72453,
+              "pgid": 72451,
+              "state": "S"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "MOCK_SIGNAL_FAILURE",
+          "signal": "TERM"
+        },
+        {
+          "phase": "HELPER_RESULT",
+          "signal": "SIGTERM",
+          "success": true
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 72451,
+              "ppid": 72403,
+              "pgid": 72451,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": true
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": true
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -15
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    },
+    {
+      "mode": "TERM_HELPER_FAIL",
+      "reason_code": "SUBPROCESS_TIMEOUT",
+      "returncode": 124,
+      "seconds": 0.305,
+      "owned_targets": {
+        "parent": {
+          "pid": 72475,
+          "ppid": 72403,
+          "pgid": 72475,
+          "sid": 72475
+        },
+        "child": {
+          "pid": 72477,
+          "ppid": 72475,
+          "pgid": 72475,
+          "sid": 72475
+        },
+        "grandchild": {
+          "pid": 72478,
+          "ppid": 72477,
+          "pgid": 72475,
+          "sid": 72475
+        }
+      },
+      "events": [
+        {
+          "phase": "BEFORE_TERMINATE",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 72475,
+              "ppid": 72403,
+              "pgid": 72475,
+              "state": "S"
+            },
+            {
+              "pid": 72477,
+              "ppid": 72475,
+              "pgid": 72475,
+              "state": "S"
+            },
+            {
+              "pid": 72478,
+              "ppid": 72477,
+              "pgid": 72475,
+              "state": "S"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "MOCK_SIGNAL_FAILURE",
+          "signal": "TERM"
+        },
+        {
+          "phase": "MOCK_HELPER_FAILURE",
+          "signal": "SIGTERM"
+        },
+        {
+          "phase": "SIGNAL_SENT",
+          "signal": "SIGKILL"
+        },
+        {
+          "phase": "GROUP_WAIT_BEGIN",
+          "known_targets": 3,
+          "states": [
+            {
+              "pid": 72475,
+              "ppid": 72403,
+              "pgid": 72475,
+              "state": "Z"
+            }
+          ],
+          "cached_returncode": null
+        },
+        {
+          "phase": "GROUP_WAIT_END",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        },
+        {
+          "phase": "GROUP_WAIT_RESULT",
+          "empty": true
+        },
+        {
+          "phase": "AFTER_TERMINATE",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        },
+        {
+          "phase": "TERMINATE_RESULT",
+          "clean": true
+        },
+        {
+          "phase": "AFTER_RUN",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        },
+        {
+          "phase": "AFTER_FINAL_REAP",
+          "known_targets": 3,
+          "states": [],
+          "cached_returncode": -9
+        }
+      ],
+      "heartbeat_stopped": true,
+      "group_empty_after_owned_parent_reap": true
+    }
+  ]
+}

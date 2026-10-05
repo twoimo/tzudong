@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-05T00:15:25.734293+00:00",
+  "registryLatestBraces": "3.0.3",
+  "advisory": "GHSA-vfj7-8cjw-p6xm",
+  "officialAdvisoryAffected": "<=3.0.3",
+  "officialAdvisoryPatched": "None",
+  "upstreamPR72": {
+    "state": "open",
+    "merged": false,
+    "head": "28d440b5dd449dbf1fe6f3506cf94ecca4d02660"
+  },
+  "suppressionOrForkOrForceOrDowngrade": false,
+  "wholeWebAuditPreviouslyRetainedHighCount": 7,
+  "productionOnlyAuditZeroNotReplacementForWholeAudit": true,
+  "source": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+}
