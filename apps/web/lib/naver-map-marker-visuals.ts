@@ -141,6 +141,8 @@ type IndividualMarkerVisual = {
 };
 
 type IndividualMarkerStamp = {
+    id: string;
+    visits: number;
     youtube: string;
     mergedYoutube: number;
     mergedReviews: number;
@@ -157,8 +159,10 @@ const individualVisualCache = new WeakMap<object, {
     plain?: IndividualMarkerStamp;
 }>();
 
-function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant) {
+function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant, visits: number) {
     return {
+        id: restaurant.id ?? '',
+        visits,
         youtube: restaurant.youtube_link ?? '',
         mergedYoutube: restaurant.mergedYoutubeLinks?.length ?? 0,
         mergedReviews: restaurant.mergedTzuyangReviews?.length ?? 0,
@@ -170,8 +174,10 @@ function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant
     };
 }
 
-function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverIndividualMarkerRestaurant) {
-    return stamp.youtube === (restaurant.youtube_link ?? '')
+function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverIndividualMarkerRestaurant, visits: number) {
+    return stamp.id === (restaurant.id ?? '')
+        && stamp.visits === visits
+        && stamp.youtube === (restaurant.youtube_link ?? '')
         && stamp.mergedYoutube === (restaurant.mergedYoutubeLinks?.length ?? 0)
         && stamp.mergedReviews === (restaurant.mergedTzuyangReviews?.length ?? 0)
         && stamp.mergedRestaurants === (restaurant.mergedRestaurants?.length ?? 0)
@@ -187,16 +193,18 @@ export function getNaverIndividualMarkerVisual(
     overlayKinds: readonly RestaurantOverlayMarkerKind[] = [],
 ) {
     const slot = isSelected ? 'selected' : 'plain';
+    const visitCount = getTzuyangVisitCount(restaurant);
     const canReuseObject = overlayKinds.length === 0;
     if (canReuseObject) {
         const cachedStamp = individualVisualCache.get(restaurant)?.[slot];
-        if (cachedStamp && individualStampMatches(cachedStamp, restaurant)) {
+        if (cachedStamp && individualStampMatches(cachedStamp, restaurant, visitCount)) {
             return cachedStamp.visual;
         }
     }
 
     const cacheKey = [
         restaurant.id ?? '',
+        visitCount,
         isSelected ? '1' : '0',
         overlayKinds.join(','),
         restaurant.youtube_link ?? '',
@@ -218,7 +226,6 @@ export function getNaverIndividualMarkerVisual(
         categories: restaurant.categories ?? [],
         category: normalizedCategory,
     });
-    const visitCount = getTzuyangVisitCount(restaurant);
     const markerKind = resolveRestaurantMarkerKind(restaurant, overlayKinds);
     const markerCategory =
         markerKind === 'user-submitted'
@@ -239,7 +246,7 @@ export function getNaverIndividualMarkerVisual(
     });
     if (canReuseObject) {
         const entry = individualVisualCache.get(restaurant) ?? {};
-        entry[slot] = { ...individualMarkerStampFields(restaurant), visual };
+        entry[slot] = { ...individualMarkerStampFields(restaurant, visitCount), visual };
         individualVisualCache.set(restaurant, entry);
     }
     return visual;
