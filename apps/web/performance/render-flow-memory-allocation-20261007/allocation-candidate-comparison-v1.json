@@ -1,0 +1,9 @@
+{
+  "beforeEstimatedAppMB": 427.388528,
+  "afterEstimatedAppMB": 364.000784,
+  "absoluteReductionMB": 63.387744,
+  "relativeReductionPercent": 14.831409793947486,
+  "diagnosticOnly": true,
+  "processesPerSource": 1,
+  "notRetainedHeap": true
+}

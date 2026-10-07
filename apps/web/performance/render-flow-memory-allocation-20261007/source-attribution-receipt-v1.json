@@ -1,0 +1,172 @@
+{
+  "createdAt": "2026-10-07T05:32:36.737890+00:00",
+  "diagnosticOnly": true,
+  "canonicalTimingAdmitted": 0,
+  "fieldAdmitted": 0,
+  "v2Passed": true,
+  "samples": "1 fresh process per source, 60 dependent pan-return cycles",
+  "matchedFunctions": {
+    "eL": "apps/web/lib/naver-map-render-plan.ts::toRestaurantRenderToken",
+    "Set.add_and_join": "apps/web/lib/map-render-guard.ts::makeDisplayIdsSignature"
+  },
+  "proof": "public chunk and exact zero-based line/column from sampled call tree; function AST members/calls match source",
+  "runs": [
+    {
+      "kind": "baseline",
+      "sourceCommit": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "topNodes": [
+        {
+          "id": 1906,
+          "sourceClass": "app",
+          "functionName": "add",
+          "selfSize": 34456572,
+          "lineNumber": -1,
+          "columnNumber": -1,
+          "appChunk": null,
+          "ancestry": [
+            "app:ub",
+            "app:iE",
+            "app:anonymous",
+            "app:anonymous",
+            "app:Set"
+          ]
+        },
+        {
+          "id": 1898,
+          "sourceClass": "app",
+          "functionName": "eL",
+          "selfSize": 34346240,
+          "lineNumber": 0,
+          "columnNumber": 17233,
+          "appChunk": "9963.2ad350d980cf6881.js",
+          "ancestry": [
+            "app:iE",
+            "app:anonymous",
+            "app:anonymous",
+            "app:map",
+            "app:anonymous"
+          ]
+        },
+        {
+          "id": 1908,
+          "sourceClass": "app",
+          "functionName": "join",
+          "selfSize": 32061432,
+          "lineNumber": -1,
+          "columnNumber": -1,
+          "appChunk": null,
+          "ancestry": [
+            "app:uy",
+            "app:ub",
+            "app:iE",
+            "app:anonymous",
+            "app:anonymous"
+          ]
+        }
+      ],
+      "groups": {
+        "browser-or-anonymous": {
+          "estimatedSelfAllocatedBytes": 16330448,
+          "nodes": 27
+        },
+        "app": {
+          "estimatedSelfAllocatedBytes": 418160764,
+          "nodes": 2128
+        },
+        "sdk": {
+          "estimatedSelfAllocatedBytes": 251853624,
+          "nodes": 1124
+        },
+        "measurement-probe": {
+          "estimatedSelfAllocatedBytes": 4272392,
+          "nodes": 9
+        }
+      }
+    },
+    {
+      "kind": "candidate",
+      "sourceCommit": "91a2a629b784ea4fb89d522475921caa7152f1e5",
+      "browser": "154.0.8037.98",
+      "topNodes": [
+        {
+          "id": 1962,
+          "sourceClass": "app",
+          "functionName": "add",
+          "selfSize": 33896772,
+          "lineNumber": -1,
+          "columnNumber": -1,
+          "appChunk": null,
+          "ancestry": [
+            "app:ub",
+            "app:iE",
+            "app:anonymous",
+            "app:anonymous",
+            "app:Set"
+          ]
+        },
+        {
+          "id": 1868,
+          "sourceClass": "app",
+          "functionName": "eL",
+          "selfSize": 32904208,
+          "lineNumber": 0,
+          "columnNumber": 17231,
+          "appChunk": "9963.ceffb39cd93dbd79.js",
+          "ancestry": [
+            "app:iE",
+            "app:anonymous",
+            "app:anonymous",
+            "app:map",
+            "app:anonymous"
+          ]
+        },
+        {
+          "id": 1965,
+          "sourceClass": "app",
+          "functionName": "join",
+          "selfSize": 30568212,
+          "lineNumber": -1,
+          "columnNumber": -1,
+          "appChunk": null,
+          "ancestry": [
+            "app:uy",
+            "app:ub",
+            "app:iE",
+            "app:anonymous",
+            "app:anonymous"
+          ]
+        }
+      ],
+      "groups": {
+        "browser-or-anonymous": {
+          "estimatedSelfAllocatedBytes": 16338348,
+          "nodes": 32
+        },
+        "app": {
+          "estimatedSelfAllocatedBytes": 427388528,
+          "nodes": 1965
+        },
+        "sdk": {
+          "estimatedSelfAllocatedBytes": 252158108,
+          "nodes": 1121
+        },
+        "measurement-probe": {
+          "estimatedSelfAllocatedBytes": 5497368,
+          "nodes": 10
+        }
+      }
+    }
+  ],
+  "rawSha256": "f943543bf186f4e77b28bb17fbd6aabb166bd5e916100cab0f951fe0880ef283",
+  "sourceTokenCacheChangeDeferred": "Reference-only caching could miss in-place data changes; first candidate changes only mutation-safe whole-signature reuse.",
+  "astraSession": {
+    "id": "01a114ca-780c-7911-b643-4a0f6560ea4e",
+    "closed": true,
+    "previousStatus": "running",
+    "matrixRetained": true,
+    "finalReportNotReceived": true,
+    "newAstraCalls": 0,
+    "reason": "Human quota constraint; bounded source matrix is recall, source causality requires browser mapping"
+  }
+}

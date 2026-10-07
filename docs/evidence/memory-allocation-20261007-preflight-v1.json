@@ -1,0 +1,10 @@
+{
+  "gitDiffCachedCheckExit": 2,
+  "rawEvidenceWhitespacePreserved": true,
+  "sourceDiffCheckPreviouslyPassed": true,
+  "diagnosticLines": 12,
+  "boundedPaths": [
+    "apps/web/performance/render-flow-memory-allocation-20261007/signature-values-source-v1.patch"
+  ],
+  "notSourceTestFailure": true
+}

@@ -1,0 +1,96 @@
+diff --git a/apps/web/lib/map-render-guard.ts b/apps/web/lib/map-render-guard.ts
+index ad506287..bfc16cb8 100644
+--- a/apps/web/lib/map-render-guard.ts
++++ b/apps/web/lib/map-render-guard.ts
+@@ -79,17 +79,30 @@ function makeBoundsSignature(bounds: RenderBoundsLike | null): string | null {
+     return lastBoundsSignature;
+ }
+ 
+-const displayIdsSignatureCache = new WeakMap<readonly string[], string>();
++// Expanded markers rebuild their token array on viewport changes. Keep one
++// value snapshot so equal arrays avoid Set/sort/join, while in-place edits
++// cannot reuse a stale signature. No history of previous views is retained.
++let lastDisplayIds: readonly string[] | null = null;
++let lastDisplayIdsSignature = '';
+ 
+ function makeDisplayIdsSignature(ids: readonly string[]): string {
+-    const cached = displayIdsSignatureCache.get(ids);
+-    if (cached !== undefined) return cached;
++    if (lastDisplayIds && lastDisplayIds.length === ids.length) {
++        let same = true;
++        for (let index = 0; index < ids.length; index += 1) {
++            if (lastDisplayIds[index] !== ids[index]) {
++                same = false;
++                break;
++            }
++        }
++        if (same) return lastDisplayIdsSignature;
++    }
+ 
+     const signature = [...new Set(ids)]
+         .filter(Boolean)
+         .sort()
+         .join("|");
+-    displayIdsSignatureCache.set(ids, signature);
++    lastDisplayIds = ids.slice();
++    lastDisplayIdsSignature = signature;
+     return signature;
+ }
+ 
+@@ -179,4 +192,3 @@ export function shouldSkipMarkerUpdate(
+         previous.markerLayerSignature === next.markerLayerSignature
+     );
+ }
+-
+diff --git a/apps/web/tests-unit/naver-map-render-guard.test.ts b/apps/web/tests-unit/naver-map-render-guard.test.ts
+index b77f0994..9735b8cf 100644
+--- a/apps/web/tests-unit/naver-map-render-guard.test.ts
++++ b/apps/web/tests-unit/naver-map-render-guard.test.ts
+@@ -189,7 +189,7 @@ describe('naver map marker render guard', () => {
+         expect(shouldSkipMarkerUpdate(previous, nextToggleChanged)).toBe(false);
+     });
+ 
+-    test('reuses the display id signature for the same id list', () => {
++    test('refreshes the display signature when the same id list is edited', () => {
+         const displayRestaurantIds = ['r-2', 'r-1', 'r-2'];
+         const input = {
+             zoom: 12,
+@@ -204,8 +204,37 @@ describe('naver map marker render guard', () => {
+         const first = buildMarkerRenderSignature(input);
+         displayRestaurantIds.push('r-3');
+         const second = buildMarkerRenderSignature(input);
+-        expect(second.displayRestaurantIdsSignature).toBe(first.displayRestaurantIdsSignature);
++        expect(second.displayRestaurantIdsSignature).toBe('r-1|r-2|r-3');
+         expect(first.displayRestaurantIdsSignature).toBe('r-1|r-2');
++        expect(shouldSkipMarkerUpdate(first, second)).toBe(false);
++    });
++
++    test('preserves canonical ids across fresh arrays, edits and interleaved views', () => {
++        const signature = (displayRestaurantIds: string[]) => buildMarkerRenderSignature({
++            zoom: 12,
++            bounds: null,
++            displayRestaurantIds,
++            selectedRestaurantId: null,
++            isClusterMode: false,
++            isRegionalClusterMode: false,
++            isSeoulDistrictMode: false,
++        }).displayRestaurantIdsSignature;
++
++        const ids = ['r-2', '', 'r-1', 'r-2'];
++        expect(signature(ids)).toBe('r-1|r-2');
++        expect(signature([...ids])).toBe('r-1|r-2');
++        ids[2] = 'r-3';
++        expect(signature(ids)).toBe('r-2|r-3');
++        expect(signature(['other'])).toBe('other');
++        expect(signature(ids)).toBe('r-2|r-3');
++        ids.splice(0, ids.length, 'r-3', '', 'r-3');
++        expect(signature(ids)).toBe('r-3');
++        ids.length = 0;
++        expect(signature(ids)).toBe('');
++        expect(signature([])).toBe('');
++        ids.push('restored');
++        expect(signature(ids)).toBe('restored');
++        expect(signature(['r-1', 'r-2', 'r-1'])).toBe('r-1|r-2');
+     });
+ 
+     test('keeps an empty desktop marker render from poisoning the render signature', () => {

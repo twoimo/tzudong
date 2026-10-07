@@ -1,0 +1,75 @@
+{
+  "completedOnly": true,
+  "diagnosticAllocationNotRetainedHeap": true,
+  "runs": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "groups": {
+        "browser-or-anonymous": {
+          "estimatedSelfAllocatedBytes": 18432924,
+          "nodes": 29
+        },
+        "app": {
+          "estimatedSelfAllocatedBytes": 429216760,
+          "nodes": 2024
+        },
+        "sdk": {
+          "estimatedSelfAllocatedBytes": 249748544,
+          "nodes": 1073
+        },
+        "measurement-probe": {
+          "estimatedSelfAllocatedBytes": 4787364,
+          "nodes": 10
+        }
+      },
+      "rawSHA": "8d8a8ef9b0ec28e786ec27dc5fc33037a8b755d8e7a49c9a75dfcd2f37441f9c"
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "groups": {
+        "browser-or-anonymous": {
+          "estimatedSelfAllocatedBytes": 15543040,
+          "nodes": 31
+        },
+        "app": {
+          "estimatedSelfAllocatedBytes": 432337112,
+          "nodes": 2231
+        },
+        "sdk": {
+          "estimatedSelfAllocatedBytes": 248667104,
+          "nodes": 1127
+        },
+        "measurement-probe": {
+          "estimatedSelfAllocatedBytes": 5333344,
+          "nodes": 10
+        }
+      },
+      "rawSHA": "1dfac648555ecff24f06edcafb43f7e9381d36a06d411e35c25d9a0e712edf6d"
+    },
+    {
+      "run": 2,
+      "kind": "candidate",
+      "groups": {
+        "browser-or-anonymous": {
+          "estimatedSelfAllocatedBytes": 17132324,
+          "nodes": 30
+        },
+        "app": {
+          "estimatedSelfAllocatedBytes": 441585108,
+          "nodes": 2136
+        },
+        "sdk": {
+          "estimatedSelfAllocatedBytes": 244210384,
+          "nodes": 1061
+        },
+        "measurement-probe": {
+          "estimatedSelfAllocatedBytes": 6450512,
+          "nodes": 9
+        }
+      },
+      "rawSHA": "ae216e7cf2837e910b854ac5747fa3dd2d82635ac65ad0c420eed6a3d0e3429d"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "createdAt": "2026-10-07T05:44:50.445408+00:00",
+  "base": "5df2808c083c910b0b87ae7a2c4a24c5cbfbf166",
+  "candidate": "791795bccea2e1f57173ca33cd76de6444df9f46",
+  "branch": "codex/marker-signature-allocation-20261007",
+  "sourcePaths": [
+    "apps/web/lib/map-render-guard.ts",
+    "apps/web/tests-unit/naver-map-render-guard.test.ts"
+  ],
+  "sourceChanged": true,
+  "localCommit": true,
+  "remotePush": false,
+  "protectedPromotion": false,
+  "deployment": false,
+  "physicalDeviceUsed": false,
+  "fieldWrites": 0,
+  "newAstraCalls": 0,
+  "knownSetupFailures": [
+    "first dependency-link command had duplicated apps/web path; missing package means one suite not run, retained tool result",
+    "initial parity command referenced nonexistent script; corrected pinned run-typecheck.mjs compiler parity passed"
+  ],
+  "checks": {
+    "unitTests": 25,
+    "unitAssertions": 83,
+    "lint": true,
+    "typeParityLogicalInputs": 2449,
+    "typeParityDiagnostics": 0,
+    "productionBuildNext": "16.3.6",
+    "routeCSS": true,
+    "actualSDKFunctionalChecks": 10,
+    "trustedCDPDetailSwipes": 4
+  },
+  "inputs": [
+    {
+      "path": "apps/web/lib/map-render-guard.ts",
+      "sha256": "9b2f3239d7be9fc11d325f7e4204a8185416ab7e96d5c00c770eaacd96c76d62",
+      "gitBlob": "bfc16cb870e7c6212ed6ef635e94230d4d8943b6"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-render-guard.test.ts",
+      "sha256": "a3a8e107df9249ec11252cd315996741a6b1e1ac2c1041a5c8016d83b77b2659",
+      "gitBlob": "9735b8cf25983a04efb6801b7d3cbb39ecc6a4ab"
+    }
+  ]
+}

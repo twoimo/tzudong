@@ -1,0 +1,1307 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-10-07T05:27:34.481378+00:00",
+  "review_kind": "independent_read_only_source_lifetime_review",
+  "source": {
+    "commit": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+    "reader_checkout": "/Users/twoimo/.codex/worktrees/nightly-quality-20261004/tzudong",
+    "read_method": "git show and git rev-parse against fixed commit; checkout HEAD and working files not used as source"
+  },
+  "reviewer_metadata": {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "effort": "max"
+  },
+  "metadata_evidence": "Current session_meta.model_provider and latest turn_context model/effort only; no raw messages/responses/credentials saved; no independent backend wire attestation.",
+  "observations_supplied_by_parent": {
+    "warm_endpoint": {
+      "baseline_MB": 26.7,
+      "variant_MB": 33.7,
+      "relative_percent_reported": 26.2,
+      "guard_percent": 20,
+      "status": "failed",
+      "same_source_AA_percent": 22.15,
+      "post_final_GC_MB_approx": 18.6,
+      "verified_by_this_review": false
+    },
+    "allocation_run0": {
+      "label": "baseline ca235",
+      "chrome": "154.0.8037.98",
+      "includeCollectedMinor": true,
+      "includeCollectedMajor": true,
+      "sampling_interval_bytes": 65536,
+      "sampled_estimated_MB": {
+        "app": 429.2,
+        "SDK": 249.7,
+        "probe": 4.79
+      },
+      "reported_top_app_frames_MB": {
+        "eL": 37.23,
+        "Set.add": 36.36,
+        "join": 33.1
+      },
+      "reported_ancestry": [
+        "app:uy",
+        "ub",
+        "iE",
+        "anonymous/map/Set"
+      ],
+      "v1_app_chunk_and_column": "not retained",
+      "source_mapping": "unconfirmed; parent preparing v2 public chunk filename and column",
+      "source_build_match": "not independently verified",
+      "verified_by_this_review": false
+    }
+  },
+  "evidence_limits": [
+    "Sampled allocation volume including collected objects is not retained/live heap.",
+    "Frame inclusive/exclusive attribution was not supplied; do not sum overlapping frame estimates.",
+    "No minified name is mapped to a source function in this matrix.",
+    "Parent-requested map/Set/join investigation focus is not a measured source hotspot ranking.",
+    "Warm 20 percent guard remains failed; A/A variation and final GC do not waive it."
+  ],
+  "instrumentation_contract": {
+    "implemented": false,
+    "owner": "parent browser profiling task",
+    "storage": "Preallocate fixed numeric counters and reason bitmasks; export one aggregate snapshot per controlled window. No per-marker event object/console/raw stack logging.",
+    "boundedness": "At most 8 probe groups; no unbounded history or new strong DOM/restaurant/callback retention.",
+    "forbidden_payloads": [
+      "raw user/response/credentials",
+      "headers/cookies/tokens",
+      "restaurant or user records",
+      "precise location",
+      "review text/profile values",
+      "HTML/icons/query strings",
+      "raw SDK/provider diagnostics"
+    ],
+    "attribution_gate": "Use parent v2 public chunk filename+column, verify actual build/source mapping, and correlate branch counters before admitting a source hotspot."
+  },
+  "matrix": [
+    {
+      "id": "F01",
+      "title": "Viewport revision and equality work before a render can be skipped",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 665,
+          "line_end": 718
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2238,
+          "line_end": 2302
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2346,
+          "line_end": 2373
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2378,
+          "line_end": 2445
+        }
+      ],
+      "trigger": "Changed idle/resize viewport while expansion is active, or data/index generation changes.",
+      "causal_path": "viewport JSON key -> revision increment -> render effect; debounced getClusters -> equality signature construction -> retain previous array or publish next.",
+      "allocation_sites": [
+        "Viewport bounds object, array and JSON string",
+        "getClusters output before equality decision",
+        "Per-feature signature arrays/join strings even when arrays remain equal",
+        "Effect-local jobs array and early-key replacement"
+      ],
+      "lifetime_and_cleanup": "Latest refs/state retain one generation. Index is replaced on completed load; cancelled idle callback is cancelled. Cluster debounce has a disposed guard but no exposed cancel operation.",
+      "boundaries": [
+        "Pan alone is not a cluster-index rebuild while dependencies are unchanged",
+        "Do not remove viewport revision: cached-equal clusters still need expanded-marker return and AX refresh",
+        "Revision is a number; allocations are around it, not evidence of unbounded numeric state"
+      ],
+      "instrumentation_ids": [
+        "I01"
+      ],
+      "conditional_candidates": [],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F02",
+      "title": "Fresh empty inputs and expanded IDs amplify full signature construction",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2623,
+          "line_end": 2675
+        },
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 7,
+          "line_end": 17
+        },
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 71,
+          "line_end": 88
+        },
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 344,
+          "line_end": 367
+        },
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 427,
+          "line_end": 441
+        },
+        {
+          "path": "apps/web/lib/map-render-guard.ts",
+          "line_start": 82,
+          "line_end": 93
+        },
+        {
+          "path": "apps/web/lib/restaurant-visit-count.ts",
+          "line_start": 33,
+          "line_end": 54
+        }
+      ],
+      "trigger": "Render effect passes early guard; especially expanded set <=1000 where inner signature omits viewport bounds.",
+      "causal_path": "Inactive Seoul branch passes new [] -> reference-key miss -> map all displayRestaurants to coordinate/category/visit tokens -> slice and expanded-ID tokens -> Set/filter/sort/join -> inner skip.",
+      "allocation_sites": [
+        "seoulIndividualIds literal [] outside filtered zooms",
+        "seoulClustersToRender [] outside district modes",
+        "Two Sets per getTzuyangVisitCount invocation",
+        "Render token array and strings; expanded/bubble copy; unique/sorted ID array and joined string"
+      ],
+      "lifetime_and_cleanup": "lastRenderTargetKey/lastRenderTargetIds strongly retain latest inputs/result for module lifetime; displayIdsSignatureCache is weak by array. Each newly copied signature array misses that weak cache.",
+      "boundaries": [
+        "Structural redundant work is confirmed; byte contribution and eL/uy/ub/iE mapping are unmeasured",
+        "Keep full coordinate/category/visit/kind/selected/search/mode invalidation",
+        "Do not memoize a mutable IDs array after pushing more tokens"
+      ],
+      "instrumentation_ids": [
+        "I02"
+      ],
+      "conditional_candidates": [
+        "C01"
+      ],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F03",
+      "title": "Expanded-list assembly defeats downstream reference reuse",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2496,
+          "line_end": 2524
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2592,
+          "line_end": 2620
+        },
+        {
+          "path": "apps/web/lib/mobile-home-search-selection.ts",
+          "line_start": 197,
+          "line_end": 237
+        },
+        {
+          "path": "apps/web/lib/mobile-home-search-selection.ts",
+          "line_start": 327,
+          "line_end": 365
+        },
+        {
+          "path": "apps/web/components/home/home-map-container.tsx",
+          "line_start": 873,
+          "line_end": 934
+        },
+        {
+          "path": "apps/web/components/home/home-map-container.tsx",
+          "line_start": 950,
+          "line_end": 997
+        }
+      ],
+      "trigger": "Nonempty expanded IDs on an effect that passed the early guard.",
+      "causal_path": "map visible IDs -> new Set and list copy -> append expanded sources -> swipe dedupe Sets/Map -> identity-based publish -> parent dedupe/signature/RAF suppression.",
+      "allocation_sites": [
+        "Visible ID array + Set + candidate copy",
+        "seenIds/seenMergedIds Sets, name Map and unique arrays",
+        "Search ordering array when selection exists",
+        "Parent payload object and ID joins even if final publish is suppressed"
+      ],
+      "lifetime_and_cleanup": "Refs retain latest published/pending/fallback arrays; WeakSet/WeakMap dedupe/order caches depend on source identity. RAFs cancel on parent cleanup.",
+      "boundaries": [
+        "Expanded rows remain in list/swipe even when provider DOM is culled",
+        "Same IDs do not establish equal restaurant values or callback ownership",
+        "Numeric-string normalization makes new rows; source-equality duplicate guard intentionally distinguishes objects"
+      ],
+      "instrumentation_ids": [
+        "I03"
+      ],
+      "conditional_candidates": [
+        "C02"
+      ],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F04",
+      "title": "Review target selection has one-entry projection reuse and independent publication gate",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 491,
+          "line_end": 569
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2541,
+          "line_end": 2587
+        },
+        {
+          "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+          "line_start": 72,
+          "line_end": 85
+        },
+        {
+          "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+          "line_start": 115,
+          "line_end": 172
+        },
+        {
+          "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+          "line_start": 175,
+          "line_end": 201
+        }
+      ],
+      "trigger": "Contextual payload eligible and no selected restaurant; viewport seed or visible ID signature changes.",
+      "causal_path": "seed + visible-ID signature -> projection hit/miss -> rank candidates -> related-ID Set/map -> target signature joins -> state update only if signature differs.",
+      "allocation_sites": [
+        "Projection coordinate wrappers, scored/candidate arrays",
+        "Known-review array and ranked objects",
+        "Related-ID Set/array on restaurant-object cache miss",
+        "ID and target signatures; map signature JSON/sort on later fetch result"
+      ],
+      "lifetime_and_cleanup": "One projection entry retains latest restaurant/target arrays. Related-ID and visible-ID caches are weak. Targets are limited to 3 mobile/5 desktop; related IDs and candidate scans are not limited to 3/5.",
+      "boundaries": [
+        "A -> B -> A can miss the one-entry projection cache",
+        "Changed seed does not necessarily change target signature or start a request",
+        "Same visible IDs omit data/size/mobile dimensions from this projection cache key; changing this cache needs correctness evidence"
+      ],
+      "instrumentation_ids": [
+        "I04"
+      ],
+      "conditional_candidates": [],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F05",
+      "title": "Review requests retain cancelled generations until awaits settle",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 944,
+          "line_end": 1058
+        },
+        {
+          "path": "apps/web/lib/supabase-rest-client.ts",
+          "line_start": 43,
+          "line_end": 66
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 616,
+          "line_end": 650
+        },
+        {
+          "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+          "line_start": 214,
+          "line_end": 244
+        }
+      ],
+      "trigger": "visibleMarkerReviewBubbleTargets identity changes after a distinct target signature.",
+      "causal_path": "related-ID Map + keys -> postgrestIn map/escape/join -> review await -> user-ID Set -> profile await -> sorted rows/new bubbles -> signature equality -> publish or discard.",
+      "allocation_sites": [
+        "Related-ID Map/array and escaped query string",
+        "Review/profile continuation arrays and per-result bubble objects",
+        "Map signatures with JSON strings and sort",
+        "Wrapper HTML on bubble object miss"
+      ],
+      "lifetime_and_cleanup": "Cleanup flips isCancelled; checks after each await prevent stale bubble state publication. This call path passes no AbortSignal. Pending requests may retain closed-over maps/targets until settlement; no duration or leak claim.",
+      "boundaries": [
+        "Do not log queries, user IDs, content, profile values, URLs or raw responses",
+        "Render-token cache revalidates bubble scalar fields; wrapper WeakMap only checks marker content/mobile for the same object",
+        "Narrow abort proposal requires measured overlapping pending requests and compatible request ownership"
+      ],
+      "instrumentation_ids": [
+        "I04"
+      ],
+      "conditional_candidates": [
+        "C05"
+      ],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F06",
+      "title": "Restaurant query-key normalization runs on component render, separately from fetch",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 1933,
+          "line_end": 1957
+        },
+        {
+          "path": "apps/web/lib/map-query-helpers.ts",
+          "line_start": 64,
+          "line_end": 90
+        },
+        {
+          "path": "apps/web/lib/map-query-helpers.ts",
+          "line_start": 109,
+          "line_end": 117
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "line_start": 254,
+          "line_end": 304
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "line_start": 620,
+          "line_end": 656
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "line_start": 669,
+          "line_end": 683
+        }
+      ],
+      "trigger": "Every NaverMapView function render invokes useRestaurants, including expanded viewport revision updates.",
+      "causal_path": "Memoized options -> normalizeCategories map/filter/Set/sort -> base query-key array -> outer spread-key array -> useQuery.",
+      "allocation_sites": [
+        "Empty normalized-category [] or nonempty category arrays/Set",
+        "Bounds rounding tuple when initial bounds are present",
+        "Base + outer key arrays and query options/callback"
+      ],
+      "lifetime_and_cleanup": "Query options specify staleTime 5 minutes and gcTime 10 minutes; actual cache lifetime is unmeasured. Naver supplies initial region bounds or undefined after full-data activation, not pan bounds.",
+      "boundaries": [
+        "Do not infer a refetch per pan from new array identity",
+        "includeVerifiedReviewCounts is false on this direct Naver caller",
+        "Preserve all key flags and normalized-key versus original-query bounds distinction",
+        "Library hash allocations are unmapped; source review does not identify minified library frames"
+      ],
+      "instrumentation_ids": [
+        "I05"
+      ],
+      "conditional_candidates": [
+        "C04"
+      ],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F07",
+      "title": "Existing visual caches avoid some HTML but miss weak-slot hydration",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/lib/naver-map-marker-visuals.ts",
+          "line_start": 28,
+          "line_end": 53
+        },
+        {
+          "path": "apps/web/lib/naver-map-marker-visuals.ts",
+          "line_start": 155,
+          "line_end": 212
+        },
+        {
+          "path": "apps/web/lib/naver-map-marker-visuals.ts",
+          "line_start": 221,
+          "line_end": 245
+        },
+        {
+          "path": "apps/web/lib/restaurant-marker-kind.ts",
+          "line_start": 12,
+          "line_end": 28
+        },
+        {
+          "path": "apps/web/lib/restaurant-visit-count.ts",
+          "line_start": 33,
+          "line_end": 54
+        }
+      ],
+      "trigger": "Individual renderer actually executes; especially refreshed objects with previously seen string cache keys.",
+      "causal_path": "Weak selected/plain stamp -> miss -> array/join key -> strong visual cache hit returns before weak stamp write, or HTML creation on miss.",
+      "allocation_sites": [
+        "String-key array/join and LRU delete/set on strong hit",
+        "HTML, visual/anchor/stamp objects on miss",
+        "Visit Sets when generating visual"
+      ],
+      "lifetime_and_cleanup": "Strong visual cache keeps at most 2000 entries for module lifetime. Weak stamps can stay alive while source rows remain strongly reachable elsewhere. No runtime hit rates observed.",
+      "boundaries": [
+        "Weak stamp omits id; both stamp/string key omit youtube_links/tzuyang_reviews contents and merged member field changes at fixed length",
+        "Do not strengthen caching without correct data invalidation",
+        "Same image does not imply same visit badge, provenance, marker identity or semantics"
+      ],
+      "instrumentation_ids": [
+        "I06"
+      ],
+      "conditional_candidates": [
+        "C06"
+      ],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F08",
+      "title": "Pool icon changes can parse transient DOM before fallback replacement",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 38,
+          "line_end": 73
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 145,
+          "line_end": 222
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 254,
+          "line_end": 280
+        }
+      ],
+      "trigger": "Existing active or pooled SDK marker is acquired with different icon content/anchor.",
+      "causal_path": "Compare content/anchor -> reset AX ownership -> parse template -> identity/style/badge/image guards -> patch bubble and mutate currentIcon.content, or setIcon.",
+      "allocation_sites": [
+        "Template + parsed subtree",
+        "Attribute/badge outerHTML strings and host array/querySelectorAll collections",
+        "SDK icon replacement allocations are external and unmeasured",
+        "releaseExcept Array.from/filter and reverse batch release"
+      ],
+      "lifetime_and_cleanup": "Successful patch retains existing image and moves new bubble; unused template is transient unless SDK/DOM owners retain something. getIcon alias/copy behavior and parser allocation sizes need actual SDK evidence.",
+      "boundaries": [
+        "Reverse release batch assists same-order return but does not guarantee identity reuse for different subsets/orders",
+        "Preserve restaurant id, role, tabindex, aria-label/title, badge, anchor and image checks",
+        "Patch is not allocation-free and content equality does not prove SDK memory ownership"
+      ],
+      "instrumentation_ids": [
+        "I06"
+      ],
+      "conditional_candidates": [],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F09",
+      "title": "Acquisition options and click ownership remain active per marker",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2723,
+          "line_end": 2795
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 3065,
+          "line_end": 3097
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 155,
+          "line_end": 171
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 218,
+          "line_end": 245
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 335,
+          "line_end": 365
+        }
+      ],
+      "trigger": "Full individual render or a deferred job; not an inner-guard skip.",
+      "causal_path": "Visual lookup -> position/anchor factories -> icon options + restaurant callback -> acquire -> stable SDK listener dispatches replaceable __onClick.",
+      "allocation_sites": [
+        "Per-call option/factory/click closures even when coordinates/anchor reuse",
+        "Overlapping markers need new projected coordinates",
+        "New SDK marker/listener only on pool miss"
+      ],
+      "lifetime_and_cleanup": "active Map keeps marker -> latest click closure -> restaurant/handler state. release clears callback before detaching; pooled marker retains icon/DOM/one SDK listener for reuse. Eviction and clear dispose listener. MAX_POOL_SIZE=1000 caps free pool only.",
+      "boundaries": [
+        "Active set and expanded snapshot are not capped by MAX_POOL_SIZE",
+        "Pooling cap and retainSmallExpandedSet<=1000 are distinct mechanisms",
+        "getStats reused excludes active hits; counters are cumulative until resetStats, not a per-pan byte metric",
+        "No pool-cap proposal without actual retainer/cardinality evidence"
+      ],
+      "instrumentation_ids": [
+        "I06"
+      ],
+      "conditional_candidates": [],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F10",
+      "title": "Selected-marker update bypasses acquire icon equality",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 3272,
+          "line_end": 3326
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 289,
+          "line_end": 310
+        }
+      ],
+      "trigger": "Selected ID changes (including grid selection) and an active marker is found.",
+      "causal_path": "Main render can acquire selected icon -> later selected-style effect builds it again -> update always setIcon -> AX sync and zIndex.",
+      "allocation_sites": [
+        "Update/icon object; potentially redundant SDK setIcon and replacement subtree"
+      ],
+      "lifetime_and_cleanup": "Up to previous/current IDs are styled, not every marker. Equal selected ID returns early. Exact same-commit duplication is a hypothesis requiring counters.",
+      "boundaries": [
+        "Keep zIndex and selected/search offscreen exceptions",
+        "Even a skipped icon setter must preserve AX resync for a replaced/delayed root",
+        "Changing a generic icon equality rule requires coverage of every supported icon field"
+      ],
+      "instrumentation_ids": [
+        "I06"
+      ],
+      "conditional_candidates": [
+        "C03"
+      ],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F11",
+      "title": "Retained mobile accessibility sync is required before render guards",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2391,
+          "line_end": 2419
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2783,
+          "line_end": 2795
+        },
+        {
+          "path": "apps/web/lib/retained-marker-accessibility.ts",
+          "line_start": 16,
+          "line_end": 49
+        },
+        {
+          "path": "apps/web/lib/retained-marker-accessibility.ts",
+          "line_start": 52,
+          "line_end": 93
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 234,
+          "line_end": 245
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 335,
+          "line_end": 353
+        }
+      ],
+      "trigger": "Existing expanded marker on effect entry, or newly acquired/deferred hidden marker, or SDK root insertion.",
+      "causal_path": "Viewport + selection exception -> visible fast path or hidden root query -> app overlay masking -> root-missing observer registry -> retry on child insertion.",
+      "allocation_sites": [
+        "Root query results/internal DOM work (bytes unmeasured)",
+        "One Set/observer/registry per pending map root, not per hidden marker",
+        "Pending membership updates"
+      ],
+      "lifetime_and_cleanup": "Registry Set strongly owns pending markers while observer is connected. Root found, visibility, release, clear or target change cancels membership; empty registry disconnects. WeakMaps alone do not prove no retention.",
+      "boundaries": [
+        "Same hidden flag is insufficient to skip: SDK root can be replaced with same desired state",
+        "Hide complete review overlay including sibling button; preserve externally owned aria-hidden",
+        "Desktop visibility and selected/search padded-view exceptions must remain intact",
+        "Do not change focusability/inert behavior as a memory optimization"
+      ],
+      "instrumentation_ids": [
+        "I07"
+      ],
+      "conditional_candidates": [],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F12",
+      "title": "Deferred jobs release captures incrementally with bounded failure recovery",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2378,
+          "line_end": 2384
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2763,
+          "line_end": 2795
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 3132,
+          "line_end": 3150
+        },
+        {
+          "path": "apps/web/lib/deferred-marker-renders.ts",
+          "line_start": 1,
+          "line_end": 30
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2158,
+          "line_end": 2180
+        }
+      ],
+      "trigger": "Retained small expanded marker is outside initial padded viewport and absent from active pool.",
+      "causal_path": "Job closures -> rAF -> MessageChannel batches <=32 -> clear each job slot before execution -> finish/error/stop -> current cancellation ref cleanup.",
+      "allocation_sites": [
+        "Job array and one closure per queued marker",
+        "One channel/two ports/rAF/stop and completion closures per batch"
+      ],
+      "lifetime_and_cleanup": "jobs slot becomes undefined before render. stop empties array, nulls onmessage, closes ports and cancels frame. Cancellation never calls complete; error calls complete(false), success true. Captures stay until queue runs/cancels and host releases callbacks. Retry limited to 6 and not reset while tail pending.",
+      "boundaries": [
+        "No stale completion may overwrite newer signature/owner",
+        "Immediate cancellation is not provider-error completion",
+        "Data, selected state or unmount during tail must not execute old jobs",
+        "Keep active-ID cleanup and signature null until a completed tail"
+      ],
+      "instrumentation_ids": [
+        "I08"
+      ],
+      "conditional_candidates": [],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F13",
+      "title": "Module roots survive component pool cleanup",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 767,
+          "line_end": 794
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 1284,
+          "line_end": 1305
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 1806,
+          "line_end": 1821
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2091,
+          "line_end": 2135
+        },
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 93,
+          "line_end": 118
+        },
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 298,
+          "line_end": 313
+        },
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 427,
+          "line_end": 441
+        },
+        {
+          "path": "apps/web/lib/expanded-cluster-restaurant-snapshot.ts",
+          "line_start": 36,
+          "line_end": 82
+        },
+        {
+          "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+          "line_start": 32,
+          "line_end": 34
+        }
+      ],
+      "trigger": "Repeated render, refreshed data, component cleanup and later remount.",
+      "causal_path": "React refs/state -> latest lists/snapshot; module lastVisibleSource/lastRenderTargetKey -> last full arrays/lookups -> weak caches; independent strong HTML caches.",
+      "allocation_sites": [
+        "Expanded snapshot Set/map-entry tuples when dependencies change",
+        "Eager useRef initializer snapshot/new Map on component render",
+        "Last-generation signature/list replacements"
+      ],
+      "lifetime_and_cleanup": "Snapshot retains current lookup IDs plus explicit expanded/selected retain IDs and prunes others. Module strong visual caches (2000 individual,256 cluster HTML) and last-input roots are not cleared by markerPool.clear; markerContentCache clear targets an otherwise unused cache.",
+      "boundaries": [
+        "This is reachable retention, not proof of a leak or its size",
+        "Measure replacing keys and component unmount separately from natural endpoint",
+        "WeakMap reachability depends on strong owners; no blanket cache deletion/size tuning"
+      ],
+      "instrumentation_ids": [
+        "I01",
+        "I03",
+        "I06"
+      ],
+      "conditional_candidates": [],
+      "measured_attribution": null,
+      "performance_rank": null
+    },
+    {
+      "id": "F14",
+      "title": "Visual guards do not establish callback or data freshness",
+      "evidence_class": "fixed_source_observation_with_unmeasured_causal_hypothesis",
+      "source": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 1511,
+          "line_end": 1519
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2420,
+          "line_end": 2466
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2666,
+          "line_end": 2675
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 3150,
+          "line_end": 3150
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 218,
+          "line_end": 222
+        },
+        {
+          "path": "apps/web/components/home/home-map-container.tsx",
+          "line_start": 1151,
+          "line_end": 1155
+        },
+        {
+          "path": "apps/web/lib/naver-map-sidepanel-helpers.ts",
+          "line_start": 49,
+          "line_end": 72
+        },
+        {
+          "path": "apps/web/lib/mobile-home-search-selection.ts",
+          "line_start": 294,
+          "line_end": 303
+        }
+      ],
+      "trigger": "Only callback owner/panel state changes, or same IDs/visual fields arrive as new row objects.",
+      "causal_path": "Effect dependency changes -> early/full visual equality can return before acquire -> old __onClick continues to capture prior handler/row until a full render.",
+      "allocation_sites": [
+        "Potentially unnecessary old capture lifetime; not measured as leak"
+      ],
+      "lifetime_and_cleanup": "Rebind on acquire and clear on release are sound ownership exits. They do not prove freshness when acquire is skipped. Scalar signature caches keyed by arrays also assume source replacement.",
+      "boundaries": [
+        "Callback-only replacement must dispatch to current owner and current row",
+        "A visual-equivalent updated name/review row must not leave stale detail data",
+        "Array mutation is not uniformly supported; search-list module explicitly requires replacing edited arrays",
+        "Review bubble in-place mutation can update token but leave wrapped HTML stale"
+      ],
+      "instrumentation_ids": [
+        "I01",
+        "I06"
+      ],
+      "conditional_candidates": [
+        "C07"
+      ],
+      "measured_attribution": null,
+      "performance_rank": null
+    }
+  ],
+  "instrumentation_points": [
+    {
+      "id": "I01",
+      "locations": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2354,
+          "line_end": 2363
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2420,
+          "line_end": 2466
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2666,
+          "line_end": 2681
+        }
+      ],
+      "counters": [
+        "viewport_key_equal/different",
+        "revision_requested",
+        "effect_enter",
+        "early_hit/miss_bitmask",
+        "inner_hit/miss_bitmask",
+        "callback_generation_changed",
+        "cluster_equal/changed",
+        "index_rebuilt"
+      ],
+      "purpose": "Distinguish actual full render frequency from state/equality work and pending-tail invalidation."
+    },
+    {
+      "id": "I02",
+      "locations": [
+        {
+          "path": "apps/web/lib/naver-map-render-plan.ts",
+          "line_start": 344,
+          "line_end": 367
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2636,
+          "line_end": 2664
+        },
+        {
+          "path": "apps/web/lib/map-render-guard.ts",
+          "line_start": 84,
+          "line_end": 93
+        },
+        {
+          "path": "apps/web/lib/restaurant-visit-count.ts",
+          "line_start": 38,
+          "line_end": 54
+        }
+      ],
+      "counters": [
+        "target_cache_hit/miss_reason",
+        "inactive_seoul_empty_identity_miss",
+        "token_count/total_chars",
+        "visit_count_calls/input_count",
+        "signature_copy_count/length",
+        "display_signature_hit/miss",
+        "dedupe_sort_length/total_chars"
+      ],
+      "purpose": "Locate map/Set/join volume that precedes the inner render skip; join only to parent v2 source-mapped frames."
+    },
+    {
+      "id": "I03",
+      "locations": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2502,
+          "line_end": 2524
+        },
+        {
+          "path": "apps/web/lib/mobile-home-search-selection.ts",
+          "line_start": 204,
+          "line_end": 236
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2592,
+          "line_end": 2620
+        },
+        {
+          "path": "apps/web/components/home/home-map-container.tsx",
+          "line_start": 873,
+          "line_end": 934
+        },
+        {
+          "path": "apps/web/components/home/home-map-container.tsx",
+          "line_start": 960,
+          "line_end": 997
+        }
+      ],
+      "counters": [
+        "expanded_list_copy_length",
+        "same_order_same_source_sequence",
+        "swipe_dedupe_scanned",
+        "publish_attempt",
+        "parent_signature_equal",
+        "raf_queued/committed/cancelled"
+      ],
+      "purpose": "Distinguish source-equivalent repeated list work from meaningful new row values/order."
+    },
+    {
+      "id": "I04",
+      "locations": [
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2541,
+          "line_end": 2587
+        },
+        {
+          "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+          "line_start": 115,
+          "line_end": 201
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 952,
+          "line_end": 1057
+        }
+      ],
+      "counters": [
+        "projection_hit/miss",
+        "candidates_scanned",
+        "targets_built",
+        "target_signature_equal/changed",
+        "related_id_count",
+        "review_fetch_started/settled",
+        "profile_fetch_started/settled",
+        "cancelled_pending/current",
+        "bubble_map_equal/changed",
+        "signature_chars"
+      ],
+      "purpose": "Separate candidate/target work from effect restarts and outstanding cancelled fetches."
+    },
+    {
+      "id": "I05",
+      "locations": [
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "line_start": 632,
+          "line_end": 656
+        },
+        {
+          "path": "apps/web/hooks/use-restaurants.tsx",
+          "line_start": 727,
+          "line_end": 753
+        }
+      ],
+      "counters": [
+        "query_key_build",
+        "normalized_category_count",
+        "bounds_present",
+        "semantic_key_changed",
+        "query_fn_started/settled"
+      ],
+      "purpose": "Separate per-render normalization/hash work from actual fetch/merge allocations."
+    },
+    {
+      "id": "I06",
+      "locations": [
+        {
+          "path": "apps/web/lib/naver-map-marker-visuals.ts",
+          "line_start": 189,
+          "line_end": 245
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 145,
+          "line_end": 245
+        },
+        {
+          "path": "apps/web/lib/marker-pool.ts",
+          "line_start": 300,
+          "line_end": 308
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2766,
+          "line_end": 2795
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 3303,
+          "line_end": 3314
+        }
+      ],
+      "counters": [
+        "weak_visual_hit",
+        "strong_visual_hit",
+        "html_built/total_chars",
+        "active_hit/free_reuse/create",
+        "icon_equal/anchor_changed/content_changed",
+        "patch_attempt/success/fallback_reason",
+        "sdk_setIcon_by_callsite",
+        "selection_update_equal_after_acquire",
+        "callback_rebind/release_clear",
+        "listener_attach/detach",
+        "active/pool_peak"
+      ],
+      "purpose": "Disambiguate app string/options churn from actual SDK subtree rebuilding and callback ownership."
+    },
+    {
+      "id": "I07",
+      "locations": [
+        {
+          "path": "apps/web/lib/retained-marker-accessibility.ts",
+          "line_start": 20,
+          "line_end": 49
+        },
+        {
+          "path": "apps/web/lib/retained-marker-accessibility.ts",
+          "line_start": 57,
+          "line_end": 93
+        }
+      ],
+      "counters": [
+        "visible_fast_return",
+        "hidden_sync",
+        "root_found/missing",
+        "owned_hide/restore",
+        "pending_root_count/peak",
+        "registry_created/disconnected"
+      ],
+      "purpose": "Measure AX work without skipping required root replacement, selection exceptions or owned mask cleanup."
+    },
+    {
+      "id": "I08",
+      "locations": [
+        {
+          "path": "apps/web/lib/deferred-marker-renders.ts",
+          "line_start": 2,
+          "line_end": 29
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 3132,
+          "line_end": 3148
+        },
+        {
+          "path": "apps/web/components/map/NaverMapView.tsx",
+          "line_start": 2164,
+          "line_end": 2178
+        }
+      ],
+      "counters": [
+        "jobs_queued/run/cancelled_remaining",
+        "channels_opened/ports_closed",
+        "tail_success/error/cancel",
+        "pending_batches/current_peak",
+        "stale_completion_blocked",
+        "retry_requested/exhausted"
+      ],
+      "purpose": "Verify reference-release and no stale work; cardinalities must settle after cancellation/unmount."
+    }
+  ],
+  "conditional_candidates": [
+    {
+      "id": "C01",
+      "scope": "Stabilize only the two inactive Seoul empty-array arguments used by render-target equality.",
+      "required_evidence": "v2 frame mapping plus I02 shows these identity misses rebuild tokens on otherwise equal pan cycles.",
+      "must_preserve": [
+        "Active district/filtered identities",
+        "Coordinates/category/visit/kind data changes",
+        "Expanded and selected/searched IDs",
+        "Identical output signatures across zoom/mode boundaries"
+      ],
+      "not_claimed": "No byte savings or endpoint pass from source review."
+    },
+    {
+      "id": "C02",
+      "scope": "If I03 dominates, preserve the immediately previous expanded candidate-list identity only for identical ordered source objects and valid data generation; no new history cache.",
+      "required_evidence": "v2 maps map/Set work to expanded-list assembly/dedupe and sequence/source equality is frequent.",
+      "must_preserve": [
+        "Expanded list/swipe membership independent of DOM culling",
+        "Merged identity/order and same-ID new data",
+        "Numeric-string normalization and selection exceptions",
+        "Existing explicit edited-array replacement contract"
+      ],
+      "not_claimed": "IDs-only equality is insufficient; do not build a broad cache/refactor."
+    },
+    {
+      "id": "C03",
+      "scope": "At selected-marker update only, skip a proven redundant equal icon setter; still perform needed AX and zIndex work.",
+      "required_evidence": "I06 confirms duplicate equal setIcon after acquire in the same selection generation and SDK allocations are attributable.",
+      "must_preserve": [
+        "All supplied icon fields",
+        "Selected/deselected badge/anchor/scale/zIndex",
+        "Delayed/replaced SDK roots and external aria ownership"
+      ],
+      "not_claimed": "Do not skip every update or callback rebind."
+    },
+    {
+      "id": "C04",
+      "scope": "If mapped normalization dominates, reuse only semantically unchanged normalized query-key values within the existing hook; do not add a query cache.",
+      "required_evidence": "I05 key builds greatly exceed semantic changes/fetches and parent v2 maps attributable sampled allocation there.",
+      "must_preserve": [
+        "Category trim/dedup/sort",
+        "Bounds precision and unrounded request filters",
+        "Theme/compact/metadata/count flags",
+        "Supported data-mutation behavior"
+      ],
+      "not_claimed": "Fresh array does not prove a network fetch; no query TTL change."
+    },
+    {
+      "id": "C05",
+      "scope": "Only if cancelled pending requests accumulate, consider passing an owner-scoped abort signal along this review request chain.",
+      "required_evidence": "I04 plus parent retainer evidence ties live cancelled generations to review/profile continuations.",
+      "must_preserve": [
+        "isCancelled checks after both awaits",
+        "Other callers sharing helpers",
+        "No abort-driven empty-state overwrite or error retry storm"
+      ],
+      "not_claimed": "Cancellation boolean currently protects state; outstanding request is not by itself a leak."
+    },
+    {
+      "id": "C06",
+      "scope": "Populate the existing weak selected/plain visual slot on a strong-cache hit only after semantic stamp/key coverage is correct.",
+      "required_evidence": "I06 + v2 maps repeated strong-hit key joins, and repeated source objects are observed.",
+      "must_preserve": [
+        "ID and selected slot",
+        "Unique visit count across nested and flat review/video fields",
+        "Merged member provenance/type",
+        "Overlay and category changes at fixed array lengths"
+      ],
+      "not_claimed": "No new cache or cache-limit change; completeness is a prerequisite."
+    },
+    {
+      "id": "C07",
+      "scope": "If callback-only or visual-equivalent data replacement reproduces stale dispatch, invalidate both visual skips for that owner/data generation or use a narrowly owned current dispatcher.",
+      "required_evidence": "Controlled current-owner click/readback fails while early/full visual guard hits; this is correctness evidence independent of memory rank.",
+      "must_preserve": [
+        "One SDK listener per marker",
+        "Current restaurant data and current selection/panel callbacks",
+        "Release/eviction clear and no stale queued click"
+      ],
+      "not_claimed": "No whole-render rewrite; a higher allocation count can be necessary for correctness."
+    }
+  ],
+  "source_manifest": [
+    {
+      "path": "apps/web/components/home/home-map-container.tsx",
+      "git_blob": "6ff027f71f27e17620c5397f1f42553b28feee36",
+      "sha256": "dcf8c744fb6c0adb9b16c764c2b32ade9c77c6225e10b55296385560d0df42ae",
+      "line_count": 1592
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "git_blob": "c1dc803486aa75bf576dba2c87234f40ac090be0",
+      "sha256": "1f1c322ce58214732ae3a88dc35f5fa1f796501da1a53924416ec6f468bb8a7e",
+      "line_count": 3825
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "git_blob": "c6d1f045215bda3fcbfab71ac10eaac009eb932f",
+      "sha256": "6022cdaab44070de278557e5e181c16630a5b135f23532055455b95eadd58d74",
+      "line_count": 759
+    },
+    {
+      "path": "apps/web/lib/deferred-marker-renders.ts",
+      "git_blob": "3f46a1d353582316f72e8ba76da4e198384381bd",
+      "sha256": "5b16f00f4960f24b9a811177704378d5775bc0ba968f4ac348aac93f7ca39a7b",
+      "line_count": 30
+    },
+    {
+      "path": "apps/web/lib/expanded-cluster-restaurant-snapshot.ts",
+      "git_blob": "427d6cc64f3180abe6f5afb6d6849e09c743f968",
+      "sha256": "1e2784741debdc537e3283c88b081bb2949414bc0868897b535cd395c550950e",
+      "line_count": 106
+    },
+    {
+      "path": "apps/web/lib/map-query-helpers.ts",
+      "git_blob": "33fc498b3c942b92dbfd73ca872992adff12bec0",
+      "sha256": "a377c9b456b6358569b2798c69cdd0b06851061cf73125d614bb270e0f140ddf",
+      "line_count": 117
+    },
+    {
+      "path": "apps/web/lib/map-render-guard.ts",
+      "git_blob": "ad506287da03a58e97a5cacefbcef304ff28a6e6",
+      "sha256": "3d7ae9b6a46fe377adca2ac2d3585efa3d1d0dda21c7bbd4fc72d1e2e41fca46",
+      "line_count": 182
+    },
+    {
+      "path": "apps/web/lib/marker-pool.ts",
+      "git_blob": "f387e971008c014151e9f6e1a888aff8c1f8926b",
+      "sha256": "31125a1f08c73f2425182fd5b8f7a609e21654b895da89fad24a888734399ed2",
+      "line_count": 398
+    },
+    {
+      "path": "apps/web/lib/mobile-home-search-selection.ts",
+      "git_blob": "436c89dc185b0465d6380d71898d58a2c587ab14",
+      "sha256": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+      "line_count": 415
+    },
+    {
+      "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+      "git_blob": "3a4aa6f2a17e379b68a02c3129553a36c7d3153c",
+      "sha256": "832012924d812f87c52cc701ba9dac6d7a8a8606b70e991750e6b1bf43aa5db3",
+      "line_count": 188
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "git_blob": "ce78d379ea137b0ff27f868cf0b8705c8de483e5",
+      "sha256": "3dbb59524012a0f42370515993a9b06a3c94ae8b30446cd12a10e5e339f7cee9",
+      "line_count": 246
+    },
+    {
+      "path": "apps/web/lib/naver-map-render-plan.ts",
+      "git_blob": "9851eb63028138304293f23a8ca2d631a0a673ac",
+      "sha256": "bd42a2d78bc1ee5a7d1170e446f72b49082f3b8a7cc88667381541847027182f",
+      "line_count": 510
+    },
+    {
+      "path": "apps/web/lib/naver-map-sidepanel-helpers.ts",
+      "git_blob": "ed092dbda00ce33c42f2c3490926a1f80a768e90",
+      "sha256": "7fb6847c8965fe44a44fb7526867dc096839d6d4a9045f8ba1034734876a2c7c",
+      "line_count": 247
+    },
+    {
+      "path": "apps/web/lib/restaurant-marker-kind.ts",
+      "git_blob": "b2ddea9d04ba7c1e62e2e63115c6b8c4a2ae9c33",
+      "sha256": "e50a0b650102c43caa28a71b12d480dab7a44764b8adc16d0830d6c32fc63880",
+      "line_count": 43
+    },
+    {
+      "path": "apps/web/lib/restaurant-visit-count.ts",
+      "git_blob": "89bc29a238bc187378824080a31102d938ce0908",
+      "sha256": "3595801da4b5bb69e9da51def61b353f94c533cb61d45fdc9ca151fa359dfa1c",
+      "line_count": 59
+    },
+    {
+      "path": "apps/web/lib/retained-marker-accessibility.ts",
+      "git_blob": "66019cb05c110288320074e75a2ed14cfa04c7eb",
+      "sha256": "bf15c5fb1681e294c0be5b65a17e007570e2ebfb16af0868b41e96f5a2ed9ae4",
+      "line_count": 93
+    },
+    {
+      "path": "apps/web/lib/supabase-rest-client.ts",
+      "git_blob": "4a1428d6b8875fe94378206e3dcb7bac8621661d",
+      "sha256": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27",
+      "line_count": 160
+    },
+    {
+      "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+      "git_blob": "edb07b39f7c80975d28140866a5bcc693294ccac",
+      "sha256": "10febcdca9f3f6aec08ff620a3116cb8bfd44840923678a11166417433ce4eab",
+      "line_count": 309
+    }
+  ],
+  "verification": {
+    "fixed_commit_resolved": true,
+    "all_recorded_line_ranges_valid": true,
+    "matrix_rows": 14,
+    "source_paths": 18,
+    "browser_or_ADB_run": false,
+    "tests_run": false,
+    "source_edits": false,
+    "git_commit_or_push": false,
+    "remote_mutations": false,
+    "raw_profile_analysis": false
+  }
+}

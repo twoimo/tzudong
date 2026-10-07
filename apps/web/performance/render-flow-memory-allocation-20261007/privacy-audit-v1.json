@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-10-07T05:48:47.328669+00:00",
+  "configuredValuesChecked": 3,
+  "filesContainConfiguredValues": 0,
+  "rawProfileURLs": false,
+  "traceArguments": false,
+  "requestBodiesStored": false,
+  "headersStored": false,
+  "physicalIdentifiers": false,
+  "fixtureRows": "synthetic ids/lat/lng only; no actual user records",
+  "newFieldWrites": 0,
+  "passed": true
+}

@@ -1,0 +1,225 @@
+{
+  "runs": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "sourceCommit": "91a2a629b784ea4fb89d522475921caa7152f1e5",
+      "browser": "154.0.8037.98",
+      "cycles": 60,
+      "medianHeapMB": 33.776232,
+      "peakHeapMB": 47.550776,
+      "endpointHeapMB": 44.593516,
+      "initialHeapMB": 19.671616,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 49.900000000001455,
+      "frameSamples": 5012,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "sourceCommit": "791795bccea2e1f57173ca33cd76de6444df9f46",
+      "browser": "154.0.8037.98",
+      "cycles": 60,
+      "medianHeapMB": 30.909636,
+      "peakHeapMB": 42.844356,
+      "endpointHeapMB": 37.06242,
+      "initialHeapMB": 23.4501,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 50.10000000000582,
+      "frameSamples": 4997,
+      "gapsAbove50Ms": 1,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 2,
+      "kind": "candidate",
+      "sourceCommit": "791795bccea2e1f57173ca33cd76de6444df9f46",
+      "browser": "154.0.8037.98",
+      "cycles": 60,
+      "medianHeapMB": 31.34314,
+      "peakHeapMB": 46.73736,
+      "endpointHeapMB": 37.753588,
+      "initialHeapMB": 19.526932,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 33.5,
+      "frameSamples": 5026,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 3,
+      "kind": "baseline",
+      "sourceCommit": "91a2a629b784ea4fb89d522475921caa7152f1e5",
+      "browser": "154.0.8037.98",
+      "cycles": 60,
+      "medianHeapMB": 32.283172,
+      "peakHeapMB": 45.778996,
+      "endpointHeapMB": 44.609604,
+      "initialHeapMB": 23.597992,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 50,
+      "frameSamples": 5026,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    }
+  ],
+  "metrics": {
+    "medianHeapMB": {
+      "before": 33.029702,
+      "after": 31.126388,
+      "absoluteReduction": 1.9033140000000017,
+      "relativeReductionPercent": 5.762431644100215,
+      "beforeProcessRange": [
+        32.283172,
+        33.776232
+      ],
+      "afterProcessRange": [
+        30.909636,
+        31.34314
+      ],
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null,
+      "reportingFloor": 0
+    },
+    "peakHeapMB": {
+      "before": 46.664885999999996,
+      "after": 44.790858,
+      "absoluteReduction": 1.8740279999999956,
+      "relativeReductionPercent": 4.015927522034439,
+      "beforeProcessRange": [
+        45.778996,
+        47.550776
+      ],
+      "afterProcessRange": [
+        42.844356,
+        46.73736
+      ],
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null,
+      "reportingFloor": 0
+    },
+    "endpointHeapMB": {
+      "before": 44.60156,
+      "after": 37.408004000000005,
+      "absoluteReduction": 7.193555999999994,
+      "relativeReductionPercent": 16.128485191997754,
+      "beforeProcessRange": [
+        44.593516,
+        44.609604
+      ],
+      "afterProcessRange": [
+        37.06242,
+        37.753588
+      ],
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null,
+      "reportingFloor": 0
+    },
+    "frameGapP95Ms": {
+      "before": 16.799999999997453,
+      "after": 16.799999999995634,
+      "absoluteReduction": 1.8189894035458565e-12,
+      "relativeReductionPercent": null,
+      "beforeProcessRange": [
+        16.799999999995634,
+        16.799999999999272
+      ],
+      "afterProcessRange": [
+        16.799999999995634,
+        16.799999999995634
+      ],
+      "guardTolerancePercent": 15,
+      "guardPassed": true,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null,
+      "reportingFloor": 0.1
+    },
+    "frameGapMaxMs": {
+      "before": 49.95000000000073,
+      "after": 41.80000000000291,
+      "absoluteReduction": 8.149999999997817,
+      "relativeReductionPercent": 16.316316316311706,
+      "beforeProcessRange": [
+        49.900000000001455,
+        50
+      ],
+      "afterProcessRange": [
+        33.5,
+        50.10000000000582
+      ],
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null,
+      "reportingFloor": 0.1
+    },
+    "gapsAbove50Ms": {
+      "before": 0.0,
+      "after": 0.5,
+      "absoluteReduction": -0.5,
+      "relativeReductionPercent": null,
+      "beforeProcessRange": [
+        0,
+        0
+      ],
+      "afterProcessRange": [
+        0,
+        1
+      ],
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null,
+      "reportingFloor": 0
+    },
+    "longTaskMs": {
+      "before": 0.0,
+      "after": 0.0,
+      "absoluteReduction": 0.0,
+      "relativeReductionPercent": null,
+      "beforeProcessRange": [
+        0,
+        0
+      ],
+      "afterProcessRange": [
+        0,
+        0
+      ],
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "noiseSeparatedImprovementProven": false,
+      "ci": null,
+      "reportingFloor": 0
+    }
+  },
+  "raw": "warm-signature-matched-pilot-v1/raw.json",
+  "freshProcessesPerVariant": 2,
+  "dependentCyclesPerProcess": 60,
+  "actualSdk": true,
+  "cpuRate": 4,
+  "forcedGCDuringPrimary": false,
+  "profilingDuringPrimary": false,
+  "physicalDevices": 0,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "allFixedGuardsPassed": true,
+  "originalCa235ComparisonNotIncluded": true,
+  "limitations": [
+    "n2 processes/source; no population CI or end-user p95",
+    "prior A/A was Chrome154.0.8037.97; current Chrome154.0.8037.98. Gain beyond matched current A/A is not established",
+    "Natural endpoints depend on GC timing; original failed20% memory guard is not waived by this matched-source pilot",
+    "No physical Galaxy, production, or field improvement from this local candidate"
+  ]
+}

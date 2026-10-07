@@ -1,0 +1,11 @@
+{
+  "candidate": "791795bccea2e1f57173ca33cd76de6444df9f46",
+  "candidateScorerExecuted": false,
+  "candidateValidatorExecuted": false,
+  "candidateMeasurementsAdmitted": 0,
+  "candidateCanonicalReleaseApproved": false,
+  "priorFrozenValidationPath": "apps/web/performance/repository-quality-20261004/canonical-main-zero-admitted-v1/validation-v4.json",
+  "priorFrozenValidationSha256": "8702e96881eebe560c89107bb2193aa6bf77a51761a8e6a5988ad8e3fdf98d6f",
+  "priorFrozenValidationDoesNotAttestNewCandidate": true,
+  "reason": "diagnostic and n2 matched-source pilot; original guard/A-A/device not complete"
+}
