@@ -1,0 +1,8 @@
+{
+  "initialEvidenceCommit": "cecb9f8f624430a10240239f588eeb951ec54a9a",
+  "initialGitBlobSetComplete": false,
+  "missingMappedPath": "apps/web/performance/render-flow-memory-allocation-20261007/build-candidate-signature-values-v1/build.log",
+  "cause": "existing git ignore log rule; ordinary add excluded one mapped artifact",
+  "recovery": "only this sanitized mapped log is explicitly added; original frozen root and map bytes unchanged",
+  "remoteInitialCommitClaim": false
+}
