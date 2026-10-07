@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "469cae9ab06143cb230182a184fef561e45c82ae",
+  "nextProductionBuild": {
+    "completed": true,
+    "runtime": "Node24.21.0",
+    "next": "16.3.8",
+    "compiler": "webpack",
+    "buildLogSha256": "4debdee1f7c66a4d7e834911f4df9b2eec7c8e308749e90506c6558f1389a18f",
+    "operatingDeploymentProven": false
+  },
+  "cssBoundaries": {
+    "verified": true,
+    "homeBytes": 193609,
+    "generalBytes": 367827,
+    "adminBytes": 380590,
+    "deferredBytes": 193609
+  },
+  "canonicalSqlReplay": {
+    "completed": false,
+    "firstFailure": "LOCAL_SHA256SUM_PATH_UNAVAILABLE",
+    "secondFailure": "LOCAL_DOCKER_VM_DISK_FULL",
+    "hostedWrites": 0,
+    "nextAction": "Extend or use a strictly admitted task-owned isolated Docker runtime; preserve the shared default runtime and its data."
+  },
+  "pullRequest": {
+    "url": "https://github.com/twoimo/tzudong/pull/3099",
+    "headSha": "469cae9ab06143cb230182a184fef561e45c82ae",
+    "pushedWithoutForce": true,
+    "requiredChecksStillRunning": true,
+    "merged": false
+  },
+  "modelUse": {
+    "routineAstraTasksStopped": 4,
+    "completedComplexStudies": 2,
+    "furtherAstraCallsForRoutineWork": 0
+  },
+  "fullGoalComplete": false
+}
