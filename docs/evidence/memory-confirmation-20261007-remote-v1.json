@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-10-07T08:31:52.648606+00:00",
+  "remoteCommit": "4d6155ac1f0537df015375b761cae90b1d2f4235",
+  "localTipMatched": true,
+  "remoteCompleteFileSetMatched": true,
+  "remoteMappedBlobIdsMatchLocalBytes": 144,
+  "remoteMapBlobBytesSHA256": "549032480cef85e3f28a05a527bcd5d0d820145984def97f4b85b297428d6221",
+  "allRemoteArtifactBytesDownloaded": false,
+  "candidateSource": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "wholeGoalComplete": false,
+  "canonicalAdmissionComplete": false
+}
