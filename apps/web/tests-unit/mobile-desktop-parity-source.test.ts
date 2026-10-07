@@ -185,25 +185,17 @@ describe("mobile and desktop parity source contracts", () => {
     expect(tableSource).not.toContain("Tzuyang Review");
   });
 
-  test("admin evaluation delete is immediate while restore keeps inline typed confirmation", () => {
-    const evaluationsSource = source("app/admin/evaluations/page.tsx");
-
-    expect(evaluationsSource).not.toContain("EVALUATION_DELETE_CONFIRMATION");
-    expect(evaluationsSource).not.toContain("검수삭제");
-    expect(evaluationsSource).toContain(
-      "const EVALUATION_RESTORE_CONFIRMATION = '검수복원'",
-    );
-    expect(evaluationsSource).toContain("휴지통 아이콘 클릭 즉시 status를 'deleted'로 변경");
-    expect(evaluationsSource).toContain('role="region"');
-    expect(evaluationsSource).toContain('aria-label="검수 항목 작업 확인"');
-    expect(evaluationsSource).toContain(
-      'aria-label="검수 항목 작업 확인 문구"',
-    );
-    expect(evaluationsSource).toContain(
-      "모바일과 데스크톱 모두 같은 흐름으로 처리합니다.",
-    );
-    expect(evaluationsSource).not.toContain("정말 삭제하시겠습니까?");
-    expect(evaluationsSource).not.toContain("복원하시겠습니까?");
+  test("admin evaluation delete and restore share one guarded confirmation across both presentations", () => {
+    const page = source("app/admin/evaluations/page.tsx");
+    const hook = source("lib/admin/use-record-action.tsx");
+    expect(page).toContain("action: 'restaurant.delete'");
+    expect(page).toContain("action: 'restaurant.restore'");
+    expect(page).toContain("{recordActions.dialog}");
+    expect(hook).toContain("RECORD_ACTION_CONFIRMATION");
+    expect(hook).toContain('aria-label="변경 적용 확인 문구"');
+    expect(hook).toContain("client.apply(confirmation)");
+    expect(page).not.toContain("EVALUATION_RESTORE_CONFIRMATION");
+    expect(page).not.toContain("window.confirm");
   });
 
   test("embedded submission and review modules cannot switch into restaurant evaluation view", () => {
