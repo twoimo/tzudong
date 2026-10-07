@@ -244,23 +244,15 @@ describe("mobile and desktop parity source contracts", () => {
     expect(bannerSource).toContain('id="banner-media-upload"');
   });
 
-  test("legacy admin review panel deletion also avoids native confirm drift", () => {
+  test("home admin reviews share the same guarded confirmation on mobile and desktop", () => {
     const reviewPanelSource = source("components/admin/AdminReviewPanel.tsx");
-
-    expect(reviewPanelSource).toContain(
-      "const ADMIN_REVIEW_DELETE_CONFIRMATION = '리뷰삭제'",
-    );
-    expect(reviewPanelSource).toContain('role="region"');
-    expect(reviewPanelSource).toContain('aria-label="관리자 리뷰 삭제 확인"');
-    expect(reviewPanelSource).toContain(
-      'aria-label="관리자 리뷰 삭제 확인 문구"',
-    );
-    expect(reviewPanelSource).toContain(
-      "모바일과 데스크톱 모두 같은 인라인 확인 흐름으로 처리합니다.",
-    );
-    expect(reviewPanelSource).not.toContain(
-      "confirm('정말로 이 리뷰를 삭제하시겠습니까?')",
-    );
+    const confirmationSource = source("lib/admin/use-record-action.tsx");
+    expect(reviewPanelSource).toContain("action: 'review.delete'");
+    expect(reviewPanelSource).toContain('{recordActions.dialog}');
+    expect(confirmationSource).toContain('aria-label="변경 적용 확인 문구"');
+    expect(confirmationSource).toContain('confirmation !== RECORD_ACTION_CONFIRMATION');
+    expect(reviewPanelSource).not.toContain("confirm(");
+    expect(reviewPanelSource).not.toContain("ADMIN_REVIEW_DELETE_CONFIRMATION");
   });
 
   test("my review deletion uses the same inline typed confirmation on mobile and desktop", () => {

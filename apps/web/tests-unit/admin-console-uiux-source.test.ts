@@ -8954,12 +8954,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(submissionSource).toContain("tabIndex={-1}");
   });
 
-  test("keeps the legacy review guard and routes restaurant forms through the guarded server client", () => {
+  test("routes home reviews and restaurant forms through the guarded server client", () => {
     const review = source("components/admin/AdminReviewPanel.tsx");
     const modal = source("components/admin/AdminRestaurantModal.tsx");
-    for (const action of ["approve_review", "reject_review", "delete_review"]) {
-      expect(review).toContain(`assertLegacyBrowserAdminMutationEnabled("review_moderation", "${action}")`);
+    for (const action of ["review.approve", "review.reject", "review.delete"]) {
+      expect(review).toContain(`action: '${action}'`);
     }
+    expect(review).toContain("recordActions.dialog");
+    expect(review).not.toContain("assertLegacyBrowserAdminMutationEnabled");
+    expect(review).not.toMatch(/\.update[<(]|\.delete\(|review_count:/);
     expect(modal).toContain("useRecordAction");
     expect(modal).toContain("recordActions.run");
     for (const method of ["update", "insert", "upsert", "delete"]) {

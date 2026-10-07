@@ -2,9 +2,9 @@
 
 The original objective and all user-added requests remain in scope. This report is progress, not completion.
 
-- Complete canonical SQL replay and exact hosted ledger/privilege/source preflight for the current new record and raw-warning SQL before applying anything. Historical79-entry readback must be refreshed; previously applied migrations must not be resent.
+- The canonical PG15 replay pair passed with 55 matching artifacts per run. Its closed 1,917-row projection does not cover every new record/raw-warning RPC. Complete exact PG17/hosted ledger, permissions and source preflight before applying those migrations; refresh the historical 79-entry readback without resending applied migrations.
 - Resolve actual partial-S3 deletion error propagation through a compatible supported provider path. Current photo cleanup admission remains blocked; local six-case success is insufficient and does not attest hosted Storage.
-- Verify current creation UI and all public/admin pages at desktop, tablet and mobile after the integrated changes; use actual API/data readback for operating functionality.
+- The public-map review panel now uses the guarded record client; its isolated callback/render tests, type checks and lint pass. Verify it and the creation UI in the actual browser at desktop, tablet and mobile, then every public/admin page; use API/data readback for operating functionality.
 - Finish provider-admitted full-pipeline and worker interruption tests, bounded parallel LAAJ, measured tokens/downloads/resources, quality and administrator protection. Media replay is not real provider performance. Preserve cold/CPU regressions and noise failures.
 - Obtain full required performance observation/scorer/validator evidence; no world ranking or actual monetary optimization saving is admitted.
 - Verify real Gemini OCR/storyboard jobs, image/text provenance and recovery on the redeemed-credit project without exceeding existing caps or charging again.
