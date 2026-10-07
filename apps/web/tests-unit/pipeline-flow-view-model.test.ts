@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, PIPELINE_FLOW_DOCUMENT, PIPELINE_FLOW_EDGES, PIPELINE_FLOW_STAGES } from '../lib/admin/pipeline-flow-view-model';
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput } from '../lib/admin/pipeline-action-preview';
 import { assertPipelineGuardedBody, buildPipelinePreviewHash, PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION } from '../lib/admin/pipeline-control';
+import { parseOperationsSnapshot } from '../lib/admin/operations-view-model';
 const id = '22222222-2222-4222-8222-222222222222';
 const job = { id, target: 'tzuyang', profile: 'heavy_local', status: 'Fetching', dry_run: true, adapter_index: 0 };
 const status = (overrides: Record<string, unknown> = {}) => ({ source: 'job_api', jobs: [job], targets: [{ id: 'tzuyang', status: 'Fetching' }], failures: [], ...overrides });
@@ -107,6 +108,51 @@ describe('pipeline execution read model', () => {
     expect(pipelineJobsForDisplay(s, gha(99, 'in_progress', null))[0].hasError).toBe(false);
     expect(pipelineJobsForDisplay(s, gha(99, 'completed', 'failure'))[0].hasError).toBe(true);
     expect(canControlPipelineJob(s.source, pipelineJobsForDisplay(s, gha(99, 'in_progress', null))[0], 'pause')).toBe(false);
+  });
+  test('manifest and operations agree on actual GitHub failure semantics without enabling controls', () => {
+    const payload = status({ source: 'github_actions', jobs: [{ ...job, id: '99', profile: 'lite_gha', status: 'Failed', error_code: 'github_crawler', dry_run: false }] });
+    const snapshot = parsePipelineStatus(payload);
+    const cases: [string, string | null, string][] = [
+      ['completed', 'success', 'Succeeded'], ['completed', 'failure', 'Failed'], ['completed', 'timed_out', 'Failed'],
+      ['completed', 'startup_failure', 'Failed'], ['completed', 'cancelled', 'Cancelled'], ['completed', 'skipped', 'Unknown'],
+      ['completed', 'neutral', 'Unknown'], ['completed', 'action_required', 'Unknown'], ['completed', 'stale', 'Unknown'],
+      ['in_progress', null, 'Fetching'], ['queued', null, 'Queued'], ['requested', null, 'Queued'], ['waiting', null, 'Queued'],
+      ['pending', null, 'Queued'], ['expected', null, 'Unknown'], ['failure', null, 'Failed'], ['startup_failure', null, 'Failed'],
+    ];
+    for (const [runStatus, conclusion, expected] of cases) {
+      const manifest = parsePipelineManifest({ githubActions: { enabled: true, configured: true, reachable: true,
+        latestRunId: 99, latestRunStatus: runStatus, latestRunConclusion: conclusion } });
+      expect(manifest.github).toEqual({ id: '99', status: runStatus, conclusion });
+      const displayed = pipelineJobsForDisplay(snapshot, manifest)[0];
+      expect(displayed).toMatchObject({ status: expected, hasError: expected === 'Failed', dry_run: undefined, adapter_index: null });
+      const operations = parseOperationsSnapshot('pipeline', { ...payload, githubRun: { id: '99', status: runStatus, conclusion } });
+      expect(operations.rows[0].metrics.find(metric => metric.id === 'failed')?.value).toBe(expected === 'Failed' ? 1 : 0);
+      for (const action of ['pause', 'resume', 'cancel'] as const) expect(canControlPipelineJob(snapshot.source, displayed, action)).toBe(false);
+    }
+    expect(snapshot.jobs[0]).toMatchObject({ status: 'Failed', hasError: true, dry_run: false, adapter_index: 0 });
+  });
+  test('unknown or contradictory manifest evidence stays unknown and recovers only from a matching valid run', () => {
+    const snapshot = parsePipelineStatus(status({ source: 'github_actions', jobs: [{ ...job, id: '99', status: 'Failed', error_code: 'github_crawler' }], targets: [{ id: 'tzuyang', status: 'FutureState' }] }));
+    const raw = { enabled: true, configured: true, reachable: true, latestRunId: 99, latestRunStatus: 'completed', latestRunConclusion: 'action_required' };
+    for (const patch of [
+      { latestRunId: 0 }, { latestRunId: -1 }, { latestRunId: 9007199254740992 }, { latestRunId: '99' },
+      { latestRunStatus: 'future' }, { latestRunStatus: {} }, { latestRunStatus: 'in_progress', latestRunConclusion: 'failure' },
+      { latestRunConclusion: 'private@example.test' }, { latestRunConclusion: {} }, { latestRunConclusion: null },
+      { latestRunStatus: 'queued', latestRunConclusion: undefined },
+    ]) {
+      const invalid = parsePipelineManifest({ githubActions: { ...raw, ...patch } });
+      expect(invalid.github).toBeNull();
+      expect(pipelineJobsForDisplay(snapshot, invalid)[0]).toMatchObject({ status: 'Unknown', hasError: false });
+      expect(JSON.stringify(invalid)).not.toContain('private@');
+    }
+    const uncertain = pipelineJobsForDisplay(snapshot, undefined);
+    const recovered = pipelineJobsForDisplay(snapshot, parsePipelineManifest({ githubActions: { ...raw, latestRunConclusion: 'failure' } }));
+    expect(recovered[0]).toMatchObject({ status: 'Failed', hasError: true });
+    expect(uncertain[0]).toMatchObject({ status: 'Unknown', hasError: false });
+    expect(snapshot.partial).toBe(true);
+    const otherRun = parsePipelineManifest({ githubActions: { ...raw, latestRunId: 100, latestRunConclusion: 'failure' } });
+    expect(pipelineJobsForDisplay(snapshot, otherRun)[0]).toMatchObject({ status: 'Unknown', hasError: false });
+    for (const action of ['pause', 'resume', 'cancel'] as const) expect(canControlPipelineJob(snapshot.source, recovered[0], action)).toBe(false);
   });
   test('controls require API, UUID, known profile and a valid transition', () => {
     const j = parsePipelineStatus(status()).jobs[0];

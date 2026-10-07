@@ -18,6 +18,8 @@ import sys
 
 from backend.knowledge_graph import longform_analysis as analysis
 from backend.knowledge_graph import osk_projection as projection
+from backend.knowledge_graph import publication_pages as pages
+from backend.knowledge_graph import publication_checkpoint as checkpoint
 
 SPACE = "00_Scope/tzudong"
 SESSION = "tzudong"
@@ -83,19 +85,36 @@ class Engine:
         value = self.api.read_node(name)
         if value.get("error") == "노드 없음: " + name:
             return None
-        if (value.get("name") != name or value.get("path") != f"{SPACE}/{name}.md"
+        if (value.get("name") != name or not isinstance(value.get("path"), str) or Path(value["path"]).name != name + ".md"
                 or not re.fullmatch(r"sha256:[a-f0-9]{64}", str(value.get("hash")))
                 or not isinstance(value.get("body"), str) or not isinstance(value.get("meta"), dict)):
             fail("OSK_NODE_READBACK_INVALID")
         path = self.vault / value["path"]
-        if path.is_symlink() or path.resolve().parent != self.vault / SPACE:
+        if (path.is_symlink() or not path.resolve().is_relative_to(self.vault / SPACE)
+                or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(self.vault))):
             fail("OSK_SCOPE_CONFLICT")
         return value
 
     def create(self, target):
         return self.api.create_node(title=target["name"], body=target["body"], summary=target["summary"],
-                                    drafter="gpt-6", space=SPACE, session=SESSION,
+                                    drafter="gpt-6", space=target.get("space", SPACE), session=SESSION,
                                     edges={"derived-from": target["parent"]} if target["parent"] else None)
+
+    def relocate(self, target, previous):
+        # Public move_nodes enforces pins, scope topology and byte preservation.
+        # Its API has no path/hash CAS; require an unchanged read immediately
+        # before moving under the publisher lock and verify exact bytes after.
+        current = self.read(target["name"])
+        if current is None or current["hash"] != previous["hash"] or current["path"] != previous["path"]:
+            fail("OSK_NODE_CHANGED_SINCE_PUBLICATION")
+        if Path(previous["path"]).parent.name == target["name"]:
+            self.api.move_cluster(name=target["name"], dest_parent=Path(target["space"]).parent.as_posix())
+        else:
+            self.api.move_nodes(names=[target["name"]], dest_space=target["space"])
+        moved = self.read(target["name"])
+        if moved is None or moved["hash"] != previous["hash"] or moved["path"] != target["space"] + "/" + target["name"] + ".md":
+            fail("OSK_MOVE_READBACK_REQUIRED")
+        return moved
 
     def update(self, target, previous):
         return self.api.update_node(name=target["name"], body=target["body"], expect_hash=previous["hash"],
@@ -112,10 +131,29 @@ def completed_bundle(state, row, config):
     evidence = analysis.checked_document(evidence_path)
     if (receipt.get("state") != "succeeded" or receipt.get("model") != config.model
             or receipt.get("modelEvidenceSha256") != config.model_evidence_hash
-            or receipt.get("reservedInputTokens") != config.input_limit
-            or receipt.get("callsAttempted") != 1
-            or receipt.get("usage") != evidence["usage"]
-            or receipt.get("callAccounting") != "watch_invocation_interactions_post_upper_bound"):
+            or receipt.get("identity") != evidence.get("identity")
+            or receipt.get("evidenceSha256") != analysis.digest(evidence)
+            or receipt.get("usage") != evidence["usage"]):
+        fail("ANALYSIS_RECEIPT_MISMATCH")
+    if evidence.get("processing") == "static_full_video":
+        # Existing successful envelopes remain byte-for-byte reusable. Their
+        # reservation describes one original watch invocation, not segments.
+        if (type(receipt.get("callsAttempted")) is not int or receipt["callsAttempted"] != 1
+                or receipt.get("reservedInputTokens") != config.input_limit
+                or receipt.get("callAccounting") != "watch_invocation_interactions_post_upper_bound"):
+            fail("ANALYSIS_RECEIPT_MISMATCH")
+    elif evidence.get("processing") == "static_segments":
+        # cached_state verifies every saved segment observation/receipt, hash,
+        # source span and exact aggregate content before this admission point.
+        count = len(analysis.segment_rows(row, config))
+        if (type(receipt.get("segmentCount")) is not int or receipt["segmentCount"] != count
+                or len(evidence["segments"]) != count
+                or type(receipt.get("callsAttempted")) is not int or receipt["callsAttempted"] != 2 * count
+                or receipt.get("reservedInputTokens") != count * config.input_limit
+                or receipt.get("reservedOutputTokens") != count * config.output_limit
+                or receipt.get("callAccounting") != "count_and_interactions_per_static_segment"):
+            fail("ANALYSIS_RECEIPT_MISMATCH")
+    else:
         fail("ANALYSIS_RECEIPT_MISMATCH")
     source = {"writer": WRITER, "identity": evidence["identity"], "receiptSha256": analysis.digest(receipt),
               "evidenceSha256": analysis.digest(evidence), "model": config.model,
@@ -123,29 +161,33 @@ def completed_bundle(state, row, config):
     return {"row": row, "analysis": evidence["analysis"], "source": source}
 
 
-def evidence_for(video, evidence):
-    result = []
+def evidence_for(video, evidence, *, bounded=True):
+    result = {}
     for item in evidence:
         start = item["startSeconds"]
         value = {"videoId": video, "startSeconds": start, "endSeconds": item["endSeconds"],
                  "url": f"https://www.youtube.com/watch?v={video}" + (f"&t={start:g}s" if start else ""),
                  "status": "unverified"}
-        if value not in result:
-            result.append(value)
-    if len(result) > projection.MAX_EVIDENCE:
+        result[projection._json(value)] = value
+    result = list(result.values())
+    if bounded and len(result) > projection.MAX_EVIDENCE:
         fail("OSK_EVIDENCE_CAPACITY_EXCEEDED")
-    return projection._evidence(result)
+    return sorted([entry for offset in range(0, len(result), projection.MAX_EVIDENCE)
+                   for entry in projection._evidence(result[offset:offset + projection.MAX_EVIDENCE])], key=projection._json)
 
 
-def specs(bundle):
+def specs(bundle, *, paged=False):
     video, value = bundle["row"]["videoId"], bundle["analysis"]
     video_name = "TZ-Video-" + video
     result = []
 
-    def node(name, kind, label, content, evidence, required, restaurant=None):
+    def node(name, kind, label, content, evidence, required, restaurant=None, *, context=None, split=True):
         label = text(label)[:512]
+        retained = evidence_for(video, evidence, bounded=not paged)
+        chunks = list(pages.utf8_chunks(content)) if paged and split else [content]
         metadata = {"schemaVersion": 1, "kind": kind, "displayLabel": label,
-                    "evidence": evidence_for(video, evidence)}
+                    "evidence": retained[:projection.MAX_EVIDENCE]}
+        content = chunks[0]
         if kind == "video":
             metadata.update(videoId=video, analysisStatus="pending")
         body = f"# {label}\n\n{content}\n\n"
@@ -159,7 +201,18 @@ def specs(bundle):
                  + analysis.canonical(metadata).decode() + "\n```\n")
         result.append({"name": name, "body": body, "summary": label[:80] or "모델 관찰 · 독립 검증 대기",
                        "metadata": metadata, "parent": None if kind == "video" else video_name,
-                       "requiredText": [text(item) for item in required]})
+                       "requiredText": [text(item) for item in required] if len(chunks) == 1 else [text(content)],
+                       "context": context or restaurant or (None if kind == "video" else video_name)})
+        if paged and split:
+            for index, chunk in enumerate(chunks[1:], 2):
+                node(pages.page_name(name, "content", index), "claim", f"{label[:450]} · 본문 페이지 {index}", chunk, [], [], context=name, split=False)
+            for offset in range(projection.MAX_EVIDENCE, len(retained), projection.MAX_EVIDENCE):
+                index = offset // projection.MAX_EVIDENCE + 1
+                page_evidence = retained[offset:offset + projection.MAX_EVIDENCE]
+                raw_evidence = [{"startSeconds": item["startSeconds"], "endSeconds": item["endSeconds"]} for item in page_evidence]
+                node(pages.page_name(name, "evidence", index), "claim", f"{label[:450]} · 근거 페이지 {index}",
+                     f"[[{name}]]의 근거 {offset + 1}–{offset + len(page_evidence)}입니다. 추가 주장이나 독립 검증이 아닙니다.",
+                     raw_evidence, [], context=name, split=False)
 
     def fact(name, kind, item, restaurant=None):
         content = (f"관찰 종류: {item['kind']}\n\n{text(item['text'])}\n\n"
@@ -182,11 +235,24 @@ def specs(bundle):
             fact(f"TZ-Claim-{video}-R{r}-{c}", "claim", item, name)
     for c, item in enumerate(value["claims"], 1):
         fact(f"TZ-Claim-{video}-{c}", "claim", item)
+    if paged:
+        pages.source_specs(bundle, node)
+        return pages.organize_specs(result, SPACE)
+    # These are domain relationships, not size-based routing hubs. Preserve
+    # child -> video provenance and the restaurant links already in each child.
+    children = {}
+    for item in result:
+        if item["context"]:
+            children.setdefault(item["context"], []).append(item["name"])
+    for item in result:
+        item["children"] = children.get(item["name"], [])
     return result
 
 
 def signature(target):
     value = {key: target[key] for key in ("name", "body", "summary", "parent")}
+    if "space" in target:
+        value["space"] = target["space"]
     value["body"] = value["body"].strip()  # OSK adds a frontmatter/body separator.
     return analysis.digest(value)
 
@@ -194,10 +260,10 @@ def signature(target):
 def matches(current, target):
     if current is None or current["body"].strip() != target["body"].strip() or current["meta"].get("summary") != target["summary"]:
         return False
-    return not target["parent"] or current["meta"].get("derived-from") == f"[[{target['parent']}]]"
+    return (not target.get("space") or current["path"] == target["space"] + "/" + target["name"] + ".md") and (not target["parent"] or current["meta"].get("derived-from") == f"[[{target['parent']}]]")
 
 
-def target_for(spec, source, current, owned=False):
+def target_for(spec, source, current, owned=False, *, include_links=True):
     body = spec["body"]
     summary = spec["summary"]
     if current:
@@ -220,8 +286,15 @@ def target_for(spec, source, current, owned=False):
                 fail("OSK_EXISTING_NODE_PROTECTED")
             body = current["body"].split(SOURCE_HEADING, 1)[0].rstrip() + "\n"
             summary = current["meta"]["summary"]
+    if include_links:
+        missing = [name for name in spec.get("children", []) if f"[[{name}]]" not in body]
+        if missing:
+            body += "\n## 연결된 관찰\n\n" + "\n".join(f"- [[{name}]]" for name in missing) + "\n"
     body += "\n" + SOURCE_HEADING + "\n\n```json\n" + analysis.canonical(source).decode() + "\n```\n"
     target = {"name": spec["name"], "body": body, "summary": summary, "parent": spec["parent"]}
+    if "space" in spec:
+        target["space"] = spec["space"]
+        target["rootLink"] = spec.get("rootLink", False)
     if len(body.encode()) > projection.MAX_NODE_BYTES - 2048:
         fail("OSK_NODE_CAPACITY_EXCEEDED")
     return target
@@ -232,6 +305,8 @@ def write_and_readback(engine, target, previous):
     # after ACK loss/refusal before a subsequent invocation may retry anything.
     try:
         if previous:
+            if target.get("space") and previous["path"] != target["space"] + "/" + target["name"] + ".md":
+                previous = engine.relocate(target, previous)
             engine.update(target, previous)
         else:
             engine.create(target)
@@ -243,14 +318,16 @@ def write_and_readback(engine, target, previous):
     return current
 
 
-def capacity(engine, targets):
-    snapshot = projection.project_vault(engine.vault, engine.engine)
+def capacity(engine, targets, *, sharded=False):
+    snapshot = projection.project_vault(engine.vault, engine.engine, sharded=sharded)
     entries, _ = projection._inventory(engine.api.graph)
     scoped = [path for path, kind in entries if kind == ("scope", "tzudong")]
     new_nodes = sum(current is None for _, current in targets)
     changed = [target for target, current in targets if not matches(current, target)]
     hub_body = engine.read("tzudong")["body"]
-    hub_links = [target["name"] for target, _ in targets if f"[[{target['name']}]]" not in hub_body]
+    hub_links = [target["name"] for target, _ in targets
+                 if (target.get("rootLink", False) if sharded else projection._metadata(target["body"])["kind"] == "video")
+                 and f"[[{target['name']}]]" not in hub_body]
     # Count every possible new reference, including duplicates/replacements.
     # This deliberately overestimates; the projection may deduplicate or omit
     # them. OSK IDs have at most 20 ASCII chars; 256 bytes bounds each JSON edge
@@ -271,24 +348,32 @@ def capacity(engine, targets):
                 "projectionBytes": len(projection._json(snapshot)) + 1,
                 "scopeBytes": sum(path.stat().st_size for path in scoped),
                 "hubBytes": (engine.vault / SPACE / "tzudong.md").stat().st_size}
-    return capacity_totals(baseline, additions)
+    return capacity_totals(baseline, additions, sharded=sharded)
 
 
-def capacity_totals(baseline, additions):
+def capacity_totals(baseline, additions, *, sharded=False):
     upper = {key: baseline[key] + additions[key] for key in baseline}
     limits = {"nodes": projection.MAX_NODES, "edges": projection.MAX_EDGES,
               "projectionBytes": projection.MAX_OUTPUT_BYTES, "scopeBytes": projection.MAX_SCOPE_BYTES,
               "hubBytes": projection.MAX_NODE_BYTES - 2048}
+    if sharded:
+        # These remain per-file/page limits; no global JSON or source prefix is
+        # admitted. The explicit manifest/count contract still fails closed.
+        limits.update(nodes=projection.MAX_GRAPH_COUNT, edges=projection.MAX_GRAPH_COUNT,
+                      projectionBytes=None, scopeBytes=None)
     return {"baseline": baseline, "additionsUpper": additions, "totalUpper": upper,
-            "limits": limits, "admitted": all(upper[key] <= limits[key] for key in upper)}
+            "format": "sharded" if sharded else "single", "limits": limits,
+            "pageLimits": {"nodes": projection.MAX_NODES, "edges": projection.MAX_EDGES,
+                           "projectionBytes": projection.MAX_OUTPUT_BYTES, "sourceBytes": projection.MAX_SCOPE_BYTES},
+            "admitted": all(limits[key] is None or upper[key] <= limits[key] for key in upper)}
 
 
-def publish(bundle, engine, state, *, execute=False, max_nodes=5000):
+def publish(bundle, engine, state, *, execute=False, max_nodes=5000, sharded=False):
     state = state.resolve()
     if state == engine.vault or engine.vault in state.parents:
         fail("PUBLICATION_STATE_INSIDE_VAULT")
-    desired = specs(bundle)
-    if type(max_nodes) is not int or not 1 <= max_nodes <= 5000 or len(desired) > max_nodes:
+    desired = specs(bundle, paged=sharded)
+    if type(max_nodes) is not int or not 1 <= max_nodes <= 5000 or (not sharded and len(desired) > max_nodes):
         fail("PUBLICATION_NODE_LIMIT")
     video = bundle["row"]["videoId"]
     path = state / (video + ".json")
@@ -298,7 +383,7 @@ def publish(bundle, engine, state, *, execute=False, max_nodes=5000):
         hub = engine.read("tzudong")
         if hub is None or (projection._metadata(hub["body"]) or {}).get("kind") != "hub":
             fail("OSK_SCOPE_UNAVAILABLE")
-        previous = analysis.checked_document(path) if path.exists() else None
+        previous = checkpoint.load(path) if path.exists() else None
         if previous and previous.get("binding") != binding:
             fail("PUBLICATION_STATE_SCOPE_MISMATCH")
         same_source = previous and previous.get("source") == bundle["source"]
@@ -320,16 +405,22 @@ def publish(bundle, engine, state, *, execute=False, max_nodes=5000):
             target = target_for(spec, bundle["source"], current, owned=bool(prior))
             operation = ledger["nodes"].get(name)
             if operation and operation.get("targetSha256") != signature(target):
-                fail("PUBLICATION_TARGET_CHANGED")
+                # A completed v1 publication can gain the explicit contextual
+                # links. Never reinterpret an unresolved write as this migration.
+                legacy = target_for(spec, bundle["source"], current, owned=bool(prior), include_links=False)
+                legacy_current = {"name": name, "body": current["body"], "summary": current["meta"]["summary"], "parent": spec["parent"]} if current else None
+                if operation.get("state") != "complete" or (operation.get("targetSha256") != signature(legacy)
+                        and (not sharded or legacy_current is None or operation.get("targetSha256") != signature(legacy_current))):
+                    fail("PUBLICATION_TARGET_CHANGED")
             if operation and operation.get("state") == "running" and not matches(current, target):
                 observed = current["hash"] if current else None
                 if observed != operation.get("beforeHash"):
                     fail("OSK_WRITE_READBACK_REQUIRED")
             targets.append((target, current))
-        bounds = capacity(engine, targets)
+        bounds = capacity(engine, targets, sharded=sharded)
         result = {"videoId": video, "phase": "publication" if execute else "plan", "nodes": len(targets),
-                  "created": 0, "updated": 0, "reused": 0, "hubUpdated": False,
-                  "providerCalls": 0, "independentlyVerified": False, "capacity": bounds}
+                  "created": 0, "updated": 0, "moved": 0, "mutations": 0, "reused": 0, "hubUpdated": False,
+                  "providerCalls": 0, "independentlyVerified": False, "publicationComplete": False, "capacity": bounds}
         if not execute:
             result["newNodes"] = sum(current is None for _, current in targets)
             return result
@@ -337,8 +428,26 @@ def publish(bundle, engine, state, *, execute=False, max_nodes=5000):
             fail("OSK_PROJECTION_CAPACITY_EXCEEDED")
         if previous and not same_source:
             history = state / "history" / (video + "-" + analysis.digest(previous["source"]) + ".json")
-            analysis.atomic_document(history, previous)
-        for target, before in targets:
+            checkpoint.save(history, previous)
+        moved_clusters = []
+        for index, (target, before) in enumerate(targets):
+            if sharded and before:
+                # Earlier public cluster moves preserve descendant bytes while
+                # changing their paths. Admit only those exact planned prefixes.
+                expected_path = before["path"]
+                for old_prefix, new_prefix in moved_clusters:
+                    if expected_path.startswith(old_prefix + "/"):
+                        expected_path = new_prefix + expected_path[len(old_prefix):]
+                refreshed = engine.read(target["name"])
+                if refreshed is None or refreshed["hash"] != before["hash"] or refreshed["path"] != expected_path:
+                    fail("OSK_NODE_CHANGED_SINCE_PUBLICATION")
+                before = refreshed
+                targets[index] = (target, before)
+            if sharded and result["mutations"] >= max_nodes and not matches(before, target):
+                ledger["state"] = "running"
+                checkpoint.save(path, ledger)
+                result.update(code="PUBLICATION_PAGE_COMPLETED", remainingNodes=sum(not matches(old, new) for new, old in targets[index:]))
+                return result
             name = target["name"]
             if matches(before, target):
                 current = before
@@ -347,16 +456,39 @@ def publish(bundle, engine, state, *, execute=False, max_nodes=5000):
                 ledger["state"] = "running"
                 ledger["nodes"][name] = {"state": "running", "targetSha256": signature(target),
                                           "beforeHash": before["hash"] if before else None}
-                analysis.atomic_document(path, ledger)
-                current = write_and_readback(engine, target, before)
-                result["updated" if before else "created"] += 1
+                checkpoint.save(path, ledger)
+                if sharded and before and before["path"] != target["space"] + "/" + name + ".md":
+                    previous_space = Path(before["path"]).parent
+                    structural = previous_space.name == name
+                    before = engine.relocate(target, before)
+                    if structural:
+                        moved_clusters.append((previous_space.as_posix(), target["space"]))
+                    result["moved"] += 1
+                    result["mutations"] += 1
+                    targets[index] = (target, before)
+                    if result["mutations"] >= max_nodes and not matches(before, target):
+                        result.update(code="PUBLICATION_PAGE_COMPLETED", remainingNodes=sum(not matches(old, new) for new, old in targets[index:]))
+                        return result
+                if matches(before, target):
+                    current = before
+                else:
+                    current = write_and_readback(engine, target, before)
+                    result["updated" if before else "created"] += 1
+                    result["mutations"] += 1
             ledger["nodes"][name] = {"state": "complete", "targetSha256": signature(target), "hash": current["hash"]}
-            analysis.atomic_document(path, ledger)
+            checkpoint.save(path, ledger)
         # Link only nodes proven present. CAS preserves unrelated hub edits;
         # links already present in the manual pilot need no second write.
         hub = engine.read("tzudong")
-        missing = [target["name"] for target, _ in targets if f"[[{target['name']}]]" not in hub["body"]]
+        missing = [target["name"] for target, _ in targets
+                   if (target.get("rootLink", False) if sharded else projection._metadata(target["body"])["kind"] == "video")
+                   and f"[[{target['name']}]]" not in hub["body"]]
         if missing:
+            if sharded and result["mutations"] >= max_nodes:
+                ledger["state"] = "running"
+                checkpoint.save(path, ledger)
+                result.update(code="PUBLICATION_PAGE_COMPLETED", remainingNodes=0, rootLinkPending=True)
+                return result
             hub_target = {"name": "tzudong", "body": hub["body"].rstrip() + "\n\n" +
                           "\n".join(f"- [[{name}]]" for name in missing) + "\n",
                           "summary": hub["meta"]["summary"], "parent": None}
@@ -364,12 +496,13 @@ def publish(bundle, engine, state, *, execute=False, max_nodes=5000):
                 fail("OSK_HUB_CAPACITY_EXCEEDED")
             write_and_readback(engine, hub_target, hub)
             result["hubUpdated"] = True
+            result["mutations"] += 1
         for target, _ in targets:
             if not matches(engine.read(target["name"]), target):
                 fail("OSK_WRITE_READBACK_REQUIRED")
         ledger["state"] = "complete"
-        analysis.atomic_document(path, ledger)
-        result["code"] = "PUBLICATION_COMPLETED"
+        checkpoint.save(path, ledger)
+        result.update(code="PUBLICATION_COMPLETED", publicationComplete=True, remainingNodes=0)
         return result
 
 
@@ -385,7 +518,9 @@ def main(argv=None):
     parser.add_argument("--state-dir", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--max-videos", type=int, required=True)
-    parser.add_argument("--max-nodes", type=int, default=5000)
+    parser.add_argument("--max-nodes", type=int, default=5000,
+                        help="Maximum mutations per video invocation; sharded mode resumes remaining nodes on the next invocation")
+    parser.add_argument("--format", choices=("single", "sharded"), default="single")
     args = parser.parse_args(argv)
     try:
         if not 1 <= args.max_videos <= 100000:
@@ -400,12 +535,12 @@ def main(argv=None):
             if len(bundles) < args.max_videos:
                 bundles.append(completed_bundle(args.analysis_state, row, config))
         engine = Engine(args.vault, args.engine)
-        plans = [publish(bundle, engine, args.state_dir, max_nodes=args.max_nodes) for bundle in bundles]
+        plans = [publish(bundle, engine, args.state_dir, max_nodes=args.max_nodes, sharded=args.format == "sharded") for bundle in bundles]
         bounds = None
         if plans:
             bounds = capacity_totals(plans[0]["capacity"]["baseline"], {
                 key: sum(plan["capacity"]["additionsUpper"][key] for plan in plans)
-                for key in plans[0]["capacity"]["baseline"]})
+                for key in plans[0]["capacity"]["baseline"]}, sharded=args.format == "sharded")
         print(json.dumps({"phase": "plan", "videos": len(bundles), "skippedNotComplete": skipped,
                           "nodes": sum(plan["nodes"] for plan in plans), "providerCalls": 0,
                           "capacity": bounds, "unprocessedAnalysisNodeUpper": None}), flush=True)
@@ -413,7 +548,7 @@ def main(argv=None):
             if bounds and not bounds["admitted"]:
                 fail("OSK_PROJECTION_CAPACITY_EXCEEDED")
             for bundle in bundles:
-                print(json.dumps(publish(bundle, engine, args.state_dir, execute=True, max_nodes=args.max_nodes)), flush=True)
+                print(json.dumps(publish(bundle, engine, args.state_dir, execute=True, max_nodes=args.max_nodes, sharded=args.format == "sharded")), flush=True)
         return 0
     except (PublicationError, analysis.AnalysisError, projection.ProjectionError) as error:
         print(json.dumps({"error": str(error)}), file=sys.stderr)

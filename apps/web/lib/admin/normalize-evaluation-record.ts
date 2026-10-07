@@ -1,4 +1,4 @@
-import type { EvaluationRecord, EvaluationRecordStatus } from '@/types/evaluation';
+import type { DbConflictInfo, EvaluationRecord, EvaluationRecordStatus, RestaurantInfo } from '@/types/evaluation';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 
 export function isEvaluationRecordStatus(value: unknown): value is EvaluationRecordStatus {
@@ -356,6 +356,59 @@ export function getNullableNumber(value: unknown): number | null {
   return typeof value === 'number' ? value : null;
 }
 
+const CONFLICT_RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Preserve the legacy conflict DTO; never invent a mutation target from display text. */
+export function parseDbConflictInfo(value: unknown): DbConflictInfo | null {
+  if (!isRecord(value) || !isRecord(value.existing_restaurant) || !isRecord(value.new_restaurant)) return null;
+  const existing = value.existing_restaurant, incoming = value.new_restaurant;
+  if (typeof existing.id !== 'string' || !CONFLICT_RECORD_ID.test(existing.id)
+    || typeof existing.name !== 'string' || typeof existing.jibun_address !== 'string'
+    || !isNullableString(existing.phone) || !isStringArray(existing.category)
+    || !isStringArray(existing.youtube_links) || typeof existing.created_at !== 'string'
+    || !Number.isFinite(Date.parse(existing.created_at))) return null;
+  if (typeof incoming.name !== 'string' || !isNullableString(incoming.phone)
+    || typeof incoming.category !== 'string' || typeof incoming.origin_address !== 'string'
+    || typeof incoming.origin_lat !== 'number' || !Number.isFinite(incoming.origin_lat)
+    || typeof incoming.origin_lng !== 'number' || !Number.isFinite(incoming.origin_lng)
+    || typeof incoming.reasoning_basis !== 'string' || typeof incoming.tzuyang_review !== 'string') return null;
+  const address = incoming.naver_address_info;
+  if (address !== null && (!isRecord(address) || !isNullableString(address.road_address)
+    || typeof address.jibun_address !== 'string' || !isNullableString(address.english_address)
+    || !isRecord(address.address_elements) || typeof address.x !== 'string' || typeof address.y !== 'string')) return null;
+  const restaurant: RestaurantInfo = {
+    name: incoming.name, phone: incoming.phone, category: incoming.category,
+    origin_address: incoming.origin_address, origin_lat: incoming.origin_lat, origin_lng: incoming.origin_lng,
+    reasoning_basis: incoming.reasoning_basis, tzuyang_review: incoming.tzuyang_review,
+    naver_address_info: address === null ? null : {
+      road_address: address.road_address as string | null, jibun_address: address.jibun_address as string,
+      english_address: address.english_address as string | null, address_elements: address.address_elements as Record<string, unknown>,
+      x: address.x as string, y: address.y as string,
+    },
+  };
+  return { existing_restaurant: { id: existing.id, name: existing.name, jibun_address: existing.jibun_address,
+    phone: existing.phone, category: [...existing.category], youtube_links: [...existing.youtube_links], created_at: existing.created_at },
+    new_restaurant: restaurant };
+}
+
+export function getEvaluationConflictTargetId(record: EvaluationRecord): string | null {
+  const id = record.db_conflict_info?.existing_restaurant.id ?? record.db_error_details?.conflicting_restaurant?.id;
+  return typeof id === 'string' && CONFLICT_RECORD_ID.test(id) && id !== record.id ? id : null;
+}
+
+/** The target must come from a fresh detail GET; a paged summary cannot establish a merge preview. */
+export function buildEvaluationConflictInfo(source: EvaluationRecord, target: EvaluationRecord): DbConflictInfo | null {
+  if (getEvaluationConflictTargetId(source) !== target.id || target.read_summary || target.status === 'deleted'
+    || !Number.isFinite(Date.parse(target.updated_at)) || !source.restaurant_info) return null;
+  return {
+    existing_restaurant: { id: target.id, name: target.restaurant_name || target.name,
+      jibun_address: target.jibun_address || target.road_address || '', phone: target.phone,
+      category: [...(target.categories ?? [])], youtube_links: [...(target.youtube_links ?? (target.youtube_link ? [target.youtube_link] : []))],
+      created_at: target.created_at },
+    new_restaurant: source.db_conflict_info?.new_restaurant ?? source.restaurant_info,
+  };
+}
+
 export function normalizeEvaluationRecord(value: unknown): EvaluationRecord | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null;
 
@@ -372,7 +425,10 @@ export function normalizeEvaluationRecord(value: unknown): EvaluationRecord | nu
     ? value.youtube_links
     : (youtubeLink ? [youtubeLink] : null);
 
+  const conflict = parseDbConflictInfo(value.db_conflict_info);
+
   return {
+    ...(conflict && conflict.existing_restaurant.id !== value.id ? { db_conflict_info: conflict } : {}),
     ...(parseEvaluationReadSummary(value.read_summary) ? { read_summary: parseEvaluationReadSummary(value.read_summary)! } : {}),
     id: value.id,
     name,

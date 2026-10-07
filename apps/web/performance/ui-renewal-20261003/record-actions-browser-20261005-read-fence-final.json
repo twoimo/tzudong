@@ -1,0 +1,94 @@
+{
+  "passed": true,
+  "kind": "actual-page-synthetic-browser",
+  "origin": "http://127.0.0.1:18794",
+  "results": [
+    {
+      "width": 390,
+      "label": "preview",
+      "overflow": 0,
+      "viewportOverflow": 0
+    },
+    {
+      "width": 390,
+      "cancellationSentNoApply": true
+    },
+    {
+      "width": 834,
+      "label": "preview",
+      "overflow": 0,
+      "viewportOverflow": 0
+    },
+    {
+      "width": 834,
+      "cancellationSentNoApply": true
+    },
+    {
+      "width": 1423,
+      "label": "preview",
+      "overflow": 0,
+      "viewportOverflow": 0
+    },
+    {
+      "width": 1423,
+      "cancellationSentNoApply": true
+    },
+    {
+      "casConflictBlocksReplay": true,
+      "staleBackgroundCleared": true,
+      "failedFreshReadRemainsEmpty": true,
+      "successfulFreshReadRecovers": true
+    },
+    {
+      "inflightCancellationBlocked": true,
+      "singleApply": true
+    },
+    {
+      "appliedReceiptWithFailedCurrentReadRemainsEmpty": true
+    },
+    {
+      "lostApplyRecoveredByOriginalId": true
+    },
+    {
+      "uncertainBackgroundCleared": true,
+      "reloadRecoveredByOriginalId": true,
+      "noReplay": true
+    },
+    {
+      "reachableSubmissionEdit": true
+    },
+    {
+      "reviewApprovalGuarded": true
+    }
+  ],
+  "deniedUnexpectedWrites": 0,
+  "syntheticNotifications": 1,
+  "pageErrors": 0,
+  "actualWrites": 0,
+  "providerCalls": 0,
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0",
+  "sourceStable": true,
+  "source": [
+    {
+      "path": "app/admin/evaluations/page.tsx",
+      "sha256": "bb0f7ccc6f92b558bfdde37f980588a1cb4ef7d618501297dc188ff329252bd6"
+    },
+    {
+      "path": "lib/admin/record-action-client.ts",
+      "sha256": "54d7cbea087c0259c261a97293a37458c68125a2c86c810d9a252a04b8c881f3"
+    },
+    {
+      "path": "lib/admin/use-record-action.tsx",
+      "sha256": "e34ca4f3ae7392f4fa697adcde4af6f72e2b40ab0e8a6f296dea6c2f5f4dfa48"
+    },
+    {
+      "path": "lib/admin/evaluation-record-actions.ts",
+      "sha256": "7161a3b1d3c9c86ddb3917d5dfe92cfa16ba41189f7e92760a9b4af020c56eab"
+    },
+    {
+      "path": "lib/admin/record-action-contract.ts",
+      "sha256": "80c0d8fd63b943e32803e171580dcab01537177c9239be7d55725f79bf043ca8"
+    }
+  ]
+}

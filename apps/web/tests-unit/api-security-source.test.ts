@@ -493,7 +493,6 @@ describe('public API security source contracts', () => {
     for (const routeSource of [
       adminUsersSource,
       adminUserUpdateSource,
-      restaurantRequestReviewSource,
       directionsSource,
       ...thumbnailRouteSources,
     ]) {
@@ -505,6 +504,9 @@ describe('public API security source contracts', () => {
       expect(routeSource).toContain('getAdminSafeErrorName');
       expect(routeSource).toContain('errorName');
     }
+
+    expect(restaurantRequestReviewSource).toContain('RECORD_ACTION_ENDPOINT_RETIRED');
+    expect(restaurantRequestReviewSource).not.toMatch(/console\.|error\.message|errorName|createSupabaseServiceRoleClient/);
 
     expect(adminUsersSource).toContain("code: 'ADMIN_USER_CREATION_ONBOARDING_REQUIRED'");
     expect(adminUsersSource).toContain("error: '새 계정은 개인정보 온보딩 가입 절차를 통해서만 만들 수 있습니다.'");

@@ -1,5 +1,6 @@
 import { isRecord } from './normalize-evaluation-record';
 import { PIPELINE_GAUGE_KEYS, type PipelineGaugeKey } from './pipeline-control';
+import { parseGithubWorkflowState } from './operations-view-model';
 
 export const PIPELINE_FLOW_DOCUMENT = 'docs/architecture/admin-crawler-console-20261004.dataflow.json';
 export const PIPELINE_FLOW_STAGES = [
@@ -45,8 +46,9 @@ export function parsePipelineManifest(value: unknown): PipelineManifestView {
     }
   } else if (availability === 'available') invalidEvents++;
   const gha = isRecord(root.githubActions) ? root.githubActions : {};
-  const github = gha.enabled === true && gha.configured === true && gha.reachable === true && count(gha.latestRunId) && ['queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending'].includes(String(gha.latestRunStatus))
-    ? { id: String(gha.latestRunId), status: String(gha.latestRunStatus), conclusion: ['success', 'failure', 'timed_out', 'cancelled', 'skipped', 'neutral', 'action_required'].includes(String(gha.latestRunConclusion)) ? String(gha.latestRunConclusion) : null } : null;
+  const githubState = parseGithubWorkflowState({ status: gha.latestRunStatus, conclusion: gha.latestRunConclusion });
+  const github = gha.enabled === true && gha.configured === true && gha.reachable === true && count(gha.latestRunId) && gha.latestRunId > 0 && githubState.failed !== null
+    ? { id: String(gha.latestRunId), status: githubState.status, conclusion: githubState.conclusion } : null;
   return { availability, checkedAt: timestamp(run.checkedAt), stale: typeof run.stale === 'boolean' ? run.stale : null, invalidEvents, events, github };
 }
 
@@ -105,9 +107,8 @@ export function pipelineJobsForDisplay(snapshot: PipelineStatusView | undefined,
   if (snapshot.source === 'job_api') return snapshot.jobs;
   return snapshot.jobs.map(job => {
     const gha = manifest?.github?.id === job.id ? manifest.github : null;
-    const status = !gha ? 'Unknown' : gha.status === 'in_progress' ? 'Fetching' : gha.status !== 'completed' ? 'Queued'
-      : gha.conclusion === 'success' ? 'Succeeded' : ['failure', 'timed_out', 'action_required'].includes(gha.conclusion ?? '') ? 'Failed' : gha.conclusion === 'cancelled' ? 'Cancelled' : 'Unknown';
-    return { ...job, status, hasError: status === 'Failed', dry_run: undefined, adapter_index: null };
+    const state = parseGithubWorkflowState(gha);
+    return { ...job, status: state.jobStatus, hasError: state.failed === true, dry_run: undefined, adapter_index: null };
   });
 }
 

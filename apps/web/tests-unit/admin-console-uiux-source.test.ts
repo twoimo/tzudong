@@ -8891,19 +8891,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(adminEvaluationSource).toContain("road_address");
     expect(adminEvaluationSource).toContain("submission_type: 'recommend' as const");
     expect(adminEvaluationSource).toContain("admin-restaurant-requests-inline");
-    expect(adminEvaluationSource).toContain("applyRestaurantRequestReadbackToSubmission");
+    expect(adminEvaluationSource).toContain("submissionApprovalInput");
     expect(adminEvaluationSource).toContain("restaurant_phone: request.phone");
     expect(adminEvaluationSource).toContain("restaurant_name: request.restaurant_name");
     expect(adminEvaluationSource).toContain("restaurant_categories: request.categories");
     expect(adminEvaluationSource).toContain("recommendation_admin_note: request.admin_note");
-    expect(adminEvaluationSource).toContain("recommendation_audit_id: auditId || request.review_audit_id");
-    expect(adminEvaluationSource).toContain("updateRecommendationRequestReadbackInCache");
-    expect(adminEvaluationSource).toContain("queryClient.setQueryData<SubmissionRecord[]>");
+    expect(adminEvaluationSource).toContain("recommendation_audit_id: request.review_audit_id ?? null");
+    expect(adminEvaluationSource).toContain("invalidateRecordViews");
+    expect(adminEvaluationSource).toContain("refreshRecordViews");
     expect(adminEvaluationSource).toContain("ADMIN_RESTAURANT_REQUEST_LEGACY_SELECT");
     expect(adminEvaluationSource).toContain("isMissingRestaurantRequestLifecycleError(requestsError)");
-    expect(adminEvaluationSource).toContain(
-      "/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review",
-    );
+    expect(adminEvaluationSource).toContain("recommendation.reject");
     expect(pendingCountsSource).toContain('.from("restaurant_requests")');
     expect(pendingCountsSource).toContain("recommendationRequests");
     expect(pendingCountsSource).toContain("recommendationRequestsLifecycleReady");
@@ -8938,14 +8936,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(rowsMarkup).not.toContain('onDelete');
     expect(rowsMarkup).not.toContain('handleConfirm');
     expect(reviewRouteSource).toContain("requireAdmin()");
-    expect(reviewRouteSource).toContain("createSupabaseServiceRoleClient()");
-    expect(reviewRouteSource).toContain("review_restaurant_request");
-    expect(reviewRouteSource).not.toContain('.from("restaurant_request_review_audit"');
-    expect(reviewRouteSource).toContain("review_audit_id");
-    expect(reviewRouteSource).toContain("검토 상태를 확인하지 못했습니다");
-    expect(reviewRouteSource).toContain('buildMutationAuditReceipt');
-    expect(reviewRouteSource).toContain('domain: "restaurant_request_reviews"');
-    expect(reviewRouteSource).toContain('source: RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE');
+    expect(reviewRouteSource).toContain("isTrustedSameOriginMutation(request)");
+    expect(reviewRouteSource).toContain("RECORD_ACTION_ENDPOINT_RETIRED");
+    expect(reviewRouteSource).not.toContain("createSupabaseServiceRoleClient");
     expect(migrationSource).toContain("add column if not exists status text");
     expect(migrationSource).toContain("restaurant_requests_status_check");
     expect(migrationSource).toContain("create table if not exists public.restaurant_request_review_audit");
@@ -8961,100 +8954,39 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(submissionSource).toContain("tabIndex={-1}");
   });
 
-  test("guards legacy direct browser admin restaurant and review mutations", () => {
-    const reviewPanelSource = source("components/admin/AdminReviewPanel.tsx");
-    const restaurantModalSource = source("components/admin/AdminRestaurantModal.tsx");
-
-    expect(reviewPanelSource).toContain(
-      'import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";',
-    );
-    expect(restaurantModalSource).toContain(
-      'import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";',
-    );
-
+  test("keeps the legacy review guard and routes restaurant forms through the guarded server client", () => {
+    const review = source("components/admin/AdminReviewPanel.tsx");
+    const modal = source("components/admin/AdminRestaurantModal.tsx");
     for (const action of ["approve_review", "reject_review", "delete_review"]) {
-      expect(reviewPanelSource).toContain(
-        `assertLegacyBrowserAdminMutationEnabled("review_moderation", "${action}")`,
-      );
+      expect(review).toContain(`assertLegacyBrowserAdminMutationEnabled("review_moderation", "${action}")`);
     }
-
-    for (const action of [
-      "update_restaurant",
-      "insert_restaurant",
-      "delete_restaurant_link",
-      "update_restaurant_link",
-      "insert_restaurant_link",
-      "delete_restaurant",
-    ]) {
-      expect(restaurantModalSource).toContain(
-        action === "update_restaurant" || action === "insert_restaurant"
-          ? `restaurant ? "update_restaurant" : "insert_restaurant"`
-          : `assertLegacyBrowserAdminMutationEnabled("restaurant_record", "${action}")`,
-      );
+    expect(modal).toContain("useRecordAction");
+    expect(modal).toContain("recordActions.run");
+    for (const method of ["update", "insert", "upsert", "delete"]) {
+      expect(modal).not.toMatch(new RegExp(`\\.from\\([^)]*\\)[\\s\\S]{0,100}\\.${method}\\(`));
     }
-
-    expect(
-      reviewPanelSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("review_moderation", "approve_review")',
-      ),
-    ).toBeLessThan(reviewPanelSource.indexOf(".update({"));
-    expect(
-      reviewPanelSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("review_moderation", "delete_review")',
-      ),
-    ).toBeLessThan(reviewPanelSource.indexOf(".delete()"));
-
-    expect(
-      restaurantModalSource.indexOf(
-        'restaurant ? "update_restaurant" : "insert_restaurant"',
-      ),
-    ).toBeLessThan(restaurantModalSource.indexOf(".update({"));
-    expect(
-      restaurantModalSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("restaurant_record", "insert_restaurant_link")',
-      ),
-    ).toBeLessThan(restaurantModalSource.indexOf(".insert({"));
-    expect(
-      restaurantModalSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant")',
-      ),
-    ).toBeLessThan(restaurantModalSource.lastIndexOf(".update({"));
+    expect(modal).not.toContain("assertLegacyBrowserAdminMutationEnabled");
+    expect(modal).toContain("recordActions.dialog");
   });
 
-  test("retires legacy browser admin evaluation mutations behind the explicit guard flag", () => {
-    const adminEvaluationSource = source("app/admin/evaluations/page.tsx");
-
-    const expectGuardBefore = (domain: string, operation: string, privilegedSnippet: string) => {
-      const guardCall = `assertLegacyBrowserAdminMutationEnabled('${domain}', '${operation}')`;
-      const guardIndex = adminEvaluationSource.indexOf(guardCall);
-      expect(guardIndex).toBeGreaterThanOrEqual(0);
-      const privilegedIndex = adminEvaluationSource.indexOf(privilegedSnippet, guardIndex);
-      expect(privilegedIndex).toBeGreaterThan(guardIndex);
-    };
-
-    expect(adminEvaluationSource).toContain("@/lib/admin/guarded-mutation-contract");
-    expect(adminEvaluationSource).toContain("assertLegacyBrowserAdminMutationEnabled");
-    expect(adminEvaluationSource).toContain("isLegacyBrowserAdminMutationEnabled");
-    expect(adminEvaluationSource).toContain(
-      "autoDeleteTargets.length > 0 && user?.id && isLegacyBrowserAdminMutationEnabled()",
-    );
-
-    expectGuardBefore("restaurant_record", "record duplicate error update", "db_error_details: errorDetails");
-    expectGuardBefore("restaurant_record", "restaurant approval update", "status: 'approved'");
-    expectGuardBefore("restaurant_record", "restaurant delete update", "status: 'deleted'");
-    expectGuardBefore("restaurant_record", "restaurant restore update", "status: 'pending'");
-    expectGuardBefore("review_moderation", "review approval update", "is_verified: true");
-    expectGuardBefore("review_moderation", "review rejection update", "is_verified: false");
-    expectGuardBefore("review_moderation", "review delete mutation", ".from('review-photos')");
-    expectGuardBefore("review_moderation", "review delete mutation", "supabase.from('reviews').delete()");
-    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "'approve_edit_submission_item'");
-    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "'approve_submission_item'");
-    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "resolved_by_admin_id: user.id");
-    expectGuardBefore("restaurant_submission", "submission rejection direct update", "item_status: 'rejected'");
-    expectGuardBefore("restaurant_submission", "submission rejection direct update", "rejection_reason: reason");
-    expectGuardBefore("restaurant_submission", "submission delete direct update", "rejection_reason: '관리자에 의해 삭제됨'");
-    expectGuardBefore("restaurant_submission", "submission edit direct update", "restaurant_name: updatedData.restaurant_name");
-    expectGuardBefore("restaurant_submission", "submission edit direct update", "youtube_link: updatedData.youtube_link");
+  test("evaluation moderation uses server-bound preview, confirmation and readback for every active domain", () => {
+    const page = source("app/admin/evaluations/page.tsx");
+    const commands = page.slice(page.indexOf("  const notifyRecordActionError ="), page.indexOf("  const initialContentLoading"));
+    const restaurantCommands = page.slice(page.indexOf("  const handleApprove ="), page.indexOf("  // 사용자 제보 데이터 쿼리"));
+    for (const commandsSource of [commands, restaurantCommands]) {
+      expect(commandsSource).not.toMatch(/\.update[<(]|\.delete\(|\.storage|callSubmissionApprovalRpc|assertLegacyBrowserAdminMutationEnabled/);
+    }
+    for (const action of ["restaurant.approve", "restaurant.delete", "restaurant.restore", "review.approve", "review.reject", "review.delete", "submission.reject", "submission.delete", "recommendation.reject"]) {
+      expect(page).toContain(`'${action}'`);
+    }
+    expect(page).toContain("submissionApprovalInput(input)");
+    expect(page).toContain("submissionEditInput(submission, updatedData)");
+    expect(page).toContain("{recordActions.dialog}");
+    const route = source("app/api/admin/record-actions/route.ts");
+    const post = route.slice(route.indexOf('export async function POST'));
+    expect(post.indexOf("await requireAdmin()")).toBeLessThan(post.indexOf("runRecordAction(transport()"));
+    expect(route).toContain("isTrustedSameOriginMutation(request)");
+    expect(route).toContain("readBoundedJsonRequest");
   });
 
   test("excludes Python QA seeds from actual GPT Image 2 page history", () => {

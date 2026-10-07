@@ -15,6 +15,7 @@ const number = new Intl.NumberFormat('ko-KR');
 export function AdminKnowledgeGraphPanel() {
   const [search, setSearch] = useState(''), [kind, setKind] = useState(''), [selected, setSelected] = useState<string | null>(null);
   const [cursors, setCursors] = useState<Array<string | null>>([null]), [scale, setScale] = useState(1);
+  const [edgeCursors, setEdgeCursors] = useState<Array<string | null>>([null]);
   const [detailOpen, setDetailOpen] = useState(false), [listOpen, setListOpen] = useState(false);
   const canvas = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 960, height: 620 });
@@ -23,17 +24,20 @@ export function AdminKnowledgeGraphPanel() {
     const observer = new ResizeObserver(([entry]) => setCanvasSize({ width: Math.max(320, entry.contentRect.width - 16), height: Math.max(480, entry.contentRect.height - 16) }));
     observer.observe(host); return () => observer.disconnect();
   }, []);
-  const q = useDeferredValue(search), cursor = cursors.at(-1) ?? null;
-  const query = useQuery<KnowledgeGraphPage>({ queryKey: ['admin-knowledge-graph', q, kind, cursor, selected], retry: false, refetchOnWindowFocus: false, placeholderData: previous => previous,
+  const q = useDeferredValue(search), cursor = cursors.at(-1) ?? null, edgeCursor = edgeCursors.at(-1) ?? null;
+  const query = useQuery<KnowledgeGraphPage>({ queryKey: ['admin-knowledge-graph', q, kind, cursor, edgeCursor, selected], staleTime: 0, retry: false, refetchOnWindowFocus: false, placeholderData: previous => previous,
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ q, kind, limit: '100' });
       if (cursor) params.set('cursor', cursor); if (selected) params.set('node', selected);
+      if (edgeCursor) params.set('edgeCursor', edgeCursor);
       const response = await fetch(`/api/admin/knowledge-graph?${params}`, { signal, cache: 'no-store' });
       if (!response.ok) throw new Error(response.status === 409 ? 'knowledge_cursor_stale' : 'knowledge_unavailable');
       const value: unknown = await response.json(); if (!isKnowledgeGraphPage(value)) throw new Error('knowledge_unavailable'); return value;
     } });
   const data = query.data;
-  const current = data?.selected?.id === selected ? data.selected : data?.nodes.find(node => node.id === selected) ?? null;
+  const current = query.isPlaceholderData ? null : data?.selected?.id === selected ? data.selected : data?.nodes.find(node => node.id === selected) ?? null;
+  const pageBusy = query.isFetching || query.isPlaceholderData || query.isError;
+  const outsideEdges = data ? data.totalEdges - (data.edgePageTotal ?? data.edges.length) : 0;
   const layout = useMemo(() => {
     const nodes = data?.nodes ?? [], positions = new Map<string, { x: number; y: number }>();
     const kinds = KNOWLEDGE_KINDS.filter(value => nodes.some(node => node.kind === value));
@@ -49,8 +53,8 @@ export function AdminKnowledgeGraphPanel() {
     }
     return { positions, width, height: compact ? Math.max(canvasSize.height, offset + 36) : height };
   }, [data?.nodes, canvasSize]);
-  const resetPage = () => setCursors([null]);
-  const reload = () => { if (cursor === null) void query.refetch(); else resetPage(); };
+  const resetPage = () => { setCursors([null]); setEdgeCursors([null]); };
+  const reload = () => { if (cursor === null && edgeCursor === null) void query.refetch(); else resetPage(); };
   const selectNode = (id: string) => { setSelected(id); setDetailOpen(true); setListOpen(false); };
   const changeQuery = (value: string, field: 'search' | 'kind') => {
     if (field === 'search') setSearch(value); else setKind(value);
@@ -76,7 +80,8 @@ export function AdminKnowledgeGraphPanel() {
         </svg> : <div className="grid h-full place-content-center text-xs text-muted-foreground">{query.isLoading ? '그래프 조회 중' : '일치하는 지식이 없습니다.'}</div>}
       </div>
     </div>
-    <footer className="admin-cms-footer"><span className="flex flex-wrap items-center gap-2">{KNOWLEDGE_KINDS.map(value => <span key={value} className="inline-flex items-center gap-1"><i className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colors[value] }} aria-hidden="true" />{labels[value]}</span>)}</span>{data?.omittedEdges ? <span>화면 밖 연결 {number.format(data.omittedEdges)}</span> : null}<div className="ml-auto flex gap-1"><Button size="sm" variant="ghost" disabled={cursors.length <= 1 || query.isFetching} aria-label="이전 지식 페이지" onClick={() => setCursors(value => value.slice(0, -1))}><ChevronLeft className="h-4 w-4" /></Button><Button size="sm" variant="ghost" disabled={!data?.nextCursor || query.isFetching} aria-label="다음 지식 페이지" onClick={() => { if (data?.nextCursor) setCursors(value => [...value, data.nextCursor]); }}><ChevronRight className="h-4 w-4" /></Button></div></footer>
+    <footer className="admin-cms-footer"><span className="flex flex-wrap items-center gap-2">{KNOWLEDGE_KINDS.map(value => <span key={value} className="inline-flex items-center gap-1"><i className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colors[value] }} aria-hidden="true" />{labels[value]}</span>)}</span>{outsideEdges ? <span>화면 밖 연결 {number.format(outsideEdges)}</span> : null}
+      {data?.edgePageTotal !== undefined && (data.nextEdgeCursor || edgeCursors.length > 1) ? <div className="flex items-center gap-1"><span aria-live="polite">화면 내 연결 {number.format(data.edges.length)} / {number.format(data.edgePageTotal)} · {edgeCursors.length}페이지</span><Button size="sm" variant="ghost" disabled={edgeCursors.length <= 1 || pageBusy} aria-label="이전 연결 페이지" onClick={() => setEdgeCursors(value => value.slice(0, -1))}><ChevronLeft className="h-4 w-4" /></Button><Button size="sm" variant="ghost" disabled={!data.nextEdgeCursor || pageBusy} aria-label="다음 연결 페이지" onClick={() => { const next = data.nextEdgeCursor; if (next) setEdgeCursors(value => [...value, next]); }}><ChevronRight className="h-4 w-4" /></Button></div> : null}<div className="ml-auto flex gap-1"><Button size="sm" variant="ghost" disabled={cursors.length <= 1 || pageBusy} aria-label="이전 지식 페이지" onClick={() => { setCursors(value => value.slice(0, -1)); setEdgeCursors([null]); }}><ChevronLeft className="h-4 w-4" /></Button><Button size="sm" variant="ghost" disabled={!data?.nextCursor || pageBusy} aria-label="다음 지식 페이지" onClick={() => { if (data?.nextCursor) { setCursors(value => [...value, data.nextCursor]); setEdgeCursors([null]); } }}><ChevronRight className="h-4 w-4" /></Button></div></footer>
     <Sheet open={listOpen} onOpenChange={setListOpen}><SheetContent className="w-full overflow-y-auto p-4 sm:max-w-md"><SheetHeader><SheetTitle>지식 목록</SheetTitle><SheetDescription>{data ? `전체 ${number.format(data.totalNodes)}개 · 현재 페이지 ${data.nodes.length}개` : '조회 중'}</SheetDescription></SheetHeader><ul className="mt-3 divide-y" aria-label="지식 목록">{data?.nodes.map(node => <li key={node.id}><button type="button" aria-pressed={selected === node.id} onClick={() => selectNode(node.id)} className="w-full px-3 py-2 text-left hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"><span className="text-[10px] text-muted-foreground">{labels[node.kind]}</span><p className="truncate text-xs font-medium">{node.label}</p></button></li>)}</ul><div className="mt-4 border-t pt-3 text-xs text-muted-foreground">{data?.coverage.pendingCount == null ? '대기 수 확인 중' : `대기 ${number.format(data.coverage.pendingCount)}`} · 실패 {data ? number.format(data.coverage.failedCount) : '—'}</div></SheetContent></Sheet>
     <Sheet open={detailOpen} onOpenChange={setDetailOpen}><SheetContent className="w-full overflow-y-auto p-4 sm:max-w-lg" onCloseAutoFocus={event => { event.preventDefault(); document.querySelector<SVGGElement>('[data-knowledge-selected="true"]')?.focus(); }}><SheetHeader><SheetTitle>지식 근거</SheetTitle><SheetDescription>미확인 근거는 독립 검증 전입니다.</SheetDescription></SheetHeader><div className="mt-3" aria-label="지식 근거 상세">{current ? <><span className="text-[10px] text-muted-foreground">{labels[current.kind]}</span><h2 className="mt-1 break-words text-sm font-semibold">{current.label}</h2><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">{current.summary}</p><h3 className="mb-1 mt-4 text-xs font-semibold">영상 근거</h3>{current.evidence.length ? <ul className="space-y-1">{current.evidence.map((evidence, index) => <li key={`${evidence.videoId}-${evidence.startSeconds}-${index}`}><a href={evidence.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded border px-2 py-1.5 text-xs hover:bg-muted/50"><span className="mr-auto">{Math.floor(evidence.startSeconds / 60)}:{String(Math.floor(evidence.startSeconds % 60)).padStart(2, '0')} · {evidence.status === 'verified' ? '근거 있음' : '미확인'}</span><ExternalLink className="h-3 w-3" aria-hidden="true" /><span className="sr-only">영상에서 근거 확인</span></a></li>)}</ul> : <p className="text-xs text-muted-foreground">연결된 영상 근거가 없습니다.</p>}</> : <p className="text-xs text-muted-foreground">{query.isFetching ? '근거 조회 중' : '선택한 근거를 불러오지 못했습니다.'}</p>}</div></SheetContent></Sheet>
   </div>;

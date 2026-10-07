@@ -1,0 +1,10 @@
+{
+  "pilot": {
+    "admitted": false,
+    "reason": "Measurement-wrapper custom env was removed by actual media allowlist; wrapper corrected without production changes."
+  },
+  "pilot-v2": {
+    "admitted": false,
+    "reason": "One-pair feasibility run before admin protection and fault probes; never pooled with seven-pair result."
+  }
+}

@@ -1995,7 +1995,7 @@ export function SubmissionListView({
                             </div>
                         </div>
                         <p className="text-xs leading-5 text-amber-900/80 dark:text-amber-100/80">
-                            승인/거부는 /api/admin/restaurant-requests/{'{id}'}/review readback과 감사 ID가 확인된 경우에만 완료됩니다.
+                            승인·거부는 처리 결과와 감사 ID가 확인되면 완료됩니다.
                         </p>
                     </div>
                 </Card>

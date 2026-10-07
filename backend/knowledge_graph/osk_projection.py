@@ -33,6 +33,7 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 SCOPE = "tzudong"
@@ -44,6 +45,7 @@ MAX_NODE_BYTES = 128 * 1024
 MAX_SCOPE_BYTES = 64 * 1024 * 1024
 MAX_EVIDENCE = 16
 MAX_COUNT = 1_000_000
+MAX_GRAPH_COUNT = (1 << 53) - 1
 VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 KINDS = {"hub", "video", "restaurant", "menu", "claim"}
 # Observed upstream/current install 3472a9619a25a86290488fd6aa21f5c195bb4393.
@@ -223,8 +225,57 @@ def _inventory(graph) -> tuple[list, tuple]:
     return entries, tuple(signature)
 
 
-def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str | None = None) -> dict:
-    """Build a bounded snapshot; never mutate the vault or expose parser errors."""
+def _read_source(path: Path) -> bytes:
+    # Bounded reads also catch a file which grows after its inventory stat.
+    with path.open("rb") as handle:
+        data = handle.read(MAX_NODE_BYTES + 1)
+    if len(data) > MAX_NODE_BYTES:
+        _fail("OSK_CAPACITY_EXCEEDED")
+    return data
+
+
+def source_pages(paths):
+    """Visit every source in explicit <=64 MiB / <=5000-file pages.
+
+    The limits are working-set bounds, never a prefix of the scope. Metadata,
+    identity and a digest are retained between pages; source bodies are not.
+    """
+    page, size = [], 0
+    for path in paths:
+        data = _read_source(path)
+        if len(data) > MAX_SCOPE_BYTES:
+            _fail("OSK_CAPACITY_EXCEEDED")
+        if page and (size + len(data) > MAX_SCOPE_BYTES or len(page) >= MAX_NODES):
+            yield page
+            page, size = [], 0
+        page.append((path, data))
+        size += len(data)
+    if page:
+        yield page
+
+
+def _identity_index(graph, contract):
+    class IdentityIndex(graph.Index):
+        # Reuse the pinned engine's name/id/scope resolution and duplicate rules,
+        # but retain only identities after parsing. Index.parse_all normally
+        # caches every full body, defeating source paging above 64 MiB.
+        def _readable(self, path):
+            if path in self.parsed:
+                return True
+            if path in self._failed:
+                return False
+            try:
+                node = contract.parse_bytes(path, _read_source(path)) if graph.space_of(path) == ("scope", SCOPE) else contract.parse(path)
+                self.parsed[path] = SimpleNamespace(id=node.id)
+                return True
+            except Exception:
+                self._failed[path] = "OSK_NODE_INVALID"
+                return False
+    return IdentityIndex()
+
+
+def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str | None = None, sharded: bool = False) -> dict:
+    """Project every scoped source. Sharded mode pages sources and output explicitly."""
     vault = vault.resolve(strict=True)
     engine = (engine or vault / "_governance/_engine").resolve(strict=True)
     graph, contract = _load_engine(vault, engine)
@@ -232,19 +283,19 @@ def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str 
     scoped = [path for path, kind in entries if kind == ("scope", SCOPE)]
     if not scoped:
         _fail("OSK_SCOPE_UNAVAILABLE")
-    if len(scoped) > MAX_NODES:
+    if len(scoped) > (MAX_GRAPH_COUNT if sharded else MAX_NODES):
         _fail("OSK_CAPACITY_EXCEEDED")
-    source_bytes = {}
+    # Read/hash once before engine indexing, then compare on projection and again
+    # at the commit boundary. Keep legacy aggregate admission for v1 exports.
+    source_hashes = {}
     total_bytes = 0
-    for path in scoped:
-        if path.stat().st_size > MAX_NODE_BYTES:
-            _fail("OSK_CAPACITY_EXCEEDED")
-        data = path.read_bytes()
-        total_bytes += len(data)
-        if len(data) > MAX_NODE_BYTES or total_bytes > MAX_SCOPE_BYTES:
-            _fail("OSK_CAPACITY_EXCEEDED")
-        source_bytes[path] = data
-    idx = graph.Index()
+    for page in source_pages(scoped):
+        for path, data in page:
+            total_bytes += len(data)
+            source_hashes[path] = hashlib.sha256(data).hexdigest()
+    if not sharded and total_bytes > MAX_SCOPE_BYTES:
+        _fail("OSK_CAPACITY_EXCEEDED")
+    idx = _identity_index(graph, contract)
     # OSK refuses ambiguous global names/IDs. Do not accidentally pick a foreign
     # duplicate, and never serialize its name or diagnostic path in an error.
     if idx.scan_errors or not idx.complete:
@@ -257,11 +308,12 @@ def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str 
                    "excludedUnsupportedEdges": 0}
     inventory_count = eligible_count = shorts_count = as_of = None
     root_seen = False
-    for path in scoped:
+    for path, data in (item for page in source_pages(scoped) for item in page):
         try:
-            node = idx.node(path)
-            retained = contract.parse_bytes(path, source_bytes[path])
-            if node.meta != retained.meta or node.body != retained.body:
+            if hashlib.sha256(data).hexdigest() != source_hashes[path]:
+                _fail("OSK_SOURCE_CHANGED")
+            node = contract.parse_bytes(path, data)
+            if path not in idx.parsed or idx.parsed[path].id != node.id:
                 _fail("OSK_SOURCE_CHANGED")
             if contract.validate(node):
                 _fail("OSK_NODE_INVALID")
@@ -303,7 +355,7 @@ def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str 
         projected = {"id": node.id, "label": metadata.get("displayLabel", path.stem), "kind": kind,
                      "summary": node.meta["summary"], "evidence": evidence}
         nodes.append(projected)
-        by_path[path.resolve()] = (projected, node)
+        by_path[path.resolve()] = (projected, tuple(node.references()))
     if not root_seen:
         _fail("OSK_SCOPE_HUB_UNREGISTERED")
     analyzed = sum(value == "complete" for value in declarations.values())
@@ -315,8 +367,8 @@ def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str 
     if all(v is not None for v in (inventory_count, eligible_count, shorts_count)) and eligible_count + shorts_count > inventory_count:
         _fail("OSK_COVERAGE_INVALID")
     edges = {}
-    for source, node in by_path.values():
-        for relation, reference in node.references():
+    for source, references in by_path.values():
+        for relation, reference in references:
             if relation not in {"Link", "derived-from"}:
                 diagnostics["excludedUnsupportedEdges"] += 1
                 continue
@@ -341,10 +393,11 @@ def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str 
             identity = [source["id"], target[0]["id"], edge_kind]
             eid = hashlib.sha256(_json(identity)).hexdigest()
             edges[eid] = {"id": eid, "source": identity[0], "target": identity[1], "relation": edge_kind}
-            if len(edges) > MAX_EDGES:
+            if len(edges) > (MAX_GRAPH_COUNT if sharded else MAX_EDGES):
                 _fail("OSK_CAPACITY_EXCEEDED")
     # Check content, addition/removal and identity races before publishing.
-    if _inventory(graph)[1] != signature or any(path.read_bytes() != data for path, data in source_bytes.items()):
+    if _inventory(graph)[1] != signature or any(hashlib.sha256(data).hexdigest() != source_hashes[path]
+                                               for page in source_pages(scoped) for path, data in page):
         _fail("OSK_SOURCE_CHANGED")
     payload = {"schemaVersion": 1, "scope": SCOPE,
                "nodes": sorted(nodes, key=lambda n: n["id"]),
@@ -355,11 +408,11 @@ def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str 
                "diagnostics": diagnostics}
     # Include all retained scope source bytes; changes not displayed in the small
     # projection still invalidate the content revision. Foreign content does not.
-    source_hashes = sorted((path.relative_to(vault).as_posix(), hashlib.sha256(data).hexdigest())
-                           for path, data in source_bytes.items())
+    source_hashes = sorted((path.relative_to(vault).as_posix(), digest)
+                           for path, digest in source_hashes.items())
     payload["revision"] = hashlib.sha256(_json({"projection": payload, "sources": source_hashes})).hexdigest()
     payload["generatedAt"] = _iso(generated_at or datetime.now(timezone.utc).isoformat())
-    if len(_json(payload)) + 1 > MAX_OUTPUT_BYTES:
+    if not sharded and len(_json(payload)) + 1 > MAX_OUTPUT_BYTES:
         _fail("OSK_CAPACITY_EXCEEDED")
     return payload
 
@@ -369,6 +422,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--vault", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--engine", type=Path, help="Existing pinned engine; defaults to the vault's bundled engine")
+    parser.add_argument("--format", choices=("single", "sharded"), default="single",
+                        help="Sharded manifest with immutable <=4 MiB files; single keeps legacy limits")
     args = parser.parse_args(argv)
     temporary = None
     try:
@@ -376,7 +431,15 @@ def main(argv: list[str] | None = None) -> int:
         output = args.output.resolve()
         if output.is_relative_to(vault):
             _fail("OSK_OUTPUT_INSIDE_VAULT")
-        payload = project_vault(vault, args.engine)
+        payload = project_vault(vault, args.engine, sharded=args.format == "sharded")
+        if args.format == "sharded":
+            from backend.knowledge_graph.graph_shards import build_graph_shards, write_graph_shards
+            bundle = build_graph_shards(payload)
+            write_graph_shards(bundle, output)
+            print(json.dumps({"ok": True, "format": args.format, "revision": payload["revision"],
+                              "nodes": len(payload["nodes"]), "edges": len(payload["edges"]),
+                              "shards": len(bundle.files), "bytes": sum(len(data) for data in bundle.files.values())}))
+            return 0
         encoded = _json(payload) + b"\n"
         # Existing destination is untouched on validation or capacity failure.
         with tempfile.NamedTemporaryFile(dir=output.parent, prefix=".osk-projection-", delete=False) as handle:

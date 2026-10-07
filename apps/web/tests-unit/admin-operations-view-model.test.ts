@@ -6,6 +6,7 @@ import {
   filterOperationsRows,
   operationsUnavailable,
   parseOperationsSnapshot,
+  parseGithubWorkflowState,
   type OperationsSnapshot,
 } from '../lib/admin/operations-view-model';
 
@@ -124,7 +125,7 @@ describe('operations read-model boundary', () => {
   });
 
   test('GitHub fallback is limited and cannot assert global queue health', () => {
-    const result = parseOperationsSnapshot('pipeline', { source: 'github_actions', jobs: [job('123', 'Failed')], failures: [{ errorCode: 'github_crawler', line: '1' }] });
+    const result = parseOperationsSnapshot('pipeline', { source: 'github_actions', jobs: [job('123', 'Failed')], failures: [{ errorCode: 'github_crawler', line: '1' }], githubRun: { id: '123', status: 'completed', conclusion: 'failure' } });
     expect(result.state).toBe('limited');
     expect(result.rows[0].priority).toBe('failure');
     expect(getMetric(result, 0, 'failed')).toBe(1);
@@ -132,6 +133,60 @@ describe('operations read-model boundary', () => {
     expect(getMetric(result, 0, 'running')).toBeNull();
     expect(parseOperationsSnapshot('pipeline', { ...pipeline(), source: 'unknown' }).state).toBe('invalid');
     expect(parseOperationsSnapshot('pipeline', { source: 'github_actions', jobs: [], failures: [] }).state).toBe('invalid');
+  });
+
+  test('preserves GitHub conclusions while only confirmed failures raise the failure count', () => {
+    for (const conclusion of ['success', 'failure', 'cancelled', 'skipped', 'neutral', 'timed_out', 'action_required', 'stale', 'startup_failure']) {
+      const failed = ['failure', 'timed_out', 'startup_failure'].includes(conclusion);
+      const state = parseGithubWorkflowState({ status: 'completed', conclusion });
+      expect(state).toMatchObject({ status: 'completed', conclusion, failed });
+      expect(state.jobStatus).toBe(failed ? 'Failed' : conclusion === 'success' ? 'Succeeded' : conclusion === 'cancelled' ? 'Cancelled' : 'Unknown');
+      // Legacy normalized fields can be misleading: only the same run's raw status/conclusion is evidence.
+      const result = parseOperationsSnapshot('pipeline', { source: 'github_actions', jobs: [job('123', 'Failed')], failures: [{ errorCode: 'github_crawler' }], githubRun: { id: '123', status: 'completed', conclusion } });
+      expect(result.state).toBe('limited');
+      expect(result.rows[0].priority).toBe(failed ? 'failure' : 'attention');
+      expect(result.rows[0].metrics.map(item => item.value)).toEqual([Number(failed), null, null, null]);
+      expect(buildOperationsViewModel({ pipeline: result }).summaries.find(item => item.id === 'pipeline')?.value).toBe(Number(failed));
+    }
+  });
+
+  test('incomplete GitHub runs remain non-failures without asserting global progress', () => {
+    for (const status of ['in_progress', 'queued', 'requested', 'waiting', 'pending', 'expected']) {
+      const state = parseGithubWorkflowState({ status, conclusion: null });
+      expect(state).toMatchObject({ status, conclusion: null, failed: false });
+      expect(state.jobStatus).toBe(status === 'in_progress' ? 'Fetching' : status === 'expected' ? 'Unknown' : 'Queued');
+      const result = parseOperationsSnapshot('pipeline', { source: 'github_actions', jobs: [job('123', 'Failed')], failures: [], githubRun: { id: '123', status, conclusion: null } });
+      expect(result.state).toBe('limited');
+      expect(result.rows[0].priority).toBe('attention');
+      expect(result.rows[0].metrics.map(item => item.value)).toEqual([0, null, null, null]);
+    }
+    for (const status of ['failure', 'startup_failure']) {
+      expect(parseGithubWorkflowState({ status, conclusion: null })).toMatchObject({ status, failed: true, jobStatus: 'Failed' });
+    }
+  });
+
+  test('missing, future, contradictory or different-run evidence cannot manufacture failure or health', () => {
+    const payload = { source: 'github_actions', jobs: [job('123', 'Failed')], failures: [{ errorCode: 'github_crawler' }] };
+    for (const githubRun of [undefined, null, {}, { id: '124', status: 'completed', conclusion: 'failure' },
+      ...[{ status: 'completed', conclusion: null }, { status: 'completed' }, { status: null, conclusion: 'failure' },
+        { status: 'future', conclusion: 'failure' }, { status: 'in_progress', conclusion: 'success' },
+        { status: 'queued', conclusion: 'failure' }, { status: 'startup_failure', conclusion: 'success' },
+        { status: 'completed', conclusion: 'future' }, { status: 'constructor', conclusion: '__proto__' },
+        { status: {}, conclusion: 'failure' }, { status: 'completed', conclusion: {} }].map(state => ({ id: '123', ...state }))]) {
+      const result = parseOperationsSnapshot('pipeline', { ...payload, githubRun });
+      expect(result.state).toBe('partial');
+      expect(result.rows[0].priority).toBe('attention');
+      expect(result.rows[0].metrics.map(item => item.value)).toEqual([null, null, null, null]);
+    }
+    const uncertain = parseOperationsSnapshot('pipeline', payload);
+    expect(parseOperationsSnapshot('pipeline', { ...payload, githubRun: { id: '123', status: 'completed', conclusion: 'success' } }).rows[0].metrics[0].value).toBe(0);
+    expect(uncertain.rows[0].metrics[0].value).toBeNull();
+    for (const id of ['0', '-1', '1.2', '9007199254740992', 'private@example.test']) {
+      expect(parseOperationsSnapshot('pipeline', { ...payload, jobs: [job(id, 'Failed')], githubRun: { id, status: 'completed', conclusion: 'failure' } }).rows[0].metrics[0].value).toBeNull();
+    }
+    for (const status of [undefined, null, 'FutureStatus', {}]) {
+      expect(parseOperationsSnapshot('pipeline', { ...payload, jobs: [{ id: '123', status }], githubRun: { id: '123', status: 'completed', conclusion: 'failure' } }).state).toBe('partial');
+    }
   });
 
   test('automation uses validated limits and picks the newest returned execution', () => {

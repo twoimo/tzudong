@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import snapshot from '../data/knowledge-graph/tzudong.json';
+import snapshot from './fixtures/knowledge-graph-v1-20261004.json';
 import { isKnowledgeGraphPage, isKnowledgeSnapshot, isKnowledgeNode, type KnowledgeSnapshot } from '../types/knowledge-graph';
 import { queryKnowledgeGraph } from '../lib/admin/knowledge-graph-query';
 
@@ -34,6 +34,7 @@ describe('bounded Tzudong knowledge graph reads', () => {
   test('rejects stale and cross-query cursors and bounded malformed queries', () => {
     const page = queryKnowledgeGraph(fixture, new URLSearchParams());
     expect(() => queryKnowledgeGraph({ ...fixture, revision: 'b'.repeat(64) }, new URLSearchParams({ cursor: page.nextCursor! }))).toThrow('knowledge_cursor_stale');
+    expect(() => queryKnowledgeGraph({ ...fixture, nodes: [], edges: [], revision: 'b'.repeat(64) }, new URLSearchParams({ cursor: page.nextCursor! }))).toThrow('knowledge_cursor_stale');
     expect(() => queryKnowledgeGraph(fixture, new URLSearchParams({ q: 'changed', cursor: page.nextCursor! }))).toThrow('knowledge_query_invalid');
     for (const query of ['limit=201', 'limit=0', 'limit=1e2', 'kind=other', 'url=http://localhost', 'cursor=%3Cscript%3E', `q=${'a'.repeat(257)}`])
       expect(() => queryKnowledgeGraph(fixture, new URLSearchParams(query))).toThrow('knowledge_query_invalid');

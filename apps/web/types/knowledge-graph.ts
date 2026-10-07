@@ -18,10 +18,12 @@ export type KnowledgeGraphPage = {
   revision: string; generatedAt: string; coverage: KnowledgeCoverage;
   nodes: KnowledgeNode[]; edges: KnowledgeEdge[]; selected: KnowledgeNode | null;
   totalNodes: number; totalEdges: number; filteredTotal: number; omittedEdges: number; nextCursor: string | null;
+  edgePageTotal?: number; nextEdgeCursor?: string | null;
 };
 
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const count = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000;
+const graphCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const nullableCount = (value: unknown) => value === null || count(value);
 const identifier = (value: unknown): value is string => typeof value === 'string' && /^[a-zA-Z0-9_.:-]{1,160}$/.test(value);
 const date = (value: unknown): value is string => typeof value === 'string' && value.length <= 64 && Number.isFinite(Date.parse(value));
@@ -53,8 +55,8 @@ function evidenceTimestamp(value: number): string {
 }
 
 export function isKnowledgeNode(value: unknown): value is KnowledgeNode {
-  if (!object(value) || !identifier(value.id) || typeof value.label !== 'string' || !value.label.trim() || value.label.length > 512
-    || !KNOWLEDGE_KINDS.includes(value.kind as KnowledgeKind) || typeof value.summary !== 'string' || value.summary.length > 4000
+  if (!object(value) || !identifier(value.id) || typeof value.label !== 'string' || !value.label.trim() || Array.from(value.label).length > 512
+    || !KNOWLEDGE_KINDS.includes(value.kind as KnowledgeKind) || typeof value.summary !== 'string' || Array.from(value.summary).length > 4000
     || !Array.isArray(value.evidence) || value.evidence.length > 64) return false;
   return value.evidence.every(item => {
     if (!object(item) || typeof item.videoId !== 'string' || !/^[a-zA-Z0-9_-]{11}$/.test(item.videoId)
@@ -88,9 +90,13 @@ export function isKnowledgeGraphPage(value: unknown): value is KnowledgeGraphPag
     || !isCoverage(value.coverage) || !Array.isArray(value.nodes) || value.nodes.length > 200 || !value.nodes.every(isKnowledgeNode)
     || !Array.isArray(value.edges) || value.edges.length > 100_000 || !value.edges.every(isEdge)
     || (value.selected !== null && !isKnowledgeNode(value.selected))
-    || !['totalNodes', 'totalEdges', 'filteredTotal', 'omittedEdges'].every(key => count(value[key]))
+    || !['totalNodes', 'totalEdges', 'filteredTotal', 'omittedEdges'].every(key => graphCount(value[key]))
     || (value.nextCursor !== null && (typeof value.nextCursor !== 'string' || value.nextCursor.length > 4096))) return false;
   const ids = new Set(value.nodes.map(node => node.id));
+  if ('edgePageTotal' in value || 'nextEdgeCursor' in value) {
+    if (!graphCount(value.edgePageTotal) || value.edgePageTotal < value.edges.length || value.edgePageTotal > (value.totalEdges as number)
+      || (value.nextEdgeCursor !== null && (typeof value.nextEdgeCursor !== 'string' || !value.nextEdgeCursor.length || value.nextEdgeCursor.length > 4096))) return false;
+  }
   return ids.size === value.nodes.length && value.nodes.length <= (value.filteredTotal as number)
     && (value.filteredTotal as number) <= (value.totalNodes as number) && value.edges.every(edge => ids.has(edge.source) && ids.has(edge.target))
     && value.edges.length + (value.omittedEdges as number) === value.totalEdges;

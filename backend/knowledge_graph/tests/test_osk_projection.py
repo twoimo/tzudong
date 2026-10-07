@@ -64,12 +64,12 @@ class ProjectionTests(unittest.TestCase):
         return {"videoId": video, "startSeconds": 12, "endSeconds": 24,
                 "url": f"https://youtu.be/{video}?t=12", "status": status}
 
-    def run_projection(self, expected=None, output=None):
+    def run_projection(self, expected=None, output=None, format="single"):
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", OSK_UPDATE_CHECK="0")
         result = subprocess.run([sys.executable, "-B", "-m", "backend.knowledge_graph.osk_projection",
                                  "--vault", str(self.vault), "--engine", str(self.engine),
-                                 "--output", str(output or self.output)], cwd=self.repo,
-                                env=env, capture_output=True, text=True, timeout=30)
+                                 "--output", str(output or self.output), "--format", format], cwd=self.repo,
+                                env=env, capture_output=True, text=True, timeout=60)
         if expected:
             self.assertEqual(result.returncode, 1, result.stdout)
             self.assertEqual(json.loads(result.stderr), {"error": expected})
@@ -203,6 +203,69 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stderr), {"error": "OSK_CAPACITY_EXCEEDED"})
         self.assertEqual(self.output.read_text(), "previous successful artifact")
 
+    def test_explicit_shards_keep_legacy_revision_counts_and_context_edges(self):
+        self.node("Video", "video", metadata={"videoId": "ABCDEFGHIJK", "analysisStatus": "pending"}, body="[[Menu]]")
+        self.node("Menu", "menu", body="[[Video]]")
+        legacy = self.run_projection()
+        manifest = self.run_projection(format="sharded")
+        self.assertEqual(manifest["revision"], legacy["revision"])
+        self.assertEqual(manifest["coverage"], legacy["coverage"])
+        for kind, key in (("nodes", "nodeShards"), ("edges", "edgeShards")):
+            restored = [item for part in manifest[key] for item in json.loads((self.base / part["path"]).read_bytes())["items"]]
+            self.assertEqual(restored, legacy[kind])
+
+    def test_real_projection_crosses_all_legacy_output_bounds_with_lossless_shards(self):
+        # 1069 entirely synthetic videos, each with a restaurant, three menus and
+        # three restaurant claims. This exercises topology/storage, not analysis.
+        self.hub.unlink()
+        self.hub = self.node("tzudong", "hub", coverage={"inventoryCount": 1069, "eligibleCount": 1069,
+                             "excludedShortsCount": 0, "asOf": None})
+        root_links = []
+        for i in range(1069):
+            video = f"{i:011d}"
+            name, restaurant = "TZ-Video-" + video, "TZ-Restaurant-" + video
+            children = [(f"TZ-{kind}-{video}-{j}", kind.lower()) for kind in ("Menu", "Claim") for j in range(3)]
+            root_links.append(f"[[{name}]]")
+            self.node(name, "video", metadata={"videoId": video, "analysisStatus": "pending"}, body=f"[[tzudong]] [[{restaurant}]]")
+            self.node(restaurant, "restaurant", body=f"[[{name}]] " + " ".join(f"[[{child}]]" for child, _ in children),
+                      edges={"derived-from": f"[[{name}]]"})
+            for child, kind in children:
+                self.node(child, kind, metadata={"displayLabel": "합" * 400}, body=f"[[{name}]] [[{restaurant}]]",
+                          edges={"derived-from": f"[[{name}]]"})
+        self.hub.write_text(self.hub.read_text() + "\n" + "\n".join(root_links))
+        self.assertLess(self.hub.stat().st_size, projection.MAX_NODE_BYTES)
+        self.run_projection("OSK_CAPACITY_EXCEEDED")
+        manifest = self.run_projection(format="sharded")
+        self.assertEqual((manifest["totalNodes"], manifest["totalEdges"]), (8553, 31001))
+        self.assertGreater(len(manifest["nodeShards"]), 1)
+        self.assertGreater(len(manifest["edgeShards"]), 1)
+        descriptors = manifest["nodeShards"] + manifest["edgeShards"]
+        self.assertGreater(sum(p["bytes"] for p in descriptors), projection.MAX_OUTPUT_BYTES)
+        self.assertTrue(all(p["bytes"] <= projection.MAX_OUTPUT_BYTES for p in descriptors))
+        self.assertEqual(manifest["diagnostics"]["excludedUnresolvedEdges"], 0)
+        self.assertEqual((manifest["coverage"]["analyzedCount"], manifest["coverage"]["pendingCount"]), (0, 1069))
+        nodes = [n for part in manifest["nodeShards"] for n in json.loads((self.base / part["path"]).read_bytes())["items"]]
+        edges = [e for part in manifest["edgeShards"] for e in json.loads((self.base / part["path"]).read_bytes())["items"]]
+        ids = {n["id"] for n in nodes}
+        self.assertEqual(len(ids), 8553)
+        self.assertEqual(len({e["id"] for e in edges}), 31001)
+        self.assertTrue(all(e["source"] in ids and e["target"] in ids for e in edges))
+
+    def test_source_pages_cross_real_64_mib_boundary_without_dropping_source(self):
+        # Large bodies exercise the source boundary, not fake analyzed videos.
+        for i in range(640):
+            self.node(f"Synthetic-{i:04d}", "claim", body="x" * 110000 + "\n[[tzudong]]")
+        paths = sorted((self.vault / "00_Scope/tzudong").glob("*.md"))
+        self.assertGreater(sum(path.stat().st_size for path in paths), projection.MAX_SCOPE_BYTES)
+        pages = [[(str(path), len(data)) for path, data in page] for page in projection.source_pages(paths)]
+        self.assertGreater(len(pages), 1)
+        self.assertEqual(sum(len(page) for page in pages), 641)
+        self.assertTrue(all(sum(size for _, size in page) <= projection.MAX_SCOPE_BYTES for page in pages))
+        self.run_projection("OSK_CAPACITY_EXCEEDED")
+        manifest = self.run_projection(format="sharded")
+        self.assertEqual((manifest["totalNodes"], manifest["totalEdges"]), (641, 640))
+        self.assertEqual(manifest["coverage"]["analyzedCount"], 0)
+
     def test_source_change_during_read_refuses_mixed_snapshot(self):
         # Actual Index/Node parser, with one controlled write between reads.
         # The writer touches only this disposable fixture, never the real vault.
@@ -219,14 +282,16 @@ def changing(graph):
         path.write_text(path.read_text() + '\\nchanged during projection\\n')
     return old(graph)
 p._inventory = changing
-sys.exit(p.main(['--vault',sys.argv[1],'--engine',sys.argv[2],'--output',sys.argv[3]]))
+sys.exit(p.main(['--vault',sys.argv[1],'--engine',sys.argv[2],'--output',sys.argv[3],'--format',sys.argv[4]]))
 """
-        result = subprocess.run([sys.executable, "-B", "-c", script,
-            str(self.vault), str(self.engine), str(self.output)], cwd=self.repo,
-            capture_output=True, text=True, timeout=30)
-        self.assertEqual(result.returncode, 1)
-        self.assertEqual(json.loads(result.stderr), {"error": "OSK_SOURCE_CHANGED"})
-        self.assertFalse(self.output.exists())
+        for format in ("single", "sharded"):
+            result = subprocess.run([sys.executable, "-B", "-c", script,
+                str(self.vault), str(self.engine), str(self.output), format], cwd=self.repo,
+                capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(json.loads(result.stderr), {"error": "OSK_SOURCE_CHANGED"})
+            self.assertFalse(self.output.exists())
+
 
 
 if __name__ == "__main__":

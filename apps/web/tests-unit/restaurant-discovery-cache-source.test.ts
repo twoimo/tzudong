@@ -33,10 +33,9 @@ describe('restaurant discovery cache invalidation contract', () => {
     expect(adminSource).toContain(
       "import { invalidateRestaurantDiscoveryQueries } from '@/lib/restaurant-discovery-cache';",
     );
-    expect(
-      adminSource.match(/invalidateRestaurantDiscoveryQueries\(queryClient\)/g)
-        ?.length ?? 0,
-    ).toBeGreaterThanOrEqual(8);
+    expect(adminSource).toContain('const onRecordApplied = async (receipt: RecordActionReceipt)');
+    expect(adminSource).toContain('onSuccess: onRecordApplied');
+    expect(adminSource).toContain('await onRecordApplied(receipt)');
     expect(adminSource).not.toContain(
       "queryClient.invalidateQueries({ queryKey: ['restaurants'] });",
     );

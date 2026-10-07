@@ -6,6 +6,9 @@ const root = path.resolve('tests-unit');
 const isolated = new Set([
   'admin-evaluation-page-api.test.ts',
   'admin-evaluation-page-server.test.ts',
+  // Its module imports fail only in the combined mock-heavy group; keep the
+  // full real status-classification assertions in a separate Bun process.
+  'admin-evaluation-status-filter-options.test.ts',
   'admin-sentry-route.test.ts',
   'sentry-admin.test.ts',
   'sentry-sdk-transport.test.ts',

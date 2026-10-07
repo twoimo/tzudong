@@ -1,0 +1,88 @@
+{
+  "kind": "record-actions-local-source-ready",
+  "sourceReady": true,
+  "files": [
+    {
+      "path": "apps/web/app/admin/evaluations/page.tsx",
+      "sha256": "459fbca12dfee4c462dc637c175137190a11ad7b1dfe39019badc691589aa272"
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-client.ts",
+      "sha256": "a6622c088dfd0b3e72937fb58b5bd96ac0fb5bc12a7455b782a74bd08b52b095"
+    },
+    {
+      "path": "apps/web/lib/admin/use-record-action.tsx",
+      "sha256": "bbb84c8859d7703573cd7e73d480c53ee713b4200c86dacf2e6f184699ff3f27"
+    },
+    {
+      "path": "apps/web/lib/admin/evaluation-record-actions.ts",
+      "sha256": "7161a3b1d3c9c86ddb3917d5dfe92cfa16ba41189f7e92760a9b4af020c56eab"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
+      "sha256": "8e1c393f4a1a55ce64e931fdd540e30c950bc6117db715d468b70858038c59d1"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-evaluation-record-actions.test.ts",
+      "sha256": "e5b399cfbf888b628e5157c210b480f3a1f0940cccffe15f4192eecc6a085a43"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-submission-approval-state.test.ts",
+      "sha256": "518e25030efe4de555d0c3bc4533cc5e73fe01b4b16c90b848d9ce79f2e32fa3"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-evaluation-missing-metrics-source.test.ts",
+      "sha256": "4e5f2afb205137cabacfd6fcced95578f58259478ff2b33fd08f464d59b260d4"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-edit-restaurant-modal-source.test.ts",
+      "sha256": "b4a2e0b53826f51fd88d567b5c0732dce31515bf1e6922fbdcf2ea1965bcb12e"
+    },
+    {
+      "path": "apps/web/tests-unit/restaurant-submission-flow.test.ts",
+      "sha256": "7e7a5d48054a01097a6e62467c0b65da54356cc468deb0be12a0fba7c723ceed"
+    },
+    {
+      "path": "apps/web/tests-unit/restaurant-discovery-cache-source.test.ts",
+      "sha256": "b4da9eccecfd87e14ea5a40e8dbf56c44407befb72b20407c023dffb6a52c4ad"
+    },
+    {
+      "path": "apps/web/scripts/verify-admin-record-actions-browser.ts",
+      "sha256": "6fc70310dfb30365f16ca4e2c01e397e87901b3ebf0256bfdffad8de6416b1b7"
+    }
+  ],
+  "unit": {
+    "passed": 57,
+    "failed": 0,
+    "assertions": 352,
+    "files": 9
+  },
+  "eslint": {
+    "passed": true,
+    "warnings": 0
+  },
+  "typecheck": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 3200,
+    "logicalInputNamesSha256": "9d94c3713ed53b8f30d6324849c6bc37569f0e1fa2214e637829e301313c766b",
+    "nonLibraryContentSha256": "352c4fd20a0c5f42ad7f5aded28bfb6f998dd9099be1295a7ea93f6bc8dd4845",
+    "standardLibraryContentSha256": {
+      "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  },
+  "rootReloadAndStatsBytesPreserved": true,
+  "frozenFallbackFilesUntouched": true,
+  "browserReceipt": "record-actions-browser-20261005-final.json",
+  "browserReceiptSha256": "2def9c8c0710f980224578743623b0bb0ed8241907b6982627087568aa9c7c2b",
+  "limits": [
+    "review.edit absent from API contract and existing page callbacks",
+    "hosted migration and deployment not verified",
+    "browser responses synthetic; no operational writes or paid calls",
+    "other agents own restaurant edit/missing/conflict modals"
+  ],
+  "actualWrites": 0,
+  "providerCalls": 0,
+  "commits": 0
+}

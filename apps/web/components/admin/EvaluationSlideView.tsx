@@ -1,3 +1,4 @@
+import { getEvaluationConflictTargetId } from '@/lib/admin/normalize-evaluation-record';
 import { useCallback, useEffect, useRef } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
@@ -42,8 +43,6 @@ export function EvaluationSlideView({
     loading
 }: EvaluationSlideViewProps) {
     const currentRecord = records[currentIndex];
-    void onRegisterMissing;
-    void onResolveConflict;
     const isMobile = useIsMobile();
     const slideSwipeStartXRef = useRef<number | null>(null);
     const slideSwipeEndXRef = useRef<number | null>(null);
@@ -56,6 +55,7 @@ export function EvaluationSlideView({
     const SLIDE_SWIPE_DISTANCE = 24;
 
     const handleSlideTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if ((e.target as HTMLElement).closest('button, a, input, textarea, select, [role=button], [contenteditable=true]')) return;
         if (isSlideSwipeActiveRef.current || slideSwipeInputRef.current === 'pointer') return;
         slideSwipeInputRef.current = 'touch';
         slideSwipePointerIdRef.current = null;
@@ -115,6 +115,8 @@ export function EvaluationSlideView({
     }, [handleSlideSwipeEndInternal]);
 
     const handleSlidePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        // Capturing a button's pointer retargets its click to the slide container.
+        if ((e.target as HTMLElement).closest('button, a, input, textarea, select, [role=button], [contenteditable=true]')) return;
         if (isSlideSwipeActiveRef.current || slideSwipeInputRef.current === 'touch') return;
         slideSwipeInputRef.current = 'pointer';
         slideSwipePointerIdRef.current = e.pointerId;
@@ -180,7 +182,7 @@ export function EvaluationSlideView({
     // 키보드 네비게이션
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
+            if ((e.target as HTMLElement).matches('input, textarea, select, [contenteditable=true]') || (e.target as HTMLElement).closest('[role=dialog], [role=alertdialog]')) return;
             if (e.key === 'ArrowLeft') {
                 if (currentIndex > 0) onNavigate(currentIndex - 1);
             } else if (e.key === 'ArrowRight') {
@@ -207,11 +209,8 @@ export function EvaluationSlideView({
     const needsMetricRerun = needsEvaluationRerun(currentRecord);
     const canApproveCurrent = !needsMetricRerun && canApproveAddressConsistencyRecord(currentRecord);
 
-    const handleApproveAndMoveNext = () => {
+    const handleApproveCurrent = () => {
         onApprove(currentRecord);
-        if (currentIndex < records.length - 1) {
-            setTimeout(() => onNavigate(currentIndex + 1), 300);
-        }
     };
 
     const getStatusBadge = (status: string) => {
@@ -246,13 +245,13 @@ export function EvaluationSlideView({
                 <div className={cn("flex items-center justify-between gap-2", isMobile ? "" : "h-full")}>
                     <div className={cn("flex items-center gap-2", isMobile ? "shrink-0" : "overflow-hidden")}>
                         <div className="flex items-center space-x-1 shrink-0">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onNavigate(currentIndex - 1)} disabled={!canMovePrev}>
+                            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="이전 후보" onClick={() => onNavigate(currentIndex - 1)} disabled={!canMovePrev}>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <span className="text-xs font-medium w-[60px] text-center">
                                 {currentIndex + 1} / {records.length}
                             </span>
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onNavigate(currentIndex + 1)} disabled={!canMoveNext}>
+                            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="다음 후보" onClick={() => onNavigate(currentIndex + 1)} disabled={!canMoveNext}>
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
@@ -270,20 +269,22 @@ export function EvaluationSlideView({
                     )}
 
                     {!isMobile && (
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
                             {isDeleted ? (
                                 <Button onClick={() => onRestore?.(currentRecord)} disabled={loading} variant="outline" size="sm" className="h-8 bg-blue-50 text-blue-600 border-blue-200">
                                     <Undo2 className="w-3.5 h-3.5 mr-1.5" /> 복원
                                 </Button>
                             ) : (
                                 <>
+                                    {(currentRecord.is_missing || currentRecord.status === 'missing') && onRegisterMissing && <Button onClick={() => onRegisterMissing(currentRecord)} variant="outline" disabled={loading} size="sm" className="h-9">누락 등록</Button>}
+                                    {(currentRecord.status === 'db_conflict' || getEvaluationConflictTargetId(currentRecord)) && onResolveConflict && <Button onClick={() => onResolveConflict(currentRecord)} variant="outline" disabled={loading} size="sm" className="h-9">충돌 해결</Button>}
                                     <Button onClick={() => onEdit?.(currentRecord)} variant="outline" disabled={loading} size="sm" className="h-8">수정</Button>
                                     <Button onClick={() => onDelete(currentRecord)} variant="destructive" disabled={loading} size="sm" className="h-8">
                                         <Trash2 className="w-3.5 h-3.5 mr-1.5" /> 삭제
                                     </Button>
                                     {!isApproved && (
                                         <Button
-                                            onClick={handleApproveAndMoveNext}
+                                            onClick={handleApproveCurrent}
                                             disabled={loading || !canApproveCurrent}
                                             title={needsMetricRerun ? '평가값/근거 확인 후 승인하세요' : undefined}
                                             className="bg-green-600 hover:bg-green-700 h-8"
@@ -319,7 +320,9 @@ export function EvaluationSlideView({
                         </Button>
                     ) : (
                         <div className="grid grid-cols-3 gap-2">
-                            <Button onClick={() => onEdit?.(currentRecord)} variant="outline" disabled={loading} size="sm" className="h-9">
+                            {(currentRecord.is_missing || currentRecord.status === 'missing') && onRegisterMissing && <Button onClick={() => onRegisterMissing(currentRecord)} variant="outline" disabled={loading} size="sm" className="h-9">누락 등록</Button>}
+                                    {(currentRecord.status === 'db_conflict' || getEvaluationConflictTargetId(currentRecord)) && onResolveConflict && <Button onClick={() => onResolveConflict(currentRecord)} variant="outline" disabled={loading} size="sm" className="h-9">충돌 해결</Button>}
+                                    <Button onClick={() => onEdit?.(currentRecord)} variant="outline" disabled={loading} size="sm" className="h-9">
                                 수정
                             </Button>
                             <Button onClick={() => onDelete(currentRecord)} variant="destructive" disabled={loading} size="sm" className="h-9">
@@ -327,7 +330,7 @@ export function EvaluationSlideView({
                             </Button>
                             {!isApproved ? (
                                 <Button
-                                    onClick={handleApproveAndMoveNext}
+                                    onClick={handleApproveCurrent}
                                     disabled={loading || !canApproveCurrent}
                                     title={needsMetricRerun ? '평가값/근거 확인 후 승인하세요' : undefined}
                                     className="bg-green-600 hover:bg-green-700 h-9"

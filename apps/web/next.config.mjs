@@ -158,6 +158,9 @@ const nextConfig = {
         output: 'standalone',
         outputFileTracingRoot: path.join(__dirname, '../../'),
     } : {}),
+    outputFileTracingIncludes: {
+        '/api/admin/knowledge-graph': ['./data/knowledge-graph/**/*.json'],
+    },
     outputFileTracingExcludes: {
         '/api/admin/storyboard': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
         '/api/admin/storyboard/chat': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],

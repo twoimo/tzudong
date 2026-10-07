@@ -29,18 +29,6 @@ function requestFromChunks(chunks: Uint8Array[], headers: HeadersInit = {}) {
 
 const adminMutationRoutes = [
   {
-    routePath: 'app/api/admin/restaurant-requests/[requestId]/review/route.ts',
-    readerCall: 'readBoundedJsonRequest(request, MAX_REVIEW_REQUEST_BYTES)',
-    maximumBytes: 'const MAX_REVIEW_REQUEST_BYTES = 4 * 1024;',
-    privilegedClientMarker: 'createSupabaseServiceRoleClient()',
-  },
-  {
-    routePath: 'app/api/admin/restaurants/[restaurantId]/destructive-action/route.ts',
-    readerCall: 'readBoundedJsonRequest(request, MAX_DESTRUCTIVE_ACTION_REQUEST_BYTES)',
-    maximumBytes: 'const MAX_DESTRUCTIVE_ACTION_REQUEST_BYTES = 4 * 1024;',
-    privilegedClientMarker: 'createSupabaseServiceRoleClient()',
-  },
-  {
     routePath: 'app/api/admin/map-overlays/apply/route.ts',
     readerCall: 'readBoundedJsonRequest(request, MAX_MAP_OVERLAY_APPLY_REQUEST_BYTES)',
     maximumBytes: 'const MAX_MAP_OVERLAY_APPLY_REQUEST_BYTES = 64 * 1024;',

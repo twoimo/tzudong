@@ -14,8 +14,9 @@ export function queryKnowledgeGraph(snapshot: KnowledgeSnapshot, params: URLSear
     if (cursor.length > 4096 || !/^[a-zA-Z0-9_-]+$/.test(cursor)) throw new Error('knowledge_query_invalid');
     let value;
     try { value = JSON.parse(Buffer.from(cursor, 'base64url').toString()); } catch { throw new Error('knowledge_query_invalid'); }
-    if (!value || value.query !== key || !Number.isSafeInteger(value.offset) || value.offset < 0 || value.offset > snapshot.nodes.length) throw new Error('knowledge_query_invalid');
+    if (!value || value.query !== key || !Number.isSafeInteger(value.offset) || value.offset < 0) throw new Error('knowledge_query_invalid');
     if (value.revision !== snapshot.revision) throw new Error('knowledge_cursor_stale');
+    if (value.offset > snapshot.nodes.length) throw new Error('knowledge_query_invalid');
     offset = value.offset;
   }
   const search = q.normalize('NFKC').toLowerCase().trim();

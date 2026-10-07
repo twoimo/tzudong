@@ -1,3 +1,4 @@
+import { getEvaluationConflictTargetId } from '@/lib/admin/normalize-evaluation-record';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -275,6 +276,8 @@ interface EvaluationTableRowProps {
   onDelete: (record: EvaluationRecord) => void;
   onRestore?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
+  onRegisterMissing?: (record: EvaluationRecord) => void;
+  onResolveConflict?: (record: EvaluationRecord) => void;
   loading?: boolean;
   thumbnailState?: 'loading' | 'loaded' | 'error';
   thumbnailUrl?: string;
@@ -292,6 +295,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
       onDelete,
       onRestore,
       onEdit,
+      onRegisterMissing,
+      onResolveConflict,
       loading,
       thumbnailState,
       thumbnailUrl,
@@ -455,7 +460,10 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
             isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
-          <div className="flex justify-center gap-1 lg:gap-2">
+          <div className="flex flex-wrap justify-center gap-1 lg:gap-2">
+            {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-8 px-2 lg:px-3" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
+            {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-8 px-2 lg:px-3" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
+
             {record.status === 'deleted' ? (
               // 삭제된 레코드 - 되돌리기 버튼만 표시
               <>
@@ -587,8 +595,6 @@ export function EvaluationTable({
   hasMore = false,
   isLoadingMore = false,
 }: EvaluationTableProps) {
-  void onRegisterMissing;
-  void onResolveConflict;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showMobileAdvancedFilters, setShowMobileAdvancedFilters] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -626,7 +632,7 @@ export function EvaluationTable({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 입력 필드나 모달이 포커스된 경우 무시
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+      if (document.activeElement?.matches('input, textarea, select, [contenteditable=true]') || document.activeElement?.closest('[role=dialog], [role=alertdialog]')) {
         return;
       }
 
@@ -1258,7 +1264,10 @@ export function EvaluationTable({
               </div>
             </div>}
 
-            <div className="mt-2 flex flex-nowrap gap-1.5">
+            <div className="mt-2 flex flex-wrap gap-1.5">
+            {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
+            {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
+
               {record.status === 'deleted' ? (
                 <Button
                   size="sm"
@@ -1691,6 +1700,8 @@ export function EvaluationTable({
                     onDelete={onDelete}
                     onRestore={onRestore}
                     onEdit={onEdit}
+                    onRegisterMissing={onRegisterMissing}
+                    onResolveConflict={onResolveConflict}
                     loading={loading}
                     thumbnailState={thumbnailInfo?.state}
                     thumbnailUrl={thumbnailInfo?.url}

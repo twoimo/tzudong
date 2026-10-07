@@ -83,6 +83,37 @@ const validJob = (value: unknown): value is Record<string, unknown> => isRecord(
   && typeof value.id === 'string' && value.id.length > 0 && value.id.length <= 128
   && typeof value.status === 'string' && JOB_STATUSES.has(value.status);
 
+const GITHUB_STATUS_LABELS = {
+  completed: '완료', in_progress: '진행 중', queued: '대기', requested: '실행 요청',
+  waiting: '승인 대기', pending: '동시 실행 대기', expected: '상태 보고 대기',
+  failure: '실패', startup_failure: '시작 실패',
+} as const;
+const GITHUB_CONCLUSION_LABELS = {
+  success: '성공', failure: '실패', cancelled: '취소', skipped: '건너뜀', neutral: '중립',
+  timed_out: '시간 초과', action_required: '조치 필요', stale: '기한 경과', startup_failure: '시작 실패',
+} as const;
+
+/** Preserve GitHub's status/conclusion distinction; neither unknown nor non-success means failure.
+ * https://docs.github.com/en/rest/guides/using-the-rest-api-to-interact-with-checks
+ */
+export function parseGithubWorkflowState(value: unknown) {
+  const status = isRecord(value) && typeof value.status === 'string' && Object.hasOwn(GITHUB_STATUS_LABELS, value.status)
+    ? value.status as keyof typeof GITHUB_STATUS_LABELS : 'unknown';
+  const conclusion = isRecord(value) && value.conclusion === null ? null
+    : isRecord(value) && typeof value.conclusion === 'string' && Object.hasOwn(GITHUB_CONCLUSION_LABELS, value.conclusion)
+      ? value.conclusion as keyof typeof GITHUB_CONCLUSION_LABELS : 'unknown';
+  const statusFailure = status === 'failure' || status === 'startup_failure';
+  const valid = status !== 'unknown' && (status === 'completed' ? conclusion !== null && conclusion !== 'unknown'
+    : statusFailure ? conclusion === null || conclusion === status : conclusion === null);
+  const failed = !valid ? null : statusFailure || (status === 'completed' && ['failure', 'timed_out', 'startup_failure'].includes(conclusion!));
+  const jobStatus = !valid ? 'Unknown' : failed ? 'Failed'
+    : status === 'in_progress' ? 'Fetching' : ['queued', 'requested', 'waiting', 'pending'].includes(status) ? 'Queued'
+      : conclusion === 'success' ? 'Succeeded' : conclusion === 'cancelled' ? 'Cancelled' : 'Unknown';
+  const label = !valid ? '미확인' : status === 'completed' ? GITHUB_CONCLUSION_LABELS[conclusion as keyof typeof GITHUB_CONCLUSION_LABELS]
+    : GITHUB_STATUS_LABELS[status as keyof typeof GITHUB_STATUS_LABELS];
+  return { status, conclusion, jobStatus, failed, label };
+}
+
 function parsePipeline(value: unknown): OperationsSnapshot {
   if (!isRecord(value) || !['job_api', 'github_actions'].includes(String(value.source)) || !Array.isArray(value.jobs)
     || !Array.isArray(value.failures) || value.jobs.length > 10_000 || value.failures.length > 20) return operationsUnavailable('pipeline', 'invalid');
@@ -90,28 +121,48 @@ function parsePipeline(value: unknown): OperationsSnapshot {
   const row = result.rows[0];
   const github = value.source === 'github_actions';
   if (github && value.jobs.length !== 1) return result;
+  if (github) {
+    const job = value.jobs[0];
+    const run = value.githubRun;
+    const identityValid = isRecord(job) && typeof job.id === 'string' && /^[1-9]\d{0,15}$/.test(job.id)
+      && Number.isSafeInteger(Number(job.id)) && typeof job.status === 'string' && (JOB_STATUSES.has(job.status) || job.status === 'Unknown')
+      && isRecord(run) && run.id === job.id;
+    const state = parseGithubWorkflowState(identityValid ? run : null);
+    const failed = state.failed === null ? null : Number(state.failed);
+    row.state = state.failed === null ? 'partial' : 'limited';
+    row.priority = state.failed === true ? 'failure' : 'attention';
+    row.summary = `GitHub 최근 실행: ${state.label}. 제어 서버 상태는 미확인입니다.`;
+    row.metrics = [metric('failed', '최근 실행 실패 표시', failed), metric('queued', '목록 대기', null), metric('running', '목록 진행', null), metric('paused', '목록 정지', null)];
+    row.details = [
+      { label: '조회 출처', value: 'GitHub Actions 최근 실행' },
+      { label: '최근 실행 상태', value: state.label },
+      { label: '집계 범위', value: '최근 실행 한정입니다. 전체 작업 대기열이나 실행 중 여부를 보장하지 않습니다.' },
+    ];
+    result.state = row.state;
+    return result;
+  }
   const jobsValid = value.jobs.every(validJob) && new Set(value.jobs.map(job => isRecord(job) ? job.id : null)).size === value.jobs.length;
-  const failuresValid = github || (value.failures.every(job => validJob(job) && job.status === 'Failed')
+  const failuresValid = (value.failures.every(job => validJob(job) && job.status === 'Failed')
     && new Set(value.failures.map(job => isRecord(job) ? job.id : null)).size === value.failures.length);
   const jobs = jobsValid ? value.jobs as Record<string, unknown>[] : [];
   const queued = jobsValid ? jobs.filter(job => job.status === 'Queued').length : null;
   const running = jobsValid ? jobs.filter(job => job.status === 'Fetching' || job.status === 'Inserting').length : null;
   const paused = jobsValid ? jobs.filter(job => job.status === 'Paused').length : null;
   // job_api has a separate capped failure-history list; its live jobs omit terminal runs.
-  const failures = github ? jobsValid ? jobs.filter(job => job.status === 'Failed').length : null : failuresValid ? value.failures.length : null;
+  const failures = failuresValid ? value.failures.length : null;
   const valid = jobsValid && failuresValid;
-  row.state = !valid ? 'partial' : github ? 'limited' : 'ready';
-  row.priority = failures !== null && failures > 0 ? 'failure' : !valid || github ? 'attention'
+  row.state = !valid ? 'partial' : 'ready';
+  row.priority = failures !== null && failures > 0 ? 'failure' : !valid ? 'attention'
     : paused !== null && paused > 0 ? 'attention' : queued !== null && queued > 0 ? 'waiting' : running !== null && running > 0 ? 'running' : 'idle';
-  row.summary = !valid ? '일부 작업 상태를 해석할 수 없습니다.' : github ? 'GitHub 최근 실행만 확인됩니다. 제어 서버 상태는 미확인입니다.'
+  row.summary = !valid ? '일부 작업 상태를 해석할 수 없습니다.'
     : failures !== null && failures > 0 ? '실패 이력을 확인하고 재실행 여부를 검토하세요.'
       : paused !== null && paused > 0 ? '일시 정지된 작업을 확인하세요.' : '현재 작업 목록과 최근 실패 이력을 확인했습니다.';
-  row.metrics = [metric('failed', github ? '최근 실행 실패 표시' : '반환된 실패 이력', failures), metric('queued', '목록 대기', github ? null : queued), metric('running', '목록 진행', github ? null : running), metric('paused', '목록 정지', github ? null : paused)];
+  row.metrics = [metric('failed', '반환된 실패 이력', failures), metric('queued', '목록 대기', queued), metric('running', '목록 진행', running), metric('paused', '목록 정지', paused)];
   row.details = [
-    { label: '조회 출처', value: github ? 'GitHub Actions 최근 실행' : '작업 제어 서버' },
-    { label: '집계 범위', value: github ? '최근 실행 한정입니다. 전체 작업 대기열이나 실행 중 여부를 보장하지 않습니다.' : '실행 목록과 최근 실패 이력 최대 20건입니다. 누적 실패 총계가 아닙니다.' },
+    { label: '조회 출처', value: '작업 제어 서버' },
+    { label: '집계 범위', value: '실행 목록과 최근 실패 이력 최대 20건입니다. 누적 실패 총계가 아닙니다.' },
   ];
-  if (!github && value.failures.length === 20) row.details.push({ label: '조회 한도', value: '실패 이력이 20건 한도에 도달했습니다. 더 많은 이력이 있을 수 있습니다.' });
+  if (value.failures.length === 20) row.details.push({ label: '조회 한도', value: '실패 이력이 20건 한도에 도달했습니다. 더 많은 이력이 있을 수 있습니다.' });
   result.state = row.state;
   return result;
 }

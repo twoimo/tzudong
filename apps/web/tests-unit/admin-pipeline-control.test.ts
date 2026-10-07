@@ -12,6 +12,8 @@ import {
 } from "../lib/admin/pipeline-control";
 import { GUARDED_MUTATION_CONFIRMATION } from "../lib/admin/guarded-mutation-contract";
 import { sha256Hex } from "../lib/admin/sha256-hex";
+import { parseGithubWorkflowState, parseOperationsSnapshot } from "../lib/admin/operations-view-model";
+import { canControlPipelineJob, parsePipelineStatus } from "../lib/admin/pipeline-flow-view-model";
 
 const root = process.cwd();
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
@@ -20,6 +22,107 @@ const OTHER_RUN_ID = "33333333-3333-4333-8333-333333333333";
 function source(rel: string) {
   return readFileSync(join(root, rel), "utf8");
 }
+
+// Execute the actual GET and read helpers with closed-over transports/auth/env;
+// no module mocks, operator credentials, job API or GitHub requests are involved.
+const pipelineRoute = source("app/api/admin/pipeline/route.ts");
+const getSource = pipelineRoute.slice(pipelineRoute.indexOf("function noStore("), pipelineRoute.indexOf("function previewTicketSecret("))
+  + pipelineRoute.slice(pipelineRoute.indexOf("async function pipelineFetch("), pipelineRoute.indexOf("export async function POST("))
+    .replace("export async function GET", "async function GET");
+const createPipelineGet = new Function("fetch", "requireAdmin", "process", "NextResponse", "PIPELINE_API_BASE", "PIPELINE_UPSTREAM_TIMEOUT_MS",
+  "allowlistedGauges", "allowlistedFailureFrames", "parseGithubWorkflowState",
+  new Bun.Transpiler({ loader: "ts" }).transformSync(`${getSource}\nreturn GET;`)) as (...args: unknown[]) => () => Promise<Response>;
+
+function githubGetFixture(run: unknown, denial?: number, githubStatus = 200, payloadOverride?: unknown) {
+  const requests: Array<{ url: string; method: string }> = [];
+  const get = createPipelineGet(async (input: string, init: RequestInit = {}) => {
+    const url = String(input);
+    requests.push({ url, method: init.method ?? "GET" });
+    if (url === "https://pipeline.fixture/v1/targets") return new Response("unavailable", { status: 503 });
+    expect(url).toBe("https://api.github.com/repos/synthetic/repo/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main");
+    expect(init.headers).not.toHaveProperty("Authorization");
+    return Response.json(payloadOverride === undefined ? { workflow_runs: run === undefined ? [] : [run] } : payloadOverride, { status: githubStatus });
+  }, async () => denial ? { ok: false, response: Response.json({ error: "Forbidden" }, { status: denial }) } : { ok: true },
+  { env: { GITHUB_REPOSITORY: "synthetic/repo" } }, { json: Response.json }, "https://pipeline.fixture", 1000,
+  () => ({}), () => [], parseGithubWorkflowState);
+  return { get, requests };
+}
+
+describe("GitHub pipeline fallback GET semantics", () => {
+  test("preserves each completed conclusion and only emits confirmed failure frames", async () => {
+    for (const conclusion of ["success", "failure", "cancelled", "skipped", "neutral", "timed_out", "action_required", "stale", "startup_failure"]) {
+      const failed = ["failure", "timed_out", "startup_failure"].includes(conclusion);
+      const fixture = githubGetFixture({ id: 123, status: "completed", conclusion, display_title: "private-title", html_url: "https://private.example", diagnostics: "private-diagnostics" });
+      const response = await fixture.get();
+      expect(response.status).toBe(200);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      const data = await response.json();
+      expect(data.source).toBe("github_actions");
+      expect(data.githubRun).toEqual({ id: "123", status: "completed", conclusion });
+      expect(data.jobs[0].status).toBe(failed ? "Failed" : conclusion === "success" ? "Succeeded" : conclusion === "cancelled" ? "Cancelled" : "Unknown");
+      expect(data.jobs[0].error_code).toBe(failed ? "github_crawler" : null);
+      expect(data.jobs[0]).not.toHaveProperty("dry_run");
+      expect(data.jobs[0]).not.toHaveProperty("adapter_index");
+      expect(data.failures).toHaveLength(failed ? 1 : 0);
+      expect(data.failureFrames).toEqual(data.failures);
+      expect(JSON.stringify(data)).not.toContain("private-");
+      const operations = parseOperationsSnapshot("pipeline", data);
+      expect(operations.state).toBe("limited");
+      expect(operations.rows[0].metrics.map(metric => metric.value)).toEqual([Number(failed), null, null, null]);
+      const pipeline = parsePipelineStatus(data);
+      for (const action of ["pause", "resume", "cancel"] as const) expect(canControlPipelineJob(pipeline.source, pipeline.jobs[0], action)).toBe(false);
+      expect(fixture.requests.map(request => request.method)).toEqual(["GET", "GET"]);
+    }
+  });
+
+  test("running and waiting states survive GET without becoming failures or asserted live-mode jobs", async () => {
+    for (const status of ["in_progress", "queued", "requested", "waiting", "pending", "expected"]) {
+      const fixture = githubGetFixture({ id: 123, status, conclusion: null });
+      const data = await (await fixture.get()).json();
+      expect(data.githubRun).toEqual({ id: "123", status, conclusion: null });
+      expect(data.jobs[0].status).toBe(status === "in_progress" ? "Fetching" : status === "expected" ? "Unknown" : "Queued");
+      expect(data.failures).toEqual([]);
+      expect(data.failureFrames).toEqual([]);
+      expect(parseOperationsSnapshot("pipeline", data).rows[0].metrics.map(metric => metric.value)).toEqual([0, null, null, null]);
+    }
+  });
+
+  test("malformed and contradictory states remain unknown after the complete DTO round trip", async () => {
+    for (const state of [{}, { status: "completed", conclusion: null }, { status: "in_progress" },
+      { status: "future-private-status", conclusion: "failure" }, { status: "completed", conclusion: "private-diagnostics" },
+      { status: "completed", conclusion: {} }, { status: "queued", conclusion: "failure" },
+      { status: "in_progress", conclusion: "success" }]) {
+      const fixture = githubGetFixture({ id: 123, ...state });
+      const data = await (await fixture.get()).json();
+      expect(data.jobs[0].status).toBe("Unknown");
+      expect(data.failures).toEqual([]);
+      expect(data.failureFrames).toEqual([]);
+      const result = parseOperationsSnapshot("pipeline", data);
+      expect(result.state).toBe("partial");
+      expect(result.rows[0].metrics.map(metric => metric.value)).toEqual([null, null, null, null]);
+      expect(JSON.stringify(data)).not.toContain("private-");
+    }
+  });
+
+  test("admin denial makes no request; missing or invalid run IDs and upstream errors stay unavailable", async () => {
+    for (const status of [401, 403]) {
+      const fixture = githubGetFixture({ id: 123, status: "completed", conclusion: "success" }, status);
+      const response = await fixture.get();
+      expect(response.status).toBe(status);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(fixture.requests).toEqual([]);
+    }
+    for (const run of [undefined, null, {}, ...[0, -1, 1.2, "123", 9007199254740992].map(id => ({ id, status: "completed", conclusion: "success" }))]) {
+      const response = await githubGetFixture(run).get();
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({ error: "pipeline_status_unavailable" });
+    }
+    expect((await githubGetFixture({ id: 123, status: "completed", conclusion: "success" }, undefined, 503).get()).status).toBe(502);
+    for (const payload of [null, {}, { workflow_runs: null }, { workflow_runs: { 0: { id: 123, status: "completed", conclusion: "failure" } } }]) {
+      expect((await githubGetFixture(undefined, undefined, 200, payload).get()).status).toBe(502);
+    }
+  });
+});
 
 function enqueueBody(overrides: Record<string, unknown> = {}) {
   const dryRun =
