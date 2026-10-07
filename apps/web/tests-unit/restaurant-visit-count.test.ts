@@ -61,5 +61,9 @@ describe('restaurant visit count', () => {
         expect(getTzuyangVisitCount(row)).toBe(1);
         row.mergedRestaurants!.length = 0;
         expect(getTzuyangVisitCount(row)).toBe(0);
+        row.mergedRestaurants = [{ youtube_link: null, tzuyang_review: null }] as Restaurant['mergedRestaurants'];
+        expect(getTzuyangVisitCount(row)).toBe(0);
+        row.mergedRestaurants![0].tzuyang_review = 'later visit';
+        expect(getTzuyangVisitCount(row)).toBe(1);
     });
 });

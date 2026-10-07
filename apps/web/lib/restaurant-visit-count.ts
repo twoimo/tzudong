@@ -39,9 +39,19 @@ export function getTzuyangVisitCount(restaurant: VisitCountRestaurant | null | u
     // non-empty inputs still use the exact unique-history calculation below.
     if (!restaurant.youtube_link && !restaurant.tzuyang_review
         && !restaurant.youtube_links?.length && !restaurant.tzuyang_reviews?.length
-        && !restaurant.mergedYoutubeLinks?.length && !restaurant.mergedTzuyangReviews?.length
-        && !restaurant.mergedRestaurants?.length) {
-        return 0;
+        && !restaurant.mergedYoutubeLinks?.length && !restaurant.mergedTzuyangReviews?.length) {
+        // The map projection retains the original compact row even when it
+        // has no video/review fields, so an existing merged row is not a visit.
+        let hasMergedHistory = false;
+        if (restaurant.mergedRestaurants) {
+            for (const merged of restaurant.mergedRestaurants) {
+                if (merged.youtube_link || merged.tzuyang_review) {
+                    hasMergedHistory = true;
+                    break;
+                }
+            }
+        }
+        if (!hasMergedHistory) return 0;
     }
 
     const youtubeLinks = new Set<string>();
