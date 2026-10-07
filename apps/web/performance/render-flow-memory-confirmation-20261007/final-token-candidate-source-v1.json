@@ -1,0 +1,13 @@
+{
+  "candidate": "789e825f425c3dff751a6419cf23565396c2ff9c",
+  "firstCandidate": "791795bccea2e1f57173ca33cd76de6444df9f46",
+  "tokenCandidateBeforeBadgeFix": "e158160149469c76fd700ebb1a63073943e7973d",
+  "unit": 39,
+  "assertions": 146,
+  "lint": true,
+  "typeParity": true,
+  "localCommit": true,
+  "newRemotePromotion": false,
+  "expectedBrowser": "154.0.8037.98",
+  "allOldMeasurementsPreserved": true
+}

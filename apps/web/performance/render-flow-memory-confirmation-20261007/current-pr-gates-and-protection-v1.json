@@ -1,0 +1,140 @@
+{
+  "capturedAt": "2026-10-07T08:18:48.663983+00:00",
+  "pr": 3138,
+  "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "draft": true,
+  "state": "OPEN",
+  "checks": [
+    {
+      "kind": "CheckRun",
+      "name": "Freshness",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Install",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Analyze (actions)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Promotion Path",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Promotion Path",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Release",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Analyze (go)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Analyze (javascript-typescript)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Analyze (python)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Analyze (rust)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Analyze (swift)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Ubuntu npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Ubuntu Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Windows npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Windows Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Admin",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "CodeQL",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "CheckRun",
+      "name": "GitGuardian Security Checks",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "kind": "StatusContext",
+      "name": "Vercel",
+      "status": "SUCCESS",
+      "conclusion": null
+    },
+    {
+      "kind": "CheckRun",
+      "name": "Vercel Preview Comments",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    }
+  ],
+  "branch": "develop",
+  "requiredContexts": [
+    "Release",
+    "Promotion Path"
+  ],
+  "enforceAdmins": true,
+  "allowForcePush": false,
+  "securityAdvisoryReadback": "braces-upstream-readback-20261007-v1.json",
+  "unpatchedDevAdvisoryDoesNotMeanCurrentCIInstallFailed": true,
+  "currentCIInstallObservedSuccess": true,
+  "noBypassOrPromotion": true
+}

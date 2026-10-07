@@ -1,0 +1,190 @@
+{
+  "objectiveSha256": "9990baa176db4872db252ed2f0493d1eff8ac3dd9e24bd558dd8b5763c8f2f02",
+  "candidate": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "capturedAt": "2026-10-07T07:43:32.220213+00:00",
+  "allowedStages": [
+    "미착수",
+    "재현",
+    "수정",
+    "실험실 검증",
+    "실제 SDK·기기 검증",
+    "배포",
+    "field 검증",
+    "전달 완료"
+  ],
+  "items": [
+    {
+      "id": "G1",
+      "requirement": "원본/후보/원격/SHA·지침/기존실패인계",
+      "currentStage": "실험실 검증",
+      "evidence": [
+        "prior-evidence-bindings-v1.json",
+        "updated-goal-requirement-intake-v1.json"
+      ],
+      "remaining": [
+        "원본·현재배포새readback 및전체증거항목별대조"
+      ]
+    },
+    {
+      "id": "G2",
+      "requirement": "전체시나리오·기능동등성·환경조건고정",
+      "currentStage": "실험실 검증",
+      "evidence": [
+        "warm-original-confirm-v4-plan.json",
+        "token-values-interactions-v3/raw.json"
+      ],
+      "remaining": [
+        "정렬/패널/태블릿/회전/키보드/주소창/background/부분실패/연속터치"
+      ]
+    },
+    {
+      "id": "G3a",
+      "requirement": "자연warm20%heap·15%frameguard및A/A",
+      "currentStage": "실험실 검증",
+      "evidence": [
+        "warm-summary-original-confirm-v4.json",
+        "paired-endpoint-uncertainty-v1.json",
+        "warm-summary-aa-current-v4.json"
+      ],
+      "remaining": [
+        "종료heap노이즈미해결;회귀해소확정불가"
+      ]
+    },
+    {
+      "id": "G3b",
+      "requirement": "cold/warm/idle 및JSheap/RSS/DOM/리스너/타이머/SDK/GPU/cache구분",
+      "currentStage": "재현",
+      "evidence": [
+        "idle-natural-scopes-v1-plan.json"
+      ],
+      "remaining": [
+        "진행중idle/RSS 결과",
+        "cold735/2000",
+        "timers/subscriptions/retainers/SDKmarkerinstances",
+        "GPU VRAMunsupported범위명시"
+      ]
+    },
+    {
+      "id": "G3c",
+      "requirement": "캐시128검색재방문·용량초과·제자리수정·보유량",
+      "currentStage": "미착수",
+      "evidence": [
+        "tests-unit/swipe-render-cache.test.ts(existing-source-reference)"
+      ],
+      "remaining": [
+        "현재source/hash재대조",
+        "actualbrowser128flow",
+        "hit/miss/eviction/data-change/lifetime·memory"
+      ]
+    },
+    {
+      "id": "G4a",
+      "requirement": "토큰/배지cache데이터정확성·렌더할당수정",
+      "currentStage": "실제 SDK·기기 검증",
+      "evidence": [
+        "checks-token-values-v3/results.json",
+        "review-history-refresh-browser-v2/raw.json",
+        "badge-history-browser-v3/raw.json"
+      ],
+      "remaining": [
+        "실기기결과없음;기재status는SDK범위만"
+      ]
+    },
+    {
+      "id": "G4b",
+      "requirement": "pixel flicker·tileblank·remount/provider/overlay分離",
+      "currentStage": "재현",
+      "evidence": [
+        "prior-evidence-bindings-v1.json"
+      ],
+      "remaining": [
+        "최종소스frame/movie·timestamps·ROI criteria/observercost",
+        "바텀navblackrectangle physical확인"
+      ]
+    },
+    {
+      "id": "G5",
+      "requirement": "실제SDK버전/origin/HTTPS·pixels/gesture/instance生命周期·오류分類",
+      "currentStage": "실험실 검증",
+      "evidence": [
+        "token-values-interactions-v3/raw.json"
+      ],
+      "remaining": [
+        "SDKversion/source-responsehash",
+        "actualtiles/screens",
+        "console2원인bounded分類",
+        "slow/error/retry/resize/identity lifecycle",
+        "모의REST와실운영分離"
+      ]
+    },
+    {
+      "id": "G6",
+      "requirement": "Galaxy Chrome·삼성인터넷 각각현재기기조건및운영검증",
+      "currentStage": "미착수",
+      "evidence": [],
+      "remaining": [
+        "사용자phonehold확인·해제후현재연결조회",
+        "browserversions/thermal/power/nativegestures/recording",
+        "새source before/after 및 deployedSHA再検證"
+      ]
+    },
+    {
+      "id": "G7",
+      "requirement": "재현統計/표본의존성/95CI/형식검증과성과分離",
+      "currentStage": "실험실 검증",
+      "evidence": [
+        "warm-summary-original-confirm-v4.json",
+        "summarize-warm-token-values-v1.py"
+      ],
+      "remaining": [
+        "모든추가지표범위/단위/CI",
+        "scorer validator新候補admission",
+        "freeze-map/externalpin/Gitbytes"
+      ]
+    },
+    {
+      "id": "G8",
+      "requirement": "保護develop-data-main/필수gate/rollback/alias·assets·운영",
+      "currentStage": "수정",
+      "evidence": [
+        "final-token-candidate-source-v1.json",
+        "braces-upstream-readback-20261007-v1.json"
+      ],
+      "remaining": [
+        "draftPR3138/currentCI/protection",
+        "승격/새main승인guard/배포/실운영·native",
+        "현재공식unpatcheddevadvisory경로·필수gate"
+      ]
+    },
+    {
+      "id": "G9",
+      "requirement": "事前계획prospective field 브라우저/기기cohort·기간·표본·依存性",
+      "currentStage": "재현",
+      "evidence": [
+        "field-aggregate-readback-20261007-v1.json"
+      ],
+      "remaining": [
+        "legacycohort3metric/2viewport collected;browser/tabletunknown",
+        "新prospective기준/관측기간/표본min/중복·상관/rollback",
+        "最小化collectorcohort分離·actualdelivery/storage·지원누락",
+        "지표충족후판정;fakefieldtraffic禁止"
+      ]
+    },
+    {
+      "id": "G10",
+      "requirement": "原자료/report/reproduce/rollback+全體完了audit",
+      "currentStage": "수정",
+      "evidence": [
+        "PROGRESS-TOKEN-CANDIDATE-v1.md",
+        "GOAL-OBJECTIVE-20261007.md"
+      ],
+      "remaining": [
+        "최종10부보고/모든명시항목evidence",
+        "新root未freeze/未Gitdeliver",
+        "全體goal未완료"
+      ]
+    }
+  ],
+  "allRequirementsComplete": false,
+  "sourceOnlyNotOperationalCompletion": true
+}

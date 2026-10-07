@@ -1,0 +1,5 @@
+{
+  "exit": 1,
+  "sourceCommit": "e158160149469c76fd700ebb1a63073943e7973d",
+  "expectedObservedFailure": "in-place same-length unique visit count2 to1 still showed badge; new test only"
+}

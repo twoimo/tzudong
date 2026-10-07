@@ -1,0 +1,10 @@
+{
+  "map": "apps/web/performance/render-flow-memory-confirmation-20261007/artifact-map-confirmation-20261007-v1.json",
+  "sha256": "549032480cef85e3f28a05a527bcd5d0d820145984def97f4b85b297428d6221",
+  "mappedArtifacts": 144,
+  "mappedBytes": 34790726,
+  "candidate": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "wholeGoalComplete": false,
+  "canonicalAdmissionComplete": false,
+  "allCopiedBytesVerified": true
+}

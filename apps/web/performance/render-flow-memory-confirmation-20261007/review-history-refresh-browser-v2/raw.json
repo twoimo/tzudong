@@ -1,0 +1,46 @@
+{
+  "fieldAdmitted": 0,
+  "physicalDevice": false,
+  "runs": [
+    {
+      "kind": "baseline",
+      "source": "91a2a629b784ea4fb89d522475921caa7152f1e5",
+      "passed": false,
+      "browser": "154.0.8037.98",
+      "initialBadge": "2",
+      "updatedBadge": "2",
+      "expectedUpdatedBadge": null,
+      "syntheticRestaurantRequests": 4,
+      "actualSDK": {
+        "loaded": true,
+        "remote": true,
+        "mapCreates": 1
+      },
+      "errors": {
+        "page": 0,
+        "console": 2
+      }
+    },
+    {
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "passed": true,
+      "browser": "154.0.8037.98",
+      "initialBadge": "2",
+      "updatedBadge": null,
+      "expectedUpdatedBadge": null,
+      "syntheticRestaurantRequests": 4,
+      "actualSDK": {
+        "loaded": true,
+        "remote": true,
+        "mapCreates": 1
+      },
+      "errors": {
+        "page": 0,
+        "console": 2
+      }
+    }
+  ],
+  "candidatePassed": true,
+  "baselineStaleBadgeObserved": true
+}

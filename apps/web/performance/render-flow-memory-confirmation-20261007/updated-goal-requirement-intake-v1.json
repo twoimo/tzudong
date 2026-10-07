@@ -1,0 +1,24 @@
+{
+  "capturedAt": "2026-10-07T07:10:28.731624+00:00",
+  "objectiveFile": "/Users/twoimo/.codex/attachments/c754eb5f-2b42-40ce-a3e7-2c977baeb9e8/goal-objective.md",
+  "objectiveSha256": "9990baa176db4872db252ed2f0493d1eff8ac3dd9e24bd558dd8b5763c8f2f02",
+  "objectiveReadInFull": true,
+  "currentMeasuredSeriesStillAligned": true,
+  "oldPrimaryGuardsUnchanged": true,
+  "doNotModifyLiveProtocol": true,
+  "newExplicitCoverageGaps": [
+    "natural idle after60cycles before forcedGC",
+    "JS heap versus owned browser/renderer RSS and DOM/listener/timer/SDK/cache scopes",
+    "128-search revisit smaller/overcapacity hit/miss/eviction/data-mutation/memory",
+    "initial/search/filter/sort/panel/list/map/breakpoint/keyboard/addressbar/orientation/background/partial-failure scenarios and equivalence",
+    "real SDK observed version/origin/HTTPS/pixel filmstrip linked to events",
+    "Galaxy Chrome and Samsung independent new-source/postdeployment verification when phone hold lifted",
+    "field pre-registered observation/sample/cohort/dependence/inclusion/rollback plan",
+    "field collector currently separates desktop/mobile only; browser/tablet cohorts unknown",
+    "protected gates/performance admission/current dependency path/deploy+asset alias/rollback evidence"
+  ],
+  "noCompletionClaim": true,
+  "noNewAstraSpawns": 0,
+  "phoneHoldPersists": true,
+  "liveMeasurementHandleLastObserved": 73771
+}

@@ -1,0 +1,208 @@
+{
+  "capturedAt": "2026-10-07T06:33:42.404Z",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "projectHealthyVerified": true,
+  "postgresVersionObserved": "17.6.1.038",
+  "readOnlySelect": true,
+  "metricTotals": {
+    "CLS": 28,
+    "INP": 19,
+    "LCP": 29
+  },
+  "cohorts": [
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "samples": 3,
+      "first_day": "2026-10-02",
+      "last_day": "2026-10-03"
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "samples": 2,
+      "first_day": "2026-10-02",
+      "last_day": "2026-10-03"
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "samples": 5,
+      "first_day": "2026-10-02",
+      "last_day": "2026-10-03"
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "samples": 1,
+      "first_day": "2026-10-03",
+      "last_day": "2026-10-03"
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "INP",
+      "navigation": "navigate",
+      "samples": 1,
+      "first_day": "2026-10-03",
+      "last_day": "2026-10-03"
+    },
+    {
+      "release_sha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "samples": 1,
+      "first_day": "2026-10-03",
+      "last_day": "2026-10-03"
+    },
+    {
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "samples": 1,
+      "first_day": "2026-10-01",
+      "last_day": "2026-10-01"
+    },
+    {
+      "release_sha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "samples": 1,
+      "first_day": "2026-10-01",
+      "last_day": "2026-10-01"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "back-forward",
+      "samples": 1,
+      "first_day": "2026-10-06",
+      "last_day": "2026-10-06"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "samples": 14,
+      "first_day": "2026-10-05",
+      "last_day": "2026-10-07"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "back-forward",
+      "samples": 1,
+      "first_day": "2026-10-06",
+      "last_day": "2026-10-06"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "samples": 9,
+      "first_day": "2026-10-05",
+      "last_day": "2026-10-07"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "back-forward",
+      "samples": 1,
+      "first_day": "2026-10-06",
+      "last_day": "2026-10-06"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "samples": 13,
+      "first_day": "2026-10-05",
+      "last_day": "2026-10-07"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "mobile",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "samples": 5,
+      "first_day": "2026-10-05",
+      "last_day": "2026-10-06"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "mobile",
+      "metric": "INP",
+      "navigation": "navigate",
+      "samples": 5,
+      "first_day": "2026-10-05",
+      "last_day": "2026-10-06"
+    },
+    {
+      "release_sha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "mobile",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "samples": 5,
+      "first_day": "2026-10-05",
+      "last_day": "2026-10-06"
+    },
+    {
+      "release_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "samples": 3,
+      "first_day": "2026-10-04",
+      "last_day": "2026-10-04"
+    },
+    {
+      "release_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "samples": 1,
+      "first_day": "2026-10-04",
+      "last_day": "2026-10-04"
+    },
+    {
+      "release_sha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "samples": 3,
+      "first_day": "2026-10-04",
+      "last_day": "2026-10-04"
+    }
+  ],
+  "query": "SELECT release_sha, device, metric, navigation, sum(sample_count)::bigint AS samples, min(observed_day)::text AS first_day, max(observed_day)::text AS last_day FROM public.app_web_vitals_histogram WHERE observed_day >= (CURRENT_DATE - 30) GROUP BY release_sha, device, metric, navigation ORDER BY release_sha, device, metric, navigation LIMIT 120",
+  "newCandidateRelease": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "newCandidateSamples": 0,
+  "distinctUsersNotKnown": true,
+  "humanIdentityNotVerified": true,
+  "allNavigationCohortsSeparate": true,
+  "fieldGainProven": false,
+  "noSyntheticFieldPosts": true,
+  "noHostedSchemaOrGrantChanges": true,
+  "notes": [
+    "Anonymous self reports, not distinct users or guaranteed humans.",
+    "Current main navigate cohorts: desktop LCP13/INP9/CLS14; mobile5/5/5. New candidate is not deployed.",
+    "No stable matched field before/after cohort or population CI."
+  ]
+}

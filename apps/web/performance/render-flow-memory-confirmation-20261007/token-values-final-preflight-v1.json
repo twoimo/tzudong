@@ -1,0 +1,12 @@
+{
+  "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "unit": 39,
+  "assertions": 148,
+  "lint": true,
+  "nativeCompatParity2449Inputs": true,
+  "plansRegisteredBeforePrimaryCandidateSamples": true,
+  "noThresholdChanges": true,
+  "newAstraSpawns": 0,
+  "phoneUse": false,
+  "earlierCandidateBuildsRetained": true
+}

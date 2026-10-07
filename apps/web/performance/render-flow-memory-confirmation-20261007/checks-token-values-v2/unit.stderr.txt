@@ -1,0 +1,52 @@
+
+tests-unit/naver-map-render-plan.test.ts:
+(pass) naver map render plan helpers > derives regional cluster mode for low zoom without selected region [0.09ms]
+(pass) naver map render plan helpers > derives seoul district filtered mode for mid zoom [0.04ms]
+(pass) naver map render plan helpers > filters visible restaurants while preserving selected restaurant [0.46ms]
+(pass) naver map render plan helpers > examines only the viewport cells for a small window in a large list [1.17ms]
+(pass) naver map render plan helpers > reuses the visible list when a small pan keeps the same restaurants [0.15ms]
+(pass) naver map render plan helpers > keeps only restaurants that can produce Naver marker coordinates [0.08ms]
+(pass) naver map render plan helpers > reuses the input list when every restaurant already has numeric coordinates
+(pass) naver map render plan helpers > treats numeric coordinate strings as renderable marker coordinates [0.03ms]
+(pass) naver map render plan helpers > filters Seoul individual marker candidates by id and coordinates [0.08ms]
+(pass) naver map render plan helpers > builds stable render target ids for restaurants and regional clusters [0.36ms]
+(pass) naver map render plan helpers > reuses render target ids when the source lists are the same [0.05ms]
+(pass) naver map render plan helpers > includes visit count in marker render signature [0.05ms]
+(pass) naver map render plan helpers > invalidates every role token after in-place coordinate, category and nested visit edits [0.29ms]
+(pass) naver map render plan helpers > includes selected restaurant outside display data in marker render signature [0.10ms]
+(pass) naver map render plan helpers > reports marker render performance only for large development marker sets [0.06ms]
+(pass) naver map render plan helpers > clears empty cluster state when clustering is off or display is empty [0.06ms]
+(pass) naver map render plan helpers > reuses the previous empty array identity when clearing cluster collections [0.02ms]
+(pass) naver map render plan helpers > continues skipped marker updates only when an empty theme still has leftover DOM [0.02ms]
+(pass) naver map render plan helpers > releases leftover cluster markers when the empty theme display is empty [0.03ms]
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.47ms]
+(pass) naver map marker visuals > returns selected marker payload [0.09ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.05ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.09ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.04ms]
+(pass) naver map marker visuals > refreshes both badge slots when duplicate history changes without a length change [0.18ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.12ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.07ms]
+
+tests-unit/restaurant-visit-count.test.ts:
+(pass) restaurant visit count > counts unique merged youtube links as Tzuyang visits [0.03ms]
+(pass) restaurant visit count > falls back to review count when review history is richer than links [0.06ms]
+(pass) restaurant visit count > counts compact merged restaurant rows when aggregate arrays are missing [0.04ms]
+(pass) restaurant visit count > does not show a badge for a single visit [0.01ms]
+(pass) restaurant visit count > compact empty histories still reflect later edits and nested duplicate changes [0.09ms]
+
+tests-unit/naver-map-render-guard.test.ts:
+(pass) naver map marker render guard > skips marker render when effective signature is unchanged [0.23ms]
+(pass) naver map marker render guard > does not skip marker render when selected marker changes [0.02ms]
+(pass) naver map marker render guard > does not skip marker render when viewport or mode changes [0.05ms]
+(pass) naver map marker render guard > does not skip marker render when marker kind, asset version, or user toggle changes [0.09ms]
+(pass) naver map marker render guard > refreshes the display signature when the same id list is edited [0.03ms]
+(pass) naver map marker render guard > preserves canonical ids across fresh arrays, edits and interleaved views [0.05ms]
+(pass) naver map marker render guard > keeps an empty desktop marker render from poisoning the render signature [0.93ms]
+
+ 39 pass
+ 0 fail
+ 146 expect() calls
+Ran 39 tests across 4 files. [62.00ms]

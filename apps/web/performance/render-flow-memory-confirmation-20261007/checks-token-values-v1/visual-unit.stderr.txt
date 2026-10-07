@@ -1,0 +1,14 @@
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.28ms]
+(pass) naver map marker visuals > returns selected marker payload [0.03ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.01ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.07ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.01ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.09ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.03ms]
+
+ 7 pass
+ 0 fail
+ 31 expect() calls
+Ran 7 tests across 1 file. [50.00ms]

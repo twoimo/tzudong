@@ -1,0 +1,28 @@
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.49ms]
+(pass) naver map marker visuals > returns selected marker payload [0.14ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.03ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.28ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.06ms]
+58 |         const restaurant = { id: 'mutable-history', categories: ['한식'], category: [],
+59 |             mergedYoutubeLinks: ['one', 'two'] };
+60 |         expect(getNaverIndividualMarkerVisual(restaurant, false).content).toContain('쯔양 2회 방문');
+61 |         expect(getNaverIndividualMarkerVisual(restaurant, true).content).toContain('쯔양 2회 방문');
+62 |         restaurant.mergedYoutubeLinks[1] = 'one';
+63 |         expect(getNaverIndividualMarkerVisual(restaurant, false).content).not.toContain('tzuyang-visit-count-badge');
+                                                                                   ^
+error: expect(received).not.toContain(expected)
+
+Expected to not contain: "tzuyang-visit-count-badge"
+Received: "<div data-restaurant-marker-kind=\"category\" data-restaurant-marker-asset-version=\"restaurant-marker-assets-gpt-image-2-20260707\"><div class=\"tzudong-individual-marker\" style=\"width: 32px; height: 32px; transform: scale(1); z-index: 1;\" role=\"button\" data-testid=\"marker\" data-restaurant-id=\"mutable-history\"><picture class=\"tzudong-marker-picture\"><source srcset=\"/images/maker-images/webp/korean.webp\" type=\"image/webp\" /><img class=\"tzudong-marker-image\" src=\"/images/maker-images/korean.png\" alt=\"marker\" draggable=\"false\" decoding=\"sync\" /></picture><span class=\"tzuyang-visit-count-badge\" data-tzuyang-visit-count-badge=\"true\" aria-label=\"쯔양 2회 방문\" style=\"background-color: #dc2626; top: -5px; right: -5px; min-width: 17px; height: 17px; font-size: 10px;\">2</span></div></div>"
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-signature-allocation-20261007/tzudong/apps/web/tests-unit/naver-map-marker-visuals.test.ts:63:79)
+(fail) naver map marker visuals > refreshes both badge slots when duplicate history changes without a length change [0.37ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.22ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.05ms]
+
+ 7 pass
+ 1 fail
+ 34 expect() calls
+Ran 8 tests across 1 file. [71.00ms]

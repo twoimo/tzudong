@@ -1,0 +1,17 @@
+{
+  "nominalCandidateBuildLabel": "token-values-v1",
+  "nominalLabelNotUsedForServing": true,
+  "servedFromExplicitReceiptPaths": [
+    "../repository-quality-20261004/build-candidate-overseas-query-v1/receipt.json",
+    "../repository-quality-20261004/build-candidate-overseas-query-v1/receipt.json"
+  ],
+  "observedUniqueSourceCommits": [
+    "91a2a629b784ea4fb89d522475921caa7152f1e5"
+  ],
+  "observedUniqueBuildIds": [
+    "qjNcKpQfmV_hG4CFztZ8g"
+  ],
+  "sameSourceAndBuildForAllFourAAProcesses": true,
+  "planAndRawBytesUnmodified": true,
+  "thresholdsUnmodified": true
+}

@@ -1,0 +1,422 @@
+diff --git a/apps/web/lib/map-render-guard.ts b/apps/web/lib/map-render-guard.ts
+index ad506287..bfc16cb8 100644
+--- a/apps/web/lib/map-render-guard.ts
++++ b/apps/web/lib/map-render-guard.ts
+@@ -79,17 +79,30 @@ function makeBoundsSignature(bounds: RenderBoundsLike | null): string | null {
+     return lastBoundsSignature;
+ }
+ 
+-const displayIdsSignatureCache = new WeakMap<readonly string[], string>();
++// Expanded markers rebuild their token array on viewport changes. Keep one
++// value snapshot so equal arrays avoid Set/sort/join, while in-place edits
++// cannot reuse a stale signature. No history of previous views is retained.
++let lastDisplayIds: readonly string[] | null = null;
++let lastDisplayIdsSignature = '';
+ 
+ function makeDisplayIdsSignature(ids: readonly string[]): string {
+-    const cached = displayIdsSignatureCache.get(ids);
+-    if (cached !== undefined) return cached;
++    if (lastDisplayIds && lastDisplayIds.length === ids.length) {
++        let same = true;
++        for (let index = 0; index < ids.length; index += 1) {
++            if (lastDisplayIds[index] !== ids[index]) {
++                same = false;
++                break;
++            }
++        }
++        if (same) return lastDisplayIdsSignature;
++    }
+ 
+     const signature = [...new Set(ids)]
+         .filter(Boolean)
+         .sort()
+         .join("|");
+-    displayIdsSignatureCache.set(ids, signature);
++    lastDisplayIds = ids.slice();
++    lastDisplayIdsSignature = signature;
+     return signature;
+ }
+ 
+@@ -179,4 +192,3 @@ export function shouldSkipMarkerUpdate(
+         previous.markerLayerSignature === next.markerLayerSignature
+     );
+ }
+-
+diff --git a/apps/web/lib/naver-map-marker-visuals.ts b/apps/web/lib/naver-map-marker-visuals.ts
+index ce78d379..634dffa1 100644
+--- a/apps/web/lib/naver-map-marker-visuals.ts
++++ b/apps/web/lib/naver-map-marker-visuals.ts
+@@ -141,6 +141,8 @@ type IndividualMarkerVisual = {
+ };
+ 
+ type IndividualMarkerStamp = {
++    id: string;
++    visits: number;
+     youtube: string;
+     mergedYoutube: number;
+     mergedReviews: number;
+@@ -157,8 +159,10 @@ const individualVisualCache = new WeakMap<object, {
+     plain?: IndividualMarkerStamp;
+ }>();
+ 
+-function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant) {
++function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant, visits: number) {
+     return {
++        id: restaurant.id ?? '',
++        visits,
+         youtube: restaurant.youtube_link ?? '',
+         mergedYoutube: restaurant.mergedYoutubeLinks?.length ?? 0,
+         mergedReviews: restaurant.mergedTzuyangReviews?.length ?? 0,
+@@ -170,8 +174,10 @@ function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant
+     };
+ }
+ 
+-function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverIndividualMarkerRestaurant) {
+-    return stamp.youtube === (restaurant.youtube_link ?? '')
++function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverIndividualMarkerRestaurant, visits: number) {
++    return stamp.id === (restaurant.id ?? '')
++        && stamp.visits === visits
++        && stamp.youtube === (restaurant.youtube_link ?? '')
+         && stamp.mergedYoutube === (restaurant.mergedYoutubeLinks?.length ?? 0)
+         && stamp.mergedReviews === (restaurant.mergedTzuyangReviews?.length ?? 0)
+         && stamp.mergedRestaurants === (restaurant.mergedRestaurants?.length ?? 0)
+@@ -187,16 +193,18 @@ export function getNaverIndividualMarkerVisual(
+     overlayKinds: readonly RestaurantOverlayMarkerKind[] = [],
+ ) {
+     const slot = isSelected ? 'selected' : 'plain';
++    const visitCount = getTzuyangVisitCount(restaurant);
+     const canReuseObject = overlayKinds.length === 0;
+     if (canReuseObject) {
+         const cachedStamp = individualVisualCache.get(restaurant)?.[slot];
+-        if (cachedStamp && individualStampMatches(cachedStamp, restaurant)) {
++        if (cachedStamp && individualStampMatches(cachedStamp, restaurant, visitCount)) {
+             return cachedStamp.visual;
+         }
+     }
+ 
+     const cacheKey = [
+         restaurant.id ?? '',
++        visitCount,
+         isSelected ? '1' : '0',
+         overlayKinds.join(','),
+         restaurant.youtube_link ?? '',
+@@ -218,7 +226,6 @@ export function getNaverIndividualMarkerVisual(
+         categories: restaurant.categories ?? [],
+         category: normalizedCategory,
+     });
+-    const visitCount = getTzuyangVisitCount(restaurant);
+     const markerKind = resolveRestaurantMarkerKind(restaurant, overlayKinds);
+     const markerCategory =
+         markerKind === 'user-submitted'
+@@ -239,7 +246,7 @@ export function getNaverIndividualMarkerVisual(
+     });
+     if (canReuseObject) {
+         const entry = individualVisualCache.get(restaurant) ?? {};
+-        entry[slot] = { ...individualMarkerStampFields(restaurant), visual };
++        entry[slot] = { ...individualMarkerStampFields(restaurant, visitCount), visual };
+         individualVisualCache.set(restaurant, entry);
+     }
+     return visual;
+diff --git a/apps/web/lib/naver-map-render-plan.ts b/apps/web/lib/naver-map-render-plan.ts
+index 9851eb63..b29d0fdf 100644
+--- a/apps/web/lib/naver-map-render-plan.ts
++++ b/apps/web/lib/naver-map-render-plan.ts
+@@ -13,8 +13,33 @@ const formatCoordForSignature = (value: number | string | null | undefined): str
+     return 'na';
+ };
+ 
+-const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'): string =>
+-    `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}:${getTzuyangVisitCount(restaurant)}`;
++type RestaurantTokenPrefix = 'restaurant' | 'searched' | 'selected' | 'seoul-individual' | 'cluster-restaurant';
++const restaurantTokenCache = new WeakMap<Restaurant, {
++    id: string;
++    lat: Restaurant['lat'];
++    lng: Restaurant['lng'];
++    category: string;
++    visits: number;
++    tokens: Partial<Record<RestaurantTokenPrefix, string>>;
++}>();
++
++const toRestaurantRenderToken = (restaurant: Restaurant, prefix: RestaurantTokenPrefix = 'restaurant'): string => {
++    // Read derived values on every call: category/visit arrays can be edited in
++    // place. Weak keys retain no source rows; each row has only five role slots.
++    const category = getPrimaryCategory(restaurant);
++    const visits = getTzuyangVisitCount(restaurant);
++    let cached = restaurantTokenCache.get(restaurant);
++    if (!cached || cached.id !== restaurant.id || cached.lat !== restaurant.lat
++        || cached.lng !== restaurant.lng || cached.category !== category || cached.visits !== visits) {
++        cached = { id: restaurant.id, lat: restaurant.lat, lng: restaurant.lng, category, visits, tokens: {} };
++        restaurantTokenCache.set(restaurant, cached);
++    }
++    const token = cached.tokens[prefix];
++    if (token !== undefined) return token;
++    const next = `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${category}:${visits}`;
++    cached.tokens[prefix] = next;
++    return next;
++};
+ 
+ type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
+ 
+@@ -312,6 +337,7 @@ const lastRenderTargetKey = {
+     mergedRestaurantById: null as Map<string, Restaurant> | null,
+ };
+ 
++
+ export function buildRenderTargetIdsForSignature({
+     activeSearchedRestaurant,
+     selectedRestaurant,
+@@ -341,27 +367,6 @@ export function buildRenderTargetIdsForSignature({
+     seoulClustersToRender: SeoulDistrictCluster[];
+     seoulIndividualIds: string[];
+ }) {
+-    const searchedId = activeSearchedRestaurant?.id ?? '';
+-    const selectedId = selectedRestaurant?.id ?? '';
+-    if (
+-        lastRenderTargetIds &&
+-        lastRenderTargetKey.searchedId === searchedId &&
+-        lastRenderTargetKey.selectedId === selectedId &&
+-        lastRenderTargetKey.clusterMode === nextIsClusterMode &&
+-        lastRenderTargetKey.regionalMode === nextIsRegionalClusterMode &&
+-        lastRenderTargetKey.seoulMode === nextIsSeoulDistrictMode &&
+-        lastRenderTargetKey.displayRestaurants === displayRestaurants &&
+-        lastRenderTargetKey.displayRestaurantIds === displayRestaurantIds &&
+-        lastRenderTargetKey.clusters === clusters &&
+-        lastRenderTargetKey.regionalClusters === regionalClusters &&
+-        lastRenderTargetKey.seoulClustersToRender === seoulClustersToRender &&
+-        lastRenderTargetKey.seoulIndividualIds === seoulIndividualIds &&
+-        lastRenderTargetKey.restaurantById === restaurantById &&
+-        lastRenderTargetKey.mergedRestaurantById === mergedRestaurantById
+-    ) {
+-        return lastRenderTargetIds;
+-    }
+-
+     const renderTargetIdsForSignature: string[] = displayRestaurants.map((restaurant) =>
+         toRestaurantRenderToken(restaurant)
+     );
+@@ -424,6 +429,29 @@ export function buildRenderTargetIdsForSignature({
+         });
+     }
+ 
++    const searchedId = activeSearchedRestaurant?.id ?? '';
++    const selectedId = selectedRestaurant?.id ?? '';
++    if (
++        lastRenderTargetIds &&
++        lastRenderTargetKey.searchedId === searchedId &&
++        lastRenderTargetKey.selectedId === selectedId &&
++        lastRenderTargetKey.clusterMode === nextIsClusterMode &&
++        lastRenderTargetKey.regionalMode === nextIsRegionalClusterMode &&
++        lastRenderTargetKey.seoulMode === nextIsSeoulDistrictMode &&
++        lastRenderTargetKey.displayRestaurants === displayRestaurants &&
++        lastRenderTargetKey.displayRestaurantIds === displayRestaurantIds &&
++        lastRenderTargetKey.clusters === clusters &&
++        lastRenderTargetKey.regionalClusters === regionalClusters &&
++        lastRenderTargetKey.seoulClustersToRender === seoulClustersToRender &&
++        lastRenderTargetKey.seoulIndividualIds === seoulIndividualIds &&
++        lastRenderTargetKey.restaurantById === restaurantById &&
++        lastRenderTargetKey.mergedRestaurantById === mergedRestaurantById &&
++        lastRenderTargetIds.length === renderTargetIdsForSignature.length &&
++        lastRenderTargetIds.every((token, index) => token === renderTargetIdsForSignature[index])
++    ) {
++        return lastRenderTargetIds;
++    }
++
+     lastRenderTargetIds = renderTargetIdsForSignature;
+     lastRenderTargetKey.searchedId = searchedId;
+     lastRenderTargetKey.selectedId = selectedId;
+diff --git a/apps/web/lib/restaurant-visit-count.ts b/apps/web/lib/restaurant-visit-count.ts
+index 89bc29a2..691ad969 100644
+--- a/apps/web/lib/restaurant-visit-count.ts
++++ b/apps/web/lib/restaurant-visit-count.ts
+@@ -35,6 +35,25 @@ export function getTzuyangVisitCount(restaurant: VisitCountRestaurant | null | u
+         return 0;
+     }
+ 
++    // Compact map rows can omit all history. Avoid two empty Set allocations;
++    // non-empty inputs still use the exact unique-history calculation below.
++    if (!restaurant.youtube_link && !restaurant.tzuyang_review
++        && !restaurant.youtube_links?.length && !restaurant.tzuyang_reviews?.length
++        && !restaurant.mergedYoutubeLinks?.length && !restaurant.mergedTzuyangReviews?.length) {
++        // The map projection retains the original compact row even when it
++        // has no video/review fields, so an existing merged row is not a visit.
++        let hasMergedHistory = false;
++        if (restaurant.mergedRestaurants) {
++            for (const merged of restaurant.mergedRestaurants) {
++                if (merged.youtube_link || merged.tzuyang_review) {
++                    hasMergedHistory = true;
++                    break;
++                }
++            }
++        }
++        if (!hasMergedHistory) return 0;
++    }
++
+     const youtubeLinks = new Set<string>();
+     const tzuyangReviews = new Set<string>();
+ 
+diff --git a/apps/web/tests-unit/naver-map-marker-visuals.test.ts b/apps/web/tests-unit/naver-map-marker-visuals.test.ts
+index 1b11f4d5..71a82fed 100644
+--- a/apps/web/tests-unit/naver-map-marker-visuals.test.ts
++++ b/apps/web/tests-unit/naver-map-marker-visuals.test.ts
+@@ -54,6 +54,21 @@ describe('naver map marker visuals', () => {
+         expect(visual.content).not.toContain('tzuyang-visit-count-badge');
+     });
+ 
++    test('refreshes both badge slots when duplicate history changes without a length change', () => {
++        const restaurant = { id: 'mutable-history', categories: ['한식'], category: [],
++            mergedYoutubeLinks: ['one', 'two'] };
++        expect(getNaverIndividualMarkerVisual(restaurant, false).content).toContain('쯔양 2회 방문');
++        expect(getNaverIndividualMarkerVisual(restaurant, true).content).toContain('쯔양 2회 방문');
++        restaurant.mergedYoutubeLinks[1] = 'one';
++        expect(getNaverIndividualMarkerVisual(restaurant, false).content).not.toContain('tzuyang-visit-count-badge');
++        expect(getNaverIndividualMarkerVisual(restaurant, true).content).not.toContain('tzuyang-visit-count-badge');
++        restaurant.mergedYoutubeLinks[1] = 'three';
++        expect(getNaverIndividualMarkerVisual({ ...restaurant }, false).content).toContain('쯔양 2회 방문');
++        expect(getNaverIndividualMarkerVisual(restaurant, true).content).toContain('쯔양 2회 방문');
++        restaurant.id = 'mutable-history-updated';
++        expect(getNaverIndividualMarkerVisual(restaurant, true).content).toContain('data-restaurant-id="mutable-history-updated"');
++    });
++
+     test('marks user-submitted restaurants with a distinct marker wrapper without changing category asset', () => {
+         const visual = getNaverIndividualMarkerVisual({
+             id: 'user-rest-1',
+diff --git a/apps/web/tests-unit/naver-map-render-guard.test.ts b/apps/web/tests-unit/naver-map-render-guard.test.ts
+index b77f0994..9735b8cf 100644
+--- a/apps/web/tests-unit/naver-map-render-guard.test.ts
++++ b/apps/web/tests-unit/naver-map-render-guard.test.ts
+@@ -189,7 +189,7 @@ describe('naver map marker render guard', () => {
+         expect(shouldSkipMarkerUpdate(previous, nextToggleChanged)).toBe(false);
+     });
+ 
+-    test('reuses the display id signature for the same id list', () => {
++    test('refreshes the display signature when the same id list is edited', () => {
+         const displayRestaurantIds = ['r-2', 'r-1', 'r-2'];
+         const input = {
+             zoom: 12,
+@@ -204,8 +204,37 @@ describe('naver map marker render guard', () => {
+         const first = buildMarkerRenderSignature(input);
+         displayRestaurantIds.push('r-3');
+         const second = buildMarkerRenderSignature(input);
+-        expect(second.displayRestaurantIdsSignature).toBe(first.displayRestaurantIdsSignature);
++        expect(second.displayRestaurantIdsSignature).toBe('r-1|r-2|r-3');
+         expect(first.displayRestaurantIdsSignature).toBe('r-1|r-2');
++        expect(shouldSkipMarkerUpdate(first, second)).toBe(false);
++    });
++
++    test('preserves canonical ids across fresh arrays, edits and interleaved views', () => {
++        const signature = (displayRestaurantIds: string[]) => buildMarkerRenderSignature({
++            zoom: 12,
++            bounds: null,
++            displayRestaurantIds,
++            selectedRestaurantId: null,
++            isClusterMode: false,
++            isRegionalClusterMode: false,
++            isSeoulDistrictMode: false,
++        }).displayRestaurantIdsSignature;
++
++        const ids = ['r-2', '', 'r-1', 'r-2'];
++        expect(signature(ids)).toBe('r-1|r-2');
++        expect(signature([...ids])).toBe('r-1|r-2');
++        ids[2] = 'r-3';
++        expect(signature(ids)).toBe('r-2|r-3');
++        expect(signature(['other'])).toBe('other');
++        expect(signature(ids)).toBe('r-2|r-3');
++        ids.splice(0, ids.length, 'r-3', '', 'r-3');
++        expect(signature(ids)).toBe('r-3');
++        ids.length = 0;
++        expect(signature(ids)).toBe('');
++        expect(signature([])).toBe('');
++        ids.push('restored');
++        expect(signature(ids)).toBe('restored');
++        expect(signature(['r-1', 'r-2', 'r-1'])).toBe('r-1|r-2');
+     });
+ 
+     test('keeps an empty desktop marker render from poisoning the render signature', () => {
+diff --git a/apps/web/tests-unit/naver-map-render-plan.test.ts b/apps/web/tests-unit/naver-map-render-plan.test.ts
+index b4ba70d1..64c6f830 100644
+--- a/apps/web/tests-unit/naver-map-render-plan.test.ts
++++ b/apps/web/tests-unit/naver-map-render-plan.test.ts
+@@ -239,6 +239,52 @@ describe('naver map render plan helpers', () => {
+         expect(ids[0]).toContain('restaurant-multi-visit:37.500000:127.000000:한식:2');
+     });
+ 
++    test('invalidates every role token after in-place coordinate, category and nested visit edits', () => {
++        const row = makeRestaurant({ id: 'mutable', youtube_link: 'one' });
++        const searched = makeRestaurant({ id: 'searched', youtube_link: 'one' });
++        const selected = makeRestaurant({ id: 'selected', youtube_link: 'one' });
++        const args = {
++            activeSearchedRestaurant: searched,
++            selectedRestaurant: selected,
++            clusters: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [127, 37.5] },
++                properties: { restaurantId: row.id, category: '한식' } }],
++            displayRestaurantIds: new Set([row.id]),
++            displayRestaurants: [row],
++            mergedRestaurantById: new Map<string, Restaurant>(),
++            nextIsClusterMode: true,
++            nextIsRegionalClusterMode: false,
++            nextIsSeoulDistrictMode: false,
++            regionalClusters: [],
++            restaurantById: new Map([[row.id, row]]),
++            seoulClustersToRender: [],
++            seoulIndividualIds: [row.id],
++        } as Parameters<typeof buildRenderTargetIdsForSignature>[0];
++        const first = buildRenderTargetIdsForSignature(args);
++        expect(buildRenderTargetIdsForSignature(args)).toBe(first);
++
++        row.lat = 38;
++        row.categories![0] = '분식';
++        row.mergedYoutubeLinks = ['one', 'two'];
++        searched.mergedTzuyangReviews = ['visit one', 'visit two', 'visit three'];
++        selected.lng = 128;
++        const changed = buildRenderTargetIdsForSignature(args);
++        expect(changed).not.toBe(first);
++        expect(changed[0]).toBe('restaurant-mutable:38.000000:127.000000:분식:2');
++        expect(changed[1]).toBe('searched-searched:37.500000:127.000000:한식:3');
++        expect(changed[2]).toBe('selected-selected:37.500000:128.000000:한식:1');
++        expect(changed[3]).toBe('seoul-individual-mutable:38.000000:127.000000:분식:2');
++        expect(changed[4]).toBe('cluster-restaurant-mutable:38.000000:127.000000:분식:2');
++        expect(first[0]).toBe('restaurant-mutable:37.500000:127.000000:한식:1');
++
++        row.mergedYoutubeLinks[1] = 'one';
++        const deduplicated = buildRenderTargetIdsForSignature(args);
++        expect(deduplicated[0]).toEndWith(':분식:1');
++        expect(deduplicated[3]).toEndWith(':분식:1');
++        expect(deduplicated[4]).toEndWith(':분식:1');
++        expect(buildRenderTargetIdsForSignature({ ...args,
++            displayRestaurants: [...args.displayRestaurants] })).not.toBe(deduplicated);
++    });
++
+     test('includes selected restaurant outside display data in marker render signature', () => {
+         const ids = buildRenderTargetIdsForSignature({
+             activeSearchedRestaurant: null,
+diff --git a/apps/web/tests-unit/restaurant-visit-count.test.ts b/apps/web/tests-unit/restaurant-visit-count.test.ts
+index 288cc35f..409e13a6 100644
+--- a/apps/web/tests-unit/restaurant-visit-count.test.ts
++++ b/apps/web/tests-unit/restaurant-visit-count.test.ts
+@@ -43,4 +43,27 @@ describe('restaurant visit count', () => {
+         expect(shouldShowTzuyangVisitBadge({ youtube_link: 'https://youtu.be/one' })).toBe(false);
+         expect(getTzuyangVisitCount(null)).toBe(0);
+     });
++
++    test('compact empty histories still reflect later edits and nested duplicate changes', () => {
++        const row = { youtube_link: null, youtube_links: [], mergedYoutubeLinks: [],
++            tzuyang_reviews: [], mergedTzuyangReviews: [], mergedRestaurants: [] } as Partial<Restaurant>;
++        expect(getTzuyangVisitCount(row)).toBe(0);
++        row.youtube_links!.push(' first ', 'first');
++        expect(getTzuyangVisitCount(row)).toBe(1);
++        row.mergedTzuyangReviews!.push('visit one', 'visit two');
++        expect(getTzuyangVisitCount(row)).toBe(2);
++        row.youtube_links!.length = 0;
++        row.mergedTzuyangReviews!.length = 0;
++        expect(getTzuyangVisitCount(row)).toBe(0);
++        row.mergedRestaurants = [{ youtube_link: 'a' }, { youtube_link: 'b' }] as Restaurant['mergedRestaurants'];
++        expect(getTzuyangVisitCount(row)).toBe(2);
++        row.mergedRestaurants![1].youtube_link = 'a';
++        expect(getTzuyangVisitCount(row)).toBe(1);
++        row.mergedRestaurants!.length = 0;
++        expect(getTzuyangVisitCount(row)).toBe(0);
++        row.mergedRestaurants = [{ youtube_link: null, tzuyang_review: null }] as Restaurant['mergedRestaurants'];
++        expect(getTzuyangVisitCount(row)).toBe(0);
++        row.mergedRestaurants![0].tzuyang_review = 'later visit';
++        expect(getTzuyangVisitCount(row)).toBe(1);
++    });
+ });

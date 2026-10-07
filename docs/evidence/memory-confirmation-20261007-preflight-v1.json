@@ -1,0 +1,12 @@
+{
+  "mappedIgnoredLogsAddedExplicitly": [
+    "apps/web/performance/render-flow-memory-confirmation-20261007/build-candidate-token-values-v1/build.log",
+    "apps/web/performance/render-flow-memory-confirmation-20261007/build-candidate-token-values-v2/build.log",
+    "apps/web/performance/render-flow-memory-confirmation-20261007/build-candidate-token-values-v3/build.log"
+  ],
+  "rawDiffCheckExit": 2,
+  "diagnosticLines": 42,
+  "rawWhitespacePreserved": true,
+  "sourceDiffCheckPassed": true,
+  "notSourceTestFailure": true
+}

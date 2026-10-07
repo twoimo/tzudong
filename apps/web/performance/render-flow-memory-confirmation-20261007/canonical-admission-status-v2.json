@@ -1,0 +1,10 @@
+{
+  "candidate": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "candidateScorerExecuted": false,
+  "candidateValidatorExecuted": false,
+  "candidateMeasurementsAdmitted": 0,
+  "canonicalReleaseApproved": false,
+  "localStatsAreNotCanonicalAdmission": true,
+  "originalPrimaryGuardAndUnresolvedEndpointPairCI": true,
+  "scope": "evidence packet only; admission pending remaining requirements"
+}

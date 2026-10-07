@@ -1,0 +1,466 @@
+{
+  "sourceRuns": [
+    {
+      "run": 0,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 31.999223999999998,
+      "peakHeapMB": 48.269184,
+      "endpointHeapMB": 30.952064,
+      "initialHeapMB": 19.695184,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50.10000000000582,
+      "gapsAbove50Ms": 1,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 1,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 24.757048,
+      "peakHeapMB": 37.819124,
+      "endpointHeapMB": 37.819124,
+      "initialHeapMB": 19.019752,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 33.40000000000873,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 2,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 28.474691999999997,
+      "peakHeapMB": 45.679828,
+      "endpointHeapMB": 25.18614,
+      "initialHeapMB": 18.97308,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 50,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 3,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 31.796197999999997,
+      "peakHeapMB": 47.943764,
+      "endpointHeapMB": 32.264192,
+      "initialHeapMB": 19.59224,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 50.10000000000218,
+      "gapsAbove50Ms": 1,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 4,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 28.56798,
+      "peakHeapMB": 44.882724,
+      "endpointHeapMB": 28.840892,
+      "initialHeapMB": 18.99606,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 49.900000000001455,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 5,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 32.118608,
+      "peakHeapMB": 48.266088,
+      "endpointHeapMB": 19.339392,
+      "initialHeapMB": 19.639548,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 33.40000000000873,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 6,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 28.734476,
+      "peakHeapMB": 47.776848,
+      "endpointHeapMB": 33.373024,
+      "initialHeapMB": 23.0463,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 7,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 31.846173999999998,
+      "peakHeapMB": 43.967768,
+      "endpointHeapMB": 43.967768,
+      "initialHeapMB": 19.667932,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50.10000000000582,
+      "gapsAbove50Ms": 1,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 8,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 28.474118,
+      "peakHeapMB": 41.388972,
+      "endpointHeapMB": 25.474276,
+      "initialHeapMB": 19.017812,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 66.69999999999709,
+      "gapsAbove50Ms": 3,
+      "longTaskMs": 118,
+      "membershipPassed": true
+    },
+    {
+      "run": 9,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 31.834927999999998,
+      "peakHeapMB": 47.790548,
+      "endpointHeapMB": 20.655224,
+      "initialHeapMB": 23.450784,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 50,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 10,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 31.148344,
+      "peakHeapMB": 48.17344,
+      "endpointHeapMB": 19.291744,
+      "initialHeapMB": 19.636328,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 11,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 28.765363999999998,
+      "peakHeapMB": 48.370948,
+      "endpointHeapMB": 37.22188,
+      "initialHeapMB": 19.024308,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 50.10000000000582,
+      "gapsAbove50Ms": 1,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 12,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 31.838428,
+      "peakHeapMB": 48.19118,
+      "endpointHeapMB": 38.281412,
+      "initialHeapMB": 19.616004,
+      "frameGapP95Ms": 16.799999999995634,
+      "frameGapMaxMs": 33.40000000000873,
+      "gapsAbove50Ms": 0,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 13,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 28.506366,
+      "peakHeapMB": 41.400744,
+      "endpointHeapMB": 20.09432,
+      "initialHeapMB": 18.976652,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 66.69999999999709,
+      "gapsAbove50Ms": 5,
+      "longTaskMs": 172,
+      "membershipPassed": true
+    },
+    {
+      "run": 14,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 32.030030000000004,
+      "peakHeapMB": 48.4185,
+      "endpointHeapMB": 26.799532,
+      "initialHeapMB": 19.882564,
+      "frameGapP95Ms": 16.799999999999272,
+      "frameGapMaxMs": 50.099999999998545,
+      "gapsAbove50Ms": 2,
+      "longTaskMs": 0,
+      "membershipPassed": true
+    },
+    {
+      "run": 15,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 31.321702000000002,
+      "peakHeapMB": 47.04146,
+      "endpointHeapMB": 34.4307,
+      "initialHeapMB": 24.79878,
+      "frameGapP95Ms": 16.800000000000182,
+      "frameGapMaxMs": 83.29999999999927,
+      "gapsAbove50Ms": 10,
+      "longTaskMs": 107,
+      "membershipPassed": true
+    },
+    {
+      "run": 16,
+      "kind": "candidate",
+      "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 28.655998,
+      "peakHeapMB": 48.000168,
+      "endpointHeapMB": 19.49824,
+      "initialHeapMB": 22.73998,
+      "frameGapP95Ms": 16.799999999999592,
+      "frameGapMaxMs": 83.30000000000291,
+      "gapsAbove50Ms": 17,
+      "longTaskMs": 297,
+      "membershipPassed": true
+    },
+    {
+      "run": 17,
+      "kind": "baseline",
+      "source": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "browser": "154.0.8037.98",
+      "medianHeapMB": 32.130134,
+      "peakHeapMB": 51.905172,
+      "endpointHeapMB": 43.767348,
+      "initialHeapMB": 18.218312,
+      "frameGapP95Ms": 16.80000000000291,
+      "frameGapMaxMs": 83.30000000000018,
+      "gapsAbove50Ms": 19,
+      "longTaskMs": 392,
+      "membershipPassed": true
+    }
+  ],
+  "metrics": {
+    "medianHeapMB": {
+      "before": 31.846173999999998,
+      "after": 28.56798,
+      "absoluteReduction": 3.278193999999999,
+      "relativeReductionPercent": 10.293839379261067,
+      "beforeProcessRange": [
+        31.148344,
+        32.130134
+      ],
+      "afterProcessRange": [
+        24.757048,
+        31.321702000000002
+      ],
+      "independentProcessesPerSource": 9,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "ci95MedianPairedAbsoluteReduction": [
+        2.3829800000000034,
+        3.5506280000000032
+      ],
+      "noiseFloorAbsolute": 1.0945229999999952,
+      "gainProven": true,
+      "reportingFloor": 0,
+      "medianPairedAbsoluteReduction": 3.3320620000000005
+    },
+    "peakHeapMB": {
+      "before": 48.19118,
+      "after": 45.679828,
+      "absoluteReduction": 2.5113520000000022,
+      "relativeReductionPercent": 5.211227448674222,
+      "beforeProcessRange": [
+        43.967768,
+        51.905172
+      ],
+      "afterProcessRange": [
+        37.819124,
+        48.370948
+      ],
+      "independentProcessesPerSource": 9,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "ci95MedianPairedAbsoluteReduction": [
+        -0.19750799999999913,
+        6.790436
+      ],
+      "noiseFloorAbsolute": 4.1428220000000024,
+      "gainProven": false,
+      "reportingFloor": 0,
+      "medianPairedAbsoluteReduction": 3.3833640000000003
+    },
+    "endpointHeapMB": {
+      "before": 30.952064,
+      "after": 28.840892,
+      "absoluteReduction": 2.111172,
+      "relativeReductionPercent": 6.820779383242423,
+      "beforeProcessRange": [
+        19.291744,
+        43.967768
+      ],
+      "afterProcessRange": [
+        19.49824,
+        37.819124
+      ],
+      "independentProcessesPerSource": 9,
+      "guardTolerancePercent": 20,
+      "guardPassed": true,
+      "ci95MedianPairedAbsoluteReduction": [
+        -9.5015,
+        18.187092000000003
+      ],
+      "noiseFloorAbsolute": 11.118841999999997,
+      "gainProven": false,
+      "reportingFloor": 0,
+      "medianPairedAbsoluteReduction": -4.819051999999999
+    },
+    "frameGapP95Ms": {
+      "before": 16.799999999999272,
+      "after": 16.799999999999272,
+      "absoluteReduction": 0.0,
+      "relativeReductionPercent": null,
+      "beforeProcessRange": [
+        16.799999999995634,
+        16.80000000000291
+      ],
+      "afterProcessRange": [
+        16.799999999995634,
+        16.800000000000182
+      ],
+      "independentProcessesPerSource": 9,
+      "guardTolerancePercent": 15,
+      "guardPassed": true,
+      "ci95MedianPairedAbsoluteReduction": [
+        -3.637978807091713e-12,
+        3.637978807091713e-12
+      ],
+      "noiseFloorAbsolute": 0.0,
+      "gainProven": false,
+      "reportingFloor": 0.1,
+      "medianPairedAbsoluteReduction": 0.0
+    },
+    "frameGapMaxMs": {
+      "before": 50.099999999998545,
+      "after": 50.10000000000582,
+      "absoluteReduction": -7.275957614183426e-12,
+      "relativeReductionPercent": null,
+      "beforeProcessRange": [
+        33.40000000000873,
+        83.30000000000018
+      ],
+      "afterProcessRange": [
+        33.40000000000873,
+        83.30000000000291
+      ],
+      "independentProcessesPerSource": 9,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "ci95MedianPairedAbsoluteReduction": [
+        -33.20000000000073,
+        0.10000000000582077
+      ],
+      "noiseFloorAbsolute": 8.25,
+      "gainProven": false,
+      "reportingFloor": 0.1,
+      "medianPairedAbsoluteReduction": -0.10000000000582077
+    },
+    "gapsAbove50Ms": {
+      "before": 1,
+      "after": 1,
+      "absoluteReduction": 0,
+      "relativeReductionPercent": 0.0,
+      "beforeProcessRange": [
+        0,
+        19
+      ],
+      "afterProcessRange": [
+        0,
+        17
+      ],
+      "independentProcessesPerSource": 9,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "ci95MedianPairedAbsoluteReduction": [
+        -5.0,
+        1.0
+      ],
+      "noiseFloorAbsolute": 0.0,
+      "gainProven": false,
+      "reportingFloor": 0,
+      "medianPairedAbsoluteReduction": 0
+    },
+    "longTaskMs": {
+      "before": 0,
+      "after": 0,
+      "absoluteReduction": 0,
+      "relativeReductionPercent": null,
+      "beforeProcessRange": [
+        0,
+        392
+      ],
+      "afterProcessRange": [
+        0,
+        297
+      ],
+      "independentProcessesPerSource": 9,
+      "guardTolerancePercent": null,
+      "guardPassed": null,
+      "ci95MedianPairedAbsoluteReduction": [
+        -118.0,
+        0.0
+      ],
+      "noiseFloorAbsolute": 0.0,
+      "gainProven": false,
+      "reportingFloor": 0,
+      "medianPairedAbsoluteReduction": 0
+    }
+  },
+  "raw": "warm-original-confirm-v4/raw.json",
+  "aa": false,
+  "freshProcessesPerSource": 9,
+  "dependentCyclesPerProcess": 60,
+  "physicalDevices": 0,
+  "fieldAdmitted": 0,
+  "canonicalTimingAdmitted": 0,
+  "allFixedGuardsPassed": true,
+  "limitations": [
+    "Natural heaps include GC phases; no forcedGC during primary",
+    "CI resamples independent adjacent process-pair deltas, not60dependent cycles",
+    "n9 does not support end-user population p95; frame p95 is within a finite lab window",
+    "A/A is one4process execution; prior different Chrome patch22.15% variation remains disclosed",
+    "No field or physical-device gain inferred from lab observations"
+  ]
+}

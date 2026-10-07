@@ -1,0 +1,23 @@
+{
+  "startedAt": "2026-10-07T06:30:16.679Z",
+  "phases": [
+    {
+      "label": "aa-current-v4",
+      "exit": 0,
+      "endedAt": "2026-10-07T06:36:24.688Z"
+    },
+    {
+      "label": "original-pilot-v4",
+      "exit": 0,
+      "endedAt": "2026-10-07T06:42:31.617Z"
+    },
+    {
+      "label": "original-confirm-v4",
+      "exit": 0,
+      "endedAt": "2026-10-07T07:10:00.793Z"
+    }
+  ],
+  "measurementOrder": "A/A4process -> original ABBA4process pilot -> original randomized9process-pairs confirm",
+  "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "noConcurrentBuildsOrTests": true
+}

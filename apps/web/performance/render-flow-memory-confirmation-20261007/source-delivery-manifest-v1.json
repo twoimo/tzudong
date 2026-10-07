@@ -1,0 +1,53 @@
+{
+  "candidate": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "base": "5df2808c083c910b0b87ae7a2c4a24c5cbfbf166",
+  "sourceTree": "8451b03e1af6d400bec5e486f06267990416e800",
+  "sourcePaths": [
+    {
+      "path": "apps/web/lib/map-render-guard.ts",
+      "sha256": "9b2f3239d7be9fc11d325f7e4204a8185416ab7e96d5c00c770eaacd96c76d62",
+      "gitBlob": "bfc16cb870e7c6212ed6ef635e94230d4d8943b6"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "sha256": "479909ca1476ba08590e8c62c4afc2d586cf00a8ff3e46158861c8f1de3d42bf",
+      "gitBlob": "634dffa134a34003fb033c09355692ea9a5fd76d"
+    },
+    {
+      "path": "apps/web/lib/naver-map-render-plan.ts",
+      "sha256": "ccc44e4d65a4088b87bc8cc07a4aa247ac4d980392c33ced943e03128055c57a",
+      "gitBlob": "b29d0fdfdffca9a8a9d50c1f5a4c15ecbe167339"
+    },
+    {
+      "path": "apps/web/lib/restaurant-visit-count.ts",
+      "sha256": "868c101b3f4867066993bb798f6f7ffff810abbedb880e5a5a52e7212727ec03",
+      "gitBlob": "691ad969b9bfa51926c2f13e648cd92b198f4d88"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-marker-visuals.test.ts",
+      "sha256": "332841c35f32b0d08b2134ac787d61ab66084723d5d17199af644f1dda910c9d",
+      "gitBlob": "71a82fedc006fc71078420238db58be8e63af2b3"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-render-guard.test.ts",
+      "sha256": "a3a8e107df9249ec11252cd315996741a6b1e1ac2c1041a5c8016d83b77b2659",
+      "gitBlob": "9735b8cf25983a04efb6801b7d3cbb39ecc6a4ab"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-render-plan.test.ts",
+      "sha256": "2064d3d85e3f60890c09db010ad7a29a244fd1372b5bbf447437aaef1c8cb468",
+      "gitBlob": "64c6f830c083d9b6383525a726b7f13e63e2fcba"
+    },
+    {
+      "path": "apps/web/tests-unit/restaurant-visit-count.test.ts",
+      "sha256": "a8e10f024d66df3f99bba0380a4388f0788f72288ac1d7b07e72091f88907e75",
+      "gitBlob": "409e13a68c527721745566569bb32cb4650fe63b"
+    }
+  ],
+  "sourcePatchSha256": "502a7f15c2b72983ce1ffb889eae0d24a62f92452b69f86805558be057f950b8",
+  "remoteSourceBranch": "codex/marker-signature-allocation-20261007",
+  "protectedPromotion": false,
+  "productionDeploy": false,
+  "physicalDeviceVerified": false,
+  "fieldGainProven": false
+}

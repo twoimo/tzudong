@@ -1,0 +1,10 @@
+{
+  "source": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "scannedProductionRouteTraceFiles": 129,
+  "ownerChainProductionTraceMatches": [],
+  "standaloneOwnerModules": [],
+  "officialAdvisoryUnpatched": true,
+  "sourceLockUnmodified": true,
+  "scope": "actual local production standalone/traces; not a deployed exposure or complete security certificate",
+  "fullAuditNotSuppressed": true
+}

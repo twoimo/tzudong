@@ -1,0 +1,75 @@
+{
+  "originalWarmGuardFormulaUnmodified": "per-source medians of process endpoints; after<=before*1.20",
+  "registeredGuardPassed": true,
+  "pairedEndpointMedianReductionMB": -4.819051999999999,
+  "pairedEndpointMedianRegressionPercent": 22.18611333964676,
+  "pairsWithAfterAboveBefore": 5,
+  "pairs": [
+    {
+      "pair": 0,
+      "beforeEndpointMB": 30.952064,
+      "afterEndpointMB": 37.819124,
+      "absoluteReductionMB": -6.867060000000002,
+      "pairedRegressionPercent": 22.18611333964676
+    },
+    {
+      "pair": 1,
+      "beforeEndpointMB": 32.264192,
+      "afterEndpointMB": 25.18614,
+      "absoluteReductionMB": 7.078052,
+      "pairedRegressionPercent": -21.937794072140406
+    },
+    {
+      "pair": 2,
+      "beforeEndpointMB": 19.339392,
+      "afterEndpointMB": 28.840892,
+      "absoluteReductionMB": -9.5015,
+      "pairedRegressionPercent": 49.130293237760526
+    },
+    {
+      "pair": 3,
+      "beforeEndpointMB": 43.967768,
+      "afterEndpointMB": 33.373024,
+      "absoluteReductionMB": 10.594743999999999,
+      "pairedRegressionPercent": -24.09661550251993
+    },
+    {
+      "pair": 4,
+      "beforeEndpointMB": 20.655224,
+      "afterEndpointMB": 25.474276,
+      "absoluteReductionMB": -4.819051999999999,
+      "pairedRegressionPercent": 23.330911347172993
+    },
+    {
+      "pair": 5,
+      "beforeEndpointMB": 19.291744,
+      "afterEndpointMB": 37.22188,
+      "absoluteReductionMB": -17.930135999999997,
+      "pairedRegressionPercent": 92.94201706180631
+    },
+    {
+      "pair": 6,
+      "beforeEndpointMB": 38.281412,
+      "afterEndpointMB": 20.09432,
+      "absoluteReductionMB": 18.187092000000003,
+      "pairedRegressionPercent": -47.50893723564847
+    },
+    {
+      "pair": 7,
+      "beforeEndpointMB": 26.799532,
+      "afterEndpointMB": 34.4307,
+      "absoluteReductionMB": -7.631168000000002,
+      "pairedRegressionPercent": 28.475004712768875
+    },
+    {
+      "pair": 8,
+      "beforeEndpointMB": 43.767348,
+      "afterEndpointMB": 19.49824,
+      "absoluteReductionMB": 24.269108,
+      "pairedRegressionPercent": -55.450259403425584
+    }
+  ],
+  "endpointNoiseUnresolved": true,
+  "doNotDeclareMemoryRegressionResolved": true,
+  "needNaturalIdleAndRetainerScopeEvidence": true
+}

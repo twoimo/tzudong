@@ -1,0 +1,39 @@
+{
+  "fieldAdmitted": 0,
+  "physicalDevice": false,
+  "sourceCommit": "0f6b4d0798a0825178889e7d01da212457325ed7",
+  "checks": [
+    {
+      "name": "populated unique histories1/2/3 rendered with exact badges",
+      "passed": true,
+      "data": [
+        {
+          "idFound": true,
+          "visitBadge": null,
+          "label": null
+        },
+        {
+          "idFound": true,
+          "visitBadge": "2",
+          "label": "쯔양 2회 방문"
+        },
+        {
+          "idFound": true,
+          "visitBadge": "3",
+          "label": "쯔양 3회 방문"
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "browser": "154.0.8037.98",
+  "actualSDK": {
+    "loaded": true,
+    "remote": true,
+    "mapCreates": 1
+  },
+  "errors": {
+    "page": 0,
+    "console": 2
+  }
+}

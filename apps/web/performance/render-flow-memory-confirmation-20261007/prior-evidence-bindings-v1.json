@@ -1,0 +1,10 @@
+{
+  "priorFrozenMapSha256": "2d83b8fed79eb12f833dfd5412caefc5aacecbd61da56e4f6da40761a00ae9f6",
+  "priorFrozenMap": "apps/web/performance/render-flow-memory-allocation-20261007/artifact-map-pilot-20261007-v1.json",
+  "sourceFirstCandidate": "791795bccea2e1f57173ca33cd76de6444df9f46",
+  "previousTurn": "progress: source correction, actual SDK measurement and independently stored evidence/draft PR",
+  "phoneHoldPersists": true,
+  "newAstraSpawns": 0,
+  "createdAt": "2026-10-07T06:01:05.423589+00:00",
+  "criteria": "memory20% and frame15% fixed; original failed guard not waived"
+}

@@ -1,0 +1,130 @@
+{
+  "diagnosticScopeOnly": true,
+  "notOriginalPrimaryGuardReplacement": true,
+  "freshProcessesPerSource": 2,
+  "warmDependentCyclesPerProcess": 60,
+  "idle30SecondsBeforeForcedGC": true,
+  "heapAndRSSDistinct": true,
+  "rendererRSSIncludesSharedPages": true,
+  "GPUVRAMUnsupported": true,
+  "sourceRows": [
+    {
+      "kind": "baseline",
+      "run": 0,
+      "initialHeapMB": 19.653576,
+      "endpointHeapMB": 25.46076,
+      "idle30HeapMB": 19.199864,
+      "endpointRendererSumRSSMB": 746.815488,
+      "idle30RendererSumRSSMB": 663.5192320000001,
+      "nodesIdle": 5252,
+      "listenersIdle": 6341,
+      "markersIdle": 735,
+      "mapCreates": 1
+    },
+    {
+      "kind": "candidate",
+      "run": 1,
+      "initialHeapMB": 18.339468,
+      "endpointHeapMB": 24.689352,
+      "idle30HeapMB": 19.322908,
+      "endpointRendererSumRSSMB": 758.726656,
+      "idle30RendererSumRSSMB": 679.886848,
+      "nodesIdle": 5253,
+      "listenersIdle": 6341,
+      "markersIdle": 735,
+      "mapCreates": 1
+    },
+    {
+      "kind": "candidate",
+      "run": 2,
+      "initialHeapMB": 18.379864,
+      "endpointHeapMB": 28.85858,
+      "idle30HeapMB": 19.427388,
+      "endpointRendererSumRSSMB": 768.147456,
+      "idle30RendererSumRSSMB": 658.653184,
+      "nodesIdle": 5252,
+      "listenersIdle": 6341,
+      "markersIdle": 735,
+      "mapCreates": 1
+    },
+    {
+      "kind": "baseline",
+      "run": 3,
+      "initialHeapMB": 19.65222,
+      "endpointHeapMB": 43.719544,
+      "idle30HeapMB": 19.2534,
+      "endpointRendererSumRSSMB": 746.422272,
+      "idle30RendererSumRSSMB": 664.4858879999999,
+      "nodesIdle": 5264,
+      "listenersIdle": 6341,
+      "markersIdle": 735,
+      "mapCreates": 1
+    }
+  ],
+  "metrics": {
+    "idle30HeapMB": {
+      "before": 19.226632000000002,
+      "after": 19.375148000000003,
+      "absoluteReduction": -0.14851600000000076,
+      "relativeReductionPercent": -0.7724493816701788,
+      "beforeProcessRange": [
+        19.199864,
+        19.2534
+      ],
+      "afterProcessRange": [
+        19.322908,
+        19.427388
+      ],
+      "ci95": null,
+      "nInsufficientForGainClaim": true
+    },
+    "idle30RendererSumRSSMB": {
+      "before": 664.00256,
+      "after": 669.2700159999999,
+      "absoluteReduction": -5.267455999999925,
+      "relativeReductionPercent": -0.793288507803332,
+      "beforeProcessRange": [
+        663.5192320000001,
+        664.4858879999999
+      ],
+      "afterProcessRange": [
+        658.653184,
+        679.886848
+      ],
+      "ci95": null,
+      "nInsufficientForGainClaim": true
+    },
+    "nodesIdle": {
+      "before": 5258.0,
+      "after": 5252.5,
+      "absoluteReduction": 5.5,
+      "relativeReductionPercent": 0.10460251046025104,
+      "beforeProcessRange": [
+        5252,
+        5264
+      ],
+      "afterProcessRange": [
+        5252,
+        5253
+      ],
+      "ci95": null,
+      "nInsufficientForGainClaim": true
+    },
+    "listenersIdle": {
+      "before": 6341.0,
+      "after": 6341.0,
+      "absoluteReduction": 0.0,
+      "relativeReductionPercent": 0.0,
+      "beforeProcessRange": [
+        6341,
+        6341
+      ],
+      "afterProcessRange": [
+        6341,
+        6341
+      ],
+      "ci95": null,
+      "nInsufficientForGainClaim": true
+    }
+  }
+}
