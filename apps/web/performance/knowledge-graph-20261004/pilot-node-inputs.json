@@ -1,0 +1,67 @@
+[
+  {
+    "title": "TZ-Video-QWtvZ6NfNJ8",
+    "summary": "claude-video로 처리한 모델 관찰; 독립 검증 대기",
+    "body": "# 울릉도 먹방 · QWtvZ6NfNJ8\n\n울릉도 서면에 위치한 식당을 방문하여 다양한 해산물 요리와 분식 메뉴를 주문해 먹는 먹방 영상이다.\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[tzudong]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"video\",\"displayLabel\":\"울릉도 먹방 · QWtvZ6NfNJ8\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":79.0,\"endSeconds\":1000.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=79s\",\"status\":\"unverified\"}],\"videoId\":\"QWtvZ6NfNJ8\",\"analysisStatus\":\"pending\"}\n```\n"
+  },
+  {
+    "title": "TZ-Restaurant-QWtvZ6NfNJ8-1",
+    "summary": "우진이네: 공개 영상의 모델 관찰, 독립 검증 대기",
+    "body": "# 우진이네\n\n영상에서 우진이네을 방문했다고 모델이 관찰했습니다. 모델 신뢰도 0.98는 교정된 정확도가 아닙니다.\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"restaurant\",\"displayLabel\":\"우진이네\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":81.0,\"endSeconds\":84.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=81s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Menu-QWtvZ6NfNJ8-1-1",
+    "summary": "오징어통찜",
+    "body": "# 오징어통찜\n\n관찰 종류: visual\n\n오징어통찜\n\n식당: [[TZ-Restaurant-QWtvZ6NfNJ8-1]]\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"menu\",\"displayLabel\":\"오징어통찜\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":191.0,\"endSeconds\":197.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=191s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Menu-QWtvZ6NfNJ8-1-2",
+    "summary": "오징어회",
+    "body": "# 오징어회\n\n관찰 종류: visual\n\n오징어회\n\n식당: [[TZ-Restaurant-QWtvZ6NfNJ8-1]]\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"menu\",\"displayLabel\":\"오징어회\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":167.0,\"endSeconds\":172.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=167s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Menu-QWtvZ6NfNJ8-1-3",
+    "summary": "오징어부침개",
+    "body": "# 오징어부침개\n\n관찰 종류: visual\n\n오징어부침개\n\n식당: [[TZ-Restaurant-QWtvZ6NfNJ8-1]]\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"menu\",\"displayLabel\":\"오징어부침개\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":204.0,\"endSeconds\":209.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=204s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Menu-QWtvZ6NfNJ8-1-4",
+    "summary": "뿔소라",
+    "body": "# 뿔소라\n\n관찰 종류: visual\n\n뿔소라\n\n식당: [[TZ-Restaurant-QWtvZ6NfNJ8-1]]\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"menu\",\"displayLabel\":\"뿔소라\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":180.0,\"endSeconds\":184.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=180s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Menu-QWtvZ6NfNJ8-1-5",
+    "summary": "닭강정",
+    "body": "# 닭강정\n\n관찰 종류: visual\n\n닭강정\n\n식당: [[TZ-Restaurant-QWtvZ6NfNJ8-1]]\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"menu\",\"displayLabel\":\"닭강정\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":229.0,\"endSeconds\":235.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=229s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Menu-QWtvZ6NfNJ8-1-6",
+    "summary": "컵라면",
+    "body": "# 컵라면\n\n관찰 종류: visual\n\n컵라면\n\n식당: [[TZ-Restaurant-QWtvZ6NfNJ8-1]]\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"menu\",\"displayLabel\":\"컵라면\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":245.0,\"endSeconds\":251.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=245s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Menu-QWtvZ6NfNJ8-1-7",
+    "summary": "호박식혜",
+    "body": "# 호박식혜\n\n관찰 종류: visual\n\n호박식혜\n\n식당: [[TZ-Restaurant-QWtvZ6NfNJ8-1]]\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"menu\",\"displayLabel\":\"호박식혜\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":479.0,\"endSeconds\":488.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=479s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Claim-QWtvZ6NfNJ8-1",
+    "summary": "출연자는 오징어통찜, 오징어회, 뿔소라, 부침개, 닭강정 등을 주문하여 식사한다.",
+    "body": "# 출연자는 오징어통찜, 오징어회, 뿔소라, 부침개, 닭강정 등을 주문하여 식사한다.\n\n관찰 종류: spoken\n\n출연자는 오징어통찜, 오징어회, 뿔소라, 부침개, 닭강정 등을 주문하여 식사한다.\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"claim\",\"displayLabel\":\"출연자는 오징어통찜, 오징어회, 뿔소라, 부침개, 닭강정 등을 주문하여 식사한다.\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":127.0,\"endSeconds\":145.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=127s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  },
+  {
+    "title": "TZ-Claim-QWtvZ6NfNJ8-2",
+    "summary": "주문한 음식을 모두 다 먹고 식사를 마친다.",
+    "body": "# 주문한 음식을 모두 다 먹고 식사를 마친다.\n\n관찰 종류: visual\n\n주문한 음식을 모두 다 먹고 식사를 마친다.\n\n## 출처\n\n- 공개 영상: https://www.youtube.com/watch?v=QWtvZ6NfNJ8\n- claude-video: 03ceb42f7fa2c4439aca01752118044baabffb8f\n- 모델: Gemini 3.8 Flash\n- 모델 관찰이며 독립 검증되지 않았습니다.\n- 영상 근거: [[TZ-Video-QWtvZ6NfNJ8]]\n\n## Tzudong graph metadata\n\n```json\n{\"schemaVersion\":1,\"kind\":\"claim\",\"displayLabel\":\"주문한 음식을 모두 다 먹고 식사를 마친다.\",\"evidence\":[{\"videoId\":\"QWtvZ6NfNJ8\",\"startSeconds\":980.0,\"endSeconds\":992.0,\"url\":\"https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=980s\",\"status\":\"unverified\"}]}\n```\n",
+    "source": "TZ-Video-QWtvZ6NfNJ8"
+  }
+]

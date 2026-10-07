@@ -1,0 +1,242 @@
+{
+  "kind": "readonly-metadata-reader-replay",
+  "baseline": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+  "dataset": {
+    "files": 1127,
+    "bytes": 16937422,
+    "sha256": "82a044517b123354902ca4273dbbb025eb2b75d945e451dca2f359c59c3cb793"
+  },
+  "sourcePreserved": true,
+  "actualProviderCalls": 0,
+  "pairs": [
+    {
+      "baseline": {
+        "wallMs": 104.26699998788536,
+        "cpuMs": 98.65,
+        "peakRssMiB": 33.5,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 77.74470816366374,
+        "cpuMs": 72.878,
+        "peakRssMiB": 32.234375,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "candidate": {
+        "wallMs": 75.73070796206594,
+        "cpuMs": 70.43599999999998,
+        "peakRssMiB": 32.703125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "baseline": {
+        "wallMs": 94.09004217013717,
+        "cpuMs": 88.562,
+        "peakRssMiB": 33.265625,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "baseline": {
+        "wallMs": 101.17479204200208,
+        "cpuMs": 94.12300000000002,
+        "peakRssMiB": 33.203125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 78.99233396165073,
+        "cpuMs": 74.74399999999997,
+        "peakRssMiB": 32.6875,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "candidate": {
+        "wallMs": 77.66558299772441,
+        "cpuMs": 72.993,
+        "peakRssMiB": 32.265625,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "baseline": {
+        "wallMs": 92.77716698125005,
+        "cpuMs": 87.89899999999999,
+        "peakRssMiB": 33.15625,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "baseline": {
+        "wallMs": 93.69316697120667,
+        "cpuMs": 87.79199999999999,
+        "peakRssMiB": 33.203125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 73.63170781172812,
+        "cpuMs": 68.79899999999999,
+        "peakRssMiB": 32.1875,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "candidate": {
+        "wallMs": 77.03783409669995,
+        "cpuMs": 71.84299999999999,
+        "peakRssMiB": 32.703125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "baseline": {
+        "wallMs": 106.40641604550183,
+        "cpuMs": 99.685,
+        "peakRssMiB": 33.234375,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "baseline": {
+        "wallMs": 96.92062484100461,
+        "cpuMs": 90.887,
+        "peakRssMiB": 33.3125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 81.20420901104808,
+        "cpuMs": 74.574,
+        "peakRssMiB": 32.421875,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    }
+  ],
+  "summary": {
+    "wallMs": {
+      "p50": {
+        "before": 96.92062484100461,
+        "after": 77.66558299772441,
+        "absoluteChange": -19.255041843280196,
+        "changePercent": -19.866815628631695,
+        "change95CI": [
+          -26.11484543944788,
+          -17.106459832239178
+        ],
+        "samplePairs": 7
+      },
+      "p75": {
+        "before": 104.26699998788536,
+        "after": 78.99233396165073,
+        "absoluteChange": -25.274666026234627,
+        "changePercent": -24.24033110108784,
+        "change95CI": [
+          -27.010432374197414,
+          -16.2157599125458
+        ],
+        "samplePairs": 7
+      },
+      "p95": {
+        "before": 106.40641604550183,
+        "after": 81.20420901104808,
+        "absoluteChange": -25.20220703445375,
+        "changePercent": -23.684856582028573,
+        "change95CI": [
+          -26.936071100808128,
+          -19.738694419716072
+        ],
+        "samplePairs": 7
+      }
+    },
+    "cpuMs": {
+      "p50": {
+        "before": 90.887,
+        "after": 72.878,
+        "absoluteChange": -18.009,
+        "changePercent": -19.814714975739108,
+        "change95CI": [
+          -27.173846933603663,
+          -16.958099637083464
+        ],
+        "samplePairs": 7
+      },
+      "p75": {
+        "before": 98.65,
+        "after": 74.574,
+        "absoluteChange": -24.076000000000008,
+        "changePercent": -24.405473897617846,
+        "change95CI": [
+          -26.89170888298139,
+          -17.948661524750516
+        ],
+        "samplePairs": 7
+      },
+      "p95": {
+        "before": 99.685,
+        "after": 74.74399999999997,
+        "absoluteChange": -24.94100000000003,
+        "changePercent": -25.019812409088658,
+        "change95CI": [
+          -26.77634548828812,
+          -20.589016499686625
+        ],
+        "samplePairs": 7
+      }
+    },
+    "peakRssMiB": {
+      "p50": {
+        "before": 33.234375,
+        "after": 32.421875,
+        "absoluteChange": -0.8125,
+        "changePercent": -2.444757874941232,
+        "change95CI": [
+          -3.23639774859287,
+          -1.5529411764705883
+        ],
+        "samplePairs": 7
+      },
+      "p75": {
+        "before": 33.3125,
+        "after": 32.703125,
+        "absoluteChange": -0.609375,
+        "changePercent": -1.8292682926829267,
+        "change95CI": [
+          -3.2182835820895526,
+          -1.5984955336154207
+        ],
+        "samplePairs": 7
+      },
+      "p95": {
+        "before": 33.5,
+        "after": 32.703125,
+        "absoluteChange": -0.796875,
+        "changePercent": -2.378731343283582,
+        "change95CI": [
+          -2.425373134328358,
+          -1.6909347111319868
+        ],
+        "samplePairs": 7
+      }
+    }
+  },
+  "confidenceMethod": "10000 paired percentile bootstrap; seed 20261003",
+  "environment": {
+    "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+    "platform": "darwin"
+  },
+  "limitations": [
+    "Reader comparison includes new integrity checks; not a whole collector timing.",
+    "Date-only baseline cache skips reads without validating outputs; that shortcut is not treated as a valid equivalent baseline.",
+    "No network or provider cost comparison."
+  ]
+}

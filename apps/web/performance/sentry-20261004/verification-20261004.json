@@ -1,0 +1,113 @@
+{
+  "schema": "tzudong-sentry-local-evidence-v1",
+  "environment": {
+    "node": "24.21.0",
+    "npm": "11.6.2",
+    "bun": "1.4.0",
+    "next": "16.3.8",
+    "sentry_sdk": "11.4.0"
+  },
+  "unit_suite": {
+    "pass": 2690,
+    "skip": 9,
+    "fail": 0
+  },
+  "sdk_transport": {
+    "envelopes": 1,
+    "raw_sensitive_values_present": 0,
+    "real_network_requests": 0,
+    "attachments": 0,
+    "added_uncaught_exception_listeners": 0,
+    "added_unhandled_rejection_listeners": 0
+  },
+  "coalescing": {
+    "input_reads": 100,
+    "upstream_mock_requests": 1,
+    "experiment_runs": 1,
+    "confidence_interval": null,
+    "scope": "one Node process, identical query/config, synthetic upstream"
+  },
+  "limits": {
+    "issues_per_page": 50,
+    "response_bytes": 1048576,
+    "cache_entries": 32,
+    "cache_ttl_ms": 30000,
+    "simultaneous_upstream_reads_per_process": 4,
+    "timeout_ms": 8000,
+    "exception_count": 5,
+    "frames_per_exception": 40,
+    "logs_sample": 0,
+    "traces_sample": 0,
+    "replay_sample": 0
+  },
+  "ui_flow": {
+    "second_page_rows": 3,
+    "second_page_first_id": "51",
+    "empty_filtered_list_rows": 0,
+    "horizontal_overflow_px": [
+      0,
+      0,
+      0
+    ],
+    "viewports": [
+      [
+        390,
+        844
+      ],
+      [
+        834,
+        1112
+      ],
+      [
+        1440,
+        960
+      ]
+    ],
+    "n_per_viewport": 1,
+    "environment": "loopback dev and synthetic interception"
+  },
+  "production_build": {
+    "passed": true,
+    "source_maps_upload": false,
+    "hosted_deployment": false
+  },
+  "external_connection": {
+    "organization_created": false,
+    "project_configured": false,
+    "pending": "immutable data-storage-region selection"
+  },
+  "limitations": [
+    "No real Sentry ingestion or issue readback yet",
+    "No production rollout yet",
+    "Counts are functional tests, not latency or invoice savings",
+    "Rendered fixture is separate from live authorization and provider state"
+  ],
+  "post_suite_targeted_tests": {
+    "privacy_and_provider": 11,
+    "sdk_actual_defaults": 1
+  },
+  "source_hashes": {
+    "apps/web/lib/monitoring/sentry-privacy.ts": "f9d709e43323e5391e70bd48879bde745386f17b88ea28355938ed1e95d58f0f",
+    "apps/web/lib/monitoring/sentry-admin.ts": "bd3c90a1176f6af7b624b59d6242a36a18d0fc8268791122555662619c08f53b",
+    "apps/web/next.config.mjs": "69aad5e8c10f813d428afbaf968a7ce25400fc22219920cbc236e76e81c8a74e",
+    "apps/web/components/admin/AdminSentryPanel.tsx": "cb03581eca93f87161b686f94439a0e08059bc61cc17422b7372b08084e27eb3",
+    "apps/web/app/api/admin/sentry/route.ts": "165c33fc307c272741fb61773e2878ad41116265adb5b1a171efdcbd7127555a",
+    "apps/web/package.json": "a3012e532f1535edc503e569d90988dd8676240825a15b2733f05f84371c6850",
+    "apps/web/package-lock.json": "41478508c873410b70607c6d0ed76f0e21deaecbe40b4553bc45e1f6fd3bd9fb",
+    "apps/web/scripts/verify-sentry-browser-fixture.ts": "d550ec149486239fbc80db6814cab5cb963be7e7e9ccd281f126e6d791d9b415",
+    "apps/web/instrumentation.ts": "4a9ece75c517c3f9fcdc3090508686dae210bb14a9b6e9a4446b522ebe409660",
+    "apps/web/instrumentation-client.ts": "f0346f404fce861cf6f3491b7e276a11ae50ed4b7d0eed1b22bd3a3dfe0ee967",
+    "apps/web/sentry.server.config.ts": "a68d292f78a4903b2ea4d731173ff76bfc5de5a35d3b4f7f13c05512c9ffac58",
+    "apps/web/sentry.edge.config.ts": "b9cd2b977d29f05e3a9b5d3ff2da93651f2a476fda32d4ccea1363bf6f60ba8c",
+    "apps/web/types/admin-sentry.ts": "1d741358ebe10f1e30e4e920a8a3570548ce5be23c9583c18967e7e90d05ab86"
+  },
+  "browser_sdk_transport": {
+    "proof_file": "browser-sdk-transport-proof.json",
+    "sessions": 0,
+    "attachments": 0,
+    "other_items": 0,
+    "events": 1,
+    "sensitive_values_present": false,
+    "real_sentry_requests": 0
+  }
+}

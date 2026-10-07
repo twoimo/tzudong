@@ -18,7 +18,7 @@ function repoSource(path: string) {
 }
 
 describe("admin restaurant refresh history source contracts", () => {
-  test("adds a dedicated admin sidebar module for approved restaurant refresh history", () => {
+  test("retains legacy refresh routes while mounting refresh inside restaurant management", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
     const routeSource = source("lib/admin/admin-module-routing.ts");
@@ -30,9 +30,9 @@ describe("admin restaurant refresh history source contracts", () => {
     );
     expect(consoleSource).toContain("AdminRestaurantRefreshHistoryModule");
     expect(consoleSource).toContain('case "restaurant-refresh-history"');
-    expect(sidebarOrderSource).toContain('"restaurant-refresh-history"');
+    expect(sidebarOrderSource).not.toContain('"restaurant-refresh-history"');
     expect(sidebarOrderSource).toContain(
-      '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
+      '검수: ["restaurants", "submissions", "reviews"]',
     );
   });
 
@@ -63,8 +63,6 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).not.toMatch(
       /<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/,
     );
-    expect(panelSource).toContain("기록 관리");
-    expect(panelSource).toContain("상호명·전화번호·폐업·이전");
     expect(panelSource).toContain(
       'data-admin-restaurant-refresh-management-structure="header-list-detail"',
     );
@@ -74,23 +72,13 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain(
       'data-admin-restaurant-refresh-detail="management-like"',
     );
-    expect(panelSource).toContain("맛집 관리 동일 구조");
-    expect(panelSource).toContain("후보 생성 → 운영자 판단 →");
-    expect(panelSource).toContain("guarded apply → readback/recrawl");
-    expect(panelSource).toContain(
-      "왼쪽 목록에서 후보를 선택하고 오른쪽 상세 패널에서",
-    );
     expect(panelSource).toContain("왼쪽 목록에서 후보를 선택하세요");
-    expect(panelSource).toContain("승인 맛집 점검 job 또는 수동");
-    expect(panelSource).toContain("후보 기록이 생성되면");
     expect(panelSource).toContain("운영자 결정 기록");
     expect(panelSource).toContain("결정 저장");
-    expect(panelSource).toContain("승인과 동시에 현재 맛집 값 guarded apply");
     expect(panelSource).toContain("function isClosureCandidate");
     expect(panelSource).toContain(
       "폐업 의심 후보는 네이버 미검색 신호일 뿐 폐업 확정이",
     );
-    expect(panelSource).toContain("guarded apply를 막습니다.");
     expect(panelSource).toContain("disabled={!canApplySelectedCandidate}");
     expect(panelSource).toContain("function reviewChecklistForCandidate");
     expect(panelSource).toContain(
@@ -105,15 +93,10 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain("function evidenceText");
     expect(panelSource).toContain("출처 미기록");
     expect(panelSource).toContain("snapshotText(");
-    expect(panelSource).toContain("candidate.previous_snapshot,");
     expect(panelSource).toContain('"road_address"');
-    expect(panelSource).toContain("candidate.candidate_snapshot,");
     expect(panelSource).toContain("selectedCandidate.previous_snapshot,");
     expect(panelSource).toContain('"jibun_address"');
     expect(panelSource).toContain("selectedCandidate.candidate_snapshot,");
-    expect(panelSource).toContain(
-      'candidate.candidate_status !== "needs_review"',
-    );
   });
 
   test("panel renders inside the compact embedded module shell without the old h1 title", () => {
@@ -134,7 +117,6 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(html).toContain('data-admin-module-content="bounded"');
     expect(html).not.toContain('data-admin-restaurant-refresh-headerless="true"');
     expect(html).toContain('aria-labelledby="admin-restaurant-refresh-history-title"');
-    expect(html).toContain("기록 관리");
     expect(html).not.toMatch(/<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/);
   });
 
@@ -199,5 +181,270 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(migrationSource).toContain(
       "restaurant_refresh_candidates_change_types_gin_idx",
     );
+  });
+});
+
+const panelSource = source("components/admin/AdminRestaurantRefreshHistoryPanel.tsx");
+const helperSource = panelSource.slice(panelSource.indexOf("function canDecideRefreshCandidate"), panelSource.indexOf("function RefreshCandidateListSkeleton"));
+const handlerSource = panelSource.slice(panelSource.indexOf("  const loadHistory"), panelSource.indexOf("  useEffect(() => {\n    void loadHistory();"));
+
+type TestCandidate = {
+  id: string; restaurant_id: string; candidate_status: string; detected_change_types: string[];
+  decided_at: string | null; applied_at: string | null; readback_state: { status: string };
+};
+type HarnessOptions = {
+  candidate?: TestCandidate; latestStatus?: string; decision?: string; apply?: boolean; notes?: string;
+  busy?: boolean; loading?: boolean; error?: string; networkFailure?: boolean;
+  response?: { ok: boolean; payload: unknown };
+};
+const candidate = (status = "needs_review", changes = ["name"]): TestCandidate => ({ id: "synthetic-candidate", restaurant_id: "synthetic-restaurant", candidate_status: status, detected_change_types: changes, decided_at: null, applied_at: null, readback_state: { status: "not_required" } });
+const createHarness = new Function(new Bun.Transpiler({ loader: "ts" }).transformSync(`
+${helperSource}
+function isClosureCandidate(candidate) { return candidate?.detected_change_types.includes("closure"); }
+return (options) => {
+  let selectedCandidate = options.candidate ?? { id: "synthetic-candidate", restaurant_id: "synthetic-restaurant", candidate_status: "needs_review", detected_change_types: ["name"], decided_at: null, applied_at: null, readback_state: { status: "not_required" } };
+  let decision = options.decision ?? "approved";
+  let applyApprovedChange = options.apply ?? false;
+  let operatorNotes = options.notes ?? "";
+  let pendingSelection = null;
+  let pendingReadback = null;
+  let readbackConflict = false;
+  const pendingReadbackRef = { current: null };
+  const readGeneration = { current: 0 };
+  let decisionMessage = null;
+  let isSavingDecision = options.busy ?? false;
+  let isLoading = options.loading ?? false;
+  let error = options.error ?? null;
+  let data = { candidates: [{ ...selectedCandidate, candidate_status: options.latestStatus ?? selectedCandidate.candidate_status }] };
+  const rowTriggerRef = { current: null };
+  const saveInFlight = { current: isSavingDecision };
+  let query = "";
+  let statusFilter = "all";
+  let reloads = 0;
+  let focusCount = 0;
+  let readRows = data.candidates;
+  let readError = false;
+  let nextReadWait = null;
+  const writes = [];
+  const readUrls = [];
+  const useCallback = callback => callback;
+  const requestAnimationFrame = callback => callback();
+  const document = { getElementById: () => ({ focus: () => { focusCount += 1; } }) };
+  const setSelectedCandidate = value => { selectedCandidate = typeof value === "function" ? value(selectedCandidate) : value; };
+  const setData = value => { data = value; };
+  const setIsLoading = value => { isLoading = value; };
+  const setError = value => { error = value; };
+  const setDecision = value => { decision = value; };
+  const setApplyApprovedChange = value => { applyApprovedChange = value; };
+  const setOperatorNotes = value => { operatorNotes = value; };
+  const setPendingSelection = value => { pendingSelection = value; };
+  const setPendingReadback = value => { pendingReadback = value; };
+  const setReadbackConflict = value => { readbackConflict = value; };
+  const setSearchInput = () => {};
+  const setQuery = value => { query = value; };
+  const setStatusFilter = value => { statusFilter = value; };
+  const setDecisionMessage = value => { decisionMessage = value; };
+  const setIsSavingDecision = value => { isSavingDecision = value; };
+  const fetch = async (url, init) => {
+    if (init.method !== "POST") {
+      reloads += 1;
+      readUrls.push(url);
+      const payload = JSON.parse(JSON.stringify({ candidates: readRows, summary: {} }));
+      const wait = nextReadWait;
+      nextReadWait = null;
+      if (wait) await wait;
+      return { ok: !readError, json: async () => payload };
+    }
+    writes.push({ url, ...JSON.parse(init.body) });
+    if (options.networkFailure) throw new Error("synthetic_response_lost");
+    return { ok: options.response?.ok ?? true, json: async () => options.response?.payload ?? { ok: true, candidate_status: decision === "approved" && applyApprovedChange ? "applied" : decision } };
+  };
+  ${handlerSource}
+  return {
+    requestSelection, applySelection, submitDecision, loadHistory, canSave,
+    setReadRows: rows => { readRows = rows; },
+    setReadError: value => { readError = value; },
+    setFilters: (status, search) => { statusFilter = status; query = search; },
+    deferNextRead: () => { let release; nextReadWait = new Promise(resolve => { release = resolve; }); return release; },
+    state: () => ({ selectedCandidate, decision, applyApprovedChange, operatorNotes, pendingSelection, pendingReadback, readbackConflict, decisionMessage, isSavingDecision, writes, reloads, readUrls, focusCount })
+  };
+};`))() as (options: HarnessOptions) => {
+  requestSelection: (candidate: TestCandidate | null) => void;
+  applySelection: (candidate: TestCandidate | null) => void;
+  submitDecision: () => Promise<void>;
+  loadHistory: () => Promise<void>;
+  setReadRows: (rows: TestCandidate[]) => void;
+  setReadError: (value: boolean) => void;
+  setFilters: (status: string, query: string) => void;
+  deferNextRead: () => () => void;
+  canSave: boolean;
+  state: () => { selectedCandidate: TestCandidate | null; decision: string; applyApprovedChange: boolean; operatorNotes: string; pendingSelection: { candidate: TestCandidate | null } | null; pendingReadback: { expectedStatus: string } | null; readbackConflict: boolean; decisionMessage: string | null; isSavingDecision: boolean; writes: Record<string, unknown>[]; reloads: number; readUrls: string[]; focusCount: number };
+};
+
+describe("refresh history CMS behavior", () => {
+  test("completed records remain selectable without a mutation path", async () => {
+    for (const status of ["approved", "rejected", "applied", "superseded"]) {
+      const historyRow = { ...candidate(status), id: "history-row" };
+      const harness = createHarness({ candidate: candidate(status) });
+      harness.requestSelection(historyRow);
+      expect(harness.state().selectedCandidate).toEqual(historyRow);
+      await harness.submitDecision();
+      expect(harness.state().writes).toHaveLength(0);
+    }
+  });
+
+  test("stale, loading, failed-read, busy and closure-apply candidates cannot write", async () => {
+    for (const options of [{ latestStatus: "applied" }, { loading: true }, { error: "read_failed" }, { busy: true }, { candidate: candidate("needs_review", ["closure"]), apply: true }]) {
+      const harness = createHarness(options);
+      await harness.submitDecision();
+      expect(harness.state().writes).toHaveLength(0);
+    }
+  });
+
+  test("notes, decision and apply changes survive selection or close until explicit discard", () => {
+    const next = { ...candidate("applied"), id: "synthetic-next" };
+    for (const options of [{ notes: "검토 중인 메모" }, { decision: "rejected" }, { apply: true }, { candidate: candidate("applied"), notes: "새로고침 전에 작성한 메모" }]) {
+      for (const destination of [next, null]) {
+        const harness = createHarness(options);
+        const before = harness.state();
+        harness.requestSelection(destination);
+        expect(harness.state().selectedCandidate).toEqual(before.selectedCandidate);
+        expect(harness.state().operatorNotes).toBe(before.operatorNotes);
+        expect(harness.state().decision).toBe(before.decision);
+        expect(harness.state().applyApprovedChange).toBe(before.applyApprovedChange);
+        expect(harness.state().pendingSelection?.candidate).toEqual(destination);
+        harness.applySelection(destination);
+        expect(harness.state().selectedCandidate).toEqual(destination);
+        expect(harness.state().operatorNotes).toBe("");
+        expect(harness.state().pendingSelection).toBeNull();
+      }
+    }
+  });
+
+  test("same-row selection preserves draft and saving prevents selection or discard", () => {
+    const harness = createHarness({ notes: "보존할 메모" });
+    harness.requestSelection(candidate());
+    expect(harness.state().operatorNotes).toBe("보존할 메모");
+    expect(harness.state().pendingSelection).toBeNull();
+    const busy = createHarness({ notes: "저장 중 메모", busy: true });
+    busy.requestSelection(null);
+    busy.applySelection(null);
+    expect(busy.state().selectedCandidate).not.toBeNull();
+    expect(busy.state().operatorNotes).toBe("저장 중 메모");
+  });
+
+  test("approved apply preserves request body and closes after the expected receipt", async () => {
+    const harness = createHarness({ apply: true, notes: "합성 확인 메모" });
+    await harness.submitDecision();
+    expect(harness.state().writes).toEqual([{ url: "/api/admin/restaurant-refresh-history", action: "decide_candidate", candidate_id: "synthetic-candidate", decision: "approved", apply: true, operator_notes: "합성 확인 메모" }]);
+    expect(harness.state().selectedCandidate).toBeNull();
+    expect(harness.state().reloads).toBe(1);
+    expect(harness.state().focusCount).toBe(1);
+  });
+
+  test("unconfirmed receipts retain the draft without automatic retry or false success", async () => {
+    for (const response of [{ ok: true, payload: { ok: true, candidate_status: "approved" } }, { ok: false, payload: { error: "provider detail must not surface" } }]) {
+      const harness = createHarness({ apply: true, notes: "보존할 메모", response });
+      await harness.submitDecision();
+      expect(harness.state().writes).toHaveLength(1);
+      expect(harness.state().reloads).toBe(0);
+      expect(harness.state().selectedCandidate).not.toBeNull();
+      expect(harness.state().operatorNotes).toBe("보존할 메모");
+      expect(harness.state().decisionMessage).not.toContain("provider detail");
+      expect(harness.state().decisionMessage).toContain("확인하지 못했습니다");
+    }
+  });
+});
+
+const decidedCandidate = (status = "approved"): TestCandidate => ({ ...candidate(status), decided_at: "2026-10-05T01:00:00Z", applied_at: status === "applied" ? "2026-10-05T01:00:00Z" : null, readback_state: { status: status === "applied" ? "pending" : "not_required" } });
+
+describe("refresh uncertain mutation readback", () => {
+  test("lost response, server failure and malformed success lock retransmission and selection", async () => {
+    for (const options of [{ networkFailure: true }, { response: { ok: false, payload: { error: "synthetic_failure" } } }, { response: { ok: true, payload: { ok: true, candidate_status: "rejected" } } }]) {
+      const harness = createHarness({ ...options, notes: "보존할 메모" });
+      await harness.submitDecision();
+      await harness.submitDecision();
+      harness.requestSelection({ ...candidate(), id: "other-candidate" });
+      harness.applySelection(null);
+      expect(harness.state().writes).toHaveLength(1);
+      expect(harness.state().pendingReadback?.expectedStatus).toBe("approved");
+      expect(harness.state().selectedCandidate?.id).toBe("synthetic-candidate");
+      expect(harness.state().operatorNotes).toBe("보존할 메모");
+      expect(harness.state().reloads).toBe(0);
+    }
+  });
+
+  test("missing row, unchanged status, incomplete application and failed GET cannot unlock", async () => {
+    const harness = createHarness({ networkFailure: true, apply: true });
+    await harness.submitDecision();
+    for (const rows of [[], [candidate()], [{ ...decidedCandidate("applied"), id: "different" }], [{ ...decidedCandidate("applied"), applied_at: null }], [{ ...decidedCandidate("applied"), decided_at: null }], [{ ...decidedCandidate("applied"), readback_state: { status: "not_required" } }]]) {
+      harness.setReadRows(rows);
+      await harness.loadHistory();
+      expect(harness.state().pendingReadback).not.toBeNull();
+      await harness.submitDecision();
+      expect(harness.state().writes).toHaveLength(1);
+    }
+    harness.setReadRows([decidedCandidate("applied")]);
+    harness.setReadError(true);
+    await harness.loadHistory();
+    expect(harness.state().pendingReadback).not.toBeNull();
+  });
+
+  test("a different terminal decision or restaurant identity reports conflict and stays locked", async () => {
+    for (const actual of [decidedCandidate("rejected"), { ...decidedCandidate(), restaurant_id: "different-restaurant" }]) {
+      const harness = createHarness({ networkFailure: true });
+      await harness.submitDecision();
+      harness.setReadRows([actual]);
+      await harness.loadHistory();
+      expect(harness.state().readbackConflict).toBe(true);
+      expect(harness.state().pendingReadback).not.toBeNull();
+      harness.applySelection(null);
+      await harness.submitDecision();
+      expect(harness.state().selectedCandidate).not.toBeNull();
+      expect(harness.state().writes).toHaveLength(1);
+    }
+  });
+
+  test("only a GET started after the mutation can confirm the expected state", async () => {
+    const harness = createHarness({ networkFailure: true });
+    harness.setReadRows([decidedCandidate()]);
+    const release = harness.deferNextRead();
+    const oldRead = harness.loadHistory();
+    await harness.submitDecision();
+    release();
+    await oldRead;
+    expect(harness.state().pendingReadback).not.toBeNull();
+    await harness.loadHistory();
+    expect(harness.state().pendingReadback).toBeNull();
+    expect(harness.state().selectedCandidate?.candidate_status).toBe("approved");
+    await harness.submitDecision();
+    expect(harness.state().writes).toHaveLength(1);
+  });
+
+  test("fresh GET confirms exact decision/apply while preserving recrawl pending or failed semantics", async () => {
+    for (const expected of ["approved", "rejected", "superseded", "applied"]) {
+      const harness = createHarness({ networkFailure: true, decision: expected === "applied" ? "approved" : expected, apply: expected === "applied" });
+      await harness.submitDecision();
+      harness.setFilters("needs_review", "old restaurant name");
+      const actual = decidedCandidate(expected);
+      if (expected === "applied") actual.readback_state.status = "failed";
+      harness.setReadRows([actual]);
+      await harness.loadHistory();
+      expect(harness.state().readUrls).toEqual(["/api/admin/restaurant-refresh-history?"]);
+      expect(harness.state().pendingReadback).toBeNull();
+      expect(harness.state().selectedCandidate?.readback_state.status).toBe(actual.readback_state.status);
+      expect(harness.state().writes).toHaveLength(1);
+      harness.requestSelection(null);
+      expect(harness.state().selectedCandidate).toBeNull();
+    }
+  });
+
+  test("a previously observed decision/apply timestamp is not accepted as a new outcome", async () => {
+    const previous = { ...candidate(), decided_at: "2026-10-04T01:00:00Z", applied_at: "2026-10-04T01:00:00Z" };
+    const harness = createHarness({ candidate: previous, networkFailure: true, apply: true });
+    await harness.submitDecision();
+    harness.setReadRows([{ ...decidedCandidate("applied"), decided_at: previous.decided_at, applied_at: previous.applied_at }]);
+    await harness.loadHistory();
+    expect(harness.state().pendingReadback).not.toBeNull();
   });
 });

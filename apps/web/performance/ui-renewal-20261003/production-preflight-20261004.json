@@ -1,0 +1,38 @@
+{
+  "kind": "current-production-and-readiness-readback",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "rootDirectory": "apps/web",
+    "nodeVersion": "24.x",
+    "repo": "twoimo/tzudong",
+    "productionBranch": "main"
+  },
+  "servingDeployment": {
+    "id": "dpl_G55TzNuyiMaUJPZ4tMBKiCpJjT3G",
+    "state": "READY",
+    "target": "production",
+    "gitSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+    "liveDomain": "www.tzudong.app"
+  },
+  "latestTarget": {
+    "id": "dpl_HY5iVLSAobPD4RC19xxpTrWrL6sr",
+    "state": "CANCELED",
+    "usableAsRollback": false
+  },
+  "rollbackSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+  "refreshBeforePromotion": true,
+  "reconciliation": {
+    "entries": 207,
+    "changedBindingHashes": 3,
+    "testsPassed": 7,
+    "historicalCompletionClaim": false
+  },
+  "skillCorrection": {
+    "skill": "vercel-api",
+    "cliVersion": "56.5.0",
+    "officialSource": "https://vercel.com/docs/cli/api",
+    "quickValidatePassed": true,
+    "backupVerified": true
+  }
+}

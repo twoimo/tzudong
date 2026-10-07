@@ -53,6 +53,40 @@ _CONTRACTS = {'backend/supabase/migrations/20260906040116_admin_user_ids_catalog
                                                                                       'sql_sha256': '3a95ed40845582f62d8f404c509539eb35f2f82f841c6c91830a9c6a8921fb69'}}
 
 
+_CONTRACTS['backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql'] = {'source': 'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql',
+ 'bindings': {'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql': 'a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545',
+              'backend/supabase/scripts/verify_g014_owner_final_replay.py': 'e2bf725020498cea26b18ae131f09c7b0f1ffed6918ce9302ff1d39ebdf7efef',
+              'backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql': '8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483',
+              'backend/supabase/scripts/verify_g014_pg17_owner_replay.py': '8b8ac9857b5931d2e7609280f85a95264fb854ef374d969d25d1f7c3ead3b2c0'},
+ 'disposition': 'legacy-contract-preserved',
+ 'receipt': {'schema': 'g014-owner-final-pg15-replay-v1',
+             'read_only': True,
+             'disposition': 'legacy-contract-preserved',
+             'source_sha256': 'a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545',
+             'predecessor_sha256': '8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483',
+             'hosted_final_verifier_executed': False,
+             'hosted_ledger_admission_verified': False,
+             'required_hosted_pg_major': 17,
+             'required_hosted_ledger_count': 77},
+ 'sql_sha256': '152ad5d6ad561667857bf6f14bf0786678b7ea86ec987c8ea899684aa55df73b'}
+
+_CONTRACTS['backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql'] = {'source': 'backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql',
+ 'bindings': {'backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql': 'b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f',
+              'backend/supabase/scripts/verify_g016_identity_correction_replay.py': '61e232b874aee9f75cb132765919903d5b43f5fbe38d4c4d5390b0d8df9055ca',
+              'backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql': '2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3'},
+ 'disposition': 'verified-existing',
+ 'receipt': {'schema': 'g016-identity-pg15-replay-v1',
+             'read_only': True,
+             'disposition': 'verified-existing',
+             'source_sha256': 'b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f',
+             'predecessor_sha256': '2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3',
+             'hosted_identity_correction_executed': False,
+             'hosted_ledger_admission_verified': False,
+             'required_hosted_pg_major': 17,
+             'required_hosted_ledger_count': 76},
+ 'sql_sha256': 'c76f00dc5841e8700f7f3b9a96358de66ecf068213ee4f752febb3ebed33f838'}
+
+
 class ReplayContractError(ValueError):
     """Bounded code, without raw SQL, provider output or arbitrary input."""
 

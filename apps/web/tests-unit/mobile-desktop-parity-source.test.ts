@@ -41,7 +41,7 @@ describe("mobile and desktop parity source contracts", () => {
   });
 
   test("admin evaluation metric parsers accept LAAJ objects without name", () => {
-    const pageSource = source("app/admin/evaluations/page.tsx");
+    const pageSource = source("app/admin/evaluations/page.tsx") + source("lib/admin/normalize-evaluation-record.ts");
     const numeric = pageSource.split("function parseNumericEvaluationMetric")[1] ?? "";
     expect(numeric).toContain("typeof value.eval_value !== 'number'");
     expect(numeric.slice(0, 350)).not.toContain("typeof value.name !== 'string'");
@@ -118,7 +118,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
     expect(consoleSource).toContain(
-      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);",
     );
     expect(consoleSource).toContain(
       "const [showSidebarLabels, setShowSidebarLabels] = useState(false);",
@@ -155,9 +155,7 @@ describe("mobile and desktop parity source contracts", () => {
 
     expect(tableSource).toContain("const mobileControls = (");
     expect(tableSource).toContain("const mobileCards = (");
-    expect(tableSource).toContain(
-      "grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden",
-    );
+    expect(tableSource).toMatch(/grid grid-cols-1 [^\"]*md:grid-cols-2 lg:hidden/);
     expect(tableSource).toContain("hidden rounded-lg border lg:block");
     expect(tableSource).toContain('aria-label="상호·영상 ID 검색"');
     expect(tableSource).toContain('aria-label="검색어 지우기"');
@@ -214,7 +212,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(evaluationsSource).toContain(
       "const canSwitchEvaluationView = !embedded || initialView === 'evaluations';",
     );
-    expect(evaluationsSource).toContain("{canSwitchEvaluationView && (");
+    expect(evaluationsSource).toContain("const reviewViewActions = canSwitchEvaluationView && (");
     expect(evaluationsSource).toContain("onClick={switchToEvaluationListView}");
     expect(evaluationsSource).toContain(
       "onClick={switchToEvaluationSlideView}",
@@ -225,20 +223,20 @@ describe("mobile and desktop parity source contracts", () => {
     const bannerSource = source("app/admin/banners/page.tsx");
 
     expect(bannerSource).toContain(
-      "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
+      "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(bannerSource).toContain('role="list" aria-label="배너 목록"');
     expect(bannerSource).toContain(
-      'aria-current={isSelected ? "true" : undefined}',
+      'aria-pressed={isSelected}',
     );
     expect(bannerSource).toContain("데스크톱 배너");
     expect(bannerSource).toContain("모바일 팝업");
     expect(bannerSource).not.toContain(">사이드바</Badge>");
-    expect(bannerSource).toContain("선택하면 오른쪽에서 바로 수정합니다.");
+    expect(bannerSource).toContain("requestEditor(banner)");
     expect(bannerSource).toContain(
-      "모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.",
+      "Boolean(pendingReadback)",
     );
-    expect(bannerSource).toContain("삭제는 모달 없이 이 패널에서 처리합니다.");
+    expect(bannerSource).toContain("deleteConfirmation !== '배너삭제'");
     expect(bannerSource).toContain('role="button"');
     expect(bannerSource).toContain("tabIndex={0}");
     expect(bannerSource).toContain('aria-label="배너 이미지 또는 영상 업로드"');
@@ -914,9 +912,9 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(myPageProfileSource).toContain('id="mypage-mobile-avatar-upload"');
     expect(myPageProfileSource).toContain(
-      'className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2',
+      'className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border',
     );
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain('sizes="64px"');
     expect(myPageProfileSource).toContain("handleMobileAvatarUpload");
     expect(myPageProfileSource).toContain("handleMobileAvatarDelete");
     expect(

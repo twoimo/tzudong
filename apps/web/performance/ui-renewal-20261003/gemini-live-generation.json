@@ -1,0 +1,49 @@
+{
+  "kind": "live-funded-gemini-generation",
+  "measuredAt": "2026-10-02T21:38:13.218Z",
+  "environment": {
+    "sdk": "2.18.0"
+  },
+  "syntheticInput": true,
+  "operationalDatabaseWrites": 0,
+  "maximumGenerationCalls": 2,
+  "generationCallsStarted": 2,
+  "usage": [
+    {
+      "model": "gemini-3.8-flash",
+      "promptTokens": 266,
+      "outputTokens": 1030,
+      "thoughtTokens": 1935,
+      "totalTokens": 3231
+    },
+    {
+      "model": "gemini-3.1-flash-image",
+      "promptTokens": 32,
+      "outputTokens": 1346,
+      "thoughtTokens": null,
+      "totalTokens": 1378
+    }
+  ],
+  "limitations": [
+    "Single request per modality; no speed comparison or confidence interval.",
+    "Credit application and billed cost require a billing receipt."
+  ],
+  "pending": null,
+  "draft": {
+    "elapsedMs": 11188.012375,
+    "sceneCount": 5,
+    "sha256": "100ab95dae1fb357653be0f890b0059e18b02addf27020739a57a2d23442fade",
+    "responseModel": "gemini-3.8-flash",
+    "verified": true
+  },
+  "image": {
+    "elapsedMs": 8038.753792000001,
+    "bytes": 845724,
+    "width": 1376,
+    "height": 768,
+    "sha256": "299dd7a05ac0366dd0701984865e16c6f54474934be709e28d6d3d03f50ef1b6",
+    "responseModel": "gemini-3.1-flash-image",
+    "verified": true
+  },
+  "passed": true
+}

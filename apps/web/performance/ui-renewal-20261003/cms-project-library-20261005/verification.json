@@ -1,0 +1,120 @@
+{
+  "schema": "tzudong-storyboard-project-library-verification-v1",
+  "recordedAt": "2026-10-04T21:30:44.606701+00:00",
+  "scope": "Offline React component UI with actual Tailwind and admin-ui.css. No authenticated app, provider execution, operating writes, or deployment.",
+  "sources": [
+    {
+      "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "sha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53"
+    },
+    {
+      "path": "apps/web/components/admin/storyboard/StoryboardProjectLibrary.tsx",
+      "sha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-project-library-browser.test.ts",
+      "sha256": "37979ae0d436d207ffdc17062dcafc83e736986c99dfc7ab6c3b872da7b89788"
+    }
+  ],
+  "checks": {
+    "projectLibraryBrowser": {
+      "command": "bun test tests-unit/storyboard-project-library-browser.test.ts",
+      "pass": 6,
+      "fail": 0,
+      "assertions": 42
+    },
+    "existingDepartureBrowser": {
+      "command": "bun test tests-unit/local-storyboard-departure-browser.test.ts",
+      "pass": 8,
+      "fail": 0
+    },
+    "eslint": {
+      "runtime": "Node 24.21.0",
+      "targetCount": 3,
+      "exitCode": 0,
+      "maxWarnings": 0
+    },
+    "typecheckParity": {
+      "runtime": "Node 24.21.0",
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3202,
+      "nonLibraryContentSha256": "1e10940e9a2e694dd948540790ad9ab96e06ec2d53301a95827da587be2a58c2"
+    },
+    "diffCheck": {
+      "exitCode": 0
+    },
+    "viewports": [
+      {
+        "width": 390,
+        "height": 1000,
+        "listDocumentOverflowPx": 0,
+        "listWorkspaceOverflowPx": 0,
+        "detailDocumentOverflowPx": 0,
+        "detailWorkspaceOverflowPx": 0
+      },
+      {
+        "width": 834,
+        "height": 1000,
+        "listDocumentOverflowPx": 0,
+        "listWorkspaceOverflowPx": 0,
+        "detailDocumentOverflowPx": 0,
+        "detailWorkspaceOverflowPx": 0
+      },
+      {
+        "width": 1423,
+        "height": 1000,
+        "listDocumentOverflowPx": 0,
+        "listWorkspaceOverflowPx": 0,
+        "detailDocumentOverflowPx": 0,
+        "detailWorkspaceOverflowPx": 0
+      }
+    ],
+    "blockedNetworkRequests": 0,
+    "fixtureMethods": [
+      "GET"
+    ],
+    "runtimePageErrors": 0
+  },
+  "screenshots": [
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/cms-project-library-20261005/storyboard-library-1423.png",
+      "width": 1423,
+      "height": 1000,
+      "sha256": "566efb50ad106d44f23cca1df824c55423eb3f00d4a28203433cc0b0d986649b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/cms-project-library-20261005/storyboard-library-390.png",
+      "width": 390,
+      "height": 1000,
+      "sha256": "dc212dd0a935893621246bcb3389108f7cc39443cb68ab94c203fc80155dbc65"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/cms-project-library-20261005/storyboard-library-834.png",
+      "width": 834,
+      "height": 1000,
+      "sha256": "2759fd65709afad4ebf986d8eb5cc421569d5ad538615229c5257f7f0ac0eedf"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/cms-project-library-20261005/storyboard-library-detail-1423.png",
+      "width": 1423,
+      "height": 1000,
+      "sha256": "fc8a2dca4db699462f799849925b04bec5b595b76af100a6eff452c74e3b8b72"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/cms-project-library-20261005/storyboard-library-detail-390.png",
+      "width": 390,
+      "height": 1000,
+      "sha256": "b7ecd100e461dfd8a6bbc43b1b2d15c97996ac0251c1b71f97d2691510511b79"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/cms-project-library-20261005/storyboard-library-detail-834.png",
+      "width": 834,
+      "height": 1000,
+      "sha256": "3d906758d3124d9e3e6fd04d69f2c07b6c176502f99e14eb864e1d4bd0eb0251"
+    }
+  ],
+  "remainingDependencies": [
+    "Authenticated integrated admin-route rendering remains outside this component-only verification."
+  ]
+}

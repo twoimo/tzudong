@@ -251,3 +251,98 @@ describe('ad banner URL trust boundary', () => {
         expect(source).toContain('tabIndex={currentBannerDestination ? 0 : undefined}');
     });
 });
+
+type PendingBannerReadback = { saved: AdBanner } | { deletedId: string; mediaCleanupFailed: boolean };
+type BannerReadbackResult = { isError: boolean; data?: AdBanner[] };
+const bannerPageSource = readFileSync(new URL('../app/admin/banners/page.tsx', import.meta.url), 'utf8');
+const bannerLogic = [
+    bannerPageSource.slice(bannerPageSource.indexOf('const matchesSavedBanner ='), bannerPageSource.indexOf('const revokeObjectUrlIfNeeded =')),
+    bannerPageSource.slice(bannerPageSource.indexOf('    const applyEditor ='), bannerPageSource.indexOf('    // 이미지 드래그 핸들러')),
+    bannerPageSource.slice(bannerPageSource.indexOf('    const handleDelete ='), bannerPageSource.indexOf('    const inspectorContent = (')),
+].join('\n');
+const makeReadbackHarness = new Function('initialPending', 'getResult', 'selected', 'dirty', new Bun.Transpiler({ loader: 'ts' }).transformSync(`
+    let pendingReadback = initialPending;
+    let actionResult = { status: 'warning' };
+    let editingBanner = selected;
+    let isEditorOpen = true;
+    let pendingEditor = null;
+    let editorTransitions = 0;
+    let writes = 0;
+    const isBusy = false;
+    const isDirty = Boolean(dirty);
+    const bannersError = false;
+    const bannerToDelete = selected;
+    const deleteConfirmation = '배너삭제';
+    const editorRef = { current: { focus() {} } };
+    const requestAnimationFrame = (callback) => callback();
+    const setPendingEditor = (value) => { pendingEditor = value; };
+    const setActionResult = (value) => { actionResult = value; };
+    const setPendingReadback = (value) => { pendingReadback = value; };
+    const openEditPanel = (value) => { editingBanner = value; editorTransitions++; };
+    const resetForm = () => { editingBanner = null; editorTransitions++; };
+    const setIsEditorOpen = (value) => { isEditorOpen = value; };
+    const setIsUploading = () => {};
+    const setBannerToDelete = () => {};
+    const setDeleteConfirmation = () => {};
+    const deleteBanner = { mutateAsync: async () => { writes++; } };
+    const deleteImage = { mutateAsync: async () => {} };
+    const resolveAdBannerMediaStoragePath = () => null;
+    const refetchBanners = async () => getResult();
+    ${bannerLogic}
+    return { applyEditor, requestEditor, closeEditor, handleDelete, refreshBannerList,
+        state: () => ({ pendingReadback, actionResult, editorTransitions, writes, isEditorOpen, pendingEditor }) };
+`)) as (pending: PendingBannerReadback | null, getResult: () => BannerReadbackResult, selected: AdBanner, dirty?: boolean) => {
+    applyEditor: (banner: AdBanner | null, close?: boolean) => void;
+    requestEditor: (banner: AdBanner | null) => void;
+    closeEditor: () => void;
+    handleDelete: () => Promise<void>;
+    refreshBannerList: () => Promise<void>;
+    state: () => { pendingReadback: PendingBannerReadback | null; actionResult: { status: string } | null; editorTransitions: number; writes: number; isEditorOpen: boolean; pendingEditor: { banner: AdBanner | null; close?: boolean } | null };
+};
+
+describe('banner unresolved readback locks', () => {
+    const saved = makeBanner({ id: 'synthetic-saved', title: 'expected title', media_type: 'none' });
+    const other = makeBanner({ id: 'synthetic-other', title: 'other title', media_type: 'none' });
+    test('blocks new/edit/discard transitions and deletion until the expected saved fields match', async () => {
+        let result: BannerReadbackResult = { isError: false, data: [{ ...saved, title: 'old title' }, other] };
+        const pending = { saved };
+        const harness = makeReadbackHarness(pending, () => result, other);
+        harness.applyEditor(null);
+        harness.requestEditor(saved);
+        harness.applyEditor(saved);
+        harness.closeEditor();
+        await harness.handleDelete();
+        await harness.refreshBannerList();
+        expect(harness.state()).toMatchObject({ pendingReadback: pending, actionResult: { status: 'warning' }, editorTransitions: 0, writes: 0, isEditorOpen: true });
+        result = { isError: false, data: [saved, other] };
+        await harness.refreshBannerList();
+        expect(harness.state()).toMatchObject({ pendingReadback: null, actionResult: { status: 'success' }, writes: 0 });
+        const transitions = harness.state().editorTransitions;
+        harness.applyEditor(null);
+        expect(harness.state().editorTransitions).toBe(transitions + 1);
+    });
+    test('does not confirm deletion from failed, absent or still-present list data', async () => {
+        let result: BannerReadbackResult = { isError: true };
+        const pending = { deletedId: saved.id, mediaCleanupFailed: false };
+        const harness = makeReadbackHarness(pending, () => result, other);
+        for (const next of [{ isError: true }, { isError: false }, { isError: false, data: [saved] }]) {
+            result = next;
+            await harness.refreshBannerList();
+            harness.applyEditor(null);
+            harness.closeEditor();
+            await harness.handleDelete();
+            expect(harness.state()).toMatchObject({ pendingReadback: pending, actionResult: { status: 'warning' }, editorTransitions: 0, writes: 0 });
+        }
+        result = { isError: false, data: [other] };
+        await harness.refreshBannerList();
+        expect(harness.state()).toMatchObject({ pendingReadback: null, actionResult: { status: 'success' }, writes: 0 });
+    });
+    test('keeps dirty editor open until discard confirmation closes it without writing', () => {
+        const harness = makeReadbackHarness(null, () => ({ isError: false, data: [saved] }), saved, true);
+        harness.closeEditor();
+        expect(harness.state()).toMatchObject({ isEditorOpen: true, pendingEditor: { banner: null, close: true }, editorTransitions: 0, writes: 0 });
+        const intent = harness.state().pendingEditor!;
+        harness.applyEditor(intent.banner, intent.close);
+        expect(harness.state()).toMatchObject({ isEditorOpen: false, pendingEditor: null, editorTransitions: 1, writes: 0 });
+    });
+});

@@ -1,0 +1,119 @@
+{
+  "schema": "tzudong-storyboard-console-classification-v1",
+  "passed": true,
+  "startedAt": "2026-10-04T21:44:22.463Z",
+  "finishedAt": "2026-10-04T21:44:25.523Z",
+  "scope": "One targeted catalog failure and recovery replay at 834px; no repeated three-width checks.",
+  "originalReceipt": {
+    "path": "verification.json",
+    "sha256": "30d02be93739d9a394dbcc6bb88a14d5534e8a984c64231d8f204f71c3e7fa71",
+    "unchanged": true,
+    "reportedConsoleErrors": 2,
+    "reportedPageErrors": 0,
+    "retainedEventMetadata": false,
+    "individualEventClassification": "unverified",
+    "reasonCode": "ORIGINAL_RECEIPT_HAS_AGGREGATE_COUNTS_ONLY"
+  },
+  "replay": {
+    "checks": [
+      {
+        "phase": "ready_baseline",
+        "consoleErrorCount": 0
+      },
+      {
+        "phase": "injected_catalog_503",
+        "staleRowsRetained": true,
+        "consoleErrorCount": 1
+      },
+      {
+        "phase": "recovery",
+        "recovered": true,
+        "consoleErrorCount": 0
+      }
+    ],
+    "transactions": [
+      {
+        "requestId": "catalog-1",
+        "phase": "bootstrap",
+        "endpoint": "/api/admin/storyboard/production",
+        "method": "GET",
+        "injectedStatus": 200,
+        "observedStatus": null
+      },
+      {
+        "requestId": "catalog-2",
+        "phase": "bootstrap",
+        "endpoint": "/api/admin/storyboard/production",
+        "method": "GET",
+        "injectedStatus": 200,
+        "observedStatus": 200
+      },
+      {
+        "requestId": "catalog-3",
+        "phase": "injected_catalog_503",
+        "endpoint": "/api/admin/storyboard/production",
+        "method": "GET",
+        "injectedStatus": 503,
+        "observedStatus": 503
+      },
+      {
+        "requestId": "catalog-4",
+        "phase": "recovery",
+        "endpoint": "/api/admin/storyboard/production",
+        "method": "GET",
+        "injectedStatus": 200,
+        "observedStatus": 200
+      }
+    ],
+    "consoleEvents": [
+      {
+        "eventId": "console-1",
+        "phase": "injected_catalog_503",
+        "category": "expected_synthetic_catalog_http_503",
+        "requestId": "catalog-3",
+        "endpoint": "/api/admin/storyboard/production",
+        "matchesBrowserResourceFailure": true,
+        "containsStatus503": true,
+        "matchesBlockedByClient": false,
+        "catalogLocationExact": true,
+        "deniedResourceType": null
+      }
+    ],
+    "counts": {
+      "expectedSyntheticCatalogHttp503": 1,
+      "deniedExternalFixtureConsoleErrors": 0,
+      "unverifiedConsoleErrors": 0,
+      "pageErrors": 0
+    }
+  },
+  "safety": {
+    "actualOperatingWrites": 0,
+    "providerCalls": 0,
+    "forwardedPosts": 0,
+    "deniedNonreadAttempts": 0,
+    "externalRequestsBlocked": 2,
+    "syntheticReadPostsFulfilled": 6
+  },
+  "sourceStable": true,
+  "sources": [
+    {
+      "path": "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "sha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53"
+    },
+    {
+      "path": "components/admin/storyboard/StoryboardProjectLibrary.tsx",
+      "sha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45"
+    },
+    {
+      "path": "tests-unit/storyboard-project-library-browser.test.ts",
+      "sha256": "37979ae0d436d207ffdc17062dcafc83e736986c99dfc7ab6c3b872da7b89788"
+    }
+  ],
+  "inference": {
+    "code": "REPLAY_SUPPORTS_EXPECTED_503_EXPLANATION_WITHOUT_RETROACTIVE_EVENT_PROOF",
+    "originalEventAttributionVerified": false
+  },
+  "runnerSha256": "d5155971ffae2f9c864cafb8fdfc4e692efb9a9ba2624f1cc0e4ae39708e50c1",
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0"
+}

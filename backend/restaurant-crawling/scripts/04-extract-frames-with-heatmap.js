@@ -1,3 +1,5 @@
+import { mediaPool, boundedLimit, mapBounded, networkConcurrency } from '../../utils/resource-budget.mjs';
+import { mediaInputHash, frameInputFingerprint, reusableFrames, withFrameWriter, publishFrames } from '../../utils/frame-receipt.mjs';
 /**
  * 유튜브 히트맵 기반 고화질 프레임 추출 및 자동 수집기
  *
@@ -1043,7 +1045,7 @@ function getMetaInfo(channelName, videoId) {
 }
 
 // [수정] params 객체를 통해 quality, fps 등 상세 조건 확인
-function shouldCollect(channelName, videoId, params) {
+async function shouldCollect(channelName, videoId, params) {
     const { force: ignoreExisting, quality, fps, ext } = params;
     const metaInfo = getMetaInfo(channelName, videoId);
     let metaRecollectId = -1;
@@ -1084,94 +1086,42 @@ function shouldCollect(channelName, videoId, params) {
         return true;
     }
 
-    // [추가] "완료 기록" 확인 (CI 환경 등에서 파일이 없어도 기록이 있으면 스킵)
-    if (isFrameCollectionCompleted(channelName, videoId, metaRecollectId)) {
-        return false;
-    }
-
-
-
-    // 이미 프레임이 추출된 상태인지 확인 (recollect_id 비교)
+    // A legacy completion marker or populated directory is not proof of reuse.
+    // Validate all current segments/configurations against the cached media and
+    // the same input recipe used by extractFrames. Missing source/receipt is a miss.
     const framesDir = getFramesOutputDir(channelName, videoId, metaRecollectId);
-
-    // frames 폴더 확인
     if (fs.existsSync(framesDir)) {
-        // [수정] 단순히 폴더가 있는지가 아니라, 요청한 설정(Quality/FPS)의 데이터가 있는지 확인해야 함
-        // 구조: frames/VID/RID/SEG/EXT/CONF
-        // 예: 1/jpg/360p_1.0fps
-
-        // 세그먼트 폴더들을 순회
         try {
-            const segDirs = fs.readdirSync(framesDir).filter(f => !f.startsWith('.')); // 숨김파일 제외
-            if (segDirs.length > 0) {
-                // 하나라도 세그먼트 폴더가 있다면 체크 시작
-                const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
-
-                // 요청된 화질/포맷 중 하나라도 없으면 수집 대상 (False 반환 -> True 반환해야 함)
-                // 모든 요청 포맷이 존재해야 "이미 수집됨"으로 간주
-                const qualities = Array.isArray(quality) ? quality : [quality];
-                const extensions = Array.isArray(ext) ? ext : [ext];
-
-                let isFullyCollected = true;
-
-                for (const q of qualities) {
-                    const configDirName = `${q}_${fpsStr}fps`;
-
-                    for (const e of extensions) {
-                        // 모든 세그먼트에 대해 해당 설정이 존재하는지 확인
-                        // (세그먼트 개수가 몇 개인지는 히트맵 까봐야 알지만, 여기선 존재하는 세그먼트 폴더 기준)
-                        // 적어도 존재하는 세그먼트 폴더들에는 다 있어야 함.
-                        const missingInSegments = segDirs.some(sd => {
-                            const targetPath = path.join(framesDir, sd, e, configDirName);
-                            // 폴더가 없거나 비어있으면 누락된 것
-                            return !fs.existsSync(targetPath) || fs.readdirSync(targetPath).length === 0;
-                        });
-
-                        if (missingInSegments) {
-                            log('info', 'FRAME_OUTPUT_INCOMPLETE');
-                            isFullyCollected = false;
-                            break;
-                        }
-                    }
-                    if (!isFullyCollected) break;
+            const cacheDirectory = requireExistingDirectory(VIDEO_CACHE_DIR);
+            const names = fs.readdirSync(cacheDirectory).filter(name => name.startsWith(videoId));
+            const video = await pickUsableLocalVideoCandidate(videoId, names, cacheDirectory, 'Cache', hasVideoStream);
+            const heatmapPath = getHeatmapOutputPath(channelName, videoId);
+            const heatmap = fs.existsSync(heatmapPath) ? JSON.parse(fs.readFileSync(heatmapPath,'utf8').trim().split('\n').pop()) : null;
+            if (!video || !heatmap || heatmap.recollect_id !== metaRecollectId) return true;
+            const segments = assertFrameSegments((heatmap.most_replayed_markers || []).map(marker => ({
+                startSec: marker.startMillis/1000, endSec: marker.endMillis/1000, peakSec: marker.peakMillis/1000,
+            })));
+            if (!segments.length) return true;
+            const context = await frameSourceContext(video);
+            const qualities = Array.isArray(quality) ? quality : [quality];
+            const extensions = Array.isArray(ext) ? ext : [ext];
+            for (let index=0;index<segments.length;index++) {
+                const startTime=Math.max(0,segments[index].startSec-params.buffer);
+                const endTime=Math.min(context.duration||99999,segments[index].endSec+params.buffer);
+                const segmentName=`${index+1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
+                const fpsStr=Number.isInteger(fps)?`${fps}.0`:`${fps}`;
+                for (const q of qualities) for (const e of extensions) {
+                    const inputHash=frameInputFingerprint({sourceHash:context.sourceHash,toolHash:context.toolHash,
+                        implementationHash:context.implementationHash,startTime,endTime,fps,quality:q,extension:e,
+                        encodingArgs:getFrameEncodingArgs(e),schemaVersion:1});
+                    const directory=path.join(framesDir,segmentName,e,`${q}_${fpsStr}fps`);
+                    if (!await reusableFrames(directory,e,inputHash)) return true;
                 }
-
-                if (isFullyCollected) {
-                    // 데이터는 다 있음. 이제 트리거 체크 (recollect_id 증가 여부 등)
-                    // 하지만 recollect_id가 같은데 데이터가 다 있다면 -> 진짜 다 있는 것.
-                    // 메타 recollect_id가 더 높은지 체크
-                    const heatmapPath = getHeatmapOutputPath(channelName, videoId);
-                    if (fs.existsSync(heatmapPath)) {
-                        try {
-                            const lines = fs.readFileSync(heatmapPath, 'utf-8').trim().split('\n');
-                            if (lines.length > 0) {
-                                const lastLine = lines[lines.length - 1];
-                                const lastData = JSON.parse(lastLine);
-                                const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
-
-                                if (metaRecollectId > lastRecollectId) {
-                                    // ... 트리거 로직 ...
-                                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_daily', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
-                                    const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
-                                    if (shouldTrigger) {
-                                        log('info', 'FRAME_RECOLLECT_TRIGGERED');
-                                        return true;
-                                    }
-                                }
-                            }
-                        } catch (e) { }
-                    }
-                    // 데이터도 있고 트리거도 없으면 스킵
-                    return false;
-                }
-
-                // isFullyCollected가 false면 수집해야 함
-                return true;
             }
-        } catch (e) {
-            logOperationError('warn', 'FRAME_OUTPUT_CHECK_FAILED', e);
-        }
+            return false;
+        } catch { return true; }
     }
+    if (isFrameCollectionCompleted(channelName,videoId,metaRecollectId)) return true;
 
     // [수정] D+7 강제 수집 로직 추가 (메타 수집 정책과 통일)
     // 히트맵/프레임이 아예 없는 신규 영상이면, 스케줄 트리거가 없어도 D+7가 지났으면 수집해야 함
@@ -1580,51 +1530,7 @@ async function fetchAndSaveHeatmap(channel, videoId, _url) {
     assertExistingPathContained(path.dirname(outPath), outPath);
     log('info', 'FRAME_HEATMAP_SAVED');
 
-    // [Fix] 변경 없으면 저장(ID동기화) 후 여기서 종료 -> 프레임 추출 스킵
-    // [수정] 단, 프레임 파일이 실제로 없는 경우에는 히트맵 변경 여부와 관계없이 추출 진행
-    // [개선] shouldCollect()와 동일한 상세 체크 로직 사용 (일관성)
-    if (!isHeatmapChanged) {
-        const recollectId = getMetaRecollectId(channel, videoId);
-        const framesDir = getFramesOutputDir(channel, videoId, recollectId);
-
-        // [일관성] shouldCollect()와 동일한 방식으로 프레임 존재 확인
-        // 단순히 폴더 존재가 아닌, 실제 설정별 데이터 존재 여부 확인
-        let hasFrames = false;
-        if (fs.existsSync(framesDir)) {
-            try {
-                const segDirs = fs.readdirSync(framesDir).filter(f => !f.startsWith('.'));
-                if (segDirs.length > 0) {
-                    // 첫 번째 세그먼트의 구조만 확인 (전체 확인은 비용이 큼)
-                    const firstSegDir = path.join(framesDir, segDirs[0]);
-                    // jpg/360p_1.0fps 같은 구조가 있는지 확인
-                    const extDirs = fs.existsSync(firstSegDir) ? fs.readdirSync(firstSegDir).filter(f => !f.startsWith('.')) : [];
-                    if (extDirs.length > 0) {
-                        const configDirs = fs.existsSync(path.join(firstSegDir, extDirs[0]))
-                            ? fs.readdirSync(path.join(firstSegDir, extDirs[0])).filter(f => !f.startsWith('.'))
-                            : [];
-                        hasFrames = configDirs.length > 0;
-                    }
-                }
-            } catch (e) { }
-        }
-
-        if (hasFrames) {
-            log('info', 'FRAME_EXTRACTION_SKIPPED');
-            return null;
-        } else {
-            log('info', 'FRAME_EXTRACTION_FORCED');
-            // 아래로 계속 진행하여 프레임 추출
-        }
-    }
-
-    // 반환값에 '재사용 가능 여부' 정보를 포함하면 좋겠지만, 
-    // 기존 구조 유지를 위해 마커 리스트만 반환하고, 실제 부분 업데이트 로직은 extractFrames에서 수행
-    // (extractFrames에서 다시 히트맵 파일 읽거나, 여기서 넘겨줄 수 있으면 좋음)
-
-    // [Fix] extractFrames에서 '어떤 게 바뀌었는지' 알기 쉽게 하기 위해 확장된 객체 반환은 호출부 수정이 많이 필요함.
-    // 대신, extractFrames가 '스마트 재사용' 로직을 내장하고 있으므로(폴더 비교), 
-    // 여기서는 최신 마커 리스트만 잘 넘겨주면 됨.
-
+    // Segment receipts decide reuse even when marker timing is unchanged.
     return parsed.mostReplayedMarkers.map(m => ({
         startSec: m.startMillis / 1000,
         endSec: m.endMillis / 1000,
@@ -1717,6 +1623,17 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
         return cachedVideoPath;
     }
 
+    const sharedRoot = process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;
+    if (sharedRoot && fs.existsSync(sharedRoot) && path.resolve(sharedRoot) !== path.resolve(cacheDirectory)) {
+        const sharedDirectory = requireExistingDirectory(sharedRoot);
+        const candidates = fs.readdirSync(sharedDirectory).filter(name => name.startsWith(videoId));
+        const shared = await pickUsableLocalVideoCandidate(videoId, candidates, sharedDirectory, 'SharedCache', validateMediaPath);
+        if (shared) {
+            copyDownloadedVideoToCache(shared, sharedDirectory, cacheDirectory);
+            return resolveContainedPath(cacheDirectory, path.basename(shared));
+        }
+    }
+
     // [추가] GDrive 우선 검색 및 다운로드 로직
     if (safeGDriveRemotePath) {
         // RClone Config 설정 시도 (없으면 로컬 설정 사용)
@@ -1791,6 +1708,33 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
 }
 
 // [수정] quality 인자 추가, compress -> ext 변경
+async function frameSourceContext(videoPath) {
+    let duration = 0;
+    try {
+        const { stdout } = await runProcess(
+            getMediaTools().ffprobePath,
+            ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', videoPath],
+            { timeoutMs: FFPROBE_TIMEOUT_MS }
+        );
+        duration = Number.parseFloat(stdout);
+        if (!Number.isFinite(duration) || duration < 0) duration = 0;
+        log('info', 'FRAME_VIDEO_DURATION_PROBED');
+    } catch (e) {
+        logOperationError('warn', 'FRAME_VIDEO_DURATION_PROBE_FAILED', e);
+    }
+
+    const sourceHash = await mediaInputHash(videoPath);
+    const toolHash = await mediaInputHash(getMediaTools().ffmpegPath);
+    const implementationHash = frameInputFingerprint(await Promise.all([
+        mediaInputHash(__filename),
+        mediaInputHash(fileURLToPath(new URL('../../utils/frame-receipt.mjs', import.meta.url))),
+        mediaInputHash(fileURLToPath(new URL('../../utils/resource-budget.mjs', import.meta.url))),
+        mediaInputHash(fileURLToPath(new URL('../../utils/frame_lock_server.py', import.meta.url))),
+    ]));
+
+    return { duration, sourceHash, toolHash, implementationHash };
+}
+
 async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, bufferSec, ext) {
     const safeSegments = assertFrameSegments(segments);
     const { quality: safeQuality } = assertFrameQuality(quality);
@@ -1806,25 +1750,11 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         return { totalSegments: safeSegments.length, failedSegments: safeSegments.length, totalFrames: 0 };
     }
 
-    let duration = 0;
-    try {
-        const { stdout } = await runProcess(
-            getMediaTools().ffprobePath,
-            ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', videoPath],
-            { timeoutMs: FFPROBE_TIMEOUT_MS }
-        );
-        duration = Number.parseFloat(stdout);
-        if (!Number.isFinite(duration) || duration < 0) duration = 0;
-        log('info', 'FRAME_VIDEO_DURATION_PROBED');
-    } catch (e) {
-        logOperationError('warn', 'FRAME_VIDEO_DURATION_PROBE_FAILED', e);
-    }
-
-    log('info', 'FRAME_IMAGE_FORMAT_CONFIGURED');
+    const { duration, sourceHash, toolHash, implementationHash } = await frameSourceContext(videoPath);
     const encodingArgs = getFrameEncodingArgs(safeExt);
 
-    // [최적화] Promise.all을 사용하여 모든 구간을 병렬로 처리 (CPU 활용 극대화)
-    const results = await Promise.all(safeSegments.map(async (seg, i) => {
+    // Every video's segments share one pool; only a bounded number wait for it.
+    const results = await mapBounded(safeSegments, mediaPool.limit, (seg, i) => mediaPool.run(async () => {
         // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
         const startTime = Math.max(0, seg.startSec - safeBufferSec);
         const endTime = Math.min(duration || 99999, seg.endSec + safeBufferSec);
@@ -1835,12 +1765,15 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
 
         // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/EXT_DIR/QUALITY_FPS/frame_x.ext
         const segDirPath = ensureContainedDirectory(outputDirectory, segDirName, safeExt, configDirName);
+        const inputHash = frameInputFingerprint({ sourceHash, toolHash, implementationHash, startTime, endTime, fps: safeFps, quality: safeQuality, extension: safeExt, encodingArgs, schemaVersion: 1 });
 
-        // [최적화] 이미 프레임이 추출되어 있다면 스킵
-        const existingFiles = fs.readdirSync(segDirPath).filter(fileName => fileName.endsWith(`.${safeExt}`));
-        if (existingFiles.length > 0) {
+        const alreadyCompleted = await reusableFrames(segDirPath, safeExt, inputHash);
+        if (alreadyCompleted) return { failed: false, frameCount: alreadyCompleted };
+        return withFrameWriter(segDirPath, async assertWriter => {
+        const reusedCount = await reusableFrames(segDirPath, safeExt, inputHash);
+        if (reusedCount) {
             log('info', 'FRAME_SEGMENT_SKIPPED');
-            return { failed: false, frameCount: existingFiles.length };
+            return { failed: false, frameCount: reusedCount };
         }
 
         log('info', 'FRAME_SEGMENT_EXTRACTION_STARTED');
@@ -1850,8 +1783,9 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
             segDuration = 1.0 / safeFps; // 최소 1프레임 보장
         }
 
-        const outputPattern = resolveContainedPath(segDirPath, `frame_%d.${safeExt}`);
-        assertPathContainmentBeforeMutation(segDirPath, outputPattern);
+        const staged = fs.mkdtempSync(path.join(segDirPath, '.frames-'));
+        const outputPattern = resolveContainedPath(staged, `frame_%d.${safeExt}`);
+        assertPathContainmentBeforeMutation(staged, outputPattern);
         try {
             await runProcess(
                 getMediaTools().ffmpegPath,
@@ -1869,7 +1803,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
             );
 
             // 파일명 정리: frame_1.ext -> 정확한 시간(초).ext 로 변경
-            const files = fs.readdirSync(segDirPath).filter(fileName => fileName.startsWith('frame_'));
+            const files = fs.readdirSync(staged).filter(fileName => fileName.startsWith('frame_'));
             let count = 0;
             for (const fileName of files) {
                 const match = fileName.match(new RegExp(`^frame_(\\d+)\\.${safeExt}$`));
@@ -1878,12 +1812,12 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                     const timeOffset = (idx - 1) / safeFps;
                     const actualTime = startTime + timeOffset;
                     const newName = `${actualTime.toFixed(2)}.${safeExt}`;
-                    const oldPath = resolveContainedPath(segDirPath, fileName);
-                    const newPath = resolveContainedPath(segDirPath, newName);
-                    assertExistingPathContained(segDirPath, oldPath);
-                    assertPathContainmentBeforeMutation(segDirPath, newPath);
+                    const oldPath = resolveContainedPath(staged, fileName);
+                    const newPath = resolveContainedPath(staged, newName);
+                    assertExistingPathContained(staged, oldPath);
+                    assertPathContainmentBeforeMutation(staged, newPath);
                     fs.renameSync(oldPath, newPath);
-                    assertExistingPathContained(segDirPath, newPath);
+                    assertExistingPathContained(staged, newPath);
                     count++;
                 }
             }
@@ -1891,12 +1825,18 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                 log('error', 'FRAME_SEGMENT_OUTPUT_MISSING');
                 return { failed: true, frameCount: 0 };
             }
+            if (sourceHash !== await mediaInputHash(videoPath)) throw new Error('FRAME_INPUT_CHANGED');
+            assertWriter();
+            count = await publishFrames(segDirPath, staged, safeExt, inputHash);
             log('info', 'FRAME_SEGMENT_EXTRACTION_COMPLETED');
             return { failed: false, frameCount: count };
         } catch (e) {
             logOperationError('error', 'FRAME_SEGMENT_EXTRACTION_FAILED', e);
             return { failed: true, frameCount: 0 };
+        } finally {
+            fs.rmSync(staged, { recursive: true, force: true });
         }
+        });
     }));
 
     return {
@@ -2021,30 +1961,8 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
             }
 
 
-            let allSegmentsExist = true;
-            for (const currentExt of extensions) {
-                const segDirs = fs.readdirSync(outputDir).filter(directoryName => /^\d+_\d+_\d+$/.test(directoryName));
-                let completedSegs = 0;
-                for (const segDirName of segDirs) {
-                    const targetPath = resolveContainedPath(outputDir, segDirName, currentExt, configDirName);
-                    if (fs.existsSync(targetPath)) {
-                        assertExistingPathContained(outputDir, targetPath);
-                        if (fs.readdirSync(targetPath).length > 0) {
-                            completedSegs++;
-                        }
-                    }
-                }
-
-                if (completedSegs < safeSegments.length) {
-                    allSegmentsExist = false;
-                    break;
-                }
-            }
-
-            if (allSegmentsExist) {
-                log('info', 'FRAME_QUALITY_SKIPPED');
-                continue;
-            }
+            // A directory or partial image alone is not a completion receipt.
+            // The segment extractor validates source/configuration and outputs.
 
             videoPath = await acquireVideo(videoId, tempDir, currentQuality);
             if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR)) {
@@ -2275,7 +2193,7 @@ async function processBatch(params, dependencies = {}) {
         }
 
         // [수정] shouldCollect 반환값 처리 (true/false 또는 객체)
-        const result = collectPredicate(channel, videoId, params);
+        const result = await collectPredicate(channel, videoId, params);
 
         if (result === true) {
             pendingUrls.push(url);
@@ -2321,9 +2239,7 @@ async function processBatch(params, dependencies = {}) {
     }
     
     // 명시적 환경변수가 있으면 최우선 적용
-    if (process.env.MAX_JOBS) {
-        CONCURRENCY = parseInt(process.env.MAX_JOBS, 10) || CONCURRENCY;
-    }
+    CONCURRENCY = networkConcurrency(CONCURRENCY);
     
     log('info', 'FRAME_CONCURRENCY_CONFIGURED');
 
@@ -2409,6 +2325,7 @@ if (isDirectExecution) {
 }
 
 export {
+    extractFrames,
     downloadVideo,
     buildYtDlpExecOptions,
     fetchUsableGDriveVideo,
@@ -2418,6 +2335,8 @@ export {
     isHeatmapRateLimitError,
     hasVideoStream,
     pickUsableLocalVideoCandidate,
+    shouldCollect,
+    frameSourceContext,
     processBatch,
     processSingleVideo,
     sortVideoCandidates,

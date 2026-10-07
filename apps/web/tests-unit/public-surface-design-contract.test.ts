@@ -171,12 +171,14 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'storyboard-canvas-toolbar',
   'storyboard-chat-examples',
   'storyboard-chat-attachments',
+  'knowledge-graph-canvas',
+  'insights-controls',
 ] as const;
 
 const LIGHT_TOKEN_LITERALS = [
-  '--background: 38 30% 98%',
-  '--primary: 0 74% 42%',
-  '--radius: 0.5rem',
+  '--background: 220 27% 98%',
+  '--primary: 352 74% 42%',
+  '--radius: 0.625rem',
   '--app-header-height: 56px',
   '--mobile-bottom-nav-height: 60px',
 ] as const;
@@ -232,7 +234,7 @@ function collectOwnerAttributeValues(root: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) {
+        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".next")) {
           continue;
         }
         visit(fullPath);
@@ -260,7 +262,7 @@ function walkCssUnder(root: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) {
+        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".next")) {
           continue;
         }
         visit(fullPath);
@@ -409,7 +411,7 @@ describe('public surface design contract', () => {
       expect(partial).toContain(literal);
     }
     expect(partial).not.toMatch(/^\.dark\s*\{/m);
-    expect(partial).not.toContain('--primary: 0 74% 50%');
+    expect(partial).not.toContain('--primary: 352 78% 62%');
     expect(partial).not.toContain('@import "tailwindcss"');
     expect(partial).not.toContain('@source');
 
@@ -419,7 +421,7 @@ describe('public surface design contract', () => {
       globalsSource.indexOf(':root {'),
     );
     expect(globalsSource).not.toMatch(/@layer base[\s\S]*@import "\.\.\/styles\/light-root-tokens\.css"/);
-    expect(globalsSource).not.toContain('--primary: 0 74% 50%');
+    expect(globalsSource.match(/:root\s*\{[\s\S]*?\n\}/)?.[0]).not.toContain('--primary:');
 
     for (const owner of [
       'app/home-app-globals.css',
@@ -435,7 +437,7 @@ describe('public surface design contract', () => {
       );
     }
 
-    expect(readApp('app/app-globals.css')).toContain('--primary: 0 74% 50%');
+    expect(readApp('app/app-globals.css')).toContain('--primary: 352 78% 62%');
     expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: calc(8.75rem * var(--phi))');
   });
 

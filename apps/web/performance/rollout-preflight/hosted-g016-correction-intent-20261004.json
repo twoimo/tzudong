@@ -1,0 +1,12 @@
+{
+  "kind": "hosted-g016-correction-intent",
+  "at": "2026-10-04T13:12:44.872206+00:00",
+  "sourceSha256": "b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f",
+  "pending": [
+    "20261004123034_g016_onboarding_allowlist_identity_correction.sql"
+  ],
+  "beforeLedgerCount": 76,
+  "rollbackPreviewPassed": true,
+  "rolesAndFunctionsPreservedExceptCatalogIdentity": true,
+  "skipVault": true
+}

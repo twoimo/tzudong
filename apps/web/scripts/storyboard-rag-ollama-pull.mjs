@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { refuseRetiredStoryboardProducer } from './storyboard-gemini-only.mjs';
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -159,6 +160,7 @@ function selectedOllamaModels(names) {
 }
 
 async function main() {
+  if (refuseRetiredStoryboardProducer()) return;
   const allow = hasArg('--yes') || process.env[MANUAL_GATE_ENV] === '1';
   const strict = hasArg('--strict');
   const dryRun = hasArg('--dry-run');

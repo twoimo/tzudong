@@ -1,0 +1,495 @@
+{
+  "kind": "synthetic-fixture-dom-observations",
+  "completeVerification": false,
+  "observations": [
+    {
+      "module": "overview",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "대시보드 (KPI)"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 61,
+        "width": 390
+      }
+    },
+    {
+      "module": "restaurants",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "관리자 데이터 검수"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 27,
+        "width": 390
+      }
+    },
+    {
+      "module": "restaurant-refresh-history",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "맛집 최신화 기록관리",
+          "변경 후보 및 결정 이력",
+          "왼쪽 목록에서 후보를 선택하세요"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 20,
+        "width": 390
+      }
+    },
+    {
+      "module": "submissions",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "제보 관리",
+          "왼쪽 목록에서 제보를 선택하세요"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 21,
+        "width": 390
+      }
+    },
+    {
+      "module": "reviews",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "관리자 데이터 검수"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 27,
+        "width": 390
+      }
+    },
+    {
+      "module": "users",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "사용자 관리",
+          "사용자 목록",
+          "새 계정 안내",
+          "상세·위험 변경"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 20,
+        "width": 390
+      }
+    },
+    {
+      "module": "banners",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "배너 관리",
+          "배너 목록",
+          "새 배너 작성"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 28,
+        "width": 390
+      }
+    },
+    {
+      "module": "insights",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "핵심 인사이트"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 30,
+        "width": 390
+      }
+    },
+    {
+      "module": "pipeline",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "크롤러 파이프라인"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 23,
+        "width": 390
+      }
+    },
+    {
+      "module": "youtube-thumbnail-generator",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "유튜브 썸네일 생성",
+          "유튜브 썸네일 생성 도우미확인 중",
+          "캔버스 편집 / PNG 내보내기1280×720가이드 숨김 문구 추가 PNG 저장"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 61,
+        "skeletons": 0,
+        "width": 390
+      }
+    },
+    {
+      "module": "storyboard",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "2. 주문과 메뉴 맥락 세팅 · 편의점 조합 먹방",
+          "3. 조리 과정과 소리 기대감 · 편의점 조합 먹방",
+          "4. 첫 상차림 전체 공개 · 편의점 조합 먹방",
+          "5. 첫 입 리액션 · 편의점 조합 먹방",
+          "6. 소스와 사이드 조합 변주 · 편의점 조합 먹방",
+          "7. 클라이맥스 히어로 한상 · 편의점 조합 먹방",
+          "8. 거의 완식과 만족감 · 편의점 조합 먹방",
+          "9. 최종 맛 평가와 재방문 포인트 · 편의점 조합 먹방",
+          "10. 다음 소재 연결과 아웃트로 · 편의점 조합 먹방",
+          "스토리보드",
+          "새 제작 요청"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 26,
+        "skeletons": 0,
+        "width": 390
+      }
+    },
+    {
+      "module": "routes",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "맛집 동선 추천",
+          "마커를 선택하세요",
+          "오버레이 제안 검토"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 28,
+        "skeletons": 0,
+        "width": 390
+      }
+    },
+    {
+      "module": "llm",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "운영 보조",
+          "현재 화면 요약",
+          "다음 검수 추천",
+          "위험 액션 체크리스트",
+          "안전 적용 원칙",
+          "운영 원칙"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 17,
+        "skeletons": 0,
+        "width": 390
+      }
+    },
+    {
+      "module": "audit",
+      "viewport": "mobile",
+      "metrics": {
+        "headings": [
+          "감사 로그"
+        ],
+        "height": 844,
+        "overflow": 0,
+        "readyControls": 17,
+        "skeletons": 0,
+        "width": 390
+      }
+    },
+    {
+      "module": "overview",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "대시보드 (KPI)",
+          "쯔양 성과 대시보드"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 61,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "restaurants",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "관리자 데이터 검수",
+          "검증 맛집 1",
+          "검증 맛집 2",
+          "검증 맛집 3",
+          "검증 맛집 4",
+          "검증 맛집 5",
+          "검증 맛집 6",
+          "검증 맛집 7",
+          "검증 맛집 8",
+          "검증 맛집 9",
+          "검증 맛집 10",
+          "검증 맛집 11",
+          "검증 맛집 12",
+          "검증 맛집 13",
+          "검증 맛집 14",
+          "검증 맛집 15",
+          "검증 맛집 16",
+          "검증 맛집 17",
+          "검증 맛집 18",
+          "검증 맛집 19",
+          "검증 맛집 20",
+          "검증 맛집 21",
+          "검증 맛집 22",
+          "검증 맛집 23",
+          "검증 맛집 24",
+          "검증 맛집 25"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 102,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "restaurant-refresh-history",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "맛집 최신화 기록관리",
+          "변경 후보 및 결정 이력",
+          "왼쪽 목록에서 후보를 선택하세요"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 20,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "submissions",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "제보 관리",
+          "왼쪽 목록에서 제보를 선택하세요"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 32,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "reviews",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "리뷰 관리",
+          "왼쪽 목록에서 리뷰를 선택하세요"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 23,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "users",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "사용자 관리",
+          "사용자 목록",
+          "새 계정 안내",
+          "상세·위험 변경"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 32,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "banners",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "배너 관리",
+          "배너 목록",
+          "새 배너 작성"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 28,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "insights",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "핵심 인사이트"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 30,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "pipeline",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "크롤러 파이프라인"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 24,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "youtube-thumbnail-generator",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "유튜브 썸네일 생성",
+          "유튜브 썸네일 생성 도우미확인 중",
+          "캔버스 편집 / PNG 내보내기1280×720가이드 숨김 문구 추가 PNG 저장"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 61,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "storyboard",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "2. 주문과 메뉴 맥락 세팅 · 편의점 조합 먹방",
+          "3. 조리 과정과 소리 기대감 · 편의점 조합 먹방",
+          "4. 첫 상차림 전체 공개 · 편의점 조합 먹방",
+          "5. 첫 입 리액션 · 편의점 조합 먹방",
+          "6. 소스와 사이드 조합 변주 · 편의점 조합 먹방",
+          "7. 클라이맥스 히어로 한상 · 편의점 조합 먹방",
+          "8. 거의 완식과 만족감 · 편의점 조합 먹방",
+          "9. 최종 맛 평가와 재방문 포인트 · 편의점 조합 먹방",
+          "10. 다음 소재 연결과 아웃트로 · 편의점 조합 먹방",
+          "스토리보드",
+          "새 제작 요청"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 26,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "routes",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "맛집 동선 추천",
+          "마커를 선택하세요",
+          "오버레이 제안 검토"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 28,
+        "skeletons": 0,
+        "width": 834
+      }
+    },
+    {
+      "module": "llm",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 17,
+        "skeletons": 18,
+        "width": 834
+      }
+    },
+    {
+      "module": "audit",
+      "viewport": "tablet",
+      "metrics": {
+        "headings": [
+          "관리자 콘솔",
+          "감사 로그"
+        ],
+        "height": 1194,
+        "overflow": 0,
+        "readyControls": 17,
+        "skeletons": 0,
+        "width": 834
+      }
+    }
+  ],
+  "profile": {
+    "actionHeights": [
+      56,
+      56,
+      56,
+      56,
+      56
+    ],
+    "avatarWidth": 64,
+    "height": 844,
+    "identityHeight": 148,
+    "overflow": 0,
+    "width": 390
+  },
+  "limits": [
+    "Initial captures may precede populated state; images need individual visual acceptance.",
+    "Some modules contain empty fixture states.",
+    "No production rendering or performance claim."
+  ]
+}

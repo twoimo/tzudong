@@ -86,6 +86,7 @@ maybe_normalize() {
 }
 
 ensure_gemini_cli_oauth_settings() {
+    [ "${TZUDONG_PIPELINE_ISOLATED:-0}" = "1" ] && return 0
     [ -f "$HOME/.gemini/oauth_creds.json" ] || return 0
     mkdir -p "$HOME/.gemini"
     "$PYTHON_EXE" - <<'PY'
@@ -186,8 +187,7 @@ log_cli_error_tail() {
     local label="$1"
     local file="$2"
     if [ -f "$file" ] && [ -s "$file" ]; then
-        log_warning "$label stderr/output tail:"
-        sed -n '1,80p' "$file" >&2
+        log_warning "$label: LAAJ_PROVIDER_DIAGNOSTIC_SUPPRESSED"
     fi
 }
 
@@ -392,7 +392,10 @@ LAAJ_RESULTS_DIR="$FULL_EVALUATION_PATH/evaluation/laaj_results"
 ERRORS_DIR="$FULL_EVALUATION_PATH/evaluation/errors"
 TRANSCRIPT_DIR="$FULL_CRAWLING_PATH/transcript"
 META_DIR="$FULL_CRAWLING_PATH/meta"
-TEMP_DIR="$SCRIPT_DIR/../temp"
+TEMP_BASE="$SCRIPT_DIR/../temp"
+mkdir -p "$TEMP_BASE"
+TEMP_DIR=$(mktemp -d "$TEMP_BASE/laaj-run.XXXXXX")
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 mkdir -p "$LAAJ_RESULTS_DIR" "$ERRORS_DIR" "$TEMP_DIR"
 
@@ -432,6 +435,9 @@ PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
 # ================================
 # Gemini Health Check (Pre-flight)
 # ================================
+HEALTH_CHECK_DONE=false
+ensure_health_check() {
+    if [ "$HEALTH_CHECK_DONE" = true ] || [ "${LAAJ_SKIP_HEALTH_CHECK:-0}" = "1" ]; then return 0; fi
 log_info "Gemini Health Check (1+1=?) 수행 중..."
 HEALTH_CHECK_PROMPT="$TEMP_DIR/health_check_prompt.txt"
 HEALTH_CHECK_RESPONSE="$TEMP_DIR/health_check_response.json"
@@ -533,17 +539,27 @@ fi
 
 rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
 
+    HEALTH_CHECK_DONE=true
+}
+
 # ================================
 # 처리할 video_id 수집
 # ================================
-mapfile -t VIDEO_IDS < <(
-    find "$RULE_RESULTS_DIR" -maxdepth 1 -type f -name "*.jsonl" -exec basename {} \; \
-        | sed 's/\.jsonl$//' \
-        | sort
-)
 if [ -n "$VIDEO_ID_FILTER" ]; then
     VIDEO_IDS=("$VIDEO_ID_FILTER")
-    log_info "video-id filter: $VIDEO_ID_FILTER"
+else
+SCAN_CACHE_ARGS=(--receipt "$LAAJ_RESULTS_DIR/.receipts/{id}.json"
+    --input "$RULE_RESULTS_DIR/{id}.jsonl" --input "$TRANSCRIPT_DIR/{id}.jsonl"
+    --input "$RULE_RESULTS_DIR/.receipts/{id}.json"
+    --metadata "$META_DIR/{id}.jsonl" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
+    --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
+    --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
+    --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
+    --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
+    --setting "$AGY_MODEL_LABEL" --output "$LAAJ_RESULTS_DIR/{id}.jsonl")
+PENDING_IDS=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" scan --scan-dir "$RULE_RESULTS_DIR" --scan-additional-dir "$LAAJ_RESULTS_DIR" "${SCAN_CACHE_ARGS[@]}") || exit 1
+VIDEO_IDS=()
+if [ -n "$PENDING_IDS" ]; then mapfile -t VIDEO_IDS <<< "$PENDING_IDS"; fi
 fi
 
 TOTAL=${#VIDEO_IDS[@]}
@@ -561,6 +577,21 @@ TOTAL_GEMINI_TIME=0
 
 
 
+if [ "${LAAJ_CHILD:-0}" = "0" ]; then
+    LAAJ_JOBS="${GEMINI_MAX_INFLIGHT:-1}"
+    if ! [[ "$LAAJ_JOBS" =~ ^[1-8]$ ]]; then log_error "LAAJ_JOBS_INVALID"; exit 1; fi
+    if [ "$TOTAL" -gt 0 ]; then
+        PARALLEL_ARGS=(--jobs "$LAAJ_JOBS" --channel "$CHANNEL" --crawling-path "$FULL_CRAWLING_PATH"
+            --evaluation-path "$FULL_EVALUATION_PATH" --script "$SCRIPT_DIR/11-laaj-evaluation.sh")
+        if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then PARALLEL_ARGS+=(--max-items "${LIVE_MAX_NEW_ITEMS:-1}"); fi
+        if [ "$FORCE_CLI_FALLBACK" = true ]; then PARALLEL_ARGS+=(--oauth-only); fi
+        # Default sequential and OAuth work use the same video lock as API pools.
+        # Admission happens inside that lock before a provider call or receipt check.
+        printf '%s\n' "${VIDEO_IDS[@]}" | LAAJ_BASH="$BASH" "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/run_parallel_laaj.py" run "${PARALLEL_ARGS[@]}"
+        exit $?
+    fi
+fi
+
 # ================================
 # 메인 루프 (Main Loop)
 # ================================
@@ -573,8 +604,22 @@ for i in "${!VIDEO_IDS[@]}"; do
     ERROR_FILE="$ERRORS_DIR/${VIDEO_ID}.jsonl"
     TRANSCRIPT_FILE="$TRANSCRIPT_DIR/${VIDEO_ID}.jsonl"
     
-    # 이미 처리된 파일 스킵
-    if [ -f "$OUTPUT_FILE" ]; then
+    META_FILE="$META_DIR/${VIDEO_ID}.jsonl"
+    RECEIPT_FILE="$LAAJ_RESULTS_DIR/.receipts/${VIDEO_ID}.json"
+    CACHE_ARGS=(--receipt "$RECEIPT_FILE" --input "$RULE_FILE" --input "$TRANSCRIPT_FILE"
+        --input "$RULE_RESULTS_DIR/.receipts/${VIDEO_ID}.json"
+        --metadata "$META_FILE" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
+        --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
+        --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
+        --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
+        --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
+        --setting "$AGY_MODEL_LABEL" --output "$OUTPUT_FILE")
+    if ! "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" certified --receipt "$RULE_RESULTS_DIR/.receipts/${VIDEO_ID}.json" --output "$RULE_FILE"; then
+        log_error "RULE_RESULT_UNCERTIFIED"
+        exit 1
+    fi
+    # Existing output alone cannot certify the current inputs/model/prompt.
+    if "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" check "${CACHE_ARGS[@]}"; then
         SKIPPED_EXISTS=$((SKIPPED_EXISTS + 1))
         if [ $((SKIPPED_EXISTS % 50)) -eq 1 ]; then
             log_warning "[$INDEX/$TOTAL] 이미 처리됨 (누적 스킵 ${SKIPPED_EXISTS}개)"
@@ -591,6 +636,8 @@ for i in "${!VIDEO_IDS[@]}"; do
         fi
     fi
     
+    INPUT_HASH=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" fingerprint "${CACHE_ARGS[@]}") || INPUT_HASH=""
+
     # 재시도 로직
     if [ -f "$ERROR_FILE" ]; then
         rm "$ERROR_FILE"
@@ -676,6 +723,8 @@ for i in "${!VIDEO_IDS[@]}"; do
         continue
     fi
     
+    ensure_health_check
+
     log_info "[$INDEX/$TOTAL] 평가 진행: $VIDEO_ID (${RESTAURANT_COUNT}개 음식점)"
     
     # ---------------------------
@@ -737,6 +786,13 @@ $TRANSCRIPT
         fi
     fi
 
+    # Parallel children use only the project-budgeted API. The parent drains
+    # active API jobs before serializing any OAuth fallback under a shared lock.
+    if [ "${LAAJ_CHILD:-0}" = "1" ] && [ "$GEMINI_SUCCESS" = false ]; then
+        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
+        exit 75
+    fi
+
     # 2. Antigravity CLI 시도 (Node 실패 또는 Sticky 모드일 때)
     if [ "$GEMINI_SUCCESS" = false ] && [ "$HAS_AGY_CLI" = true ]; then
         log_debug "Antigravity CLI 호출 (모델: ${AGY_MODEL_LABEL})"
@@ -747,7 +803,7 @@ $TRANSCRIPT
         else
             log_warning "Antigravity CLI 호출 실패 - Gemini CLI OAuth fallback 확인"
             if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
-                cat "$TEMP_STDERR" >&2
+                log_warning "LAAJ_PROVIDER_DIAGNOSTIC_SUPPRESSED"
             fi
             if is_quota_error "$TEMP_STDERR" || is_quota_error "$TEMP_RESPONSE"; then
                 log_warning "Antigravity CLI 할당량 소진 감지 -> Gemini CLI OAuth($CURRENT_MODEL)로 전환"
@@ -809,6 +865,7 @@ $TRANSCRIPT
                 --rule-file "$win_rule_file"; then
                 
                 SUCCESS=$((SUCCESS + 1))
+                "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" complete "${CACHE_ARGS[@]}" --expected "$INPUT_HASH" || { log_error "STAGE_RECEIPT_FAILED"; exit 1; }
                 PARSE_SUCCESS=true
                 log_success "완료 [$INDEX/$TOTAL] - ${GEMINI_DURATION}s"
                 break
@@ -816,6 +873,10 @@ $TRANSCRIPT
                 # 파싱 실패 시 JSON 전용 프롬프트로 같은 provider를 먼저 재요청하고,
                 # agy 응답이 계속 파싱 불가하면 Gemini CLI OAuth로 명시적으로 전환한다.
                 if [ $PARSE_ATTEMPT -lt 3 ]; then
+                    if [ "${LAAJ_CHILD:-0}" = "1" ]; then
+                        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
+                        exit 75
+                    fi
                     log_warning "파싱 실패 (${PARSE_ATTEMPT}/3, provider=${LAST_SUCCESS_PROVIDER:-unknown}) - JSON 전용 재요청..."
                     sleep_before_parse_retry
                     RETRY_PROMPT="$TEMP_DIR/eval_prompt_${VIDEO_ID}_json_retry_${PARSE_ATTEMPT}.txt"
@@ -881,7 +942,8 @@ $TRANSCRIPT
     
     PROCESSED=$((PROCESSED + 1))
     rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
-    sleep 2 # Rate Limit
+    # Node calls have project admission; keep the historical CLI fallback pace.
+    if [ "$LAST_SUCCESS_PROVIDER" != "node" ]; then sleep 2; fi
 done
 
 log_info "============================================================"
@@ -889,3 +951,5 @@ log_info "LAAJ 평가 완료: $CHANNEL"
 log_info "성공: $SUCCESS / 실패: $FAILED / 스킵: $SKIPPED_EXISTS / rule 미대상: $SKIPPED_NO_RULE / 자막 없음: $SKIPPED_NO_TRANSCRIPT"
 log_info "Gemini 호출: $GEMINI_CALLS회 ($(format_duration $TOTAL_GEMINI_TIME))"
 log_info "============================================================"
+
+if [ "$FAILED" -gt 0 ]; then exit 1; fi

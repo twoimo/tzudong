@@ -1,0 +1,4471 @@
+{
+  "kind": "local_native_postgresql_storage_comparison",
+  "liveEvidenceEligible": false,
+  "formalPerformanceClaim": "not_established",
+  "environment": {
+    "postgres": "15.8",
+    "python": "3.14.7",
+    "transport": "private Unix socket; REST-style reads use a local SQL adapter",
+    "fullProductionCatalogLoaded": false
+  },
+  "sourceSha256": "b6387d7ce640ded987444c051fa32c18828c8a4d691b50efe2507b93704dd5ec",
+  "corpusSha256": "73c831c808a32834b16008851dee955d2483e7f639ae675a1f2089b5d7033587",
+  "confidenceMethod": "10000 paired percentile bootstrap draws; seed 20261002; pooled same-source runs",
+  "comparisons": {
+    "change-five": {
+      "1": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1737.9613749217242,
+          "afterMs": 204.71979095600545,
+          "absoluteReductionMs": 1533.2415839657187,
+          "reductionPercent": 88.22069385948086,
+          "reduction95CI": [
+            84.0049261744092,
+            91.4537472898963
+          ],
+          "experimentalNoiseBudgetMs": 255.35316998139024,
+          "mediansMs": [
+            1737.9613749217242,
+            204.71979095600545
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 2060.7731249183416,
+          "afterMs": 267.6285421475768,
+          "absoluteReductionMs": 1793.1445827707648,
+          "reductionPercent": 87.01319718743025,
+          "reduction95CI": [
+            84.60100747868286,
+            88.73526769678287
+          ],
+          "experimentalNoiseBudgetMs": 255.35316998139024,
+          "mediansMs": [
+            1737.9613749217242,
+            204.71979095600545
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 2139.853584114462,
+          "afterMs": 327.09620893001556,
+          "absoluteReductionMs": 1812.7573751844466,
+          "reductionPercent": 84.71408458231603,
+          "reduction95CI": [
+            84.71408458231603,
+            87.94798995330262
+          ],
+          "experimentalNoiseBudgetMs": 255.35316998139024,
+          "mediansMs": [
+            1737.9613749217242,
+            204.71979095600545
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              2658
+            ],
+            "writeRpcCalls": [
+              1329
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              19659883,
+              19659907,
+              19659908,
+              19659920,
+              19659922,
+              19659923
+            ],
+            "writeBytes": [
+              5320763
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5324074,
+              5324092,
+              5324094,
+              5324098,
+              5324104,
+              5324108
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              1329
+            ],
+            "writeRpcCalls": [
+              5
+            ],
+            "writeRows": [
+              5
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              17852
+            ],
+            "rpcReadbackRows": [
+              5
+            ],
+            "rpcReadbackBytes": [
+              17813,
+              17814,
+              17815
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 643.5639999999978,
+            "afterMs": 117.02500000000171,
+            "absoluteReductionMs": 526.5389999999961,
+            "reductionPercent": 81.81610531353492,
+            "reduction95CI": [
+              77.4203088494183,
+              86.81622327777342
+            ],
+            "experimentalNoiseBudgetMs": 82.20600000000661,
+            "mediansMs": [
+              643.5639999999978,
+              117.02500000000171
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 778.5989999999998,
+            "afterMs": 145.0630000000004,
+            "absoluteReductionMs": 633.5359999999994,
+            "reductionPercent": 81.36871483266734,
+            "reduction95CI": [
+              77.45942905445288,
+              83.23683441530507
+            ],
+            "experimentalNoiseBudgetMs": 82.20600000000661,
+            "mediansMs": [
+              643.5639999999978,
+              117.02500000000171
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 790.3059999999992,
+            "afterMs": 172.2140000000003,
+            "absoluteReductionMs": 618.091999999999,
+            "reductionPercent": 78.20919998076688,
+            "reduction95CI": [
+              78.20919998076688,
+              82.17413585170303
+            ],
+            "experimentalNoiseBudgetMs": 82.20600000000661,
+            "mediansMs": [
+              643.5639999999978,
+              117.02500000000171
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 4965.8380579869445
+      },
+      "50": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1063.5479588527232,
+          "afterMs": 142.63979205861688,
+          "absoluteReductionMs": 920.9081667941064,
+          "reductionPercent": 86.58830653838253,
+          "reduction95CI": [
+            83.09093441655989,
+            91.1610808607967
+          ],
+          "experimentalNoiseBudgetMs": 222.293583676219,
+          "mediansMs": [
+            1063.5479588527232,
+            142.63979205861688
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1508.7784579955041,
+          "afterMs": 172.10937500931323,
+          "absoluteReductionMs": 1336.669082986191,
+          "reductionPercent": 88.5928000829247,
+          "reduction95CI": [
+            81.86317098106443,
+            90.91184144707711
+          ],
+          "experimentalNoiseBudgetMs": 222.293583676219,
+          "mediansMs": [
+            1063.5479588527232,
+            142.63979205861688
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1569.5125830825418,
+          "afterMs": 192.89387483149767,
+          "absoluteReductionMs": 1376.6187082510442,
+          "reductionPercent": 87.70995040685486,
+          "reduction95CI": [
+            85.46611533423417,
+            89.96435780090107
+          ],
+          "experimentalNoiseBudgetMs": 222.293583676219,
+          "mediansMs": [
+            1063.5479588527232,
+            142.63979205861688
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              197
+            ],
+            "writeRpcCalls": [
+              27
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11413166,
+              11413171,
+              11413172,
+              11413190,
+              11413193,
+              11413195,
+              11413200
+            ],
+            "writeBytes": [
+              5320763
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5252415,
+              5252515,
+              5252536,
+              5252565,
+              5252586
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              5
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              17852
+            ],
+            "rpcReadbackRows": [
+              5
+            ],
+            "rpcReadbackBytes": [
+              17590,
+              17595
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 319.1450000000025,
+            "afterMs": 93.07000000000087,
+            "absoluteReductionMs": 226.0750000000016,
+            "reductionPercent": 70.83770699838627,
+            "reduction95CI": [
+              68.7215800053347,
+              72.6669695592925
+            ],
+            "experimentalNoiseBudgetMs": 22.015999999993596,
+            "mediansMs": [
+              319.1450000000025,
+              93.07000000000087
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 337.3939999999998,
+            "afterMs": 96.16299999999889,
+            "absoluteReductionMs": 241.2310000000009,
+            "reductionPercent": 71.49830761661471,
+            "reduction95CI": [
+              69.47566711869462,
+              72.368506849559
+            ],
+            "experimentalNoiseBudgetMs": 22.015999999993596,
+            "mediansMs": [
+              319.1450000000025,
+              93.07000000000087
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 352.4860000000025,
+            "afterMs": 107.59399999999886,
+            "absoluteReductionMs": 244.89200000000363,
+            "reductionPercent": 69.47566711869462,
+            "reduction95CI": [
+              69.47566711869462,
+              72.368506849559
+            ],
+            "experimentalNoiseBudgetMs": 22.015999999993596,
+            "mediansMs": [
+              319.1450000000025,
+              93.07000000000087
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 7721.833862496362
+      },
+      "100": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1276.0009169578552,
+          "afterMs": 162.47633402235806,
+          "absoluteReductionMs": 1113.5245829354972,
+          "reductionPercent": 87.26675413292635,
+          "reduction95CI": [
+            83.66433276713147,
+            89.68575122719588
+          ],
+          "experimentalNoiseBudgetMs": 469.307582359761,
+          "mediansMs": [
+            1276.0009169578552,
+            162.47633402235806
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1575.260957935825,
+          "afterMs": 179.37558284029365,
+          "absoluteReductionMs": 1395.8853750955313,
+          "reductionPercent": 88.61296079632787,
+          "reduction95CI": [
+            86.14178243398986,
+            93.90711281710917
+          ],
+          "experimentalNoiseBudgetMs": 469.307582359761,
+          "mediansMs": [
+            1276.0009169578552,
+            162.47633402235806
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 2666.6558750439435,
+          "afterMs": 195.6421670038253,
+          "absoluteReductionMs": 2471.013708040118,
+          "reductionPercent": 92.66338904713,
+          "reduction95CI": [
+            86.14178243398986,
+            93.73624810342335
+          ],
+          "experimentalNoiseBudgetMs": 469.307582359761,
+          "mediansMs": [
+            1276.0009169578552,
+            162.47633402235806
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              194
+            ],
+            "writeRpcCalls": [
+              14
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11376658,
+              11376707,
+              11376708,
+              11376709,
+              11376714,
+              11376735
+            ],
+            "writeBytes": [
+              5320763
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251350,
+              5251650,
+              5251750,
+              5251821,
+              5251950
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              5
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              17852
+            ],
+            "rpcReadbackRows": [
+              5
+            ],
+            "rpcReadbackBytes": [
+              17585,
+              17590,
+              17595
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 347.66299999999717,
+            "afterMs": 95.30599999999723,
+            "absoluteReductionMs": 252.35699999999994,
+            "reductionPercent": 72.5866715756356,
+            "reduction95CI": [
+              67.99070862087969,
+              74.73230423049738
+            ],
+            "experimentalNoiseBudgetMs": 29.991999999985808,
+            "mediansMs": [
+              347.66299999999717,
+              95.30599999999723
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 359.08299999999826,
+            "afterMs": 104.45400000000049,
+            "absoluteReductionMs": 254.62899999999777,
+            "reductionPercent": 70.91090360724372,
+            "reduction95CI": [
+              68.62191259926918,
+              74.73230423049738
+            ],
+            "experimentalNoiseBudgetMs": 29.991999999985808,
+            "mediansMs": [
+              347.66299999999717,
+              95.30599999999723
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 375.9100000000011,
+            "afterMs": 109.09000000000191,
+            "absoluteReductionMs": 266.8199999999992,
+            "reductionPercent": 70.97975579260951,
+            "reduction95CI": [
+              68.71172858449843,
+              74.04724535128086
+            ],
+            "experimentalNoiseBudgetMs": 29.991999999985808,
+            "mediansMs": [
+              347.66299999999717,
+              95.30599999999723
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 7409.035159391064
+      },
+      "200": {
+        "p50": {
+          "samples": 14,
+          "statistic": "p50",
+          "beforeMs": 891.4832079317421,
+          "afterMs": 144.67962505295873,
+          "absoluteReductionMs": 746.8035828787833,
+          "reductionPercent": 83.77090855265595,
+          "reduction95CI": [
+            80.73813769351506,
+            86.54602460258465
+          ],
+          "experimentalNoiseBudgetMs": 140.3281253296882,
+          "mediansMs": [
+            917.0716244261712,
+            148.3278750674799
+          ]
+        },
+        "p75": {
+          "samples": 14,
+          "statistic": "p75",
+          "beforeMs": 1034.346834057942,
+          "afterMs": 183.03641607053578,
+          "absoluteReductionMs": 851.3104179874063,
+          "reductionPercent": 82.30415465647548,
+          "reduction95CI": [
+            74.73176162478359,
+            85.9589825299834
+          ],
+          "experimentalNoiseBudgetMs": 140.3281253296882,
+          "mediansMs": [
+            917.0716244261712,
+            148.3278750674799
+          ]
+        },
+        "p95": {
+          "samples": 14,
+          "statistic": "p95",
+          "beforeMs": 1258.8790410663933,
+          "afterMs": 265.797832980752,
+          "absoluteReductionMs": 993.0812080856413,
+          "reductionPercent": 78.88614995483638,
+          "reduction95CI": [
+            76.35891334484974,
+            84.30305574375804
+          ],
+          "experimentalNoiseBudgetMs": 140.3281253296882,
+          "mediansMs": [
+            917.0716244261712,
+            148.3278750674799
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11258462,
+              11258467,
+              11258472,
+              11258497,
+              11258504,
+              11258517,
+              11258520
+            ],
+            "writeBytes": [
+              5320763
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5250952,
+              5251152,
+              5251352,
+              5251423,
+              5251552
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              5
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              17852
+            ],
+            "rpcReadbackRows": [
+              5
+            ],
+            "rpcReadbackBytes": [
+              17590,
+              17595
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 14,
+            "statistic": "p50",
+            "beforeMs": 330.21100000000206,
+            "afterMs": 92.36999999999895,
+            "absoluteReductionMs": 237.8410000000031,
+            "reductionPercent": 72.02697669066191,
+            "reduction95CI": [
+              67.9581910177244,
+              74.91758489555909
+            ],
+            "experimentalNoiseBudgetMs": 37.66899999999751,
+            "mediansMs": [
+              332.5054999999999,
+              95.09349999999905
+            ]
+          },
+          "p75": {
+            "samples": 14,
+            "statistic": "p75",
+            "beforeMs": 350.73300000000177,
+            "afterMs": 102.87500000000094,
+            "absoluteReductionMs": 247.85800000000083,
+            "reductionPercent": 70.6685712493548,
+            "reduction95CI": [
+              65.57041726920119,
+              73.12380159854777
+            ],
+            "experimentalNoiseBudgetMs": 37.66899999999751,
+            "mediansMs": [
+              332.5054999999999,
+              95.09349999999905
+            ]
+          },
+          "p95": {
+            "samples": 14,
+            "statistic": "p95",
+            "beforeMs": 357.01699999999903,
+            "afterMs": 121.87100000000228,
+            "absoluteReductionMs": 235.14599999999675,
+            "reductionPercent": 65.8640905054934,
+            "reduction95CI": [
+              65.25248550891942,
+              71.1848455395678
+            ],
+            "experimentalNoiseBudgetMs": 37.66899999999751,
+            "mediansMs": [
+              332.5054999999999,
+              95.09349999999905
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 7260.850209653637
+      }
+    },
+    "new-fifty": {
+      "1": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1571.7347918543965,
+          "afterMs": 195.3156660310924,
+          "absoluteReductionMs": 1376.419125823304,
+          "reductionPercent": 87.57324282421393,
+          "reduction95CI": [
+            80.61835982424537,
+            93.78374865373182
+          ],
+          "experimentalNoiseBudgetMs": 830.5307482369244,
+          "mediansMs": [
+            1571.7347918543965,
+            195.3156660310924
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 3135.511083062738,
+          "afterMs": 235.78300001099706,
+          "absoluteReductionMs": 2899.728083051741,
+          "reductionPercent": 92.48023707252578,
+          "reduction95CI": [
+            85.08286985429214,
+            93.85647894797033
+          ],
+          "experimentalNoiseBudgetMs": 830.5307482369244,
+          "mediansMs": [
+            1571.7347918543965,
+            195.3156660310924
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 3179.2137501761317,
+          "afterMs": 267.3362090718001,
+          "absoluteReductionMs": 2911.8775411043316,
+          "reductionPercent": 91.59112189115974,
+          "reduction95CI": [
+            87.76811831276316,
+            93.11731292379126
+          ],
+          "experimentalNoiseBudgetMs": 830.5307482369244,
+          "mediansMs": [
+            1571.7347918543965,
+            195.3156660310924
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              2758
+            ],
+            "writeRpcCalls": [
+              1379
+            ],
+            "writeRows": [
+              1379
+            ],
+            "readBytes": [
+              19659884,
+              19659896,
+              19659912,
+              19659939,
+              19659941,
+              19659986,
+              19660027
+            ],
+            "writeBytes": [
+              5519662
+            ],
+            "rpcReadbackRows": [
+              1379
+            ],
+            "rpcReadbackBytes": [
+              5530277,
+              5530295,
+              5530298,
+              5530301,
+              5530307,
+              5530318,
+              5530327
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              1429
+            ],
+            "writeRpcCalls": [
+              50
+            ],
+            "writeRows": [
+              50
+            ],
+            "readBytes": [
+              5241945
+            ],
+            "writeBytes": [
+              199004
+            ],
+            "rpcReadbackRows": [
+              50
+            ],
+            "rpcReadbackBytes": [
+              206304
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 572.9850000000027,
+            "afterMs": 106.58400000000512,
+            "absoluteReductionMs": 466.4009999999976,
+            "reductionPercent": 81.39846592842665,
+            "reduction95CI": [
+              74.89955162173118,
+              88.699404921461
+            ],
+            "experimentalNoiseBudgetMs": 229.35000000001082,
+            "mediansMs": [
+              572.9850000000027,
+              106.58400000000512
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 932.6500000000024,
+            "afterMs": 112.07300000000231,
+            "absoluteReductionMs": 820.577,
+            "reductionPercent": 87.98338068943312,
+            "reduction95CI": [
+              79.57147320221999,
+              88.75538916756803
+            ],
+            "experimentalNoiseBudgetMs": 229.35000000001082,
+            "mediansMs": [
+              572.9850000000027,
+              106.58400000000512
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 976.0320000000036,
+            "afterMs": 122.37499999999812,
+            "absoluteReductionMs": 853.6570000000054,
+            "reductionPercent": 87.46198895118216,
+            "reduction95CI": [
+              81.94774101517517,
+              88.75538916756803
+            ],
+            "experimentalNoiseBudgetMs": 229.35000000001082,
+            "mediansMs": [
+              572.9850000000027,
+              106.58400000000512
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 5848.598075076162
+      },
+      "50": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 655.3885419853032,
+          "afterMs": 112.57783300243318,
+          "absoluteReductionMs": 542.81070898287,
+          "reductionPercent": 82.82273402867062,
+          "reduction95CI": [
+            77.4450698286581,
+            84.9993514272132
+          ],
+          "experimentalNoiseBudgetMs": 59.12224994972348,
+          "mediansMs": [
+            655.3885419853032,
+            112.57783300243318
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 681.0133340768516,
+          "afterMs": 144.2785409744829,
+          "absoluteReductionMs": 536.7347931023687,
+          "reductionPercent": 78.81413861447224,
+          "reduction95CI": [
+            77.09347352522971,
+            83.89944662859168
+          ],
+          "experimentalNoiseBudgetMs": 59.12224994972348,
+          "mediansMs": [
+            655.3885419853032,
+            112.57783300243318
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 699.2171660531312,
+          "afterMs": 150.12674988247454,
+          "absoluteReductionMs": 549.0904161706567,
+          "reductionPercent": 78.52931003826829,
+          "reduction95CI": [
+            77.48282830912048,
+            83.20145174760268
+          ],
+          "experimentalNoiseBudgetMs": 59.12224994972348,
+          "mediansMs": [
+            655.3885419853032,
+            112.57783300243318
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              207
+            ],
+            "writeRpcCalls": [
+              28
+            ],
+            "writeRows": [
+              1379
+            ],
+            "readBytes": [
+              11413202,
+              11413207,
+              11413216,
+              11413219,
+              11413220
+            ],
+            "writeBytes": [
+              5519662
+            ],
+            "rpcReadbackRows": [
+              1379
+            ],
+            "rpcReadbackBytes": [
+              5456021,
+              5456071,
+              5456121,
+              5456142
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              37
+            ],
+            "writeRpcCalls": [
+              2
+            ],
+            "writeRows": [
+              50
+            ],
+            "readBytes": [
+              5241765
+            ],
+            "writeBytes": [
+              199004
+            ],
+            "rpcReadbackRows": [
+              50
+            ],
+            "rpcReadbackBytes": [
+              203666
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 266.0070000000001,
+            "afterMs": 69.07900000000011,
+            "absoluteReductionMs": 196.928,
+            "reductionPercent": 74.03113451901639,
+            "reduction95CI": [
+              66.97052434382287,
+              76.85077186963983
+            ],
+            "experimentalNoiseBudgetMs": 35.00599999999986,
+            "mediansMs": [
+              266.0070000000001,
+              69.07900000000011
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 276.9250000000003,
+            "afterMs": 82.866,
+            "absoluteReductionMs": 194.0590000000003,
+            "reductionPercent": 70.07637446962177,
+            "reduction95CI": [
+              66.20464874984502,
+              75.71436309470076
+            ],
+            "experimentalNoiseBudgetMs": 35.00599999999986,
+            "mediansMs": [
+              266.0070000000001,
+              69.07900000000011
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 279.304,
+            "afterMs": 89.89799999999981,
+            "absoluteReductionMs": 189.40600000000018,
+            "reductionPercent": 67.8135651476528,
+            "reduction95CI": [
+              67.46268440635274,
+              74.6648812763155
+            ],
+            "experimentalNoiseBudgetMs": 35.00599999999986,
+            "mediansMs": [
+              266.0070000000001,
+              69.07900000000011
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 9557.900923352767
+      },
+      "100": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 628.1518330797553,
+          "afterMs": 128.50116682238877,
+          "absoluteReductionMs": 499.65066625736654,
+          "reductionPercent": 79.54297670479404,
+          "reduction95CI": [
+            76.21298164987243,
+            81.51066200463087
+          ],
+          "experimentalNoiseBudgetMs": 110.52916664630175,
+          "mediansMs": [
+            628.1518330797553,
+            128.50116682238877
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 680.4407080635428,
+          "afterMs": 138.6984169948846,
+          "absoluteReductionMs": 541.7422910686582,
+          "reductionPercent": 79.61638459438961,
+          "reduction95CI": [
+            77.48667507468382,
+            81.4778822091232
+          ],
+          "experimentalNoiseBudgetMs": 110.52916664630175,
+          "mediansMs": [
+            628.1518330797553,
+            128.50116682238877
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 693.7714589294046,
+          "afterMs": 145.07775008678436,
+          "absoluteReductionMs": 548.6937088426203,
+          "reductionPercent": 79.08853870831449,
+          "reduction95CI": [
+            77.62164023269106,
+            81.07853726632605
+          ],
+          "experimentalNoiseBudgetMs": 110.52916664630175,
+          "mediansMs": [
+            628.1518330797553,
+            128.50116682238877
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              203
+            ],
+            "writeRpcCalls": [
+              14
+            ],
+            "writeRows": [
+              1379
+            ],
+            "readBytes": [
+              11376710,
+              11376744,
+              11376746,
+              11376753
+            ],
+            "writeBytes": [
+              5519662
+            ],
+            "rpcReadbackRows": [
+              1379
+            ],
+            "rpcReadbackBytes": [
+              5455100,
+              5455171,
+              5455300,
+              5455400
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              36
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              50
+            ],
+            "readBytes": [
+              5241763
+            ],
+            "writeBytes": [
+              199004
+            ],
+            "rpcReadbackRows": [
+              50
+            ],
+            "rpcReadbackBytes": [
+              203610
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 265.1950000000003,
+            "afterMs": 84.05100000000054,
+            "absoluteReductionMs": 181.14399999999972,
+            "reductionPercent": 68.3059635362656,
+            "reduction95CI": [
+              64.29342096086718,
+              71.44029767092007
+            ],
+            "experimentalNoiseBudgetMs": 49.42400000000009,
+            "mediansMs": [
+              265.1950000000003,
+              84.05100000000054
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 276.54699999999985,
+            "afterMs": 87.03799999999973,
+            "absoluteReductionMs": 189.50900000000013,
+            "reductionPercent": 68.5268688505029,
+            "reduction95CI": [
+              64.65222116836759,
+              71.65533568046601
+            ],
+            "experimentalNoiseBudgetMs": 49.42400000000009,
+            "mediansMs": [
+              265.1950000000003,
+              84.05100000000054
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 296.53200000000004,
+            "afterMs": 87.6209999999995,
+            "absoluteReductionMs": 208.91100000000054,
+            "reductionPercent": 70.45141839666562,
+            "reduction95CI": [
+              67.61662243970244,
+              70.71648253814098
+            ],
+            "experimentalNoiseBudgetMs": 49.42400000000009,
+            "mediansMs": [
+              265.1950000000003,
+              84.05100000000054
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 9942.435031907102
+      },
+      "200": {
+        "p50": {
+          "samples": 14,
+          "statistic": "p50",
+          "beforeMs": 576.4050830621272,
+          "afterMs": 110.6910000089556,
+          "absoluteReductionMs": 465.71408305317163,
+          "reductionPercent": 80.79631785672076,
+          "reduction95CI": [
+            78.75133572640505,
+            82.07552390160225
+          ],
+          "experimentalNoiseBudgetMs": 37.172208074480295,
+          "mediansMs": [
+            584.9731875350699,
+            112.42147942539304
+          ]
+        },
+        "p75": {
+          "samples": 14,
+          "statistic": "p75",
+          "beforeMs": 605.2590829785913,
+          "afterMs": 123.43058292753994,
+          "absoluteReductionMs": 481.8285000510514,
+          "reductionPercent": 79.60698378616388,
+          "reduction95CI": [
+            78.31534179034844,
+            81.64568311960161
+          ],
+          "experimentalNoiseBudgetMs": 37.172208074480295,
+          "mediansMs": [
+            584.9731875350699,
+            112.42147942539304
+          ]
+        },
+        "p95": {
+          "samples": 14,
+          "statistic": "p95",
+          "beforeMs": 644.4746251218021,
+          "afterMs": 151.73875004984438,
+          "absoluteReductionMs": 492.7358750719577,
+          "reductionPercent": 76.45543452992169,
+          "reduction95CI": [
+            75.19329476247708,
+            80.64586980300521
+          ],
+          "experimentalNoiseBudgetMs": 37.172208074480295,
+          "mediansMs": [
+            584.9731875350699,
+            112.42147942539304
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              198
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1379
+            ],
+            "readBytes": [
+              11258424,
+              11258475,
+              11258501,
+              11258511,
+              11258517,
+              11258522,
+              11258538
+            ],
+            "writeBytes": [
+              5519662
+            ],
+            "rpcReadbackRows": [
+              1379
+            ],
+            "rpcReadbackBytes": [
+              5453802,
+              5454202,
+              5454602,
+              5454802,
+              5454873,
+              5455002
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              36
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              50
+            ],
+            "readBytes": [
+              5241763
+            ],
+            "writeBytes": [
+              199004
+            ],
+            "rpcReadbackRows": [
+              50
+            ],
+            "rpcReadbackBytes": [
+              203610
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 14,
+            "statistic": "p50",
+            "beforeMs": 254.50500000000176,
+            "afterMs": 72.30200000000053,
+            "absoluteReductionMs": 182.20300000000123,
+            "reductionPercent": 71.59112787568023,
+            "reduction95CI": [
+              69.04115592019565,
+              73.12443110293412
+            ],
+            "experimentalNoiseBudgetMs": 19.482000000003495,
+            "mediansMs": [
+              255.90200000000252,
+              73.79800000000003
+            ]
+          },
+          "p75": {
+            "samples": 14,
+            "statistic": "p75",
+            "beforeMs": 271.3940000000008,
+            "afterMs": 78.37399999999661,
+            "absoluteReductionMs": 193.0200000000042,
+            "reductionPercent": 71.1216902363367,
+            "reduction95CI": [
+              68.58804345690592,
+              72.59116076401413
+            ],
+            "experimentalNoiseBudgetMs": 19.482000000003495,
+            "mediansMs": [
+              255.90200000000252,
+              73.79800000000003
+            ]
+          },
+          "p95": {
+            "samples": 14,
+            "statistic": "p95",
+            "beforeMs": 283.80699999999945,
+            "afterMs": 105.11099999999907,
+            "absoluteReductionMs": 178.69600000000037,
+            "reductionPercent": 62.963915618712974,
+            "reduction95CI": [
+              61.56074120396371,
+              72.22531642804917
+            ],
+            "experimentalNoiseBudgetMs": 19.482000000003495,
+            "mediansMs": [
+              255.90200000000252,
+              73.79800000000003
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 11172.271630682839
+      }
+    },
+    "refresh-all": {
+      "1": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 2303.3962920308113,
+          "afterMs": 1781.1415421310812,
+          "absoluteReductionMs": 522.2547498997301,
+          "reductionPercent": 22.67324783436545,
+          "reduction95CI": [
+            17.390380697364694,
+            26.042920028826355
+          ],
+          "experimentalNoiseBudgetMs": 226.82233387604356,
+          "mediansMs": [
+            2303.3962920308113,
+            1781.1415421310812
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 2363.4971249848604,
+          "afterMs": 1850.0123750418425,
+          "absoluteReductionMs": 513.484749943018,
+          "reductionPercent": 21.725634633310886,
+          "reduction95CI": [
+            18.46997273715154,
+            25.142595816802594
+          ],
+          "experimentalNoiseBudgetMs": 226.82233387604356,
+          "mediansMs": [
+            2303.3962920308113,
+            1781.1415421310812
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 2379.379249876365,
+          "afterMs": 1877.959624864161,
+          "absoluteReductionMs": 501.41962501220405,
+          "reductionPercent": 21.073547860781684,
+          "reduction95CI": [
+            20.371490772443224,
+            24.702797998594406
+          ],
+          "experimentalNoiseBudgetMs": 226.82233387604356,
+          "mediansMs": [
+            2303.3962920308113,
+            1781.1415421310812
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              2658
+            ],
+            "writeRpcCalls": [
+              1329
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              19690061,
+              19690065,
+              19690110,
+              19690112,
+              19690125,
+              19690140,
+              19690157
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5351781,
+              5351798,
+              5351800,
+              5351801,
+              5351802,
+              5351807,
+              5351821
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              1329
+            ],
+            "writeRpcCalls": [
+              1329
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5351777,
+              5351792,
+              5351795,
+              5351796,
+              5351799,
+              5351809
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 962.4510000000015,
+            "afterMs": 627.7969999999975,
+            "absoluteReductionMs": 334.654000000004,
+            "reductionPercent": 34.7710169141082,
+            "reduction95CI": [
+              27.21526381132606,
+              37.51483671895084
+            ],
+            "experimentalNoiseBudgetMs": 73.5080000000039,
+            "mediansMs": [
+              962.4510000000015,
+              627.7969999999975
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 972.249999999999,
+            "afterMs": 635.5009999999979,
+            "absoluteReductionMs": 336.74900000000105,
+            "reductionPercent": 34.63605039856018,
+            "reduction95CI": [
+              30.90733969833286,
+              36.87865667966484
+            ],
+            "experimentalNoiseBudgetMs": 73.5080000000039,
+            "mediansMs": [
+              962.4510000000015,
+              627.7969999999975
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 977.1329999999949,
+            "afterMs": 664.9829999999995,
+            "absoluteReductionMs": 312.14999999999543,
+            "reductionPercent": 31.945497695809788,
+            "reduction95CI": [
+              31.481429962442597,
+              34.99605478476281
+            ],
+            "experimentalNoiseBudgetMs": 73.5080000000039,
+            "mediansMs": [
+              962.4510000000015,
+              627.7969999999975
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 718.373573025392
+      },
+      "50": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1499.6275829616934,
+          "afterMs": 1063.5565831325948,
+          "absoluteReductionMs": 436.0709998290986,
+          "reductionPercent": 29.078619570858987,
+          "reduction95CI": [
+            -20.617553650306995,
+            43.75328303234451
+          ],
+          "experimentalNoiseBudgetMs": 589.3040858209133,
+          "mediansMs": [
+            1499.6275829616934,
+            1063.5565831325948
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1893.1004160549492,
+          "afterMs": 1406.7521248944104,
+          "absoluteReductionMs": 486.3482911605388,
+          "reductionPercent": 25.690570190357086,
+          "reduction95CI": [
+            -3.184885203278842,
+            54.20679213175097
+          ],
+          "experimentalNoiseBudgetMs": 589.3040858209133,
+          "mediansMs": [
+            1499.6275829616934,
+            1063.5565831325948
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 2325.250583002344,
+          "afterMs": 1547.3889999557287,
+          "absoluteReductionMs": 777.8615830466151,
+          "reductionPercent": 33.45280670964274,
+          "reduction95CI": [
+            16.11053117831561,
+            54.20679213175097
+          ],
+          "experimentalNoiseBudgetMs": 589.3040858209133,
+          "mediansMs": [
+            1499.6275829616934,
+            1063.5565831325948
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              197
+            ],
+            "writeRpcCalls": [
+              27
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11415992,
+              11416024,
+              11416028,
+              11416034,
+              11416040
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5280165,
+              5280186,
+              5280265,
+              5280365
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              27
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5280065,
+              5280115,
+              5280165,
+              5280186,
+              5280265,
+              5280315
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 344.00100000000225,
+            "afterMs": 228.67899999999963,
+            "absoluteReductionMs": 115.32200000000262,
+            "reductionPercent": 33.52373975657101,
+            "reduction95CI": [
+              17.90354471909763,
+              40.77442184709952
+            ],
+            "experimentalNoiseBudgetMs": 31.410000000001048,
+            "mediansMs": [
+              344.00100000000225,
+              228.67899999999963
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 367.9389999999998,
+            "afterMs": 263.2390000000022,
+            "absoluteReductionMs": 104.6999999999976,
+            "reductionPercent": 28.455803815305703,
+            "reduction95CI": [
+              22.356039662675265,
+              40.535979426212
+            ],
+            "experimentalNoiseBudgetMs": 31.410000000001048,
+            "mediansMs": [
+              344.00100000000225,
+              228.67899999999963
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 384.5670000000006,
+            "afterMs": 267.0960000000022,
+            "absoluteReductionMs": 117.47099999999836,
+            "reductionPercent": 30.546302724882313,
+            "reduction95CI": [
+              22.76645394110861,
+              38.36314608377776
+            ],
+            "experimentalNoiseBudgetMs": 31.410000000001048,
+            "mediansMs": [
+              344.00100000000225,
+              228.67899999999963
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 944.7293353829152
+      },
+      "100": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1178.25987492688,
+          "afterMs": 783.5038751363754,
+          "absoluteReductionMs": 394.7559997905046,
+          "reductionPercent": 33.50330501707038,
+          "reduction95CI": [
+            17.112377573714898,
+            47.22014673367491
+          ],
+          "experimentalNoiseBudgetMs": 209.07883206382394,
+          "mediansMs": [
+            1178.25987492688,
+            783.5038751363754
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1242.8587081376463,
+          "afterMs": 931.3071251381189,
+          "absoluteReductionMs": 311.55158299952745,
+          "reductionPercent": 25.06733717675519,
+          "reduction95CI": [
+            0.45156990996548796,
+            34.914838842573424
+          ],
+          "experimentalNoiseBudgetMs": 209.07883206382394,
+          "mediansMs": [
+            1178.25987492688,
+            783.5038751363754
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1307.6151250861585,
+          "afterMs": 1172.9392078705132,
+          "absoluteReductionMs": 134.6759172156453,
+          "reductionPercent": 10.299354499036673,
+          "reduction95CI": [
+            2.564697132060978,
+            29.081594935946352
+          ],
+          "experimentalNoiseBudgetMs": 209.07883206382394,
+          "mediansMs": [
+            1178.25987492688,
+            783.5038751363754
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              194
+            ],
+            "writeRpcCalls": [
+              14
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11379455,
+              11379459,
+              11379462,
+              11379463,
+              11379470
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5279350,
+              5279421,
+              5279550,
+              5279650
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              14
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5279450,
+              5279521,
+              5279550,
+              5279621,
+              5279650
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 343.93200000000235,
+            "afterMs": 230.28599999999955,
+            "absoluteReductionMs": 113.6460000000028,
+            "reductionPercent": 33.04315969435878,
+            "reduction95CI": [
+              31.37331075570897,
+              40.151839668518164
+            ],
+            "experimentalNoiseBudgetMs": 43.91800000000501,
+            "mediansMs": [
+              343.93200000000235,
+              230.28599999999955
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 374.6539999999996,
+            "afterMs": 231.74399999999906,
+            "absoluteReductionMs": 142.91000000000054,
+            "reductionPercent": 38.14452801785132,
+            "reduction95CI": [
+              32.34384226901293,
+              46.09182971192553
+            ],
+            "experimentalNoiseBudgetMs": 43.91800000000501,
+            "mediansMs": [
+              343.93200000000235,
+              230.28599999999955
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 427.18199999999484,
+            "afterMs": 232.37099999999344,
+            "absoluteReductionMs": 194.8110000000014,
+            "reductionPercent": 45.60374734890603,
+            "reduction95CI": [
+              37.39684951546727,
+              45.82777364214699
+            ],
+            "experimentalNoiseBudgetMs": 43.91800000000501,
+            "mediansMs": [
+              343.93200000000235,
+              230.28599999999955
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 1427.0265566827923
+      },
+      "200": {
+        "p50": {
+          "samples": 14,
+          "statistic": "p50",
+          "beforeMs": 979.2975829914212,
+          "afterMs": 765.4752081725746,
+          "absoluteReductionMs": 213.82237481884658,
+          "reductionPercent": 21.834259425586644,
+          "reduction95CI": [
+            -2.189834403039992,
+            28.22357476621353
+          ],
+          "experimentalNoiseBudgetMs": 182.52979218959808,
+          "mediansMs": [
+            979.7064585145563,
+            785.2509580552578
+          ]
+        },
+        "p75": {
+          "samples": 14,
+          "statistic": "p75",
+          "beforeMs": 1036.856000078842,
+          "afterMs": 883.8450410403311,
+          "absoluteReductionMs": 153.01095903851092,
+          "reductionPercent": 14.757204378127343,
+          "reduction95CI": [
+            -4.204109717218252,
+            26.173431207962505
+          ],
+          "experimentalNoiseBudgetMs": 182.52979218959808,
+          "mediansMs": [
+            979.7064585145563,
+            785.2509580552578
+          ]
+        },
+        "p95": {
+          "samples": 14,
+          "statistic": "p95",
+          "beforeMs": 1064.2684169579297,
+          "afterMs": 1042.53620817326,
+          "absoluteReductionMs": 21.732208784669638,
+          "reductionPercent": 2.04198569067644,
+          "reduction95CI": [
+            -0.5478299873836079,
+            16.434907223389583
+          ],
+          "experimentalNoiseBudgetMs": 182.52979218959808,
+          "mediansMs": [
+            979.7064585145563,
+            785.2509580552578
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11260686,
+              11260703,
+              11260714,
+              11260730
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5278852,
+              5278923,
+              5279052,
+              5279252
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5278652,
+              5278852,
+              5279052,
+              5279252
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 14,
+            "statistic": "p50",
+            "beforeMs": 342.95099999999934,
+            "afterMs": 249.79100000000187,
+            "absoluteReductionMs": 93.15999999999747,
+            "reductionPercent": 27.164230458577943,
+            "reduction95CI": [
+              16.346172586064156,
+              36.38109805346977
+            ],
+            "experimentalNoiseBudgetMs": 69.70700000000107,
+            "mediansMs": [
+              343.35450000000026,
+              250.9219999999992
+            ]
+          },
+          "p75": {
+            "samples": 14,
+            "statistic": "p75",
+            "beforeMs": 399.1460000000018,
+            "afterMs": 268.5689999999994,
+            "absoluteReductionMs": 130.57700000000239,
+            "reductionPercent": 32.714094591954265,
+            "reduction95CI": [
+              21.87265460003883,
+              37.80740384192588
+            ],
+            "experimentalNoiseBudgetMs": 69.70700000000107,
+            "mediansMs": [
+              343.35450000000026,
+              250.9219999999992
+            ]
+          },
+          "p95": {
+            "samples": 14,
+            "statistic": "p95",
+            "beforeMs": 448.4769999999969,
+            "afterMs": 310.4319999999987,
+            "absoluteReductionMs": 138.0449999999982,
+            "reductionPercent": 30.78084271880145,
+            "reduction95CI": [
+              22.22595240839259,
+              40.07474184852209
+            ],
+            "experimentalNoiseBudgetMs": 69.70700000000107,
+            "mediansMs": [
+              343.35450000000026,
+              250.9219999999992
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 1503.6572456589206
+      }
+    },
+    "resume-after-response-loss": {
+      "1": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1207.5854591093957,
+          "afterMs": 145.77008388005197,
+          "absoluteReductionMs": 1061.8153752293438,
+          "reductionPercent": 87.92879768628892,
+          "reduction95CI": [
+            86.26798270164852,
+            88.832003241001
+          ],
+          "experimentalNoiseBudgetMs": 130.55233238264918,
+          "mediansMs": [
+            1207.5854591093957,
+            145.77008388005197
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1236.8373749777675,
+          "afterMs": 153.10612483881414,
+          "absoluteReductionMs": 1083.7312501389533,
+          "reductionPercent": 87.62115958522305,
+          "reduction95CI": [
+            83.26154694726667,
+            89.07266639824346
+          ],
+          "experimentalNoiseBudgetMs": 130.55233238264918,
+          "mediansMs": [
+            1207.5854591093957,
+            145.77008388005197
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1333.9949999935925,
+          "afterMs": 202.13112514466047,
+          "absoluteReductionMs": 1131.863874848932,
+          "reductionPercent": 84.847684950421,
+          "reduction95CI": [
+            83.48381466803161,
+            88.73309749702214
+          ],
+          "experimentalNoiseBudgetMs": 130.55233238264918,
+          "mediansMs": [
+            1207.5854591093957,
+            145.77008388005197
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              2658
+            ],
+            "writeRpcCalls": [
+              1329
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              19659920,
+              19659946,
+              19659955,
+              19659958,
+              19659968,
+              19659979,
+              19660009
+            ],
+            "writeBytes": [
+              5320770
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5324066,
+              5324094,
+              5324096,
+              5324099,
+              5324101,
+              5324106,
+              5324107
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              1329
+            ],
+            "writeRpcCalls": [
+              4
+            ],
+            "writeRows": [
+              4
+            ],
+            "readBytes": [
+              5241773
+            ],
+            "writeBytes": [
+              14268
+            ],
+            "rpcReadbackRows": [
+              4
+            ],
+            "rpcReadbackBytes": [
+              14292
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 473.8059999999962,
+            "afterMs": 87.66299999999916,
+            "absoluteReductionMs": 386.142999999997,
+            "reductionPercent": 81.49812370463863,
+            "reduction95CI": [
+              79.69641797305505,
+              82.58282511949893
+            ],
+            "experimentalNoiseBudgetMs": 27.502000000012572,
+            "mediansMs": [
+              473.8059999999962,
+              87.66299999999916
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 485.36,
+            "afterMs": 91.05300000000227,
+            "absoluteReductionMs": 394.30699999999774,
+            "reductionPercent": 81.24011043349219,
+            "reduction95CI": [
+              76.42492170759856,
+              83.45175576035139
+            ],
+            "experimentalNoiseBudgetMs": 27.502000000012572,
+            "mediansMs": [
+              473.8059999999962,
+              87.66299999999916
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 529.7419999999988,
+            "afterMs": 114.42399999999964,
+            "absoluteReductionMs": 415.3179999999992,
+            "reductionPercent": 78.40005134574946,
+            "reduction95CI": [
+              76.42492170759856,
+              82.82239278743204
+            ],
+            "experimentalNoiseBudgetMs": 27.502000000012572,
+            "mediansMs": [
+              473.8059999999962,
+              87.66299999999916
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 8680.253656730807
+      },
+      "200": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 581.6682500299066,
+          "afterMs": 101.76166682504117,
+          "absoluteReductionMs": 479.90658320486546,
+          "reductionPercent": 82.5052051887293,
+          "reduction95CI": [
+            79.53102315415597,
+            84.80960282083927
+          ],
+          "experimentalNoiseBudgetMs": 48.979001585394144,
+          "mediansMs": [
+            581.6682500299066,
+            101.76166682504117
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 648.1605831068009,
+          "afterMs": 117.49445903114974,
+          "absoluteReductionMs": 530.6661240756512,
+          "reductionPercent": 81.87263124394752,
+          "reduction95CI": [
+            79.82398784708771,
+            84.73938391724441
+          ],
+          "experimentalNoiseBudgetMs": 48.979001585394144,
+          "mediansMs": [
+            581.6682500299066,
+            101.76166682504117
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 666.8254169635475,
+          "afterMs": 120.69708295166492,
+          "absoluteReductionMs": 546.1283340118825,
+          "reductionPercent": 81.89974768789251,
+          "reduction95CI": [
+            79.82398784708771,
+            82.51448867361515
+          ],
+          "experimentalNoiseBudgetMs": 48.979001585394144,
+          "mediansMs": [
+            581.6682500299066,
+            101.76166682504117
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11260730,
+              11261488,
+              11261503,
+              11261530
+            ],
+            "writeBytes": [
+              5321763,
+              5322163
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251152,
+              5251352,
+              5251423,
+              5251552
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241875,
+              5241885
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 258.56499999999727,
+            "afterMs": 72.09699999999941,
+            "absoluteReductionMs": 186.46799999999786,
+            "reductionPercent": 72.11648908398269,
+            "reduction95CI": [
+              68.53342980128095,
+              74.87687886992262
+            ],
+            "experimentalNoiseBudgetMs": 27.72799999998199,
+            "mediansMs": [
+              258.56499999999727,
+              72.09699999999941
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 274.31299999999936,
+            "afterMs": 77.4149999999949,
+            "absoluteReductionMs": 196.89800000000446,
+            "reductionPercent": 71.77858869248081,
+            "reduction95CI": [
+              70.05975286678563,
+              73.7485435479173
+            ],
+            "experimentalNoiseBudgetMs": 27.72799999998199,
+            "mediansMs": [
+              258.56499999999727,
+              72.09699999999941
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 274.639999999998,
+            "afterMs": 78.24500000000256,
+            "absoluteReductionMs": 196.39499999999543,
+            "reductionPercent": 71.50997669676553,
+            "reduction95CI": [
+              70.80728243572626,
+              72.29354791727324
+            ],
+            "experimentalNoiseBudgetMs": 27.72799999998199,
+            "mediansMs": [
+              258.56499999999727,
+              72.09699999999941
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 11311.171700851526
+      }
+    },
+    "unchanged": {
+      "1": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 2095.5079160630703,
+          "afterMs": 298.8255829550326,
+          "absoluteReductionMs": 1796.6823331080377,
+          "reductionPercent": 85.7397063182443,
+          "reduction95CI": [
+            83.86876958765357,
+            87.03071736924205
+          ],
+          "experimentalNoiseBudgetMs": 279.8586655408144,
+          "mediansMs": [
+            2095.5079160630703,
+            298.8255829550326
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 2217.535875039175,
+          "afterMs": 323.7184581812471,
+          "absoluteReductionMs": 1893.817416857928,
+          "reductionPercent": 85.40188405405038,
+          "reduction95CI": [
+            84.55179025095585,
+            86.52443072878117
+          ],
+          "experimentalNoiseBudgetMs": 279.8586655408144,
+          "mediansMs": [
+            2095.5079160630703,
+            298.8255829550326
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 2224.8663750942796,
+          "afterMs": 326.966708060354,
+          "absoluteReductionMs": 1897.8996670339257,
+          "reductionPercent": 85.30398446753915,
+          "reduction95CI": [
+            84.7874987363355,
+            85.84598997709367
+          ],
+          "experimentalNoiseBudgetMs": 279.8586655408144,
+          "mediansMs": [
+            2095.5079160630703,
+            298.8255829550326
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              2658
+            ],
+            "writeRpcCalls": [
+              1329
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              19659687,
+              19659699,
+              19659710,
+              19659744,
+              19659751,
+              19659787
+            ],
+            "writeBytes": [
+              5320658
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5323969,
+              5323978,
+              5323986,
+              5323992,
+              5323997,
+              5323998,
+              5324005
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              1329
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 782.7660000000001,
+            "afterMs": 165.44799999999958,
+            "absoluteReductionMs": 617.3180000000004,
+            "reductionPercent": 78.86367062442676,
+            "reduction95CI": [
+              77.43238027766908,
+              80.72348569048732
+            ],
+            "experimentalNoiseBudgetMs": 80.73400000000106,
+            "mediansMs": [
+              782.7660000000001,
+              165.44799999999958
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 839.4759999999994,
+            "afterMs": 172.82800000000088,
+            "absoluteReductionMs": 666.6479999999985,
+            "reductionPercent": 79.41239535138574,
+            "reduction95CI": [
+              77.6968704072799,
+              80.29151518328104
+            ],
+            "experimentalNoiseBudgetMs": 80.73400000000106,
+            "mediansMs": [
+              782.7660000000001,
+              165.44799999999958
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 843.2709999999996,
+            "afterMs": 177.25100000000003,
+            "absoluteReductionMs": 666.0199999999995,
+            "reductionPercent": 78.98054124949155,
+            "reduction95CI": [
+              77.6968704072799,
+              79.66076457218549
+            ],
+            "experimentalNoiseBudgetMs": 80.73400000000106,
+            "mediansMs": [
+              782.7660000000001,
+              165.44799999999958
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 4105.419281516239
+      },
+      "50": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 861.8484169710428,
+          "afterMs": 125.45679206959903,
+          "absoluteReductionMs": 736.3916249014437,
+          "reductionPercent": 85.44328798438644,
+          "reduction95CI": [
+            84.60616839327818,
+            87.89384449950936
+          ],
+          "experimentalNoiseBudgetMs": 20.82966547459364,
+          "mediansMs": [
+            861.8484169710428,
+            125.45679206959903
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 938.5590411256999,
+          "afterMs": 136.47591602057219,
+          "absoluteReductionMs": 802.0831251051277,
+          "reductionPercent": 85.45899511480022,
+          "reduction95CI": [
+            84.65373405832743,
+            86.63304208128162
+          ],
+          "experimentalNoiseBudgetMs": 20.82966547459364,
+          "mediansMs": [
+            861.8484169710428,
+            125.45679206959903
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1049.2043748963624,
+          "afterMs": 142.1486248727888,
+          "absoluteReductionMs": 907.0557500235736,
+          "reductionPercent": 86.45176971485371,
+          "reduction95CI": [
+            84.65373405832743,
+            86.45176971485371
+          ],
+          "experimentalNoiseBudgetMs": 20.82966547459364,
+          "mediansMs": [
+            861.8484169710428,
+            125.45679206959903
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              197
+            ],
+            "writeRpcCalls": [
+              27
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11413154,
+              11413191,
+              11413193,
+              11413197,
+              11413200
+            ],
+            "writeBytes": [
+              5320658
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5252260,
+              5252410,
+              5252460,
+              5252510,
+              5252560
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 333.553,
+            "afterMs": 82.79300000000012,
+            "absoluteReductionMs": 250.75999999999988,
+            "reductionPercent": 75.17845739657562,
+            "reduction95CI": [
+              70.93586765920189,
+              77.97683362459985
+            ],
+            "experimentalNoiseBudgetMs": 22.739999999999895,
+            "mediansMs": [
+              333.553,
+              82.79300000000012
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 350.7669999999998,
+            "afterMs": 93.97800000000034,
+            "absoluteReductionMs": 256.7889999999995,
+            "reductionPercent": 73.20785592715382,
+            "reduction95CI": [
+              70.68591798005117,
+              77.23346743258142
+            ],
+            "experimentalNoiseBudgetMs": 22.739999999999895,
+            "mediansMs": [
+              333.553,
+              82.79300000000012
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 363.661,
+            "afterMs": 97.77799999999992,
+            "absoluteReductionMs": 265.8830000000001,
+            "reductionPercent": 73.11287160294893,
+            "reduction95CI": [
+              71.61947609026925,
+              75.79174010960757
+            ],
+            "experimentalNoiseBudgetMs": 22.739999999999895,
+            "mediansMs": [
+              333.553,
+              82.79300000000012
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 9737.981900042118
+      },
+      "100": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 841.5231660474092,
+          "afterMs": 129.42320806905627,
+          "absoluteReductionMs": 712.0999579783529,
+          "reductionPercent": 84.62036301662967,
+          "reduction95CI": [
+            84.2441648112744,
+            90.41955451441304
+          ],
+          "experimentalNoiseBudgetMs": 129.2200842872262,
+          "mediansMs": [
+            841.5231660474092,
+            129.42320806905627
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1350.910124834627,
+          "afterMs": 141.22799993492663,
+          "absoluteReductionMs": 1209.6821248997003,
+          "reductionPercent": 89.54571460094614,
+          "reduction95CI": [
+            84.30007569593121,
+            91.16182482319587
+          ],
+          "experimentalNoiseBudgetMs": 129.2200842872262,
+          "mediansMs": [
+            841.5231660474092,
+            129.42320806905627
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1597.9316669981927,
+          "afterMs": 143.65279185585678,
+          "absoluteReductionMs": 1454.278875142336,
+          "reductionPercent": 91.01007916529267,
+          "reduction95CI": [
+            84.34587779783229,
+            91.16182482319587
+          ],
+          "experimentalNoiseBudgetMs": 129.2200842872262,
+          "mediansMs": [
+            841.5231660474092,
+            129.42320806905627
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              194
+            ],
+            "writeRpcCalls": [
+              14
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11376707,
+              11376724,
+              11376726,
+              11376735
+            ],
+            "writeBytes": [
+              5320658
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251645,
+              5251716,
+              5251745,
+              5251845
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 295.3890000000001,
+            "afterMs": 86.21499999999926,
+            "absoluteReductionMs": 209.17400000000086,
+            "reductionPercent": 70.81306345192297,
+            "reduction95CI": [
+              67.83128726762526,
+              75.71873035826515
+            ],
+            "experimentalNoiseBudgetMs": 29.865999999998337,
+            "mediansMs": [
+              295.3890000000001,
+              86.21499999999926
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 318.20000000000005,
+            "afterMs": 91.71300000000038,
+            "absoluteReductionMs": 226.48699999999968,
+            "reductionPercent": 71.17756128221234,
+            "reduction95CI": [
+              68.95178899688197,
+              72.90540540540565
+            ],
+            "experimentalNoiseBudgetMs": 29.865999999998337,
+            "mediansMs": [
+              295.3890000000001,
+              86.21499999999926
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 332.6279999999997,
+            "afterMs": 92.87599999999863,
+            "absoluteReductionMs": 239.7520000000011,
+            "reductionPercent": 72.07811729619915,
+            "reduction95CI": [
+              69.03010778831342,
+              72.07811729619915
+            ],
+            "experimentalNoiseBudgetMs": 29.865999999998337,
+            "mediansMs": [
+              295.3890000000001,
+              86.21499999999926
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 9410.315239275222
+      },
+      "200": {
+        "p50": {
+          "samples": 14,
+          "statistic": "p50",
+          "beforeMs": 894.1426251549274,
+          "afterMs": 143.46508402377367,
+          "absoluteReductionMs": 750.6775411311537,
+          "reductionPercent": 83.95501120429019,
+          "reduction95CI": [
+            81.85985519576265,
+            84.73345706928211
+          ],
+          "experimentalNoiseBudgetMs": 119.60987327620387,
+          "mediansMs": [
+            896.2715205270797,
+            144.13883350789547
+          ]
+        },
+        "p75": {
+          "samples": 14,
+          "statistic": "p75",
+          "beforeMs": 951.9771249033511,
+          "afterMs": 154.25674989819527,
+          "absoluteReductionMs": 797.7203750051558,
+          "reductionPercent": 83.79617053152867,
+          "reduction95CI": [
+            82.30491822623918,
+            84.9876971286348
+          ],
+          "experimentalNoiseBudgetMs": 119.60987327620387,
+          "mediansMs": [
+            896.2715205270797,
+            144.13883350789547
+          ]
+        },
+        "p95": {
+          "samples": 14,
+          "statistic": "p95",
+          "beforeMs": 988.695333013311,
+          "afterMs": 165.12354207225144,
+          "absoluteReductionMs": 823.5717909410596,
+          "reductionPercent": 83.29884479488805,
+          "reduction95CI": [
+            82.65467333692335,
+            84.22632286367747
+          ],
+          "experimentalNoiseBudgetMs": 119.60987327620387,
+          "mediansMs": [
+            896.2715205270797,
+            144.13883350789547
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11258493,
+              11258504,
+              11258520
+            ],
+            "writeBytes": [
+              5320658
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251247,
+              5251318,
+              5251447
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 14,
+            "statistic": "p50",
+            "beforeMs": 334.83000000000015,
+            "afterMs": 97.89400000000015,
+            "absoluteReductionMs": 236.936,
+            "reductionPercent": 70.76307379864406,
+            "reduction95CI": [
+              68.66897517940933,
+              71.66874552945957
+            ],
+            "experimentalNoiseBudgetMs": 25.197000000000344,
+            "mediansMs": [
+              336.57800000000026,
+              97.90900000000047
+            ]
+          },
+          "p75": {
+            "samples": 14,
+            "statistic": "p75",
+            "beforeMs": 351.19399999999956,
+            "afterMs": 105.10799999999954,
+            "absoluteReductionMs": 246.086,
+            "reductionPercent": 70.07124267498885,
+            "reduction95CI": [
+              67.29862915509372,
+              72.47329018170444
+            ],
+            "experimentalNoiseBudgetMs": 25.197000000000344,
+            "mediansMs": [
+              336.57800000000026,
+              97.90900000000047
+            ]
+          },
+          "p95": {
+            "samples": 14,
+            "statistic": "p95",
+            "beforeMs": 374.2839999999994,
+            "afterMs": 124.82199999999999,
+            "absoluteReductionMs": 249.46199999999942,
+            "reductionPercent": 66.65045794102869,
+            "reduction95CI": [
+              64.45782103338891,
+              71.91758130189918
+            ],
+            "experimentalNoiseBudgetMs": 25.197000000000344,
+            "mediansMs": [
+              336.57800000000026,
+              97.90900000000047
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 8615.506296334515
+      }
+    }
+  },
+  "perRun": {
+    "storage-rpc-raw.json": {
+      "change-five": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1004.6645840629935,
+          "afterMs": 183.03641607053578,
+          "absoluteReductionMs": 821.6281679924577,
+          "reductionPercent": 81.7813408600199,
+          "reduction95CI": [
+            73.06971432410634,
+            86.60214709214212
+          ],
+          "experimentalNoiseBudgetMs": 262.5354202464223,
+          "mediansMs": [
+            1004.6645840629935,
+            183.03641607053578
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1073.812915943563,
+          "afterMs": 253.86104197241366,
+          "absoluteReductionMs": 819.9518739711493,
+          "reductionPercent": 76.35891334484974,
+          "reduction95CI": [
+            74.73176162478359,
+            84.170952667024
+          ],
+          "experimentalNoiseBudgetMs": 262.5354202464223,
+          "mediansMs": [
+            1004.6645840629935,
+            183.03641607053578
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1258.8790410663933,
+          "afterMs": 265.797832980752,
+          "absoluteReductionMs": 993.0812080856413,
+          "reductionPercent": 78.88614995483638,
+          "reduction95CI": [
+            75.45687446284649,
+            82.80912137945474
+          ],
+          "experimentalNoiseBudgetMs": 262.5354202464223,
+          "mediansMs": [
+            1004.6645840629935,
+            183.03641607053578
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11258462,
+              11258467,
+              11258517,
+              11258520
+            ],
+            "writeBytes": [
+              5320763
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5250952,
+              5251352,
+              5251423,
+              5251552
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              5
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              17852
+            ],
+            "rpcReadbackRows": [
+              5
+            ],
+            "rpcReadbackBytes": [
+              17590,
+              17595
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 322.01700000000244,
+            "afterMs": 92.36999999999895,
+            "absoluteReductionMs": 229.6470000000035,
+            "reductionPercent": 71.31517901228872,
+            "reduction95CI": [
+              64.01739431129059,
+              74.95678510106673
+            ],
+            "experimentalNoiseBudgetMs": 66.24000000000763,
+            "mediansMs": [
+              322.01700000000244,
+              92.36999999999895
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 345.3669999999995,
+            "afterMs": 110.29999999999873,
+            "absoluteReductionMs": 235.06700000000077,
+            "reductionPercent": 68.06295911305976,
+            "reduction95CI": [
+              62.15386144209736,
+              73.77389486260452
+            ],
+            "experimentalNoiseBudgetMs": 66.24000000000763,
+            "mediansMs": [
+              322.01700000000244,
+              92.36999999999895
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 355.8389999999996,
+            "afterMs": 121.87100000000228,
+            "absoluteReductionMs": 233.96799999999732,
+            "reductionPercent": 65.75108405767709,
+            "reduction95CI": [
+              63.59886499402536,
+              71.08945337638622
+            ],
+            "experimentalNoiseBudgetMs": 66.24000000000763,
+            "mediansMs": [
+              322.01700000000244,
+              92.36999999999895
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 5235.147503036005
+      },
+      "refresh-all": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 860.4418328031898,
+          "afterMs": 879.2840840760618,
+          "absoluteReductionMs": -18.84225127287209,
+          "reductionPercent": -2.189834403039992,
+          "reduction95CI": [
+            -26.07281666729635,
+            23.773583133640162
+          ],
+          "experimentalNoiseBudgetMs": 363.622420001775,
+          "mediansMs": [
+            860.4418328031898,
+            879.2840840760618
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 979.2975829914212,
+          "afterMs": 1021.3204580359161,
+          "absoluteReductionMs": -42.02287504449487,
+          "reductionPercent": -4.291124145954628,
+          "reduction95CI": [
+            -23.238224661667207,
+            16.86613303127631
+          ],
+          "experimentalNoiseBudgetMs": 363.622420001775,
+          "mediansMs": [
+            860.4418328031898,
+            879.2840840760618
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1057.6725420542061,
+          "afterMs": 1042.53620817326,
+          "absoluteReductionMs": 15.13633388094604,
+          "reductionPercent": 1.4310983105932151,
+          "reduction95CI": [
+            -8.21765134997614,
+            16.434907223389583
+          ],
+          "experimentalNoiseBudgetMs": 363.622420001775,
+          "mediansMs": [
+            860.4418328031898,
+            879.2840840760618
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11260686,
+              11260703,
+              11260714,
+              11260730
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5278852,
+              5278923,
+              5279052,
+              5279252
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5278652,
+              5278852,
+              5279052,
+              5279252
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 297.59899999999817,
+            "afterMs": 225.2330000000029,
+            "absoluteReductionMs": 72.36599999999527,
+            "reductionPercent": 24.316613967115387,
+            "reduction95CI": [
+              17.120999782301638,
+              34.428265430609095
+            ],
+            "experimentalNoiseBudgetMs": 27.80199999999411,
+            "mediansMs": [
+              297.59899999999817,
+              225.2330000000029
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 318.86300000000034,
+            "afterMs": 243.65099999999984,
+            "absoluteReductionMs": 75.2120000000005,
+            "reductionPercent": 23.5875595475174,
+            "reduction95CI": [
+              9.754737079089292,
+              34.325020192388024
+            ],
+            "experimentalNoiseBudgetMs": 27.80199999999411,
+            "mediansMs": [
+              297.59899999999817,
+              225.2330000000029
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 342.95099999999934,
+            "afterMs": 268.5689999999994,
+            "absoluteReductionMs": 74.38199999999995,
+            "reductionPercent": 21.688812687526816,
+            "reduction95CI": [
+              12.762052634657305,
+              32.43495426460291
+            ],
+            "experimentalNoiseBudgetMs": 27.80199999999411,
+            "mediansMs": [
+              297.59899999999817,
+              225.2330000000029
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 1301.2566129888137
+      },
+      "unchanged": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 951.9771249033511,
+          "afterMs": 143.34245794452727,
+          "absoluteReductionMs": 808.6346669588238,
+          "reductionPercent": 84.94265731867455,
+          "reduction95CI": [
+            82.71627726138404,
+            85.34237462518767
+          ],
+          "experimentalNoiseBudgetMs": 33.26458157971501,
+          "mediansMs": [
+            951.9771249033511,
+            143.34245794452727
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 977.9377919621766,
+          "afterMs": 155.529041076079,
+          "absoluteReductionMs": 822.4087508860976,
+          "reductionPercent": 84.09622346590994,
+          "reduction95CI": [
+            83.57809756350892,
+            85.34237462518767
+          ],
+          "experimentalNoiseBudgetMs": 33.26458157971501,
+          "mediansMs": [
+            951.9771249033511,
+            143.34245794452727
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 988.695333013311,
+          "afterMs": 162.36258298158646,
+          "absoluteReductionMs": 826.3327500317246,
+          "reductionPercent": 83.57809756350892,
+          "reduction95CI": [
+            83.57809756350892,
+            85.19204552863643
+          ],
+          "experimentalNoiseBudgetMs": 33.26458157971501,
+          "mediansMs": [
+            951.9771249033511,
+            143.34245794452727
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11258504,
+              11258520
+            ],
+            "writeBytes": [
+              5320658
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251247,
+              5251318,
+              5251447
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 327.85499999999956,
+            "afterMs": 96.73100000000012,
+            "absoluteReductionMs": 231.12399999999946,
+            "reductionPercent": 70.49579844748433,
+            "reduction95CI": [
+              68.67208276937599,
+              73.20483793737407
+            ],
+            "experimentalNoiseBudgetMs": 18.782000000001744,
+            "mediansMs": [
+              327.85499999999956,
+              96.73100000000012
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 338.32600000000036,
+            "afterMs": 98.83300000000084,
+            "absoluteReductionMs": 239.49299999999954,
+            "reductionPercent": 70.78764268782159,
+            "reduction95CI": [
+              66.60291897332665,
+              72.11683570903806
+            ],
+            "experimentalNoiseBudgetMs": 18.782000000001744,
+            "mediansMs": [
+              327.85499999999956,
+              96.73100000000012
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 351.19399999999956,
+            "afterMs": 109.49399999999976,
+            "absoluteReductionMs": 241.69999999999982,
+            "reductionPercent": 68.82236029089339,
+            "reduction95CI": [
+              67.29862915509372,
+              72.11683570903806
+            ],
+            "experimentalNoiseBudgetMs": 18.782000000001744,
+            "mediansMs": [
+              327.85499999999956,
+              96.73100000000012
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 8545.027930506578
+      }
+    },
+    "storage-new-and-failures-raw.json": {
+      "new-fifty": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 593.5412920080125,
+          "afterMs": 106.38916702009737,
+          "absoluteReductionMs": 487.15212498791516,
+          "reductionPercent": 82.07552390160225,
+          "reduction95CI": [
+            80.13570071151625,
+            82.97579238442721
+          ],
+          "experimentalNoiseBudgetMs": 38.425917737185955,
+          "mediansMs": [
+            593.5412920080125,
+            106.38916702009737
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 621.935207862407,
+          "afterMs": 114.15195884183049,
+          "absoluteReductionMs": 507.7832490205765,
+          "reductionPercent": 81.64568311960161,
+          "reduction95CI": [
+            74.43501368935996,
+            83.49210925100574
+          ],
+          "experimentalNoiseBudgetMs": 38.425917737185955,
+          "mediansMs": [
+            593.5412920080125,
+            106.38916702009737
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 644.4746251218021,
+          "afterMs": 151.73875004984438,
+          "absoluteReductionMs": 492.7358750719577,
+          "reductionPercent": 76.45543452992169,
+          "reduction95CI": [
+            75.19329476247708,
+            83.31806562893213
+          ],
+          "experimentalNoiseBudgetMs": 38.425917737185955,
+          "mediansMs": [
+            593.5412920080125,
+            106.38916702009737
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              198
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1379
+            ],
+            "readBytes": [
+              11258424,
+              11258475,
+              11258522,
+              11258538
+            ],
+            "writeBytes": [
+              5519662
+            ],
+            "rpcReadbackRows": [
+              1379
+            ],
+            "rpcReadbackBytes": [
+              5453802,
+              5454202,
+              5454802,
+              5455002
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              36
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              50
+            ],
+            "readBytes": [
+              5241763
+            ],
+            "writeBytes": [
+              199004
+            ],
+            "rpcReadbackRows": [
+              50
+            ],
+            "rpcReadbackBytes": [
+              203610
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 258.1749999999996,
+            "afterMs": 69.38599999999973,
+            "absoluteReductionMs": 188.78899999999987,
+            "reductionPercent": 73.12443110293412,
+            "reduction95CI": [
+              68.93014026290544,
+              75.00937362353369
+            ],
+            "experimentalNoiseBudgetMs": 19.83600000000149,
+            "mediansMs": [
+              258.1749999999996,
+              69.38599999999973
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 274.70699999999937,
+            "afterMs": 75.46900000000001,
+            "absoluteReductionMs": 199.23799999999937,
+            "reductionPercent": 72.52745652640806,
+            "reduction95CI": [
+              59.28691778832218,
+              75.55169534225729
+            ],
+            "experimentalNoiseBudgetMs": 19.83600000000149,
+            "mediansMs": [
+              258.1749999999996,
+              69.38599999999973
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 283.80699999999945,
+            "afterMs": 105.11099999999907,
+            "absoluteReductionMs": 178.69600000000037,
+            "reductionPercent": 62.963915618712974,
+            "reduction95CI": [
+              59.6547793143953,
+              75.25501485164203
+            ],
+            "experimentalNoiseBudgetMs": 19.83600000000149,
+            "mediansMs": [
+              258.1749999999996,
+              69.38599999999973
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 12080.388404992236
+      }
+    },
+    "storage-one-and-resume-raw.json": {
+      "unchanged": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 839.7020408883691,
+          "afterMs": 148.0981248896569,
+          "absoluteReductionMs": 691.6039159987122,
+          "reductionPercent": 82.36301477450556,
+          "reduction95CI": [
+            81.33739774241204,
+            84.15607636145687
+          ],
+          "experimentalNoiseBudgetMs": 59.52700041234493,
+          "mediansMs": [
+            839.7020408883691,
+            148.0981248896569
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 871.7492909636348,
+          "afterMs": 154.25674989819527,
+          "absoluteReductionMs": 717.4925410654396,
+          "reductionPercent": 82.30491822623918,
+          "reduction95CI": [
+            80.33546019519522,
+            83.54285050634375
+          ],
+          "experimentalNoiseBudgetMs": 59.52700041234493,
+          "mediansMs": [
+            839.7020408883691,
+            148.0981248896569
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 894.1426251549274,
+          "afterMs": 165.12354207225144,
+          "absoluteReductionMs": 729.0190830826759,
+          "reductionPercent": 81.53275132771569,
+          "reduction95CI": [
+            80.94487699238259,
+            82.964332327307
+          ],
+          "experimentalNoiseBudgetMs": 59.52700041234493,
+          "mediansMs": [
+            839.7020408883691,
+            148.0981248896569
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11258493,
+              11258504,
+              11258520
+            ],
+            "writeBytes": [
+              5320658
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251247,
+              5251447
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 340.5070000000006,
+            "afterMs": 102.42299999999993,
+            "absoluteReductionMs": 238.08400000000063,
+            "reductionPercent": 69.92044216418465,
+            "reduction95CI": [
+              67.25612272252182,
+              73.06820333998034
+            ],
+            "experimentalNoiseBudgetMs": 38.76399999999683,
+            "mediansMs": [
+              340.5070000000006,
+              102.42299999999993
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 361.6779999999995,
+            "afterMs": 108.7100000000003,
+            "absoluteReductionMs": 252.96799999999917,
+            "reductionPercent": 69.94287736605476,
+            "reduction95CI": [
+              63.34231014340388,
+              72.63495099977555
+            ],
+            "experimentalNoiseBudgetMs": 38.76399999999683,
+            "mediansMs": [
+              340.5070000000006,
+              102.42299999999993
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 374.2839999999994,
+            "afterMs": 124.82199999999999,
+            "absoluteReductionMs": 249.46199999999942,
+            "reductionPercent": 66.65045794102869,
+            "reduction95CI": [
+              65.2349015719521,
+              71.91758130189918
+            ],
+            "experimentalNoiseBudgetMs": 38.76399999999683,
+            "mediansMs": [
+              340.5070000000006,
+              102.42299999999993
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 8615.506296334515
+      },
+      "change-five": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 852.5167079642415,
+          "afterMs": 143.33445788361132,
+          "absoluteReductionMs": 709.1822500806302,
+          "reductionPercent": 83.18690337156144,
+          "reduction95CI": [
+            82.12958029677633,
+            85.81655368693141
+          ],
+          "experimentalNoiseBudgetMs": 21.448750514537096,
+          "mediansMs": [
+            852.5167079642415,
+            143.33445788361132
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 891.4832079317421,
+          "afterMs": 151.9761250820011,
+          "absoluteReductionMs": 739.507082849741,
+          "reductionPercent": 82.95244108584069,
+          "reduction95CI": [
+            80.73813769351506,
+            87.70783954527022
+          ],
+          "experimentalNoiseBudgetMs": 21.448750514537096,
+          "mediansMs": [
+            852.5167079642415,
+            143.33445788361132
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1166.0639999900013,
+          "afterMs": 165.7607089728117,
+          "absoluteReductionMs": 1000.3032910171896,
+          "reductionPercent": 85.78459595920695,
+          "reduction95CI": [
+            80.73813769351506,
+            87.59247991069107
+          ],
+          "experimentalNoiseBudgetMs": 21.448750514537096,
+          "mediansMs": [
+            852.5167079642415,
+            143.33445788361132
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11258472,
+              11258497,
+              11258504,
+              11258520
+            ],
+            "writeBytes": [
+              5320763
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251152,
+              5251352,
+              5251552
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              5
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              17852
+            ],
+            "rpcReadbackRows": [
+              5
+            ],
+            "rpcReadbackBytes": [
+              17595
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 343.6869999999992,
+            "afterMs": 97.81699999999915,
+            "absoluteReductionMs": 245.87000000000006,
+            "reductionPercent": 71.53892931650037,
+            "reduction95CI": [
+              68.00244306889847,
+              75.64899795571002
+            ],
+            "experimentalNoiseBudgetMs": 23.206000000001836,
+            "mediansMs": [
+              343.6869999999992,
+              97.81699999999915
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 353.2719999999969,
+            "afterMs": 101.11100000000306,
+            "absoluteReductionMs": 252.16099999999386,
+            "reductionPercent": 71.3787110215347,
+            "reduction95CI": [
+              66.26208540399688,
+              73.89396476798196
+            ],
+            "experimentalNoiseBudgetMs": 23.206000000001836,
+            "mediansMs": [
+              343.6869999999992,
+              97.81699999999915
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 357.01699999999903,
+            "afterMs": 118.33000000000027,
+            "absoluteReductionMs": 238.68699999999876,
+            "reductionPercent": 66.85592002621708,
+            "reduction95CI": [
+              66.26208540399688,
+              72.48870501964947
+            ],
+            "experimentalNoiseBudgetMs": 23.206000000001836,
+            "mediansMs": [
+              343.6869999999992,
+              97.81699999999915
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 8744.79461351523
+      },
+      "refresh-all": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 1036.0876249615103,
+          "afterMs": 730.2469171117991,
+          "absoluteReductionMs": 305.8407078497112,
+          "reductionPercent": 29.518807143466542,
+          "reduction95CI": [
+            22.3012910739237,
+            34.73665020740005
+          ],
+          "experimentalNoiseBudgetMs": 29.355002101510763,
+          "mediansMs": [
+            1036.0876249615103,
+            730.2469171117991
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 1040.3211251832545,
+          "afterMs": 805.026707937941,
+          "absoluteReductionMs": 235.29441724531353,
+          "reductionPercent": 22.617479502193703,
+          "reduction95CI": [
+            12.838923732360064,
+            29.571038113655945
+          ],
+          "experimentalNoiseBudgetMs": 29.355002101510763,
+          "mediansMs": [
+            1036.0876249615103,
+            730.2469171117991
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 1064.2684169579297,
+          "afterMs": 903.0651249922812,
+          "absoluteReductionMs": 161.20329196564853,
+          "reductionPercent": 15.146864211796007,
+          "reduction95CI": [
+            12.903515538935729,
+            26.419334411022867
+          ],
+          "experimentalNoiseBudgetMs": 29.355002101510763,
+          "mediansMs": [
+            1036.0876249615103,
+            730.2469171117991
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11260703,
+              11260714,
+              11260730
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5279052,
+              5279252
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              5241745
+            ],
+            "writeBytes": [
+              5348463
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5279052,
+              5279252
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 399.1460000000018,
+            "afterMs": 259.72199999999646,
+            "absoluteReductionMs": 139.42400000000532,
+            "reductionPercent": 34.93057678142952,
+            "reduction95CI": [
+              31.054892577335423,
+              37.80740384192588
+            ],
+            "experimentalNoiseBudgetMs": 46.876000000011686,
+            "mediansMs": [
+              399.1460000000018,
+              259.72199999999646
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 432.12700000000126,
+            "afterMs": 273.1550000000027,
+            "absoluteReductionMs": 158.97199999999856,
+            "reductionPercent": 36.78825900718957,
+            "reduction95CI": [
+              22.22595240839259,
+              40.07474184852209
+            ],
+            "experimentalNoiseBudgetMs": 46.876000000011686,
+            "mediansMs": [
+              399.1460000000018,
+              259.72199999999646
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 448.4769999999969,
+            "afterMs": 310.4319999999987,
+            "absoluteReductionMs": 138.0449999999982,
+            "reductionPercent": 30.78084271880145,
+            "reduction95CI": [
+              23.953985145118807,
+              40.07474184852209
+            ],
+            "experimentalNoiseBudgetMs": 46.876000000011686,
+            "mediansMs": [
+              399.1460000000018,
+              259.72199999999646
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 1650.8769049466764
+      },
+      "new-fifty": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 575.2106250729412,
+          "afterMs": 120.6895001232624,
+          "absoluteReductionMs": 454.5211249496788,
+          "reductionPercent": 79.01820744219424,
+          "reduction95CI": [
+            77.8009382833283,
+            80.75644030481546
+          ],
+          "experimentalNoiseBudgetMs": 25.448165368288755,
+          "mediansMs": [
+            575.2106250729412,
+            120.6895001232624
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 598.1374999973923,
+          "afterMs": 124.73245803266764,
+          "absoluteReductionMs": 473.40504196472466,
+          "reductionPercent": 79.14652433040706,
+          "reduction95CI": [
+            77.76605012671098,
+            79.78205319253084
+          ],
+          "experimentalNoiseBudgetMs": 25.448165368288755,
+          "mediansMs": [
+            575.2106250729412,
+            120.6895001232624
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 605.2590829785913,
+          "afterMs": 127.89204204455018,
+          "absoluteReductionMs": 477.36704093404114,
+          "reductionPercent": 78.86986818683168,
+          "reduction95CI": [
+            78.57548087849824,
+            79.39188992937764
+          ],
+          "experimentalNoiseBudgetMs": 25.448165368288755,
+          "mediansMs": [
+            575.2106250729412,
+            120.6895001232624
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              198
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1379
+            ],
+            "readBytes": [
+              11258501,
+              11258511,
+              11258517,
+              11258538
+            ],
+            "writeBytes": [
+              5519662
+            ],
+            "rpcReadbackRows": [
+              1379
+            ],
+            "rpcReadbackBytes": [
+              5454602,
+              5454802,
+              5454873,
+              5455002
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              36
+            ],
+            "writeRpcCalls": [
+              1
+            ],
+            "writeRows": [
+              50
+            ],
+            "readBytes": [
+              5241763
+            ],
+            "writeBytes": [
+              199004
+            ],
+            "rpcReadbackRows": [
+              50
+            ],
+            "rpcReadbackBytes": [
+              203610
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 254.50500000000176,
+            "afterMs": 76.29899999999878,
+            "absoluteReductionMs": 178.20600000000297,
+            "reductionPercent": 70.0206282784235,
+            "reduction95CI": [
+              67.40530843560042,
+              71.59112787568023
+            ],
+            "experimentalNoiseBudgetMs": 22.030000000000882,
+            "mediansMs": [
+              254.50500000000176,
+              76.29899999999878
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 271.3940000000008,
+            "afterMs": 79.94500000000215,
+            "absoluteReductionMs": 191.44899999999865,
+            "reductionPercent": 70.54282703375834,
+            "reduction95CI": [
+              68.36407929117394,
+              71.1216902363367
+            ],
+            "experimentalNoiseBudgetMs": 22.030000000000882,
+            "mediansMs": [
+              254.50500000000176,
+              76.29899999999878
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 273.44700000000444,
+            "afterMs": 80.51499999999834,
+            "absoluteReductionMs": 192.9320000000061,
+            "reductionPercent": 70.55553727047763,
+            "reduction95CI": [
+              68.70761254416173,
+              71.1216902363367
+            ],
+            "experimentalNoiseBudgetMs": 22.030000000000882,
+            "mediansMs": [
+              254.50500000000176,
+              76.29899999999878
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 11055.66283027019
+      },
+      "resume-after-response-loss": {
+        "p50": {
+          "samples": 7,
+          "statistic": "p50",
+          "beforeMs": 581.6682500299066,
+          "afterMs": 101.76166682504117,
+          "absoluteReductionMs": 479.90658320486546,
+          "reductionPercent": 82.5052051887293,
+          "reduction95CI": [
+            79.53102315415597,
+            84.80960282083927
+          ],
+          "experimentalNoiseBudgetMs": 48.979001585394144,
+          "mediansMs": [
+            581.6682500299066,
+            101.76166682504117
+          ]
+        },
+        "p75": {
+          "samples": 7,
+          "statistic": "p75",
+          "beforeMs": 648.1605831068009,
+          "afterMs": 117.49445903114974,
+          "absoluteReductionMs": 530.6661240756512,
+          "reductionPercent": 81.87263124394752,
+          "reduction95CI": [
+            79.82398784708771,
+            84.73938391724441
+          ],
+          "experimentalNoiseBudgetMs": 48.979001585394144,
+          "mediansMs": [
+            581.6682500299066,
+            101.76166682504117
+          ]
+        },
+        "p95": {
+          "samples": 7,
+          "statistic": "p95",
+          "beforeMs": 666.8254169635475,
+          "afterMs": 120.69708295166492,
+          "absoluteReductionMs": 546.1283340118825,
+          "reductionPercent": 81.89974768789251,
+          "reduction95CI": [
+            79.82398784708771,
+            82.51448867361515
+          ],
+          "experimentalNoiseBudgetMs": 48.979001585394144,
+          "mediansMs": [
+            581.6682500299066,
+            101.76166682504117
+          ]
+        },
+        "counts": {
+          "baseline": {
+            "readQueries": [
+              189
+            ],
+            "writeRpcCalls": [
+              7
+            ],
+            "writeRows": [
+              1329
+            ],
+            "readBytes": [
+              11260730,
+              11261488,
+              11261503,
+              11261530
+            ],
+            "writeBytes": [
+              5321763,
+              5322163
+            ],
+            "rpcReadbackRows": [
+              1329
+            ],
+            "rpcReadbackBytes": [
+              5251152,
+              5251352,
+              5251423,
+              5251552
+            ]
+          },
+          "candidate": {
+            "readQueries": [
+              27
+            ],
+            "writeRpcCalls": [
+              0
+            ],
+            "writeRows": [
+              0
+            ],
+            "readBytes": [
+              5241875,
+              5241885
+            ],
+            "writeBytes": [
+              0
+            ],
+            "rpcReadbackRows": [
+              0
+            ],
+            "rpcReadbackBytes": [
+              0
+            ]
+          }
+        },
+        "cpu": {
+          "p50": {
+            "samples": 7,
+            "statistic": "p50",
+            "beforeMs": 258.56499999999727,
+            "afterMs": 72.09699999999941,
+            "absoluteReductionMs": 186.46799999999786,
+            "reductionPercent": 72.11648908398269,
+            "reduction95CI": [
+              68.53342980128095,
+              74.87687886992262
+            ],
+            "experimentalNoiseBudgetMs": 27.72799999998199,
+            "mediansMs": [
+              258.56499999999727,
+              72.09699999999941
+            ]
+          },
+          "p75": {
+            "samples": 7,
+            "statistic": "p75",
+            "beforeMs": 274.31299999999936,
+            "afterMs": 77.4149999999949,
+            "absoluteReductionMs": 196.89800000000446,
+            "reductionPercent": 71.77858869248081,
+            "reduction95CI": [
+              70.05975286678563,
+              73.7485435479173
+            ],
+            "experimentalNoiseBudgetMs": 27.72799999998199,
+            "mediansMs": [
+              258.56499999999727,
+              72.09699999999941
+            ]
+          },
+          "p95": {
+            "samples": 7,
+            "statistic": "p95",
+            "beforeMs": 274.639999999998,
+            "afterMs": 78.24500000000256,
+            "absoluteReductionMs": 196.39499999999543,
+            "reductionPercent": 71.50997669676553,
+            "reduction95CI": [
+              70.80728243572626,
+              72.29354791727324
+            ],
+            "experimentalNoiseBudgetMs": 27.72799999998199,
+            "mediansMs": [
+              258.56499999999727,
+              72.09699999999941
+            ]
+          }
+        },
+        "afterThroughputRowsPerSecond": 11311.171700851526
+      }
+    }
+  },
+  "quality": {
+    "sourcePreserved": true,
+    "protectedFixtures": 67,
+    "protectedViolations": 0,
+    "omissions": 0,
+    "duplicates": 0,
+    "failures": {
+      "lostResponseAfterCommitDetected": true,
+      "restartVerifiedBeforeSkipping": true,
+      "resendCountAfterVerifiedRestart": 0,
+      "concurrentAdminEditPreserved": true,
+      "wholeBatchRollbackVerified": true,
+      "rpc201RejectedWithoutWrites": true
+    }
+  },
+  "limitations": [
+    "Unix socket fixture, not operational Supabase/API latency",
+    "Full production catalog/triggers/extensions not loaded",
+    "Read/write bytes are JSON encoding sizes, not measured wire transfer",
+    "Client RSS is the process-wide high-water mark, not an independent per-case peak",
+    "Batch-size groups are ordered within runs; do not infer a causal speed winner across groups"
+  ]
+}

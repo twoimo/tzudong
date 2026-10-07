@@ -608,11 +608,12 @@ test('rejects portable path escapes, links, hardlinks, swaps, oversized input, a
     const replacementPath = path.join(root, 'replacement.jsonl');
     fs.writeFileSync(stablePath, 'stable');
     fs.writeFileSync(replacementPath, 'other');
+    const canonicalStablePath = fs.realpathSync.native(stablePath);
     const swappingFilesystem = Object.create(fs);
     let targetStats = 0;
-    swappingFilesystem.lstatSync = candidate => {
-        const listed = fs.lstatSync(candidate);
-        if (candidate === stablePath && ++targetStats === 2) {
+    swappingFilesystem.lstatSync = (candidate, options) => {
+        const listed = fs.lstatSync(candidate, options);
+        if (candidate === canonicalStablePath && ++targetStats === 2) {
             fs.renameSync(replacementPath, stablePath);
         }
         return listed;
@@ -624,6 +625,21 @@ test('rejects portable path escapes, links, hardlinks, swaps, oversized input, a
         }),
         { name: 'MAP_PATH_REJECTED' }
     );
+    assert.ok(targetStats >= 2, 'the swap hook must execute against the canonical path');
+
+    const mutablePath = path.join(root, 'mutable.jsonl');
+    fs.writeFileSync(mutablePath, 'safe');
+    const mutatingFilesystem = Object.create(fs);
+    let mutated = false;
+    mutatingFilesystem.readSync = (...args) => {
+        const count = fs.readSync(...args);
+        if (!mutated && count > 0) { mutated = true; fs.writeFileSync(mutablePath, 'evil'); }
+        return count;
+    };
+    assert.throws(() => readContainedRegularFile(root, 'mutable.jsonl', {
+        maxBytes: 1024, filesystem: mutatingFilesystem
+    }), { name: 'MAP_FILE_READ_REJECTED' });
+    assert.equal(mutated, true);
 
     const published = publishContainedFile(root, 'map_url_crawling/video.jsonl', '{"record":true}\n');
     assert.equal(resolveContainedPath(root, 'map_url_crawling/video.jsonl'), published);

@@ -16,5 +16,9 @@
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "winston": "^3.19.0"
+  },
+  "overrides": {
+    "brace-expansion@<2": "1.1.21",
+    "brace-expansion@>=2 <3": "2.1.7"
   }
 }

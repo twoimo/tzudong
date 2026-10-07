@@ -1,0 +1,37 @@
+{
+  "kind": "upstream-integration-verification",
+  "upstreamDevelop": "8bd6cf5c",
+  "candidateBeforeMerge": "cdd29535e5a422876a817b76ab421105da77b26f",
+  "resolvedConflicts": [
+    "apps/web/components/feed/FeedContent.tsx",
+    "apps/web/components/home/map-panel-chrome.tsx",
+    "apps/web/tests-unit/mobile-desktop-parity-source.test.ts"
+  ],
+  "resolution": "unified upstream public-panel header with existing candidate implementation preserved",
+  "verification": {
+    "webTestsPassed": 2663,
+    "webTestsSkipped": 9,
+    "webTestsFailed": 0,
+    "separateTestProcesses": 11,
+    "typescriptParityDiagnostics": 0,
+    "eslintPassed": true,
+    "nextVersion": "16.3.8",
+    "productionBuildPassed": true,
+    "staticPages": 48,
+    "cssOwnershipPassed": true
+  },
+  "fixtureCorrection": {
+    "sameBridgeAssertions": 129,
+    "commandTimeoutMs": 500,
+    "pidRecordedBySpawningProcess": true
+  },
+  "publicFont": {
+    "httpStatus": 200,
+    "corsOrigin": "https://www.tzudong.app",
+    "bytes": 11420784,
+    "sha256": "8c2eeb55898708b108032eb0baddabfbf7c98a78c3411a2f2601c7bdeff1cfb7",
+    "sourceContentMatched": true
+  },
+  "originalEnvironmentUnchanged": true,
+  "productionDeploymentVerified": false
+}

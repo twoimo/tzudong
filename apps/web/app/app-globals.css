@@ -708,33 +708,33 @@ All colors MUST be HSL.
 
 
   .dark {
-    --background: 24 10% 10%;
-    --foreground: 38 30% 96%;
-    --card: 24 9% 13%;
-    --card-foreground: 38 30% 96%;
-    --popover: 24 9% 13%;
-    --popover-foreground: 38 30% 96%;
-    --primary: 0 74% 50%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 24 7% 18%;
-    --secondary-foreground: 38 30% 96%;
-    --muted: 24 7% 18%;
-    --muted-foreground: 24 7% 68%;
-    --accent: 24 7% 18%;
-    --accent-foreground: 38 30% 96%;
+    --background: 220 18% 9%;
+    --foreground: 220 20% 96%;
+    --card: 220 16% 12%;
+    --card-foreground: 220 20% 96%;
+    --popover: 220 16% 12%;
+    --popover-foreground: 220 20% 96%;
+    --primary: 352 78% 62%;
+    --primary-foreground: 220 18% 9%;
+    --secondary: 220 14% 18%;
+    --secondary-foreground: 220 20% 96%;
+    --muted: 220 14% 18%;
+    --muted-foreground: 220 12% 70%;
+    --accent: 220 14% 18%;
+    --accent-foreground: 220 20% 96%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 24 6% 24%;
-    --input: 24 6% 24%;
-    --ring: 0 74% 54%;
-    --sidebar-background: 24 10% 10%;
-    --sidebar-foreground: 38 30% 96%;
-    --sidebar-primary: 0 74% 50%;
+    --border: 220 13% 24%;
+    --input: 220 13% 32%;
+    --ring: 352 78% 62%;
+    --sidebar-background: 220 16% 12%;
+    --sidebar-foreground: 220 20% 96%;
+    --sidebar-primary: 352 78% 62%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 24 7% 18%;
-    --sidebar-accent-foreground: 38 30% 96%;
-    --sidebar-border: 24 6% 24%;
-    --sidebar-ring: 0 74% 54%;
+    --sidebar-accent: 220 14% 18%;
+    --sidebar-accent-foreground: 220 20% 96%;
+    --sidebar-border: 220 13% 24%;
+    --sidebar-ring: 352 78% 62%;
     --gradient-primary: linear-gradient(135deg, hsl(0 74% 50%), hsl(0 58% 36%));
     --gradient-secondary: linear-gradient(
       135deg,
@@ -1071,8 +1071,10 @@ div[style*="z-index"] > div > .custom-marker {
     max-width: 100%;
   }
 
-  [data-admin-dashboard-management="true"] .recharts-responsive-container,
-  [data-admin-dashboard-management="true"] .recharts-wrapper {
+  /* Recharts 3 measures inside a zero-width, overflow-visible element.
+     Clamp its outer responsive container; a percentage cap on the inner
+     wrapper collapses the painted chart to zero on mobile. */
+  [data-admin-dashboard-management="true"] .recharts-responsive-container {
     max-width: 100% !important;
   }
 }

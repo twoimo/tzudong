@@ -1,0 +1,1642 @@
+{
+  "kind": "local-transform-component-two-condition-replay",
+  "liveEvidenceEligible": false,
+  "formalPerformanceClaim": "not_established",
+  "baselineCommit": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+  "baselineSourceSha256": "5bb46aee715d0258f9ff1d8d69629f5f21be27bbd4d589e45a97b93e0c732a3a",
+  "sourceHashes": {
+    "backend/restaurant-evaluation/scripts/12-transform.py": "ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4",
+    "backend/utils/stage_cache.py": "f1fda8ef6c5dd63c6a20a4edf4549ad8e04d4a4f1c40ed15304c563c528dc18b",
+    "backend/utils/jsonl_utils.py": "c6038dba73205181cbf446e9be2be0a3c4342e41da8826787898f4d13915a96d",
+    "backend/bin/benchmark_pipeline_transform.py": "c0dc9284b920c7779f68a4709aba128f47268c685e2a214340bb353a9f9007d0",
+    "backend/bin/benchmark_pipeline_transform_followup.py": "a9f6f26837bd928575980bd43dda49e3ea77cf7494f95b7c6fcd351637cf7680",
+    "backend/bin/analyze_pipeline_performance.py": "037b3c03decf9acbc5006beec9dff66f5570de73d65fb847e1b305e30753b7cc"
+  },
+  "dataset": {
+    "sha256": "71d4a176f6eff028cecf4963f3332f97c14284148b6d769e3617fce8ef8361c9",
+    "files": 3307,
+    "bytes": 23636539
+  },
+  "sourcePreserved": true,
+  "holdout": {
+    "videoId": "-1OU4tkFJns",
+    "sourceFiles": {
+      "restaurant-crawling/data/tzuyang/meta/-1OU4tkFJns.jsonl": "61e98abc873335f3ec5182135f81a0a21c9a9144446a249abd21d3a249a4b461",
+      "restaurant-evaluation/data/tzuyang/evaluation/rule_results/-1OU4tkFJns.jsonl": "7e28185fc9e5829b586c78f49e3bd0f5cf3387696a9b5ac50922b7009ee723b5",
+      "restaurant-evaluation/data/tzuyang/evaluation/laaj_results/-1OU4tkFJns.jsonl": "1e4cbfca725aebb0bd9a24d73a1438db82d580d5d99d2af98866820a9ef4b3fe"
+    },
+    "oneVideoGroup": true
+  },
+  "oracle": {
+    "records": 1257,
+    "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+    "outputFileSha256": "fc4847525130069d897e100380b2e707ea9ec3b20bcf1a136b3065c5040311e8",
+    "outputBytes": 4784992
+  },
+  "observations": [
+    {
+      "scenario": "new-input",
+      "repeat": 0,
+      "implementation": "baseline",
+      "wallMs": 463.59616704285145,
+      "cpuMs": 425.55500000000006,
+      "peakRssMiB": 103.5,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 463.59616704285145,
+          "cpuMs": 425.55500000000006,
+          "peakRssMiB": 103.5,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "new",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 0,
+      "implementation": "candidate",
+      "wallMs": 186.22266687452793,
+      "cpuMs": 170.29,
+      "peakRssMiB": 71.875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 186.22266687452793,
+          "cpuMs": 170.29,
+          "peakRssMiB": 71.875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "new",
+          "receiptSha256": "bd7bd59fa1372a00daca45f56b593a5b7e7c89a3bb7c0f756e2647b82c9f92f6",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 1,
+      "implementation": "candidate",
+      "wallMs": 212.04399992711842,
+      "cpuMs": 195.88400000000001,
+      "peakRssMiB": 71.6875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 212.04399992711842,
+          "cpuMs": 195.88400000000001,
+          "peakRssMiB": 71.6875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "new",
+          "receiptSha256": "23b06b4a572a848a864d9e40ec4f59cc00286b362b9ab73727ee432fea7555d2",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 1,
+      "implementation": "baseline",
+      "wallMs": 430.2826249040663,
+      "cpuMs": 398.278,
+      "peakRssMiB": 103.28125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 430.2826249040663,
+          "cpuMs": 398.278,
+          "peakRssMiB": 103.28125,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "new",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 2,
+      "implementation": "baseline",
+      "wallMs": 343.25587493367493,
+      "cpuMs": 316.61400000000003,
+      "peakRssMiB": 103.3125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 343.25587493367493,
+          "cpuMs": 316.61400000000003,
+          "peakRssMiB": 103.3125,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "new",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 2,
+      "implementation": "candidate",
+      "wallMs": 162.76449989527464,
+      "cpuMs": 151.68699999999998,
+      "peakRssMiB": 73.484375,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 162.76449989527464,
+          "cpuMs": 151.68699999999998,
+          "peakRssMiB": 73.484375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "new",
+          "receiptSha256": "16d992f4b0f0737cc31309fbe48ef690830bd071bffb863cc18c83db0ea4c401",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 3,
+      "implementation": "candidate",
+      "wallMs": 163.03374990820885,
+      "cpuMs": 150.524,
+      "peakRssMiB": 69.546875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 163.03374990820885,
+          "cpuMs": 150.524,
+          "peakRssMiB": 69.546875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "new",
+          "receiptSha256": "47b457cd2228facbbe6421560ac3081d946d9249067b865f7bd0d667750b432c",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 3,
+      "implementation": "baseline",
+      "wallMs": 489.9526247754693,
+      "cpuMs": 426.992,
+      "peakRssMiB": 103.140625,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 489.9526247754693,
+          "cpuMs": 426.992,
+          "peakRssMiB": 103.140625,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "new",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 4,
+      "implementation": "baseline",
+      "wallMs": 556.317042093724,
+      "cpuMs": 494.925,
+      "peakRssMiB": 103.625,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 556.317042093724,
+          "cpuMs": 494.925,
+          "peakRssMiB": 103.625,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "new",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 4,
+      "implementation": "candidate",
+      "wallMs": 206.39100018888712,
+      "cpuMs": 186.32999999999998,
+      "peakRssMiB": 72.109375,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 206.39100018888712,
+          "cpuMs": 186.32999999999998,
+          "peakRssMiB": 72.109375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "new",
+          "receiptSha256": "c8e3c1db6cc0b1ad4571836c038d2ff45abc09f6a37356e3f61fe01df84cec7b",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 5,
+      "implementation": "candidate",
+      "wallMs": 215.05287499167025,
+      "cpuMs": 188.99900000000002,
+      "peakRssMiB": 70.84375,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 215.05287499167025,
+          "cpuMs": 188.99900000000002,
+          "peakRssMiB": 70.84375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "new",
+          "receiptSha256": "894a9011b673cf4e9d6e22f4d9a054de9a4f52dd3a30432fd328774d4b58baa2",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 5,
+      "implementation": "baseline",
+      "wallMs": 457.6322080101818,
+      "cpuMs": 400.58299999999997,
+      "peakRssMiB": 103.421875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 457.6322080101818,
+          "cpuMs": 400.58299999999997,
+          "peakRssMiB": 103.421875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "new",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 6,
+      "implementation": "baseline",
+      "wallMs": 531.0213749762625,
+      "cpuMs": 466.753,
+      "peakRssMiB": 103.46875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 531.0213749762625,
+          "cpuMs": 466.753,
+          "peakRssMiB": 103.46875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "new",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "new-input",
+      "repeat": 6,
+      "implementation": "candidate",
+      "wallMs": 175.87812501005828,
+      "cpuMs": 162.169,
+      "peakRssMiB": 71.984375,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 175.87812501005828,
+          "cpuMs": 162.169,
+          "peakRssMiB": 71.984375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "new",
+          "receiptSha256": "5ed11ea4f2ca1e7e53f2dba005c584151b5a11eac7bc019c4802d46b2d69e864",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 0,
+      "implementation": "baseline",
+      "wallMs": 931.4771667122841,
+      "cpuMs": 852.119,
+      "peakRssMiB": 103.328125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 467.0587917789817,
+          "cpuMs": 426.48500000000007,
+          "peakRssMiB": 103.328125,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "d2accc04828c244d9d834af049233b7c000a3dc45fe9beb07b937f74d70ba9e9",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": null,
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "append-open",
+            "stagedOutputBytes": null,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        },
+        {
+          "wallMs": 464.4183749333024,
+          "cpuMs": 425.63399999999996,
+          "peakRssMiB": 103.328125,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "restart",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 0,
+      "implementation": "candidate",
+      "wallMs": 286.50875110179186,
+      "cpuMs": 275.552,
+      "peakRssMiB": 70.78125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 142.6881670486182,
+          "cpuMs": 136.89,
+          "peakRssMiB": 70.78125,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "f8eb62afed3ad18fce4083b29016b6e81d133fba042d7d697d830d2d298f90f0",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": "75d2a7376ae5debb95a1c51f892e9eb2be499e66c3a428ae0cbbb5ba3b2c038a",
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "atomic-replace-after-fsync",
+            "stagedOutputBytes": 4784992,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": false,
+            "recordCount": 1256,
+            "groupCount": 1249
+          }
+        },
+        {
+          "wallMs": 143.82058405317366,
+          "cpuMs": 138.662,
+          "peakRssMiB": 70.234375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "restart",
+          "receiptSha256": "68311d4c64628ec505cb459dafafc36188e5248a0328d93235bf9fd5d719905b",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 1,
+      "implementation": "candidate",
+      "wallMs": 304.73287496715784,
+      "cpuMs": 286.61199999999997,
+      "peakRssMiB": 70.234375,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 165.1934999972582,
+          "cpuMs": 151.45,
+          "peakRssMiB": 69.1875,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "f8eb62afed3ad18fce4083b29016b6e81d133fba042d7d697d830d2d298f90f0",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": "15c31623579ab698c8066cd571ced634e4030aee6d27c68c70917da600a40012",
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "atomic-replace-after-fsync",
+            "stagedOutputBytes": 4784992,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": false,
+            "recordCount": 1256,
+            "groupCount": 1249
+          }
+        },
+        {
+          "wallMs": 139.53937496989965,
+          "cpuMs": 135.162,
+          "peakRssMiB": 70.234375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "restart",
+          "receiptSha256": "e52e161aee51161d179ccfc3948ccdc2c5c90e2846e253e4d11dd517350e6396",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 1,
+      "implementation": "baseline",
+      "wallMs": 850.9687499608845,
+      "cpuMs": 772.4170000000001,
+      "peakRssMiB": 103.421875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 413.1702498998493,
+          "cpuMs": 367.9750000000001,
+          "peakRssMiB": 103.09375,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "d2accc04828c244d9d834af049233b7c000a3dc45fe9beb07b937f74d70ba9e9",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": null,
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "append-open",
+            "stagedOutputBytes": null,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        },
+        {
+          "wallMs": 437.79850006103516,
+          "cpuMs": 404.442,
+          "peakRssMiB": 103.421875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "restart",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 2,
+      "implementation": "baseline",
+      "wallMs": 669.9482488911599,
+      "cpuMs": 636.664,
+      "peakRssMiB": 103.125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 333.37220805697143,
+          "cpuMs": 317.651,
+          "peakRssMiB": 103.125,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "d2accc04828c244d9d834af049233b7c000a3dc45fe9beb07b937f74d70ba9e9",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": null,
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "append-open",
+            "stagedOutputBytes": null,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        },
+        {
+          "wallMs": 336.57604083418846,
+          "cpuMs": 319.013,
+          "peakRssMiB": 103.03125,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "restart",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 2,
+      "implementation": "candidate",
+      "wallMs": 360.0764579605311,
+      "cpuMs": 302.868,
+      "peakRssMiB": 74.46875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 154.45041609928012,
+          "cpuMs": 141.17499999999998,
+          "peakRssMiB": 69.015625,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "f8eb62afed3ad18fce4083b29016b6e81d133fba042d7d697d830d2d298f90f0",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": "a630683c63e852f1f66640d61744ae44ea9f62ba6ae9190cffedb2b67c8fd78d",
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "atomic-replace-after-fsync",
+            "stagedOutputBytes": 4784992,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": false,
+            "recordCount": 1256,
+            "groupCount": 1249
+          }
+        },
+        {
+          "wallMs": 205.626041861251,
+          "cpuMs": 161.693,
+          "peakRssMiB": 74.46875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "restart",
+          "receiptSha256": "c276e7e626a6ba44298f8d5fa459dfced2300e85efadf74d0806e0f72579b725",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 3,
+      "implementation": "candidate",
+      "wallMs": 439.15529176592827,
+      "cpuMs": 392.644,
+      "peakRssMiB": 73.046875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 214.31999979540706,
+          "cpuMs": 190.66100000000003,
+          "peakRssMiB": 71.015625,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "f8eb62afed3ad18fce4083b29016b6e81d133fba042d7d697d830d2d298f90f0",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": "ffdb7b5cf468d84b6bd02ee5e4edb9ecde5c49462e0a7d4423054c18b35c14e6",
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "atomic-replace-after-fsync",
+            "stagedOutputBytes": 4784992,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": false,
+            "recordCount": 1256,
+            "groupCount": 1249
+          }
+        },
+        {
+          "wallMs": 224.8352919705212,
+          "cpuMs": 201.983,
+          "peakRssMiB": 73.046875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "restart",
+          "receiptSha256": "b9245e79dbfea6f6a8044103176d7432c436512a73d4d7c33903d86c89a369d6",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 3,
+      "implementation": "baseline",
+      "wallMs": 1608.4093330428004,
+      "cpuMs": 882.9839999999999,
+      "peakRssMiB": 103.46875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 1133.6119580082595,
+          "cpuMs": 459.43100000000004,
+          "peakRssMiB": 103.46875,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "d2accc04828c244d9d834af049233b7c000a3dc45fe9beb07b937f74d70ba9e9",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": null,
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "append-open",
+            "stagedOutputBytes": null,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        },
+        {
+          "wallMs": 474.7973750345409,
+          "cpuMs": 423.55299999999994,
+          "peakRssMiB": 103.359375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "restart",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 4,
+      "implementation": "baseline",
+      "wallMs": 936.3744580186903,
+      "cpuMs": 832.3209999999999,
+      "peakRssMiB": 103.28125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 420.939875068143,
+          "cpuMs": 376.26099999999997,
+          "peakRssMiB": 103.265625,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "d2accc04828c244d9d834af049233b7c000a3dc45fe9beb07b937f74d70ba9e9",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": null,
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "append-open",
+            "stagedOutputBytes": null,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        },
+        {
+          "wallMs": 515.4345829505473,
+          "cpuMs": 456.06,
+          "peakRssMiB": 103.28125,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "restart",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 4,
+      "implementation": "candidate",
+      "wallMs": 317.89695704355836,
+      "cpuMs": 296.15700000000004,
+      "peakRssMiB": 73.1875,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 152.0252909976989,
+          "cpuMs": 142.416,
+          "peakRssMiB": 69.390625,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "f8eb62afed3ad18fce4083b29016b6e81d133fba042d7d697d830d2d298f90f0",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": "80b5ad763845627d4700eb887a72ae21bdb9344d76011388bd58f68ab5ec18c6",
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "atomic-replace-after-fsync",
+            "stagedOutputBytes": 4784992,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": false,
+            "recordCount": 1256,
+            "groupCount": 1249
+          }
+        },
+        {
+          "wallMs": 165.87166604585946,
+          "cpuMs": 153.741,
+          "peakRssMiB": 73.1875,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "restart",
+          "receiptSha256": "cacc74e608184dcd86cef03e15bf05fbde2001d30be5916077db5bada9cb088d",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 5,
+      "implementation": "candidate",
+      "wallMs": 386.30312494933605,
+      "cpuMs": 344.16700000000003,
+      "peakRssMiB": 73.828125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 199.97600000351667,
+          "cpuMs": 175.593,
+          "peakRssMiB": 69.453125,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "f8eb62afed3ad18fce4083b29016b6e81d133fba042d7d697d830d2d298f90f0",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": "633f4af609d7f927ecb662d00f4c0585f505036b6c5765f838ae0cfc4be0c20c",
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "atomic-replace-after-fsync",
+            "stagedOutputBytes": 4784992,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": false,
+            "recordCount": 1256,
+            "groupCount": 1249
+          }
+        },
+        {
+          "wallMs": 186.32712494581938,
+          "cpuMs": 168.574,
+          "peakRssMiB": 73.828125,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "restart",
+          "receiptSha256": "966e1de143c1bc69f528dfd8129d490c576f889df569661c7d1ee78d507047e6",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 5,
+      "implementation": "baseline",
+      "wallMs": 812.2467079665512,
+      "cpuMs": 743.508,
+      "peakRssMiB": 103.328125,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 413.47804199904203,
+          "cpuMs": 374.73100000000005,
+          "peakRssMiB": 103.203125,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "d2accc04828c244d9d834af049233b7c000a3dc45fe9beb07b937f74d70ba9e9",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": null,
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "append-open",
+            "stagedOutputBytes": null,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        },
+        {
+          "wallMs": 398.76866596750915,
+          "cpuMs": 368.77700000000004,
+          "peakRssMiB": 103.328125,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "restart",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 6,
+      "implementation": "baseline",
+      "wallMs": 842.8387090098113,
+      "cpuMs": 774.5730000000001,
+      "peakRssMiB": 103.25,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 396.1882090661675,
+          "cpuMs": 367.467,
+          "peakRssMiB": 103.09375,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "d2accc04828c244d9d834af049233b7c000a3dc45fe9beb07b937f74d70ba9e9",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": null,
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "append-open",
+            "stagedOutputBytes": null,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        },
+        {
+          "wallMs": 446.6504999436438,
+          "cpuMs": 407.10600000000005,
+          "peakRssMiB": 103.25,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "0988af09b64bdfd08807f01f1ad394fc89c4f347c73095457e0398455089e063",
+          "outputBytes": 4784992,
+          "stats": null,
+          "phase": "restart",
+          "receiptSha256": null,
+          "failureEvidence": {},
+          "receiptReadback": {
+            "supportedByImplementation": false
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "failure-restart",
+      "repeat": 6,
+      "implementation": "candidate",
+      "wallMs": 344.33058369904757,
+      "cpuMs": 315.65,
+      "peakRssMiB": 73.4375,
+      "records": 1257,
+      "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+      "primedRecords": 1256,
+      "addedRecords": 1,
+      "phases": [
+        {
+          "wallMs": 168.31574984826148,
+          "cpuMs": 153.982,
+          "peakRssMiB": 69.609375,
+          "records": 1256,
+          "outputSha256": "ae884c3fe632fcef69d55dc75c5926cc30b78f78a9173bd0aa5abb9ea302d004",
+          "outputFileSha256": "f8eb62afed3ad18fce4083b29016b6e81d133fba042d7d697d830d2d298f90f0",
+          "outputBytes": 4779542,
+          "stats": null,
+          "phase": "fail",
+          "receiptSha256": "c3a74c6804a1c3c6a8e8bf0e2b9de6ca4da3a25e013b461a9c789d68e58c8cac",
+          "failureEvidence": {
+            "injected": true,
+            "boundary": "atomic-replace-after-fsync",
+            "stagedOutputBytes": 4784992,
+            "errorClass": "IsADirectoryError",
+            "errno": 21,
+            "outputPreserved": true,
+            "receiptPreserved": true,
+            "incompleteTemporaryFiles": 0
+          },
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": false,
+            "recordCount": 1256,
+            "groupCount": 1249
+          }
+        },
+        {
+          "wallMs": 176.0148338507861,
+          "cpuMs": 161.66799999999998,
+          "peakRssMiB": 73.4375,
+          "records": 1257,
+          "outputSha256": "aca09c4d4e468167f3f2e0a80d994a588742bc043a057127972b028ed3da8671",
+          "outputFileSha256": "a54e07b65c1de1bd6e98c73f1f2b2cf25fb53e48bd91cf2401cf7124a52b30e4",
+          "outputBytes": 4784992,
+          "stats": {
+            "groups": 1250,
+            "reused": 1249,
+            "new": 1,
+            "updated": 0,
+            "removed": 0
+          },
+          "phase": "restart",
+          "receiptSha256": "8b58cba9b3a283b351bf6c3600042601c16c710fdf7169d79e664c308625333a",
+          "failureEvidence": {},
+          "receiptReadback": {
+            "matchesOutput": true,
+            "hasHoldoutGroup": true,
+            "recordCount": 1257,
+            "groupCount": 1250
+          }
+        }
+      ]
+    }
+  ],
+  "environment": {
+    "python": "3.14.8",
+    "pythonExecutable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpuCount": 18,
+    "measurementScope": "transform invoke only, imports and validation excluded; failure + fresh-process restart summed; RSS maximum across phases",
+    "workRoot": "tmp/transform-followup-ownership-20261005-astra",
+    "paidProviderCalls": 0,
+    "dbCalls": 0,
+    "networkAndDotenvGuard": true,
+    "originalSourceWriteGuard": true,
+    "repeats": 7,
+    "pairOrder": "AB/BA alternating, A first for repeat 0",
+    "elapsedExperimentSeconds": 48.09217596054077
+  },
+  "hypotheses": {
+    "new-input": "Cached unchanged groups avoid re-transforming all real input groups; directory/stat scanning and full output publication remain.",
+    "failure-restart": "A failed output publication leaves the old output and candidate receipt unchanged; a new worker retries without a completed receipt for the held-out input."
+  },
+  "limitations": [
+    "Transform component only, not whole-pipeline/provider/live evidence.",
+    "Baseline uses append-open failure; candidate uses actual atomic replace failure after fsync. These are native boundaries, not identical writer algorithms.",
+    "EISDIR is controlled fault injection; no disk-full, power-loss or operational failure rate claim.",
+    "OS filesystem caches are not cleared; host workload is not isolated.",
+    "Seven paired repeats; bootstrap CI is exploratory, especially p95.",
+    "RSS is process high-water memory including imports, not incremental allocation or whole pipeline memory.",
+    "Worker audit guards and boundary hooks add instrumentation overhead."
+  ],
+  "confidenceMethod": "10000 paired percentile bootstrap draws, seed 20261002, nearest-rank quantiles; 2*MAD paired-difference noise budget",
+  "comparisons": {
+    "new-input": {
+      "pairedSamples": 7,
+      "allOutputsEquivalent": true,
+      "wallMs": {
+        "p50": {
+          "unit": "ms",
+          "before": 463.59616704285145,
+          "after": 186.22266687452793,
+          "absoluteChange": -277.3735001683235,
+          "changePercent": -59.83084414558698,
+          "change95CI": [
+            -66.87927580732125,
+            -50.719832116299216
+          ],
+          "experimentalNoiseBudget": 118.26975038275123
+        },
+        "p75": {
+          "unit": "ms",
+          "before": 531.0213749762625,
+          "after": 212.04399992711842,
+          "absoluteChange": -318.97737504914403,
+          "changePercent": -60.06865073244987,
+          "change95CI": [
+            -64.93122957943973,
+            -53.612024800931465
+          ],
+          "experimentalNoiseBudget": 118.26975038275123
+        },
+        "p95": {
+          "unit": "ms",
+          "before": 556.317042093724,
+          "after": 215.05287499167025,
+          "absoluteChange": -341.26416710205376,
+          "changePercent": -61.34346807311364,
+          "change95CI": [
+            -62.90047139089513,
+            -56.107414448443336
+          ],
+          "experimentalNoiseBudget": 118.26975038275123
+        }
+      },
+      "cpuMs": {
+        "p50": {
+          "unit": "ms",
+          "before": 425.55500000000006,
+          "after": 170.29,
+          "absoluteChange": -255.26500000000007,
+          "changePercent": -59.98402086686798,
+          "change95CI": [
+            -65.25592765338413,
+            -52.54596035934698
+          ],
+          "experimentalNoiseBudget": 98.63799999999975
+        },
+        "p75": {
+          "unit": "ms",
+          "before": 466.753,
+          "after": 188.99900000000002,
+          "absoluteChange": -277.75399999999996,
+          "changePercent": -59.50770536022264,
+          "change95CI": [
+            -63.516035247764876,
+            -52.819016283766395
+          ],
+          "experimentalNoiseBudget": 98.63799999999975
+        },
+        "p95": {
+          "unit": "ms",
+          "before": 494.925,
+          "after": 195.88400000000001,
+          "absoluteChange": -299.041,
+          "changePercent": -60.42147800171743,
+          "change95CI": [
+            -62.351871495681166,
+            -54.12466744107618
+          ],
+          "experimentalNoiseBudget": 98.63799999999975
+        }
+      },
+      "peakRssMiB": {
+        "p50": {
+          "unit": "MiB",
+          "before": 103.421875,
+          "after": 71.875,
+          "absoluteChange": -31.546875,
+          "changePercent": -30.50309714458378,
+          "change95CI": [
+            -31.500226620335404,
+            -30.20266182698125
+          ],
+          "experimentalNoiseBudget": 0.21875
+        },
+        "p75": {
+          "unit": "MiB",
+          "before": 103.5,
+          "after": 72.109375,
+          "absoluteChange": -31.390625,
+          "changePercent": -30.32910628019324,
+          "change95CI": [
+            -30.59001512859304,
+            -28.94697084151685
+          ],
+          "experimentalNoiseBudget": 0.21875
+        },
+        "p95": {
+          "unit": "MiB",
+          "before": 103.625,
+          "after": 73.484375,
+          "absoluteChange": -30.140625,
+          "changePercent": -29.08624849215923,
+          "change95CI": [
+            -30.449879227053145,
+            -28.979160374509217
+          ],
+          "experimentalNoiseBudget": 0.21875
+        }
+      }
+    },
+    "failure-restart": {
+      "pairedSamples": 7,
+      "allOutputsEquivalent": true,
+      "wallMs": {
+        "p50": {
+          "unit": "ms",
+          "before": 850.9687499608845,
+          "after": 344.33058369904757,
+          "absoluteChange": -506.6381662618369,
+          "changePercent": -59.53663589704381,
+          "change95CI": [
+            -67.28498713041624,
+            -52.44017351372949
+          ],
+          "experimentalNoiseBudget": 197.46508123353124
+        },
+        "p75": {
+          "unit": "ms",
+          "before": 936.3744580186903,
+          "after": 386.30312494933605,
+          "absoluteChange": -550.0713330693543,
+          "changePercent": -58.744803252458496,
+          "change95CI": [
+            -72.69629796694035,
+            -54.604311266765926
+          ],
+          "experimentalNoiseBudget": 197.46508123353124
+        },
+        "p95": {
+          "unit": "ms",
+          "before": 1608.4093330428004,
+          "after": 439.15529176592827,
+          "absoluteChange": -1169.2540412768722,
+          "changePercent": -72.69629796694035,
+          "change95CI": [
+            -72.69629796694035,
+            -58.527901836518346
+          ],
+          "experimentalNoiseBudget": 197.46508123353124
+        }
+      },
+      "cpuMs": {
+        "p50": {
+          "unit": "ms",
+          "before": 774.5730000000001,
+          "after": 302.868,
+          "absoluteChange": -471.7050000000001,
+          "changePercent": -60.89871451754709,
+          "change95CI": [
+            -66.36479177204123,
+            -53.71038374839275
+          ],
+          "experimentalNoiseBudget": 100.71799999999939
+        },
+        "p75": {
+          "unit": "ms",
+          "before": 852.119,
+          "after": 344.16700000000003,
+          "absoluteChange": -507.952,
+          "changePercent": -59.61045346952714,
+          "change95CI": [
+            -64.45707700450289,
+            -55.532150072934506
+          ],
+          "experimentalNoiseBudget": 100.71799999999939
+        },
+        "p95": {
+          "unit": "ms",
+          "before": 882.9839999999999,
+          "after": 392.644,
+          "absoluteChange": -490.3399999999999,
+          "changePercent": -55.532150072934506,
+          "change95CI": [
+            -62.95705177328519,
+            -55.532150072934506
+          ],
+          "experimentalNoiseBudget": 100.71799999999939
+        }
+      },
+      "peakRssMiB": {
+        "p50": {
+          "unit": "MiB",
+          "before": 103.328125,
+          "after": 73.1875,
+          "absoluteChange": -30.140625,
+          "changePercent": -29.1698170270679,
+          "change95CI": [
+            -31.56065870977489,
+            -28.4957627118644
+          ],
+          "experimentalNoiseBudget": 1.1875
+        },
+        "p75": {
+          "unit": "MiB",
+          "before": 103.421875,
+          "after": 73.828125,
+          "absoluteChange": -29.59375,
+          "changePercent": -28.614594349599642,
+          "change95CI": [
+            -29.36999546759329,
+            -27.9298351731438
+          ],
+          "experimentalNoiseBudget": 1.1875
+        },
+        "p95": {
+          "unit": "MiB",
+          "before": 103.46875,
+          "after": 74.46875,
+          "absoluteChange": -29.0,
+          "changePercent": -28.027786167321057,
+          "change95CI": [
+            -29.02446390818484,
+            -27.9298351731438
+          ],
+          "experimentalNoiseBudget": 1.1875
+        }
+      }
+    }
+  }
+}

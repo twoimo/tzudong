@@ -28,6 +28,39 @@ import unicodedata
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
+from urllib.parse import parse_qs, urlparse
+
+import sys
+import hashlib
+import os
+import tempfile
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from utils.stage_cache import atomic_write, stage_lock, fingerprint, input_digest, canonical_digest
+from utils.jsonl_utils import load_last_jsonl_record
+
+class LazyMetaCache(dict):
+    """Load historical metadata only for invalidated videos, once each."""
+    def __init__(self, directory):
+        super().__init__()
+        self.paths = {path.stem: path for path in directory.glob("*.jsonl")} if directory.exists() else {}
+    def __bool__(self):
+        return bool(self.paths)
+    def __len__(self):
+        return len(self.paths)
+    def get(self, key, default=None):
+        if key not in self.paths:
+            return default
+        if not super().__contains__(key):
+            values = []
+            with open(self.paths[key], encoding="utf-8") as source:
+                for line in source:
+                    try:
+                        value = json.loads(line)
+                        if isinstance(value, dict): values.append(value)
+                    except json.JSONDecodeError:
+                        continue
+            super().__setitem__(key, values)
+        return super().get(key, default)
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -719,196 +752,220 @@ def merge_rule_results_into_laaj(rule_data: dict, laaj_data: dict) -> dict:
     return merged
 
 
+def pipeline_owned_row(row: dict, channel: str) -> bool:
+    """Only unreviewed rows positively attributed to this channel are writable."""
+    return (row.get("channel_name") == channel
+        and row.get("source_type") in ("geminiCLI", "map_url_crawling")
+        and row.get("status") in (None, "", "pending")
+        and all(row.get(field) in (None, "") for field in
+            ("updated_by_admin_id", "created_by", "approved_name")))
+
+
+def ownership_video(link):
+    """Recognize YouTube aliases without treating an unrelated host as YouTube."""
+    if not isinstance(link, str) or not link.strip(): return None
+    try:
+        parsed = urlparse(link)
+        if parsed.scheme not in ("https", "http"): return None
+        if parsed.hostname in ("youtu.be", "www.youtu.be"):
+            video = parsed.path.strip("/")
+        elif parsed.hostname in ("youtube.com", "www.youtube.com", "m.youtube.com"):
+            if parsed.path == "/watch":
+                values = parse_qs(parsed.query).get("v", [])
+                video = values[0] if len(values) == 1 else ""
+            else:
+                match = re.fullmatch(r"/(?:shorts|embed|live)/([A-Za-z0-9_-]+)", parsed.path)
+                video = match.group(1) if match else ""
+        else: return None
+        return video if re.fullmatch(r"[A-Za-z0-9_-]{11}", video) else None
+    except ValueError:
+        return None
+
+
+def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
+    output = evaluation_path / "evaluation" / "transforms.jsonl"
+    receipt_path = output.parent / ".receipts" / "transform.json"
+    with stage_lock(receipt_path):
+        try:
+            ledger = json.loads(receipt_path.read_bytes())
+            if (not isinstance(ledger, dict) or ledger.get("schemaVersion") != 2
+                or not isinstance(ledger.get("groups"), dict)
+                or any(not isinstance(group, dict) for group in ledger["groups"].values())
+                or any(not isinstance(group.get("records"), list)
+                    or any(not isinstance(trace, str) for trace in group["records"])
+                    for group in ledger["groups"].values())
+                or not isinstance(ledger.get("recordCount"), int)
+                or ledger["recordCount"] < 0): raise ValueError()
+        except (OSError, ValueError):
+            ledger = {"schemaVersion": 2, "groups": {}, "files": {}}
+        file_cache = ledger.get("files", {})
+        if not isinstance(file_cache,dict): file_cache = {}
+        observed = {}
+
+        def file_signature(path):
+            try:
+                stat = path.stat()
+            except FileNotFoundError:
+                return None
+            return [stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns]
+
+        def file_hash(path):
+            signature = file_signature(path)
+            observed[path] = signature
+            if signature is None: return None
+            previous = file_cache.get(str(path), {})
+            if isinstance(previous,dict) and previous.get("signature") == signature and isinstance(previous.get("hash"),str) and re.fullmatch(r"[a-f0-9]{64}",previous["hash"]): return previous["hash"]
+            value = input_digest(path, latest=False)
+            # A file modified during the read cannot become a validated input.
+            if signature != file_signature(path):
+                raise ValueError("transform_input_changed")
+            file_cache[str(path)] = {"signature": signature, "hash": value}
+            return value
+        script_hash = file_hash(Path(__file__))
+        meta_dir = crawling_path / "meta"
+        base = evaluation_path / "evaluation"
+        def input_groups():
+            result = []
+            for path in sorted((base / "rule_results").glob("*.jsonl")):
+                laaj = base / "laaj_results" / path.name
+                result.append(("results", path.stem, [path,laaj] if laaj.is_file() else [path]))
+            for kind,directory in [("notSelection",base/"notSelection"),("map_url_crawling",crawling_path/"map_url_crawling")]:
+                result.extend((kind,path.stem,[path]) for path in sorted(directory.glob("*.jsonl")))
+            return result
+
+        groups = input_groups()
+
+        def verify_snapshot():
+            # Hashing and parsing are separate reads. Check every observed input
+            # again before publishing; additions and removals also invalidate it.
+            if groups != input_groups() or any(signature != file_signature(path) for path,signature in observed.items()):
+                raise ValueError("transform_input_changed")
+
+        keys = {}
+        for kind,video,inputs in groups:
+            keys[kind+":"+video] = canonical_digest([channel,kind,script_hash,file_hash(meta_dir/(video+".jsonl")),*[file_hash(path) for path in inputs]])
+        verified = output.is_file() and file_hash(output) == ledger.get("outputHash")
+        if verified and set(ledger["groups"]) == set(keys) and all(ledger["groups"].get(identity,{}).get("inputHash") == key for identity,key in keys.items()):
+            verify_snapshot()
+            stats = {"groups":len(groups),"reused":len(groups),"new":0,"updated":0,"removed":0,"records":ledger["recordCount"]}
+            print(json.dumps({"operation":"transform_complete",**stats},sort_keys=True))
+            return stats
+        records = {}
+        damaged_lines = 0
+        if output.is_file():
+            with output.open("rb") as source:
+                for line in source:
+                    if not line.strip(): continue
+                    try:
+                        row = json.loads(line)
+                        if not isinstance(row,dict) or not isinstance(row.get("trace_id"),str): raise ValueError()
+                        records[row["trace_id"]] = row
+                    except (ValueError, UnicodeError):
+                        damaged_lines += 1
+        meta = LazyMetaCache(meta_dir)
+        stats = {"groups":len(groups),"reused":0,"new":0,"updated":0}
+        previous_owned = {
+            trace for group in ledger["groups"].values()
+            for trace in group.get("records", [])
+            if isinstance(trace, str) and trace in records
+            and pipeline_owned_row(records[trace], channel)
+        }
+        # A missing/corrupt receipt supplies no ownership. Bootstrap only rows
+        # whose channel, source family and video are positively present in this
+        # invocation. A partial input directory never claims absent videos (or
+        # absent source families). A valid ledger still retires removed groups.
+        legacy_by_video = {}
+        protected = set()
+        for trace, row in records.items():
+            if not pipeline_owned_row(row, channel):
+                protected.add(trace)
+                continue
+            video = ownership_video(row.get("youtube_link"))
+            if video:
+                legacy_by_video.setdefault((video, row["source_type"]), set()).add(trace)
+        claimed, superseded = set(protected), {}
+        for kind,video,inputs in groups:
+            identity = kind+":"+video
+            key = keys[identity]
+            previous = ledger["groups"].get(identity,{})
+            if (verified and previous.get("inputHash") == key
+                and previous.get("blocked",[]) == sorted(trace for trace in previous.get("candidates",[]) if trace in claimed)):
+                claimed.update(previous.get("records",[])); stats["reused"] += 1
+                continue
+            payload = load_last_jsonl_record(inputs[-1])
+            if not isinstance(payload,dict): raise ValueError("transform_input_invalid")
+            if kind == "results" and len(inputs) == 2:
+                rule = load_last_jsonl_record(inputs[0])
+                if not isinstance(rule,dict): raise ValueError("transform_rule_invalid")
+                payload = merge_rule_results_into_laaj(rule,payload)
+            source_type = "map_url_crawling" if kind == "map_url_crawling" else "geminiCLI"
+            scoped_legacy = legacy_by_video.get(
+                (ownership_video(payload.get("youtube_link")), source_type), ())
+            # notSelection is a subset of a video's Gemini rows. It alone
+            # cannot establish ownership of the selected restaurants.
+            previous_owned.update(trace for trace in scoped_legacy
+                if kind != "notSelection" or records[trace].get("is_notSelected") is True)
+            transformed = (transform_map_url_crawling_object(payload,channel,meta)
+                if kind == "map_url_crawling" else transform_json_object(payload,kind,channel,meta,video))
+            candidates = [record["trace_id"] for record in transformed]
+            blocked = sorted(trace for trace in candidates if trace in claimed)
+            contributed = []
+            for record in transformed:
+                trace = record["trace_id"]
+                if trace in claimed: continue
+                claimed.add(trace); contributed.append(trace)
+                old = records.get(trace)
+                if old != record:
+                    if old is None: stats["new"] += 1
+                    else: superseded[trace] = old; stats["updated"] += 1
+                    records[trace] = record
+            ledger["groups"][identity] = {"inputHash":key,"records":contributed,"candidates":candidates,"blocked":blocked}
+        removed = 0
+        for trace in previous_owned - claimed:
+            obsolete = records.pop(trace, None)
+            if obsolete is not None:
+                superseded[trace] = obsolete
+                removed += 1
+        ledger["groups"] = {identity: ledger["groups"][identity] for identity in keys}
+        verify_snapshot()
+        if not verified or stats["new"] or stats["updated"] or removed:
+            if damaged_lines:
+                damaged = output.read_bytes()
+                atomic_write(output.parent / ".history" / ("damaged-" + hashlib.sha256(damaged).hexdigest() + ".jsonl"), damaged)
+            if superseded:
+                history = output.parent/".history"/(canonical_digest(superseded)+".jsonl")
+                atomic_write(history,"".join(json.dumps(record,ensure_ascii=False)+"\n" for record in superseded.values()).encode())
+            descriptor, temporary = tempfile.mkstemp(prefix=".transform-",dir=output.parent)
+            digest = hashlib.sha256()
+            try:
+                with os.fdopen(descriptor,"wb") as target:
+                    for record in records.values():
+                        encoded = (json.dumps(record,ensure_ascii=False)+"\n").encode()
+                        target.write(encoded); digest.update(encoded)
+                    target.flush(); os.fsync(target.fileno())
+                os.replace(temporary,output)
+            finally:
+                if os.path.exists(temporary): os.unlink(temporary)
+            ledger["outputHash"] = digest.hexdigest()
+            file_cache.pop(str(output),None)
+            file_hash(output)
+        else:
+            ledger["outputHash"] = file_hash(output)
+        ledger["recordCount"] = len(records)
+        stats["removed"] = removed
+        ledger["files"] = file_cache
+        atomic_write(receipt_path,json.dumps(ledger,separators=(",", ":")).encode()+b"\n")
+        print(json.dumps({"operation":"transform_complete",**stats,"records":len(records)},sort_keys=True))
+        return stats
+
+
 def main():
     parser = argparse.ArgumentParser(description="평가 결과 변환")
-    parser.add_argument("--channel", "-c", required=True, help="채널 이름")
-    parser.add_argument(
-        "--crawling-path",
-        required=True,
-        help="크롤링 데이터 경로 (meta, map_url_crawling)",
-    )
-    parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
+    parser.add_argument("--channel", "-c", required=True)
+    parser.add_argument("--crawling-path", required=True)
+    parser.add_argument("--evaluation-path", required=True)
     args = parser.parse_args()
-
-    channel = args.channel
-    crawling_path = Path(args.crawling_path)
-    evaluation_path = Path(args.evaluation_path)
-
-    print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Transform 시작: {channel}")
-    print(f"크롤링 경로: {crawling_path}")
-    print(f"평가 경로: {evaluation_path}")
-
-    # 입력 폴더 (evaluation 경로)
-    laaj_results_dir = evaluation_path / "evaluation" / "laaj_results"
-    rule_results_dir = evaluation_path / "evaluation" / "rule_results"
-    not_selection_dir = evaluation_path / "evaluation" / "notSelection"
-
-    # 입력 폴더 (crawling 경로)
-    map_url_crawling_dir = crawling_path / "map_url_crawling"  # ← 정육왕 전용
-    meta_dir = crawling_path / "meta"
-
-    # [PERF] Meta 파일 사전 로딩 (비디오별 반복 파일 I/O 방지)
-    print(f"Meta 캐시 로딩 중...")
-    meta_cache = preload_meta_cache(meta_dir)
-    print(f"Meta 캐시 완료: {len(meta_cache)}개 파일")
-
-    # 출력 파일 (evaluation 경로)
-    output_file = evaluation_path / "evaluation" / "transforms.jsonl"
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-
-    # 기존 trace_id 수집 (중복 방지)
-    existing_trace_ids = set()
-    if output_file.exists():
-        with open(output_file, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    data = json.loads(line.strip())
-                    tid = data.get("trace_id")
-                    if tid:
-                        existing_trace_ids.add(tid)
-                except (json.JSONDecodeError, AttributeError):
-                    pass
-
-    print(f"기존 trace_id: {len(existing_trace_ids)}개")
-
-    # [PERF] 배치 쓰기 버퍼 (레코드별 open/close 방지)
-    BATCH_SIZE = 100
-    write_buffer: List[str] = []
-
-    def flush_buffer():
-        """버퍼의 레코드를 파일에 배치로 기록"""
-        nonlocal write_buffer
-        if write_buffer:
-            with open(output_file, "a", encoding="utf-8") as out:
-                out.write("".join(write_buffer))
-            write_buffer = []
-
-    # 통계
-    stats = {
-        "total_files": 0,
-        "total_records": 0,
-        "new_records": 0,
-        "skipped_records": 0,
-    }
-
-    # rule_results & laaj_results 병합 처리
-    if rule_results_dir.exists():
-        for f in rule_results_dir.glob("*.jsonl"):
-            stats["total_files"] += 1
-            video_id = f.stem
-            
-            # laaj_results가 존재하면 우선적으로 사용 (parse_laaj_evaluation에서 이미 병합됨)
-            laaj_file = laaj_results_dir / f"{video_id}.jsonl"
-            use_laaj = laaj_file.exists()
-            target_file = laaj_file if use_laaj else f
-
-            # [PERF] rule 파일은 파일당 1회만 읽고 파싱한다.
-            # 기존에는 라인마다 f를 다시 열고 파싱해 O(라인수 x 파일크기)였다.
-            # rule 파일이 깨져 있으면 기존과 동일하게 이 파일의 라인을 전부 건너뛴다.
-            rule_data = None
-            if use_laaj:
-                try:
-                    with open(f, "r", encoding="utf-8") as rule_file:
-                        rule_data = json.loads(rule_file.read().strip())
-                except json.JSONDecodeError:
-                    continue
-
-            with open(target_file, "r", encoding="utf-8") as file:
-                for line in file:
-                    try:
-                        data = json.loads(line.strip())
-                        if rule_data is not None:
-                            data = merge_rule_results_into_laaj(rule_data, data)
-                        transformed = transform_json_object(
-                            data, "results", channel, meta_cache, video_id
-                        )
-
-                        for record in transformed:
-                            stats["total_records"] += 1
-                            if record["trace_id"] not in existing_trace_ids:
-                                write_buffer.append(
-                                    json.dumps(record, ensure_ascii=False) + "\n"
-                                )
-                                existing_trace_ids.add(record["trace_id"])
-                                stats["new_records"] += 1
-                                if len(write_buffer) >= BATCH_SIZE:
-                                    flush_buffer()
-                            else:
-                                stats["skipped_records"] += 1
-                    except json.JSONDecodeError:
-                        continue
-
-    # notSelection 처리
-    if not_selection_dir.exists():
-        for f in not_selection_dir.glob("*.jsonl"):
-            stats["total_files"] += 1
-            video_id = f.stem
-            with open(f, "r", encoding="utf-8") as file:
-                for line in file:
-                    try:
-                        data = json.loads(line.strip())
-                        transformed = transform_json_object(
-                            data, "notSelection", channel, meta_cache, video_id
-                        )
-
-                        for record in transformed:
-                            stats["total_records"] += 1
-                            if record["trace_id"] not in existing_trace_ids:
-                                write_buffer.append(
-                                    json.dumps(record, ensure_ascii=False) + "\n"
-                                )
-                                existing_trace_ids.add(record["trace_id"])
-                                stats["new_records"] += 1
-                                if len(write_buffer) >= BATCH_SIZE:
-                                    flush_buffer()
-                            else:
-                                stats["skipped_records"] += 1
-                    except json.JSONDecodeError:
-                        continue
-
-    # map_url_crawling 처리 (정육왕 등 - 평가 스킵 데이터)
-    if map_url_crawling_dir.exists():
-        for f in map_url_crawling_dir.glob("*.jsonl"):
-            stats["total_files"] += 1
-            with open(f, "r", encoding="utf-8") as file:
-                for line in file:
-                    try:
-                        data = json.loads(line.strip())
-                        transformed = transform_map_url_crawling_object(
-                            data, channel, meta_cache
-                        )
-
-                        for record in transformed:
-                            stats["total_records"] += 1
-                            if record["trace_id"] not in existing_trace_ids:
-                                write_buffer.append(
-                                    json.dumps(record, ensure_ascii=False) + "\n"
-                                )
-                                existing_trace_ids.add(record["trace_id"])
-                                stats["new_records"] += 1
-                                if len(write_buffer) >= BATCH_SIZE:
-                                    flush_buffer()
-                            else:
-                                stats["skipped_records"] += 1
-                    except json.JSONDecodeError:
-                        continue
-
-    # [PERF] 남은 버퍼 최종 플러시
-    flush_buffer()
-
-
-    # 결과 파일이 없으면 빈 파일 생성 (0건일 경우 대비)
-    if not output_file.exists():
-        output_file.touch()
-
-    print(f"\n{'='*50}")
-    print(f"[OK] Transform 완료!")
-    print(f"   총 파일: {stats['total_files']}개")
-    print(f"   총 레코드: {stats['total_records']}개")
-    print(f"   새로 추가: {stats['new_records']}개")
-    print(f"   중복 건너뜀: {stats['skipped_records']}개")
-    print(f"   출력 파일: {output_file}")
-    print(f"{'='*50}")
+    return run_transform(args.channel, Path(args.crawling_path), Path(args.evaluation_path))
 
 
 if __name__ == "__main__":

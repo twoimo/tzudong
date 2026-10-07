@@ -28,6 +28,9 @@ def validate_endpoint(context, endpoint):
         raise ValueError('docker_context_denied')
     if endpoint in LEGACY:
         return endpoint
+    if (platform.system() == 'Linux' and context == 'tzudong-catalog-ci'
+            and os.environ.get('GITHUB_ACTIONS') == 'true'):
+        return validate_ci_socket(endpoint)
     if platform.system() != 'Darwin' or context != 'colima':
         raise ValueError('docker_endpoint_denied')
     home = account_home()
@@ -46,6 +49,34 @@ def validate_endpoint(context, endpoint):
     except (OSError,ValueError):
         raise ValueError('docker_socket_denied') from None
     return endpoint
+
+
+def validate_ci_socket(endpoint):
+    """Admit only the action-owned ephemeral Unix socket, never TCP or SSH."""
+    try:
+        root = Path(os.environ['RUNNER_TEMP'])
+        if not root.is_absolute() or root.resolve(strict=True) != root:
+            raise ValueError
+        base = root / 'tzudong-catalog-docker'
+        if not isinstance(endpoint, str) or not endpoint.startswith('unix://'):
+            raise ValueError
+        path = Path(endpoint[7:])
+        if (path.parent.parent != base or path.name != 'docker.sock'
+                or not re.fullmatch(r'run-[a-f0-9]{8}', path.parent.name)
+                or endpoint != 'unix://' + str(path)):
+            raise ValueError
+        for directory in (root, base, path.parent):
+            info = directory.lstat()
+            if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
+                    or stat.S_IMODE(info.st_mode) & 0o022):
+                raise ValueError
+        info = path.lstat()
+        if (not stat.S_ISSOCK(info.st_mode) or info.st_uid not in (0, os.getuid())
+                or stat.S_IMODE(info.st_mode) & 0o002):
+            raise ValueError
+        return endpoint
+    except (OSError, KeyError, ValueError):
+        raise ValueError('docker_ci_socket_denied') from None
 
 
 def resolve_endpoint():

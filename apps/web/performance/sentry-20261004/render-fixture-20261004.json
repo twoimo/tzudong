@@ -1,0 +1,27 @@
+{
+  "environment": "Next16.3.8 local dev, synthetic API interception, no Sentry network",
+  "n": 1,
+  "viewports": [
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "result": "\"{\\\"width\\\":390,\\\"overflow\\\":0,\\\"rows\\\":50,\\\"panel\\\":true,\\\"overlay\\\":false}\""
+    },
+    {
+      "viewport": [
+        834,
+        1112
+      ],
+      "result": "\"{\\\"width\\\":834,\\\"overflow\\\":0,\\\"rows\\\":50,\\\"panel\\\":true,\\\"overlay\\\":false}\""
+    },
+    {
+      "viewport": [
+        1440,
+        960
+      ],
+      "result": "\"{\\\"width\\\":1440,\\\"overflow\\\":0,\\\"rows\\\":50,\\\"panel\\\":true,\\\"overlay\\\":false}\""
+    }
+  ]
+}

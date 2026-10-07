@@ -758,7 +758,7 @@ expect(executableProbe.status).toBe(0);
 
   test('admin storyboard keeps graph diagnostics available while settings stay API-key-only', () => {
     const source = readFileSync(
-      path.resolve('components/admin/storyboard/AdminStoryboardGenerator.tsx'),
+      path.resolve('components/admin/storyboard/LegacyStoryboardReference.tsx'),
       'utf8',
     );
     expect(source).toContain('formatStoryboardGraphDiagnosticsText');

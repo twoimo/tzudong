@@ -1,0 +1,71 @@
+{
+  "kind": "local-postgresql-storyboard-migration",
+  "operationalDatabaseChanges": false,
+  "migrations": [
+    {
+      "file": "20260918021531_storyboard_mlx_worker.sql",
+      "sha256": "3584d659ad253971771bc1a1f49e2f19e837e609e375c22c078673095105a5fa"
+    },
+    {
+      "file": "20260920021531_storyboard_historical_restore.sql",
+      "sha256": "6cd66d48f9fde8b86d89f089da3a5f4cc15dd85475fa0769e5724d40f68d2b95"
+    },
+    {
+      "file": "20261003000812_storyboard_gemini_only.sql",
+      "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470"
+    },
+    {
+      "file": "20261003182338_storyboard_service_role_bridge.sql",
+      "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+    },
+    {
+      "file": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+      "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+    },
+    {
+      "file": "20261004023841_storyboard_claim_capability_order.sql",
+      "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+    }
+  ],
+  "assertions": {
+    "idempotent_create": true,
+    "remote_models_claim_without_fake_disk_bytes": true,
+    "draft_checkpoint_readback": true,
+    "non_gemini_create_denied": true,
+    "stale_lease_rejected": true,
+    "duplicate_result_rejected_without_resend": true,
+    "five_images_checkpoint_and_finish_ready": true,
+    "cas_edit_and_restore_replay_preserve_assets": true,
+    "expired_lease_backoff_and_restart": true,
+    "active_cancel_readback": true,
+    "concurrent_workers_never_double_claim": true,
+    "browser_roles_denied": true,
+    "empty_search_path_preserved": true,
+    "existing_auth_table_grants_unchanged": true,
+    "bridge_reapply_preserves_all_seven_data_tables": true,
+    "legacy_public_definers_removed": true,
+    "unknown_installed_body_fails_and_rolls_back": true,
+    "expired_claim_never_requeues_paid_generation": true,
+    "explicit_operator_retry_creates_one_fresh_job": true,
+    "compatible_job_after_65_incompatible_jobs_is_claimed": true,
+    "capability_filter_preserves_rpc_metadata_and_incompatible_jobs": true
+  },
+  "postgresVersion": "17.6",
+  "bridgeDataSha256": {
+    "before": "bd4b449ce3d2a0c7d71768536c19c0cfd97c929748b80c2c7db2942e0429da1e",
+    "after": "bd4b449ce3d2a0c7d71768536c19c0cfd97c929748b80c2c7db2942e0429da1e",
+    "tables": 7
+  },
+  "claimAdmission": {
+    "incompatibleAhead": 65,
+    "compatibleJobs": 1,
+    "beforeClaimed": 0,
+    "afterClaimed": 1,
+    "realProviderCalls": 0
+  },
+  "passed": true,
+  "limitations": [
+    "Synthetic fixture database only.",
+    "Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only."
+  ]
+}

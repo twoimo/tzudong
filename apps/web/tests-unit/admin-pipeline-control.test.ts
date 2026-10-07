@@ -317,17 +317,12 @@ describe("admin pipeline control contract", () => {
     expect(route).toContain("payload.jobs");
   });
 
-  test("dashboard renders jobs controls error_code and keeps empty-state copy", () => {
+  test("dashboard keeps controls behind action eligibility and explicit ticket confirmation", () => {
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
-    expect(dashboard).toContain("error_code");
-    expect(dashboard).toContain("최근 실패 없음");
-    expect(dashboard).toContain("data-admin-pipeline-jobs");
-    expect(dashboard).toContain("data-admin-pipeline-job");
-    expect(dashboard).toContain("data-admin-pipeline-pause");
-    expect(dashboard).toContain("data-admin-pipeline-resume");
-    expect(dashboard).toContain("data-admin-pipeline-cancel");
-    expect(dashboard).toContain("data-admin-pipeline-enqueue");
-    expect(dashboard).toContain("state already changed, refreshed");
+    expect(dashboard).toContain("canControlPipelineJob(snapshot?.source, job, action)");
+    for (const selector of ["data-admin-pipeline-jobs", "data-admin-pipeline-job", "data-admin-pipeline-enqueue", "data-pipeline-preview", "data-pipeline-apply"]) expect(dashboard).toContain(selector);
+    expect(source("lib/admin/pipeline-action-preview.ts")).toContain("idempotencyKey: preview.idempotencyKey");
+    expect(dashboard).not.toContain("payload.error");
   });
 
   test("proxy production frame-src omits loopback Grafana and keeps frame-ancestors none", () => {
@@ -343,18 +338,15 @@ describe("admin pipeline control contract", () => {
     expect(proxySource).toContain("frame-ancestors 'none'");
   });
 
-  test("502 bodies are error-only and query.isError gates empty failures", () => {
+  test("502 bodies are error-only and unavailable snapshots cannot feed current metrics", () => {
     const route = source("app/api/admin/pipeline/route.ts");
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
     expect(route).toContain('noStore({ error: "pipeline_status_unavailable" }');
     expect(route).toContain("readGithubCrawlerSnapshot");
-    expect(route).toContain("source: \"github_actions\"");
-    expect(route).toContain("source: \"job_api\"");
-    expect(dashboard).toContain("query.isError");
-    expect(dashboard).toContain("GitHub Actions 크롤러 최근 실행");
-    const errorBranch = dashboard.indexOf("query.isError");
-    const emptyState = dashboard.indexOf("최근 실패 없음");
-    expect(errorBranch).toBeGreaterThan(-1);
-    expect(emptyState).toBeGreaterThan(errorBranch);
+    expect(route).toContain('source: "github_actions"');
+    expect(route).toContain('source: "job_api"');
+    expect(dashboard).toContain("query.isError ? undefined : query.data");
+    expect(dashboard).toContain("manifestQuery.isError ? undefined : manifestQuery.data");
+    expect(dashboard).toContain("pipelineJobsForDisplay(snapshot, manifest)");
   });
 });

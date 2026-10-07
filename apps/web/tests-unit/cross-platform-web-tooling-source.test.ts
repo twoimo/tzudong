@@ -14,7 +14,6 @@ describe("cross-platform web command wrapper", () => {
     expect(manifest.scripts["lint:fix"]).toBe("node scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --fix");
     expect(manifest.scripts.analyze).toBe("node scripts/run-web-tool.mjs next-analyze");
     for (const [name, command] of Object.entries<string>(manifest.scripts)) {
-      if (name === "storyboard:image-proof") continue;
       expect(command).not.toMatch(/^(?:[A-Za-z_][A-Za-z0-9_]*=|set\s+[A-Za-z_][A-Za-z0-9_]*=)/i);
     }
   });

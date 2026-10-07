@@ -1,0 +1,418 @@
+{
+  "kind": "local-transform-component-source-checkpoint",
+  "formalPerformanceClaim": "not_established",
+  "liveEvidenceEligible": false,
+  "confidenceMethod": "10000 paired percentile bootstrap; seed 20261002; nearest-rank quantiles; exploratory 2*MAD noise budget",
+  "environment": {
+    "python": "3.14.8",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "realProviderCalls": 0,
+    "dbCalls": 0,
+    "measurementScope": "isolated transform subprocess only; real-corpus read-only symlinks"
+  },
+  "rawFile": "apps/web/performance/pipeline-20261002/transform-final-followup-20261004-raw.json",
+  "rawSha256": "f6c28177e2d8a151946f8bae389ce1643fd7e7e2d7ad179a1e614838e62a14e4",
+  "candidateSourceSha256": "7a4b5885905101768aa72f5b454db38a0b2279b9648e01e5cac472647a35ae83",
+  "baselineSha": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+  "dataset": {
+    "sha256": "71d4a176f6eff028cecf4963f3332f97c14284148b6d769e3617fce8ef8361c9",
+    "files": 3307,
+    "bytes": 23636539
+  },
+  "sourcePreserved": true,
+  "comparisons": {
+    "cold": {
+      "wallMs": {
+        "p50": {
+          "before": 377.2726249881089,
+          "after": 564.0153340063989,
+          "absoluteChange": 186.74270901829004,
+          "changePercent": 49.49808087034566,
+          "change95CI": [
+            41.40756753856392,
+            59.149636308265016
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 29.31516757234931
+        },
+        "p75": {
+          "before": 401.636625174433,
+          "after": 634.9700419232249,
+          "absoluteChange": 233.33341674879193,
+          "changePercent": 58.09565217003154,
+          "change95CI": [
+            49.49808087034566,
+            58.09565217003154
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 29.31516757234931
+        },
+        "p95": {
+          "before": 491.88858293928206,
+          "after": 749.4847921188921,
+          "absoluteChange": 257.59620917961,
+          "changePercent": 52.36881239250215,
+          "change95CI": [
+            52.36881239250215,
+            58.09565217003154
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 29.31516757234931
+        }
+      },
+      "cpuMs": {
+        "p50": {
+          "before": 356.5969999999999,
+          "after": 516.216,
+          "absoluteChange": 159.61900000000009,
+          "changePercent": 44.76173383399191,
+          "change95CI": [
+            44.00878302397386,
+            60.7000441872245
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 48.81000000000006
+        },
+        "p75": {
+          "before": 371.14799999999997,
+          "after": 596.435,
+          "absoluteChange": 225.28699999999998,
+          "changePercent": 60.7000441872245,
+          "change95CI": [
+            44.76173383399191,
+            60.7000441872245
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 48.81000000000006
+        },
+        "p95": {
+          "before": 445.121,
+          "after": 693.35,
+          "absoluteChange": 248.22900000000004,
+          "changePercent": 55.766634241026615,
+          "change95CI": [
+            55.766634241026615,
+            60.7000441872245
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 48.81000000000006
+        }
+      },
+      "peakRssMiB": {
+        "p50": {
+          "before": 139.6875,
+          "after": 183.328125,
+          "absoluteChange": 43.640625,
+          "changePercent": 31.241610738255044,
+          "change95CI": [
+            19.23623806621979,
+            54.589625738673675
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 26.125
+        },
+        "p75": {
+          "before": 153.84375,
+          "after": 183.9375,
+          "absoluteChange": 30.09375,
+          "changePercent": 19.561243144424132,
+          "change95CI": [
+            13.015017327685797,
+            38.934280639431606
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 26.125
+        },
+        "p95": {
+          "before": 162.3125,
+          "after": 184.421875,
+          "absoluteChange": 22.109375,
+          "changePercent": 13.621486330381206,
+          "change95CI": [
+            13.015017327685797,
+            24.637374272101642
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 26.125
+        }
+      },
+      "deterministicOutputsEquivalent": true,
+      "records": 1257
+    },
+    "unchanged": {
+      "wallMs": {
+        "p50": {
+          "before": 432.47058312408626,
+          "after": 196.2183341383934,
+          "absoluteChange": -236.25224898569286,
+          "changePercent": -54.62851306071526,
+          "change95CI": [
+            -58.04988047121087,
+            -48.1512869245024
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 31.370833981782198
+        },
+        "p75": {
+          "before": 441.2368340417743,
+          "after": 217.83195878379047,
+          "absoluteChange": -223.4048752579838,
+          "changePercent": -50.63151079468422,
+          "change95CI": [
+            -54.78861487883863,
+            -50.63151079468422
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 31.370833981782198
+        },
+        "p95": {
+          "before": 505.75474998913705,
+          "after": 246.28195795230567,
+          "absoluteChange": -259.4727920368314,
+          "changePercent": -51.30407416685745,
+          "change95CI": [
+            -53.561143989039635,
+            -50.63151079468422
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 31.370833981782198
+        }
+      },
+      "cpuMs": {
+        "p50": {
+          "before": 388.452,
+          "after": 175.87,
+          "absoluteChange": -212.582,
+          "changePercent": -54.72542296088062,
+          "change95CI": [
+            -56.82684089668737,
+            -48.67474910568879
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 2.933999999999969
+        },
+        "p75": {
+          "before": 399.99600000000004,
+          "after": 184.368,
+          "absoluteChange": -215.62800000000004,
+          "changePercent": -53.907539075390766,
+          "change95CI": [
+            -55.01332692140441,
+            -48.84506480287095
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 2.933999999999969
+        },
+        "p95": {
+          "before": 441.107,
+          "after": 225.64800000000002,
+          "absoluteChange": -215.459,
+          "changePercent": -48.84506480287095,
+          "change95CI": [
+            -54.0110401104011,
+            -48.84506480287095
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 2.933999999999969
+        }
+      },
+      "peakRssMiB": {
+        "p50": {
+          "before": 127.71875,
+          "after": 113.3125,
+          "absoluteChange": -14.40625,
+          "changePercent": -11.27966723758258,
+          "change95CI": [
+            -26.106104055714873,
+            -0.8612440191387516
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 20.1875
+        },
+        "p75": {
+          "before": 152.5625,
+          "after": 113.75,
+          "absoluteChange": -38.8125,
+          "changePercent": -25.44039328144203,
+          "change95CI": [
+            -25.72716099959034,
+            -4.657971785999471
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 20.1875
+        },
+        "p95": {
+          "before": 152.84375,
+          "after": 115.265625,
+          "absoluteChange": -37.578125,
+          "changePercent": -24.585974238397057,
+          "change95CI": [
+            -25.690042936004907,
+            -11.120481927710845
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 20.1875
+        }
+      },
+      "deterministicOutputsEquivalent": true,
+      "records": 1257
+    },
+    "delta-five": {
+      "wallMs": {
+        "p50": {
+          "before": 543.7007499858737,
+          "after": 438.9694998972118,
+          "absoluteChange": -104.73125008866191,
+          "changePercent": -19.26266426731672,
+          "change95CI": [
+            -26.138187567467497,
+            -9.367835995064222
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 65.30575035139918
+        },
+        "p75": {
+          "before": 563.7114581186324,
+          "after": 447.75124988518655,
+          "absoluteChange": -115.96020823344588,
+          "changePercent": -20.570844633965592,
+          "change95CI": [
+            -30.966364619360366,
+            -2.563803152321298
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 65.30575035139918
+        },
+        "p95": {
+          "before": 645.9621670655906,
+          "after": 529.7613330185413,
+          "absoluteChange": -116.20083404704928,
+          "changePercent": -17.988798720970657,
+          "change95CI": [
+            -30.966364619360366,
+            -5.810551240092366
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 65.30575035139918
+        }
+      },
+      "cpuMs": {
+        "p50": {
+          "before": 452.7680000000001,
+          "after": 384.363,
+          "absoluteChange": -68.40500000000009,
+          "changePercent": -15.108179023252543,
+          "change95CI": [
+            -31.755110140080568,
+            -11.061515049192593
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 99.94000000000005
+        },
+        "p75": {
+          "before": 483.79299999999995,
+          "after": 388.10100000000006,
+          "absoluteChange": -95.6919999999999,
+          "changePercent": -19.779533808881055,
+          "change95CI": [
+            -23.25302705813257,
+            -11.256095837161661
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 99.94000000000005
+        },
+        "p95": {
+          "before": 505.6890000000001,
+          "after": 401.804,
+          "absoluteChange": -103.8850000000001,
+          "changePercent": -20.543258801358167,
+          "change95CI": [
+            -23.25302705813257,
+            -16.506004318038727
+          ],
+          "samples": 7,
+          "unit": "ms",
+          "experimentalNoiseBudget": 99.94000000000005
+        }
+      },
+      "peakRssMiB": {
+        "p50": {
+          "before": 117.828125,
+          "after": 122.5,
+          "absoluteChange": 4.671875,
+          "changePercent": 3.9649913804535197,
+          "change95CI": [
+            -9.780092592592593,
+            5.079787234042543
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 2.875
+        },
+        "p75": {
+          "before": 135.0,
+          "after": 123.59375,
+          "absoluteChange": -11.40625,
+          "changePercent": -8.449074074074069,
+          "change95CI": [
+            -26.598633086789626,
+            5.092162843124259
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 2.875
+        },
+        "p95": {
+          "before": 166.890625,
+          "after": 123.828125,
+          "absoluteChange": -43.0625,
+          "changePercent": -25.802827450613243,
+          "change95CI": [
+            -26.018163093343315,
+            4.002624671916011
+          ],
+          "samples": 7,
+          "unit": "MiB",
+          "experimentalNoiseBudget": 2.875
+        }
+      },
+      "deterministicOutputsEquivalent": true,
+      "records": 1257
+    }
+  },
+  "amortization": {
+    "formula": "warm repeats * warm saving > cold overhead",
+    "warmRepeats": 2,
+    "scope": "component p75 only; no whole-pipeline or monetary payback claim"
+  },
+  "limitations": [
+    "No whole-pipeline end-to-end comparison",
+    "No remote provider or actual cost claim",
+    "No database or real browser before-after timing",
+    "No G003 complete scorer/validator or operational observation",
+    "Seven pairs per condition cannot establish world rankings"
+  ]
+}

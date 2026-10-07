@@ -1,9 +1,10 @@
 import { cn } from "@/lib/utils";
 
-function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
-    <div
-      className={cn("rounded-md bg-muted/40", className)}
+    <span
+      data-slot="skeleton"
+      className={cn("block rounded-md bg-muted/40", className)}
       style={{ contain: 'layout style paint' }}
       {...props}
     />

@@ -1,0 +1,18 @@
+{
+  "kind": "hosted-service-rpc-registry-readback",
+  "migrationVersion": "20261003065736",
+  "migrationName": "g014_current_service_rpc_registry",
+  "migrationSha256": "9fa8a42fc86b5fb00c25d65c02d1c9410a82ac5948359bec2f6beb1f03e2bf28",
+  "functions": 6,
+  "registryRows": 6,
+  "aclDigestBefore": "31689bd5ac5c9f7a7a340f75e27887de",
+  "aclDigestAfter": "31689bd5ac5c9f7a7a340f75e27887de",
+  "newExecuteGrants": 0,
+  "restaurantRows": 1659,
+  "applicationFunctionMismatchBefore": 6,
+  "limits": [
+    "Existing vector 0.8.0 public functions were observed with 354 unmatched effective grant rows; no extension relocation or privilege change was made.",
+    "This is metadata registration, not a new runtime feature or security certification."
+  ],
+  "applicationFunctionMismatchAfter": 0
+}

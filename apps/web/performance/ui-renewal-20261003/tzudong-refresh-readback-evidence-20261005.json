@@ -1,0 +1,39 @@
+{
+  "scope": "Local synthetic fixture; POST intercepted in browser memory. No provider, operational, SQL or API changes.",
+  "targetedTests": {
+    "passed": 28,
+    "failed": 0,
+    "assertions": 284
+  },
+  "lint": "pass",
+  "diffCheck": "pass",
+  "checks": {
+    "conflictStillLocked": true,
+    "expectedApplyUnlocks": true,
+    "expectedDecisionUnlocks": true,
+    "finalFocusReturned": true,
+    "incompleteApplyStillLocked": true,
+    "localFreshReads": 10,
+    "lostResponseLocked": true,
+    "malformedResponseEscapeLocked": true,
+    "noAutomaticRetry": true,
+    "pendingMobileOverflow": false,
+    "recrawlFailurePreserved": true,
+    "serverFailureLocked": true,
+    "syntheticPostAttempts": 3,
+    "unchangedGetStillLocked": true
+  },
+  "source": {
+    "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx": "3e9b52cca2a0f2b276e9175975d657149ac7ed64ae67ca6e6849522c101a44bf",
+    "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts": "c45a0532abbe58039c128ac045204fe5c893c9f0b267de4c89421981b76baee0"
+  },
+  "limitations": [
+    "GET does not identify the deciding actor; matching readback confirms observed expected state, not attribution of the write.",
+    "Candidate absent from bounded GET remains locked.",
+    "UI lock is component state; full page reload or parent unmount is outside this readback recovery lifetime."
+  ],
+  "browserErrorCount": 1,
+  "browserErrorCategories": [
+    "fixture MyPage hydration"
+  ]
+}

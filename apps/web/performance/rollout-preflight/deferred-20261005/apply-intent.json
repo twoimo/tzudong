@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-04T19:28:48.700Z",
+  "operationId": "9dbb58f5-7e08-402f-9fb6-ff29a27ad07c",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "filename": "20261004172622_restaurant_review_deferred_reclassification.sql",
+  "sourceSha256": "de64777c29fc14b52522f0e2451d4072951ea3b0c3717783bfd1242db38eed40",
+  "baseLedgerCount": 78,
+  "singlePending": true,
+  "skipVault": true,
+  "providerCalls": 0,
+  "billingChanges": 0
+}

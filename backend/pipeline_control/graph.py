@@ -97,7 +97,7 @@ STEP_SPECS: tuple[StepSpec, ...] = (
         "Step 4 (Heatmap & Frames)",
         "node",
         "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
-        ("--channel", "{target}", "--delete-cache"),
+        ("--channel", "{target}"),
         frozenset({HEAVY_CAPABILITY}),
         skip_when_lite=True,
     ),

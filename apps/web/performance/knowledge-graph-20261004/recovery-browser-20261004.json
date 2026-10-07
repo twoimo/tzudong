@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-04T09:01:43.540Z",
+  "completedAt": "2026-10-04T09:01:45.821Z",
+  "passed": true,
+  "failureCode": null,
+  "sourceHead": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+  "sourceStart": [
+    {
+      "path": "components/admin/AdminKnowledgeGraphPanel.tsx",
+      "sha256": "2ef3d5b90ec61904a50003e5acdf06590ede8a8f364bc41718653c9a500c3b50"
+    },
+    {
+      "path": "types/knowledge-graph.ts",
+      "sha256": "db1bc693f8d0fa652ac24669794f6facd25144314512a418f0ef392b7898faa6"
+    },
+    {
+      "path": "app/api/admin/knowledge-graph/route.ts",
+      "sha256": "5a05991720a9babcf00b4eb35d621909e6849dec34b33f050325c3ca17a65e48"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "sha256": "649326bd12d162764abf720980ed6c4ffaae7ff6ece5a4bb05cb66498be411a0"
+    },
+    {
+      "path": "scripts/verify-knowledge-graph-recovery-browser.ts",
+      "sha256": "e52fbca352fb8b146ff1b42c348245100f3ea502840336aac9c383bd4be8a7ef"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/AdminKnowledgeGraphPanel.tsx",
+      "sha256": "2ef3d5b90ec61904a50003e5acdf06590ede8a8f364bc41718653c9a500c3b50"
+    },
+    {
+      "path": "types/knowledge-graph.ts",
+      "sha256": "db1bc693f8d0fa652ac24669794f6facd25144314512a418f0ef392b7898faa6"
+    },
+    {
+      "path": "app/api/admin/knowledge-graph/route.ts",
+      "sha256": "5a05991720a9babcf00b4eb35d621909e6849dec34b33f050325c3ca17a65e48"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "sha256": "649326bd12d162764abf720980ed6c4ffaae7ff6ece5a4bb05cb66498be411a0"
+    },
+    {
+      "path": "scripts/verify-knowledge-graph-recovery-browser.ts",
+      "sha256": "e52fbca352fb8b146ff1b42c348245100f3ea502840336aac9c383bd4be8a7ef"
+    }
+  ],
+  "environment": {
+    "browserOwner": "tzudong-kg-recovery-astra-74a1b6",
+    "agentBrowserVersion": "0.38.1",
+    "viewport": {
+      "width": 1423,
+      "height": 1000
+    },
+    "colorScheme": "light",
+    "fixtureOrigin": "http://127.0.0.1:18794",
+    "fakeSupabaseOrigin": "http://127.0.0.1:18793",
+    "nodeVersion": "v24.21.0"
+  },
+  "requests": {
+    "graph": [
+      {
+        "phase": "initial-503",
+        "status": 503,
+        "cursorPresent": false,
+        "selectedPresent": false,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "initial-503",
+        "status": 503,
+        "cursorPresent": false,
+        "selectedPresent": false,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "retry-initial",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": false,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "second-page",
+        "status": 200,
+        "cursorPresent": true,
+        "selectedPresent": false,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "revision-409",
+        "status": 409,
+        "cursorPresent": true,
+        "selectedPresent": true,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "recover-first-page",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": true,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "refresh-first-page",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": true,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "search",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": true,
+        "searchPresent": true,
+        "kindPresent": false
+      },
+      {
+        "phase": "select-search-result",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": true,
+        "searchPresent": true,
+        "kindPresent": false
+      },
+      {
+        "phase": "empty-search",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": true,
+        "searchPresent": true,
+        "kindPresent": false
+      },
+      {
+        "phase": "reset-search",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": true,
+        "searchPresent": false,
+        "kindPresent": false
+      },
+      {
+        "phase": "select-graph-node",
+        "status": 200,
+        "cursorPresent": false,
+        "selectedPresent": true,
+        "searchPresent": false,
+        "kindPresent": false
+      }
+    ],
+    "graphTotal": 12,
+    "recoveryRequests": 1,
+    "oldCursorResendsDuringRecovery": 0,
+    "syntheticReadMockCounts": {
+      "/rest/v1/rpc/get_current_privacy_eligibility": 2,
+      "/rest/v1/rpc/read_public_profile_summaries": 2
+    },
+    "allowedReadRequests": 105,
+    "allowedReadFailures": 0,
+    "externalBlocked": 2,
+    "mutationsBlocked": 0,
+    "forwardedMutations": 0,
+    "forwardedExternalRequests": 0
+  },
+  "fixtures": {
+    "nodes": 101,
+    "initialRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "updatedRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "fixtureValidationCount": 12,
+    "validation": "actual-isKnowledgeGraphPage"
+  },
+  "diagnostics": {
+    "pageErrorCount": 0,
+    "pageErrorHashes": [],
+    "consoleErrors": 2,
+    "expectedStatusConsoleErrors": 2,
+    "unexpectedConsoleErrorHashes": []
+  },
+  "assertions": [
+    {
+      "name": "isolated-owned-browser",
+      "passed": true
+    },
+    {
+      "name": "initial-503-rendered",
+      "passed": true
+    },
+    {
+      "name": "unknown-analysis-count-is-dash",
+      "passed": true
+    },
+    {
+      "name": "unknown-failure-count-is-dash",
+      "passed": true
+    },
+    {
+      "name": "initial-error-shows-no-success-data",
+      "passed": true
+    },
+    {
+      "name": "initial-retry-one-cursorless-request",
+      "passed": true
+    },
+    {
+      "name": "first-page-100-nodes",
+      "passed": true
+    },
+    {
+      "name": "known-counts-rendered",
+      "passed": true
+    },
+    {
+      "name": "second-page-one-node",
+      "passed": true
+    },
+    {
+      "name": "second-page-cursor-request",
+      "passed": true
+    },
+    {
+      "name": "revision-409-rendered",
+      "passed": true
+    },
+    {
+      "name": "recovery-one-cursorless-request",
+      "passed": true
+    },
+    {
+      "name": "recovered-first-page-controls",
+      "passed": true
+    },
+    {
+      "name": "recovered-first-page-100-nodes",
+      "passed": true
+    },
+    {
+      "name": "off-page-selection-detail-preserved",
+      "passed": true
+    },
+    {
+      "name": "timestamp-evidence-link-rendered",
+      "passed": true
+    },
+    {
+      "name": "first-page-refresh-one-cursorless-request",
+      "passed": true
+    },
+    {
+      "name": "search-one-matching-node",
+      "passed": true
+    },
+    {
+      "name": "search-resets-pagination",
+      "passed": true
+    },
+    {
+      "name": "list-selection-updates-detail",
+      "passed": true
+    },
+    {
+      "name": "empty-search-rendered",
+      "passed": true
+    },
+    {
+      "name": "cleared-search-restores-first-page",
+      "passed": true
+    },
+    {
+      "name": "graph-click-updates-detail",
+      "passed": true
+    },
+    {
+      "name": "no-browser-page-errors",
+      "passed": true
+    },
+    {
+      "name": "no-unexpected-console-errors",
+      "passed": true
+    },
+    {
+      "name": "no-local-network-failures",
+      "passed": true
+    },
+    {
+      "name": "no-mutation-attempts",
+      "passed": true
+    },
+    {
+      "name": "source-stable-during-run",
+      "passed": true
+    }
+  ],
+  "limits": [
+    "Synthetic browser-fulfilled graph responses; no live database/provider or deployed API validation.",
+    "One desktop light viewport; not a cross-device, performance, statistical, or full accessibility audit.",
+    "Evidence links were inspected without navigating to external video.",
+    "Git HEAD plus source hashes identify local dirty/untracked source, not a deployment receipt.",
+    "Recovery request assertions cover this deterministic event sequence only."
+  ]
+}

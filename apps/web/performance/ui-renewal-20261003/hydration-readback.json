@@ -1,0 +1,17 @@
+{
+  "kind": "synthetic-authenticated-hydration-readback",
+  "navigationSamples": 6,
+  "observedNewHydrationErrors": 0,
+  "startUtc": "2026-10-03T04:14:52.013Z",
+  "viewport": [
+    834,
+    1194
+  ],
+  "scope": "Owned loopback fixture tab; sidebar initial account name and email",
+  "priorHydrationErrorObserved": true,
+  "priorRateNotMeasured": true,
+  "limits": [
+    "No production observation or confidence interval from six local navigation samples.",
+    "The first fixed capture still contained loading placeholders and is retained as an attempt."
+  ]
+}

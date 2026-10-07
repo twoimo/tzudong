@@ -1,0 +1,44 @@
+{
+  "artifacts": [
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/density-review-final-20261004.json",
+      "sha256": "a54ca73af4647da6bea689a24684ccabc0555e1dc3948a284c41c1e16de1c1ad",
+      "bytes": 1404
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/density-review-before-390.png",
+      "sha256": "735a8e51af13b949034d10a48bec493a6e2bf6fb036a4b56ae99eae0c472c0c3",
+      "bytes": 65058
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/density-review-final-390.png",
+      "sha256": "f575db1a9c1e14662f7ca445f0adacbeb5d988221d3ea03cfd90c1b8944142f1",
+      "bytes": 58522
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/density-review-final-834.png",
+      "sha256": "c84e4b26e01a004fe8a51546233eb37b41db6cfec9a637ae606515f16e12d936",
+      "bytes": 123833
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/density-review-final-1440.png",
+      "sha256": "d26b8d5ca5469f612a9fd83a2a5c46659be28fa7b816e851c4cc39d29a796c09",
+      "bytes": 180870
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/manual-stop-dialog-390.png",
+      "sha256": "b612dbc7f85f5c2b26931201a9f0b9a117bbce9dd3e6bafaa62127e39274f76e",
+      "bytes": 53614
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/restaurant-automation-manual-local.json",
+      "sha256": "1112ca326a0c84676b0f0716b9f49367c9f5fc64dff3ab48ed214c4045ef237d",
+      "bytes": 3483
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-input-gates-20261004.json",
+      "sha256": "716fc734d77babb81d8ca5b8e3d26f7fc04f2e1ad6240efb647e18088f719282",
+      "bytes": 654
+    }
+  ]
+}

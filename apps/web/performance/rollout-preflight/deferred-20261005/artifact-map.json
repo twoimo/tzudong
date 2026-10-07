@@ -1,0 +1,45 @@
+{
+  "kind": "hosted-deferred-79-proof",
+  "entries": [
+    {
+      "path": "apply-before.json",
+      "sha256": "e5dac0cd284a738665ad862c6208c9b2fb279d0a252f90a3eebf28c39341cae2",
+      "bytes": 23955
+    },
+    {
+      "path": "apply-intent.json",
+      "sha256": "3e087b7dd86e884238b67488b257bb5303e70a228a9b789315518bcb0e3d5cfe",
+      "bytes": 418
+    },
+    {
+      "path": "apply-readback-canonical.json",
+      "sha256": "d1248cb35a4c5f4ab64240725eb59484e8f3b097b7d6445910cac6a054ae54ea",
+      "bytes": 24682
+    },
+    {
+      "path": "apply-readback.json",
+      "sha256": "2a6e56e3a954b478c2118403d47dd6cb94e75e4bcc80412786d2460e4763a843",
+      "bytes": 24684
+    },
+    {
+      "path": "apply-transport.json",
+      "sha256": "3b67507fb8f297c7016cd8b0bcf87395c18f01f59e274336eb9cca236de7eb1f",
+      "bytes": 171
+    },
+    {
+      "path": "migration-workspace-plan.json",
+      "sha256": "ccd54bc30f7f41baeb35aa5fe9ba61c2b7d977e9560f22942a87cbf06e83d985",
+      "bytes": 16529
+    },
+    {
+      "path": "ready.json",
+      "sha256": "de5cb227ea303a4662f7869ab4f00f82a34511e19bacafec755534264ef5f1bf",
+      "bytes": 2642
+    },
+    {
+      "path": "statement-vector-proof.json",
+      "sha256": "f9d7617e5da873666867fa1b4237b0e3628df13aabcde99d895530ff2f1930d1",
+      "bytes": 406
+    }
+  ]
+}

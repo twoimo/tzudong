@@ -1,0 +1,32 @@
+{
+  "kind": "live-gemini-model-readiness",
+  "measuredAt": "2026-10-02T18:21:30.828Z",
+  "elapsedMs": 562.629916,
+  "models": [
+    {
+      "id": "gemini-3.8-flash",
+      "capabilities": [
+        "chat"
+      ]
+    },
+    {
+      "id": "gemini-3.1-flash-image",
+      "capabilities": [
+        "image"
+      ]
+    },
+    {
+      "id": "gemini-3-pro-image",
+      "capabilities": [
+        "image"
+      ]
+    }
+  ],
+  "paidInferenceCalls": 0,
+  "environment": {
+    "sdk": "2.18.0"
+  },
+  "limitations": [
+    "Model metadata is not inference verification or a credit deduction receipt."
+  ]
+}

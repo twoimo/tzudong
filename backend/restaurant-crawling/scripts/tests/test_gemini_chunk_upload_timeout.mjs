@@ -9,6 +9,7 @@ const SCRIPT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 
 test('chunk video upload timeout is five minutes', () => {
   const source = fs.readFileSync(SCRIPT, 'utf8');
   assert.match(source, /ai\.files\.upload\(\{[\s\S]*?\}\), UPLOAD_TIMEOUT_MS\)/);
+  assert.match(source, /abortSignal,[\s\S]*?httpOptions: \{ timeout: UPLOAD_TIMEOUT_MS \}/);
   assert.match(source, /const UPLOAD_TIMEOUT_MS = 300000;/);
   assert.doesNotMatch(source, /GoogleAIFileManager/);
 });

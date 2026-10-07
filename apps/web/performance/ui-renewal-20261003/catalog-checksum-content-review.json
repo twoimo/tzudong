@@ -1,0 +1,18 @@
+{
+  "kind": "checksum-content-review",
+  "reportFile": "catalog-dual-clean-replay-37121857541.json",
+  "matchedArtifactHashes": 51,
+  "independentReplaySets": 2,
+  "matchedCommitOid": "8333b13e16a12100c4a388a968a7180d9cf4e096",
+  "contentRecomputed": true,
+  "onlyTypedChecksumsAndVerdict": true,
+  "credentialValuesPresent": false,
+  "scannerReportedOccurrences": 4,
+  "scannerDistinctIncidentIds": [
+    37839896,
+    37839897
+  ],
+  "scannerConclusion": "failure",
+  "assessment": "generic entropy false positives on verified checksum-only report",
+  "securityChecksChanged": false
+}

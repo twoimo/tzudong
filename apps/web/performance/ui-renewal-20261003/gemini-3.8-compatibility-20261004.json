@@ -1,0 +1,91 @@
+{
+  "kind": "gemini-generation-config-compatibility-v1",
+  "reviewedAt": "2026-10-04",
+  "sources": [
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/latest-model",
+      "scope": "Gemini 3.8 Flash migration checklist and thinking levels",
+      "finding": "Omit temperature/top_p/top_k/candidate_count; MINIMAL is unsupported."
+    },
+    {
+      "url": "https://ai.google.dev/api/generate-content",
+      "scope": "GenerateContent GenerationConfig/ThinkingConfig",
+      "finding": "SDK/REST field names remain camelCase; generic examples still include sampling fields. Applied the model-specific migration guidance; service rejection was not tested."
+    }
+  ],
+  "installedSdk": {
+    "web": "@google/genai@2.18.0",
+    "backend": "@google/genai@2.26.0",
+    "observation": "Web SDK synthetic transport retains obsolete sampling fields when supplied; it does not enforce model-specific omission."
+  },
+  "modelScope": {
+    "storyboardText": "gemini-3.8-flash",
+    "backendDefault": "gemini-3.7-flash",
+    "backendOverride": "PRIMARY_MODEL preserved; omit sampling only for gemini-3.8-flash and models/gemini-3.8-flash",
+    "deployedModelSelection": "unverified"
+  },
+  "preserved": [
+    "existing prompts",
+    "MEDIUM storyboard thinking",
+    "configured backend thinking",
+    "8192 storyboard / 4096 evaluation output limits",
+    "one-attempt SDK policy",
+    "project-budget admission",
+    "idempotency and administrator guards",
+    "OCR gemini-3.6-flash",
+    "both Nano Banana image configurations"
+  ],
+  "changes": [
+    "Remove storyboard temperature 0.2.",
+    "Omit backend temperature 0.1 only when 3.8 Flash is selected.",
+    "Reject configured MINIMAL for 3.8 before any SDK request; do not substitute another thinking level."
+  ],
+  "verification": {
+    "web": {
+      "tests": 20,
+      "passed": 20,
+      "assertions": 163,
+      "files": [
+        "apps/web/tests-unit/storyboard-gemini-client.test.ts",
+        "apps/web/tests-unit/gemini-ocr.test.ts"
+      ]
+    },
+    "backend": {
+      "tests": 13,
+      "passed": 13,
+      "file": "backend/utils/tests/gemini-client.test.mjs",
+      "compatibilityScenarios": 40,
+      "capturedSyntheticSdkRequests": 32,
+      "preflightRejectionsWithoutRequest": 8
+    },
+    "webSyntheticSdkCaptures": {
+      "draft": 1,
+      "bothImageModels": 2,
+      "obsoleteParameterControl": 1
+    },
+    "targetedEslint": "passed",
+    "javascriptSyntax": "passed",
+    "diffWhitespace": "passed",
+    "typecheckParity": "blocked by out-of-scope diagnostic",
+    "typecheckNative": {
+      "exitCode": 1,
+      "file": "apps/web/lib/admin/evaluation-page-server.ts",
+      "line": 17,
+      "code": "TS2739",
+      "detail": "ProcessVersions lacks icu and unicode required by Pick<ProcessVersions, icu | unicode>."
+    },
+    "typecheckCompat": {
+      "exitCode": 2,
+      "sameDiagnosticAsNative": true
+    }
+  },
+  "boundaries": {
+    "realProviderCalls": 0,
+    "realCredentialsUsed": false,
+    "remoteDatabaseWrites": 0,
+    "modelOrProviderSwaps": 0,
+    "deploymentPerformed": false,
+    "commitOrPushPerformed": false,
+    "providerAcceptanceAndOutputQuality": "not observed"
+  }
+}

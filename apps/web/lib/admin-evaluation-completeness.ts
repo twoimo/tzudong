@@ -57,8 +57,9 @@ export function isEvaluationCompletenessCheckable(record: Pick<EvaluationRecord,
   );
 }
 
-export function getEvaluationCompletenessIssues(record: Pick<EvaluationRecord, 'status' | 'is_missing' | 'is_not_selected' | 'evaluation_results'>): EvaluationCompletenessIssue[] {
+export function getEvaluationCompletenessIssues(record: Pick<EvaluationRecord, 'status' | 'is_missing' | 'is_not_selected' | 'evaluation_results' | 'read_summary'>): EvaluationCompletenessIssue[] {
   if (!isEvaluationCompletenessCheckable(record)) return [];
+  if (record.read_summary) return record.read_summary.evaluation_issues;
 
   const results = record.evaluation_results;
   return EVALUATION_COMPLETENESS_METRICS.flatMap((definition) => {
@@ -78,11 +79,11 @@ export function getEvaluationCompletenessIssues(record: Pick<EvaluationRecord, '
   });
 }
 
-export function needsEvaluationRerun(record: Pick<EvaluationRecord, 'status' | 'is_missing' | 'is_not_selected' | 'evaluation_results'>): boolean {
+export function needsEvaluationRerun(record: Pick<EvaluationRecord, 'status' | 'is_missing' | 'is_not_selected' | 'evaluation_results' | 'read_summary'>): boolean {
   return getEvaluationCompletenessIssues(record).length > 0;
 }
 
-export function getEvaluationRerunSummary(record: Pick<EvaluationRecord, 'status' | 'is_missing' | 'is_not_selected' | 'evaluation_results'>): string {
+export function getEvaluationRerunSummary(record: Pick<EvaluationRecord, 'status' | 'is_missing' | 'is_not_selected' | 'evaluation_results' | 'read_summary'>): string {
   const issues = getEvaluationCompletenessIssues(record);
   if (issues.length === 0) return '';
 

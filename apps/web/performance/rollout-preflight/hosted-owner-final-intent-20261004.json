@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "hosted-owner-final-intent",
+  "at": "2026-10-04T12:18:26.041028+00:00",
+  "sourceSha256": "a2a50b992a973c7eb12fe447769dc15374690f55488632a8c6e11119ea99ec97",
+  "pending": [
+    "20261004115554_g014_pg17_owner_final_verifier.sql"
+  ],
+  "ledgerCount": 76,
+  "preflightPassed": true,
+  "skipVault": true
+}

@@ -125,7 +125,7 @@ function getEvalBasis(row: RestaurantIdentityWarningRow, key: string): string | 
   return typeof basis === 'string' && basis.trim() ? basis.trim() : null;
 }
 
-function isSameVideoSameOriginDeleted(target: RestaurantIdentityWarningRow, related: RestaurantIdentityWarningRow): boolean {
+export function isSameVideoSameOriginDeleted(target: RestaurantIdentityWarningRow, related: RestaurantIdentityWarningRow): boolean {
   if (related.id === target.id || related.status !== 'deleted') return false;
   const targetVideoId = extractVideoIdFromYoutubeLink(target.youtube_link || '');
   const relatedVideoId = extractVideoIdFromYoutubeLink(related.youtube_link || '');
@@ -138,6 +138,15 @@ function isSameVideoSameOriginDeleted(target: RestaurantIdentityWarningRow, rela
   const targetCandidate = normalizeName(resolveCandidateName(target) || '');
   const relatedCandidate = normalizeName(resolveCandidateName(related) || '');
   return Boolean(targetCandidate && relatedCandidate && targetCandidate === relatedCandidate);
+}
+
+export function deletedRestaurantIdentityWarning(rows: RestaurantIdentityWarningRow[], total = rows.length): RestaurantIdentityWarning {
+  return {
+    rule: 'deleted_same_video_identity', severity: 'warn',
+    title: '관리자가 이미 삭제한 같은 영상/같은 장소 후보입니다',
+    message: `같은 영상에서 같은 원본명 또는 같은 후보명이 삭제된 이력이 ${total}건 있습니다. 재수집으로 되살아난 오매칭인지 확인하세요.`,
+    evidence: rows.slice(0,3).map(row => `${row.id}:${row.origin_name || resolveCandidateName(row) || '이름 없음'}`),
+  };
 }
 
 export function findRestaurantIdentityWarnings(
@@ -195,13 +204,7 @@ export function findRestaurantIdentityWarnings(
 
   const deletedMatches = relatedRows.filter((row) => isSameVideoSameOriginDeleted(target, row));
   if (deletedMatches.length > 0) {
-    warnings.push({
-      rule: 'deleted_same_video_identity',
-      severity: 'warn',
-      title: '관리자가 이미 삭제한 같은 영상/같은 장소 후보입니다',
-      message: `같은 영상에서 같은 원본명 또는 같은 후보명이 삭제된 이력이 ${deletedMatches.length}건 있습니다. 재수집으로 되살아난 오매칭인지 확인하세요.`,
-      evidence: deletedMatches.slice(0, 3).map((row) => `${row.id}:${row.origin_name || resolveCandidateName(row) || '이름 없음'}`),
-    });
+    warnings.push(deletedRestaurantIdentityWarning(deletedMatches));
   }
 
   const unique = new Map<string, RestaurantIdentityWarning>();

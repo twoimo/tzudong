@@ -41,9 +41,11 @@ from utils.config_loader import (
     get_api_config,
 )
 from utils.logger import PipelineLogger
-from utils.duplicate_checker import append_to_jsonl
 from utils.runtime_paths import load_backend_env, get_backend_log_dir, resolve_backend_root
 from utils.privacy_log import safe_error_name
+from utils.stage_cache import atomic_write, stage_lock, canonical_digest
+from utils.metadata_checkpoint import latest_metadata, checkpoint, verified_today, last_sequence, append_metadata
+METADATA_RECIPE_HASH = hashlib.sha256(Path(__file__).read_bytes() + Path(latest_metadata.__code__.co_filename).read_bytes()).hexdigest()
 
 try:
     from googleapiclient.discovery import build
@@ -62,6 +64,7 @@ KST = timezone(timedelta(hours=9))
 # 로그 디렉토리
 LOG_DIR = get_backend_log_dir(BACKEND_ROOT, "restaurant-crawling")
 OPENAI_AD_ANALYSIS_DISABLED_REASON: Optional[str] = None
+OPENAI_AD_ANALYSIS_FAILURE_COUNT = 0
 
 
 def extract_video_id(url: str) -> Optional[str]:
@@ -93,37 +96,26 @@ def parse_duration(duration: str) -> int:
 
 
 def get_latest_meta(channel_data_path: Path, video_id: str) -> Optional[Dict]:
-    meta_file = channel_data_path / "meta" / f"{video_id}.jsonl"
-    if not meta_file.exists():
-        return None
-    try:
-        with open(meta_file, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if lines:
-                return json.loads(lines[-1].strip())
-    except Exception:
-        pass
-    return None
+    return latest_metadata(channel_data_path / "meta" / f"{video_id}.jsonl", video_id)
 
 
-def load_checked_cache(channel_path: Path) -> Dict[str, str]:
+def load_checked_cache(channel_path: Path) -> Dict[str, Any]:
     """오늘 확인한 영상 캐시 로드"""
     cache_file = channel_path / "checked_cache.json"
     if not cache_file.exists():
         return {}
     try:
-        return json.loads(cache_file.read_text(encoding="utf-8"))
+        value = json.loads(cache_file.read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
     except:
         return {}
 
 
-def save_checked_cache(channel_path: Path, cache: Dict[str, str]):
+def save_checked_cache(channel_path: Path, cache: Dict[str, Any]):
     """확인된 영상 캐시 저장"""
     cache_file = channel_path / "checked_cache.json"
     try:
-        cache_file.write_text(
-            json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        atomic_write(cache_file, json.dumps(cache, indent=2, ensure_ascii=False).encode('utf-8'))
     except Exception:
         pass
 
@@ -469,8 +461,10 @@ def analyze_ad_content(
 ) -> Optional[List[str]]:
     """광고/협찬 주체를 GPT-4o-mini로 분석"""
     global OPENAI_AD_ANALYSIS_DISABLED_REASON
+    global OPENAI_AD_ANALYSIS_FAILURE_COUNT
 
     if OPENAI_AD_ANALYSIS_DISABLED_REASON:
+        OPENAI_AD_ANALYSIS_FAILURE_COUNT += 1
         return None
 
     text_preview = text[:100]
@@ -518,6 +512,7 @@ def analyze_ad_content(
         return parsed if parsed else None
 
     except Exception as error:
+        OPENAI_AD_ANALYSIS_FAILURE_COUNT += 1
         error_name = safe_error_name(error)
         if error_name == "AuthenticationError" or getattr(error, "status_code", None) == 401:
             OPENAI_AD_ANALYSIS_DISABLED_REASON = "invalid_api_key"
@@ -732,7 +727,13 @@ def save_thumbnail_file(
                 pass
 
 
-def collect_channel_meta(
+def collect_channel_meta(channel_name: str, youtube, openai_client: Optional[OpenAI], logger: PipelineLogger) -> Dict[str, Any]:
+    channel_path = Path(__file__).parent.parent / "data" / channel_name
+    with stage_lock(channel_path / '.receipts' / 'metadata-collection'):
+        return _collect_channel_meta(channel_name, youtube, openai_client, logger)
+
+
+def _collect_channel_meta(
     channel_name: str,
     youtube,
     openai_client: Optional[OpenAI],
@@ -771,7 +772,7 @@ def collect_channel_meta(
 
     # urls.txt에는 없지만 혹시 남아있을 수 있는 것들 필터링
     original_count = len(video_ids)
-    video_ids = [vid for vid in video_ids if vid not in deleted_ids]
+    video_ids = list(dict.fromkeys(vid for vid in video_ids if vid not in deleted_ids))
     if len(video_ids) < original_count:
         logger.warning(f"op=deleted_videos_filtered count={original_count - len(video_ids)}")
 
@@ -798,30 +799,18 @@ def collect_channel_meta(
 
     # 캐시 로드
     checked_cache = load_checked_cache(channel_path)
+    recipe = canonical_digest({'code': METADATA_RECIPE_HASH,
+        'adModel': get_api_config().get('openai', {}).get('model', 'gpt-4o-mini'),
+        'adsAnalysisEnabled': openai_client is not None})
 
     skipped_today_count = 0
 
     for vid in video_ids:
-        # 1. 캐시 확인
-        if checked_cache.get(vid) == today_str:
+        meta = get_latest_meta(channel_path, vid)
+        if verified_today(checked_cache.get(vid), today_str, recipe, meta):
             skipped_today_count += 1
             continue
-
-        # 2. 메타데이터 파일 확인 (이중 체크)
-        meta = get_latest_meta(channel_path, vid)
-        if meta and meta.get("collected_at"):
-            try:
-                last_collected_str = meta.get("collected_at")
-                last_dt = datetime.fromisoformat(
-                    last_collected_str.replace("Z", "+00:00")
-                ).astimezone(KST)
-                if last_dt.date().isoformat() == today_str:
-                    # 메타데이터가 있으면 캐시도 업데이트
-                    checked_cache[vid] = today_str
-                    skipped_today_count += 1
-                    continue
-            except:
-                pass
+        # Date-only cache entries and output existence never establish completion.
         pending_ids.append(vid)
 
     # 초기 캐시 저장 (메타데이터로 업데이트된 내용 반영)
@@ -844,6 +833,7 @@ def collect_channel_meta(
 
         # 1. 배치의 현재 메타데이터 가져오기
         current_metas = get_video_meta_batch(youtube, batch_ids, channel_name)
+        recipe_completed = set()
 
         for vid in batch_ids:
             if vid not in current_metas:
@@ -851,6 +841,8 @@ def collect_channel_meta(
 
             current_meta = current_metas[vid]
             previous_meta = get_latest_meta(channel_path, vid)
+            prior_checkpoint = checked_cache.get(vid)
+            recipe_changed = not isinstance(prior_checkpoint,dict) or prior_checkpoint.get('recipe') != recipe
 
             # 2. 변경 사항 감지 -> List[str] (viral 포함)
             recollect_vars = detect_changes(
@@ -905,24 +897,25 @@ def collect_channel_meta(
             # 하지만 new_video는 is_changed에 포함되지 않으므로(recollect_vars=["new_video"]),
             # new_video인 경우 위에서 schedule_reason="new_video"로 처리됨.
 
-            if not (is_changed or is_scheduled):
+            if not (is_changed or is_scheduled or recipe_changed):
                 # 수집 안 함. 하지만 썸네일 백필 체크
                 prev_id = previous_meta.get("recollect_id", 0)
                 if not check_thumbnail_exists(channel_path, vid, prev_id):
                     save_thumbnail_file(
                         channel_path, vid, prev_id, current_meta.get("thumbnail_url")
                     )
+                recipe_completed.add(vid)
                 continue
 
             # [수정] 변경사항 없이 스케줄링에 의한 수집인 경우, 하루 1회만 허용
-            if not is_changed and is_scheduled and already_collected_today:
+            if not is_changed and is_scheduled and already_collected_today and not recipe_changed:
                 logger.debug("op=video_skip_collected_today")
+                recipe_completed.add(vid)
                 continue
 
             # 5. 수집 확정 -> ID 계산
-            prev_id = previous_meta.get("recollect_id", 0) if previous_meta else 0
-            # previous_meta가 없으면(신규) 0, 있으면 +1
-            new_id = prev_id + 1 if previous_meta else 0
+            prior_sequence = previous_meta.get("recollect_id", 0) if previous_meta else last_sequence(meta_dir / f"{vid}.jsonl", vid)
+            new_id = prior_sequence + 1 if prior_sequence is not None else 0
 
             # schedule_reason이 있으면 recollect_vars에 추가 (daily_collection 제외)
             if schedule_reason and schedule_reason != "daily_collection":
@@ -943,11 +936,15 @@ def collect_channel_meta(
             what_ads = None
             if is_ads:
                 # 이전 데이터 재사용 확인
-                if previous_meta and previous_meta.get("ads_info", {}).get("what_ads"):
+                if previous_meta and not recipe_changed and previous_meta.get('description') == description and previous_meta.get("ads_info", {}).get("what_ads"):
                     what_ads = previous_meta["ads_info"]["what_ads"]
                 elif openai_client:
                     # 신규 분석
+                    failures_before=OPENAI_AD_ANALYSIS_FAILURE_COUNT
                     what_ads = analyze_ad_content(openai_client, description, logger)
+                    if OPENAI_AD_ANALYSIS_FAILURE_COUNT != failures_before:
+                        # Provider failures are not completed recipe execution.
+                        continue
 
             current_meta["ads_info"] = {"is_ads": is_ads, "what_ads": what_ads}
 
@@ -957,13 +954,19 @@ def collect_channel_meta(
             current_meta["collected_at"] = datetime.now(KST).isoformat()
 
             output_file = meta_dir / f"{vid}.jsonl"
-            append_to_jsonl(str(output_file), current_meta)
+            append_metadata(output_file, current_meta)
+            recipe_completed.add(vid)
             logger.info("op=metadata_updated")
             success_count += 1
 
         # 배치 처리 후 캐시 업데이트 (처리된 모든 비디오)
         for vid in batch_ids:
-            checked_cache[vid] = today_str
+            # A failed or incomplete provider read is eligible on restart.
+            if vid not in current_metas or vid not in recipe_completed:
+                continue
+            saved = get_latest_meta(channel_path, vid)
+            if saved is not None:
+                checked_cache[vid] = checkpoint(today_str, recipe, saved)
         save_checked_cache(channel_path, checked_cache)
 
     logger.progress_done()

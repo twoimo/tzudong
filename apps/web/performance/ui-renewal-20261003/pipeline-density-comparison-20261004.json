@@ -1,0 +1,257 @@
+{
+  "kind": "pipeline-density-comparison",
+  "observedAt": "2026-10-04T12:18:21.757257+00:00",
+  "candidate": "/Users/twoimo/.codex/worktrees/pipeline-performance-20261002/tzudong",
+  "origin": "http://127.0.0.1:18794",
+  "synthetic": true,
+  "changes": [
+    "Four counts share one compact row; the DAG keeps status labels and moves timing into selected-stage detail.",
+    "Default explanatory paragraphs, implementation labels and execution IDs are inside explicit detail disclosures.",
+    "Stage selection opens detail, detail can collapse, and the top New execution action only opens controls.",
+    "AdminPageHeader uses titleAs=h2, icon=Workflow, source badge in summary, and refresh/new-execution actions. Shared component/CSS were not edited by this agent."
+  ],
+  "measurement": {
+    "scope": "Default rendered pipeline panel with closed disclosures; rendered text includes off-viewport scroll content but excludes collapsed/hidden content.",
+    "textMetric": "root.innerText with whitespace collapsed",
+    "explanationMetric": "Visible prose/legend blocks in flow and selected detail plus explicitly marked explanatory paragraphs; closed details and hidden ancestors excluded.",
+    "internalTermMetric": "Occurrences of manifest, Step number, backend/, heavy_local, lite_gha, dry-run, or live in rendered text.",
+    "noiseBudget": {
+      "geometryPx": 1,
+      "textCharacters": 0
+    },
+    "timingOrPerformanceClaim": false,
+    "rows": [
+      {
+        "width": 390,
+        "before": {
+          "panelHeight": 1314,
+          "panelWidth": 370,
+          "diagramHeight": 405,
+          "executionOffset": 1004,
+          "visibleTextCharacters": 757,
+          "explanationBlocks": 3,
+          "explanationCharacters": 146,
+          "visibleImplementationTerms": 7
+        },
+        "compactBeforeSharedHeader": {
+          "panelHeight": 702,
+          "panelWidth": 370,
+          "diagramHeight": 291,
+          "executionOffset": 490,
+          "visibleTextCharacters": 276,
+          "explanationBlocks": 0,
+          "explanationCharacters": 0,
+          "visibleImplementationTerms": 0
+        },
+        "finalSharedHeader": {
+          "panelHeight": 727,
+          "panelWidth": 370,
+          "diagramHeight": 291,
+          "executionOffset": 515,
+          "visibleTextCharacters": 271,
+          "explanationBlocks": 0,
+          "explanationCharacters": 0,
+          "visibleImplementationTerms": 0
+        },
+        "panelHeightReductionPx": 587,
+        "panelHeightReductionPercent": 44.7,
+        "executionMovedUpPx": 489,
+        "samePanelWidth": true
+      },
+      {
+        "width": 834,
+        "before": {
+          "panelHeight": 1248,
+          "panelWidth": 602,
+          "diagramHeight": 405,
+          "executionOffset": 980,
+          "visibleTextCharacters": 757,
+          "explanationBlocks": 3,
+          "explanationCharacters": 146,
+          "visibleImplementationTerms": 7
+        },
+        "compactBeforeSharedHeader": {
+          "panelHeight": 702,
+          "panelWidth": 602,
+          "diagramHeight": 291,
+          "executionOffset": 490,
+          "visibleTextCharacters": 276,
+          "explanationBlocks": 0,
+          "explanationCharacters": 0,
+          "visibleImplementationTerms": 0
+        },
+        "finalSharedHeader": {
+          "panelHeight": 723,
+          "panelWidth": 602,
+          "diagramHeight": 291,
+          "executionOffset": 511,
+          "visibleTextCharacters": 271,
+          "explanationBlocks": 0,
+          "explanationCharacters": 0,
+          "visibleImplementationTerms": 0
+        },
+        "panelHeightReductionPx": 525,
+        "panelHeightReductionPercent": 42.1,
+        "executionMovedUpPx": 469,
+        "samePanelWidth": true
+      },
+      {
+        "width": 1423,
+        "before": {
+          "panelHeight": 1017,
+          "panelWidth": 1191,
+          "diagramHeight": 267,
+          "executionOffset": 749,
+          "visibleTextCharacters": 757,
+          "explanationBlocks": 3,
+          "explanationCharacters": 146,
+          "visibleImplementationTerms": 7
+        },
+        "compactBeforeSharedHeader": {
+          "panelHeight": 616,
+          "panelWidth": 1191,
+          "diagramHeight": 205,
+          "executionOffset": 404,
+          "visibleTextCharacters": 276,
+          "explanationBlocks": 0,
+          "explanationCharacters": 0,
+          "visibleImplementationTerms": 0
+        },
+        "finalSharedHeader": {
+          "panelHeight": 637,
+          "panelWidth": 1191,
+          "diagramHeight": 205,
+          "executionOffset": 425,
+          "visibleTextCharacters": 271,
+          "explanationBlocks": 0,
+          "explanationCharacters": 0,
+          "visibleImplementationTerms": 0
+        },
+        "panelHeightReductionPx": 380,
+        "panelHeightReductionPercent": 37.4,
+        "executionMovedUpPx": 324,
+        "samePanelWidth": true
+      }
+    ]
+  },
+  "verification": {
+    "unitTests": 26,
+    "unitAssertions": 245,
+    "unitStatus": "pass",
+    "targetedEslint": "pass",
+    "typecheckParity": {
+      "status": "pass",
+      "diagnostics": 0,
+      "logicalInputs": 3173,
+      "nonLibraryContentSha256": "f2eeaffac1ef07aa40bb42bfc310be676738b2ac17632034c9a27a3189fa1c78"
+    },
+    "guardedPrepareApplyHandlersByteIdentical": true,
+    "guardedHandlersSha256": "f675d82dd445c38fa64cb7752f39f8d3608f7bdb8dbde982194122b9fe3617d7",
+    "finalRenderCases": 3,
+    "widths": [
+      390,
+      834,
+      1423
+    ],
+    "nodes": 8,
+    "edges": 8,
+    "clippedLabels": 0,
+    "horizontalOverflow": 0,
+    "pageRuntimeErrors": 0,
+    "manualScreenshotReview": "pass",
+    "sharedGeometryFrozenDuringFinalRender": true,
+    "behavior": {
+      "syntheticApplyChecks": 2,
+      "newExecutionSendsNoPost": true,
+      "initialDetailCollapsed": true,
+      "clickArrowSpaceSelection": "pass",
+      "previewConfirmationApplyReadback": "pass",
+      "HTTPFailureMalformedGhaStates": "pass"
+    },
+    "console": {
+      "finalCount": 3,
+      "classification": {
+        "synthetic-realtime-handshake": 3
+      }
+    }
+  },
+  "evidence": [
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-density-before-20261004.json",
+      "sha256": "bd9d1bddcd9cf46dcaec86db119b89d8b5bc3c9839c746b1bcd00903902eb4b6"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-density-after-20261004.json",
+      "sha256": "e6f3661fb9ed404dba6049447acf6abab2ce070edeff5babd41be14de88db6ba"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-density-after-behavior-20261004.json",
+      "sha256": "0092ead9a92e54c47313e64ce1e5cf735cc80ba288d9b5a5be242e83061bf3c3"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-density-final-20261004.json",
+      "sha256": "7344a7d02e04655f1a6adae019dc64be248fa375ac17686c0fabcbb86a59c5e9"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-density-final-1423-light.png",
+      "sha256": "a376fdaad0bb1493c41c2ce5197464f24841da3e36fecd299b920a81273d467c"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-density-final-390-light.png",
+      "sha256": "d3c2bc67eb7388ca3ee2ee522ace69d096a29d845cc087ff1b5606fe6e49d2e9"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-density-final-834-light.png",
+      "sha256": "166e70d2d3f88cb6f31f7eec180c009dd3c25c7b82e10e763fca11c8c6be8a63"
+    }
+  ],
+  "source": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "74951230acb2597304fc38847c4b4f45e51c1baa439e9f573ceba73548b7604c"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "f9fb6b217509be9373fa39655bd9bfdfb48359d5d18ced07c0ce2c4d5249132d"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "3a19f6295e3b2dc4d2ca637bdc5a50b93f47c34077db58bb1764e35258c886de"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "4ffbfe3e0ea1479c7639bf33cf271824088b9345e35295c98ac1db02f972694a"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sharedGeometrySource": [
+    {
+      "path": "components/admin/AdminPageHeader.tsx",
+      "sha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6"
+    },
+    {
+      "path": "styles/admin-ui.css",
+      "sha256": "b2aa7f6deef59a57253d1ae1f335f158ded82ee64c249a9a9b9cd0ee860d4088"
+    }
+  ],
+  "preservedEvidence": "Existing before and intermediate after images/reports remain unchanged; final shared-header results have a distinct density-final suffix.",
+  "safety": {
+    "serverBoundPosts": 0,
+    "providerCalls": 0,
+    "serverRestart": false,
+    "hostedWrites": false,
+    "commit": false,
+    "ownBrowserSession": "tzudong-pipeline-density-astra",
+    "ownBrowserClosed": true
+  },
+  "limits": [
+    "Fixed synthetic data and local rendered geometry only; no production availability or execution success is established.",
+    "The common header was implemented by another agent; this report measures the integrated final layout without claiming all height reduction comes from a single component edit.",
+    "Final render was light theme at the three requested widths; existing theme color tokens were preserved."
+  ],
+  "sampleCountPerGeometryCondition": 1,
+  "confidenceInterval": "Not estimated: single descriptive DOM geometry observation per condition; no timing or statistical improvement claim."
+}

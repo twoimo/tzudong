@@ -1,0 +1,18 @@
+{
+  "kind": "postgresql-typescript-read-normalization-conformance",
+  "postgresVersion": "17.6",
+  "hostedMutations": false,
+  "evaluationCases": 65,
+  "statusCases": 80,
+  "differences": 0,
+  "testsPassed": 3,
+  "browserRoleExecutionDenied": true,
+  "migrationSha256": "b8c28a6a35443e2dc7b0df1918fe70dc2d0be77da74c6abc725f40f9ff1105f8",
+  "routeMigrated": false,
+  "remaining": [
+    "Database filter/keyset query",
+    "Global statistics and duplicate warnings",
+    "Route switch",
+    "Cold query plan and paired measurements"
+  ]
+}

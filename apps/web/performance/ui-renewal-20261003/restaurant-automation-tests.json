@@ -1,0 +1,35 @@
+{
+  "kind": "restaurant-review-related-verification",
+  "webUnit": {
+    "pass": 2658,
+    "skip": 9,
+    "fail": 0
+  },
+  "pythonRelated": {
+    "pass": 20,
+    "fail": 0
+  },
+  "isolatedPostgres": {
+    "version": "17.6",
+    "pass": 64,
+    "fail": 0
+  },
+  "purpose": "Source verification only; not production or ML accuracy proof",
+  "processFixtureFailureBeforeIsolation": 1,
+  "processFixtureAfterIsolation": {
+    "pass": 25,
+    "fail": 0
+  },
+  "testTimeoutsAndAssertionsUnchanged": true,
+  "compilerParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2542,
+    "logicalInputNamesSha256": "715627381972c57f8af631deb7f7acf7a74407072f41ead0793fb90743a10127",
+    "nonLibraryContentSha256": "4b8e2bf3248c5a970db921ec323ae32fffeb95b645ba794cd72270f77e2e013a",
+    "standardLibraryContentSha256": {
+      "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  }
+}

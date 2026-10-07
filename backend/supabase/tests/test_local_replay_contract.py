@@ -26,6 +26,10 @@ class LocalReplayContractTests(unittest.TestCase):
                 args = ['python3', str(ROOT / verifier), '--source', str(ROOT / path), '--output', str(output)]
                 if PREDECESSOR in plan['bindings']:
                     args += ['--predecessor', str(ROOT / PREDECESSOR)]
+                elif 'owner_final_verifier' in path:
+                    args += ['--predecessor', str(ROOT / 'backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql')]
+                elif 'onboarding_allowlist_identity_correction' in path:
+                    args += ['--predecessor', str(ROOT / 'backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql')]
                 subprocess.run(args, check=True, capture_output=True, timeout=30)
                 cls.sql[path] = output.read_bytes()
                 receipt = {'source_sha256': plan['source_sha256'], 'read_only': True}
@@ -34,6 +38,16 @@ class LocalReplayContractTests(unittest.TestCase):
                                    body_sha256='be57e320d7a79e6e7382bce9e942b3e684fc50246beb44deaa67c408cb553acd')
                 elif 'admin_management_group' in path:
                     receipt.update(schema='admin-management-group-source-overlap-v1', already_present_contract_verified=True)
+                elif 'owner_final_verifier' in path:
+                    receipt.update(schema='g014-owner-final-pg15-replay-v1', disposition='legacy-contract-preserved',
+                                   predecessor_sha256='8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483',
+                                   hosted_final_verifier_executed=False, hosted_ledger_admission_verified=False,
+                                   required_hosted_pg_major=17, required_hosted_ledger_count=77)
+                elif 'onboarding_allowlist_identity_correction' in path:
+                    receipt.update(schema='g016-identity-pg15-replay-v1', disposition='verified-existing',
+                                   predecessor_sha256='2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3',
+                                   hosted_identity_correction_executed=False, hosted_ledger_admission_verified=False,
+                                   required_hosted_pg_major=17, required_hosted_ledger_count=76)
                 else:
                     receipt.update(schema='g014-owner-pg15-replay-v1', disposition='legacy-contract-preserved')
                 if PREDECESSOR in plan['bindings']:
@@ -44,7 +58,7 @@ class LocalReplayContractTests(unittest.TestCase):
         return contract.assemble_proof(path, self.sql[path], json.dumps(self.receipts[path]).encode())
 
     def test_generated_sql_and_exact_fixture_receipts_match_all_pins(self):
-        self.assertEqual(len(contract.supported_sources()), 3)
+        self.assertEqual(len(contract.supported_sources()), 5)
         for path in contract.supported_sources():
             proof = self.proof(path)
             self.assertNotEqual(proof['disposition'], 'applied')
@@ -138,7 +152,7 @@ class LocalReplayContractTests(unittest.TestCase):
                 def run(self, sql):
                     raise AssertionError('Replay diagnosis must never write a ledger')
             proof = local_migrate.verify_replay(Executor(), path)
-            expected_role = "postgres" if path.endswith("20260906064252_g014_pg17_workflow_owner_contract.sql") else "supabase_admin"
+            expected_role = "postgres" if 'g014_pg17_' in path or 'onboarding_allowlist_identity_correction' in path else "supabase_admin"
             self.assertEqual(calls, [(self.sql[path], expected_role)])
             contract.validate_proof(proof, self.sql[path])
 
@@ -146,7 +160,7 @@ class LocalReplayContractTests(unittest.TestCase):
         from backend.supabase.tests.test_local_migration_contract import local_migrate
         calls = []
         class Executor:
-            def capture(self, sql):
+            def capture(self, sql, *, role='supabase_admin'):
                 calls.append(sql)
                 return b'{"applied":true}'
             def run(self, sql):
@@ -177,13 +191,14 @@ class LocalReplayContractTests(unittest.TestCase):
             self.assertNotIn(b'INSERT INTO _tzudong_local', sql)
             self.assertNotIn(b'GRANT privacy_workflow_owner', sql)
 
-    def test_full_snapshot_requires_all_100_exact_sources_and_distinct_terminal_states(self):
+    def test_full_snapshot_requires_all_current_exact_sources_and_distinct_terminal_states(self):
         from backend.supabase.tests.test_local_migration_contract import local_migrate
         rows = [local_migrate._expected_snapshot_row(item) for item in local_migrate.build_manifest()['source']['files']]
-        self.assertEqual(len(rows), 100)
-        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 97)
+        self.assertEqual(len(rows), len(local_migrate.migration_files()))
+        self.assertEqual(sum(row['status'] == 'applied' for row in rows), len(rows) - 3)
         self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 2)
         self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 1)
+        self.assertFalse(any('/applied-receipts/' in row['path'] for row in rows))
         local_migrate._validate_ledger_snapshot(rows)
         recovery_index = next(
             index for index, row in enumerate(rows)
