@@ -18,7 +18,7 @@ import catalog_docker_endpoint as endpoint
 
 class EndpointTests(unittest.TestCase):
     def setUp(self):
-        self.temp=self.enterContext(tempfile.TemporaryDirectory())
+        self.temp=self.enterContext(tempfile.TemporaryDirectory(dir='/tmp',prefix='catalog-socket-'))
         self.home=Path(self.temp).resolve()
         self.path=self.home/'.colima/default/docker.sock'
         self.path.parent.mkdir(parents=True)
@@ -30,6 +30,25 @@ class EndpointTests(unittest.TestCase):
         self.uri='unix://'+str(self.path)
     def test_exact_owned_colima_default_socket(self):
         self.assertEqual(endpoint.validate_endpoint('colima',self.uri),self.uri)
+    def test_explicit_owned_catalog_profile_keeps_socket_and_context_bound(self):
+        profile=self.home/'.colima/tzudong-catalog-20261007';profile.mkdir()
+        sock=self.enterContext(socket.socket(socket.AF_UNIX));path=profile/'docker.sock'
+        sock.bind(str(path));path.chmod(0o600)
+        uri='unix://'+str(path);context='colima-tzudong-catalog-20261007'
+        self.assertEqual(endpoint.validate_endpoint(context,uri),uri)
+        for ctx,target in [('colima',uri),(context,self.uri),('colima-tzudong-record-storage-20261007',uri),(context+'../',uri),(context,'tcp://remote:2375')]:
+            with self.subTest(ctx=ctx),self.assertRaises(ValueError):endpoint.validate_endpoint(ctx,target)
+        profile.chmod(0o777)
+        with self.assertRaises(ValueError):endpoint.validate_endpoint(context,uri)
+    def test_explicit_context_does_not_select_or_mutate_saved_context(self):
+        calls=[]
+        def run(args,**kwargs):
+            calls.append(args);return subprocess.CompletedProcess(args,0,self.uri+'\n','')
+        with patch.object(endpoint.subprocess,'run',side_effect=run):
+            self.assertEqual(endpoint.resolve_endpoint('colima'),self.uri)
+        self.assertEqual(len(calls),1)
+        self.assertEqual(calls[0][2:4],['inspect','colima'])
+        self.assertNotIn('use',calls[0])
     def test_legacy_allowlist_unchanged(self):
         for uri in endpoint.LEGACY:self.assertEqual(endpoint.validate_endpoint('default',uri),uri)
     def test_exact_private_ci_socket_and_scope(self):

@@ -5,14 +5,16 @@ IFS=$'\n\t'
 umask 077
 
 usage() {
-  printf 'usage: %s --output-dir PATH\n' "${0##*/}" >&2
+  printf 'usage: %s --output-dir PATH [--docker-context NAME]\n' "${0##*/}" >&2
   exit 64
 }
 
 output_dir=''
+catalog_context=''
 while (($#)); do
   case "$1" in
     --output-dir) (($# >= 2)) || usage; output_dir=$2; shift 2 ;;
+    --docker-context) (($# >= 2)) || usage; catalog_context=$2; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -39,6 +41,7 @@ relevant_sources=(
   'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
   'backend/supabase/scripts/catalog_docker_endpoint.py'
   'backend/supabase/scripts/transform_g014_guardian_replay.py'
+  'backend/supabase/scripts/transform_registration_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
   'backend/supabase/scripts/verify_admin_management_group_replay.py'
@@ -647,7 +650,11 @@ initialization_inputs_hash=$(sha256sum -- "$initialization_inputs" | cut -d' ' -
 
 # Admit the account's saved local context before isolating operation config.
 # The resolver never changes context and admits only the fixed local endpoints.
-docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py") || {
+if [[ -n "$catalog_context" ]]; then
+  docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py" --context "$catalog_context")
+else
+  docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py")
+fi || {
   printf 'unable to admit a canonical local Docker endpoint\n' >&2
   exit 1
 }
@@ -1380,6 +1387,13 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20261004190259_admin_record_guarded_actions.sql|20261004194715_admin_evaluation_raw_warning_invoker_contract.sql)
+      registration_replay="$work_dir/${migration##*/}.pg15-registration-replay.sql"
+      python3 "$script_dir/transform_registration_replay.py" --source "$migration" --output "$registration_replay"
+      g026_chain_apply 'registration-pg15-replay-transformer' "$script_dir/transform_registration_replay.py"
+      g026_chain_apply 'registration-pg15-replay-window' "$registration_replay"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$registration_replay"
+      ;;
     20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
       storyboard_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_storyboard_history_replay.py" \

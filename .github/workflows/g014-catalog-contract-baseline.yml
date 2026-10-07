@@ -8,6 +8,8 @@ on:
       - 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
       - 'backend/supabase/scripts/catalog_docker_endpoint.py'
       - 'backend/supabase/tests/test_catalog_docker_endpoint.py'
+      - 'backend/supabase/scripts/transform_registration_replay.py'
+      - 'backend/supabase/tests/test_registration_replay.py'
       - 'backend/supabase/tests/test_g014_catalog_baseline_generator.py'
       - 'backend/supabase/scripts/g014_catalog_diagnostic.py'
       - 'backend/supabase/tests/test_g014_diagnostic_admission.py'
@@ -102,6 +104,7 @@ jobs:
         run: >-
           python -m unittest
           backend.supabase.tests.test_catalog_docker_endpoint
+          backend.supabase.tests.test_registration_replay
           backend.supabase.tests.test_g014_catalog_baseline_generator
           backend.supabase.tests.test_reconstruction_source_archive
           backend.supabase.tests.test_g024_source_reconstruction
