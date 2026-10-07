@@ -43,4 +43,23 @@ describe('restaurant visit count', () => {
         expect(shouldShowTzuyangVisitBadge({ youtube_link: 'https://youtu.be/one' })).toBe(false);
         expect(getTzuyangVisitCount(null)).toBe(0);
     });
+
+    test('compact empty histories still reflect later edits and nested duplicate changes', () => {
+        const row = { youtube_link: null, youtube_links: [], mergedYoutubeLinks: [],
+            tzuyang_reviews: [], mergedTzuyangReviews: [], mergedRestaurants: [] } as Partial<Restaurant>;
+        expect(getTzuyangVisitCount(row)).toBe(0);
+        row.youtube_links!.push(' first ', 'first');
+        expect(getTzuyangVisitCount(row)).toBe(1);
+        row.mergedTzuyangReviews!.push('visit one', 'visit two');
+        expect(getTzuyangVisitCount(row)).toBe(2);
+        row.youtube_links!.length = 0;
+        row.mergedTzuyangReviews!.length = 0;
+        expect(getTzuyangVisitCount(row)).toBe(0);
+        row.mergedRestaurants = [{ youtube_link: 'a' }, { youtube_link: 'b' }] as Restaurant['mergedRestaurants'];
+        expect(getTzuyangVisitCount(row)).toBe(2);
+        row.mergedRestaurants![1].youtube_link = 'a';
+        expect(getTzuyangVisitCount(row)).toBe(1);
+        row.mergedRestaurants!.length = 0;
+        expect(getTzuyangVisitCount(row)).toBe(0);
+    });
 });

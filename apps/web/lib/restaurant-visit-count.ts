@@ -35,6 +35,15 @@ export function getTzuyangVisitCount(restaurant: VisitCountRestaurant | null | u
         return 0;
     }
 
+    // Compact map rows can omit all history. Avoid two empty Set allocations;
+    // non-empty inputs still use the exact unique-history calculation below.
+    if (!restaurant.youtube_link && !restaurant.tzuyang_review
+        && !restaurant.youtube_links?.length && !restaurant.tzuyang_reviews?.length
+        && !restaurant.mergedYoutubeLinks?.length && !restaurant.mergedTzuyangReviews?.length
+        && !restaurant.mergedRestaurants?.length) {
+        return 0;
+    }
+
     const youtubeLinks = new Set<string>();
     const tzuyangReviews = new Set<string>();
 
