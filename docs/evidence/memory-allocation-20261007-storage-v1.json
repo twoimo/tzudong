@@ -1,0 +1,10 @@
+{
+  "verifiedCommit": "6be0e33ce5bcdc3283bf41f5bbbcc7c8627d8d4a",
+  "mappedArtifacts": 74,
+  "mappedBytes": 135808852,
+  "artifactMapSha256": "2d83b8fed79eb12f833dfd5412caefc5aacecbd61da56e4f6da40761a00ae9f6",
+  "allGitBlobBytesMatch": true,
+  "rootFileSetComplete": true,
+  "mapBlobVerifiedSeparately": true,
+  "notGoalCompleteOrPerformanceAdmission": true
+}
