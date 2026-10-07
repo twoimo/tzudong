@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-10-07T05:55:59.683290+00:00",
+  "remoteCommit": "9ac4e008951afe77a18e079dbe4f9c398be1a542",
+  "localTipMatched": true,
+  "mappedArtifactCount": 74,
+  "remoteCompleteFileSetMatched": true,
+  "remoteGitTreeAllBlobIdsMatchLocalBytes": true,
+  "remoteMapBlobBytesSha256": "2d83b8fed79eb12f833dfd5412caefc5aacecbd61da56e4f6da40761a00ae9f6",
+  "fullRemoteArtifactBytesDownloaded": false,
+  "candidateSourceBranch": "791795bccea2e1f57173ca33cd76de6444df9f46",
+  "goalComplete": false,
+  "canonicalAdmission": false
+}
