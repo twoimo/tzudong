@@ -1,0 +1,12 @@
+{
+  "scope": "clarify frozen pilot wording; no artifact bytes changed",
+  "frozenWording": "newAstraCalls:0 / 추가 Astra 호출0",
+  "preciseVerifiedMeaning": "zero new Astra agents were spawned in this turn; existing agent was sent one interrupt requesting no further investigation, then closed",
+  "newAstraSpawns": 0,
+  "existingAgentControlMessages": 1,
+  "existingAgentClosed": true,
+  "actualBackendModelRequestCountVerified": false,
+  "actualQuotaConsumptionMeasured": false,
+  "quotaSavingsClaim": false,
+  "finalReportFromAgentReceived": false
+}
