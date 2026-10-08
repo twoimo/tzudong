@@ -90,6 +90,30 @@ docker_local() {
     DOCKER_HOST="$docker_endpoint" docker "$@"
 }
 
+# IMAGE_INSPECT_COMPAT_BEGIN
+image_inspect_platform_args=()
+configure_image_inspection() {
+  local help api major minor
+  help=$(docker_local image inspect --help) || return 1
+  api=$(docker_local version --format '{{.Server.APIVersion}}') || return 1
+  image_inspect_platform_args=()
+  if [[ "$help" == *--platform* && "$api" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+    major=${BASH_REMATCH[1]}; minor=${BASH_REMATCH[2]}
+    if ((major > 1 || (major == 1 && minor >= 49))); then
+      image_inspect_platform_args=(--platform linux/amd64)
+    fi
+  fi
+}
+inspect_amd64_image() {
+  docker_local image inspect "${image_inspect_platform_args[@]}" "$@"
+}
+available_amd64_image() {
+  local platform
+  platform=$(inspect_amd64_image "$1" --format '{{.Os}}/{{.Architecture}}') || return 1
+  [[ "$platform" == 'linux/amd64' ]]
+}
+# IMAGE_INSPECT_COMPAT_END
+
 compose_host_path() {
   case "$(uname -s)" in
     MSYS*|MINGW*|CYGWIN*) cygpath -m "$1" ;;
@@ -623,18 +647,20 @@ docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py") || {
 # The public, digest-pinned image is a reproducible build dependency, never
 # a source of catalog data. Compose itself remains pull-free. Select the same
 # pinned AMD64 variant for inspection and execution on multi-architecture stores.
-# Docker image inspect --platform requires API 1.49+; unsupported clients deny.
-if ! docker_local image inspect --platform linux/amd64 "$db_image" >/dev/null; then
+# Inspect uses explicit platform when the existing client/server support it.
+# Older clients inspect their local selection, which must still be linux/amd64.
+configure_image_inspection
+if ! available_amd64_image "$db_image"; then
   docker_local pull --platform linux/amd64 "$db_image" >/dev/null
 fi
-docker_local image inspect --platform linux/amd64 "$db_image" >/dev/null || {
+available_amd64_image "$db_image" || {
   printf 'required pinned DB image is unavailable after pull\n' >&2
   exit 1
 }
-[[ $(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(inspect_amd64_image "$db_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required Postgres image architecture is not amd64\n' >&2; exit 1;
 }
-db_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+db_resolved_repo_digests=$(inspect_amd64_image "$db_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$db_resolved_repo_digests" == *"@${db_index_digest}"* || "$db_resolved_repo_digests" == *"@${db_amd64_manifest_digest}"* ]] || {
   printf 'Postgres resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
@@ -651,31 +677,31 @@ cmp -s "$platform_auth_bootstrap" "$platform_auth_image_evidence" || {
   exit 1
 }
 platform_auth_image_sha256=$(sha256sum -- "$platform_auth_image_evidence" | cut -d' ' -f1)
-if ! docker_local image inspect --platform linux/amd64 "$storage_image" >/dev/null; then
+if ! available_amd64_image "$storage_image"; then
   docker_local pull --platform linux/amd64 "$storage_image" >/dev/null
 fi
-docker_local image inspect --platform linux/amd64 "$storage_image" >/dev/null || {
+available_amd64_image "$storage_image" || {
   printf 'required pinned Storage image is unavailable after pull\n' >&2; exit 1;
 }
-[[ $(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(inspect_amd64_image "$storage_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required Storage image architecture is not amd64\n' >&2; exit 1;
 }
-storage_resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{.Id}}')
-storage_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+storage_resolved_image_id=$(inspect_amd64_image "$storage_image" --format '{{.Id}}')
+storage_resolved_repo_digests=$(inspect_amd64_image "$storage_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$storage_resolved_repo_digests" == *"@${storage_index_digest}"* || "$storage_resolved_repo_digests" == *"@${storage_amd64_manifest_digest}"* ]] || {
   printf 'Storage resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
-if ! docker_local image inspect --platform linux/amd64 "$gotrue_image" >/dev/null; then
+if ! available_amd64_image "$gotrue_image"; then
   docker_local pull --platform linux/amd64 "$gotrue_image" >/dev/null
 fi
-docker_local image inspect --platform linux/amd64 "$gotrue_image" >/dev/null || {
+available_amd64_image "$gotrue_image" || {
   printf 'required pinned GoTrue image is unavailable after pull\n' >&2; exit 1;
 }
-[[ $(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(inspect_amd64_image "$gotrue_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required GoTrue image architecture is not amd64\n' >&2; exit 1;
 }
-gotrue_resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{.Id}}')
-gotrue_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+gotrue_resolved_image_id=$(inspect_amd64_image "$gotrue_image" --format '{{.Id}}')
+gotrue_resolved_repo_digests=$(inspect_amd64_image "$gotrue_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$gotrue_resolved_repo_digests" == *"@${gotrue_index_digest}"* || "$gotrue_resolved_repo_digests" == *"@${gotrue_amd64_manifest_digest}"* ]] || {
   printf 'GoTrue resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
@@ -1604,8 +1630,8 @@ jsonl_hash=$(sha256sum -- "$jsonl" | cut -d' ' -f1)
 tuple_hash=$(sha256sum -- "$tuple_evidence" | cut -d' ' -f1)
 chain_hash=$(sha256sum -- "$chain_file" | cut -d' ' -f1)
 source_sha=$(git -C "$repo_root" rev-parse HEAD)
-resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{.Id}}')
-resolved_image_digest=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{index .RepoDigests 0}}')
+resolved_image_id=$(inspect_amd64_image "$db_image" --format '{{.Id}}')
+resolved_image_digest=$(inspect_amd64_image "$db_image" --format '{{index .RepoDigests 0}}')
 server_version=$(compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At -c 'SHOW server_version;')
 row_count=$(wc -l <"$jsonl" | tr -d '[:space:]')
 reconstruction_entries=$(jq -c '.entries' "$reconstruction_manifest")
