@@ -1,5 +1,6 @@
 'use client';
 
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { memo, useState, useEffect, useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -742,7 +743,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                         <p className="font-medium">영상 {index + 1}</p>
                         <p className="mt-1 break-all text-muted-foreground">{review.youtube_link || '-'}</p>
                         {review.tzuyang_review && (
-                            <p className="mt-2 whitespace-pre-wrap break-words">{review.tzuyang_review}</p>
+                            <p className="mt-2 whitespace-pre-wrap break-words">{formatTzuyangReviewForDisplay(review.tzuyang_review)}</p>
                         )}
                     </div>
                 ))}

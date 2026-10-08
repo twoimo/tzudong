@@ -1,3 +1,4 @@
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import React, { memo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -118,7 +119,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
                   <p><strong>카테고리:</strong> {restaurant_info.category || '-'}</p>
                   <p><strong>전화번호:</strong> {restaurant_info.phone || '-'}</p>
                   {restaurant_info.tzuyang_review && (
-                    <p><strong>쯔양 리뷰:</strong> {restaurant_info.tzuyang_review}</p>
+                    <p><strong>쯔양 리뷰:</strong> {formatTzuyangReviewForDisplay(restaurant_info.tzuyang_review)}</p>
                   )}
                 </>
               )}

@@ -1,3 +1,4 @@
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useRecordAction } from '@/lib/admin/use-record-action';
 import { isRecordActionCancelled, recordActionErrorMessage } from '@/lib/admin/record-action-client';
 import { type RecordActionReceipt, type RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
@@ -243,7 +244,7 @@ function DbConflictEditor({ record: incomingRecord, open, onOpenChange, onSucces
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">츄양 리뷰</p>
                   <p className="text-xs text-muted-foreground line-clamp-3 mt-1">
-                    {newInfo.tzuyang_review}
+                    {formatTzuyangReviewForDisplay(newInfo.tzuyang_review || '')}
                   </p>
                 </div>
 

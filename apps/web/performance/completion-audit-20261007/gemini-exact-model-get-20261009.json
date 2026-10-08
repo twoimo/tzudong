@@ -1,0 +1,28 @@
+{
+  "schema": "credited-gemini-exact-model-get-v1",
+  "observedAtUtc": "2026-10-08T19:02:51.339738+00:00",
+  "inferenceCalls": 0,
+  "billingChanges": 0,
+  "models": [
+    {
+      "requestedId": "gemini-3-pro-image",
+      "httpStatus": 200,
+      "returnedId": "models/gemini-3-pro-image",
+      "methods": [
+        "generateContent",
+        "countTokens",
+        "batchGenerateContent"
+      ]
+    },
+    {
+      "requestedId": "gemini-3-pro-image-preview",
+      "httpStatus": 200,
+      "returnedId": "models/gemini-3-pro-image-preview",
+      "methods": [
+        "generateContent",
+        "countTokens",
+        "batchGenerateContent"
+      ]
+    }
+  ]
+}

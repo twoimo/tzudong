@@ -1,5 +1,6 @@
 'use client';
 
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import Image from 'next/image';
@@ -1930,7 +1931,7 @@ export function SubmissionListView({
             <Card className="p-3 shadow-none">
                 <Label className="text-sm font-medium">추천 사유</Label>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-                    {submission.recommendation_reason || submission.items[0]?.tzuyang_review || '추천 사유가 없습니다.'}
+                    {submission.recommendation_reason || formatTzuyangReviewForDisplay(submission.items[0]?.tzuyang_review || '') || '추천 사유가 없습니다.'}
                 </p>
             </Card>
 

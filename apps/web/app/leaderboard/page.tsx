@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { MapPanelHeader } from "@/components/home/map-panel-chrome";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { Trophy, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -113,13 +114,12 @@ export default function LeaderboardPage() {
                 onTouchMove={leaderboardBottomNavAutoHide.onTouchMove}
             >
                 {/* Header */}
-                <div className="border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                            <div className="flex min-w-0 items-center gap-2">
-                                <h1 className="flex min-w-0 items-center gap-1.5 text-lg font-semibold leading-snug tracking-tight text-foreground text-balance sm:gap-2 sm:text-2xl">
-                                    <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
-                                    <span className="min-w-0 truncate">쯔동여지도 랭킹</span>
+                <MapPanelHeader
+                    variant="page"
+                    titleAs="h1"
+                    title="쯔동여지도 랭킹"
+                    titleIcon={<Trophy />}
+                    titleAddon={(
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button
@@ -154,22 +154,17 @@ export default function LeaderboardPage() {
                                             </div>
                                         </PopoverContent>
                                     </Popover>
-                                </h1>
-                            </div>
-                            <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
-                                맛집 리뷰를 작성하고 랭킹을 올려보세요!
-                            </p>
-                        </div>
-                        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+                    )}
+                    description="맛집 리뷰를 작성하고 랭킹을 올려보세요!"
+                    actions={(
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
                                 <TabsList className="h-8">
                                     <TabsTrigger value="all" className="text-xs px-2 sm:px-3">전체</TabsTrigger>
                                     <TabsTrigger value="monthly" className="text-xs px-2 sm:px-3">월간</TabsTrigger>
                                 </TabsList>
                             </Tabs>
-                        </div>
-                    </div>
-                </div>
+                    )}
+                />
 
                 {/* List Content */}
                 <div>
