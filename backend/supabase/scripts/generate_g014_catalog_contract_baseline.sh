@@ -1367,6 +1367,8 @@ g026_phase_b_applied=0
 previous_effective_filename=''
 for migration in "${effective_migrations[@]}"; do
   canonical_path=${migration#"$repo_root"/}
+  # Static repository filenames only; never emit SQL bodies or environment data.
+  printf 'catalog_source_apply %s\n' "${migration##*/}"
   if [[ ${migration##*/} == '20260713002000_g014_public_api_private_boundary.sql' ]]; then
     g026_apply_repairs 'g026-phase-b-before-20260713002000_g014_public_api_private_boundary.sql'
     ((g026_phase_b_applied += 1))
