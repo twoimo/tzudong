@@ -3,15 +3,20 @@
 BEGIN;
 SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('tzudong:public-profile-leaderboard-read:v1',0));
 
--- PostgreSQL 17 tracks grants separately by grantor. Preserve every existing row.
+-- PostgreSQL 16+ tracks grants separately by grantor. Preserve every existing row.
 DO $membership_acquire$
 DECLARE
   v_self_set boolean;
   v_self_inherit boolean;
   v_self_admin boolean;
 BEGIN
-  IF pg_catalog.current_setting('server_version_num')::integer < 170000 THEN
-    RAISE EXCEPTION 'public_profile_leaderboard_pg17_required';
+  PERFORM pg_catalog.set_config('public_profile_leaderboard.remove_legacy_grant','false',true);
+  IF pg_catalog.current_setting('server_version_num')::integer < 160000 THEN
+    IF NOT pg_catalog.pg_has_role(session_user,'privacy_workflow_owner','MEMBER') THEN
+      EXECUTE pg_catalog.format('GRANT privacy_workflow_owner TO %I',session_user);
+      PERFORM pg_catalog.set_config('public_profile_leaderboard.remove_legacy_grant','true',true);
+    END IF;
+    RETURN;
   END IF;
   PERFORM pg_catalog.set_config('public_profile_leaderboard.remove_self_grant','false',true);
   PERFORM pg_catalog.set_config('public_profile_leaderboard.restore_self_set','false',true);
@@ -25,7 +30,8 @@ BEGIN
     IF FOUND THEN
       EXECUTE pg_catalog.format(
         'GRANT privacy_workflow_owner TO %I WITH ADMIN %s, INHERIT %s, SET TRUE GRANTED BY %I',
-        session_user,v_self_admin,v_self_inherit,session_user);
+        session_user,CASE WHEN v_self_admin THEN 'TRUE' ELSE 'FALSE' END,
+        CASE WHEN v_self_inherit THEN 'TRUE' ELSE 'FALSE' END,session_user);
       PERFORM pg_catalog.set_config('public_profile_leaderboard.restore_self_set','true',true);
     ELSE
       EXECUTE pg_catalog.format(
@@ -51,8 +57,15 @@ BEGIN
     RAISE EXCEPTION 'public_profile_leaderboard_prerequisite_missing';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
-             WHERE n.nspname='public' AND p.proname='read_public_profile_leaderboard_page') THEN
-    RAISE EXCEPTION 'public_profile_leaderboard_identity_already_exists';
+             WHERE n.nspname='public' AND p.proname='read_public_profile_leaderboard_page'
+               AND (p.oid IS DISTINCT FROM pg_catalog.to_regprocedure('public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)')
+                    OR p.proisstrict OR p.prokind <> 'f' OR NOT p.proretset
+                    OR p.proparallel <> 'u' OR p.proleakproof
+                    OR p.prolang <> (SELECT oid FROM pg_catalog.pg_language WHERE lanname='plpgsql')
+                    OR pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex') <> 'e8a132569e5ea419609003fdbeb2dcad6c8233d35584e850954e1d4488a62d19'
+                    OR pg_catalog.pg_get_function_result(p.oid) <> 'TABLE(user_id uuid, nickname text, review_count bigint, verified_review_count bigint, total_likes bigint, avg_likes_per_review numeric, quality_score numeric)'
+                    OR pg_catalog.pg_get_function_arguments(p.oid) <> 'p_period text, p_limit integer, p_after_quality_score numeric, p_after_user_id uuid')) THEN
+    RAISE EXCEPTION 'public_profile_leaderboard_existing_contract_drift';
   END IF;
   IF pg_catalog.has_table_privilege('anon','public.profiles','SELECT')
      OR pg_catalog.has_table_privilege('authenticated','public.profiles','SELECT')
@@ -64,6 +77,10 @@ BEGIN
 END
 $prerequisites$;
 
+DO $restore_leaderboard$
+BEGIN
+  IF pg_catalog.to_regprocedure('public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)') IS NULL THEN
+    EXECUTE $definition$
 CREATE FUNCTION public.read_public_profile_leaderboard_page(
   p_period text,
   p_limit integer,
@@ -198,6 +215,7 @@ BEGIN
 END
 $profile_leaderboard_page$;
 
+    $definition$;
 REVOKE ALL ON FUNCTION public.read_public_profile_leaderboard_page(
   text, integer, numeric, uuid
 ) FROM PUBLIC, anon, authenticated, service_role;
@@ -228,6 +246,10 @@ SET function_schema = EXCLUDED.function_schema,
     function_name = EXCLUDED.function_name,
     identity_arguments = EXCLUDED.identity_arguments;
 
+  END IF;
+END
+$restore_leaderboard$;
+
 DO $readback$
 DECLARE
   v_oid oid := 'public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)'::pg_catalog.regprocedure;
@@ -244,6 +266,10 @@ BEGIN
     FROM pg_catalog.pg_proc AS procedure
    WHERE procedure.oid = v_oid
      AND procedure.prosecdef
+     AND NOT procedure.proisstrict
+     AND procedure.prokind = 'f' AND procedure.proretset
+     AND procedure.proparallel = 'u' AND NOT procedure.proleakproof
+     AND procedure.prolang = (SELECT oid FROM pg_catalog.pg_language WHERE lanname='plpgsql')
      AND procedure.provolatile = 's'::"char";
 
   IF v_owner IS DISTINCT FROM 'privacy_workflow_owner'
@@ -262,8 +288,10 @@ BEGIN
      OR EXISTS (
        SELECT 1
          FROM pg_catalog.aclexplode(v_acl) AS acl
-        WHERE acl.grantee = 0
-          AND acl.privilege_type = 'EXECUTE'
+        WHERE acl.grantee NOT IN (
+                'privacy_workflow_owner'::pg_catalog.regrole,
+                'anon'::pg_catalog.regrole, 'authenticated'::pg_catalog.regrole
+              ) OR acl.is_grantable
      ) THEN
     RAISE EXCEPTION 'public_profile_leaderboard_read_function_acl_drift';
   END IF;
@@ -300,7 +328,9 @@ RESET ROLE;
 
 DO $membership_cleanup$
 BEGIN
-  IF pg_catalog.current_setting('public_profile_leaderboard.remove_self_grant',true)='true' THEN
+  IF pg_catalog.current_setting('public_profile_leaderboard.remove_legacy_grant',true)='true' THEN
+    EXECUTE pg_catalog.format('REVOKE privacy_workflow_owner FROM %I',session_user);
+  ELSIF pg_catalog.current_setting('public_profile_leaderboard.remove_self_grant',true)='true' THEN
     EXECUTE pg_catalog.format('REVOKE privacy_workflow_owner FROM %I GRANTED BY %I',session_user,session_user);
   ELSIF pg_catalog.current_setting('public_profile_leaderboard.restore_self_set',true)='true' THEN
     EXECUTE pg_catalog.format('GRANT privacy_workflow_owner TO %I WITH SET FALSE GRANTED BY %I',session_user,session_user);
