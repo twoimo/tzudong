@@ -17,6 +17,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { pageHeaderTitleClass, pageHeaderDescriptionClass } from "@/components/home/map-panel-chrome";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/lib/no-toast";
@@ -237,7 +238,7 @@ export function MyPageLayoutContent({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+                <h1 className={`${pageHeaderTitleClass} flex-wrap`}>
                   <MobileRouteIcon
                     className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6"
                     aria-hidden="true"
@@ -246,7 +247,7 @@ export function MyPageLayoutContent({
                     {mobileRouteHeader.title}
                   </span>
                 </h1>
-                <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+                <p className={pageHeaderDescriptionClass}>
                   {mobileRouteHeader.description}
                 </p>
               </div>

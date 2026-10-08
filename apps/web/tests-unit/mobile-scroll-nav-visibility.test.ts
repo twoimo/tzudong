@@ -97,7 +97,7 @@ describe("mobile mypage scroll frame guards", () => {
       "shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4 md:hidden",
     );
     expect(layoutSource).toContain("쯔동여지도 마이페이지");
-    expect(layoutSource).toContain("flex min-w-0 flex-wrap items-center");
+    expect(layoutSource).toContain("pageHeaderTitleClass");
     expect(layoutSource).toContain(
       "내 활동과 계정 정보를 관리하세요.",
     );
