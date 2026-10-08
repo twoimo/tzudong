@@ -99,4 +99,17 @@ describe('swipe cache invalidation for mutable list inputs', () => {
         visible.length = 0;
         expect(order(visible, null)).toEqual([]);
     });
+
+    test('invalidates both lists when a shared row changes after its key was pooled', () => {
+        const a = row('a');
+        const shared = row('shared', { mergedRestaurants: [row('search')] });
+        const first = [a, shared];
+        const second = [row('b'), shared];
+        const searched = row('search');
+        expect(ids(order(first, searched))).toEqual(['shared', 'a']);
+        expect(ids(order(second, searched))).toEqual(['shared', 'b']);
+        shared.mergedRestaurants![0].id = 'different';
+        expect(ids(order(first, searched))).toEqual(['a', 'shared']);
+        expect(ids(order(second, searched))).toEqual(['b', 'shared']);
+    });
 });

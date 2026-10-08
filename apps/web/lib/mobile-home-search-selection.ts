@@ -76,7 +76,7 @@ const createRestaurantSelectionMatcher = (selection: Restaurant) => {
     };
 };
 
-type SelectionCacheKey = Pick<Restaurant, 'id' | 'name' | 'lat' | 'lng'> & { mergedIds: readonly string[] };
+type SelectionCacheKey = Readonly<Pick<Restaurant, 'id' | 'name' | 'lat' | 'lng'> & { mergedIds: readonly string[] }>;
 const EMPTY_MERGED_IDS: readonly string[] = [];
 
 const selectionCacheKey = (selection: Restaurant): SelectionCacheKey => ({
@@ -98,6 +98,18 @@ const matchesSelectionCacheKey = (key: SelectionCacheKey, selection: Restaurant)
         if (key.mergedIds[index] !== merged![index].id) return false;
     }
     return true;
+};
+
+// Multiple visible lists share catalog rows. Keep one immutable key per live
+// row instead of allocating another key for every list containing that row.
+// Replacing a changed key leaves older list snapshots able to detect the edit.
+const rowSelectionKeys = new WeakMap<Restaurant, SelectionCacheKey>();
+const snapshotKeyForRestaurant = (restaurant: Restaurant): SelectionCacheKey => {
+    const previous = rowSelectionKeys.get(restaurant);
+    if (previous && matchesSelectionCacheKey(previous, restaurant)) return previous;
+    const key = selectionCacheKey(restaurant);
+    rowSelectionKeys.set(restaurant, key);
+    return key;
 };
 
 type SearchSelectionInput = {
@@ -248,7 +260,7 @@ const dedupeRestaurants = (restaurants: Restaurant[]): Restaurant[] => {
     const unique = uniqueRestaurants.length === restaurants.length ? restaurants : uniqueRestaurants;
     swipeListSnapshots.set(restaurants, {
         references: restaurants.slice(),
-        keys: restaurants.map(selectionCacheKey),
+        keys: restaurants.map(snapshotKeyForRestaurant),
         unique,
     });
     return unique;
