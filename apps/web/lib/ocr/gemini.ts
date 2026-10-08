@@ -79,11 +79,18 @@ export function buildGeminiReceiptOcrRequest(input: {
   signal?: AbortSignal;
   timeoutMs?: number;
 }) {
+  // Google removed sampling controls starting with 3.6 Flash and 3.5
+  // Flash-Lite, including later releases. Preserve older explicit models.
+  const model = input.model.replace(/^models\//, '');
+  const version = /^gemini-(\d+)\.(\d+)-/.exec(model);
+  const modern = /^gemini-3\.5-flash-lite(?:-|$)/.test(model)
+    || (version !== null && (Number(version[1]) > 3
+      || (Number(version[1]) === 3 && Number(version[2]) >= 6)));
   return {
     model: input.model,
     contents: [{ role: 'user' as const, parts: input.parts }],
     config: {
-      temperature: 0,
+      ...(modern ? {} : { temperature: 0 }),
       responseMimeType: 'application/json',
       thinkingConfig: { thinkingLevel: toGeminiThinkingLevel(input.thinkingLevel) },
       abortSignal: input.signal,
