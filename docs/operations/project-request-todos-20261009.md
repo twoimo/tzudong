@@ -493,6 +493,10 @@
 - [ ] T273 현재 접근·승인 가능한 범위는 구현·검증·운영 반영·실제 동작 확인까지 끝내라. 외부 권한이나 자료 때문에 남은 항목은 준비 완료와 실제 적용 완료를 구분하라. **[I:? L:? O:? R:?]**
 - [ ] T274 일부 기능이나 일부 화면의 성공을 전체 완료로 확대하지 말고, 실행 수단 없이 백그라운드에서 계속 작업한다고 약속하지 마라. **[I:? L:? O:? R:?]**
 
+## 운영 적용 전 fresh PG17 증빙
+
+`apps/web/performance/completion-audit-20261007/fresh-pg17-readiness-20261009.md`: 단일 snapshot·source runtime 설정 복원 후 SQL3개/롤백/G0144개/9행 ACL/랭킹 보존 구조 검증 통과. 유효 합성 요청은 nested helper 실행권한으로 실패했으므로 정확한 private owner dependency 수정이 필요하다. 운영 적용·배포는 미완료다. 현재 production SHA는 f31904e6이며, 비Gemini 경로를 다시 여는 롤백은 사용할 수 없다.
+
 ## 통합 후속 증빙
 
 `apps/web/performance/completion-audit-20261007/gemini-and-source-integration-20261009.md`: 최신 develop 충돌 8개 해결, 126개 SQL inventory 계약과 95개 Python 검증, 전체 웹 3,167 pass/9 skip/0 fail, 타입·빌드 검증. 실제 Models API metadata만 확인했으며 추론·결제·운영 쓰기·배포는 수행하지 않았다.
