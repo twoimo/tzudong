@@ -3,6 +3,7 @@ import {parseRecordActionRequest,RECORD_ACTION_CONFIRMATION,type RecordActionRec
 import {runRecordAction,readRecordAction,resumeRecordMediaCleanup,createRecordMediaTransport,type RecordActionRpc} from '../lib/admin/record-action-service';
 import {admitRecordMediaCleanup,createRecordMediaCleanupAdmitter,recordMediaEvidenceHash,RECORD_MEDIA_REQUIRED_CASES} from '../lib/admin/record-media-admission';
 import compatibility from '../lib/admin/record-media-compatibility.json';
+import experimentalProviderProof from '../../../backend/supabase/tests/record-storage-evidence/20261009-experimental-provider-patch-bootstrap.json';
 // Synthetic policy fixtures exercise orchestration without granting any production admission.
 const unitProof={...compatibility,status:'passed',completeCaseSet:true,tests:RECORD_MEDIA_REQUIRED_CASES.map(name=>({name,passed:true}))};
 const unitEnvironment={NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:54321',ADMIN_RECORD_MEDIA_VERIFIED_ENDPOINT:'http://127.0.0.1:54321',ADMIN_RECORD_MEDIA_STORAGE_IMAGE:unitProof.storageImage,ADMIN_RECORD_MEDIA_SQL_SHA256:unitProof.recordSqlSha256,ADMIN_RECORD_MEDIA_COMPATIBILITY_SHA256:recordMediaEvidenceHash(unitProof)};
@@ -110,6 +111,16 @@ test('media admission requires complete physical proof and exact deployment bind
  for(const proof of [{...unitProof,status:'failed'},{...unitProof,completeCaseSet:false},{...unitProof,tests:unitProof.tests.slice(1)},{...unitProof,tests:unitProof.tests.map((x,i)=>i===0?{...x,passed:false}:x)}]) {
   expect(createRecordMediaCleanupAdmitter(proof)({...unitEnvironment,ADMIN_RECORD_MEDIA_COMPATIBILITY_SHA256:recordMediaEvidenceHash(proof)})).toBeNull();
  }
+});
+test('passing experimental provider evidence cannot attest an official deployed runtime',()=>{
+ expect(experimentalProviderProof.status).toBe('passed');
+ expect(experimentalProviderProof.tests).toHaveLength(RECORD_MEDIA_REQUIRED_CASES.length);
+ expect(experimentalProviderProof.admissionEligible).toBe(false);
+ const proof={...experimentalProviderProof,storageImage:experimentalProviderProof.baseStorageImage};
+ const env={...unitEnvironment,ADMIN_RECORD_MEDIA_STORAGE_IMAGE:proof.storageImage,
+  ADMIN_RECORD_MEDIA_SQL_SHA256:proof.recordSqlSha256,
+  ADMIN_RECORD_MEDIA_COMPATIBILITY_SHA256:recordMediaEvidenceHash(proof)};
+ expect(createRecordMediaCleanupAdmitter(proof)(env)).toBeNull();
 });
 test('missing or forged media admission fails before RPC and Storage; DB moderation remains available',async()=>{
  let calls=0;const runner:RecordActionRpc=async()=>{calls++;return {error:null,data:{...receipt,action:'review.delete'}};};

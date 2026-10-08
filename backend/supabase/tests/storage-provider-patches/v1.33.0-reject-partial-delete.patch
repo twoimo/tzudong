@@ -1,0 +1,15 @@
+--- a/src/storage/backend/s3/adapter.ts
++++ b/src/storage/backend/s3/adapter.ts
+@@ -327,7 +327,11 @@
+           Objects: s3Prefixes,
+         },
+       })
+-      await this.client.send(command)
++      const response = await this.client.send(command)
++      if (response.Errors !== undefined &&
++          (!Array.isArray(response.Errors) || response.Errors.length > 0)) {
++        throw new Error('S3_DELETE_PARTIAL_FAILURE')
++      }
+     } catch (e) {
+       throw StorageBackendError.fromError(e)
+     }

@@ -19,10 +19,11 @@ MC='cgr.dev/chainguard/minio-client@sha256:fce18c0d1a830273b51e422e6d8962f56c4e2
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def literal(s):return "'"+str(s).replace("'","''")+"'"
 class Fixture:
- def __init__(self,host):
+ def __init__(self,host,provider_patch=False):
   allowed='unix://'+str(Path.home()/'.colima/tzudong-record-storage-20261007/docker.sock')
   if host!=allowed:raise ValueError('OWNED_DOCKER_ENDPOINT_REQUIRED')
   self.host=host;self.prefix='record-http-'+uuid.uuid4().hex[:10];self.names=[];self.network=False;self.cases=[];self.selected=set();self.observations=[]
+  self.provider_patch=provider_patch;self.patch_receipt=None
   self.password=secrets.token_hex(24);self.secret=secrets.token_hex(32);self.access='fixture'+secrets.token_hex(8);self.s3secret=secrets.token_hex(24)
   self.actor=str(uuid.uuid4());self.user=str(uuid.uuid4());self.jwt={r:self.token(r) for r in ['service_role','authenticated','anon']}
  def token(self,role):
@@ -35,10 +36,18 @@ class Fixture:
   if check and r.returncode:raise RuntimeError('FIXTURE_DOCKER_FAILED:'+str(args[0]))
   return r
  def start_container(self,kind,image,environment,args=(),publish=None,extra=()):
-  name=self.prefix+'-'+kind;command=['run','-d','--name',name,'--label','tzudong.record-storage-owner='+self.prefix,'--network',self.prefix,'--network-alias',kind,*extra]
+  patched=kind=='storage' and self.provider_patch
+  name=self.prefix+'-'+kind;command=[*(['create'] if patched else ['run','-d']),'--name',name,'--label','tzudong.record-storage-owner='+self.prefix,'--network',self.prefix,'--network-alias',kind,*extra]
+  if patched:
+   environment={**environment,'TZUDONG_STORAGE_FIXTURE_PATCH':'1'}
+   args=['sh','-c','node /app/record-storage-s3-patch.cjs && exec node dist/start/server.js']
   if publish:command+=['-p','127.0.0.1::'+str(publish)]
   for key in environment:command+=['-e',key]
-  self.docker(*command,image,*args,env={**os.environ,**environment});self.names.append(name);return name
+  self.docker(*command,image,*args,env={**os.environ,**environment});self.names.append(name)
+  if patched:
+   self.docker('cp',str(Path(__file__).with_name('record_storage_s3_patch.cjs')),name+':/app/record-storage-s3-patch.cjs')
+   self.docker('start',name)
+  return name
  def sql(self,text,check=True):
   r=self.docker('exec','-i',self.prefix+'-db','psql','-X','-At','-v','ON_ERROR_STOP=1','-U','supabase_admin','-d','postgres',input=text,check=check)
   if check and r.returncode:raise RuntimeError('FIXTURE_SQL_FAILED')
@@ -103,6 +112,16 @@ class Fixture:
    except (urllib.error.URLError,TimeoutError,ConnectionError):pass
    time.sleep(.3)
   else:raise RuntimeError('STORAGE_NOT_READY')
+  if self.provider_patch:
+   logs=self.docker('logs',self.prefix+'-storage').stdout.splitlines()
+   receipts=[]
+   for line in logs:
+    try:value=json.loads(line)
+    except json.JSONDecodeError:continue
+    if isinstance(value,dict) and value.get('schema')=='record-storage-fixture-provider-patch-v1':receipts.append(value)
+   if len(receipts)!=1:raise RuntimeError('FIXTURE_PATCH_RECEIPT_REQUIRED')
+   self.patch_receipt=receipts[0]
+   if self.patch_receipt.get('patchSha256')!=sha(Path(__file__).with_name('record_storage_s3_patch.cjs')):raise RuntimeError('FIXTURE_PATCH_HASH_MISMATCH')
   self.api_ok('POST','/bucket',{'id':'review-photos','name':'review-photos','public':False})
   self.install_domain()
  def install_domain(self):
@@ -161,17 +180,21 @@ CASES={
 }
 ADJACENT_CASES={'forged_tus_probe_cannot_commit_or_add_live_reference','partial_s3_delete_never_reports_physical_success'}
 def main():
- p=argparse.ArgumentParser();p.add_argument('--docker-host',required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--case',action='append',default=[]);args=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--docker-host',required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--case',action='append',default=[]);p.add_argument('--experimental-provider-patch',action='store_true');args=p.parse_args()
  if args.output.exists():raise SystemExit('OUTPUT_MUST_BE_NEW')
  if set(args.case)-(CASES|ADJACENT_CASES):raise SystemExit('UNKNOWN_CASE')
- fixture=Fixture(args.docker_host);fixture.selected=set(args.case);before=sha(SQL);failure=None
+ fixture=Fixture(args.docker_host,args.experimental_provider_patch);fixture.selected=set(args.case);before=sha(SQL);failure=None
  try:
   fixture.setup();run_cases(fixture)
- except Exception:
-  failure='FIXTURE_EXECUTION_FAILED'
+ except Exception as error:
+  code=str(error)
+  failure=code if re.fullmatch(r'(?:FIXTURE_[A-Z_]+(?::[a-z]+)?|[A-Z_]+_NOT_READY|STORAGE_EXITED)',code) else 'FIXTURE_EXECUTION_FAILED'
  finally:fixture.close()
  passed=bool(fixture.cases) and all(t['passed'] for t in fixture.cases) and not failure and before==sha(SQL)
  result={'schema':'record-media-storage-compatibility-v1','status':'passed' if passed else 'failed','storageImage':STORAGE,'databaseImage':DB,'s3Image':S3,'recordSqlSha256':before,'recordSqlUnchanged':before==sha(SQL),'harnessSha256':sha(Path(__file__)),'tests':fixture.cases,'observations':fixture.observations,'physicalBackend':'s3','syntheticOnly':True,'hostedOperations':0,'canonicalReplay':False,'completeCaseSet':CASES.issubset(t['name'] for t in fixture.cases),'sixCaseSetPassed':all(any(t['name']==name and t['passed'] for t in fixture.cases) for name in CASES),'faultProxySha256':sha(Path(__file__).with_name('record_storage_s3_fault_proxy.cjs'))}
+ if args.experimental_provider_patch:
+  result.update(schema='record-media-storage-provider-patch-experiment-v1',providerModified=True,admissionEligible=False,providerPatch=fixture.patch_receipt,baseStorageImage=STORAGE)
+  del result['storageImage']
  if failure:result['code']=failure
  args.output.write_text(json.dumps(result,indent=2)+'\n');print('PROOF '+str(args.output))
  if not passed:raise SystemExit(1)
