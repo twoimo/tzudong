@@ -1,3 +1,4 @@
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -1433,7 +1434,7 @@ export function EvaluationTable({
 
                 <div className="rounded-lg bg-background/70 p-2">
                   <p className="font-semibold text-foreground">쯔양 리뷰 요약</p>
-                  <p className="mt-1 whitespace-pre-wrap break-all text-muted-foreground">{tzuyangReview}</p>
+                  <p className="mt-1 whitespace-pre-wrap break-all text-muted-foreground">{formatTzuyangReviewForDisplay(tzuyangReview)}</p>
                 </div>
 
                 <div className="overflow-hidden rounded-lg bg-background/70">

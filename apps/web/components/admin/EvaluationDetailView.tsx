@@ -1,3 +1,4 @@
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import React, { useState, useEffect, useMemo, useCallback, useId, memo } from 'react';
 import Image from 'next/image';
 import { EvaluationRecord, LocationMatchResult } from '@/types/evaluation';
@@ -607,7 +608,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                         {record.reasoning_basis || '-'}
                     </EvidenceNote>
                     <EvidenceNote title="쯔양 리뷰 요약">
-                        {record.restaurant_info?.tzuyang_review || '-'}
+                        {formatTzuyangReviewForDisplay(record.restaurant_info?.tzuyang_review || '') || '-'}
                     </EvidenceNote>
                 </div>
             </SectionPanel>
