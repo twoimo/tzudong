@@ -622,7 +622,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v2'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 100",
+      "receipt.ledger.length !== 101",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -639,7 +639,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== 100");
+    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== 101");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -1663,7 +1663,7 @@ describe('local migration v2 receipt envelope', () => {
   const receipt = (): Record<string, unknown> => ({
     ...Object.fromEntries(keys.map((key: string) => [key, 'fixture'])),
     schema: 'local-receipt-v2', serializer: 'receipt-v1', project_name: 'fixture-project',
-    ledger: Array(100).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
+    ledger: Array(101).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
   });
   const stack = { config_sha256: 'fixture', input_provenance_sha256: 'fixture', env_provenance_sha256: 'fixture' };
 
