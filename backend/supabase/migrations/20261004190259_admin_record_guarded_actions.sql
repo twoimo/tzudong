@@ -242,21 +242,33 @@ BEGIN
  PERFORM pipeline_control.admin_record_validate_restaurant(changes,'{}'::uuid[]);
  IF nullif(btrim(changes->>'tzuyang_review'),'') IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_EVIDENCE_REQUIRED'; END IF;
  INSERT INTO public.restaurants(id,approved_name,source_type,status,trace_id,youtube_link,lat,lng,jibun_address,categories,geocoding_success,updated_by_admin_id)
- VALUES(created,changes->>'approved_name','admin','pending',public.generate_unique_id(changes->>'youtube_link',changes->>'approved_name',changes->>'tzuyang_review'),changes->>'youtube_link',(changes->>'lat')::numeric,(changes->>'lng')::numeric,
+ VALUES(created,changes->>'approved_name','admin','pending',encode(sha256(convert_to(coalesce(changes->>'youtube_link','')||'|'||coalesce(changes->>'approved_name','')||'|'||coalesce(changes->>'tzuyang_review',''),'UTF8')),'hex'),changes->>'youtube_link',(changes->>'lat')::numeric,(changes->>'lng')::numeric,
   changes->>'jibun_address',ARRAY(SELECT jsonb_array_elements_text(changes->'categories')),true,actor);
  PERFORM pipeline_control.admin_record_patch(created,changes,actor,true);
  RETURN created;
 END $$;
+
+-- Service-only actor predicate; protected role tables remain unavailable to Data API callers.
+CREATE FUNCTION pipeline_control.admin_record_assert_operator(actor uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF actor IS NULL OR NOT EXISTS (
+  SELECT 1 FROM public.user_roles role JOIN public.user_account_status account ON account.user_id=role.user_id
+  WHERE role.user_id=actor AND role.role='admin' AND account.account_status='active' AND account.disabled_at IS NULL
+ ) THEN RAISE EXCEPTION 'RECORD_ACTION_FORBIDDEN' USING ERRCODE='42501'; END IF;
+END $$;
+REVOKE ALL ON FUNCTION pipeline_control.admin_record_assert_operator(uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION pipeline_control.admin_record_assert_operator(uuid) TO service_role;
 
 CREATE FUNCTION public.admin_record_action(p_actor uuid,p_phase text,p_operation_id uuid,p_action text DEFAULT NULL,
  p_target_ids uuid[] DEFAULT '{}'::uuid[],p_payload jsonb DEFAULT '{}'::jsonb,p_preview_hash text DEFAULT NULL) RETURNS jsonb
 LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
 <<work>>
 DECLARE op pipeline_control.admin_record_operations; ids uuid[]; fingerprint jsonb; after_state jsonb; digest text;
- receipt jsonb; audit uuid; row_value jsonb; changed jsonb; item jsonb; target uuid; created uuid; source_id uuid; rpc_result record;
- classification text; photo text; job pipeline_control.admin_record_media_cleanup; expected_count integer; pending_count integer; final_rows jsonb; final_row jsonb; key_name text; old_role text; related_ids uuid[];
+ receipt jsonb; audit uuid; row_value jsonb; changed jsonb; item jsonb; target uuid; created uuid; source_id uuid;
+ classification text; photo text; job pipeline_control.admin_record_media_cleanup; expected_count integer; pending_count integer; final_rows jsonb; final_row jsonb; key_name text; related_ids uuid[];
 BEGIN
- PERFORM pipeline_control.assert_restaurant_review_operator(p_actor);
+ PERFORM pipeline_control.admin_record_assert_operator(p_actor);
  IF current_user NOT IN ('service_role','postgres') OR p_operation_id IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_FORBIDDEN'; END IF;
  PERFORM set_config('lock_timeout','2s',true);
  PERFORM pg_advisory_xact_lock(hashtextextended('admin-record:'||p_operation_id,0));
@@ -439,19 +451,25 @@ BEGIN
     UPDATE public.restaurant_submission_items SET youtube_link=item->>'youtube_link',tzuyang_review=CASE WHEN item ? 'tzuyang_review' THEN item->>'tzuyang_review' ELSE tzuyang_review END WHERE id=(item->>'id')::uuid;
    END LOOP;
   ELSIF p_action='submission.approve' THEN
+   IF row_value->>'submission_type' IS NULL OR row_value->>'submission_type' NOT IN ('new','edit') THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
    SELECT count(*) INTO pending_count FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='pending';
    IF jsonb_typeof(p_payload->'items') IS DISTINCT FROM 'array' OR jsonb_array_length(p_payload->'items')<>pending_count OR pending_count=0
     OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'items') x GROUP BY x->>'id' HAVING count(*)>1)
-    OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'items') x WHERE x->>'decision' NOT IN ('approve','reject') OR NOT EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE id=(x->>'id')::uuid AND submission_id=target AND item_status='pending'))
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'items') x WHERE x->>'decision' IS NULL OR x->>'decision' NOT IN ('approve','reject') OR NOT EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE id=(x->>'id')::uuid AND submission_id=target AND item_status='pending'))
     THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
    FOR item IN SELECT value FROM jsonb_array_elements(p_payload->'items') ORDER BY value->>'id' LOOP
     IF item->>'decision'='approve' THEN
      SELECT target_restaurant_id INTO source_id FROM public.restaurant_submission_items WHERE id=(item->>'id')::uuid;
+     IF row_value->>'submission_type'='new' AND source_id IS NOT NULL THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
      IF row_value->>'submission_type'='edit' THEN
       SELECT to_jsonb(r) INTO final_row FROM public.restaurants r WHERE id=source_id AND status<>'deleted';
       IF final_row IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
      ELSE final_row:='{}'::jsonb; END IF;
      final_row:=pipeline_control.admin_record_compose(final_row,item->'changes');
+     -- Preserve the existing submission URL canonicalization without a privileged helper call.
+     final_row:=final_row||jsonb_build_object('youtube_link',CASE
+      WHEN public.extract_youtube_video_id(final_row->>'youtube_link')<>'' THEN 'https://www.youtube.com/watch?v='||public.extract_youtube_video_id(final_row->>'youtube_link')
+      ELSE nullif(btrim(final_row->>'youtube_link'),'') END);
      PERFORM pipeline_control.admin_record_validate_restaurant(final_row||jsonb_build_object('geocoding_success',true),ARRAY[source_id]);
      IF nullif(btrim(final_row->>'tzuyang_review'),'') IS NULL OR jsonb_typeof(final_row->'youtube_meta') IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'RECORD_ACTION_EVIDENCE_REQUIRED'; END IF;
      -- Preserve the inherited fuzzy admission policy, but expose its actual domain reason rather than claiming stale CAS.
@@ -459,22 +477,22 @@ BEGIN
       ((public.extract_youtube_video_id(r.youtube_link)=public.extract_youtube_video_id(final_row->>'youtube_link') AND extensions.similarity(coalesce(r.approved_name,r.origin_name,''),final_row->>'approved_name')>0.8)
        OR extensions.similarity(coalesce(r.jibun_address,''),final_row->>'jibun_address')>0.9
        OR extensions.similarity(coalesce(r.road_address,''),coalesce(final_row->>'road_address',''))>0.9)) THEN RAISE EXCEPTION 'RECORD_ACTION_DUPLICATE_REVIEW'; END IF;
-     SELECT jsonb_object_agg(key,value) INTO changed FROM jsonb_each(final_row) WHERE key=ANY(ARRAY['phone','categories','youtube_link','youtube_meta','tzuyang_review','road_address','jibun_address','english_address','address_elements','lat','lng']);
-     changed:=changed||jsonb_build_object('name',final_row->>'approved_name');
-     -- Only this service-only, actor-validated boundary bridges the legacy RPC role representation.
-     -- Ordinary PostgREST JSON claims need no legacy GUC; restore the prior setting before returning.
-     old_role:=current_setting('request.jwt.claim.role',true);
-     PERFORM set_config('request.jwt.claim.role','service_role',true);
+     -- Use the current-schema service invoker path in the same locked/audited operation.
+     -- Edit approval retains existing status, missing marker, evaluation and provenance.
      IF row_value->>'submission_type'='edit' THEN
-      SELECT * INTO rpc_result FROM public.approve_edit_submission_item((item->>'id')::uuid,p_actor,changed);
+      PERFORM pipeline_control.admin_record_write(source_id,final_row||jsonb_build_object('geocoding_success',true),p_actor,false);
      ELSE
-      SELECT * INTO rpc_result FROM public.approve_submission_item((item->>'id')::uuid,p_actor,changed);
+      source_id:=pipeline_control.admin_record_create(final_row||jsonb_build_object('geocoding_success',true),p_actor);
+      UPDATE public.restaurants SET source_type='user_submission_new',created_by=(row_value->>'user_id')::uuid WHERE id=source_id;
      END IF;
-     PERFORM set_config('request.jwt.claim.role',coalesce(old_role,''),true);
-     IF rpc_result.success IS DISTINCT FROM true THEN RAISE EXCEPTION 'RECORD_ACTION_SUBMISSION_CONFLICT'; END IF;
+     UPDATE public.restaurant_submission_items SET item_status='approved',target_restaurant_id=source_id,rejection_reason=NULL
+      WHERE id=(item->>'id')::uuid AND submission_id=target AND item_status='pending';
+     IF NOT FOUND THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
     ELSE
      IF nullif(btrim(item->>'reason'),'') IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
-     UPDATE public.restaurant_submission_items SET item_status='rejected',rejection_reason=item->>'reason' WHERE id=(item->>'id')::uuid;
+     UPDATE public.restaurant_submission_items SET item_status='rejected',rejection_reason=item->>'reason'
+      WHERE id=(item->>'id')::uuid AND submission_id=target AND item_status='pending';
+     IF NOT FOUND THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
     END IF;
    END LOOP;
   ELSE
@@ -584,7 +602,7 @@ BEGIN
   INSERT INTO privacy_retention.g014_public_rpc_allowlist(function_schema,function_name,identity_arguments,grantee,source_signature)
    SELECT n.nspname,p.proname,p.proargtypes::text,'service_role',signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.oid=to_regprocedure(signature);
   -- Retire the three browser-admin RPC entrances now covered by this server contract.
-  -- Service execution remains available to the atomic submission implementation.
+  -- Preserve service ACLs for legacy compatibility; the atomic path does not call them.
   FOREACH signature IN ARRAY ARRAY[
    'public.approve_submission_item(uuid,uuid,jsonb)',
    'public.approve_edit_submission_item(uuid,uuid,jsonb)',
