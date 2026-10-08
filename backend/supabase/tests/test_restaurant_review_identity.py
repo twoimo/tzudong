@@ -27,7 +27,7 @@ class ReviewIdentityTests(unittest.TestCase):
             c.execute('CREATE SCHEMA pipeline_control;CREATE SCHEMA privacy_retention;GRANT USAGE ON SCHEMA pipeline_control,privacy_retention TO service_role;')
             c.execute('CREATE TABLE privacy_retention.g014_public_rpc_allowlist(function_schema name,function_name name,identity_arguments text,grantee name,source_signature text,UNIQUE(source_signature,grantee));')
             c.execute((ROOT/'backend/supabase/migrations/20260124_create_restaurants.sql').read_text())
-            c.execute('ALTER TABLE public.restaurants ADD COLUMN google_name text;CREATE TABLE public.user_roles(user_id uuid,role text);CREATE TABLE public.user_account_status(user_id uuid,account_status text);GRANT SELECT,UPDATE ON public.restaurants TO service_role;')
+            c.execute('ALTER TABLE public.restaurants ADD COLUMN google_name text;CREATE TABLE public.user_roles(user_id uuid,role text);CREATE TABLE public.user_account_status(user_id uuid,account_status text,disabled_at timestamptz);GRANT SELECT,UPDATE ON public.restaurants TO service_role;')
             c.execute("CREATE FUNCTION public.extract_youtube_video_id(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT nullif(split_part($1,''v='',2),'''')';CREATE FUNCTION public.normalize_restaurant_identity_name(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT lower(btrim($1))';")
             c.execute((ROOT/'backend/supabase/migrations/20261003081915_restaurant_review_automation.sql').read_text())
             c.execute(MIGRATION.read_text())

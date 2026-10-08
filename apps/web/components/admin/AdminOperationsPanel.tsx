@@ -9,41 +9,22 @@ import { ArrowUpRight, Bot, RefreshCw, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { readOperationsSource } from '@/lib/admin/operations-source';
 import {
   OPERATIONS_SOURCES,
   OPERATIONS_STATE_LABELS,
   buildOperationsViewModel,
   filterOperationsRows,
   operationsUnavailable,
-  parseOperationsSnapshot,
   type OperationsPriority,
   type OperationsSnapshot,
   type OperationsSourceId,
 } from '@/lib/admin/operations-view-model';
 
-const ENDPOINTS: Record<OperationsSourceId, string> = {
-  pending: '/api/admin/pending-counts',
-  pipeline: '/api/admin/pipeline',
-  automation: '/api/admin/evaluations/automation',
-};
 const SOURCE_LABELS: Record<OperationsSourceId, string> = { pending: '검수 대기', pipeline: '파이프라인', automation: '자동 검수' };
 const PRIORITY_LABELS: Record<OperationsPriority, string> = { failure: '실패 확인', attention: '확인 필요', waiting: '검수 대기', running: '진행 중', idle: '대기 없음' };
 const number = new Intl.NumberFormat('ko-KR');
 const formatTime = (value: number) => new Date(value).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-async function readSource(sourceId: OperationsSourceId, signal: AbortSignal): Promise<OperationsSnapshot> {
-  try {
-    const response = await fetch(ENDPOINTS[sourceId], {
-      method: 'GET', cache: 'no-store', headers: { Accept: 'application/json' },
-      signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]),
-    });
-    if (!response.ok) return operationsUnavailable(sourceId, response.status === 401 || response.status === 403 ? 'forbidden' : 'unavailable');
-    // Raw provider errors, row identities and item names never enter the query cache.
-    return parseOperationsSnapshot(sourceId, await response.json());
-  } catch {
-    return operationsUnavailable(sourceId, 'unavailable');
-  }
-}
 
 export function AdminOperationsPanel() {
   const [search, setSearch] = useState('');
@@ -63,7 +44,7 @@ export function AdminOperationsPanel() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const queries = useQueries({ queries: OPERATIONS_SOURCES.map(sourceId => ({
     queryKey: ['admin-operations', sourceId],
-    queryFn: ({ signal }: { signal: AbortSignal }) => readSource(sourceId, signal),
+    queryFn: ({ signal }: { signal: AbortSignal }) => readOperationsSource(sourceId, signal),
     staleTime: 30_000, retry: false, refetchOnWindowFocus: false,
   })) });
   const snapshots: Partial<Record<OperationsSourceId, OperationsSnapshot>> = {};
@@ -84,7 +65,7 @@ export function AdminOperationsPanel() {
   const closeDetail = () => { setSelectedId(null); if (inlineInspector) window.requestAnimationFrame(() => rowRef.current?.focus()); };
   const stateLabel = (row: (typeof rows)[number]) => row.state === 'ready' ? PRIORITY_LABELS[row.priority] : OPERATIONS_STATE_LABELS[row.state];
   const stateClass = (row: (typeof rows)[number]) => row.priority === 'failure' ? 'border-destructive/25 bg-destructive/5 text-destructive' : row.priority === 'attention' ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'border-border text-muted-foreground';
-  const inspector = selected ? <aside key={selected.id} ref={detailRef} tabIndex={-1} className={cn('h-full min-h-0 overflow-y-auto outline-none', inlineInspector ? 'admin-cms-inspector' : 'p-3')} aria-label="운영 항목 상세" data-operations-inspector>
+  const inspector = selected ? <aside key={selected.id} ref={detailRef} tabIndex={-1} className={cn('h-full min-h-0 overflow-y-auto outline-none', inlineInspector ? 'admin-cms-inspector' : 'p-3')} aria-label="운영 항목 상세" data-operations-inspector onKeyDown={event => { if (inlineInspector && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeDetail(); } }}>
     <div className="flex items-start justify-between gap-2"><h2 className="min-w-0 text-base font-semibold leading-6">{selected.title}</h2><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label="운영 항목 상세 닫기" onClick={closeDetail}><X className="h-3.5 w-3.5" /></Button></div>
     <span className={`mt-2 inline-flex rounded border px-1.5 py-0.5 text-[11px] ${stateClass(selected)}`}>{stateLabel(selected)}</span>
     <p className="mt-3 text-xs leading-5 text-muted-foreground">{selected.summary}</p>

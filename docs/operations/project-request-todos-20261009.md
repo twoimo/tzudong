@@ -511,3 +511,16 @@
 - 원문의 모든 비어 있지 않은 행(컴퓨터/브라우저 태그 제외)은 섹션 제목 또는 T 항목으로 보존했다. 의미상 중복은 실행 시 증빙을 연결하되 원문 범위를 삭제하지 않는다.
 - 조항별 미확인 표시는 증거 연결 대기다. 위 실행 표의 확인된 소스/부분 검증은 보존하며 모든 항목을 미착수로 되돌리는 의미가 아니다. 최종 체크박스는 운영을 포함한 각 요구의 전체 완료 증거가 있어야 닫는다.
 - 원본 디자인 레퍼런스 이름·URL 12개는 회수했다. 실제 심층 탐색, 현재 운영 DB/배포 SHA, 실제 Gemini/credit attribution, Sentry, 전체 롱폼 처리, 카드 0488 삭제 readback과 실제 device 검증은 현재 미확인이다.
+
+## 즉시 후속 작업 — 현재 스키마 승인 및 CMS
+
+- 전체 요청 19개 실행 묶음과 원문 274개/추가 20개 추적 항목을 유지한다. 제품 완료율의 분모로 조항 수를 사용하지 않는다.
+- 권한 복구 실험을 채택하지 않고 현재 스키마 atomic 제보 승인 경로를 수정했다. pristine PG17에서 SQL 3개, G014 4개, exact schema rollback, 실제 synthetic 흐름 6개와 trace 경계 조합 512개가 통과했다. 관련 웹 검사 63 pass/0 fail. 후속 신규/혼합/실패·active actor 27개도 통과했고 synthetic 행은 rollback 후 0건이다. 실제 2연결 경합 2개도 통과했다(다른 operation은 한쪽만 적용, 동일 operation은 동일 receipt/audit1개/신규1개). 일회성 DB만 회수했고 원본 clone은 보존했다. 운영 검증은 남았다.
+- 운영 보조의 취소 요청을 장애로 캐시하던 경로와 desktop 상세 Escape/행 포커스 복귀를 수정했다. 관련 28개 검사와 synthetic 관리자 15개 메뉴 렌더 확인이 통과했다. 기존 hydration spec의 누락 3개 메뉴·오래된 선택자를 갱신하여 15개 메뉴와 최신화 legacy URL을 포함한 16개 경로가 Playwright에서 통과했다. 공개/계정 22개 경로는 source inventory이며 실제 전체 동작 완료가 아니다.
+- canonical PG15는 relevant source clean gate에서 실제 중단했다. 해당 gate를 우회하지 않고 SQL을 `df3b784b5438113bcdb8b29ab0a7224e67c2f8c9`로 고정했다. 이후 이전 source SHA에 고정된 PG15 adapter 거부를 확인하여 `15d82aa12680b3b3609c8c41aa3599bed82837db`로 정확한 hash만 갱신했다. 관련 17개 검사가 통과했다. 동일 source의 PG15.8 canonical 두 실행과 비교도 통과하여 1,917 catalog 행/56개 artifact 해시가 일치했다. 운영 반영 증빙은 아니다.
+- 병행 PR #3147의 리뷰 media/verification SQL은 별도 변경이며 적용하지 않았다. 현재 source inventory 126과 해당 branch의 inventory 104를 혼용하지 않는다. 운영 적용·승격 직전에 최신 ledger/G014/배포 SHA를 다시 확인한다.
+- 이번 후속 실행은 operating DB 변경·배포·카드/청구 변경·새 유료 inference를 수행하지 않았다. 전체 목표와 최종 체크박스는 열린 상태다.
+
+증빙: `apps/web/performance/current-schema-record-20261009/`, `apps/web/performance/cms-followthrough-20261009/`.
+
+이번 후속 UI의 Next16.3.8 production build/50개 페이지/route CSS boundary도 통과했다. 관련 build가 추가한 tsconfig include만 검사 후 제거하여 원래 bytes를 복원했다. 운영 반영·배포는 수행하지 않았다.

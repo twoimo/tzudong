@@ -1,0 +1,83 @@
+{
+  "kind": "current-schema-record-source-followthrough",
+  "observedAt": "2026-10-08T22:08:30.968396+00:00",
+  "sourceHead": "8d918f851d8a0ec7dc1637f677cf9db05a61b460",
+  "sourceDirty": true,
+  "firstSourceSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "pg17": {
+    "version": "17.6",
+    "network": "none",
+    "publishedPorts": 0,
+    "assertionsPassed": 4,
+    "rollbackSchemaExact": true,
+    "syntheticActionCasesPassed": 6,
+    "traceBoundaryCases": 512,
+    "traceMismatches": 0,
+    "legacyOwnerHelperGrantsAdded": 0,
+    "extendedCasesPassed": 27,
+    "extendedGuardedRuntimeCases": 26,
+    "unknownTypeEnumBoundaryCases": 1,
+    "extendedRollbackCountsExact": true,
+    "concurrencyCasesPassed": 2,
+    "concurrencyScope": "Real independent PostgreSQL connections in task-owned throwaway template copy; original DB untouched.",
+    "concurrencyCleanup": "Throwaway database absence verified; not a zero-row query inside dropped database."
+  },
+  "webAffected": {
+    "testsPassed": 63,
+    "testsFailed": 0,
+    "files": 7
+  },
+  "operatingWrites": false,
+  "newPaidModelCalls": 0,
+  "statisticalCI": "Not applicable to deterministic boundary/contract checks; not a performance estimate.",
+  "remaining": [
+    "Full operating/UI/provider/Storage verification",
+    "Protected promotion/deployment and policy-safe rollback"
+  ],
+  "sourceFreeze": {
+    "commit": "df3b784b5438113bcdb8b29ab0a7224e67c2f8c9",
+    "sameSqlBytesAsPg17Measurement": true
+  },
+  "sourceContracts": {
+    "testsRun": 41,
+    "passed": 38,
+    "skipped": 3,
+    "failed": 0,
+    "canonicalReplayEvidence": false
+  },
+  "pg15Adapter": {
+    "sourceCommit": "15d82aa12680b3b3609c8c41aa3599bed82837db",
+    "boundFirstMigrationSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+    "relatedTestsPassed": 17,
+    "relatedTestsFailed": 0,
+    "exactReverseBodyCheckRetained": true,
+    "sourceDriftGuardRetained": true,
+    "canonicalPairStatus": "passed"
+  },
+  "pg15": {
+    "sourceHead": "15d82aa12680b3b3609c8c41aa3599bed82837db",
+    "version": "15.8",
+    "runSeconds": [
+      143.065,
+      131.305
+    ],
+    "catalogRows": 1917,
+    "comparedArtifacts": 56,
+    "verdict": "passed",
+    "catalogSha256": "8fb085166ca04d7d80b2bda0183582bbee32d31a5a78d384b3bac380e40ce874",
+    "generatorOwnedContainersCleaned": true,
+    "operatingWrites": false
+  },
+  "productionBuild": {
+    "status": "passed",
+    "nextVersion": "16.3.8",
+    "nodeRuntime": "24.21.0",
+    "npmReleaseAuthority": "11.6.2",
+    "staticPagesGenerated": 50,
+    "routeCssBoundaries": "passed",
+    "isolatedDistDirectory": ".next-current-schema-followthrough-build",
+    "ownTsconfigIncludesRemoved": 2,
+    "tsconfigBytesRestored": true,
+    "deployPerformed": false
+  }
+}

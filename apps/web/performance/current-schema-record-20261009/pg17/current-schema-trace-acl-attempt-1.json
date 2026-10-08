@@ -1,0 +1,1 @@
+{"status": "failed", "stage": "test_query_preparation", "cause": "unresolved_helper_signature", "queriedSignature": "public.canonicalize_youtube_watch_url(text)", "actualSignature": "public.canonicalize_youtube_link(text)", "sourceChanged": false, "operatingWrites": false}

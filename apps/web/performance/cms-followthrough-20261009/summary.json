@@ -1,0 +1,74 @@
+{
+  "candidate_head_at_start": "8d918f851d8a0ec7dc1637f677cf9db05a61b460",
+  "source_routes": 27,
+  "public_account_routes": 22,
+  "admin_page_routes": 5,
+  "sidebar_modules": 15,
+  "local_rendered_modules_passed": 15,
+  "browser_page_errors": 0,
+  "blocked_mutation_attempts": 0,
+  "keyboard": {
+    "desktopEnterEscapeFocusReturn": true,
+    "mobileDrawerEscapeFocusReturn": true
+  },
+  "unit": {
+    "passed": 28,
+    "failed": 0
+  },
+  "eslint": "passed",
+  "typecheck_parity": {
+    "status": "passed",
+    "diagnostics": 0
+  },
+  "external_mutations": false,
+  "hosted_or_deployed_evidence": false,
+  "remaining": [
+    "Public/account routes have source inventory only; no complete public functional or visual verification.",
+    "Synthetic local reads prove rendered failure states and keyboard flow, not hosted successful reads or guarded mutations.",
+    "Source has not been committed, promoted or deployed."
+  ],
+  "hydration_spec": {
+    "status": "passed",
+    "visited_paths": 16,
+    "sidebar_modules": 15,
+    "runtime_errors": 0,
+    "blockedMutationCount": 0,
+    "scope": "local-read-only-synthetic-failure-states",
+    "duration_seconds": 35.2,
+    "routing_unit_cases_passed": 3,
+    "eslint": "passed",
+    "typecheck_parity": {
+      "status": "passed",
+      "diagnostics": 0
+    }
+  },
+  "processOwnership": {
+    "checkedAt": "2026-10-08T22:10:59.393886+00:00",
+    "ownedHarnessProcessesRemaining": 0,
+    "preexistingDevServerPid": 57309,
+    "preexistingDevServerPort": 19872,
+    "preexistingDevServerStillRunning": true,
+    "devServerStartedOrStoppedByHelper": false,
+    "browserLifecycle": "First two harnesses awaited browser.close in finally; Playwright fixture teardown completed on failed and passed runs. No user browser tabs adopted or closed."
+  },
+  "sourceFiles": {
+    "apps/web/components/admin/AdminOperationsPanel.tsx": "b88367d4b6832063f9e8fa1ad1136cf746882daa7050562b7dfcd433039c205f",
+    "apps/web/lib/admin/operations-source.ts": "84d372171a48a48087d95a318a2648838a8e6c52ccda7d7e8fcecdbabb15ee3b",
+    "apps/web/tests-unit/admin-operations-source.test.ts": "2d127da1219276b58077a0c22ee1d3e271985331039acf1541b810b353a7ee69",
+    "apps/web/tests/admin-console-module-hydration.spec.ts": "d3a73e77a5037e26b1c91d3a9b6309e2c9f6dc6b2a5d98ea5aecc76fc7922f4a"
+  },
+  "evidenceClass": "local-synthetic-render-and-behavior",
+  "statisticalCI": "Not applicable to deterministic local checks and route inventory; no operating success probability estimated.",
+  "productionBuild": {
+    "status": "passed",
+    "nextVersion": "16.3.8",
+    "nodeRuntime": "24.21.0",
+    "npmReleaseAuthority": "11.6.2",
+    "staticPagesGenerated": 50,
+    "routeCssBoundaries": "passed",
+    "isolatedDistDirectory": ".next-current-schema-followthrough-build",
+    "ownTsconfigIncludesRemoved": 2,
+    "tsconfigBytesRestored": true,
+    "deployPerformed": false
+  }
+}

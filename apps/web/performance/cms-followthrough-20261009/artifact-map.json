@@ -1,0 +1,110 @@
+{
+  "sourceFreeze": "15d82aa12680b3b3609c8c41aa3599bed82837db",
+  "evidenceClass": "local-synthetic-render-and-behavior",
+  "artifacts": {
+    "README.md": {
+      "sha256": "9a7baea101887345735330c885486aa15210cf651119e93bf83e1236087245d4",
+      "bytes": 9860
+    },
+    "browser-check.mjs": {
+      "sha256": "6611c9e47d3a1e191774aca0674c863ae17979b036217e51efc2b5d015be957c",
+      "bytes": 4517
+    },
+    "browser-results.json": {
+      "sha256": "2029d413f7a7044c4012f10af987ad1d1758191abc954a36cd9f3bb3b534ab72",
+      "bytes": 1445
+    },
+    "browser-selector-reconciliation.json": {
+      "sha256": "78e20d211ca9474fe87eefaecef2ef3bf2b71bc215218104c01e1ce73c54d414",
+      "bytes": 575
+    },
+    "browser-selector-reconciliation.mjs": {
+      "sha256": "ce27e3cf6b826efd729593bd0446f06f0335d21a8f3808b60b0c719ebbb0002d",
+      "bytes": 3571
+    },
+    "hydration-artifacts/g001-admin-console-modules-final.png": {
+      "sha256": "3a5fc58255010176c93596c543f3c91d70e9c3bfbbf9fef3bf5aaea37b22090e",
+      "bytes": 61681
+    },
+    "hydration-artifacts/g001-admin-console-modules-transcript.json": {
+      "sha256": "5bb32c6e817b8f809251ed8ef60528cb082e82e8625592113c5e91a38e9f35d3",
+      "bytes": 4046
+    },
+    "hydration-current-targets.json": {
+      "sha256": "690fc51885a82e08e2ad82fa766ebbf31ca813a43d0989cc07ebb2b957adaef2",
+      "bytes": 406
+    },
+    "hydration-legacy-routing-first.json": {
+      "sha256": "2637551097387669ce78d22d4ff00b9abed5957bfe81d4946a7d994b182b506a",
+      "bytes": 10584
+    },
+    "hydration-legacy-routing-first.log": {
+      "sha256": "252c3da9ba9f88d6ba8e401e5ce2748efc5c4b695808217a5f0078b0d23d4b68",
+      "bytes": 2396
+    },
+    "hydration-lint.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "hydration-routing-unit.log": {
+      "sha256": "a2744629060f723ad868ad49baf0574a0e32e8ff5b742bdacd2fcfcf128d4eb8",
+      "bytes": 542
+    },
+    "hydration-run-output/.last-run.json": {
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    "hydration-run.json": {
+      "sha256": "140e9ab7a4d36b4dc3ebc03f518b76c3b1942498739cde9d2431a81249ce5291",
+      "bytes": 4109
+    },
+    "hydration-typecheck.log": {
+      "sha256": "ee329034a1c29d29a3f5e7398c0c572f38340838648fa5b98be99475fa1d0bc1",
+      "bytes": 510
+    },
+    "hydration.config.mjs": {
+      "sha256": "b6e980f144c13a2e0b089da8ee9deda293aa8d0ff95fb4f6d60b8caaf847f56d",
+      "bytes": 920
+    },
+    "hydration.log": {
+      "sha256": "26f8b865af31ec7a9a8afb0b2ef03867782c52f020036b791c965b4be49172a3",
+      "bytes": 377
+    },
+    "lint.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "operations-desktop.png": {
+      "sha256": "65317a696378ff3d40ee3d09b2e467d4ba3974eb7258b2f831c93d3e747f8124",
+      "bytes": 51607
+    },
+    "process-ownership.json": {
+      "sha256": "2cd98c188fd9a701310607ddaf4ab7f863462bfffc7a60fdc632b92daec8f94d",
+      "bytes": 440
+    },
+    "route-inventory.json": {
+      "sha256": "7c806a038b38810e925b6b87026450ee6ca3b92fb294da2b723cd7b3ad432c60",
+      "bytes": 4610
+    },
+    "run-hydration.mjs": {
+      "sha256": "80eb680e04318ca108c6bef510dc619d89b599084c372decf43117677a975546",
+      "bytes": 837
+    },
+    "sidebar-inventory.json": {
+      "sha256": "43e63af1ec9fec06be0b553dc505ad0cc370ad569ebb9e6b57a0b11021ab2852",
+      "bytes": 1403
+    },
+    "summary.json": {
+      "sha256": "bc20d6f1fe9d5f7daf9bc7fe1ea03d93b91ba300f106570a3487de90a071dd0c",
+      "bytes": 2892
+    },
+    "typecheck.log": {
+      "sha256": "b643a13833d403060a7c91c089d5b7fd0c76a3960c11a82f39ea965b5640e343",
+      "bytes": 510
+    },
+    "unit.log": {
+      "sha256": "d0c5bea87346bf7a29c0ffc802ea4039ff35f520f5fbc5a6d2472dfcef41c5cf",
+      "bytes": 3620
+    }
+  }
+}
