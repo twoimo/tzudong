@@ -18,8 +18,10 @@ import {
   embedStoryboardRagTexts,
   rerankStoryboardRagCandidates,
   serializePgVector,
+  STORYBOARD_RAG_EMBEDDING_FINGERPRINT,
+  STORYBOARD_RAG_FINGERPRINT_KEY,
 } from '@/lib/admin/storyboard/rag-worker-client';
-import type { StoryboardRagRpcClient } from '@/lib/admin/storyboard/rag-service-role-client';
+import type { StoryboardRagLegacyClient, StoryboardRagRpcClient } from '@/lib/admin/storyboard/rag-service-role-client';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
@@ -135,24 +137,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const queryEmbedding = await embedStoryboardRagTexts([parsed.data.query]);
+    const tokens = parsed.data.query.toLowerCase().match(/[\p{L}\p{N}]+/gu)?.slice(0, 8) ?? [];
+    const legacyFilter = tokens.length ? tokens.flatMap((token) =>
+      [`title.ilike.%${token}%`, `content.ilike.%${token}%`]).join(',') : 'id.is.null';
+    const queryEmbedding = await embedStoryboardRagTexts([parsed.data.query], 'RETRIEVAL_QUERY');
     const query = queryEmbedding.items[0];
-    const supabase = createSupabaseServiceRoleClient() as unknown as StoryboardRagRpcClient<HybridRpcRow>;
+    const supabase = createSupabaseServiceRoleClient() as unknown as StoryboardRagRpcClient<HybridRpcRow> & StoryboardRagLegacyClient;
     const rpcName = resolveStoryboardRagSearchRpcName();
     const { data, error } = await supabase.rpc(rpcName, {
       p_user_id: auth.userId,
       p_query_embedding: serializePgVector(query.dense),
       p_query_sparse: query.sparse,
-      p_dense_weight: 0.65,
+      p_dense_weight: 1,
       p_match_count: parsed.data.candidateCount,
       p_candidate_count: Math.min(200, Math.max(parsed.data.candidateCount, parsed.data.candidateCount * 5)),
-      p_metadata_filter: parsed.data.metadataFilter,
+      p_metadata_filter: { ...parsed.data.metadataFilter,
+        [STORYBOARD_RAG_FINGERPRINT_KEY]: STORYBOARD_RAG_EMBEDDING_FINGERPRINT },
     });
 
     if (error) {
       return failClosedCode('storyboard_rag_search_rpc_failed', traceId, telemetry, 'supabase_search');
     }
 
+    // Separate content-only retrieval keeps existing BGE documents searchable without
+    // comparing their stored vectors to the Gemini query. The bounded window is explicit.
+    const { data: legacy, error: legacyError } = await supabase.from('documents')
+      .select('id,title,content,metadata').eq('user_id', auth.userId)
+      .contains('metadata', Object.fromEntries(Object.entries(parsed.data.metadataFilter)
+        .filter(([key]) => key !== STORYBOARD_RAG_FINGERPRINT_KEY)))
+      .not('metadata', 'cs', JSON.stringify({ [STORYBOARD_RAG_FINGERPRINT_KEY]: STORYBOARD_RAG_EMBEDDING_FINGERPRINT }))
+      .or(legacyFilter).order('id').limit(200);
+    if (legacyError) return failClosedCode('storyboard_rag_legacy_read_failed', traceId, telemetry, 'supabase_search');
+    const legacyCandidates = (legacy ?? []).map((row) => ({
+      id: row.id, content: `${row.title}\n\n${row.content}`, metadata: row.metadata ?? {},
+      denseScore: null, sparseScore: null, weightedScore: null,
+      lexicalMatches: tokens.filter((token) => `${row.title} ${row.content}`.toLowerCase().includes(token)).length,
+    })).filter((row) => row.lexicalMatches > 0)
+      .sort((a, b) => b.lexicalMatches - a.lexicalMatches || a.id.localeCompare(b.id))
+      .slice(0, parsed.data.candidateCount);
     const candidates = (data ?? []).map((row) => ({
       id: row.id,
       content: `${row.title}\n\n${row.content}`,
@@ -162,6 +184,9 @@ export async function POST(request: NextRequest) {
       weightedScore: row.weighted_score,
     }));
 
+    const ids = new Set(candidates.map((row) => row.id));
+    candidates.push(...legacyCandidates.filter((row) => !ids.has(row.id)));
+    candidates.splice(50);
     if (candidates.length === 0) {
       const payload = { results: [], traceId, trace: [{ step: 'supabase_hybrid_rpc', status: 'passed', detail: 'no candidates' }] };
       return NextResponse.json(
@@ -174,9 +199,12 @@ export async function POST(request: NextRequest) {
       query: parsed.data.query,
       candidates,
       topK: parsed.data.topK,
+      // Reuse the original worker-verified vector, never a client request field.
+      queryEmbedding: { dense: query.dense, fingerprint: queryEmbedding.fingerprint },
     });
 
     const responsePayload = {
+      retrieval: { legacyMode: 'content-only', legacyWindow: 200, embeddingFingerprint: STORYBOARD_RAG_EMBEDDING_FINGERPRINT },
       results: reranked.results.map((result) => ({
         id: result.id,
         title: String(result.content.split('\n\n')[0] ?? ''),
@@ -192,9 +220,9 @@ export async function POST(request: NextRequest) {
       traceId,
       trace: [
         { step: 'oauth_user_mapping', status: 'passed', detail: 'Supabase user resolved' },
-        { step: 'bge_m3_embed', status: 'passed', detail: 'Python worker produced dense vector and sparse lexical weights' },
-        { step: 'supabase_hybrid_rpc', status: 'passed', detail: `${rpcName} dense plus JSONB sparse fusion completed` },
-        { step: 'bge_reranker_v2_m3', status: 'passed', detail: 'Python worker reranked final candidates' },
+        { step: 'gemini_embed', status: 'passed', detail: 'Gemini retrieval query vector verified against the model/configuration fingerprint' },
+        { step: 'supabase_hybrid_rpc', status: 'passed', detail: `${rpcName} isolated Gemini dense vector search completed` },
+        { step: 'gemini_embedding_cosine', status: 'passed', detail: 'Worker ranked freshly embedded candidate text using cosine similarity' },
       ],
     };
     return NextResponse.json(

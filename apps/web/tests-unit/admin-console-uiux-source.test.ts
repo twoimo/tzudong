@@ -5788,7 +5788,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "new StoryboardImageGenerationError(",
     );
     expect(imageProviderSource).toContain("'provider_unavailable'");
-    expect(imageProviderSource).toContain("backend provenance");
+    expect(imageProviderSource).toContain("STORYBOARD_WORKFLOW_RETIRED");
+    expect(imageProviderSource).not.toContain("fetch(");
+    expect(imageProviderSource).not.toContain("spawn(");
     expect(storyboardSource).not.toContain(
       "STORYBOARD_IMAGE_PROVIDER_MODEL_ENV",
     );
@@ -6271,7 +6273,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "local_codex_model_provenance_unverified",
     );
     expect(imageProviderSource).toContain(
-      "backend provenance를 증명할 수 없어 중단",
+      "storyboard_workflow_retired",
     );
     expect(storyboardSource).toContain(
       "fetch(STORYBOARD_CHAT_AGENT_STREAM_URL",
@@ -7636,61 +7638,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       expect(retired).toContain("retiredStoryboardApi");
       expect(retired).not.toContain("generateStoryboardWithBackendAgent");
     }
-    expect(imageProviderSource).toContain("STORYBOARD_IMAGE_PROVIDER_MODEL");
-    expect(imageProviderSource).toContain(
-      "providerId: STORYBOARD_IMAGE_PROVIDER_ID",
-    );
-    expect(imageProviderSource).toContain(
-      "STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID",
-    );
-    expect(imageProviderSource).toContain("modelProvenance: 'unverified'");
-    expect(imageProviderSource).toContain(
-      "modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE",
-    );
-    expect(imageProviderSource).toContain(
-      "STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE",
-    );
-    expect(imageProviderSource).toContain("hasOpenAIAPIKey !== false");
-    expect(imageProviderSource).toContain(
-      "proof.endpoint !== LOCAL_CODEX_RESPONSES_ENDPOINT",
-    );
-    expect(imageProviderSource).toContain(
-      "proof.rawImageItemTypes[0] !== 'image_generation_call'",
-    );
-    expect(imageProviderSource).toContain("proof.generatedImageItemTypes");
-    expect(imageProviderSource).toContain(
-      "toStoryboardGeneratedImageProvenance",
-    );
-    expect(imageProviderSource).toContain(
-      "provenance: toStoryboardGeneratedImageProvenance(finalProof)",
-    );
-    expect(imageProviderSource).toContain("LOCAL_CODEX_PROVENANCE_MAX_AGE_MS");
-    expect(imageProviderSource).toContain("isSha256Hex(proof.requestHash)");
-    expect(imageProviderSource).toContain(
-      "isFreshGeneratedAt(proof.generatedAt)",
-    );
-    expect(imageProviderSource).toContain(
-      "requestToolType: 'image_generation'",
-    );
-    expect(imageProviderSource).toContain(
-      "requestToolModel: STORYBOARD_IMAGE_PROVIDER_MODEL",
-    );
-    expect(imageProviderSource).toContain(
-      "exact_provenance: ${finalProof.requestToolType}.${finalProof.requestToolModel}",
-    );
-    expect(imageProviderSource).toContain("browser_memory_only_api_key");
-    expect(imageProviderSource).toContain(
-      "storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.",
-    );
+    // Historical receipts remain parseable; the former producer cannot become ready or execute.
+    for (const contract of ["STORYBOARD_IMAGE_PROVIDER_MODEL", "hasOpenAIAPIKey !== false", "proof.endpoint !== LOCAL_CODEX_RESPONSES_ENDPOINT", "proof.rawImageItemTypes[0] !== 'image_generation_call'", "proof.generatedImageItemTypes", "LOCAL_CODEX_PROVENANCE_MAX_AGE_MS", "isSha256Hex(proof.requestHash)", "isFreshGeneratedAt(proof.generatedAt)", "validateLocalCodexCommandResult", "STORYBOARD_WORKFLOW_RETIRED", "storyboard_workflow_retired"]) {
+      expect(imageProviderSource).toContain(contract);
+    }
+    for (const forbidden of ["fetch(", "spawn(", "STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE", "OPENAI_API_KEY:"]) expect(imageProviderSource).not.toContain(forbidden);
     expect(imageProviderSource).not.toMatch(/\b(?:localStorage|sessionStorage)\b/);
-    expect(imageProviderSource).toContain(
-      'browser component-memory API key (active operation; transmitted once in guarded request header; never persisted)',
-    );
-    expect(imageProviderSource).toContain(
-      'browser_api_key_provider: API key exists only in component memory for the active operation and is transmitted once in the guarded request header.',
-    );
-    expect(imageProviderSource).toContain("redactProviderSecretText");
-    expect(imageProviderSource).toContain("OPENAI_API_KEY: ''");
     expect(storyboardSource).not.toContain(
       "STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY",
     );
@@ -7761,9 +7714,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(imageProviderSource).not.toContain(
       "THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL",
     );
-    expect(imageProviderSource).toContain(
-      "codex-imagegen-storyboard-provider.py",
-    );
+    expect(imageProviderSource).not.toContain("codex-imagegen-storyboard-provider.py");
     expect(imageProviderSource).toContain("generateStoryboardSceneImage");
     expect(imageProviderSource).toContain("buildStoryboardSceneImagePrompt");
     expect(imageProviderSource).toContain("no recognizable face");
@@ -7812,23 +7763,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardImageWrapperSource).toContain("tool_choice");
     expect(storyboardImageWrapperSource).toContain("image_generation_call");
-    expect(backendAgentWrapperSource).toContain("codex_cli_oauth");
-    expect(backendAgentWrapperSource).toContain("gpt-5.5");
-    expect(backendAgentWrapperSource).toContain("STORYBOARD_AGENT_CODEX_MODEL");
-    expect(backendAgentWrapperSource).toContain(
-      "STORYBOARD_AGENT_CODEX_EFFORT",
-    );
-    expect(backendAgentWrapperSource).toContain('model_reasoning_effort="');
-    expect(backendAgentWrapperSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS");
-    expect(backendAgentWrapperSource).toContain("codex_oauth_env");
-    expect(backendAgentWrapperSource).toContain("CODEX_API_KEY");
-    expect(backendAgentWrapperSource).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
-    expect(backendAgentWrapperSource).toContain("OPENAI_API_KEY");
-    expect(backendAgentWrapperSource).toContain("Do not run shell commands");
-    expect(backendAgentWrapperSource).toContain(
-      "gpt-image-2 is handled by the separate image provider",
-    );
-    expect(backendAgentWrapperSource).toContain("from utils.privacy_log import redact_log_text, safe_error_name");
+    expect(backendAgentWrapperSource).toContain("storyboard_gemini_only");
+    expect(backendAgentWrapperSource).toContain("storyboard:gemini-worker");
+    expect(backendAgentWrapperSource).not.toContain("subprocess");
+    expect(backendAgentWrapperSource).not.toContain("load_dotenv");
+    expect(backendAgentWrapperSource).not.toContain("OPENAI_API_KEY");
     expect(backendAgentRequirementsSource).toContain("langgraph");
     expect(backendAgentRequirementsSource).toContain("langchain-openai");
     expect(backendAgentRequirementsSource).toContain("supabase");
@@ -7860,41 +7799,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
     );
     expect(readmeSource).toContain("Remote service bridge");
-    expect(backendAgentSource).toContain("BACKEND_AGENT_ROOT");
-    expect(backendAgentSource).toContain("backend/storyboard-agent");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_COMMAND");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_ROOT");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_PYTHON");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentPython");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentCommand");
-    expect(backendAgentSource).toContain("UNSAFE_COMMAND_PATTERN");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentPythonCommand");
-    expect(backendAgentSource).toContain("shouldRunThroughWindowsCommandShell");
-    expect(backendAgentSource).toContain("buildWindowsCommandShellSpec");
-    expect(backendAgentSource).toContain("shell: false");
-    expect(backendAgentSource).not.toContain("shell: true");
-    expect(backendAgentSource).toContain("sanitizeCommandOutput");
-    expect(backendAgentSource).toContain("BACKEND_AGENT_ROOT");
-    expect(backendAgentSource).toContain("backend_agent_local_adapter");
-    expect(backendAgentSource).toContain("backend_agent_command");
-    expect(backendAgentSource).toContain(
-      "generateStoryboardChatWithBackendAgent",
-    );
-    expect(backendAgentSource).toContain(
-      'DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = "gpt-5.5"',
-    );
-    expect(backendAgentSource).toContain(
-      'DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "low"',
-    );
-    expect(backendAgentSource).toContain("resolveStoryboardAgentCodexModel");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentCodexEffort");
-    expect(backendAgentSource).toContain("createStoryboardChatCanvasPatch");
-    expect(backendAgentSource).toContain("shouldGenerate");
-    expect(backendAgentSource).toContain("shouldReset");
-    expect(backendAgentSource).toContain("src/graph.py");
-    expect(backendAgentSource).toContain("src/state/slots.py");
-    expect(backendAgentSource).toContain("src/prompts/designer.py");
+    for (const preserved of ["normalizeStoryboardBackendAgentOutput", "isCasualStoryboardChatMessage", "__runStoryboardAgentCommandForTests", "UNSAFE_COMMAND_PATTERN", "STORYBOARD_WORKFLOW_RETIRED"]) expect(backendAgentSource).toContain(preserved);
+    const productionGenerator = backendAgentSource.slice(backendAgentSource.indexOf("export async function generateStoryboardWithBackendAgent"), backendAgentSource.indexOf("export function normalizeStoryboardBackendAgentOutput"));
+    expect(productionGenerator).toContain("STORYBOARD_WORKFLOW_RETIRED");
+    expect(productionGenerator).not.toContain("runStoryboardAgentCommand(");
     expect(typesSource).toContain(
       "export type StoryboardGenerationMode = 'local_heatmap' | 'backend_agent';",
     );

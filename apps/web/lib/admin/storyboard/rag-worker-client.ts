@@ -5,7 +5,8 @@ type RagWorkerEmbedItem = {
 
 type RagWorkerEmbedResponse = {
   schemaVersion: 1;
-  provider: 'bge-m3';
+  provider: 'gemini-api';
+  fingerprint: string;
   model: string;
   dimensions: number;
   items: RagWorkerEmbedItem[];
@@ -26,13 +27,17 @@ type RagWorkerRerankResult = RagWorkerRerankCandidate & {
 
 type RagWorkerRerankResponse = {
   schemaVersion: 1;
-  provider: 'bge-reranker-v2-m3';
+  provider: 'gemini-api';
+  fingerprint: string;
+  method: 'embedding_cosine';
   model: string;
   results: RagWorkerRerankResult[];
 };
 
-const REQUIRED_EMBED_MODEL = 'BAAI/bge-m3';
-const REQUIRED_RERANK_MODEL = 'BAAI/bge-reranker-v2-m3';
+export const STORYBOARD_RAG_EMBEDDING_FINGERPRINT = 'gemini-embedding-001:1024:retrieval:l2:v1';
+export const STORYBOARD_RAG_FINGERPRINT_KEY = 'storyboardEmbeddingFingerprint';
+const REQUIRED_EMBED_MODEL = 'gemini-embedding-001';
+const REQUIRED_RERANK_MODEL = REQUIRED_EMBED_MODEL;
 
 export class StoryboardRagWorkerError extends Error {
   status: number;
@@ -65,17 +70,16 @@ async function callStoryboardRagWorker<T>(path: string, body: unknown): Promise<
       cache: 'no-store',
     });
     if (!response.ok) {
-      const detail = await response.text().catch(() => '');
       throw new StoryboardRagWorkerError(
-        `required_storyboard_rag_worker_failed:${response.status}:${detail.slice(0, 300)}`,
+        `required_storyboard_rag_worker_failed:${response.status}`,
         response.status,
       );
     }
-    return await response.json() as T;
+    try { return await response.json() as T; }
+    catch { throw new StoryboardRagWorkerError('required_gemini_response_invalid', 503); }
   } catch (error) {
     if (error instanceof StoryboardRagWorkerError) throw error;
-    const reason = error instanceof Error ? error.name || error.message : 'unknown';
-    throw new StoryboardRagWorkerError(`required_storyboard_rag_worker_unavailable:${reason}`, 503);
+    throw new StoryboardRagWorkerError('required_gemini_response_uncertain_explicit_retry_required', 503);
   } finally {
     clearTimeout(timeout);
   }
@@ -96,7 +100,7 @@ function assertSparseWeights(sparse: unknown): asserts sparse is Record<string, 
     throw new StoryboardRagWorkerError('required_storyboard_rag_worker_sparse_missing', 503);
   }
   const entries = Object.entries(sparse);
-  if (entries.length === 0 || entries.some(([key, value]) => !key.trim() || !isFiniteNumber(value))) {
+  if (entries.some(([key, value]) => !key.trim() || !isFiniteNumber(value))) {
     throw new StoryboardRagWorkerError('required_storyboard_rag_worker_sparse_invalid', 503);
   }
 }
@@ -128,12 +132,12 @@ export function serializePgVector(vector: number[]) {
   return `[${vector.map((value) => value.toFixed(8)).join(',')}]`;
 }
 
-export async function embedStoryboardRagTexts(texts: string[]) {
-  const result = await callStoryboardRagWorker<RagWorkerEmbedResponse>('/embed', { texts });
-  if (result.schemaVersion !== 1 || result.provider !== 'bge-m3' || result.model !== REQUIRED_EMBED_MODEL || result.dimensions !== 1024) {
+export async function embedStoryboardRagTexts(texts: string[], task: 'RETRIEVAL_QUERY' | 'RETRIEVAL_DOCUMENT' = 'RETRIEVAL_DOCUMENT') {
+  const result = await callStoryboardRagWorker<RagWorkerEmbedResponse>('/embed', { texts, task });
+  if (result.schemaVersion !== 1 || result.provider !== 'gemini-api' || result.fingerprint !== STORYBOARD_RAG_EMBEDDING_FINGERPRINT || result.model !== REQUIRED_EMBED_MODEL || result.dimensions !== 1024) {
     throw new StoryboardRagWorkerError('required_storyboard_rag_worker_embed_contract_invalid', 503);
   }
-  if (result.items.length !== texts.length) {
+  if (!Array.isArray(result.items) || result.items.length !== texts.length) {
     throw new StoryboardRagWorkerError('required_storyboard_rag_worker_embed_count_mismatch', 503);
   }
   for (const [index, item] of result.items.entries()) {
@@ -147,9 +151,18 @@ export async function rerankStoryboardRagCandidates(args: {
   query: string;
   candidates: RagWorkerRerankCandidate[];
   topK: number;
+  queryEmbedding?: { dense: number[]; fingerprint: string };
 }) {
+  if (args.queryEmbedding) {
+    assertDenseVector(args.queryEmbedding.dense, 'rerank-query');
+    const normSquared = args.queryEmbedding.dense.reduce((sum, value) => sum + value * value, 0);
+    if (args.queryEmbedding.fingerprint !== STORYBOARD_RAG_EMBEDDING_FINGERPRINT ||
+        !Number.isFinite(normSquared) || Math.abs(normSquared - 1) > 0.00001) {
+      throw new StoryboardRagWorkerError('required_gemini_query_embedding_invalid', 503);
+    }
+  }
   const result = await callStoryboardRagWorker<RagWorkerRerankResponse>('/rerank', args);
-  if (result.schemaVersion !== 1 || result.provider !== 'bge-reranker-v2-m3' || result.model !== REQUIRED_RERANK_MODEL) {
+  if (result.schemaVersion !== 1 || result.provider !== 'gemini-api' || result.fingerprint !== STORYBOARD_RAG_EMBEDDING_FINGERPRINT || result.method !== 'embedding_cosine' || result.model !== REQUIRED_RERANK_MODEL) {
     throw new StoryboardRagWorkerError('required_storyboard_rag_worker_rerank_contract_invalid', 503);
   }
   assertRerankResults(result.results, args.candidates, args.topK);

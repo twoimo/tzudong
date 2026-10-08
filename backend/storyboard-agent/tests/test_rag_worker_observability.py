@@ -8,6 +8,9 @@ import unittest
 from unittest import mock
 from pathlib import Path
 import sys
+import subprocess
+import sqlite3
+import json
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -21,6 +24,12 @@ from src import rag_worker
 
 class RagWorkerObservabilityTest(unittest.TestCase):
     def setUp(self) -> None:
+        self.budget_directory = tempfile.TemporaryDirectory(prefix="rag-shared-budget-test-")
+        self.addCleanup(self.budget_directory.cleanup)
+        env = mock.patch.dict(os.environ, {"GEMINI_BUDGET_PATH": str(Path(self.budget_directory.name) / "budget.sqlite"),
+            "GEMINI_BUDGET_PROJECT": "test-project", "GEMINI_REQUESTS_PER_MINUTE": "100000", "GEMINI_MAX_INFLIGHT": "1"})
+        env.start()
+        self.addCleanup(env.stop)
         with rag_worker._COUNTER_LOCK:
             rag_worker._WORKLOAD_QUEUED.clear()
             rag_worker._WORKLOAD_INFLIGHT.clear()
@@ -136,7 +145,7 @@ class RagWorkerObservabilityTest(unittest.TestCase):
                     lambda: (_ for _ in ()).throw(rag_worker.RagWorkerError("required_test_provider_missing")),
                 )
             self.assertEqual(raised.exception.status_code, 503)
-            self.assertEqual(raised.exception.detail, "required_model_failed:RagWorkerError")
+            self.assertEqual(raised.exception.detail, "required_model_failed")
 
         async def run_generic_error() -> None:
             with self.assertRaises(HTTPException) as raised:
@@ -153,7 +162,7 @@ class RagWorkerObservabilityTest(unittest.TestCase):
         asyncio.run(run_generic_error())
         counters = rag_worker._worker_counters_snapshot()["operations"]
         self.assertEqual(counters["test.known-rag-error"]["lastError"], "required_bge_model_load_failed")
-        self.assertEqual(counters["test.unknown-rag-error"]["lastError"], "required_model_failed:RagWorkerError")
+        self.assertEqual(counters["test.unknown-rag-error"]["lastError"], "required_model_failed")
         self.assertEqual(counters["test.generic-error"]["lastError"], "required_model_failed:ValueError")
 
     def test_request_models_reject_empty_and_invalid_inputs(self) -> None:
@@ -181,114 +190,168 @@ class RagWorkerObservabilityTest(unittest.TestCase):
         self.assertIn("overBudget", profile)
         self.assertEqual(profile["budgetPolicy"], "warn")
 
-    def test_known_typeerror_fallbacks_are_counted_and_unknown_typeerrors_fail(self) -> None:
-        known = TypeError("got an unexpected keyword argument 'device'")
-        self.assertTrue(rag_worker._is_unsupported_keyword_error(known, "device"))
-        rag_worker._record_compatibility_fallback("test.device_keyword", known)
-        counters = rag_worker._worker_counters_snapshot()["compatibilityFallbacks"]
-        self.assertEqual(counters["test.device_keyword"]["count"], 1)
-        self.assertFalse(rag_worker._is_unsupported_keyword_error(TypeError("shape exploded"), "device"))
+    def test_readiness_is_configuration_only_and_never_calls_provider(self) -> None:
+        with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker, "_gemini_call") as call:
+            result = rag_worker._provider_readiness(True)
+        self.assertTrue(result.ready)
+        self.assertEqual([item.id for item in result.providers], [rag_worker.EMBED_MODEL_ID, rag_worker.CAPTION_MODEL_ID])
+        call.assert_not_called()
 
-    def test_readiness_reports_local_llava_warmup_disabled_without_loading(self) -> None:
-        original_remote = rag_worker.REMOTE_LLAVA_WORKER_URL
-        original_local_warmup = rag_worker.ALLOW_LOCAL_LLAVA_WARMUP
-        rag_worker.REMOTE_LLAVA_WORKER_URL = ""
-        rag_worker.ALLOW_LOCAL_LLAVA_WARMUP = False
+    def test_embedding_checks_count_dimension_and_normalizes(self) -> None:
+        with mock.patch.object(rag_worker, "_gemini_call", return_value={"embeddings": [{"values": [2.0] + [0.0]*1023}]}) as call:
+            result = rag_worker._encode_texts(rag_worker.EmbedRequest(texts=["test"], task="RETRIEVAL_QUERY"))
+        self.assertEqual(result.items[0].dense[0], 1)
+        self.assertEqual(result.items[0].sparse, {})
+        self.assertEqual(result.fingerprint, rag_worker.EMBED_FINGERPRINT)
+        self.assertEqual(call.call_args.args[2]["requests"][0]["taskType"], "RETRIEVAL_QUERY")
+        for response in ({"embeddings": []}, {"embeddings": [{"values": [0.0]*1024}]}, {"embeddings": [{"values": [float("nan")]*1024}]}):
+            with mock.patch.object(rag_worker, "_gemini_call", return_value=response):
+                with self.assertRaisesRegex(rag_worker.RagWorkerError, "required_gemini_response_invalid"):
+                    rag_worker._encode_texts(rag_worker.EmbedRequest(texts=["test"]))
+
+    def test_rerank_legacy_content_uses_new_gemini_vectors(self) -> None:
+        responses = [{"embeddings": [{"values": [1.0]+[0.0]*1023}]}, {"embeddings": [{"values": [0.0,1.0]+[0.0]*1022}, {"values": [1.0]+[0.0]*1023}]}]
+        request = rag_worker.RerankRequest(query="test", candidates=[rag_worker.RerankCandidate(id="old", content="old BGE document", metadata={"preserved":True}), rag_worker.RerankCandidate(id="new", content="new document")])
+        with mock.patch.object(rag_worker, "_gemini_call", side_effect=responses) as call:
+            result = rag_worker._rerank(request)
+        self.assertEqual([item.id for item in result.results], ["new", "old"])
+        self.assertTrue(result.results[1].metadata["preserved"])
+        self.assertEqual(request.candidates[0].content, "old BGE document")
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual(result.method, "embedding_cosine")
+
+    def test_reused_query_reduces_search_calls_from_three_to_two_with_identical_rank(self) -> None:
+        calls = []
+        def http(request, **_kwargs):
+            body = json.loads(request.data)
+            calls.append(body)
+            embeddings = []
+            for item in body["requests"]:
+                text = item["content"]["parts"][0]["text"]
+                values = [1.0]+[0.0]*1023 if text != "unrelated" else [0.0,1.0]+[0.0]*1022
+                embeddings.append({"values": values})
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps({"embeddings": embeddings}).encode()
+            return response
+        candidates = [rag_worker.RerankCandidate(id="old", content="unrelated"), rag_worker.RerankCandidate(id="new", content="relevant")]
+        with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker.urllib.request, "urlopen", side_effect=http):
+            original = rag_worker._encode_texts(rag_worker.EmbedRequest(texts=["question"], task="RETRIEVAL_QUERY"))
+            direct = rag_worker._rerank(rag_worker.RerankRequest(query="question", candidates=candidates))
+            self.assertEqual(len(calls), 3)
+            calls.clear()
+            current = rag_worker._encode_texts(rag_worker.EmbedRequest(texts=["question"], task="RETRIEVAL_QUERY"))
+            reused = rag_worker._rerank(rag_worker.RerankRequest(query="question", candidates=candidates,
+                queryEmbedding=rag_worker.QueryEmbedding(fingerprint=current.fingerprint, dense=current.items[0].dense)))
+            self.assertEqual(len(calls), 2)
+        self.assertEqual(direct.model_dump(), reused.model_dump())
+        self.assertEqual(original.items[0].dense, current.items[0].dense)
+        self.assertEqual([item.id for item in reused.results], ["new", "old"])
+
+    def test_invalid_reused_query_rejects_without_any_provider_call(self) -> None:
+        with mock.patch.object(rag_worker.urllib.request, "urlopen") as send:
+            for dense in ([1.0], [0.0]*1024, [float("nan")]*1024, [2.0]+[0.0]*1023, [True]+[0.0]*1023):
+                with self.assertRaises(ValidationError):
+                    rag_worker.RerankRequest(query="test", candidates=[rag_worker.RerankCandidate(id="a", content="test")],
+                        queryEmbedding={"fingerprint": rag_worker.EMBED_FINGERPRINT, "dense": dense})
+            with self.assertRaises(ValidationError):
+                rag_worker.RerankRequest(query="test", candidates=[rag_worker.RerankCandidate(id="a", content="test")],
+                    queryEmbedding={"fingerprint": "BAAI/bge-m3", "dense": [1.0]+[0.0]*1023})
+            send.assert_not_called()
+
+    def test_response_loss_has_no_retry_or_raw_diagnostic(self) -> None:
+        with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker.urllib.request, "urlopen", side_effect=TimeoutError("private payload")) as send:
+            with self.assertRaisesRegex(rag_worker.RagWorkerError, "^required_gemini_response_uncertain$"):
+                rag_worker._gemini_call(rag_worker.EMBED_MODEL_ID, "batchEmbedContents", {})
+        self.assertEqual(send.call_count, 1)
+        self.assertFalse(rag_worker._GEMINI_CALL_LOCK.locked())
+        with sqlite3.connect(os.environ["GEMINI_BUDGET_PATH"]) as db:
+            self.assertEqual(db.execute("select count(*) from leases").fetchone()[0], 0)
+            self.assertEqual({row[0] for row in db.execute("select name from sqlite_master where type='table'")}, {"leases", "pacing"})
+
+    def test_shared_budget_uses_existing_environment_limits(self) -> None:
+        with mock.patch.dict(os.environ, {"GEMINI_BUDGET_PROJECT": "existing-project", "GEMINI_REQUESTS_PER_MINUTE": "7", "GEMINI_MAX_INFLIGHT": "2"}):
+            budget = rag_worker._DeadlineProjectBudget(time.monotonic() + 1)
+        self.assertEqual(budget.scope, "existing-project")
+        self.assertEqual(budget.interval, 60 / 7)
+        self.assertEqual(budget.concurrency, 2)
+        self.assertEqual(str(budget.path), os.environ["GEMINI_BUDGET_PATH"])
+
+    def test_expired_operation_does_not_start_another_paid_call(self) -> None:
+        rag_worker._OPERATION_DEADLINE.value = time.monotonic() - 1
         try:
-            with (
-                mock.patch.object(rag_worker, "_load_bge_model", return_value=object()),
-                mock.patch.object(rag_worker, "_load_reranker", return_value=object()),
-                mock.patch.object(rag_worker, "_ollama_models", return_value=set()),
-                mock.patch.object(rag_worker, "_oauth_file_exists", return_value=False),
-                mock.patch.object(rag_worker, "_load_llava_components") as load_llava,
-            ):
-                result = rag_worker._provider_readiness(True)
-            llava = next(provider for provider in result.providers if provider.id == rag_worker.LLAVA_MODEL_ID)
-            self.assertFalse(llava.ready)
-            self.assertEqual(llava.reason, "required_llava_local_warmup_disabled")
-            load_llava.assert_not_called()
+            with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker.urllib.request, "urlopen") as send:
+                with self.assertRaisesRegex(rag_worker.RagWorkerError, "required_gemini_response_uncertain"):
+                    rag_worker._gemini_call(rag_worker.EMBED_MODEL_ID, "batchEmbedContents", {})
+                send.assert_not_called()
         finally:
-            rag_worker.REMOTE_LLAVA_WORKER_URL = original_remote
-            rag_worker.ALLOW_LOCAL_LLAVA_WARMUP = original_local_warmup
+            del rag_worker._OPERATION_DEADLINE.value
 
-    def test_provider_readiness_checks_each_oauth_file_once_and_preserves_state(self) -> None:
-        original_remote = rag_worker.REMOTE_LLAVA_WORKER_URL
-        original_local_warmup = rag_worker.ALLOW_LOCAL_LLAVA_WARMUP
-        rag_worker.REMOTE_LLAVA_WORKER_URL = ""
-        rag_worker.ALLOW_LOCAL_LLAVA_WARMUP = False
-        gemini_path = "/tmp/rag-worker-gemini-oauth"
-        openai_path = "/tmp/rag-worker-openai-oauth"
+    def test_shared_live_process_lease_blocks_http_until_release_with_deadline(self) -> None:
+        child = subprocess.Popen([sys.executable, "-c", "from backend.utils.provider_budget import ProjectBudget,budget_path; import os,sys; b=ProjectBudget(budget_path(),os.environ['GEMINI_BUDGET_PROJECT'],rpm=100000,concurrency=1); lease=b.acquire(os.getpid()); print('ready',flush=True); sys.stdin.readline(); b.release(lease)"],
+            cwd=ROOT.parents[1], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         try:
-            with (
-                mock.patch.dict(os.environ, {
-                    "GEMINI_OAUTH_FILE": gemini_path,
-                    "OPENAI_CODEX_AUTH_FILE": openai_path,
-                }),
-                mock.patch.object(rag_worker, "_load_bge_model", return_value=object()),
-                mock.patch.object(rag_worker, "_load_reranker", return_value=object()),
-                mock.patch.object(rag_worker, "_ollama_models", return_value=set()),
-                mock.patch.object(
-                    rag_worker,
-                    "_oauth_file_exists",
-                    side_effect=lambda path: path == openai_path,
-                ) as oauth_file_exists,
-            ):
-                result = rag_worker._provider_readiness(True)
-
-            self.assertEqual(
-                oauth_file_exists.call_args_list,
-                [mock.call(gemini_path), mock.call(openai_path)],
-            )
-            gemini = next(provider for provider in result.providers if provider.id == "gemini-cli-oauth")
-            openai = next(provider for provider in result.providers if provider.id == "openai-codex-oauth")
-            self.assertFalse(gemini.ready)
-            self.assertEqual(gemini.reason, "required_gemini_oauth_missing")
-            self.assertTrue(openai.ready)
-            self.assertIsNone(openai.reason)
+            self.assertEqual(child.stdout.readline().strip(), "ready")
+            rag_worker._OPERATION_DEADLINE.value = time.monotonic() + 0.15
+            started = time.monotonic()
+            with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker.urllib.request, "urlopen") as send:
+                with self.assertRaisesRegex(rag_worker.RagWorkerError, "required_provider_budget_timeout"):
+                    rag_worker._gemini_call(rag_worker.EMBED_MODEL_ID, "batchEmbedContents", {})
+                send.assert_not_called()
+            self.assertLess(time.monotonic() - started, 0.5)
+            child.communicate("release\n", timeout=3)
+            del rag_worker._OPERATION_DEADLINE.value
+            fake = mock.MagicMock()
+            fake.__enter__.return_value.read.return_value = b'{"embeddings":[]}'
+            with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker.urllib.request, "urlopen", return_value=fake) as send:
+                self.assertEqual(rag_worker._gemini_call(rag_worker.EMBED_MODEL_ID, "batchEmbedContents", {}), {"embeddings": []})
+                self.assertEqual(send.call_count, 1)
+            with sqlite3.connect(os.environ["GEMINI_BUDGET_PATH"]) as db:
+                self.assertEqual(db.execute("select count(*) from leases").fetchone()[0], 0)
         finally:
-            rag_worker.REMOTE_LLAVA_WORKER_URL = original_remote
-            rag_worker.ALLOW_LOCAL_LLAVA_WARMUP = original_local_warmup
+            if hasattr(rag_worker._OPERATION_DEADLINE, "value"):
+                del rag_worker._OPERATION_DEADLINE.value
+            if child.poll() is None:
+                child.communicate("release\n", timeout=3)
 
-    def test_caption_missing_frame_fails_before_local_llava_load(self) -> None:
-        original_remote = rag_worker.REMOTE_LLAVA_WORKER_URL
-        rag_worker.REMOTE_LLAVA_WORKER_URL = ""
-        try:
-            with mock.patch.object(rag_worker, "_load_llava_components") as load_llava:
-                with self.assertRaises(rag_worker.RagWorkerError) as raised:
-                    rag_worker._caption_frames(
-                        rag_worker.CaptionRequest(framePaths=["missing-frame-for-test.png"])
-                    )
-            self.assertEqual(str(raised.exception), "required_llava_frame_missing")
-            load_llava.assert_not_called()
-        finally:
-            rag_worker.REMOTE_LLAVA_WORKER_URL = original_remote
+    def test_sqlite_busy_wait_also_obeys_operation_deadline(self) -> None:
+        rag_worker.ProjectBudget(rag_worker.budget_path(), "test-project", rpm=100000)
+        with sqlite3.connect(os.environ["GEMINI_BUDGET_PATH"]) as db:
+            db.execute("BEGIN IMMEDIATE")
+            rag_worker._OPERATION_DEADLINE.value = time.monotonic() + 0.1
+            started = time.monotonic()
+            try:
+                with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker.urllib.request, "urlopen") as send:
+                    with self.assertRaisesRegex(rag_worker.RagWorkerError, "required_provider_budget_unavailable"):
+                        rag_worker._gemini_call(rag_worker.EMBED_MODEL_ID, "batchEmbedContents", {})
+                    send.assert_not_called()
+                self.assertLess(time.monotonic() - started, 0.5)
+            finally:
+                del rag_worker._OPERATION_DEADLINE.value
+                db.rollback()
 
-    def test_caption_closes_opened_and_converted_images_when_processor_fails(self) -> None:
-        original_remote = rag_worker.REMOTE_LLAVA_WORKER_URL
-        rag_worker.REMOTE_LLAVA_WORKER_URL = ""
-        opened_image = mock.MagicMock()
-        converted_image = mock.Mock()
-        opened_image.__enter__.return_value = opened_image
-        opened_image.convert.return_value = converted_image
-        processor = mock.Mock(side_effect=RuntimeError("processor failed"))
-        model = mock.Mock()
-        try:
-            with tempfile.NamedTemporaryFile(suffix=".png") as frame_file:
-                with (
-                    mock.patch.object(rag_worker, "_load_llava_components", return_value=(processor, model)),
-                    mock.patch("PIL.Image.open", return_value=opened_image),
-                    mock.patch.dict(sys.modules, {"torch": mock.Mock()}),
-                ):
-                    with self.assertRaisesRegex(RuntimeError, "processor failed"):
-                        rag_worker._caption_frames(
-                            rag_worker.CaptionRequest(framePaths=[frame_file.name])
-                        )
+    def test_429_persists_shared_cooldown_without_retransmitting(self) -> None:
+        failure = rag_worker.urllib.error.HTTPError("https://example.invalid", 429, "private provider detail", {"Retry-After": "3"}, None)
+        with mock.patch.dict(os.environ, {"STORYBOARD_GEMINI_API_KEY": "test-key"}), mock.patch.object(rag_worker.urllib.request, "urlopen", side_effect=failure) as send:
+            with self.assertRaisesRegex(rag_worker.RagWorkerError, "^required_model_quota_exhausted$"):
+                rag_worker._gemini_call(rag_worker.EMBED_MODEL_ID, "batchEmbedContents", {})
+            self.assertEqual(send.call_count, 1)
+            rag_worker._OPERATION_DEADLINE.value = time.monotonic() + 0.1
+            try:
+                with self.assertRaisesRegex(rag_worker.RagWorkerError, "required_provider_budget_timeout"):
+                    rag_worker._gemini_call(rag_worker.EMBED_MODEL_ID, "batchEmbedContents", {})
+            finally:
+                del rag_worker._OPERATION_DEADLINE.value
+            self.assertEqual(send.call_count, 1)
+        with sqlite3.connect(os.environ["GEMINI_BUDGET_PATH"]) as db:
+            self.assertGreater(db.execute("select next from pacing where scope='test-project'").fetchone()[0], time.time())
+            self.assertEqual(db.execute("select count(*) from leases").fetchone()[0], 0)
+        self.assertFalse(rag_worker._GEMINI_CALL_LOCK.locked())
 
-            opened_image.__exit__.assert_called_once()
-            converted_image.close.assert_called_once()
-            self.assertEqual(processor.call_args.kwargs["videos"], [[converted_image]])
-        finally:
-            rag_worker.REMOTE_LLAVA_WORKER_URL = original_remote
+    def test_invalid_caption_frame_fails_before_provider(self) -> None:
+        with mock.patch.object(rag_worker, "_gemini_call") as call:
+            with self.assertRaisesRegex(rag_worker.RagWorkerError, "required_gemini_frame_invalid"):
+                rag_worker._caption_frames(rag_worker.CaptionRequest(framePaths=["missing-frame-for-test.png"]))
+        call.assert_not_called()
 
 
 if __name__ == "__main__":

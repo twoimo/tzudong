@@ -11,6 +11,9 @@ describe('retired storyboard producer entrypoints', () => {
     const commands = [
       [process.execPath,'scripts/storyboard-eight-real-provider-smoke.ts','--all'],
       ['node','scripts/storyboard-rag-ollama-pull.mjs','--yes'],
+      [process.execPath,'scripts/storyboard-mlx-live.ts','--run-local-models'],
+      ['python3','../../scripts/codex-imagegen-storyboard-provider.py','--prompt-file',join(directory,'unreadable-prompt'),'--codex-bin',join(directory,'unreadable-codex'),'--output',join(directory,'unexpected.png'),'--json-output',join(directory,'unexpected.json')],
+      ...['run-storyboard-agent.py','01-bge-embed-and-store-supabase.py','99-openai-embed-and-store-supabase.py'].map(name => ['python3',`../../backend/storyboard-agent/scripts/${name}`,'--yes']),
       ['python3','scripts/codex-imagegen-storyboard-provider.py','--prove','--auth-file',join(directory,'unreadable-auth')],
     ];
     try {
@@ -21,6 +24,8 @@ describe('retired storyboard producer entrypoints', () => {
         expect(result.status).toBe(2);
         expect(JSON.parse(result.stdout.trim())).toMatchObject({code:'storyboard_gemini_only'});
         expect(existsSync(marker)).toBe(false);
+        expect(existsSync(join(directory,'unexpected.png'))).toBe(false);
+        expect(existsSync(join(directory,'unexpected.json'))).toBe(false);
       }
     } finally { rmSync(directory,{recursive:true,force:true}); }
   });

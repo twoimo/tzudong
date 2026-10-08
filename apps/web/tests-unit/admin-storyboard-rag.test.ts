@@ -206,48 +206,14 @@ describe('storyboard local RAG layer', () => {
     expect(diagnostics.modelStack.providerUnavailableBehavior).toBe('fail_closed');
     expect(diagnostics.modelStack.ciProviderMode).toBe('mock_required_providers_only');
   });
-  test('registers every screenshot model as a required live RAG stack capability', () => {
+  test('registers only supported Gemini live capabilities; sparse execution is absent', () => {
     const stack = buildStoryboardRagModelStackDiagnostics();
-    const modelIds = stack.models.map((model) => model.id);
-    const roles = new Set(stack.models.map((model) => model.role));
-
-    expect(stack.allScreenshotModelsRegistered).toBe(true);
-    expect(stack.providerUnavailableBehavior).toBe('fail_closed');
-    expect(stack.ciProviderMode).toBe('mock_required_providers_only');
-    expect(modelIds).toContain('a.x-4.0-light-imatrix:Q8_0');
-    expect(modelIds.filter((id) => id === 'bge-m3')).toHaveLength(2);
-    expect(modelIds).toContain('bge-reranker-v2-m3');
-    expect(modelIds).toContain('LLaVA-NeXT-Video-7B-hf');
-    expect(modelIds).toContain('gemini-cli');
-    expect(modelIds).toContain('openai-api');
-    expect(modelIds).toContain('exaone3.5:7.8b');
-    expect(modelIds).toContain('EEVE-Korean-Instruct-10.8B');
-    expect(modelIds).toContain('qwen3:8b');
-    expect(modelIds).toContain('solar:10.7b-instruct-v1-q5_0');
-    expect(roles).toEqual(new Set([
-      'contextual_retrieval',
-      'dense_embedding',
-      'sparse_embedding',
-      'reranker',
-      'video_captioning',
-      'llm_judge',
-    ]));
-    expect(stack.models.every((model) => model.execution === 'required_live_provider')).toBe(true);
-    expect(stack.models.every((model) => model.providerRequired)).toBe(true);
-    expect(stack.models.every((model) => model.unavailableBehavior === 'fail_closed')).toBe(true);
-    expect(stack.models.every((model) => model.ciProviderMode === 'mock_required_provider')).toBe(true);
-    expect(stack.models.every((model) => model.requiredEnv)).toBe(true);
-    expect(
-      stack.models.find((model) => model.id === 'a.x-4.0-light-imatrix:Q8_0')?.localPullId,
-    ).toBe('cookieshake/a.x-4.0-light-imatrix:Q8_0');
-    expect(
-      stack.models.find((model) => model.id === 'EEVE-Korean-Instruct-10.8B')?.localPullId,
-    ).toBe('bnksys/eeve:10.8b-korean-instruct-q8-v1');
-    expect(stack.executionPlan.embeddings.requiredDenseModels).toContain('bge-m3');
-    expect(stack.executionPlan.embeddings.requiredSparseModels).toContain('bge-m3');
-    expect(stack.executionPlan.reranking.requiredModels).toContain('bge-reranker-v2-m3');
-    expect(stack.executionPlan.videoCaptioning.providerUnavailableBehavior).toBe('fail_closed');
-    expect(stack.executionPlan.judging.providerUnavailableBehavior).toBe('fail_closed');
+    expect(stack.allScreenshotModelsRegistered).toBe(false);
+    expect(stack.models.every((model) => model.provider === 'gemini-api')).toBe(true);
+    expect(stack.executionPlan.embeddings.requiredDenseModels).toEqual(['gemini-embedding-001']);
+    expect(stack.executionPlan.embeddings.requiredSparseModels).toEqual([]);
+    expect(stack.executionPlan.reranking.requiredModels).toEqual(['gemini-embedding-001:cosine']);
+    expect(stack.models.every((model) => !model.localPullId)).toBe(true);
   });
 
   test('wires storyboard document hybrid v2 RPC with rollback and index migration', () => {
@@ -297,7 +263,7 @@ describe('storyboard local RAG layer', () => {
     expect(documentsRoute).not.toContain('new OpenAI');
     expect(documentsRoute).not.toContain('ffmpeg');
     expect(searchRoute).toContain("process.env.STORYBOARD_RAG_SEARCH_RPC_VERSION === 'v1'");
-    expect(searchRoute).toContain('p_metadata_filter: parsed.data.metadataFilter');
+    expect(searchRoute).toContain('[STORYBOARD_RAG_FINGERPRINT_KEY]: STORYBOARD_RAG_EMBEDDING_FINGERPRINT');
 
     expect(runbook).toContain('## Coverage audit and safe backfill runbook');
     expect(runbook).toContain('artifacts/storyboard-rag-coverage/<run_id>/');
@@ -377,7 +343,7 @@ describe('storyboard local RAG layer', () => {
     const xps = resolveStoryboardRagExecutionProfile({
       STORYBOARD_RAG_EXECUTION_PROFILE: 'xps_9550_local_dev',
     });
-    expect(xps.label).toContain('XPS 9550');
+    expect(xps.label).toContain('Gemini');
     expect(xps.stages.find((stage) => stage.component === 'llava_caption')?.location).toBe('remote_worker');
     expect(xps.stages.find((stage) => stage.component === 'bge_embed')?.actions).toContain('queue');
 
@@ -385,7 +351,7 @@ describe('storyboard local RAG layer', () => {
       STORYBOARD_RAG_EXECUTION_PROFILE: 'gpu_cloud_worker',
     });
     expect(gpu.stages.every((stage) => stage.actions.includes('queue'))).toBe(true);
-    expect(gpu.stages.find((stage) => stage.component === 'llava_caption')?.endpointEnv).toBe('STORYBOARD_RAG_GPU_WORKER_URL');
+    expect(gpu.stages.find((stage) => stage.component === 'llava_caption')?.endpointEnv).toBe('STORYBOARD_RAG_WORKER_URL');
 
     const ci = resolveStoryboardRagExecutionProfile({ CI: 'true' });
     expect(ci.id).toBe('ci_exception_only');
@@ -400,24 +366,24 @@ describe('storyboard local RAG layer', () => {
     });
     const detail = buildStoryboardRagProfileTraceDetail(profile);
 
-    expect(detail).toContain('현재 실행 프로파일: 6c/12GB VPS');
+    expect(detail).toContain('현재 실행 프로파일: Gemini RAG worker');
     expect(detail).toContain('원격/로컬 provider 위치');
     expect(detail).toContain('remote_worker');
     expect(detail).toContain('대기열/타임아웃');
     expect(detail).toContain('모델 미설치 조치');
-    expect(detail).toContain('GPU caption worker endpoint 설정');
+    expect(detail).toContain('프레임과 Gemini worker 인증 확인');
   });
 
   test('maps required RAG failures to Korean fail-closed status without raw technical details', () => {
     const cases = [
       ['required_storyboard_rag_worker_failed:500:OPENAI_API_KEY=sk-secret stack', 'worker 연결'],
-      ['required_storyboard_rag_worker_embed_contract_invalid: raw vector dump', 'BGE 임베딩'],
+      ['required_storyboard_rag_worker_embed_contract_invalid: raw vector dump', 'Gemini 임베딩'],
       ['storyboard_rag_search_rpc_failed: relation documents missing', 'Supabase 검색'],
       ['required_storyboard_rag_worker_rerank_results_invalid: duplicate ids', 'reranker'],
-      ['required_llava_caption_failed: CUDA out of memory', 'LLaVA caption'],
+      ['required_llava_caption_failed: CUDA out of memory', 'Gemini caption'],
       ['required_gemini_oauth_missing: token path', 'judge'],
       ['OPENAI_API_KEY=sk-secret stack dump', 'judge'],
-      ['CUDA out of memory vector [0.1,0.2] db password', 'BGE 임베딩'],
+      ['CUDA out of memory vector [0.1,0.2] db password', 'Gemini 임베딩'],
       ['unauthorized bearer sk-secret token', 'judge'],
       ['session cookie secret=abc123', 'judge'],
       ['oauth token sk-secret at C:/Users/me/.codex/auth.json', 'judge'],

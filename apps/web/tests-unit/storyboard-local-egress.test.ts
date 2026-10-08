@@ -28,6 +28,8 @@ type EgressChildReport = {
   proxyConnections?: number;
   proxyReceipts?: { host: string; remoteAddress?: string }[];
   fetchCalls?: string[];
+  inferencePaths?: string[];
+  retiredErrors?: string[];
   draftTitle?: string;
   imageBytes?: number;
   imageProvenance?: Record<string, unknown>;
@@ -78,49 +80,42 @@ describe('local-only egress boundary', () => {
     expect(['127.0.0.1', '::1', '::ffff:127.0.0.1']).toContain(egressChild?.proxyReceipts?.[0].remoteAddress ?? '');
   });
 
-  test('never routes a model call through the global fetch stack', () => {
-    expect(egressChild?.fetchCalls).toEqual([]);
-    expect(egressChild?.draftTitle).toBe('t');
-    expect(egressChild?.imageBytes).toBe(18);
-    expect(egressChild?.imageProvenance).toMatchObject({
-      providerId: 'local-mlx', model: 'installed-image', verification: 'local-worker',
-    });
-  });
+  test('never routes a model call through the global fetch stack', () => { expect(egressChild?.fetchCalls).toEqual([]);expect(egressChild?.inferencePaths).toEqual([]);expect(egressChild?.retiredErrors).toEqual(['STORYBOARD_WORKFLOW_RETIRED','STORYBOARD_WORKFLOW_RETIRED']); });
 
-  test('rejects an external provider before any socket is opened', async () => {
+  test('rejects an external provider before any socket is opened', async () =>{
     const receipts: MlxDestinationReceipt[] = [];
     const model = createServer((_req, res) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"status":"ok"}'); });
     const { origin } = await listen(model);
     const client = new MlxStoryboardClient(new MlxTransport({ origin, onDestination: (receipt) => receipts.push(receipt) }));
 
     for (const id of ['openai-api', 'xai-api'] as const) {
-      await expect(client.draft(request(id, id))).rejects.toThrow('external_ai_disabled');
-      await expect(client.image(request(id, id), 'prompt')).rejects.toThrow('external_ai_disabled');
+      await expect(client.draft(request(id, id))).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+      await expect(client.image(request(id, id), 'prompt')).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
     }
     for (const id of ['chatgpt-manual', 'grok-manual'] as const) {
-      await expect(client.draft(request(id, id))).rejects.toThrow('provider_not_configured');
-      await expect(client.image(request(id, id), 'prompt')).rejects.toThrow('provider_not_configured');
+      await expect(client.draft(request(id, id))).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+      await expect(client.image(request(id, id), 'prompt')).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
     }
     expect(receipts).toEqual([]);
   });
 
-  test('consent for external AI never turns the local adapter into a cloud client', async () => {
+  test('consent for external AI never turns the local adapter into a cloud client', async () =>{
     const receipts: MlxDestinationReceipt[] = [];
     const model = createServer((_req, res) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"status":"ok"}'); });
     const { origin } = await listen(model);
     const client = new MlxStoryboardClient(new MlxTransport({ origin, onDestination: (receipt) => receipts.push(receipt) }));
 
     for (const id of ['openai-api', 'xai-api'] as const) {
-      await expect(client.draft(request(id, 'local-mlx', true))).rejects.toThrow('provider_not_configured');
-      await expect(client.image(request('local-mlx', id, true), 'prompt')).rejects.toThrow('provider_not_configured');
+      await expect(client.draft(request(id, 'local-mlx', true))).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+      await expect(client.image(request('local-mlx', id, true), 'prompt')).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
     }
     for (const id of ['chatgpt-manual', 'grok-manual', 'manual'] as const) {
-      await expect(client.draft(request(id, 'local-mlx', true))).rejects.toThrow('provider_not_configured');
+      await expect(client.draft(request(id, 'local-mlx', true))).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
     }
     expect(receipts).toEqual([]);
   });
 
-  test('retrieval fails closed instead of reaching any embedding provider', async () => {
+  test('retrieval fails closed instead of reaching any embedding provider', async () =>{
     const receipts: MlxDestinationReceipt[] = [];
     const paths: string[] = [];
     const model = createServer((req, res) => {
@@ -130,7 +125,7 @@ describe('local-only egress boundary', () => {
     const { origin } = await listen(model);
     const client = new MlxStoryboardClient(new MlxTransport({ origin, onDestination: (receipt) => receipts.push(receipt) }));
 
-    await expect(client.draft(request('local-mlx', 'local-mlx', false, 'bge-local'))).rejects.toThrow('bge_dependency_unavailable');
+    await expect(client.draft(request('local-mlx', 'local-mlx', false, 'bge-local'))).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
     expect(paths).toEqual([]);
     expect(receipts).toEqual([]);
   });

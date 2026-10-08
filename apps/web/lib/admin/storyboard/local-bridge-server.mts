@@ -6,60 +6,43 @@ import * as fsPromises from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { delimiter, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { LOCAL_BRIDGE_ALLOWED_ORIGINS, LOCAL_BRIDGE_HELPER_COMMANDS, LOCAL_BRIDGE_HELPER_MESSAGE_VERSION, LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM, LOCAL_BRIDGE_HELPER_ROUTE, LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM, LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM, LOCAL_BRIDGE_MODEL, LOCAL_BRIDGE_MODEL_PROVENANCE, LOCAL_BRIDGE_PROVIDER_ID, redactLocalBridgeSecretText } from '../local-bridge/core-contract.ts';
+import type { LocalBridgeHelperSurface } from '../local-bridge/core-contract.ts';
+import type { ThumbnailGenerationResult, ThumbnailGeneratorPayload, ThumbnailReferenceImage, ThumbnailReferenceRole } from '../youtube-thumbnail-generator/types.ts';
 
-import {
-  LOCAL_BRIDGE_ALLOWED_ORIGINS,
-  LOCAL_BRIDGE_HELPER_COMMANDS,
-  LOCAL_BRIDGE_HELPER_MESSAGE_VERSION,
-  LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM,
-  LOCAL_BRIDGE_HELPER_ROUTE,
-  LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM,
-  LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM,
-  LOCAL_BRIDGE_MODEL,
-  LOCAL_BRIDGE_MODEL_PROVENANCE,
-  LOCAL_BRIDGE_PROVIDER_ID,
-  redactLocalBridgeSecretText,
-} from '../local-bridge/core-contract.ts';
-import { getAdminSafeErrorName } from '../guarded-mutation-contract.ts';
-import type {
-  LocalBridgeHelperSurface,
-} from '../local-bridge/core-contract.ts';
-import {
-  STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
-  type StoryboardGeneratedImageProvenance,
-  type StoryboardGenerateRequest,
-  type StoryboardScene,
-  type StoryboardSceneGeneratedImage,
-} from './types.ts';
-import type {
-  ThumbnailGenerationResult,
-  ThumbnailGeneratorPayload,
-  ThumbnailReferenceImage,
-  ThumbnailReferenceRole,
-} from '../youtube-thumbnail-generator/types.ts';
 
 const DEFAULT_PORT = 17873;
-const LOCAL_CODEX_RESPONSES_ENDPOINT = 'https://chatgpt.com/backend-api/codex/responses' as const;
-const DEFAULT_LOCAL_CODEX_SCRIPT = 'scripts/codex-imagegen-storyboard-provider.py' as const;
+
 const DEFAULT_LOCAL_CODEX_THUMBNAIL_SCRIPT = 'scripts/codex-imagegen-thumbnail-provider.py' as const;
-const DEFAULT_SIZE = '1536x864' as const;
-const STORYBOARD_LOCAL_BRIDGE_MAX_SCENES = STORYBOARD_IMAGE_GENERATION_BATCH_SIZE;
+
 const STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES = 512 * 1024;
+
 const THUMBNAIL_LOCAL_BRIDGE_MAX_BODY_BYTES = 64 * 1024 * 1024;
+
 const STORYBOARD_LOCAL_BRIDGE_ALLOWED_ORIGINS = LOCAL_BRIDGE_ALLOWED_ORIGINS;
-const STORYBOARD_GENERATED_IMAGE_TRUST_POLICY = 'storyboard-gpt-image-2-panel-v1' as const;
+
 const STORYBOARD_IMAGE_PROVIDER_ID = LOCAL_BRIDGE_PROVIDER_ID;
+
 const STORYBOARD_IMAGE_PROVIDER_MODEL = LOCAL_BRIDGE_MODEL;
+
 const STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE = LOCAL_BRIDGE_MODEL_PROVENANCE;
+
 const THUMBNAIL_TARGET_WIDTH = 1280 as const;
+
 const THUMBNAIL_TARGET_HEIGHT = 720 as const;
+
 const LOCAL_BRIDGE_AUTH_STATUS_PATH = '/auth-status' as const;
+
 const STORYBOARD_LOCAL_BRIDGE_IMAGES_PATH = '/v1/storyboard/images' as const;
+
 const THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH = '/v1/youtube-thumbnail/images' as const;
-const COMMAND_TIMEOUT_MS = 5 * 60 * 1000;
+
 const THUMBNAIL_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
+
 const MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
+
 const LOCAL_BRIDGE_PROCESS_TERMINATION_GRACE_MS = 250;
+
 const LOCAL_BRIDGE_PROVIDER_ENVIRONMENT_KEYS = [
   'CODEX_HOME',
   'CODEX_IMAGEGEN_AGENT_EFFORT',
@@ -86,31 +69,29 @@ const LOCAL_BRIDGE_PROVIDER_ENVIRONMENT_KEYS = [
   'WINDIR',
   'path',
 ] as const;
-const MAX_IMAGE_OUTPUT_BYTES = 3 * 1024 * 1024;
-const MAX_IMAGE_DIMENSION = 4096;
-const MAX_IMAGE_PIXELS = 16 * 1024 * 1024;
-const MAX_IMAGE_FRAMES = 1;
-const MAX_REFERENCE_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_RUN_BYTES = 48 * 1024 * 1024;
-const LOCAL_BRIDGE_SESSION_TTL_MS = 5 * 60 * 1000;
-const LOCAL_BRIDGE_MAX_ACTIVE_SESSIONS = 32;
-const LOCAL_BRIDGE_MAX_USED_NONCES = 128;
-const LOCAL_BRIDGE_GLOBAL_GENERATION_CONCURRENCY = 2;
-const LOCAL_BRIDGE_GLOBAL_GENERATION_QUEUE_LIMIT = 8;
-const STORYBOARD_LOCAL_BRIDGE_DEFAULT_CONCURRENCY = 4;
 
-const STORYBOARD_LOCAL_BRIDGE_MIN_SCENE_NO = 1;
-const STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_NO = STORYBOARD_LOCAL_BRIDGE_MAX_SCENES;
-const STORYBOARD_LOCAL_BRIDGE_MAX_TITLE_LENGTH = 140;
-const STORYBOARD_LOCAL_BRIDGE_MAX_LOGLINE_LENGTH = 240;
-const STORYBOARD_LOCAL_BRIDGE_MAX_REQUEST_PROMPT_LENGTH = 400;
-const STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TITLE_LENGTH = 512;
-const STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TEXT_LENGTH = 2048;
-const STORYBOARD_LOCAL_BRIDGE_MAX_HEATMAP_VIDEO_ID_LENGTH = 256;
-const STORYBOARD_LOCAL_BRIDGE_MAX_HEATMAP_URL_LENGTH = 2048;
-const STORYBOARD_LOCAL_BRIDGE_MAX_HEATMAP_TIME_LENGTH = 128;
-const STORYBOARD_LOCAL_BRIDGE_MAX_PRODUCTION_CHECKLIST_ITEMS = 12;
-const STORYBOARD_LOCAL_BRIDGE_MAX_PRODUCTION_CHECKLIST_ITEM_LENGTH = 512;
+const MAX_IMAGE_OUTPUT_BYTES = 3 * 1024 * 1024;
+
+const MAX_IMAGE_DIMENSION = 4096;
+
+const MAX_IMAGE_PIXELS = 16 * 1024 * 1024;
+
+const MAX_IMAGE_FRAMES = 1;
+
+const MAX_REFERENCE_IMAGE_BYTES = 8 * 1024 * 1024;
+
+const MAX_RUN_BYTES = 48 * 1024 * 1024;
+
+const LOCAL_BRIDGE_SESSION_TTL_MS = 5 * 60 * 1000;
+
+const LOCAL_BRIDGE_MAX_ACTIVE_SESSIONS = 32;
+
+const LOCAL_BRIDGE_MAX_USED_NONCES = 128;
+
+const LOCAL_BRIDGE_GLOBAL_GENERATION_CONCURRENCY = 2;
+
+const LOCAL_BRIDGE_GLOBAL_GENERATION_QUEUE_LIMIT = 8;
+
 type BridgeErrorCode =
   | 'not_found'
   | 'origin_forbidden'
@@ -121,6 +102,7 @@ type BridgeErrorCode =
   | 'auth_required'
   | 'method_not_allowed'
   | 'session_invalid';
+
 
 class LocalBridgeHttpError extends Error {
   readonly code: BridgeErrorCode;
@@ -137,6 +119,7 @@ class LocalBridgeHttpError extends Error {
     this.status = status;
   }
 }
+
 
 type ProviderResult = {
   ok?: boolean;
@@ -169,23 +152,6 @@ type ProviderResult = {
   error?: string;
 };
 
-type StoryboardLocalBridgeImagesRequest = {
-  title: string;
-  logline: string;
-  request: StoryboardGenerateRequest;
-  scenes: StoryboardScene[];
-  sourceResult?: unknown;
-};
-
-type StoryboardLocalBridgeImagesResponse = {
-  ok: true;
-  providerId: typeof STORYBOARD_IMAGE_PROVIDER_ID;
-  model: typeof STORYBOARD_IMAGE_PROVIDER_MODEL;
-  images: Array<{
-    sceneNo: number;
-    image: StoryboardSceneGeneratedImage;
-  }>;
-};
 
 type ThumbnailLocalBridgeReferenceImage = {
   name: string;
@@ -193,14 +159,17 @@ type ThumbnailLocalBridgeReferenceImage = {
   role: ThumbnailReferenceRole;
   dataBase64: string;
 };
+
 type ValidatedThumbnailLocalBridgeReferenceImage = Omit<ThumbnailLocalBridgeReferenceImage, 'dataBase64'> & {
   bytes: Buffer;
 };
+
 
 type ThumbnailLocalBridgeImagesRequest = {
   payload: ThumbnailGeneratorPayload;
   referenceImages: ValidatedThumbnailLocalBridgeReferenceImage[];
 };
+
 
 type ThumbnailLocalBridgeImagesResponse = {
   ok: true;
@@ -208,6 +177,7 @@ type ThumbnailLocalBridgeImagesResponse = {
   model: typeof STORYBOARD_IMAGE_PROVIDER_MODEL;
   result: ThumbnailGenerationResult;
 };
+
 
 export type StoryboardLocalBridgeServerOptions = {
   host?: string;
@@ -225,14 +195,17 @@ export type StoryboardLocalBridgeServerOptions = {
   log?: (message: string) => void;
 };
 
+
 function redactStoryboardLocalBridgeSecretText(value: string, token?: string | null) {
   return redactLocalBridgeSecretText(value, token);
 }
+
 
 function compactText(value: string, maxLength: number) {
   const compact = value.replace(/\s+/g, ' ').trim();
   return compact.length > maxLength ? `${compact.slice(0, maxLength - 1)}…` : compact;
 }
+
 function isOptionalBoundedImageDimension(value: unknown): value is number | undefined {
   return value === undefined || (
     typeof value === 'number'
@@ -243,33 +216,19 @@ function isOptionalBoundedImageDimension(value: unknown): value is number | unde
 }
 
 
-function buildLocalBridgeScenePrompt(scene: StoryboardScene, context: { title: string; logline: string; request: StoryboardGenerateRequest }) {
-  return [
-    'Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.',
-    'The entire image must be one coherent scene; never draw storyboard sheets, comic pages, split screens, internal borders, captions, subtitles, labels, readable text, watermarks, or UI chrome.',
-    'Style: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point.',
-    'Safety: do not recreate a real person likeness; no recognizable face and no detailed eyes, nose, or mouth. Human presence may appear only through cropped hands, chopsticks, over-shoulder silhouette, or back-of-head silhouette.',
-    `Storyboard title: ${compactText(context.title, 120)}`,
-    `Overall logline: ${compactText(context.logline, 180)}`,
-    `User brief: ${compactText(context.request.prompt, 220)}`,
-    `CUT ${scene.sceneNo}: ${compactText(scene.title, 80)}`,
-    `Visual direction: ${compactText(scene.visualDirection, 260)}`,
-    `Operator intent: ${compactText(scene.operatorIntent, 180)}`,
-    `Caption idea for mood only, do not render readable text: ${compactText(scene.captionIdea, 120)}`,
-    `Heatmap evidence mood: ${scene.heatmapEvidence?.peakTime ?? 'unknown'}, replay score ${scene.heatmapEvidence?.replayScore ?? 0}.`,
-    'Output only the image. Fill the whole frame with one coherent CUT.',
-  ].join('\n');
-}
-
 function sha256(value: string | Buffer) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+
 function generatedToken() {
   return randomBytes(24).toString('base64url');
 }
+
 let activeLocalBridgeGenerations = 0;
+
 const queuedLocalBridgeGenerations: Array<() => void> = [];
+
 
 async function withLocalBridgeGenerationSlot<T>(signal: AbortSignal | undefined, work: () => Promise<T>) {
   if (signal?.aborted) {
@@ -309,11 +268,13 @@ async function withLocalBridgeGenerationSlot<T>(signal: AbortSignal | undefined,
   }
 }
 
+
 function tokenMatches(expected: string, candidate: string) {
   const expectedHash = Buffer.from(sha256(expected), 'hex');
   const candidateHash = Buffer.from(sha256(candidate), 'hex');
   return expectedHash.length === candidateHash.length && timingSafeEqual(expectedHash, candidateHash);
 }
+
 
 function parseAllowedOrigins(value?: string, fallback?: string[]) {
   const raw = value?.trim()
@@ -322,14 +283,17 @@ function parseAllowedOrigins(value?: string, fallback?: string[]) {
   return new Set(raw?.length ? raw : [...STORYBOARD_LOCAL_BRIDGE_ALLOWED_ORIGINS]);
 }
 
+
 function getRequestOrigin(request: IncomingMessage) {
   const origin = request.headers.origin;
   return typeof origin === 'string' ? origin : null;
 }
 
+
 function isLoopbackHost(hostname: string) {
   return hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '[::1]';
 }
+
 
 function parseBoundLoopbackOrigin(value: string, expectedPort: number) {
   if (
@@ -363,6 +327,7 @@ function parseBoundLoopbackOrigin(value: string, expectedPort: number) {
   return parsed.origin;
 }
 
+
 function getBoundLoopbackOrigin(request: IncomingMessage) {
   const port = request.socket.localPort;
   if (typeof port !== 'number' || !Number.isSafeInteger(port) || port < 1 || port > 65535) {
@@ -374,6 +339,7 @@ function getBoundLoopbackOrigin(request: IncomingMessage) {
   }
   return parseBoundLoopbackOrigin(hostHeader.trim(), port);
 }
+
 
 function parseBridgeRequestUrl(request: IncomingMessage) {
   const rawPath = request.url || '';
@@ -393,6 +359,7 @@ function parseBridgeRequestUrl(request: IncomingMessage) {
   }
 }
 
+
 function requestOriginCandidates(bridgeOrigin: string) {
   const port = new URL(bridgeOrigin).port || '80';
   const suffix = port === '80' ? '' : `:${port}`;
@@ -402,6 +369,7 @@ function requestOriginCandidates(bridgeOrigin: string) {
     `http://[::1]${suffix}`,
   ]);
 }
+
 
 function applyCors(response: ServerResponse, origin: string, request: IncomingMessage) {
   response.setHeader('Access-Control-Allow-Origin', origin);
@@ -417,9 +385,11 @@ function applyCors(response: ServerResponse, origin: string, request: IncomingMe
   }
 }
 
+
 function isAllowedOrigin(origin: string, bridgeOrigin: string, allowedOrigins: Set<string>) {
   return allowedOrigins.has(origin) || requestOriginCandidates(bridgeOrigin).has(origin);
 }
+
 
 function assertAllowedOrigin(
   request: IncomingMessage,
@@ -435,12 +405,14 @@ function assertAllowedOrigin(
   return origin;
 }
 
+
 function bearerToken(request: IncomingMessage) {
   const value = request.headers.authorization;
   if (typeof value !== 'string') return null;
   const match = /^Bearer[ \t]+(\S+)$/i.exec(value.trim());
   return match?.[1]?.trim() || null;
 }
+
 
 function assertPaired(request: IncomingMessage, expectedToken: string) {
   const token = bearerToken(request);
@@ -449,6 +421,7 @@ function assertPaired(request: IncomingMessage, expectedToken: string) {
   }
 }
 
+
 function respondJson(response: ServerResponse, status: number, payload: unknown, origin?: string, request?: IncomingMessage) {
   if (origin && request) applyCors(response, origin, request);
   response.statusCode = status;
@@ -456,6 +429,7 @@ function respondJson(response: ServerResponse, status: number, payload: unknown,
   response.setHeader('Cache-Control', 'no-store');
   response.end(`${JSON.stringify(payload)}\n`);
 }
+
 
 function respondHtml(response: ServerResponse, status: number, html: string) {
   response.statusCode = status;
@@ -467,6 +441,7 @@ function respondHtml(response: ServerResponse, status: number, html: string) {
   response.end(html);
 }
 
+
 type LocalBridgeHelperRouteContext = {
   openerOrigin: string;
   sessionId: string;
@@ -474,6 +449,7 @@ type LocalBridgeHelperRouteContext = {
   bridgeOrigin: string;
   sessionBinding: string;
 };
+
 
 type LocalBridgeSession = {
   bridgeOrigin: string;
@@ -483,15 +459,18 @@ type LocalBridgeSession = {
   surface: LocalBridgeHelperSurface;
 };
 
+
 function pruneExpiredLocalBridgeSessions(sessions: Map<string, LocalBridgeSession>, now = Date.now()) {
   for (const [sessionId, session] of sessions) {
     if (session.expiresAt <= now) sessions.delete(sessionId);
   }
 }
+
 function requireLocalBridgeHelperSurface(value: string | null): LocalBridgeHelperSurface {
   if (value === 'storyboard' || value === 'thumbnail') return value;
   throw new LocalBridgeHttpError('invalid_payload', 'Helper surface query is invalid.', 400);
 }
+
 
 
 function createLocalBridgeHelperSession(
@@ -546,6 +525,7 @@ function createLocalBridgeHelperSession(
   };
 }
 
+
 function assertLocalBridgeHelperSession(
   request: IncomingMessage,
   bridgeOrigin: string,
@@ -583,12 +563,14 @@ function assertLocalBridgeHelperSession(
   session.requestNonces.add(requestNonce);
 }
 
+
 function serializeInlineScriptValue(value: unknown) {
   return JSON.stringify(value)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026');
 }
+
 
 function buildLocalBridgeHelperHtml(context: LocalBridgeHelperRouteContext) {
   const configJson = serializeInlineScriptValue(context);
@@ -811,6 +793,7 @@ function buildLocalBridgeHelperHtml(context: LocalBridgeHelperRouteContext) {
 </html>`;
 }
 
+
 async function readJsonBody(request: IncomingMessage, maxBytes = STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES) {
   const contentType = request.headers['content-type'];
   if (typeof contentType !== 'string' || !contentType.toLowerCase().includes('application/json')) {
@@ -833,11 +816,14 @@ async function readJsonBody(request: IncomingMessage, maxBytes = STORYBOARD_LOCA
   }
 }
 
+
 type PlainRecord = Record<string, unknown>;
+
 
 function invalidStoryboardLocalBridgePayload(): never {
   throw new LocalBridgeHttpError('invalid_payload', 'Invalid storyboard local bridge payload.', 400);
 }
+
 
 function assertPlainRecord(value: unknown): PlainRecord {
   if (
@@ -856,6 +842,7 @@ function assertPlainRecord(value: unknown): PlainRecord {
   return value as PlainRecord;
 }
 
+
 function assertExactPlainRecord(
   value: unknown,
   allowedKeys: readonly string[],
@@ -871,6 +858,7 @@ function assertExactPlainRecord(
   }
   return record;
 }
+
 
 function assertPlainArray(value: unknown, maxLength: number): unknown[] {
   if (
@@ -892,6 +880,7 @@ function assertPlainArray(value: unknown, maxLength: number): unknown[] {
   });
 }
 
+
 function assertBoundedString(record: PlainRecord, key: string, maxLength: number) {
   const value = record[key];
   if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
@@ -900,181 +889,16 @@ function assertBoundedString(record: PlainRecord, key: string, maxLength: number
   return value;
 }
 
-function assertSafeIntegerInRange(record: PlainRecord, key: string, min: number, max: number): number {
-  const value = record[key];
-  if (
-    typeof value !== 'number'
-    || !Number.isSafeInteger(value)
-    || value < min
-    || value > max
-  ) {
-    return invalidStoryboardLocalBridgePayload();
-  }
-  return value;
-}
-
-function assertFiniteNumberInRange(record: PlainRecord, key: string, min: number, max: number): number {
-  const value = record[key];
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
-    return invalidStoryboardLocalBridgePayload();
-  }
-  return value;
-}
-
-function assertStoryboardGenerateRequest(value: unknown): StoryboardGenerateRequest {
-  const request = assertExactPlainRecord(value, [
-    'prompt',
-    'tone',
-    'targetLengthMinutes',
-    'sourceLimit',
-    'segmentCount',
-    'includeProductionNotes',
-    'generationMode',
-  ]);
-  const tone = assertBoundedString(request, 'tone', 32);
-  const generationMode = assertBoundedString(request, 'generationMode', 32);
-  const includeProductionNotes = request.includeProductionNotes;
-  if (
-    (tone !== 'warm' && tone !== 'energetic' && tone !== 'documentary' && tone !== 'comfort') ||
-    (generationMode !== 'local_heatmap' && generationMode !== 'backend_agent') ||
-    typeof includeProductionNotes !== 'boolean'
-  ) {
-    return invalidStoryboardLocalBridgePayload();
-  }
-  return {
-    prompt: assertBoundedString(request, 'prompt', STORYBOARD_LOCAL_BRIDGE_MAX_REQUEST_PROMPT_LENGTH),
-    tone,
-    targetLengthMinutes: assertSafeIntegerInRange(request, 'targetLengthMinutes', 6, 60),
-    sourceLimit: assertSafeIntegerInRange(request, 'sourceLimit', 10, 250),
-    segmentCount: assertSafeIntegerInRange(
-      request,
-      'segmentCount',
-      STORYBOARD_LOCAL_BRIDGE_MIN_SCENE_NO,
-      STORYBOARD_LOCAL_BRIDGE_MAX_SCENES,
-    ),
-    includeProductionNotes,
-    generationMode,
-  };
-}
-
-function assertStoryboardScene(value: unknown): StoryboardScene {
-  const scene = assertExactPlainRecord(value, [
-    'sceneNo',
-    'title',
-    'durationSec',
-    'operatorIntent',
-    'visualDirection',
-    'hostBeat',
-    'captionIdea',
-    'heatmapEvidence',
-    'productionChecklist',
-  ]);
-  const heatmapEvidence = assertExactPlainRecord(scene.heatmapEvidence, [
-    'videoId',
-    'youtubeLink',
-    'peakTime',
-    'replayScore',
-    'reason',
-  ]);
-  const productionChecklist = assertPlainArray(
-    scene.productionChecklist,
-    STORYBOARD_LOCAL_BRIDGE_MAX_PRODUCTION_CHECKLIST_ITEMS,
-  ).map((item) => {
-    if (
-      typeof item !== 'string' ||
-      item.length === 0 ||
-      item.length > STORYBOARD_LOCAL_BRIDGE_MAX_PRODUCTION_CHECKLIST_ITEM_LENGTH
-    ) {
-      return invalidStoryboardLocalBridgePayload();
-    }
-    return item;
-  });
-  return {
-    sceneNo: assertSafeIntegerInRange(
-      scene,
-      'sceneNo',
-      STORYBOARD_LOCAL_BRIDGE_MIN_SCENE_NO,
-      STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_NO,
-    ),
-    title: assertBoundedString(scene, 'title', STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TITLE_LENGTH),
-    durationSec: assertSafeIntegerInRange(scene, 'durationSec', 1, 60 * 60),
-    operatorIntent: assertBoundedString(
-      scene,
-      'operatorIntent',
-      STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TEXT_LENGTH,
-    ),
-    visualDirection: assertBoundedString(
-      scene,
-      'visualDirection',
-      STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TEXT_LENGTH,
-    ),
-    hostBeat: assertBoundedString(scene, 'hostBeat', STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TEXT_LENGTH),
-    captionIdea: assertBoundedString(scene, 'captionIdea', STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TEXT_LENGTH),
-    heatmapEvidence: {
-      videoId: assertBoundedString(
-        heatmapEvidence,
-        'videoId',
-        STORYBOARD_LOCAL_BRIDGE_MAX_HEATMAP_VIDEO_ID_LENGTH,
-      ),
-      youtubeLink: assertBoundedString(
-        heatmapEvidence,
-        'youtubeLink',
-        STORYBOARD_LOCAL_BRIDGE_MAX_HEATMAP_URL_LENGTH,
-      ),
-      peakTime: assertBoundedString(
-        heatmapEvidence,
-        'peakTime',
-        STORYBOARD_LOCAL_BRIDGE_MAX_HEATMAP_TIME_LENGTH,
-      ),
-      replayScore: assertFiniteNumberInRange(heatmapEvidence, 'replayScore', 0, 1),
-      reason: assertBoundedString(
-        heatmapEvidence,
-        'reason',
-        STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_TEXT_LENGTH,
-      ),
-    },
-    productionChecklist,
-  };
-}
-
-function assertImagesPayload(value: unknown): StoryboardLocalBridgeImagesRequest {
-  const payload = assertExactPlainRecord(
-    value,
-    ['title', 'logline', 'request', 'scenes', 'sourceResult'],
-    ['title', 'logline', 'request', 'scenes'],
-  );
-  if (
-    Object.prototype.hasOwnProperty.call(payload, 'sourceResult') &&
-    payload.sourceResult !== null
-  ) {
-    assertPlainRecord(payload.sourceResult);
-  }
-  const scenes = assertPlainArray(payload.scenes, STORYBOARD_LOCAL_BRIDGE_MAX_SCENES);
-  if (scenes.length === 0) return invalidStoryboardLocalBridgePayload();
-
-  const sceneNos = new Set<number>();
-  const validatedScenes = scenes.map((scene) => {
-    const validatedScene = assertStoryboardScene(scene);
-    if (sceneNos.has(validatedScene.sceneNo)) return invalidStoryboardLocalBridgePayload();
-    sceneNos.add(validatedScene.sceneNo);
-    return validatedScene;
-  });
-
-  return {
-    title: assertBoundedString(payload, 'title', STORYBOARD_LOCAL_BRIDGE_MAX_TITLE_LENGTH),
-    logline: assertBoundedString(payload, 'logline', STORYBOARD_LOCAL_BRIDGE_MAX_LOGLINE_LENGTH),
-    request: assertStoryboardGenerateRequest(payload.request),
-    scenes: validatedScenes,
-  };
-}
 
 function isThumbnailMime(value: unknown): value is ThumbnailReferenceImage['mime'] {
   return value === 'image/png' || value === 'image/jpeg' || value === 'image/webp';
 }
 
+
 function isThumbnailReferenceRole(value: unknown): value is ThumbnailReferenceRole {
   return value === 'host' || value === 'food' || value === 'object' || value === 'person' || value === 'other';
 }
+
 
 type ImageInspection = {
   frames: number;
@@ -1082,6 +906,7 @@ type ImageInspection = {
   mime: ThumbnailReferenceImage['mime'];
   width: number;
 };
+
 
 function inspectPng(bytes: Buffer): ImageInspection {
   const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -1124,6 +949,7 @@ function inspectPng(bytes: Buffer): ImageInspection {
   return { mime: 'image/png', frames: 1, width, height };
 }
 
+
 function inspectJpeg(bytes: Buffer): ImageInspection {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[bytes.length - 2] !== 0xff || bytes[bytes.length - 1] !== 0xd9) {
     throw new LocalBridgeHttpError('invalid_payload', 'Image format is invalid.', 400);
@@ -1159,6 +985,7 @@ function inspectJpeg(bytes: Buffer): ImageInspection {
   }
   throw new LocalBridgeHttpError('invalid_payload', 'Image format is invalid.', 400);
 }
+
 
 function inspectWebp(bytes: Buffer): ImageInspection {
   if (
@@ -1207,6 +1034,7 @@ function inspectWebp(bytes: Buffer): ImageInspection {
   return { mime: 'image/webp', frames: 1, ...dimensions };
 }
 
+
 function inspectImage(bytes: Buffer): ImageInspection {
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
     return inspectPng(bytes);
@@ -1217,6 +1045,7 @@ function inspectImage(bytes: Buffer): ImageInspection {
   }
   throw new LocalBridgeHttpError('invalid_payload', 'Image format is invalid.', 400);
 }
+
 
 function assertImageBounds(image: ImageInspection) {
   if (
@@ -1234,6 +1063,7 @@ function assertImageBounds(image: ImageInspection) {
     throw new LocalBridgeHttpError('invalid_payload', 'Image dimensions are invalid.', 400);
   }
 }
+
 
 function decodeCanonicalBase64(value: string) {
   const maxBase64Length = Math.ceil(MAX_REFERENCE_IMAGE_BYTES / 3) * 4;
@@ -1255,6 +1085,7 @@ function decodeCanonicalBase64(value: string) {
   }
   return bytes;
 }
+
 
 function assertThumbnailImagesPayload(value: unknown): ThumbnailLocalBridgeImagesRequest {
   const body = assertExactPlainRecord(value, ['payload', 'referenceImages']);
@@ -1332,9 +1163,11 @@ function assertThumbnailImagesPayload(value: unknown): ThumbnailLocalBridgeImage
   };
 }
 
+
 function getPathEnvironmentValue() {
   return process.env.PATH || process.env.Path || process.env.path || '';
 }
+
 
 function resolveCommandFromPath(command: string) {
   if (command.includes('/') || command.includes('\\') || isAbsolute(command)) {
@@ -1366,9 +1199,11 @@ function resolveCommandFromPath(command: string) {
   return command;
 }
 
+
 function shouldRunThroughWindowsCommandShell(command: string) {
   return process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command.trim());
 }
+
 
 function resolveLocalBridgePythonCommand() {
   const configuredPython = process.env.PYTHON?.trim();
@@ -1376,33 +1211,6 @@ function resolveLocalBridgePythonCommand() {
   return resolveCommandFromPath(process.platform === 'win32' ? 'python' : 'python3');
 }
 
-function resolveProviderCommand(options: StoryboardLocalBridgeServerOptions) {
-  if (options.providerCommand) {
-    return { command: options.providerCommand, args: options.providerArgs ?? [] };
-  }
-  const envCommand = process.env.TZUDONG_LOCAL_BRIDGE_PROVIDER_COMMAND || process.env.STORYBOARD_LOCAL_CODEX_COMMAND;
-  if (envCommand) {
-    const args = process.env.TZUDONG_LOCAL_BRIDGE_PROVIDER_ARGS_JSON || process.env.STORYBOARD_LOCAL_CODEX_ARGS_JSON;
-    return {
-      command: envCommand,
-      args: args ? JSON.parse(args) as string[] : [],
-    };
-  }
-  return {
-    command: resolveLocalBridgePythonCommand(),
-    args: [resolveStoryboardProviderScriptPath()],
-  };
-}
-
-function resolveStoryboardProviderScriptPath() {
-  const cwd = process.cwd();
-  const candidates = [
-    resolve(cwd, 'apps/web', DEFAULT_LOCAL_CODEX_SCRIPT),
-    resolve(cwd, DEFAULT_LOCAL_CODEX_SCRIPT),
-    resolve(resolveLocalBridgeRepoRoot(), DEFAULT_LOCAL_CODEX_SCRIPT),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
-}
 
 function resolveLocalBridgeRepoRoot() {
   const configured = process.env.TZUDONG_REPO_ROOT || process.env.CODEX_IMAGEGEN_WORKDIR;
@@ -1414,6 +1222,7 @@ function resolveLocalBridgeRepoRoot() {
   }
   return candidates[0];
 }
+
 
 function parseArgsJson(value: string | undefined) {
   if (!value?.trim()) return [];
@@ -1427,6 +1236,7 @@ function parseArgsJson(value: string | undefined) {
   }
 }
 
+
 function replacePlaceholders(
   args: string[],
   placeholders: Record<string, string>,
@@ -1436,6 +1246,7 @@ function replacePlaceholders(
     arg,
   ));
 }
+
 
 function resolveThumbnailProviderCommand(
   options: StoryboardLocalBridgeServerOptions,
@@ -1464,6 +1275,7 @@ function resolveThumbnailProviderCommand(
   };
 }
 
+
 function parseProviderStdout(stdout: string): ProviderResult {
   const jsonLine = stdout
     .split(/\r?\n/)
@@ -1481,6 +1293,7 @@ function parseProviderStdout(stdout: string): ProviderResult {
   }
 }
 
+
 type ProviderCommandTerminationReason =
   | 'aborted'
   | 'output_limit'
@@ -1488,11 +1301,13 @@ type ProviderCommandTerminationReason =
   | 'nonzero_exit'
   | 'timed_out';
 
+
 type ProviderCommandMessages = {
   aborted: string;
   outputLimit: string;
   timedOut: string;
 };
+
 
 type LocalBridgeProviderCommandOptions = {
   command: string;
@@ -1505,13 +1320,16 @@ type LocalBridgeProviderCommandOptions = {
   timeoutMs: number;
 };
 
+
 function providerCommandError(message: string, status = 502) {
   return new LocalBridgeHttpError('provider_execution_failed', message, status);
 }
 
+
 function hasValidProviderProcessPid(pid: number | undefined): pid is number {
   return typeof pid === 'number' && Number.isSafeInteger(pid) && pid > 0;
 }
+
 
 async function resolveTrustedProviderPath(path: string) {
   const candidate = isAbsolute(path.trim())
@@ -1543,6 +1361,7 @@ async function resolveTrustedProviderPath(path: string) {
   return resolvedPath;
 }
 
+
 async function resolveTrustedProviderLaunch(command: string, args: string[]) {
   const executable = await resolveTrustedProviderPath(command);
   const trustedArgs = await Promise.all(args.map(async (arg) => {
@@ -1557,6 +1376,7 @@ async function resolveTrustedProviderLaunch(command: string, args: string[]) {
   return { executable, args: trustedArgs };
 }
 
+
 function createLocalBridgeProviderEnvironment(extra?: NodeJS.ProcessEnv) {
   const environment: NodeJS.ProcessEnv = {
     NODE_ENV: process.env.NODE_ENV,
@@ -1570,6 +1390,7 @@ function createLocalBridgeProviderEnvironment(extra?: NodeJS.ProcessEnv) {
   }
   return environment;
 }
+
 
 function terminateWindowsProviderProcessTree(pid: number, force: boolean): Promise<void> {
   return new Promise((resolveTermination) => {
@@ -1598,6 +1419,7 @@ function terminateWindowsProviderProcessTree(pid: number, force: boolean): Promi
   });
 }
 
+
 function terminateProviderProcessTree(pid: number | undefined, signal: 'SIGTERM' | 'SIGKILL') {
   if (!hasValidProviderProcessPid(pid)) return Promise.resolve();
   if (process.platform === 'win32') {
@@ -1610,6 +1432,7 @@ function terminateProviderProcessTree(pid: number | undefined, signal: 'SIGTERM'
   }
   return Promise.resolve();
 }
+
 
 async function runLocalBridgeProviderCommand(
   options: LocalBridgeProviderCommandOptions,
@@ -1764,89 +1587,11 @@ async function runLocalBridgeProviderCommand(
   });
 }
 
-function runProviderCommand(
-  input: Record<string, unknown>,
-  options: StoryboardLocalBridgeServerOptions,
-  signal?: AbortSignal,
-) {
-  const { command, args } = resolveProviderCommand(options);
-  const configuredTimeoutMs = Number(process.env.TZUDONG_LOCAL_BRIDGE_TIMEOUT_MS);
-  const timeoutMs = options.commandTimeoutMs ?? (Number.isFinite(configuredTimeoutMs) && configuredTimeoutMs > 0 ? configuredTimeoutMs : COMMAND_TIMEOUT_MS);
-  return runLocalBridgeProviderCommand({
-    command,
-    args,
-    cwd: process.cwd(),
-    input,
-    messages: {
-      aborted: 'Provider request was aborted.',
-      outputLimit: 'Provider output exceeded limit.',
-      timedOut: 'Provider timed out.',
-    },
-    signal,
-    timeoutMs,
-  }).then(parseProviderStdout);
-}
-
-function isProof(value: ProviderResult, outputPath: string): value is Required<Pick<ProviderResult, 'providerId' | 'authMode' | 'endpoint' | 'requestToolType' | 'requestToolModel' | 'model' | 'modelProvenance' | 'responseId' | 'imageCallId' | 'imageItemCount' | 'rawImageItemTypes' | 'requestHash' | 'responseHash' | 'hasOpenAIAPIKey' | 'generatedAt'>> & ProviderResult {
-  return (
-    value.ok === true &&
-    value.providerId === STORYBOARD_IMAGE_PROVIDER_ID &&
-    value.authMode === 'codex_oauth' &&
-    value.endpoint === LOCAL_CODEX_RESPONSES_ENDPOINT &&
-    value.requestToolType === 'image_generation' &&
-    value.requestToolModel === STORYBOARD_IMAGE_PROVIDER_MODEL &&
-    value.model === STORYBOARD_IMAGE_PROVIDER_MODEL &&
-    value.modelProvenance === STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE &&
-    value.hasOpenAIAPIKey === false &&
-    value.outputPath === outputPath &&
-    typeof value.responseId === 'string' && value.responseId.length > 0 &&
-    typeof value.imageCallId === 'string' && value.imageCallId.length > 0 &&
-    typeof value.imageItemCount === 'number' && value.imageItemCount > 0 &&
-    Array.isArray(value.rawImageItemTypes) && value.rawImageItemTypes[0] === 'image_generation_call' &&
-    value.mime === 'image/png' &&
-    typeof value.bytes === 'number' &&
-    Number.isSafeInteger(value.bytes) &&
-    value.bytes > 0 &&
-    value.bytes <= MAX_IMAGE_OUTPUT_BYTES &&
-    isOptionalBoundedImageDimension(value.width) &&
-    isOptionalBoundedImageDimension(value.height) &&
-    (
-      value.width === undefined ||
-      value.height === undefined ||
-      value.width * value.height <= MAX_IMAGE_PIXELS
-    ) &&
-    (value.outputHash === undefined || /^[a-f0-9]{64}$/i.test(value.outputHash)) &&
-    typeof value.requestHash === 'string' && /^[a-f0-9]{64}$/i.test(value.requestHash) &&
-    typeof value.responseHash === 'string' && /^[a-f0-9]{64}$/i.test(value.responseHash) &&
-    typeof value.generatedAt === 'string' && Number.isFinite(Date.parse(value.generatedAt))
-  );
-}
-
-function toProvenance(proof: ProviderResult): StoryboardGeneratedImageProvenance {
-  return {
-    providerId: STORYBOARD_IMAGE_PROVIDER_ID,
-    authMode: 'codex_oauth',
-    endpoint: LOCAL_CODEX_RESPONSES_ENDPOINT,
-    agentModel: typeof proof.agentModel === 'string' ? proof.agentModel : undefined,
-    requestToolType: 'image_generation',
-    requestToolModel: STORYBOARD_IMAGE_PROVIDER_MODEL,
-    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
-    modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
-    responseId: proof.responseId || 'missing_response',
-    imageCallId: proof.imageCallId || 'missing_call',
-    imageItemCount: proof.imageItemCount || 1,
-    generatedImageItemTypes: proof.generatedImageItemTypes,
-    rawImageItemTypes: proof.rawImageItemTypes || ['image_generation_call'],
-    requestHash: proof.requestHash || '0'.repeat(64),
-    responseHash: proof.responseHash || '0'.repeat(64),
-    hasOpenAIAPIKey: false,
-    generatedAt: proof.generatedAt || new Date().toISOString(),
-  };
-}
 
 function defaultOutputDir(options: StoryboardLocalBridgeServerOptions) {
   return resolve(options.outputDir || process.env.TZUDONG_LOCAL_BRIDGE_OUTPUT_DIR || join(tmpdir(), 'tzudong-storyboard-local-bridge'));
 }
+
 function isPathInsideRoot(root: string, candidate: string) {
   const relativePath = relative(root, candidate);
   return relativePath !== ''
@@ -1855,13 +1600,16 @@ function isPathInsideRoot(root: string, candidate: string) {
     && !isAbsolute(relativePath);
 }
 
+
 function hasSameFileIdentity(expected: Awaited<ReturnType<typeof fsPromises.lstat>>, actual: Awaited<ReturnType<typeof fsPromises.lstat>>) {
   return expected.dev === actual.dev && expected.ino === actual.ino;
 }
 
+
 function rejectUntrustedProviderOutput(): never {
   throw new LocalBridgeHttpError('provider_execution_failed', 'Provider output could not be verified.', 502);
 }
+
 
 class LocalBridgeRunBudget {
   #usedBytes = 0;
@@ -1873,6 +1621,7 @@ class LocalBridgeRunBudget {
     this.#usedBytes += bytes;
   }
 }
+
 
 async function createPrivateLocalBridgeRunDirectory(options: StoryboardLocalBridgeServerOptions) {
   const outputRoot = defaultOutputDir(options);
@@ -1894,6 +1643,7 @@ async function createPrivateLocalBridgeRunDirectory(options: StoryboardLocalBrid
   return runDir;
 }
 
+
 async function withPrivateLocalBridgeRunDirectory<T>(
   options: StoryboardLocalBridgeServerOptions,
   work: (runDir: string, budget: LocalBridgeRunBudget) => Promise<T>,
@@ -1905,6 +1655,7 @@ async function withPrivateLocalBridgeRunDirectory<T>(
     await fsPromises.rm(runDir, { recursive: true, force: true, maxRetries: 2, retryDelay: 50 });
   }
 }
+
 async function assertPrivateRunArtifactBounds(runDir: string) {
   const initialRunStat = await fsPromises.lstat(runDir).catch(() => rejectUntrustedProviderOutput());
   const resolvedRunDir = await fsPromises.realpath(runDir).catch(() => rejectUntrustedProviderOutput());
@@ -1944,6 +1695,7 @@ async function assertPrivateRunArtifactBounds(runDir: string) {
   }
   await scan(runDir, 0);
 }
+
 
 async function readTrustedProviderPngOutput(
   runDir: string,
@@ -2032,83 +1784,7 @@ async function readTrustedProviderPngOutput(
     await handle?.close().catch(() => undefined);
   }
 }
-function resolveStoryboardSceneOutputPath(runDir: string, sceneNo: number) {
-  if (
-    !Number.isSafeInteger(sceneNo) ||
-    sceneNo < STORYBOARD_LOCAL_BRIDGE_MIN_SCENE_NO ||
-    sceneNo > STORYBOARD_LOCAL_BRIDGE_MAX_SCENE_NO
-  ) {
-    throw new LocalBridgeHttpError(
-      'invalid_payload',
-      'Invalid storyboard local bridge payload.',
-      400,
-    );
-  }
-  const outputPath = resolve(runDir, `cut-${sceneNo}.png`);
-  const relativeOutputPath = relative(runDir, outputPath);
-  if (
-    relativeOutputPath === '' ||
-    relativeOutputPath === '..' ||
-    relativeOutputPath.startsWith(`..${sep}`) ||
-    isAbsolute(relativeOutputPath)
-  ) {
-    throw new LocalBridgeHttpError(
-      'invalid_payload',
-      'Invalid storyboard local bridge payload.',
-      400,
-    );
-  }
-  return outputPath;
-}
 
-
-async function generateImageForScene(
-  scene: StoryboardScene,
-  payload: StoryboardLocalBridgeImagesRequest,
-  options: StoryboardLocalBridgeServerOptions,
-  runDir: string,
-  budget: LocalBridgeRunBudget,
-  signal?: AbortSignal,
-): Promise<{ sceneNo: number; image: StoryboardSceneGeneratedImage }> {
-  const prompt = buildLocalBridgeScenePrompt(scene, {
-    title: payload.title,
-    logline: payload.logline,
-    request: payload.request,
-  });
-  const outputPath = resolveStoryboardSceneOutputPath(runDir, scene.sceneNo);
-  const result = await withLocalBridgeGenerationSlot(signal, () => runProviderCommand({
-    prompt,
-    sceneNo: scene.sceneNo,
-    outputPath,
-    size: process.env.STORYBOARD_LOCAL_CODEX_IMAGE_SIZE || DEFAULT_SIZE,
-    outputFormat: 'png',
-    background: 'opaque',
-    agentModel: process.env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
-    reasoningEffort: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'low',
-    timeout: 300,
-  }, options, signal));
-  if (!isProof(result, outputPath)) {
-    throw new LocalBridgeHttpError('provider_execution_failed', 'Provider response did not satisfy exact gpt-image-2 provenance.', 502);
-  }
-  await assertPrivateRunArtifactBounds(runDir);
-  const { bytes: imageBytes } = await readTrustedProviderPngOutput(runDir, outputPath, result, budget);
-  const image: StoryboardSceneGeneratedImage = {
-    dataUrl: `data:image/png;base64,${imageBytes.toString('base64')}`,
-    mime: 'image/png',
-    providerId: STORYBOARD_IMAGE_PROVIDER_ID,
-    trustPolicy: STORYBOARD_GENERATED_IMAGE_TRUST_POLICY,
-    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
-    prompt,
-    generatedAt: result.generatedAt,
-    warnings: [
-      'local_bridge_provider: generated on the operator machine through a paired localhost bridge.',
-      'no_relay_transport: browser connected directly to 127.0.0.1; Vercel/Next did not proxy this request.',
-      `exact_provenance: ${result.requestToolType}.${result.requestToolModel} response=${result.responseId} call=${result.imageCallId}`,
-    ],
-    provenance: toProvenance(result),
-  };
-  return { sceneNo: scene.sceneNo, image };
-}
 
 function shouldRequireThumbnailHostReference(payload: ThumbnailGeneratorPayload) {
   const haystack = [
@@ -2119,6 +1795,7 @@ function shouldRequireThumbnailHostReference(payload: ThumbnailGeneratorPayload)
   ].filter(Boolean).join(' ').toLowerCase();
   return /쯔양|tzuyang|tzuyang/i.test(haystack);
 }
+
 
 function buildLocalBridgeThumbnailPrompt(
   payload: ThumbnailGeneratorPayload,
@@ -2141,11 +1818,13 @@ function buildLocalBridgeThumbnailPrompt(
   ].join('\n');
 }
 
+
 function extensionForThumbnailMime(mime: ThumbnailReferenceImage['mime']) {
   if (mime === 'image/jpeg') return 'jpg';
   if (mime === 'image/webp') return 'webp';
   return 'png';
 }
+
 
 async function writeThumbnailReferenceManifest(
   runDir: string,
@@ -2178,9 +1857,11 @@ async function writeThumbnailReferenceManifest(
   return { manifestPath, references };
 }
 
+
 function parseThumbnailProviderStdout(stdout: string): ProviderResult {
   return parseProviderStdout(stdout);
 }
+
 
 function runThumbnailProviderCommand(
   placeholders: Record<string, string>,
@@ -2210,6 +1891,7 @@ function runThumbnailProviderCommand(
     timeoutMs,
   }).then(parseThumbnailProviderStdout);
 }
+
 
 function isThumbnailProof(value: ProviderResult, outputPath: string): value is ProviderResult & {
   outputPath: string;
@@ -2249,6 +1931,7 @@ function isThumbnailProof(value: ProviderResult, outputPath: string): value is P
     typeof value.generatedAt === 'string' && Number.isFinite(Date.parse(value.generatedAt))
   );
 }
+
 
 async function generateThumbnailForLocalBridge(
   payload: ThumbnailLocalBridgeImagesRequest,
@@ -2329,6 +2012,7 @@ async function generateThumbnailForLocalBridge(
   };
 }
 
+
 function authFileExists(options: StoryboardLocalBridgeServerOptions) {
   if (options.fakeAuthReady || process.env.TZUDONG_LOCAL_BRIDGE_FAKE_AUTH_READY === '1') return true;
   const configured = options.authFile || process.env.CODEX_AUTH_FILE;
@@ -2338,68 +2022,6 @@ function authFileExists(options: StoryboardLocalBridgeServerOptions) {
   return existsSync(path);
 }
 
-function getStoryboardLocalBridgeConcurrency(sceneCount: number) {
-  const parsed = Number(process.env.TZUDONG_LOCAL_BRIDGE_STORYBOARD_CONCURRENCY);
-  const configured = Number.isFinite(parsed)
-    ? Math.trunc(parsed)
-    : STORYBOARD_LOCAL_BRIDGE_DEFAULT_CONCURRENCY;
-  return Math.max(
-    1,
-    Math.min(sceneCount, STORYBOARD_LOCAL_BRIDGE_MAX_SCENES, configured),
-  );
-}
-
-async function mapLocalBridgeItemsWithConcurrency<TItem, TResult>(
-  items: TItem[],
-  concurrency: number,
-  mapper: (item: TItem, index: number) => Promise<TResult>,
-) {
-  const results = new Array<TResult>(items.length);
-  let nextIndex = 0;
-  let failure: unknown;
-  async function runWorker() {
-    while (nextIndex < items.length && !failure) {
-      const index = nextIndex;
-      nextIndex += 1;
-      const item = items[index];
-      if (item === undefined) continue;
-      try {
-        results[index] = await mapper(item, index);
-      } catch (error) {
-        failure ??= error;
-      }
-    }
-  }
-  await Promise.all(
-    Array.from(
-      { length: Math.min(concurrency, items.length) },
-      () => runWorker(),
-    ),
-  );
-  if (failure) throw failure;
-  return results;
-}
-
-async function handleImages(
-  payloadValue: unknown,
-  options: StoryboardLocalBridgeServerOptions,
-  signal?: AbortSignal,
-): Promise<StoryboardLocalBridgeImagesResponse> {
-  const payload = assertImagesPayload(payloadValue);
-  const images = await withPrivateLocalBridgeRunDirectory(options, (runDir, budget) => (
-    mapLocalBridgeItemsWithConcurrency(
-      payload.scenes,
-      getStoryboardLocalBridgeConcurrency(payload.scenes.length),
-      (scene) => generateImageForScene(scene, payload, options, runDir, budget, signal),
-    )
-  ));
-  return {
-    ok: true,
-    providerId: STORYBOARD_IMAGE_PROVIDER_ID,
-    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
-    images,
-  };
-}
 
 async function handleThumbnailImages(
   payloadValue: unknown,
@@ -2418,6 +2040,7 @@ async function handleThumbnailImages(
     result,
   };
 }
+
 
 export function createStoryboardLocalBridgeServer(options: StoryboardLocalBridgeServerOptions = {}) {
   const token = options.token || process.env.TZUDONG_LOCAL_BRIDGE_TOKEN || generatedToken();
@@ -2517,9 +2140,7 @@ export function createStoryboardLocalBridgeServer(options: StoryboardLocalBridge
       if (request.method === 'POST' && url.pathname === STORYBOARD_LOCAL_BRIDGE_IMAGES_PATH) {
         assertPaired(request, token);
         assertLocalBridgeHelperSession(request, bridgeOrigin, url.pathname, sessions);
-        const body = await readJsonBody(request);
-        const payload = await handleImages(body, options, abortController.signal);
-        respondJson(response, 200, payload, origin, request);
+        respondJson(response, 410, { ok:false, error:'STORYBOARD_WORKFLOW_RETIRED' }, origin, request);
         return;
       }
       if (request.method === 'POST' && url.pathname === THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH) {
@@ -2554,6 +2175,7 @@ export function createStoryboardLocalBridgeServer(options: StoryboardLocalBridge
   return { server, token, allowedOrigins };
 }
 
+
 export async function startStoryboardLocalBridgeServer(options: StoryboardLocalBridgeServerOptions = {}) {
   const host = options.host || process.env.TZUDONG_LOCAL_BRIDGE_HOST || '127.0.0.1';
   const port = options.port ?? (Number(process.env.TZUDONG_LOCAL_BRIDGE_PORT) || DEFAULT_PORT);
@@ -2570,7 +2192,9 @@ export async function startStoryboardLocalBridgeServer(options: StoryboardLocalB
   return bridge;
 }
 
+
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
 if (isMain) {
   console.log(JSON.stringify({ code: 'storyboard_gemini_only', command: 'storyboard:gemini-worker' }));
   process.exitCode = process.argv.includes('--help') ? 0 : 2;

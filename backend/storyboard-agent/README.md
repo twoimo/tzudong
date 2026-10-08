@@ -1,5 +1,15 @@
 # 📊 Mukbang Storyboard Agent
 
+## 현재 실행 경로
+
+신규 스토리보드는 Gemini 전용 outbound worker로 실행합니다. `apps/web`에서 `bun run storyboard:gemini-worker -- --help`로 현재 인자를 확인하세요. 기존 작업 토큰·프로젝트 사용 한도·관리자 편집 결과를 보존합니다.
+
+RAG는 `scripts/run_rag_worker.py`를 통해 기존 worker URL에서 실행하며, `requirements-rag-worker.txt`의 가벼운 웹 의존성만 사용합니다. 임베딩은 `gemini-embedding-001`의 1024차원 정규화 벡터입니다. 모델·차원·task·정규화 지문으로 기존 벡터와 분리하며, 과거 문서는 원본 내용으로 조회할 수 있습니다. 재정렬은 Gemini 임베딩 cosine 방식으로 바뀌었으므로 과거 cross-encoder와의 품질 동등성을 주장하지 않습니다.
+
+호출량은 크롤러와 같은 `GEMINI_BUDGET_PROJECT`, `GEMINI_BUDGET_PATH` 또는 `TZUDONG_PROVIDER_STATE_DIR`, `GEMINI_REQUESTS_PER_MINUTE`, `GEMINI_MAX_INFLIGHT` 설정으로 공유합니다. 기본 RPM 값은 내부 pacing 설정이며 확인된 공급자 쿼터가 아닙니다. 429 cooldown과 응답 유실 후 명시적 복구를 유지하고 다른 모델로 대체하지 않습니다.
+
+`run-storyboard-agent.py`, `01-bge-embed-and-store-supabase.py`, `99-openai-embed-and-store-supabase.py` 및 이전 Codex/MLX/Ollama storyboard CLI는 실행 전에 retired 코드로 종료합니다. 기존 문서·임베딩·이미지와 데이터 이동 전용 스크립트는 보존합니다. 아래 LangGraph 구조는 과거 구현 참고 자료이며 신규 모델 실행 경로가 아닙니다.
+
 > **Tzuyang Agentic Framework** - 쯔양 유튜브 콘텐츠 분석 및 스토리보드 생성 에이전트
 
 ## 🎯 목표

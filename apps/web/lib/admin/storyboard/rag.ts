@@ -12,9 +12,9 @@ export type StoryboardRagDocumentSource =
 
 export type StoryboardRagProviderKind = 'required_model_provider';
 
-export type StoryboardRagEmbeddingProviderId = 'BAAI/bge-m3';
+export type StoryboardRagEmbeddingProviderId = 'gemini-embedding-001' | 'BAAI/bge-m3';
 
-export type StoryboardRagRerankerProviderId = 'BAAI/bge-reranker-v2-m3';
+export type StoryboardRagRerankerProviderId = 'gemini-embedding-001:cosine' | 'BAAI/bge-reranker-v2-m3';
 
 export type StoryboardRagProviderDescriptor = {
   id: StoryboardRagEmbeddingProviderId | StoryboardRagRerankerProviderId;
@@ -35,7 +35,7 @@ export type StoryboardRagModelExecution = 'required_live_provider';
 
 export type StoryboardRagModelDescriptor = {
   id: string;
-  provider: 'ollama' | 'flag_embedding' | 'huggingface' | 'gemini_cli' | 'openai_api';
+  provider: 'gemini-api';
   role: StoryboardRagModelRole;
   modelLabel: string;
   execution: StoryboardRagModelExecution;
@@ -97,7 +97,7 @@ export type StoryboardRagExecutionProfile = {
 export type StoryboardRagModelStackDiagnostics = {
   schemaVersion: 1;
   policy: 'required_live_model_stack_fail_closed';
-  allScreenshotModelsRegistered: true;
+  allScreenshotModelsRegistered: boolean;
   providerUnavailableBehavior: 'fail_closed';
   ciProviderMode: 'mock_required_providers_only';
   executionProfile: StoryboardRagExecutionProfile;
@@ -190,145 +190,35 @@ const MIN_RELEVANT_CANDIDATE_SCORE = 0.11;
 const REQUIRED_EMBEDDING_PROVIDER: StoryboardRagProviderDescriptor = {
   id: 'BAAI/bge-m3',
   kind: 'required_model_provider',
-  modelLabel: 'Required BGE-M3 embedding provider',
+  modelLabel: 'Historical BGE-M3 local fixture identity; no model execution',
   evidenceBound: true,
 };
 
 const REQUIRED_RERANKER_PROVIDER: StoryboardRagProviderDescriptor = {
   id: 'BAAI/bge-reranker-v2-m3',
   kind: 'required_model_provider',
-  modelLabel: 'Required BGE reranker v2 M3 provider',
+  modelLabel: 'Historical BGE reranker v2 M3 local fixture identity; no model execution',
   evidenceBound: true,
 };
+// Historical screenshot stack is replaced by the supported Gemini execution contract.
 const SCREENSHOT_RAG_MODEL_STACK: StoryboardRagModelDescriptor[] = [
-  {
-    id: 'a.x-4.0-light-imatrix:Q8_0',
-    provider: 'ollama',
-    role: 'contextual_retrieval',
-    modelLabel: 'Required Contextual Retrieval context generator (Q8_0)',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    localPullId: 'cookieshake/a.x-4.0-light-imatrix:Q8_0',
-    requiredEnv: 'STORYBOARD_RAG_PULL_OLLAMA_MODELS',
-  },
-  {
-    id: 'bge-m3',
-    provider: 'flag_embedding',
-    role: 'dense_embedding',
-    modelLabel: 'Required BGE-M3 dense embedding',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_AGENT_ENABLE_BGE_RETRIEVAL',
-  },
-  {
-    id: 'bge-m3',
-    provider: 'flag_embedding',
-    role: 'sparse_embedding',
-    modelLabel: 'Required BGE-M3 sparse lexical embedding',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_AGENT_ENABLE_BGE_RETRIEVAL',
-  },
-  {
-    id: 'bge-reranker-v2-m3',
-    provider: 'flag_embedding',
-    role: 'reranker',
-    modelLabel: 'Required BGE reranker v2 M3 cross-encoder reranking',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_AGENT_ENABLE_BGE_RETRIEVAL',
-  },
-  {
-    id: 'LLaVA-NeXT-Video-7B-hf',
-    provider: 'huggingface',
-    role: 'video_captioning',
-    modelLabel: 'Required video captioning for most-replayed frames',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_AGENT_ENABLE_VIDEO_CAPTIONING',
-  },
-  {
-    id: 'gemini-cli',
-    provider: 'gemini_cli',
-    role: 'llm_judge',
-    modelLabel: 'Required Gemini CLI planning and LLM-as-a-judge route',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_AGENT_ENABLE_REAL_JUDGE',
-  },
-  {
-    id: 'openai-api',
-    provider: 'openai_api',
-    role: 'llm_judge',
-    modelLabel: 'Required OpenAI API LLM-as-a-judge route',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_AGENT_ENABLE_REAL_JUDGE',
-  },
-  {
-    id: 'exaone3.5:7.8b',
-    provider: 'ollama',
-    role: 'llm_judge',
-    modelLabel: 'Required EXAONE Korean judge experiment',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_RAG_PULL_OLLAMA_MODELS',
-  },
-  {
-    id: 'EEVE-Korean-Instruct-10.8B',
-    provider: 'ollama',
-    role: 'llm_judge',
-    modelLabel: 'Required EEVE Korean instruct judge experiment',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    localPullId: 'bnksys/eeve:10.8b-korean-instruct-q8-v1',
-    requiredEnv: 'STORYBOARD_RAG_PULL_OLLAMA_MODELS',
-  },
-  {
-    id: 'qwen3:8b',
-    provider: 'ollama',
-    role: 'llm_judge',
-    modelLabel: 'Required Qwen3 judge/planning experiment',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_RAG_PULL_OLLAMA_MODELS',
-  },
-  {
-    id: 'solar:10.7b-instruct-v1-q5_0',
-    provider: 'ollama',
-    role: 'llm_judge',
-    modelLabel: 'Required Solar Korean judge/planning experiment',
-    execution: 'required_live_provider',
-    unavailableBehavior: 'fail_closed',
-    ciProviderMode: 'mock_required_provider',
-    providerRequired: true,
-    requiredEnv: 'STORYBOARD_RAG_PULL_OLLAMA_MODELS',
-  },
+  { id: 'gemini-embedding-001', provider: 'gemini-api', role: 'dense_embedding',
+    modelLabel: 'Gemini 1024-dimension normalized retrieval embedding',
+    execution: 'required_live_provider', unavailableBehavior: 'fail_closed',
+    ciProviderMode: 'mock_required_provider', providerRequired: true },
+  { id: 'gemini-embedding-001:cosine', provider: 'gemini-api', role: 'reranker',
+    modelLabel: 'Gemini embedding cosine candidate ranking',
+    execution: 'required_live_provider', unavailableBehavior: 'fail_closed',
+    ciProviderMode: 'mock_required_provider', providerRequired: true },
+  { id: 'gemini-3.8-flash', provider: 'gemini-api', role: 'video_captioning',
+    modelLabel: 'Gemini frame captioning',
+    execution: 'required_live_provider', unavailableBehavior: 'fail_closed',
+    ciProviderMode: 'mock_required_provider', providerRequired: true },
 ];
 
+const GPU_WORKER_URL_ENV = 'STORYBOARD_RAG_GPU_WORKER_URL' as const;
 const PROFILE_ENV = 'STORYBOARD_RAG_EXECUTION_PROFILE' as const;
 const WORKER_URL_ENV = 'STORYBOARD_RAG_WORKER_URL' as const;
-const GPU_WORKER_URL_ENV = 'STORYBOARD_RAG_GPU_WORKER_URL' as const;
 
 function profileStage(
   component: StoryboardRagProfileStage['component'],
@@ -373,78 +263,22 @@ function profile(
   };
 }
 
-const STORYBOARD_RAG_EXECUTION_PROFILES: Record<StoryboardRagExecutionProfileId, StoryboardRagExecutionProfile> = {
-  xps_9550_local_dev: profile(
-    'xps_9550_local_dev',
-    'XPS 9550 로컬 개발',
-    '저전력 Windows 로컬 개발 장비',
-    'BGE는 로컬 worker에서 1개씩 큐잉하고, LLaVA 같은 GPU 캡션은 원격 GPU worker를 필수 endpoint로 분리합니다.',
-    false,
-    [
-      profileStage('bge_embed', 'BAAI/bge-m3 dense/sparse embedding', 'local_worker', ['enable', 'queue', 'unload_after_request'], 180_000, 'BAAI/bge-m3 설치 후 worker 재시작'),
-      profileStage('bge_rerank', 'BAAI/bge-reranker-v2-m3 rerank', 'local_worker', ['enable', 'queue', 'unload_after_request'], 180_000, 'BAAI/bge-reranker-v2-m3 설치 후 worker 재시작'),
-      profileStage('llava_caption', 'LLaVA-NeXT-Video caption', 'remote_worker', ['remote_required', 'queue'], 600_000, 'GPU worker endpoint 확인 또는 LLaVA 모델 다운로드', GPU_WORKER_URL_ENV),
-      profileStage('ollama_judge', 'Ollama judge models', 'local_ollama', ['enable', 'queue', 'unload_after_request'], 240_000, 'Ollama 실행 및 exaone/EEVE/qwen/solar 모델 pull'),
-      profileStage('gemini_openai_judge', 'Gemini/OpenAI OAuth judge', 'oauth_provider', ['enable', 'queue'], 240_000, 'Gemini/OpenAI OAuth 파일과 quota 확인'),
-    ],
-  ),
-  vps_6c_12gb: profile(
-    'vps_6c_12gb',
-    '6c/12GB VPS',
-    'CPU/메모리 제한이 있는 운영 보조 worker',
-    'BGE 검색은 작은 배치로 큐잉하고, LLaVA와 큰 Ollama judge는 원격 GPU worker 또는 OAuth judge로 분리합니다.',
-    false,
-    [
-      profileStage('bge_embed', 'BAAI/bge-m3 dense/sparse embedding', 'local_worker', ['enable', 'queue'], 240_000, 'BAAI/bge-m3 배치 크기를 낮추고 worker 재시작'),
-      profileStage('bge_rerank', 'BAAI/bge-reranker-v2-m3 rerank', 'local_worker', ['enable', 'queue', 'unload_after_request'], 240_000, 'BAAI/bge-reranker-v2-m3 모델 설치 또는 원격 worker 전환'),
-      profileStage('llava_caption', 'LLaVA-NeXT-Video caption', 'remote_worker', ['remote_required', 'queue'], 900_000, 'GPU caption worker endpoint 설정', GPU_WORKER_URL_ENV),
-      profileStage('ollama_judge', 'Ollama judge models', 'remote_worker', ['remote_required', 'queue'], 360_000, 'Ollama judge 전용 worker endpoint 또는 모델 설치 확인', GPU_WORKER_URL_ENV),
-      profileStage('gemini_openai_judge', 'Gemini/OpenAI OAuth judge', 'oauth_provider', ['enable', 'queue'], 240_000, 'OAuth 파일·quota·네트워크 확인'),
-    ],
-  ),
-  gpu_cloud_worker: profile(
-    'gpu_cloud_worker',
-    'GPU 클라우드 worker',
-    '원격 GPU가 있는 heavy-model 실행 환경',
-    'BGE, reranker, LLaVA, Ollama judge를 GPU worker에서 실행하고 모든 단계는 큐/타임아웃 기준으로 fail-closed 처리합니다.',
-    false,
-    [
-      profileStage('bge_embed', 'BAAI/bge-m3 dense/sparse embedding', 'remote_worker', ['enable', 'queue'], 120_000, 'GPU worker BAAI/bge-m3 모델 캐시 확인', GPU_WORKER_URL_ENV),
-      profileStage('bge_rerank', 'BAAI/bge-reranker-v2-m3 rerank', 'remote_worker', ['enable', 'queue'], 120_000, 'GPU worker BAAI/bge-reranker-v2-m3 모델 캐시 확인', GPU_WORKER_URL_ENV),
-      profileStage('llava_caption', 'LLaVA-NeXT-Video caption', 'remote_worker', ['enable', 'queue'], 600_000, 'GPU worker LLaVA 모델 캐시와 VRAM 확인', GPU_WORKER_URL_ENV),
-      profileStage('ollama_judge', 'Ollama judge models', 'remote_worker', ['enable', 'queue'], 300_000, 'GPU worker Ollama 모델 pull 상태 확인', GPU_WORKER_URL_ENV),
-      profileStage('gemini_openai_judge', 'Gemini/OpenAI OAuth judge', 'oauth_provider', ['enable', 'queue'], 240_000, 'OAuth 파일·quota·네트워크 확인'),
-    ],
-  ),
-  macbook_pro_m5_max: profile(
-    'macbook_pro_m5_max',
-    'MacBook Pro M5 Max 예정',
-    '고성능 로컬 Apple Silicon 개발/검증 장비',
-    'BGE/reranker/Ollama는 로컬 worker·Ollama에서 큐잉하고, LLaVA는 로컬 우선·필요 시 GPU endpoint로 분리합니다.',
-    false,
-    [
-      profileStage('bge_embed', 'BAAI/bge-m3 dense/sparse embedding', 'local_worker', ['enable', 'queue'], 120_000, 'BAAI/bge-m3 모델 캐시 확인 및 worker 재시작'),
-      profileStage('bge_rerank', 'BAAI/bge-reranker-v2-m3 rerank', 'local_worker', ['enable', 'queue'], 120_000, 'BAAI/bge-reranker-v2-m3 모델 캐시 확인 및 worker 재시작'),
-      profileStage('llava_caption', 'LLaVA-NeXT-Video caption', 'local_worker', ['enable', 'queue', 'unload_after_request'], 600_000, 'LLaVA 모델 설치·Metal/MPS 메모리 확인 또는 GPU endpoint 설정'),
-      profileStage('ollama_judge', 'Ollama judge models', 'local_ollama', ['enable', 'queue'], 240_000, 'Ollama 실행 및 judge 모델 pull 상태 확인'),
-      profileStage('gemini_openai_judge', 'Gemini/OpenAI OAuth judge', 'oauth_provider', ['enable', 'queue'], 240_000, 'OAuth 파일·quota·네트워크 확인'),
-    ],
-  ),
-  ci_exception_only: profile(
-    'ci_exception_only',
-    'CI 예외 처리 검증',
-    'credentials/network/GPU 없는 테스트 환경',
-    '실제 provider를 호출하지 않고 프로파일 선택, Korean fail-closed 메시지, 예외 매핑만 검증합니다. 성공 결과를 합성하지 않습니다.',
-    true,
-    [
-      profileStage('bge_embed', 'BAAI/bge-m3 dense/sparse embedding', 'not_invoked_in_ci', ['fail_closed_exception_only'], 1_000, 'CI에서는 모델 실행 대신 오류 매핑 테스트만 수행'),
-      profileStage('bge_rerank', 'BAAI/bge-reranker-v2-m3 rerank', 'not_invoked_in_ci', ['fail_closed_exception_only'], 1_000, 'CI에서는 모델 실행 대신 오류 매핑 테스트만 수행'),
-      profileStage('llava_caption', 'LLaVA-NeXT-Video caption', 'not_invoked_in_ci', ['fail_closed_exception_only'], 1_000, 'CI에서는 GPU 캡션 실행 없이 fail-closed 경로만 검증'),
-      profileStage('ollama_judge', 'Ollama judge models', 'not_invoked_in_ci', ['fail_closed_exception_only'], 1_000, 'CI에서는 Ollama 실행 없이 fail-closed 경로만 검증'),
-      profileStage('gemini_openai_judge', 'Gemini/OpenAI OAuth judge', 'not_invoked_in_ci', ['fail_closed_exception_only'], 1_000, 'CI에서는 OAuth provider 호출 없이 fail-closed 경로만 검증'),
-    ],
-  ),
-};
+// Preserve configured profile IDs and worker URL ownership; execution no longer loads models.
+const STORYBOARD_RAG_EXECUTION_PROFILES = Object.fromEntries([
+  'xps_9550_local_dev', 'vps_6c_12gb', 'gpu_cloud_worker', 'macbook_pro_m5_max', 'ci_exception_only',
+].map((value) => {
+  const id = value as StoryboardRagExecutionProfileId;
+  const ci = id === 'ci_exception_only';
+  return [id, profile(id, ci ? 'CI 예외 처리 검증' : 'Gemini RAG worker', value,
+    '기존 worker가 공식 Gemini API를 호출하며 모델을 다운로드하지 않습니다. 응답 유실 시 자동 재호출하지 않습니다.', ci,
+    [profileStage('bge_embed', 'Gemini retrieval embeddings', ci ? 'not_invoked_in_ci' : 'remote_worker',
+      ci ? ['fail_closed_exception_only'] : ['enable', 'queue'], 120_000, 'Gemini worker 인증·quota 확인', WORKER_URL_ENV),
+     profileStage('bge_rerank', 'Gemini embedding cosine ranking', ci ? 'not_invoked_in_ci' : 'remote_worker',
+      ci ? ['fail_closed_exception_only'] : ['enable', 'queue'], 120_000, 'Gemini worker 응답 확인', WORKER_URL_ENV),
+     profileStage('llava_caption', 'Gemini frame caption', ci ? 'not_invoked_in_ci' : 'remote_worker',
+      ci ? ['fail_closed_exception_only'] : ['enable', 'queue'], 120_000, '프레임과 Gemini worker 인증 확인', WORKER_URL_ENV)]),
+  ];
+})) as Record<StoryboardRagExecutionProfileId, StoryboardRagExecutionProfile>;
 
 export function resolveStoryboardRagExecutionProfile(
   env: Pick<NodeJS.ProcessEnv, string> = process.env,
@@ -490,7 +324,7 @@ export function buildStoryboardRagModelStackDiagnostics(): StoryboardRagModelSta
   return {
     schemaVersion: 1,
     policy: 'required_live_model_stack_fail_closed',
-    allScreenshotModelsRegistered: true,
+    allScreenshotModelsRegistered: false,
     providerUnavailableBehavior: 'fail_closed',
     ciProviderMode: 'mock_required_providers_only',
     executionProfile,

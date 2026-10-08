@@ -41,11 +41,14 @@ export class MlxTransport {
   }
 
   async request(path: MlxPath, body?: unknown, signal?: AbortSignal): Promise<Record<string, unknown>> {
+    if (body !== undefined || path === '/v1/chat/completions' || path === '/v1/images/generations') {
+      throw new Error('STORYBOARD_WORKFLOW_RETIRED');
+    }
     if (!PATHS.includes(path)) throw new StoryboardProductionError('invalid_local_endpoint');
     if (signal?.aborted) throw new StoryboardProductionError('generation_cancelled');
     const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
     if (payload && payload.length > 128 * 1024) throw new StoryboardProductionError('invalid_model_request');
-    const maxBytes = path === '/v1/images/generations' ? Math.ceil(MAX_STORYBOARD_IMAGE_BYTES * 4 / 3) + 65536 : 512 * 1024;
+    const maxBytes = 512 * 1024;
     const method = payload ? 'POST' : 'GET';
     return new Promise((resolve, reject) => {
       let finished = false;

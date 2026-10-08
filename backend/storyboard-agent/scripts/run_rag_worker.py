@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the local storyboard FastAPI RAG worker."""
+"""Run the Gemini-only storyboard FastAPI RAG worker at the existing host/port."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ if __name__ == "__main__":
         "src.rag_worker:app",
         host=host,
         port=port,
+        access_log=False,  # No request URLs or payload-related query values in access logs.
         reload=os.environ.get("STORYBOARD_RAG_WORKER_RELOAD") == "1",
         log_level=os.environ.get("STORYBOARD_RAG_WORKER_LOG_LEVEL", "info"),
         app_dir=str(ROOT),
