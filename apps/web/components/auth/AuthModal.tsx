@@ -22,7 +22,7 @@ import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
 import {
   AUTH_PRIVACY_ONBOARDING_REASON,
   getSafeAuthNextPath,
-  isAdminAuthRedirect,
+  resolveRequestedAuthRedirect,
 } from "@/lib/auth/auth-redirect";
 import {
   beginExistingAccountPrivacyRecovery,
@@ -239,7 +239,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
   const safeRedirectTo = getSafeAuthNextPath(redirectTo);
-  const isAdminRedirect = isAdminAuthRedirect(reason, safeRedirectTo);
+  const requestedRedirect = resolveRequestedAuthRedirect(reason, safeRedirectTo);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -361,8 +361,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     setIsGoogleLoading(true);
     try {
       const callbackUrl = new URL("/auth/callback", window.location.origin);
-      if (isAdminRedirect) {
-        callbackUrl.searchParams.set("next", safeRedirectTo);
+      if (requestedRedirect) {
+        callbackUrl.searchParams.set("next", requestedRedirect);
       }
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -374,7 +374,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       toast.error("Google 로그인에 실패했습니다");
       setIsGoogleLoading(false);
     }
-  }, [isAdminRedirect, safeRedirectTo]);
+  }, [requestedRedirect]);
 
   const handleGoogleSignup = useCallback(async () => {
     setIsGoogleLoading(true);
@@ -386,8 +386,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
     try {
       const callbackUrl = new URL("/auth/callback", window.location.origin);
-      if (isAdminRedirect) {
-        callbackUrl.searchParams.set("next", safeRedirectTo);
+      if (requestedRedirect) {
+        callbackUrl.searchParams.set("next", requestedRedirect);
       }
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -399,13 +399,13 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       toast.error("Google 가입을 시작할 수 없습니다");
       setIsGoogleLoading(false);
     }
-  }, [isAdminRedirect, safeRedirectTo, startOnboardingChallenge]);
+  }, [requestedRedirect, startOnboardingChallenge]);
 
-  const redirectAfterAdminLogin = useCallback(() => {
-    if (!isAdminRedirect) return false;
-    window.location.assign(safeRedirectTo);
+  const redirectAfterRequestedLogin = useCallback(() => {
+    if (!requestedRedirect) return false;
+    window.location.assign(requestedRedirect);
     return true;
-  }, [isAdminRedirect, safeRedirectTo]);
+  }, [requestedRedirect]);
   const closeAfterAuthSuccess = useCallback(() => {
     if (onAuthSuccess) {
       onAuthSuccess();
@@ -453,7 +453,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         source: 'auth-modal-password-login',
       });
       resetForm();
-      if (redirectAfterAdminLogin()) {
+      if (redirectAfterRequestedLogin()) {
         return;
       }
       closeAfterAuthSuccess();
@@ -462,7 +462,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, redirectAfterAdminLogin, resetForm, closeAfterAuthSuccess, rejectPrivacyIneligibleSession]);
+  }, [email, password, redirectAfterRequestedLogin, resetForm, closeAfterAuthSuccess, rejectPrivacyIneligibleSession]);
 
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -480,8 +480,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
     // 기존 계정의 개인정보 처리 확인에서는 이미 설정된 비밀번호를 다시 입력하는 것이므로
     // 신규 가입 비밀번호 규칙을 적용하지 않는다. 실제 검증은 서버 로그인이 담당한다.
-    if (!isExistingAccountRecovery && (password.length < 8 || password.length > 12)) {
-      toast.error("비밀번호는 8자 이상 12자 이하여야 합니다");
+    if (!isExistingAccountRecovery && password.length < 8) {
+      toast.error("비밀번호는 8자 이상이어야 합니다");
       return;
     }
     if (!isExistingAccountRecovery && password !== confirmPassword) {
@@ -529,7 +529,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           source: 'auth-modal-existing-account-onboarding',
         });
         resetForm();
-        if (redirectAfterAdminLogin()) return;
+        if (redirectAfterRequestedLogin()) return;
         closeAfterAuthSuccess();
         return;
       }
@@ -580,7 +580,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         source: 'auth-modal-signup',
       });
       resetForm();
-      if (redirectAfterAdminLogin()) return;
+      if (redirectAfterRequestedLogin()) return;
       closeAfterAuthSuccess();
     } catch {
       toast.error("회원가입을 완료할 수 없습니다. 다시 시도해주세요.");
@@ -588,7 +588,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       if (recoveryToken !== null) endExistingAccountPrivacyRecovery(recoveryToken);
       setIsLoading(false);
     }
-  }, [ageBand, closeAfterAuthSuccess, confirmPassword, email, isExistingAccountRecovery, password, policyContentSha256, policyVersion, privacyAgreed, redirectAfterAdminLogin, rejectPrivacyIneligibleSession, resetForm, startOnboardingChallenge, username]);
+  }, [ageBand, closeAfterAuthSuccess, confirmPassword, email, isExistingAccountRecovery, password, policyContentSha256, policyVersion, privacyAgreed, redirectAfterRequestedLogin, rejectPrivacyIneligibleSession, resetForm, startOnboardingChallenge, username]);
 
   const handleForgotPassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();

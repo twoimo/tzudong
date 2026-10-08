@@ -115,8 +115,9 @@ export function getCanonicalReviewPhotoObjectPaths(
 /**
  * Resolves the historical composer layout for display only. The stored value
  * must still address the requesting owner and the requested purpose, so a
- * legacy key can never expose another user's object. Cleanup and writes keep
- * using the canonical layout exclusively.
+ * legacy key can never expose another user's object. New uploads and direct
+ * compensation use canonical keys. A trusted DB cleanup queue may return an
+ * existing legacy key from an authorized review's authoritative pre-image.
  */
 export function getLegacyReviewPhotoObjectPath(
     value: string | null | undefined,
@@ -303,6 +304,12 @@ export function resolveReviewPhotoUrl(
     const configuredOrigin = resolveConfiguredSupabaseOrigin();
     const objectPath = getOwnedReviewPhotoObjectPath(value, ownership, configuredOrigin);
     if (!objectPath || !configuredOrigin) return null;
+    // Verification images are served only through the authenticated admin
+    // route. Never construct a public URL or embed a signed bearer URL.
+    if (typeof ownership === 'object' && ownership?.purpose === 'verification') {
+        const cacheKey = getBoundedCacheBuster(cacheBuster);
+        return `/api/admin/review-verification/${encodeURIComponent(ownership.reviewId)}${cacheKey ? `?t=${cacheKey}` : ''}`;
+    }
 
     try {
         const expectedPath = `${REVIEW_PHOTO_PUBLIC_PATH}${objectPath

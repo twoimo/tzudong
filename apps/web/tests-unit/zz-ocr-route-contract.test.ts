@@ -458,7 +458,7 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).toContain(".select('id, receipt_hash, receipt_data, is_duplicate, ocr_processed_at')");
     expect(processRouteSource).not.toContain('uploadToStorage');
     expect(processRouteSource).not.toContain('ocr-debug/');
-    expect(processRouteSource).toContain("const storage = storageAdmin.from('review-photos')");
+    expect(processRouteSource).toContain('const storage = storageAdmin.from(REVIEW_VERIFICATION_BUCKET)');
     expect(processRouteSource).not.toContain("supabase.storage.from('review-photos')");
     expect(processRouteSource).toContain('storage.upload(newObjectPath, canonicalImage');
     expect(processRouteSource).not.toContain('raw: ocrData');
@@ -584,7 +584,7 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).toContain('PHONE_LIKE_PATTERN');
     expect(processRouteSource).toContain('SAFE_OCR_FAILURE_CODES');
     expect(processRouteSource).toContain("return errorResponse(PRIVACY_UNSAFE_VALUE_REASON, 422);");
-    expect(processRouteSource).toContain("storage.download(review.verification_photo)");
+    expect(processRouteSource).toContain('downloadReviewVerification(storageAdmin, review.verification_photo)');
     expect(processRouteSource).not.toContain('getPublicUrl');
     expect(processRouteSource).not.toContain('publicUrl');
     expect(processRouteSource).not.toContain('fetch(');

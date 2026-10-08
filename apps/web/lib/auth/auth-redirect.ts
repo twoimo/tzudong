@@ -6,7 +6,7 @@ export const AUTH_REDIRECT_NEXT_PARAM = 'next';
 
 export type AuthRedirectReason = 'admin' | 'mypage' | 'review' | typeof AUTH_PRIVACY_ONBOARDING_REASON;
 
-const SAFE_AUTH_NEXT_PATH_PATTERN = /^\/(?:admin(?:\/[A-Za-z0-9_-]+)*|mypage(?:\/[A-Za-z0-9_-]+)*|submissions(?:\/[A-Za-z0-9_-]+)*|user(?:\/[A-Za-z0-9_-]+)*|feed|)$/;
+const SAFE_AUTH_NEXT_PATH_PATTERN = /^\/(?:admin(?:\/[A-Za-z0-9_-]+)*|mypage(?:\/[A-Za-z0-9_-]+)*|submissions(?:\/[A-Za-z0-9_-]+)*|user(?:\/[A-Za-z0-9_-]+)*|feed|stamp|)$/;
 const SAFE_AUTH_NEXT_QUERY_PATTERN = /^[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/;
 
 export function getSafeAuthNextPath(value: string | null | undefined) {
@@ -29,6 +29,18 @@ export function isAdminAuthNextPath(nextPath: string) {
 
 export function isAdminAuthRedirect(reason: string | null | undefined, nextPath: string) {
   return reason === 'admin' && isAdminAuthNextPath(nextPath);
+}
+
+export function resolveRequestedAuthRedirect(reason: string | null | undefined, next: string | null | undefined): string | null {
+  const safeNext = getSafeAuthNextPath(next);
+  if (isAdminAuthRedirect(reason, safeNext)) return safeNext;
+  if ((reason === 'mypage' || reason === 'review') && safeNext !== '/' && !isAdminAuthNextPath(safeNext)) return safeNext;
+  return null;
+}
+
+export function buildStampReviewContinuationPath(restaurantId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(restaurantId)) return '/stamp';
+  return `/stamp?restaurant=${restaurantId}&writeReview=1`;
 }
 
 export function buildHomeAuthLoginPath({

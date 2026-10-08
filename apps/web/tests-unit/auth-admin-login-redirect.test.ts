@@ -363,8 +363,8 @@ describe('admin auth redirect helpers', () => {
 
     expect(authModalSource).toContain('onAuthSuccess?: () => void;');
     expect(authModalSource).toContain('const closeAfterAuthSuccess = useCallback(() => {');
-    expect(authModalSource).toContain('window.location.assign(safeRedirectTo);');
-    expect(authModalSource.indexOf('redirectAfterAdminLogin()')).toBeLessThan(
+    expect(authModalSource).toContain('window.location.assign(requestedRedirect);');
+    expect(authModalSource.indexOf('redirectAfterRequestedLogin()')).toBeLessThan(
       authModalSource.indexOf('closeAfterAuthSuccess();'),
     );
     expect(homeRuntimeShellSource).toContain('onAuthSuccess={closeAuthAfterSuccess}');

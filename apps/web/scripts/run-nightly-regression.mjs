@@ -1323,7 +1323,7 @@ function assertLocalMigrationReceiptEnvelope(receipt, stackReceipt) {
     || receipt.serializer !== 'receipt-v1'
     || receipt.project_name !== localProjectName
     || !Array.isArray(receipt.ledger)
-    || receipt.ledger.length !== 101
+    || receipt.ledger.length !== 104
     || !receipt.replay_proofs
     || typeof receipt.replay_proofs !== 'object'
     || Array.isArray(receipt.replay_proofs)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,13 +9,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
-    buildReviewPhotoObjectPath,
-    cleanupCanonicalReviewPhotoObjects,
     getCanonicalReviewPhotoObjectPath,
-    getCanonicalReviewPhotoObjectPaths,
+    getLegacyReviewPhotoObjectPath,
     resolveReviewPhotoUrl,
     type ReviewPhotoOwnership,
 } from "@/lib/review-photo-url";
+import { ReviewMediaMutation, createReviewMediaDependencies, reviewMutationMessage } from "@/lib/reviews/review-media-mutation";
 import imageCompression from "browser-image-compression";
 import {
     Dialog,
@@ -97,43 +96,11 @@ function getOwnedFoodPhotoPaths(
     values: unknown,
     ownership: ReviewPhotoOwnership | null,
 ): string[] {
-    return getCanonicalReviewPhotoObjectPaths(values, ownership);
-}
-
-function mergeOwnedFoodPhotoPaths(
-    currentPaths: string[],
-    additionalPaths: string[],
-    ownership: ReviewPhotoOwnership | null,
-): string[] {
-    return getOwnedFoodPhotoPaths([...currentPaths, ...additionalPaths], ownership);
-}
-
-async function cleanupOwnedFoodPhotos(
-    paths: string[],
-    ownership: ReviewPhotoOwnership,
-) {
-    return cleanupCanonicalReviewPhotoObjects(
-        paths,
-        ownership,
-        supabase.storage.from("review-photos"),
-    );
-}
-
-function getSafeReviewEditFailureMessage(error: unknown): string {
-    switch (error instanceof Error ? error.message : "") {
-        case "REVIEW_PHOTO_UPLOAD_FAILED":
-            return "사진 업로드에 실패했습니다. 다시 시도해 주세요.";
-        case "REVIEW_PHOTO_UPLOAD_COMPENSATION_FAILED":
-            return "새 사진 정리에 실패했습니다. 사진 정리가 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.";
-        case "REVIEW_PHOTO_CLEANUP_FAILED":
-            return "사진 정리에 실패했습니다. 리뷰는 변경되지 않았으며 다시 시도할 수 있습니다.";
-        case "REVIEW_UPDATE_FAILED":
-            return "리뷰 저장에 실패했습니다. 사진 정리 상태를 유지한 채 다시 시도해 주세요.";
-        case "REVIEW_DELETE_FAILED":
-            return "리뷰 삭제에 실패했습니다. 사진 정리 상태를 유지한 채 다시 시도해 주세요.";
-        default:
-            return "요청을 완료하지 못했습니다. 다시 시도해 주세요.";
-    }
+    if (!Array.isArray(values)) return [];
+    return [...new Set(values.flatMap((value) => {
+        const path = getCanonicalReviewPhotoObjectPath(value, ownership) ?? getLegacyReviewPhotoObjectPath(value, ownership);
+        return path ? [path] : [];
+    }))];
 }
 
 function isSupportedFoodPhotoFile(file: File): boolean {
@@ -178,6 +145,10 @@ type Category = typeof CATEGORIES[number];
 
 export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEditModalProps) {
     const { user } = useAuth();
+    const ownerRef = useRef(user?.id);
+    useLayoutEffect(() => { ownerRef.current = user?.id; }, [user?.id]);
+    const mutationRef = useRef<ReviewMediaMutation | null>(null);
+    const [retryKind, setRetryKind] = useState<'edit' | 'delete' | null>(null);
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
@@ -188,6 +159,11 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     const [isDeleting, setIsDeleting] = useState(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
     const [cleanupFailureMessage, setCleanupFailureMessage] = useState<string | null>(null);
+    useEffect(() => {
+        mutationRef.current = new ReviewMediaMutation(createReviewMediaDependencies(supabase, () => ownerRef.current, compressFoodImage));
+        setRetryKind(null);
+        setCleanupFailureMessage(null);
+    }, [user?.id]);
     const foodPhotoOwnership = useMemo(
         () => getFoodPhotoOwnership(user?.id, review?.id),
         [review?.id, user?.id],
@@ -222,7 +198,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Load review data when opened
     useEffect(() => {
-        if (isOpen && review) {
+        if (isOpen && review && !mutationRef.current?.pending) {
             setContent(review.content);
 
             // [DEBUG & SAFETY] 카테고리 데이터 안전하게 로드
@@ -244,12 +220,13 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             setNewFoodPhotos([]);
             setRemovedPhotos([]);
             setCleanupFailureMessage(null);
+            setRetryKind(null);
         }
     }, [foodPhotoOwnership, isOpen, review]);
 
     // Auto-save to IndexedDB
     useEffect(() => {
-        if (!isOpen || !review || !user) return;
+        if (!isOpen || !review || !user || isSubmitting || isDeleting || mutationRef.current?.pending) return;
         if (content.trim().length === 0 && categories.length === 0) return;
 
         const saveTimer = setTimeout(async () => {
@@ -282,15 +259,16 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         }, 2000); // Save after 2 seconds of inactivity
 
         return () => clearTimeout(saveTimer);
-    }, [isOpen, review, user, content, categories, existingFoodPhotos, removedPhotos, foodPhotoOwnership]);
+    }, [isOpen, review, user, content, categories, existingFoodPhotos, removedPhotos, foodPhotoOwnership, isSubmitting, isDeleting]);
 
     // Load draft on open
     useEffect(() => {
         const loadDraft = async () => {
-            if (!isOpen || !review || !user) return;
+            if (!isOpen || !review || !user || mutationRef.current?.pending) return;
 
             try {
                 const draft = await getEditDraft(user.id, `edit_${review.id}`);
+                if (ownerRef.current !== user.id || mutationRef.current?.pending) return;
                 if (draft && draft.savedAt) {
                     // Only load draft if it's newer than review data
                     const draftDate = new Date(draft.savedAt);
@@ -321,6 +299,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     }, [foodPhotoOwnership, isOpen, review, user]);
 
     const appendNewFoodPhotos = useCallback((files: File[]) => {
+        if (mutationRef.current?.pending) return;
         const supportedFiles = files.filter(isSupportedFoodPhotoFile);
         if (supportedFiles.length === 0) return;
 
@@ -343,12 +322,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Remove new photo
     const removeNewFoodPhoto = useCallback((index: number) => {
+        if (mutationRef.current?.pending) return;
         setNewFoodPhotos(prev => prev.filter((_, i) => i !== index));
     }, []);
 
     // Remove existing photo
     const removeExistingFoodPhoto = useCallback((photoPath: string) => {
-        const ownedPhotoPath = getCanonicalReviewPhotoObjectPath(photoPath, foodPhotoOwnership);
+        if (mutationRef.current?.pending) return;
+        const ownedPhotoPath = getCanonicalReviewPhotoObjectPath(photoPath, foodPhotoOwnership)
+            ?? getLegacyReviewPhotoObjectPath(photoPath, foodPhotoOwnership);
         if (!ownedPhotoPath) return;
 
         setExistingFoodPhotos(prev => prev.filter(p => p !== ownedPhotoPath));
@@ -387,245 +369,48 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         foodPhotosFileInputRef.current?.click();
     }, []);
 
-    // Submit edit
-    const handleSubmit = async () => {
-        if (!review || !user || !foodPhotoOwnership) return;
-
-        if (content.trim().length < 20) {
-            toast({
-                title: "리뷰 내용이 너무 짧습니다",
-                description: `최소 20자 이상 작성해주세요 (현재 ${content.trim().length}자)`,
-                variant: "destructive",
-            });
-            return;
-        }
-
-        if (categories.length === 0) {
-            toast({
-                title: "카테고리를 선택해주세요",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        const ownedExistingFoodPhotos = getOwnedFoodPhotoPaths(
-            existingFoodPhotos,
-            foodPhotoOwnership,
-        );
-        const ownedRemovedPhotos = getOwnedFoodPhotoPaths(
-            removedPhotos,
-            foodPhotoOwnership,
-        );
-
-        if (ownedExistingFoodPhotos.length + newFoodPhotos.length === 0) {
-            toast({
-                title: "음식 사진이 필요합니다",
-                description: "최소 1장 이상의 음식 사진을 업로드해주세요",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        setIsSubmitting(true);
-        setCleanupFailureMessage(null);
-        const uploadedNewPhotoPaths: string[] = [];
-        let reviewUpdateCommitted = false;
-
-        const compensateUploadedPhotos = async (): Promise<boolean> => {
-            if (uploadedNewPhotoPaths.length === 0) return true;
-
-            const compensation = await cleanupOwnedFoodPhotos(
-                uploadedNewPhotoPaths,
-                foodPhotoOwnership,
-            );
-            if (compensation.success) return true;
-
-            setRemovedPhotos((currentPaths) => mergeOwnedFoodPhotoPaths(
-                currentPaths,
-                compensation.paths,
-                foodPhotoOwnership,
-            ));
-            setCleanupFailureMessage(
-                "새로 업로드한 사진을 정리하지 못했습니다. 사진 정리가 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.",
-            );
-            return false;
-        };
-
+    const executeMutation = async (kind: 'edit' | 'delete') => {
+        if (!review || !user || isSubmitting || isDeleting) return;
+        const ownerId = user.id;
+        if (kind === 'edit') setIsSubmitting(true);
+        else setIsDeleting(true);
         try {
-            const uploadTimestamp = Date.now();
-            for (const [index, photo] of newFoodPhotos.entries()) {
-                const compressedPhoto = await compressFoodImage(photo);
-                const photoPath = buildReviewPhotoObjectPath(
-                    foodPhotoOwnership,
-                    `${uploadTimestamp}_food_edit_${index}_${compressedPhoto.name}`,
-                );
-                if (!photoPath) {
-                    throw new Error("REVIEW_PHOTO_UPLOAD_FAILED");
-                }
-
-                const { error: uploadError } = await supabase.storage
-                    .from("review-photos")
-                    .upload(photoPath, compressedPhoto, {
-                        cacheControl: "3600",
-                        upsert: false,
-                    });
-                if (uploadError) {
-                    throw new Error("REVIEW_PHOTO_UPLOAD_FAILED");
-                }
-
-                uploadedNewPhotoPaths.push(photoPath);
-            }
-
-            const removedCleanup = await cleanupOwnedFoodPhotos(
-                ownedRemovedPhotos,
-                foodPhotoOwnership,
-            );
-            if (!removedCleanup.success) {
-                setCleanupFailureMessage(
-                    "기존 사진 정리에 실패했습니다. 리뷰는 변경되지 않았으며 다시 시도할 수 있습니다.",
-                );
-                throw new Error("REVIEW_PHOTO_CLEANUP_FAILED");
-            }
-
-            const finalFoodPhotos = getOwnedFoodPhotoPaths(
-                [...ownedExistingFoodPhotos, ...uploadedNewPhotoPaths],
-                foodPhotoOwnership,
-            );
-            const { data: updatedReview, error: updateError } = await supabase
-                .from("reviews")
-                .update({
-                    content: content.trim(),
-                    categories,
-                    food_photos: finalFoodPhotos,
-                    is_verified: false,
-                    admin_note: null,
-                    updated_at: new Date().toISOString(),
-                } as never)
-                .eq("id", review.id)
-                .eq("user_id", user.id)
-                .select("id")
-                .maybeSingle();
-
-            if (updateError || !updatedReview) {
-                if (ownedRemovedPhotos.length > 0) {
-                    setCleanupFailureMessage(
-                        "사진 정리는 완료되었지만 리뷰 저장에 실패했습니다. 저장이 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.",
-                    );
-                }
-                throw new Error("REVIEW_UPDATE_FAILED");
-            }
-            reviewUpdateCommitted = true;
-
-            toast({
-                title: "리뷰 수정 완료",
-                description: "관리자 재검토 후 다시 공개됩니다.",
+            const outcome = await mutationRef.current!.run({
+                ownerId, reviewId: review.id, kind,
+                ...(kind === 'edit' ? { edit: {
+                    content, categories: [...categories],
+                    foodPhotos: getOwnedFoodPhotoPaths(existingFoodPhotos, foodPhotoOwnership),
+                    files: [...newFoodPhotos],
+                    original: { content: review.content, categories: review.categories, foodPhotos: review.foodPhotos },
+                } } : {}),
             });
-
-            try {
-                await deleteEditDraft(user.id, `edit_${review.id}`);
-            } catch {
-                console.error("REVIEW_EDIT_DRAFT_CLEANUP_FAILED");
-            }
-
-            if (onSuccess) {
-                try {
-                    onSuccess();
-                } catch {
-                    console.error("REVIEW_EDIT_SUCCESS_CALLBACK_FAILED");
-                }
-            }
+            if (ownerRef.current !== ownerId) return;
+            setRetryKind(mutationRef.current!.pending ? kind : null);
+            setCleanupFailureMessage(outcome.committed ? null : reviewMutationMessage(outcome.code));
+            toast({
+                title: outcome.committed ? (kind === 'edit' ? '리뷰 수정 완료' : '리뷰 삭제 완료') : '리뷰 변경 확인 필요',
+                description: outcome.code === 'REVIEW_COMMITTED' && kind === 'edit'
+                    ? '관리자 재검토 후 다시 공개됩니다.' : reviewMutationMessage(outcome.code),
+                ...(outcome.committed ? {} : { variant: 'destructive' as const }),
+            });
+            if (!outcome.committed) return;
+            try { await deleteEditDraft(ownerId, `edit_${review.id}`); } catch { /* keep result separate from local draft cleanup */ }
+            if (ownerRef.current !== ownerId) return;
+            try { onSuccess?.(); } catch { /* committed mutation must not be replayed for a UI callback */ }
             handleClose(true);
-        } catch (error) {
-            if (reviewUpdateCommitted) {
-                console.error("REVIEW_EDIT_POST_COMMIT_UI_FAILED");
-                return;
-            }
-            const compensationSucceeded = await compensateUploadedPhotos();
-            const failure = compensationSucceeded
-                ? error
-                : new Error("REVIEW_PHOTO_UPLOAD_COMPENSATION_FAILED");
-            toast({
-                title: "리뷰 수정 실패",
-                description: getSafeReviewEditFailureMessage(failure),
-                variant: "destructive",
-            });
         } finally {
             setIsSubmitting(false);
-        }
-    };
-
-    // Delete review handler
-    const handleDeleteReview = async () => {
-        if (!review || !user || !foodPhotoOwnership) return;
-
-        const allPhotos = getOwnedFoodPhotoPaths(
-            [...existingFoodPhotos, ...removedPhotos],
-            foodPhotoOwnership,
-        );
-        setIsDeleting(true);
-        setCleanupFailureMessage(null);
-
-        try {
-            const cleanup = await cleanupOwnedFoodPhotos(allPhotos, foodPhotoOwnership);
-            if (!cleanup.success) {
-                setCleanupFailureMessage(
-                    "사진 정리에 실패했습니다. 리뷰는 삭제되지 않았으며 다시 시도할 수 있습니다.",
-                );
-                throw new Error("REVIEW_PHOTO_CLEANUP_FAILED");
-            }
-
-            const { data: deletedReview, error: deleteError } = await supabase
-                .from("reviews")
-                .delete()
-                .eq("id", review.id)
-                .eq("user_id", user.id)
-                .select("id")
-                .maybeSingle();
-
-            if (deleteError || !deletedReview) {
-                if (allPhotos.length > 0) {
-                    setCleanupFailureMessage(
-                        "사진 정리는 완료되었지만 리뷰 삭제에 실패했습니다. 삭제가 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.",
-                    );
-                }
-                throw new Error("REVIEW_DELETE_FAILED");
-            }
-
-            try {
-                await deleteEditDraft(user.id, `edit_${review.id}`);
-            } catch {
-                console.error("REVIEW_EDIT_DRAFT_DELETE_FAILED");
-            }
-
-            toast({
-                title: "리뷰 삭제 완료",
-                description: "리뷰가 성공적으로 삭제되었습니다.",
-            });
-
-            if (onSuccess) {
-                try {
-                    onSuccess();
-                } catch {
-                    console.error("REVIEW_DELETE_SUCCESS_CALLBACK_FAILED");
-                }
-            }
-            handleClose(true);
-        } catch (error) {
-            toast({
-                title: "리뷰 삭제 실패",
-                description: getSafeReviewEditFailureMessage(error),
-                variant: "destructive",
-            });
-        } finally {
             setIsDeleting(false);
         }
     };
+    const handleSubmit = () => executeMutation('edit');
+    const handleDeleteReview = () => executeMutation('delete');
 
     const handleClose = useCallback((force = false) => {
-        if (!force && cleanupFailureMessage) {
+        if (!force && (isSubmitting || isDeleting || mutationRef.current?.pending)) {
             toast({
-                title: "사진 정리 재시도 필요",
-                description: cleanupFailureMessage,
+                title: "리뷰 변경 확인 필요",
+                description: cleanupFailureMessage ?? "진행 중인 요청의 결과를 먼저 확인해 주세요.",
                 variant: "destructive",
             });
             return;
@@ -638,8 +423,9 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         setRemovedPhotos([]);
         setCleanupFailureMessage(null);
         setLastSavedAt(null);
+        setRetryKind(null);
         onClose();
-    }, [cleanupFailureMessage, onClose]);
+    }, [cleanupFailureMessage, isSubmitting, isDeleting, onClose]);
 
     // Form validation
     const isFormValid = useMemo(() => {
@@ -721,6 +507,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <AlertCircle className="h-4 w-4 text-destructive" />
                                         <AlertDescription className="text-destructive">
                                             {cleanupFailureMessage}
+                                            {retryKind && (
+                                                <Button type="button" variant="outline" className="mt-2" disabled={isSubmitting || isDeleting}
+                                                    onClick={() => void executeMutation(retryKind)}>
+                                                    같은 요청 다시 확인
+                                                </Button>
+                                            )}
                                         </AlertDescription>
                                     </Alert>
                                 )}
@@ -756,6 +548,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                                 id={`edit-category-${cat}`}
                                                                 checked={categories.includes(cat)}
                                                                 onCheckedChange={(checked) => {
+                                                                    if (mutationRef.current?.pending) return;
                                                                     if (checked) {
                                                                         setCategories([...categories, cat]);
                                                                     } else {
@@ -777,7 +570,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => setCategories([])}
+                                                            onClick={() => { if (!mutationRef.current?.pending) setCategories([]); }}
                                                             className="w-full"
                                                         >
                                                             선택 해제
@@ -794,7 +587,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                     {category}
                                                     <button
                                                         type="button"
-                                                        onClick={() => setCategories(categories.filter(c => c !== category))}
+                                                        onClick={() => { if (!mutationRef.current?.pending) setCategories(categories.filter(c => c !== category)); }}
                                                         className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                                                     >
                                                         <XIcon className="h-3 w-3" />
@@ -817,7 +610,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         id="editContent"
                                         placeholder="맛, 분위기, 서비스 등 상세한 후기를 작성해주세요"
                                         value={content}
-                                        onChange={(e) => setContent(e.target.value)}
+                                        onChange={(e) => { if (!mutationRef.current?.pending) setContent(e.target.value); }}
                                         className="min-h-[120px] resize-none"
                                     />
                                 </div>
@@ -950,7 +743,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>리뷰를 삭제하시겠습니까?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                이 작업은 취소할 수 없습니다. 리뷰와 함께 업로드된 모든 사진이 영구적으로 삭제됩니다.
+                                                이 작업은 취소할 수 없습니다. 리뷰 삭제 후 소유권이 확인된 사진을 정리합니다. 정리에 실패하면 나의 리뷰에서 다시 시도할 수 있습니다.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -975,7 +768,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                 <Button
                                     onClick={handleSubmit}
                                     className={`${mobileSheetStyles.primaryAction} flex-1`}
-                                    disabled={!isFormValid || isSubmitting || isDeleting}
+                                    disabled={!isFormValid || isSubmitting || isDeleting || retryKind !== null}
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -1055,6 +848,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <AlertCircle className="h-4 w-4 text-destructive" />
                                         <AlertDescription className="text-destructive">
                                             {cleanupFailureMessage}
+                                            {retryKind && (
+                                                <Button type="button" variant="outline" className="mt-2" disabled={isSubmitting || isDeleting}
+                                                    onClick={() => void executeMutation(retryKind)}>
+                                                    같은 요청 다시 확인
+                                                </Button>
+                                            )}
                                         </AlertDescription>
                                     </Alert>
                                 )}
@@ -1090,6 +889,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                                 id={`edit-category-${cat}`}
                                                                 checked={categories.includes(cat)}
                                                                 onCheckedChange={(checked) => {
+                                                                    if (mutationRef.current?.pending) return;
                                                                     if (checked) {
                                                                         setCategories([...categories, cat]);
                                                                     } else {
@@ -1111,7 +911,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => setCategories([])}
+                                                            onClick={() => { if (!mutationRef.current?.pending) setCategories([]); }}
                                                             className="w-full"
                                                         >
                                                             선택 해제
@@ -1128,7 +928,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                     {category}
                                                     <button
                                                         type="button"
-                                                        onClick={() => setCategories(categories.filter(c => c !== category))}
+                                                        onClick={() => { if (!mutationRef.current?.pending) setCategories(categories.filter(c => c !== category)); }}
                                                         className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                                                     >
                                                         <XIcon className="h-3 w-3" />
@@ -1151,7 +951,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         id="editContent"
                                         placeholder="맛, 분위기, 서비스 등 상세한 후기를 작성해주세요"
                                         value={content}
-                                        onChange={(e) => setContent(e.target.value)}
+                                        onChange={(e) => { if (!mutationRef.current?.pending) setContent(e.target.value); }}
                                         className="min-h-[120px] resize-none"
                                     />
                                 </div>
@@ -1284,7 +1084,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>리뷰를 삭제하시겠습니까?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                이 작업은 취소할 수 없습니다. 리뷰와 함께 업로드된 모든 사진이 영구적으로 삭제됩니다.
+                                                이 작업은 취소할 수 없습니다. 리뷰 삭제 후 소유권이 확인된 사진을 정리합니다. 정리에 실패하면 나의 리뷰에서 다시 시도할 수 있습니다.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -1309,7 +1109,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                 <Button
                                     onClick={handleSubmit}
                                     className="flex-1"
-                                    disabled={!isFormValid || isSubmitting || isDeleting}
+                                    disabled={!isFormValid || isSubmitting || isDeleting || retryKind !== null}
                                 >
                                     {isSubmitting ? (
                                         <>

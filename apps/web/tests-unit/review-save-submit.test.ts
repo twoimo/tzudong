@@ -37,6 +37,7 @@ function fixture() {
     const counts = { uploads: 0, inserts: 0, removes: 0, reads: 0, cleared: 0, success: 0, closes: 0 };
     const rows = new Map<string, { id: string; user_id: string; restaurant_id: string; verification_photo: string; food_photos: string[]; is_verified: boolean }>();
     const objects = new Set<string>();
+    const metadata = new Map<string, { size: number; contentType: string }>();
     const selected: string[] = [];
     const filters: Record<string, unknown>[] = [];
     let mode: 'normal' | 'denied' | 'lost' | 'lost-read-fails' = 'normal';
@@ -47,16 +48,26 @@ function fixture() {
     let currentOwner = (): string | undefined => 'fixture-owner';
     let prepareDeletion: (...args: unknown[]) => Promise<() => Promise<boolean>> = async () => async () => { counts.cleared++; return true; };
     const storage = {
-        async upload(path: string, _file: File, options: unknown) {
+        async upload(path: string, file: File, options: unknown) {
             expect(options).toEqual({ cacheControl: '3600', upsert: false });
             counts.uploads++; if (uploadError) return { error: uploadError };
-            objects.add(path); return { error: null };
+            objects.add(path); metadata.set(path, { size: file.size, contentType: file.type }); return { error: null };
         },
+        async info(path: string) { return { data: objects.has(path) ? metadata.get(path) ?? null : null, error: null }; },
         async remove(paths: string[]) { counts.removes++; paths.forEach(path => objects.delete(path)); return { error: null }; },
         async list(directory: string, { search }: {search: string}) { return { data: objects.has(`${directory}/${search}`) ? [{ name: search }] : [], error: null }; },
     };
     const supabase = {
-        storage: { from: (bucket: string) => { expect(bucket).toBe('review-photos'); return storage; } },
+        storage: { from: (bucket: string) => {
+            expect(['review-photos', 'review-verifications']).toContain(bucket);
+            const bound = (path: string) => expect(bucket).toBe(path.split('/')[3] === 'verification' ? 'review-verifications' : 'review-photos');
+            return {
+                upload: (path: string, file: File, options: unknown) => { bound(path); return storage.upload(path, file, options); },
+                info: (path: string) => { bound(path); return storage.info(path); },
+                remove: (paths: string[]) => { paths.forEach(bound); return storage.remove(paths); },
+                list: (directory: string, options: { search: string }) => { bound(directory); return storage.list(directory, options); },
+            };
+        } },
         from: (table: string) => {
             expect(table).toBe('reviews');
             return {
@@ -264,28 +275,31 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
         await close(); expect(f.counts.closes).toBe(0); expect(f.objects.size).toBe(2);
         expect(f.bindings.closeRequestedRef.current).toBe(false);
     });
-    test('actual edit handler still updates owned existing row and resets moderation', async () => {
+    test('actual edit handler binds the owner and original snapshot to the atomic mutation', async () => {
         const edit = readFileSync(join(import.meta.dir, '../components/reviews/ReviewEditModal.tsx'), 'utf8');
-        const calls = { update: 0, close: 0, draft: 0, success: 0 }; const filters: Record<string, unknown> = {};
-        let updated: Record<string, unknown> = {};
+        const calls = { update: 0, close: 0, draft: 0, success: 0 };
+        let submitted: Record<string, unknown> = {};
         const ownership = { ownerId: 'fixture-owner', reviewId: 'fixture-review', purpose: 'food' as const };
         const existing = buildReviewPhotoObjectPath(ownership, 'existing.jpg')!;
-        const query = { eq(key: string, value: unknown) { filters[key] = value; return query; }, select() { return query; },
-            async maybeSingle() { return { data: { id: 'fixture-review' }, error: null }; } };
-        const submit = evaluate(`${nodeText(edit, 'handleSubmit')};`, {
-            review: { id: 'fixture-review' }, user: { id: 'fixture-owner' }, foodPhotoOwnership: ownership,
+        const original = { content: 'Original fixture review content.', categories: ['한식'], foodPhotos: [existing] };
+        const execute = evaluate(`${nodeText(edit, 'executeMutation')};`, {
+            review: { id: 'fixture-review', ...original }, user: { id: 'fixture-owner' }, foodPhotoOwnership: ownership,
+            isSubmitting: false, isDeleting: false, ownerRef: { current: 'fixture-owner' },
+            mutationRef: { current: { pending: false, run: async (input: Record<string, unknown>) => {
+                calls.update++; submitted = input; return { committed: true, code: 'REVIEW_COMMITTED' };
+            } } },
             content: 'Synthetic existing review content for edit regression.', categories: ['한식'],
             existingFoodPhotos: [existing], removedPhotos: [], newFoodPhotos: [],
             getOwnedFoodPhotoPaths: getCanonicalReviewPhotoObjectPaths,
-            setIsSubmitting() {}, setCleanupFailureMessage() {}, cleanupOwnedFoodPhotos: async () => ({ success: true }),
+            setIsSubmitting() {}, setIsDeleting() {}, setCleanupFailureMessage() {}, setRetryKind() {}, reviewMutationMessage: () => 'COMMITTED',
             toast() {}, deleteEditDraft: async () => { calls.draft++; }, onSuccess: () => { calls.success++; },
-            handleClose: () => { calls.close++; }, getSafeReviewEditFailureMessage: () => 'FAILED',
-            supabase: { from: () => ({ update: (data: Record<string, unknown>) => { calls.update++; updated = data; return query; } }) },
-        }) as () => Promise<void>;
-        await submit();
+            handleClose: () => { calls.close++; },
+        }) as (kind: string) => Promise<void>;
+        await execute('edit');
         expect(calls).toEqual({ update: 1, close: 1, draft: 1, success: 1 });
-        expect(filters).toEqual({ id: 'fixture-review', user_id: 'fixture-owner' });
-        expect(updated.food_photos).toEqual([existing]); expect(updated.is_verified).toBe(false); expect(updated.admin_note).toBeNull();
+        expect(submitted.ownerId).toBe('fixture-owner'); expect(submitted.reviewId).toBe('fixture-review'); expect(submitted.kind).toBe('edit');
+        expect(submitted.edit).toEqual({ content: 'Synthetic existing review content for edit regression.', categories: ['한식'],
+            foodPhotos: [existing], files: [], original });
     });
 });
 

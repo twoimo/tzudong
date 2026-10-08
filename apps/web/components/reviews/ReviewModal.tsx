@@ -115,11 +115,11 @@ function createReviewSaveOperation(
             });
             return uploads;
         },
-        upload: ({ path, file }) => supabase.storage.from('review-photos').upload(path, file, {
+        upload: ({ path, file, purpose }) => supabase.storage.from(purpose === 'verification' ? 'review-verifications' : 'review-photos').upload(path, file, {
             cacheControl: '3600', upsert: false,
         }),
-        verifyUpload: async ({ path, file }) => {
-            const { data, error } = await supabase.storage.from('review-photos').info(path);
+        verifyUpload: async ({ path, file, purpose }) => {
+            const { data, error } = await supabase.storage.from(purpose === 'verification' ? 'review-verifications' : 'review-photos').info(path);
             return !error && data !== null && data.size === file.size
                 && (!file.type || data.contentType === file.type);
         },
@@ -143,7 +143,7 @@ function createReviewSaveOperation(
                 cleanupCanonicalReviewPhotoObjects(
                     uploads.filter(upload => upload.purpose === purpose).map(upload => upload.path),
                     { ownerId, reviewId, purpose },
-                    supabase.storage.from('review-photos'),
+                    supabase.storage.from(purpose === 'verification' ? 'review-verifications' : 'review-photos'),
                 )
             )));
             return results.every(result => result.success);

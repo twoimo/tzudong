@@ -1,5 +1,9 @@
 'use client';
 
+export function shouldRefreshPopularAfterSearch(result: { success: boolean; reason: string }): boolean {
+    return result.success && result.reason !== 'analytics_disabled';
+}
+
 /**
  * Search analytics is disabled until an approved aggregate-only endpoint and
  * retention contract are available.

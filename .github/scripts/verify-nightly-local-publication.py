@@ -126,7 +126,7 @@ STACK_SERVICES = {
     "supavisor",
     "vector",
 }
-EXPECTED_LEDGER_UNITS = 101
+EXPECTED_LEDGER_UNITS = 104
 SEQUENCE_MARKERS = (
     "prerequisite",
     "migration",
@@ -194,6 +194,7 @@ READBACK_SECTIONS = (
     "admin_map_overlay_rpc",
     "admin_map_overlay_table_grants",
     "admin_map_overlay_policies",
+    "review_media_functions",
     "auth_users",
     "auth_identities",
     "profiles",
@@ -207,9 +208,10 @@ READBACK_SECTIONS = (
     "seed_buckets",
     "seed_realtime",
 )
-CATALOG_SECTIONS = READBACK_SECTIONS[:22]
-SEED_SECTIONS = READBACK_SECTIONS[22:]
+CATALOG_SECTIONS = READBACK_SECTIONS[:23]
+SEED_SECTIONS = READBACK_SECTIONS[23:]
 READBACK_ROW_LENGTHS = {
+    "review_media_functions": 12,
     "extensions": 5,
     "roles": 7,
     "schemas": 3,
@@ -218,10 +220,10 @@ READBACK_ROW_LENGTHS = {
     "constraints": 6,
     "indexes": 5,
     "functions": 8,
-    "policies": 8,
+    "policies": 9,
     "triggers": 7,
     "storage_buckets": 6,
-    "storage_policies": 8,
+    "storage_policies": 9,
     "realtime_membership": 4,
     "public_read_function_grants": 4,
     "public_read_table_grants": 7,
@@ -778,6 +780,10 @@ def verify_migration_summary(
         or set(section_counts) != set(READBACK_SECTIONS)
         or any(type(value) is not int or value < 0 for value in section_counts.values())
         or any(section_counts[section] < 1 for section in READBACK_SECTIONS)
+        or section_counts.get("review_media_functions") != 12
+        or section_counts.get("storage_policies") != 20
+        or section_counts.get("storage_buckets") != 7
+        or section_counts.get("seed_buckets") != 7
         or payload.get("readback_row_count") != sum(section_counts.values())
         or type(payload.get("readback_row_count")) is not int
         or payload["readback_row_count"] <= 0

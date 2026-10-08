@@ -209,9 +209,123 @@ This diagnostic does not repair ACLs, update the migration ledger, clear ambigui
 
 ## Replay receipt version and source accounting
 
-Admission requires accounting for 101 source units: 98 source applications, two `verified-existing` overlaps, and one `legacy-contract-preserved` PG15 contract. Each non-application row contains its full pinned verification proof and an independently read-back proof digest. These statuses do not assert that hosted PG17 repair SQL ran. A conflicting terminal proof is never overwritten; uncertain outcomes still require a fresh isolated database.
+Admission requires accounting for 104 source units: 101 source applications, two `verified-existing` overlaps, and one `legacy-contract-preserved` PG15 contract. Each non-application row contains its full pinned verification proof and an independently read-back proof digest. These statuses do not assert that hosted PG17 repair SQL ran. A conflicting terminal proof is never overwritten; uncertain outcomes still require a fresh isolated database.
 
 Receipt content now uses `local-receipt-v2` with the unchanged `receipt-v1` row serializer. The historical artifact filename `local-receipt-v1.json` remains the workflow path, but readers reject v1 **content** and require the v2 `replay_proofs` field. The web, closure and publication checks validate the same exact source/proof bindings. These source changes do not establish a successful current full-stack replay.
+
+### Review media catalog integration (2026-10-09)
+
+The final three units are `20261008192455_review_media_commit_cleanup.sql`,
+`20261008200719_review_verification_private.sql`, and
+`20261008201635_review_media_catalog_integration.sql`. The last file was created
+with the repository's Supabase CLI 2.117.0. It pins the final bodies of six public
+RPCs and six private helpers, assigns the trusted workflow owner, and registers
+exact authenticated-only public identities. G014 denies the workflow role auth-
+schema access. Therefore the integration pins each parent body and replaces only
+its `auth.uid()` calls with the existing private
+`privacy_retention.g041_current_claim_user_id()` helper, whose body and metadata
+are independently pinned. All six final RPC bodies have separate post-transition
+hashes; the six media helper bodies are unchanged. The existing claim helper
+rejects missing/malformed subjects and non-authenticated claims. No auth-schema
+or Auth-table privilege is restored. It preserves existing G014 assertion
+bodies, all existing immutable manifest rows, and the runner's prior role memberships.
+A before/after source hash admits only the two new identities in the declarative
+`g014_catalog_protected_relations()` list. The new table shapes, constraints,
+grants and policies are checked before their catalog rows are appended to the
+manifest; the existing manifest assertion then compares both directions.
+
+The workflow role gains only six review UPDATE columns, private commits
+SELECT/INSERT, cleanup SELECT/INSERT/UPDATE, and a Storage SELECT policy for
+`review-photos` and `review-verifications`. The existing reviews SELECT/DELETE
+and Storage SELECT grants must already satisfy the source contract. Private
+tables retain the migration owner with FORCE RLS and five exact workflow policies.
+No API role gains direct private-schema/table/helper access. The transaction uses
+only the already-held G014 ADMIN authority for a noninheriting workflow-owner
+SET lease, restores the complete pre-existing membership catalog, and invokes
+the unchanged G014 assertions through a self-dropping temporary owner function.
+It does not grant Storage/service-role membership, create a new administrative
+authority, or modify global settings. Missing existing public-schema CREATE or
+G014 owner-management authority is a fixed-code failure.
+
+Storage policy DDL runs as `postgres`. Standard owner/USAGE/SET checks alone do
+not establish whether this is allowed: the existing
+[supautils policy hook](https://github.com/supabase/supautils#manage-policies)
+can authorize `storage.objects` policy management through `supautils.policy_grants`.
+Read the admitted clone's current setting and `shared_preload_libraries` without
+changing either; an absent `pg_extension` row does not prove the preload hook is
+absent. The actual policy command must succeed with existing authority or roll
+back; no role/configuration fallback is attempted. Parent-reported stage 1
+success in its exact 17.6 clone is local evidence, not hosted DDL evidence.
+
+Canonical readback now serializes the policy permissive bit and twelve exact
+`review_media_functions` rows. It rejects changed bodies, owners, grants,
+overloads, full policy predicates, a broadened legacy public-media read policy,
+and any change to the verification bucket's private flag, 5 MiB limit, or four
+MIME types. A fresh nightly receipt contains 20 Storage policies and seven
+buckets. The publication verifier enforces those counts independently. Old
+101-unit receipts are not current evidence.
+
+DB-free validation:
+
+```sh
+python3 -m unittest backend.supabase.tests.test_review_media_catalog_integration \
+  backend.supabase.tests.test_local_migration_contract \
+  backend.supabase.tests.test_local_replay_contract \
+  backend.supabase.tests.test_local_seed_receipt_contract \
+  backend.supabase.tests.test_local_publication_verifier \
+  backend.supabase.tests.test_local_function_runtime_contract
+```
+
+Full-clone handoff: the parent owns `tzudong-ranking-clone-20261008` in
+`colima-tzudong-catalog-20261007`. Do not connect, restart, reset, or change its
+state from a parallel task. The parent prepared the separate schema-only database
+`user_readiness_clone_20261009`, retaining `ranking_clone`, its 1963-row manifest,
+and zero user rows. The parent must confirm the admitted network-isolated
+PostgreSQL 17.6 clone and executor
+`postgres`/`postgres`, retain the pre-run catalog/membership fingerprint, and
+run a rollback rehearsal. If stages 1 and 2 have already succeeded in that
+clone, rehearse and apply only stage 3; never replay the first two files blindly.
+Use `names = ("20261008201635_review_media_catalog_integration.sql",)` in the
+following generator for that staged state. The three source files each have an outer transaction;
+for the rehearsal only, strip exactly that single outer BEGIN/COMMIT pair in
+memory and wrap their ordered bodies in one BEGIN/ROLLBACK. Do not modify source
+files or suppress the internal assertions. This DB-free generator emits the SQL
+to the parent's already-admitted local psql transport (`-X -v ON_ERROR_STOP=1`):
+
+```python
+from pathlib import Path
+import re
+
+names = (
+    "20261008192455_review_media_commit_cleanup.sql",
+    "20261008200719_review_verification_private.sql",
+    "20261008201635_review_media_catalog_integration.sql",
+)
+bodies = []
+for name in names:
+    source = (Path("backend/supabase/migrations") / name).read_text()
+    body, begins = re.subn(r"(?m)^BEGIN;$", "", source)
+    body, commits = re.subn(r"(?m)^COMMIT;$", "", body)
+    assert (begins, commits) == (1, 1)
+    bodies.append(body)
+print("BEGIN;\nSET LOCAL row_security=on;\n" + "\n".join(bodies) + "\nROLLBACK;")
+```
+
+After rollback, compare the catalog and memberships to the pre-run fingerprint.
+Then apply the pending unmodified file(s) once to an exclusively owned disposable
+full clone, rerun the parent's media and private-Storage fixtures under the new
+trusted owner, and execute the `REVIEW_MEDIA_READBACK_BEGIN/END` block from the
+integration migration inside a read-only transaction. The migration itself already verifies exact allowlist rows and all unchanged
+G014 assertions under the trusted owner after restoring memberships. The shared
+block reads only catalogs and bucket configuration; it does not emit review, receipt, or cleanup
+rows. Retain fixed result codes and catalog hashes only. An application-only
+fixture pass does not prove these G014/catalog checks. Verify privilege
+revocations, cross-owner denials, lost-response retries, active-reference
+deletion denial, private Storage reads, both bucket cleanup readbacks, and the
+claim-helper branches (authenticated, missing subject, malformed subject, and
+non-authenticated role) under the final workflow owner.
+The canonical PG15 nightly replay remains a separate gate with its original
+three overlap proofs. No hosted apply or historical object transfer is implied.
 
 ## Local Compose bootstrap
 
@@ -356,7 +470,7 @@ set +a
 
 For ordinary development and generated schema types, do not source the file.
 The wrappers validate owner-only provenance, current service readiness, and the
-101-unit source ledger before exposing only mapped loopback values to the
+104-unit source ledger before exposing only mapped loopback values to the
 child process:
 
 ```sh

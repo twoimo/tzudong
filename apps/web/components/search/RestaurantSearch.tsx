@@ -35,7 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { FilterState } from "@/components/filters/filter-state";
 import { useSearchHistory } from "@/hooks/use-search-history";
-import { incrementSearchCount } from "@/lib/search-count";
+import { incrementSearchCount, shouldRefreshPopularAfterSearch } from "@/lib/search-count";
 
 type SearchType = "name" | "youtube";
 
@@ -342,7 +342,11 @@ const RestaurantSearch = ({
   const handleSelect = useCallback(
     (restaurant: Restaurant) => {
       // 검색 카운트 증가 (비동기, 에러 무시)
-      incrementSearchCount(restaurant.id).catch(() => {});
+      incrementSearchCount(restaurant.id).then((result) => {
+        if (shouldRefreshPopularAfterSearch(result)) {
+          void queryClient.invalidateQueries({ queryKey: POPULAR_RESTAURANTS_QUERY_KEY });
+        }
+      }).catch(() => {});
 
       // 검색 기록에 추가
       addToHistory({
@@ -353,11 +357,6 @@ const RestaurantSearch = ({
           restaurant.jibun_address ||
           restaurant.english_address ||
           "주소 없음",
-      });
-
-      // 인기 검색어 쿼리 무효화하여 즉시 업데이트
-      queryClient.invalidateQueries({
-        queryKey: POPULAR_RESTAURANTS_QUERY_KEY,
       });
 
       // 검색 시에는 별도 콜백 호출 (지도 재조정용)

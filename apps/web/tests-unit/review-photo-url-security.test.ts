@@ -43,6 +43,14 @@ afterAll(() => {
 });
 
 describe('review photo URL trust boundary', () => {
+  test('verification images resolve to the authenticated admin route, never a public or signed URL', () => {
+    const ownership = { ...OWNER, purpose: 'verification' as const };
+    const path = 'owner-123/reviews/review-456/verification/proof.webp';
+    expect(resolveReviewPhotoUrl(path, ownership)).toBe('/api/admin/review-verification/review-456');
+    expect(resolveReviewPhotoUrl('owner-123/1789717467000_verification_proof.jpg', ownership))
+      .toBe('/api/admin/review-verification/review-456');
+    expect(resolveReviewPhotoUrl(path.replace('owner-123', 'other-owner'), ownership)).toBeNull();
+  });
   test('builds and resolves a canonical key bound to its owner and review', () => {
     expect(buildReviewPhotoObjectPath(OWNER, 'food-1.webp')).toBe(VALID_PATH);
     expect(getCanonicalReviewPhotoObjectPath(VALID_PATH, OWNER)).toBe(VALID_PATH);

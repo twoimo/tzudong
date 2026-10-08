@@ -3,6 +3,8 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { NextResponse } from 'next/server';
+import { downloadReviewVerification, REVIEW_VERIFICATION_BUCKET } from '@/lib/reviews/private-verification';
+import { buildReviewPhotoObjectPath } from '@/lib/review-photo-url';
 
 import {
     PRIVACY_UNSAFE_VALUE_REASON,
@@ -452,10 +454,10 @@ function assertSafeReceiptObjectPath(value: unknown): asserts value is string {
     }
 }
 
-function buildReplacementReceiptObjectPath(oldObjectPath: string): string {
-    const separatorIndex = oldObjectPath.lastIndexOf('/');
-    const directory = separatorIndex === -1 ? '' : oldObjectPath.slice(0, separatorIndex);
-    const newObjectPath = `${directory ? `${directory}/` : ''}ocr-${crypto.randomUUID()}.jpg`;
+function buildReplacementReceiptObjectPath(oldObjectPath: string, reviewId: string): string {
+    const ownerId = oldObjectPath.split('/')[0];
+    const newObjectPath = buildReviewPhotoObjectPath({ ownerId, reviewId, purpose: 'verification' }, `ocr-${crypto.randomUUID()}.jpg`);
+    if (!newObjectPath) throw new OcrPersistenceError();
     assertSafeReceiptObjectPath(newObjectPath);
     return newObjectPath;
 }
@@ -475,7 +477,7 @@ async function removeReplacementObject(
     objectPath: string,
 ): Promise<boolean> {
     try {
-        const { error } = await storageAdmin.from('review-photos').remove([objectPath]);
+        const { error } = await storageAdmin.from(REVIEW_VERIFICATION_BUCKET).remove([objectPath]);
         return !error;
     } catch {
         return false;
@@ -489,8 +491,8 @@ async function replaceReceiptWithCompressedObject(
     oldObjectPath: string,
     canonicalImage: Buffer,
 ): Promise<string> {
-    const newObjectPath = buildReplacementReceiptObjectPath(oldObjectPath);
-    const storage = storageAdmin.from('review-photos');
+    const newObjectPath = buildReplacementReceiptObjectPath(oldObjectPath, reviewId);
+    const storage = storageAdmin.from(REVIEW_VERIFICATION_BUCKET);
     let databaseUpdated = false;
     let replacementRemoved = false;
     let replacementStateIndeterminate = false;
@@ -630,9 +632,8 @@ export async function POST(request: Request) {
         if (!review.verification_photo) return errorResponse('RECEIPT_NOT_FOUND', 400);
         assertSafeReceiptObjectPath(review.verification_photo);
 
-        const storage = storageAdmin.from('review-photos');
         const downloadedImage = await downloadPrivateReceiptObject(
-            () => storage.download(review.verification_photo),
+            () => downloadReviewVerification(storageAdmin, review.verification_photo),
         );
         const canonicalStorageImage = await canonicalizeReceiptImage(
             downloadedImage.bytes,
