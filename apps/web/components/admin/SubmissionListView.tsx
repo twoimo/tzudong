@@ -1,5 +1,6 @@
 'use client';
 
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import Image from 'next/image';
@@ -1969,7 +1970,7 @@ export function SubmissionListView({
             <Card className="p-3 shadow-none">
                 <Label className="text-sm font-medium">추천 사유</Label>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-                    {submission.recommendation_reason || submission.items[0]?.tzuyang_review || '추천 사유가 없습니다.'}
+                    {submission.recommendation_reason || formatTzuyangReviewForDisplay(submission.items[0]?.tzuyang_review || '') || '추천 사유가 없습니다.'}
                 </p>
             </Card>
 
@@ -2947,7 +2948,7 @@ export function SubmissionListView({
                                                     {submission.submission_type === 'recommend' ? (
                                                         <>
                                                             <p className="line-clamp-2 text-xs text-muted-foreground">
-                                                                {submission.recommendation_reason || submission.items[0]?.tzuyang_review || '추천 사유 없음'}
+                                                                {submission.recommendation_reason || formatTzuyangReviewForDisplay(submission.items[0]?.tzuyang_review || '') || '추천 사유 없음'}
                                                             </p>
                                                             {submission.items[0]?.youtube_link && (
                                                                 <p className="line-clamp-1 text-2xs text-primary">{submission.items[0].youtube_link}</p>
@@ -2957,7 +2958,7 @@ export function SubmissionListView({
                                                         <>
                                                             {submission.items.slice(0, 2).map((item) => (
                                                                 <p key={item.id} className="line-clamp-1 text-xs text-muted-foreground">
-                                                                    {item.tzuyang_review?.slice(0, 90) || '리뷰없음'}
+                                                                    {formatTzuyangReviewForDisplay(item.tzuyang_review || '').slice(0, 90) || '리뷰없음'}
                                                                 </p>
                                                             ))}
                                                             {submission.items.length > 2 && (

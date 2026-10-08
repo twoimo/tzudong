@@ -1,4 +1,5 @@
 'use client';
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -1051,7 +1052,7 @@ export function SubmissionDetailView({
                                         <div className="space-y-1">
                                             <Label className="text-xs text-gray-600">기존 쯔양 리뷰</Label>
                                             <div className="bg-white rounded p-2 text-xs whitespace-pre-wrap min-h-[40px] border">
-                                                {item.original_restaurant?.tzuyang_review || '-'}
+                                                {formatTzuyangReviewForDisplay(item.original_restaurant?.tzuyang_review || '') || '-'}
                                             </div>
                                         </div>
                                     </div>

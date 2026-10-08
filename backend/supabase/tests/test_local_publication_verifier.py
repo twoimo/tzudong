@@ -1082,11 +1082,11 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_100_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 100)
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 100)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 100)
-        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 100)
+    def test_publication_uses_the_current_101_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 101)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 101)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 101)
+        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 101)
 
     def test_rejects_missing_or_extra_manifest_units_with_recomputed_chain(self) -> None:
         manifest = local_migrate.verify_manifest()
