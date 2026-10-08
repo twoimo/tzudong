@@ -1,0 +1,23 @@
+{
+  "method": "old operating error page, real retry click, no reload",
+  "view": {
+    "errorVisible": false,
+    "overflow": false,
+    "rows": 15
+  },
+  "rpc": {
+    "status": 200,
+    "rows": 19,
+    "columns": [
+      "avg_likes_per_review",
+      "nickname",
+      "quality_score",
+      "review_count",
+      "total_likes",
+      "user_id",
+      "verified_review_count"
+    ]
+  },
+  "field": false,
+  "physicalDevice": false
+}

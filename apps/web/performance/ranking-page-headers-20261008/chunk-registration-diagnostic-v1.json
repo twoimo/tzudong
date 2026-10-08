@@ -1,0 +1,11 @@
+{
+  "scope": "IAB diagnostic only, debugger affects timing",
+  "events": [
+    {
+      "event": "__tzChunkReject",
+      "data": "{\"id\":9963,\"event\":\"error\",\"at\":184.40000009536743}",
+      "context": 9
+    }
+  ],
+  "breakpointsRemoved": true
+}

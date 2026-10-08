@@ -1,0 +1,51 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/verify-pin-contract-source.test.ts:
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > owns the two bounded fixed codes and never mutates release-authority files [0.03ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > verifies all six Pin_Contract items with declared vs resolved [0.05ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > routes type checking through npm run typecheck:parity and guards the compiler root [0.01ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > detects bun.lock vs package-lock.json conflicts and records list + count [0.01ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > fails closed on drift while still recording the per-item receipt
+(pass) Pin_Contract declared values in the tree > package.json and both locks pin the exact contract versions [0.05ms]
+(pass) Pin_Contract verifier runtime behavior > rejects an absent repository compiler or emits a per-item installed-compiler receipt [200.41ms]
+(pass) Bun reconciliation is a failing pin gate > missing or differently resolved direct dependencies fail with otherwise matching pins [2.05ms]
+
+tests-unit/local-supabase-runtime.test.ts:
+(pass) local Supabase runtime source contract > rejects a development port absent from the admitted local browser origins [0.16ms]
+(pass) local Supabase runtime source contract > delegates replay ledger admission to Python over stdin and fails closed [0.51ms]
+(pass) local Supabase runtime source contract > runs the offline Python bridge and propagates authority rejection without diagnostics [99.36ms]
+94 |       'manifest = module.verify_manifest()',
+95 |       'print(json.dumps([module._expected_snapshot_row(item) for item in manifest["source"]["files"]]))',
+96 |     ].join('\n'), root], { encoding: 'utf8', timeout: 30_000 });
+97 |     expect(generated.status).toBe(0);
+98 |     const rows = JSON.parse(generated.stdout);
+99 |     expect(rows).toHaveLength(readdirSync(path.join(root, "backend/supabase/migrations")).filter(name => /^\d{14}_.+\.sql$/.test(name)).length);
+                      ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 80
+Received length: 101
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/local-supabase-runtime.test.ts:99:18)
+(fail) local Supabase runtime source contract > validates current migration fixture snapshots through the real offline authority [966.59ms]
+(pass) local Supabase runtime source contract > derives a path-bound Compose project name [0.38ms]
+(pass) local Supabase runtime source contract > parses exact generated env lines and rejects duplicates or malformed keys [0.50ms]
+(pass) local Supabase runtime source contract > reconstructs STORAGE_SERVICE_KEY from JWT_SECRET when the generated env omitted it [0.32ms]
+(pass) local Supabase runtime source contract > passes only the bounded GitHub socket admission context to local stack status [0.06ms]
+(pass) local Supabase runtime source contract > passes an exact local-only environment to the type generation child [0.11ms]
+(pass) local Supabase runtime source contract > keeps local development isolated from ambient hosted credentials [1.10ms]
+(pass) local Supabase runtime source contract > fails closed on unadmitted next-dev spawners and pins the hosted argv marker [8.90ms]
+(pass) local Supabase runtime source contract > rejects malformed GitHub repository inputs while keeping status fail closed [0.14ms]
+(pass) local Supabase runtime source contract > loads non-database operator inputs into an isolated map before scrubbing [1.54ms]
+(pass) local Supabase runtime source contract > accepts only an explicit owner-only absolute operator env path [1.18ms]
+(pass) local Supabase runtime source contract > rejects group- or world-readable optional local env files [0.67ms]
+(pass) local Supabase runtime source contract > strict local clean wrapper skips repository dotenv and blocks Next dotenv reprocessing [138.05ms]
+(pass) local Supabase runtime source contract > clean wrapper forwards termination and exits with the signal status [43.35ms]
+
+1 tests failed:
+(fail) local Supabase runtime source contract > validates current migration fixture snapshots through the real offline authority [966.59ms]
+
+ 24 pass
+ 1 fail
+ 177 expect() calls
+Ran 25 tests across 2 files. [1.55s]

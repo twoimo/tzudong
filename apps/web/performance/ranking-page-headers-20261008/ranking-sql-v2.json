@@ -1,0 +1,37 @@
+{
+  "kind": "isolated-ranking-rpc",
+  "observedAt": "2026-10-08T08:59:50.096Z",
+  "operatingWrites": false,
+  "userRowsCopied": 0,
+  "receipts": [
+    {
+      "stage": "version",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "before",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "transaction-rollback",
+      "status": "failed",
+      "expectedFailure": false,
+      "sqlState": "P0001",
+      "fixedCode": null,
+      "assertion": "assert_g014_catalog_contract"
+    }
+  ],
+  "sourceSha256": "611238768fc2c8728b2262e272035467eea058594d59d5ee00bafbfbeb0251f2",
+  "fixtureSha256": "db0633026bfaf02c776e80839ab35d8478f2a1a1b1dd63a7843e4da9d9bfe055",
+  "serverVersion": "17.6",
+  "status": "failed",
+  "code": "LOCAL_STAGE_FAILED"
+}

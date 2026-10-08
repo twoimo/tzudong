@@ -1,0 +1,220 @@
+{
+  "rawSources": [
+    "operating-headers-v2.json",
+    "operating-stamp-390-confirm-v3.json"
+  ],
+  "states": [
+    {
+      "pane": "feed",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "box": {
+        "bottom": 74,
+        "height": 74,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390,
+        "x": 0,
+        "y": 0
+      },
+      "font": "20px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "page",
+      "weight": "700"
+    },
+    {
+      "pane": "stamp",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "font": "20px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "weight": "700",
+      "box": {
+        "bottom": 74,
+        "height": 74,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390,
+        "x": 0,
+        "y": 0
+      },
+      "clipped": false,
+      "variant": "page",
+      "confirmation": "operating-stamp-390-confirm-v3.json"
+    },
+    {
+      "pane": "leaderboard",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "box": {
+        "bottom": 74,
+        "height": 74,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390,
+        "x": 0,
+        "y": 0
+      },
+      "font": "20px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "page",
+      "weight": "700"
+    },
+    {
+      "pane": "feed",
+      "viewport": {
+        "w": 768,
+        "h": 1024
+      },
+      "box": {
+        "bottom": 87,
+        "height": 87,
+        "left": 41.5,
+        "right": 711.5,
+        "top": 0,
+        "width": 670,
+        "x": 41.5,
+        "y": 0
+      },
+      "font": "24px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "page",
+      "weight": "700"
+    },
+    {
+      "pane": "stamp",
+      "viewport": {
+        "w": 768,
+        "h": 1024
+      },
+      "box": {
+        "bottom": 87,
+        "height": 87,
+        "left": 0,
+        "right": 768,
+        "top": 0,
+        "width": 768,
+        "x": 0,
+        "y": 0
+      },
+      "font": "24px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "page",
+      "weight": "700"
+    },
+    {
+      "pane": "leaderboard",
+      "viewport": {
+        "w": 768,
+        "h": 1024
+      },
+      "box": {
+        "bottom": 87,
+        "height": 87,
+        "left": 0,
+        "right": 753,
+        "top": 0,
+        "width": 753,
+        "x": 0,
+        "y": 0
+      },
+      "font": "24px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "page",
+      "weight": "700"
+    },
+    {
+      "pane": "feed",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "box": {
+        "bottom": 126,
+        "height": 57,
+        "left": 0,
+        "right": 391,
+        "top": 69,
+        "width": 391,
+        "x": 0,
+        "y": 69
+      },
+      "font": "14px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "panel",
+      "weight": "600"
+    },
+    {
+      "pane": "stamp",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "box": {
+        "bottom": 134,
+        "height": 65,
+        "left": 0,
+        "right": 391,
+        "top": 69,
+        "width": 391,
+        "x": 0,
+        "y": 69
+      },
+      "font": "14px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "panel",
+      "weight": "600"
+    },
+    {
+      "pane": "leaderboard",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "box": {
+        "bottom": 134,
+        "height": 65,
+        "left": 0,
+        "right": 391,
+        "top": 69,
+        "width": 391,
+        "x": 0,
+        "y": 69
+      },
+      "font": "14px",
+      "overflow": false,
+      "rankingError": false,
+      "titleClipped": false,
+      "variant": "panel",
+      "weight": "600"
+    }
+  ],
+  "independentUsers": 0,
+  "deterministicReadyStates": 9,
+  "notPerformanceSample": true
+}

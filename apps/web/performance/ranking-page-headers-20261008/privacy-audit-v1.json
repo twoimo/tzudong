@@ -1,0 +1,10 @@
+{
+  "knownBrowserKeyValuesStored": false,
+  "artifactSymlinks": 0,
+  "rawProfileRowsStored": false,
+  "headerCapturesOnlyOrRequestedPublicBusinessText": true,
+  "initialCaptureMinimized": true,
+  "privateSchemaSnapshotsExcluded": true,
+  "authProfilesExcluded": true,
+  "auditScope": "known configured key byte check plus manual capture/payload review; not universal PII proof"
+}

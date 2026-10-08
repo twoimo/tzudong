@@ -1,0 +1,14 @@
+{
+  "scope": "this task only, inactive regenerated webpack cache",
+  "path": "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/.next/cache/webpack",
+  "allocatedBefore": 2256646144,
+  "allocatedAfter": 1446010880,
+  "cacheAllocatedRemoved": 810635264,
+  "diskFreeBefore": 274090156032,
+  "diskFreeAfter": 274903781376,
+  "buildIdPreserved": true,
+  "packageLockSha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694",
+  "runtimeOutputPreserved": true,
+  "otherWorktreesOrVmStopped": false,
+  "browserProfilesCopied": 0
+}

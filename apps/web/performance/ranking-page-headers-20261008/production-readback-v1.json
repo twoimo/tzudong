@@ -1,0 +1,20 @@
+{
+  "id": "dpl_HXG5n1x3k4E2PBA4Vf4pEvXcqfye",
+  "url": "tzudong-niao9yn3r-twoimos-projects.vercel.app",
+  "sha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "branch": "main",
+  "state": "READY",
+  "target": "production",
+  "aliases": [
+    "www.tzudong.app",
+    "internal.tzudong.app",
+    "tzudong.app",
+    "tzudong-twoimos-projects.vercel.app",
+    "tzudong-git-main-twoimos-projects.vercel.app"
+  ],
+  "project": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "region": [
+    "icn1"
+  ],
+  "aliasMatchesIndependentLookup": true
+}

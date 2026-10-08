@@ -1,0 +1,15 @@
+{
+  "box": {
+    "bottom": 65,
+    "height": 65,
+    "left": 0,
+    "right": 390,
+    "top": 0,
+    "width": 390,
+    "x": 0,
+    "y": 0
+  },
+  "font": "14px",
+  "overflow": false,
+  "weight": "600"
+}

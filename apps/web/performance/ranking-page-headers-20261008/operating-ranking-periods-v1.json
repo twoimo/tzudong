@@ -1,0 +1,25 @@
+{
+  "periods": [
+    {
+      "period": "월간",
+      "error": false,
+      "overflow": false,
+      "rows": 19,
+      "selected": [
+        "월간"
+      ]
+    },
+    {
+      "period": "전체",
+      "error": false,
+      "overflow": false,
+      "rows": 15,
+      "selected": [
+        "전체"
+      ]
+    }
+  ],
+  "rowsAfterScroll": 19,
+  "field": false,
+  "physicalDevice": false
+}

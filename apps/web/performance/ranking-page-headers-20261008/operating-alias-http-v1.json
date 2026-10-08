@@ -1,0 +1,14 @@
+[
+  {
+    "requested": "https://tzudong.app/",
+    "final": "https://www.tzudong.app/",
+    "status": 200,
+    "release": null
+  },
+  {
+    "requested": "https://www.tzudong.app/",
+    "final": "https://www.tzudong.app/",
+    "status": 200,
+    "release": null
+  }
+]

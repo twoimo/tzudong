@@ -1,0 +1,17 @@
+{
+  "sha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "sdk": {
+    "loaded": true,
+    "version": null
+  },
+  "detail": {
+    "loadedMapImages": 73,
+    "markers": 0,
+    "overflow": false,
+    "paragraphs": 1
+  },
+  "sourceReferenceGroups": 4,
+  "qa": true,
+  "physicalDevice": false,
+  "field": false
+}

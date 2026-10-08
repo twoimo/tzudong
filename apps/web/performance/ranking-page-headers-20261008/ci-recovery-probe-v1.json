@@ -1,0 +1,13 @@
+{
+  "generatedSqlSha256": "ac27b2d87153c6b433d697f444ea77444f1a921d6e948163fd12ec8265574a0a",
+  "generatorSha256": "6f871597b0ee6525bd3034cda7cde2566c8f3a604040b42a97449013d7c90138",
+  "status": "passed",
+  "sqlState": [],
+  "scope": "same CI probe on full hosted-schema PG17 clone; no whole canonical PG15 execution claim",
+  "operatingWrites": false,
+  "lastDerivedResult": {
+    "missing_rpc_recovery": "passed",
+    "synthetic_fixture": "passed",
+    "rollback": "exact"
+  }
+}

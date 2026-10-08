@@ -1,0 +1,631 @@
+..........................................E.E..............F.FFFFFFFFFFFFFFFFF.FF.FFFFFFFFFF..FFFFFFFF.FFFFFF..
+======================================================================
+ERROR: test_accepts_one_candidate_and_general_proof_for_the_same_rpc (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_accepts_one_candidate_and_general_proof_for_the_same_rpc)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1304, in test_accepts_one_candidate_and_general_proof_for_the_same_rpc
+    verifier.verify(root)
+    ~~~~~~~~~~~~~~~^^^^^^
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/.github/scripts/verify-nightly-local-publication.py", line 1211, in verify
+    verify_manifest(payloads["local-migration-manifest.json"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/.github/scripts/verify-nightly-local-publication.py", line 657, in verify_manifest
+    fail("local migration manifest contract mismatch")
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/.github/scripts/verify-nightly-local-publication.py", line 345, in fail
+    raise SystemExit(message)
+SystemExit: local migration manifest contract mismatch
+
+======================================================================
+ERROR: test_accepts_only_the_exact_healthy_sanitized_bundle (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_accepts_only_the_exact_healthy_sanitized_bundle)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1083, in test_accepts_only_the_exact_healthy_sanitized_bundle
+    verifier.verify(root)
+    ~~~~~~~~~~~~~~~^^^^^^
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/.github/scripts/verify-nightly-local-publication.py", line 1211, in verify
+    verify_manifest(payloads["local-migration-manifest.json"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/.github/scripts/verify-nightly-local-publication.py", line 657, in verify_manifest
+    fail("local migration manifest contract mismatch")
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/.github/scripts/verify-nightly-local-publication.py", line 345, in fail
+    raise SystemExit(message)
+SystemExit: local migration manifest contract mismatch
+
+======================================================================
+FAIL: test_publication_uses_the_current_101_unit_manifest (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_publication_uses_the_current_101_unit_manifest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1088, in test_publication_uses_the_current_101_unit_manifest
+    self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 101)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 100 != 101
+
+======================================================================
+FAIL: test_rejects_blanket_applied_or_arbitrary_status_ledger_hash (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_blanket_applied_or_arbitrary_status_ledger_hash) (status='applied')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1173, in test_rejects_blanket_applied_or_arbitrary_status_ledger_hash
+    with self.assertRaisesRegex(SystemExit, "ledger digest mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "ledger digest mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_blanket_applied_or_arbitrary_status_ledger_hash (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_blanket_applied_or_arbitrary_status_ledger_hash) (status='new-status')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1173, in test_rejects_blanket_applied_or_arbitrary_status_ledger_hash
+    with self.assertRaisesRegex(SystemExit, "ledger digest mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "ledger digest mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='disposition', value='applied')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='disposition', value='new-status')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='schema', value='local-replay-proof-v2')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='source_sha256', value='0000000000000000000000000000000000000000000000000000000000000000')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='verification_sql_sha256', value='0000000000000000000000000000000000000000000000000000000000000000')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='bindings', value={})
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='receipt', value={'read_only': True})
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes) (field='unexpected', value=True)
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1158, in test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_cross_artifact_closure_binding_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_cross_artifact_closure_binding_drift)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1528, in test_rejects_cross_artifact_closure_binding_drift
+    with self.assertRaisesRegex(SystemExit, "closure binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "closure binding mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_cross_artifact_stack_identity_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_cross_artifact_stack_identity_drift)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1516, in test_rejects_cross_artifact_stack_identity_drift
+    with self.assertRaisesRegex(SystemExit, "stack binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "stack binding mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_duplicate_rpc_proofs_within_candidate_or_general_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_duplicate_rpc_proofs_within_candidate_or_general_proofs) (proof_group='candidate')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1342, in test_rejects_duplicate_rpc_proofs_within_candidate_or_general_proofs
+    with self.assertRaisesRegex(SystemExit, "runtime case mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "runtime case mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_duplicate_rpc_proofs_within_candidate_or_general_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_duplicate_rpc_proofs_within_candidate_or_general_proofs) (proof_group='general')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1342, in test_rejects_duplicate_rpc_proofs_within_candidate_or_general_proofs
+    with self.assertRaisesRegex(SystemExit, "runtime case mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "runtime case mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_failed_image_preflight (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_failed_image_preflight)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1354, in test_rejects_failed_image_preflight
+    with self.assertRaisesRegex(SystemExit, "image pull preflight contract mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_failed_nested_rpc_case_under_passing_summary (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_failed_nested_rpc_case_under_passing_summary)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1504, in test_rejects_failed_nested_rpc_case_under_passing_summary
+    with self.assertRaisesRegex(SystemExit, "runtime case mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "runtime case mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_failed_runtime_smoke (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_failed_runtime_smoke)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1278, in test_rejects_failed_runtime_smoke
+    with self.assertRaisesRegex(SystemExit, "runtime success contract mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "runtime success contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_incompatible_browser_destination_class (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_incompatible_browser_destination_class)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1584, in test_rejects_incompatible_browser_destination_class
+    with self.assertRaisesRegex(SystemExit, "diagnostics record mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "diagnostics record mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_incomplete_readback_even_with_recomputed_digests (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_incomplete_readback_even_with_recomputed_digests)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1480, in test_rejects_incomplete_readback_even_with_recomputed_digests
+    with self.assertRaisesRegex(SystemExit, "readback summary mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "readback summary mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_malformed_readback_partition_digest (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_malformed_readback_partition_digest)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1492, in test_rejects_malformed_readback_partition_digest
+    with self.assertRaisesRegex(SystemExit, "publication summary contract mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "publication summary contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_manifest_chain_not_derived_from_units (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_manifest_chain_not_derived_from_units)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1466, in test_rejects_manifest_chain_not_derived_from_units
+    with self.assertRaisesRegex(SystemExit, "chain digest mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "chain digest mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_mismatched_github_commit_binding (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_mismatched_github_commit_binding)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1238, in test_rejects_mismatched_github_commit_binding
+    self.assertRaisesRegex(SystemExit, "commit binding mismatch"),
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "commit binding mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_missing_extra_swapped_or_digest_only_replay_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_missing_extra_swapped_or_digest_only_replay_proofs) (proofs='NoneType')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1129, in test_rejects_missing_extra_swapped_or_digest_only_replay_proofs
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_missing_extra_swapped_or_digest_only_replay_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_missing_extra_swapped_or_digest_only_replay_proofs) (proofs='dict')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1129, in test_rejects_missing_extra_swapped_or_digest_only_replay_proofs
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_missing_extra_swapped_or_digest_only_replay_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_missing_extra_swapped_or_digest_only_replay_proofs) (proofs='dict')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1129, in test_rejects_missing_extra_swapped_or_digest_only_replay_proofs
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_missing_extra_swapped_or_digest_only_replay_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_missing_extra_swapped_or_digest_only_replay_proofs) (proofs='dict')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1129, in test_rejects_missing_extra_swapped_or_digest_only_replay_proofs
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_missing_extra_swapped_or_digest_only_replay_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_missing_extra_swapped_or_digest_only_replay_proofs) (proofs='dict')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1129, in test_rejects_missing_extra_swapped_or_digest_only_replay_proofs
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_missing_extra_swapped_or_digest_only_replay_proofs (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_missing_extra_swapped_or_digest_only_replay_proofs) (proofs='dict')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1129, in test_rejects_missing_extra_swapped_or_digest_only_replay_proofs
+    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "replay proof binding mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_rejects_missing_or_extra_manifest_units_with_recomputed_chain (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_missing_or_extra_manifest_units_with_recomputed_chain) (mutation='missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1110, in test_rejects_missing_or_extra_manifest_units_with_recomputed_chain
+    with self.assertRaisesRegex(SystemExit, "manifest contract mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: SystemExit not raised
+
+======================================================================
+FAIL: test_rejects_truncated_migration_ledger_count (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_truncated_migration_ledger_count)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1454, in test_rejects_truncated_migration_ledger_count
+    with self.assertRaisesRegex(SystemExit, "ledger count mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "ledger count mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_typegen_image_or_cli_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_typegen_image_or_cli_drift) (field='image')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1377, in test_rejects_typegen_image_or_cli_drift
+    with self.assertRaisesRegex(
+         ~~~~~~~~~~~~~~~~~~~~~~^
+        SystemExit, "image pull preflight contract mismatch",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_typegen_image_or_cli_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_typegen_image_or_cli_drift) (field='pull_reference')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1377, in test_rejects_typegen_image_or_cli_drift
+    with self.assertRaisesRegex(
+         ~~~~~~~~~~~~~~~~~~~~~~^
+        SystemExit, "image pull preflight contract mismatch",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_typegen_image_or_cli_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_typegen_image_or_cli_drift) (field='repo_digest')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1377, in test_rejects_typegen_image_or_cli_drift
+    with self.assertRaisesRegex(
+         ~~~~~~~~~~~~~~~~~~~~~~^
+        SystemExit, "image pull preflight contract mismatch",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_typegen_image_or_cli_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_typegen_image_or_cli_drift) (field='image_id')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1377, in test_rejects_typegen_image_or_cli_drift
+    with self.assertRaisesRegex(
+         ~~~~~~~~~~~~~~~~~~~~~~^
+        SystemExit, "image pull preflight contract mismatch",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_typegen_image_or_cli_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_typegen_image_or_cli_drift) (field='platform')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1377, in test_rejects_typegen_image_or_cli_drift
+    with self.assertRaisesRegex(
+         ~~~~~~~~~~~~~~~~~~~~~~^
+        SystemExit, "image pull preflight contract mismatch",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_typegen_image_or_cli_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_typegen_image_or_cli_drift) (field='registry')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1377, in test_rejects_typegen_image_or_cli_drift
+    with self.assertRaisesRegex(
+         ~~~~~~~~~~~~~~~~~~~~~~^
+        SystemExit, "image pull preflight contract mismatch",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_typegen_image_or_cli_drift (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_typegen_image_or_cli_drift) (field='status')
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1377, in test_rejects_typegen_image_or_cli_drift
+    with self.assertRaisesRegex(
+         ~~~~~~~~~~~~~~~~~~~~~~^
+        SystemExit, "image pull preflight contract mismatch",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+AssertionError: "image pull preflight contract mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_rejects_unknown_browser_diagnostic_class (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_rejects_unknown_browser_diagnostic_class)
+----------------------------------------------------------------------
+SystemExit: local migration manifest contract mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1556, in test_rejects_unknown_browser_diagnostic_class
+    with self.assertRaisesRegex(SystemExit, "diagnostics record mismatch"):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "diagnostics record mismatch" does not match "local migration manifest contract mismatch"
+
+======================================================================
+FAIL: test_replay_proofs_do_not_replace_independent_publication_bindings (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_replay_proofs_do_not_replace_independent_publication_bindings) (field='ledger_sha256')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1189, in test_replay_proofs_do_not_replace_independent_publication_bindings
+    with self.assertRaisesRegex(SystemExit, error):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: "ledger digest mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_replay_proofs_do_not_replace_independent_publication_bindings (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_replay_proofs_do_not_replace_independent_publication_bindings) (field='sequence_sha256')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1189, in test_replay_proofs_do_not_replace_independent_publication_bindings
+    with self.assertRaisesRegex(SystemExit, error):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: "sequence digest mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_replay_proofs_do_not_replace_independent_publication_bindings (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_replay_proofs_do_not_replace_independent_publication_bindings) (field='service_sha256')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1189, in test_replay_proofs_do_not_replace_independent_publication_bindings
+    with self.assertRaisesRegex(SystemExit, error):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: "service digest mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_replay_proofs_do_not_replace_independent_publication_bindings (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_replay_proofs_do_not_replace_independent_publication_bindings) (field='prerequisite_sha256')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1189, in test_replay_proofs_do_not_replace_independent_publication_bindings
+    with self.assertRaisesRegex(SystemExit, error):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: "sequence mismatch" does not match "local migration publication ledger count mismatch"
+
+======================================================================
+FAIL: test_replay_proofs_do_not_replace_independent_publication_bindings (backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_replay_proofs_do_not_replace_independent_publication_bindings) (field='readback_sql_sha256')
+----------------------------------------------------------------------
+SystemExit: local migration publication ledger count mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/backend/supabase/tests/test_local_publication_verifier.py", line 1189, in test_replay_proofs_do_not_replace_independent_publication_bindings
+    with self.assertRaisesRegex(SystemExit, error):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: "tracked source binding mismatch" does not match "local migration publication ledger count mismatch"
+
+----------------------------------------------------------------------
+Ran 87 tests in 55.451s
+
+FAILED (failures=44, errors=2)

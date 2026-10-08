@@ -1,0 +1,62 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/tzuyang-review-display.test.ts:
+(pass) public Tzuyang review display > removes single and grouped source references without erasing sentences [0.11ms]
+(pass) public Tzuyang review display > handles case, whitespace, fractional seconds and compact lists [0.01ms]
+(pass) public Tzuyang review display > preserves meaningful dates, times, brackets and paragraph structure [0.07ms]
+(pass) public Tzuyang review display > leaves source review identity, visit count inputs and video metadata intact [0.47ms]
+
+tests-unit/nightly-regression-workflow.test.ts:
+(pass) nightly regression package and source contracts > publishes one package entry point for the explicit nightly runner [0.06ms]
+(pass) nightly regression package and source contracts > passes the verified Node 24 supervisor into the unit lane [0.01ms]
+(pass) nightly regression package and source contracts > passes only validated GitHub socket admission context to local stack children [0.42ms]
+(pass) nightly regression package and source contracts > keeps hosted regression as an explicit manual fallback [0.94ms]
+(pass) nightly regression package and source contracts > routes publication script changes through web admin pull and push CI [0.10ms]
+(pass) nightly regression package and source contracts > parses local and hosted mode only from explicit command arguments [0.16ms]
+(pass) nightly regression package and source contracts > requires dedicated nightly inputs instead of silently falling back to ambient env files [0.06ms]
+(pass) nightly regression package and source contracts > keeps the browser lane pinned to curated public and real-local admin specs [0.10ms]
+(pass) nightly regression package and source contracts > keeps mobile emulation inside the selected Chromium project [0.22ms]
+(pass) nightly regression package and source contracts > requires loopback local endpoints and blocks third-party browser destinations [1.22ms]
+(pass) nightly regression package and source contracts > keeps the real local admin browser mutation exception exact and browser-originated [2.05ms]
+(pass) nightly regression package and source contracts > proves local browser function, owned Storage cleanup, and Realtime without raw evidence [0.45ms]
+(pass) nightly regression package and source contracts > proves the real local current-profile mutation lifecycle without raw evidence [0.12ms]
+(pass) nightly regression package and source contracts > requires an explicit non-conflicting local browser port [0.09ms]
+(pass) nightly regression package and source contracts > requires current owner-only local stack and migration receipts before browser admission [0.47ms]
+(pass) nightly regression package and source contracts > keeps nightly web log custody owner-only and symlink-safe [0.18ms]
+(pass) nightly regression package and source contracts > keeps local Supabase fixture routing fail-closed [0.43ms]
+(pass) nightly regression package and source contracts > keeps local health responses redacted to the stable three-field contract [0.05ms]
+(pass) nightly regression package and source contracts > accepts the runner base URL and forwards only the local admin credentials needed by the real DB lane [0.06ms]
+(pass) nightly regression package and source contracts > leaves the existing Playwright projects and server controls intact [0.02ms]
+(pass) nightly regression package and source contracts > reduces the private Playwright JSON report before diagnostics persistence [0.25ms]
+(pass) nightly regression package and source contracts > reconstructs local Docker nightly and uploads only sanitized artifacts [6.05ms]
+(pass) nightly regression package and source contracts > uses one exact publication allowlist from capture through release [0.25ms]
+(pass) nightly regression package and source contracts > attempts both requested local lanes before aggregating their raw outcomes [0.15ms]
+(pass) nightly regression package and source contracts > captures a failing lane exit code even when the workflow shell inherits errexit [74.16ms]
+(pass) nightly regression package and source contracts > emits only fixed-schema lane summaries and rejects inconsistent outcomes [73.85ms]
+(pass) nightly regression package and source contracts > verifies and copies only bounded E2E failure evidence into diagnostics [281.85ms]
+(pass) nightly regression package and source contracts > routes public web and local Supabase changes into Web Admin CI [0.11ms]
+(pass) local migration v2 receipt envelope > admits v2 envelope for subsequent full authority validation, retaining v1 filename [0.17ms]
+1677 |     for (const patch of [
+1678 |       { schema: 'local-receipt-v1' }, { serializer: 'receipt-v2' },
+1679 |       { ledger: Array(77).fill(null) }, { ledger: Array(88).fill(null) }, { ledger: Array(99).fill(null) }, { ledger: Array(101).fill(null) },
+1680 |       { replay_proofs: null }, { replay_proofs: [] }, { replay_proofs: undefined },
+1681 |       { extra: true }, { config_sha256: 'drift' },
+1682 |     ]) expect(() => validate({ ...receipt(), ...patch }, stack)).toThrow('local-receipt-v2');
+                                                                        ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "local-receipt-v2"
+
+Received function did not throw
+Received value: undefined
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/nightly-regression-workflow.test.ts:1682:66)
+(fail) local migration v2 receipt envelope > rejects stale counts/schema, absent proofs, extra fields and provenance drift [0.41ms]
+
+1 tests failed:
+(fail) local migration v2 receipt envelope > rejects stale counts/schema, absent proofs, extra fields and provenance drift [0.41ms]
+
+ 33 pass
+ 1 fail
+ 927 expect() calls
+Ran 34 tests across 2 files. [533.00ms]

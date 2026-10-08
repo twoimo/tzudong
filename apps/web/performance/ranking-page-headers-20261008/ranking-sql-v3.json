@@ -1,0 +1,46 @@
+{
+  "kind": "isolated-ranking-rpc",
+  "observedAt": "2026-10-08T09:00:35.356Z",
+  "operatingWrites": false,
+  "userRowsCopied": 0,
+  "receipts": [
+    {
+      "stage": "version",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "before",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "transaction-rollback",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "apply",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    }
+  ],
+  "sourceSha256": "bd8ed1990006c094ebd65bb1d138115756e60a6ec85012caf50010d0fc5db9fb",
+  "fixtureSha256": "db0633026bfaf02c776e80839ab35d8478f2a1a1b1dd63a7843e4da9d9bfe055",
+  "serverVersion": "17.6",
+  "rollbackExact": true,
+  "status": "failed",
+  "code": "APPLY_STATE_DRIFT"
+}

@@ -1,0 +1,79 @@
+{
+  "kind": "isolated-ranking-rpc",
+  "observedAt": "2026-10-08T09:09:52.172Z",
+  "operatingWrites": false,
+  "userRowsCopied": 0,
+  "receipts": [
+    {
+      "stage": "version",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "before",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "transaction-rollback",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "apply",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "full-g014-contracts",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "synthetic-role-cursor-period-fixture",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "duplicate-migration-fail-closed",
+      "status": "failed",
+      "expectedFailure": true,
+      "sqlState": "P0001",
+      "fixedCode": "public_profile_leaderboard_identity_already_exists",
+      "assertion": null
+    },
+    {
+      "stage": "repeat-readback",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    }
+  ],
+  "sourceSha256": "c20a88dab056196720db99832cd2cd74f17e0928fb41e451c4618b2d5689d273",
+  "fixtureSha256": "ba207a26ab9bfba525d875e68abcf3e6f5fb9e858671512a0b9b57ac21543477",
+  "serverVersion": "17.6",
+  "rollbackExact": true,
+  "membershipRestored": true,
+  "immutableManifestPreserved": true,
+  "status": "passed"
+}

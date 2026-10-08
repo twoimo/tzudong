@@ -1,0 +1,6 @@
+{
+  "fixture_only": true,
+  "status": "failed",
+  "sqlState": "42601",
+  "fixedCode": []
+}

@@ -1,0 +1,9 @@
+{
+  "kind": "isolated-wrong-existing-contract",
+  "operatingWrites": false,
+  "userRowsCopied": 0,
+  "denied": true,
+  "statePreserved": true,
+  "status": "passed",
+  "originalDefinitionRestored": true
+}

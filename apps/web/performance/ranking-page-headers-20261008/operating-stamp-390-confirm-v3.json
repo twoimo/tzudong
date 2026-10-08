@@ -1,0 +1,17 @@
+{
+  "box": {
+    "bottom": 74,
+    "height": 74,
+    "left": 0,
+    "right": 390,
+    "top": 0,
+    "width": 390,
+    "x": 0,
+    "y": 0
+  },
+  "clipped": false,
+  "font": "20px",
+  "overflow": false,
+  "variant": "page",
+  "weight": "700"
+}

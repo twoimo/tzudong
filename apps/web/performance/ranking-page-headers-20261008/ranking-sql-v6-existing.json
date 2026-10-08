@@ -1,0 +1,79 @@
+{
+  "kind": "isolated-ranking-rpc",
+  "observedAt": "2026-10-08T09:53:15.338Z",
+  "operatingWrites": false,
+  "userRowsCopied": 0,
+  "receipts": [
+    {
+      "stage": "version",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "before",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "transaction-rollback",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "apply",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "full-g014-contracts",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "synthetic-role-cursor-period-fixture",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "compatible-existing-idempotence",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    },
+    {
+      "stage": "repeat-readback",
+      "status": "passed",
+      "expectedFailure": false,
+      "sqlState": null,
+      "fixedCode": null,
+      "assertion": null
+    }
+  ],
+  "sourceSha256": "41b15df1af43f0169684ab8c1c5c8f881f2d97a094a520a5d9c808bf46b7501a",
+  "fixtureSha256": "ba207a26ab9bfba525d875e68abcf3e6f5fb9e858671512a0b9b57ac21543477",
+  "serverVersion": "17.6",
+  "rollbackExact": true,
+  "membershipRestored": true,
+  "immutableManifestPreserved": true,
+  "status": "passed"
+}

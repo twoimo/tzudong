@@ -1,0 +1,19 @@
+{
+  "appRuntime": "Node24.21.0",
+  "npm": "11.6.2",
+  "bun": "1.4.0",
+  "next": "16.3.6",
+  "typeScriptNative": "7.0.2",
+  "typeScriptCompat": "6.0.2",
+  "surface": "Codex IAB",
+  "uaReportedChromeVersion": "155.0.0.0",
+  "nativeProductVersion": "unavailable through supported raw CDP",
+  "viewports": [
+    "390x844",
+    "768x1024",
+    "1440x900"
+  ],
+  "device": "desktop responsive emulation; no physical Galaxy",
+  "cache": "operating default cache/distinct QA URLs; local diagnostics bypassed cache/SW separately",
+  "field": false
+}

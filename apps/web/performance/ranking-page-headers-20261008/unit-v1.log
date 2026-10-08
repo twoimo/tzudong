@@ -1,0 +1,102 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/public-profile-read.test.ts:
+(pass) public profile summary RPC boundary > uses the exact RPC contract and preserves requested ordinal order [0.92ms]
+(pass) public profile summary RPC boundary > allows omitted rows but rejects duplicates, reordered rows, and extra fields [0.70ms]
+(pass) public profile summary RPC boundary > drops only the deleted-account row instead of blanking the whole batch [0.09ms]
+(pass) public profile summary RPC boundary > still rejects an empty nickname and a reordered deleted-account row [0.10ms]
+(pass) public profile summary RPC boundary > preserves every bounded raw avatar reference needed for legacy repair [0.15ms]
+(pass) public profile summary RPC boundary > bounds inputs before transport and returns no raw provider diagnostic [0.18ms]
+(pass) public profile summary RPC boundary > classifies an invalid session without preserving the provider error [0.06ms]
+(pass) public profile leaderboard RPC boundary > maps the exact ranked response and validates deterministic order [0.28ms]
+(pass) public profile leaderboard RPC boundary > rejects invalid parameters and malformed or unsorted results [0.20ms]
+(pass) public profile leaderboard page RPC boundary > uses the exact null-or-paired cursor contract and proves after-cursor order [0.17ms]
+(pass) public profile leaderboard page RPC boundary > fetches 101+ equal-score rows sequentially across the UUID boundary [0.95ms]
+(pass) public profile leaderboard page RPC boundary > rejects malformed, duplicate, and no-progress second pages without publishing a prefix [0.78ms]
+(pass) public profile leaderboard page RPC boundary > rejects malformed cursor pairs before transport [0.13ms]
+(pass) public reviewer display labels > labels lookup failure separately from a missing deleted-account row [0.08ms]
+(pass) public reviewer display labels > lookup wrapper swallows RPC failures without inventing deleted-account labels [0.15ms]
+(pass) public reviewer display labels > reads array summaries even when Array.prototype.get exists [0.06ms]
+(pass) public reviewer display labels > reads map summaries by lowercase user id [0.04ms]
+(pass) public reviewer display labels > lookup wrapper batches more than 100 ids instead of failing the whole page [0.51ms]
+(pass) public profile caller convergence > routes public and self reads through the bounded RPC helper [1.55ms]
+
+tests-unit/mypage-mobile-cleanup-contract.test.ts:
+(pass) mypage mobile cleanup source contracts > layout fills the viewport without duplicate return chrome [0.34ms]
+(pass) mypage mobile cleanup source contracts > profile page keeps a quiet mobile-first action hierarchy without noisy duplicate chrome [2.89ms]
+(pass) mypage mobile cleanup source contracts > profile dashboard keeps exactly one border around the whole surface [0.36ms]
+(pass) mypage mobile cleanup source contracts > mobile loading keeps static mypage chrome and uses borderless dynamic skeletons [0.13ms]
+(pass) mypage mobile cleanup source contracts > mypage sections share a calm responsive frame across desktop and mobile [0.82ms]
+(pass) mypage mobile cleanup source contracts > profile photo controls are compact and not duplicated as a large mobile identity card [0.38ms]
+(pass) mypage mobile cleanup source contracts > mobile icon-only mypage actions have labels and touch-sized targets [0.67ms]
+(pass) mypage mobile cleanup source contracts > mypage list cards avoid cramped md columns and clipped card content [0.38ms]
+(pass) mypage mobile cleanup source contracts > mypage desktop cards fill stretched rows and keep touch targets [0.19ms]
+
+tests-unit/feed-query-state.test.ts:
+(pass) public feed query state > keeps a failed first page distinct from a confirmed empty feed [0.06ms]
+
+tests-unit/mobile-scroll-nav-visibility.test.ts:
+(pass) mobile scroll nav visibility > hides the bottom nav while scrolling down through the review feed [0.06ms]
+(pass) mobile scroll nav visibility > shows the bottom nav when scrolling back up [0.07ms]
+(pass) mobile scroll nav visibility > can keep admin navigation hidden until the scroll frame reaches the top [0.01ms]
+(pass) mobile scroll nav visibility > shows the bottom nav near the top even after it was hidden
+(pass) mobile scroll nav visibility > ignores tiny scroll jitter
+(pass) mobile scroll nav visibility > mobile auto-hide collapses the header banner with the bottom nav [0.07ms]
+(pass) mobile mypage scroll frame guards > mypage scroll frame uses the parent viewport instead of a nested 100vh calc [0.16ms]
+(pass) mobile mypage scroll frame guards > mypage scroll frame avoids snap locking so the top area remains freely scrollable [0.26ms]
+
+tests-unit/web-quality-performance-source.test.ts:
+(pass) Tailwind v4 source contracts > parses exact source directives and compiles all production entries with retained utilities [474.75ms]
+(pass) route CSS boundary verifier fixtures > inventories shared and exclusive home, general, admin, and deferred assets [7.38ms]
+(pass) route CSS boundary verifier fixtures > rejects malformed, decoy, negated-media, and budget-bypass CSS [22.84ms]
+(pass) route CSS ceiling boundaries > enforces exact and one-over raw and transfer ceilings for every route [1790.49ms]
+(pass) web quality performance source contracts > map marker HTML keeps image markers with WebP delivery and PNG fallback [0.15ms]
+(pass) web quality performance source contracts > global map exposes bounded Google failure exploration fallback [0.27ms]
+(pass) web quality performance source contracts > map marker WebP assets are present and at least 75% smaller than PNG fallbacks [0.56ms]
+(pass) web quality performance source contracts > popup ad banners load immediately for first-screen exposure while distant media has no src [0.23ms]
+(pass) web quality performance source contracts > home filter count queries run before dropdown open so triggers do not show stale zero counts [0.27ms]
+(pass) web quality performance source contracts > home map runtime renders directly while supporting queries stay intent-gated [13.12ms]
+(pass) web quality performance source contracts > mobile toast dark tokens and G007 announcement width stay explicit [0.21ms]
+(pass) web quality performance source contracts > naver marker click centering avoids slow duplicate recenter loops [0.26ms]
+(pass) web quality performance source contracts > device location floating action does not show expanding circle animations [0.92ms]
+(pass) web quality performance source contracts > profile/stamp/map regressions stay fixed while preserving deferred map loading [1.71ms]
+(pass) web quality performance source contracts > review like heart keeps the previous feed-style mobile and desktop overlay layout [0.86ms]
+(pass) web quality performance source contracts > auth-gated review actions open UI prompts without uncaught LOGIN_REQUIRED throws [0.41ms]
+2896 |     expect(leaderboardPageSource).toContain(
+2897 |       'data-mobile-leaderboard-panel-list="true"',
+2898 |     );
+2899 |     expect(leaderboardPageSource).toContain("mobilePanel");
+2900 |     expect(leaderboardPageSource).toContain('className="px-4"');
+2901 |     expect(leaderboardPageSource).toContain(
+                                         ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "flex flex-wrap items-start justify-between gap-3"
+Received: "'use client';\n\nimport { useState, useEffect, useRef, useMemo, useCallback } from \"react\";\nimport { useRouter } from \"next/navigation\";\nimport { MapPanelHeader } from \"@/components/home/map-panel-chrome\";\nimport { LeaderboardList } from \"@/components/leaderboard/LeaderboardList\";\nimport { Trophy, Info } from \"lucide-react\";\nimport { useAuth } from \"@/contexts/AuthContext\";\nimport { useLeaderboard } from \"@/hooks/useLeaderboard\";\nimport { LeaderboardSkeleton } from \"@/components/ui/skeleton-loaders\";\nimport {\n    Popover,\n    PopoverContent,\n    PopoverTrigger,\n} from \"@/components/ui/popover\";\nimport { Tabs, TabsList, TabsTrigger } from \"@/components/ui/tabs\";\nimport { Button } from \"@/components/ui/button\";\nimport { BREAKPOINTS } from \"@/hooks/useDeviceType\";\nimport { useMobileBottomNavAutoHide } from \"@/hooks/use-mobile-bottom-nav-auto-hide\";\n\nexport default function LeaderboardPage() {\n    const router = useRouter();\n    const { user: currentUser } = useAuth();\n    const LEADERBOARD_PAGE_SIZE = 15;\n    const [period, setPeriod] = useState<'all' | 'monthly'>('all');\n    const {\n        data: leaderboardData = [],\n        isError,\n        isLoading,\n        refetch,\n    } = useLeaderboard(period);\n    const scrollRef = useRef<HTMLDivElement>(null);\n    const userItemRef = useRef<HTMLDivElement>(null);\n    const loadMoreRef = useRef<HTMLDivElement>(null);\n    const [displayLimit, setDisplayLimit] = useState(LEADERBOARD_PAGE_SIZE);\n    const [isMounted, setIsMounted] = useState(false);\n    const leaderboardBottomNavAutoHide = useMobileBottomNavAutoHide({\n        scrollRef,\n        source: 'leaderboard-page-scroll',\n        disabled: !isMounted,\n    });\n\n    useEffect(() => {\n        setIsMounted(true);\n\n        const redirectIfDesktop = () => {\n            if (window.innerWidth > BREAKPOINTS.tabletMax) {\n                router.replace('/?panel=leaderboard');\n            }\n        };\n\n        redirectIfDesktop();\n        window.addEventListener('resize', redirectIfDesktop, { passive: true });\n\n        return () => {\n            window.removeEventListener('resize', redirectIfDesktop);\n        };\n    }, [router]);\n\n    const displayedUsers = useMemo(\n        () => leaderboardData.slice(0, displayLimit),\n        [leaderboardData, displayLimit]\n    );\n\n    const hasMoreToDisplay = displayLimit < leaderboardData.length;\n\n    const loadMoreUsers = useCallback(() => {\n        if (hasMoreToDisplay) {\n            setDisplayLimit(prev => prev + LEADERBOARD_PAGE_SIZE);\n        }\n    }, [hasMoreToDisplay]);\n\n    useEffect(() => {\n        setDisplayLimit(LEADERBOARD_PAGE_SIZE);\n    }, [period]);\n\n    useEffect(() => {\n        const observer = new IntersectionObserver(\n            (entries) => {\n                if (entries[0].isIntersecting) {\n                    loadMoreUsers();\n                }\n            },\n            { root: scrollRef.current, threshold: 0.1 }\n        );\n\n        const target = loadMoreRef.current;\n        if (target) observer.observe(target);\n\n        return () => observer.disconnect();\n    }, [loadMoreUsers]);\n\n    useEffect(() => {\n        if (!isLoading && currentUser && leaderboardData.length > 0) {\n            const timer = setTimeout(() => {\n                userItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });\n            }, 300);\n            return () => clearTimeout(timer);\n        }\n    }, [isLoading, currentUser, leaderboardData]);\n\n    if (!isMounted) return null;\n    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;\n\n    return (\n        <div className=\"flex flex-col h-full bg-background overflow-hidden relative\">\n            <div\n                ref={scrollRef}\n                className=\"h-full overflow-y-auto\"\n                data-layout-primitives=\"stack\"\n                data-scroll-owner=\"leaderboard-list\"\n                onScroll={leaderboardBottomNavAutoHide.onScroll}\n                onTouchStart={leaderboardBottomNavAutoHide.onTouchStart}\n                onTouchMove={leaderboardBottomNavAutoHide.onTouchMove}\n            >\n                {/* Header */}\n                <MapPanelHeader\n                    variant=\"page\"\n                    titleAs=\"h1\"\n                    title=\"쯔동여지도 랭킹\"\n                    titleIcon={<Trophy />}\n                    titleAddon={(\n                                    <Popover>\n                                        <PopoverTrigger asChild>\n                                            <Button\n                                                variant=\"ghost\"\n                                                size=\"icon\"\n                                                className=\"hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0\"\n                                                title=\"랭킹 및 티어 산정 기준 보기\"\n                                                aria-label=\"랭킹 및 티어 산정 기준 보기\"\n                                            >\n                                                <Info className=\"h-4 w-4 text-muted-foreground\" aria-hidden=\"true\" />\n                                            </Button>\n                                        </PopoverTrigger>\n                                        <PopoverContent className=\"w-auto max-w-sm\">\n                                            <div className=\"space-y-3\">\n                                                <div>\n                                                    <h4 className=\"font-medium text-sm\">📊 랭킹 산정 기준</h4>\n                                                    <p className=\"text-xs text-muted-foreground mt-1\">\n                                                        품질 점수 = 리뷰수 × (1 + 평균좋아요 × 0.1)\n                                                    </p>\n                                                </div>\n                                                <div>\n                                                    <h4 className=\"font-medium text-sm\">🏅 티어 산정 기준</h4>\n                                                    <ul className=\"text-xs text-muted-foreground mt-1 space-y-0.5\">\n                                                        <li>👑 마스터: 150점 이상</li>\n                                                        <li>💎 다이아몬드: 75점 이상</li>\n                                                        <li>🏆 골드: 35점 이상</li>\n                                                        <li>🥈 실버: 15점 이상</li>\n                                                        <li>🥉 브론즈: 7점 이상</li>\n                                                        <li>🌱 뉴비: 7점 미만</li>\n                                                    </ul>\n                                                </div>\n                                            </div>\n                                        </PopoverContent>\n                                    </Popover>\n                    )}\n                    description=\"맛집 리뷰를 작성하고 랭킹을 올려보세요!\"\n                    actions={(\n                            <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className=\"w-auto\">\n                                <TabsList className=\"h-8\">\n                                    <TabsTrigger value=\"all\" className=\"text-xs px-2 sm:px-3\">전체</TabsTrigger>\n                                    <TabsTrigger value=\"monthly\" className=\"text-xs px-2 sm:px-3\">월간</TabsTrigger>\n                                </TabsList>\n                            </Tabs>\n                    )}\n                />\n\n                {/* List Content */}\n                <div>\n                    <div data-mobile-leaderboard-panel-list=\"true\">\n                        {isLoading ? (\n                            <LeaderboardSkeleton\n                                count={8}\n                                showHeader={false}\n                                className=\"px-4\"\n                            />\n                        ) : (\n                            <LeaderboardList\n                                users={displayedUsers}\n                                currentUserId={currentUser?.id}\n                                userItemRef={userItemRef}\n                                mobilePanel\n                                isError={isError}\n                                onRetry={() => { void refetch(); }}\n                            />\n                        )}\n                    </div>\n                    <div ref={loadMoreRef} className=\"h-10 flex items-center justify-center\">\n                        {hasMoreToDisplay && (\n                            <span className=\"text-sm text-muted-foreground\" role=\"status\" aria-live=\"polite\">\n                                더 불러오는 중… ({displayedUsers.length} / {leaderboardData.length}명)\n                            </span>\n                        )}\n                    </div>\n                </div>\n            </div>\n        </div>\n    );\n}\n"
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/web-quality-performance-source.test.ts:2901:35)
+(fail) web quality performance source contracts > overlay and review icon buttons expose stable accessible names [1.35ms]
+(pass) web quality performance source contracts > desktop direct feature routes hand off to the home left panel and suppress popup blockers [1.60ms]
+(pass) web quality performance source contracts > direct utility routes render clear fallback states instead of blank or invalid panel configs [0.58ms]
+(pass) web quality performance source contracts > admin utility APIs stay behind admin auth and short URLs cannot become open redirects [0.48ms]
+(pass) web quality performance source contracts > feed direct route defers heavy modals and detail panels until interaction [1.21ms]
+(pass) web quality performance source contracts > /mypage avoids client-side redirect work and defers desktop-only sidebar cost [3.92ms]
+(pass) web quality performance source contracts > page-level loaders keep route fallbacks single-owner while map fallbacks stay embedded [14.37ms]
+(pass) web quality performance source contracts > route loading boundaries keep skeleton ownership single-pass [7.26ms]
+(pass) web quality performance source contracts > intent-loaded mobile modal shells do not render desktop dialog on the first client paint [1.56ms]
+(pass) web quality performance source contracts > auth user state lookups have Supabase index migration coverage [0.33ms]
+(pass) web quality performance source contracts > user-facing Supabase reads avoid wide fanout and redundant stamp fetches [0.89ms]
+(pass) web quality performance source contracts > admin review queue avoids fetching approved review history [0.32ms]
+(pass) web quality performance source contracts > Supabase reads use explicit response shapes instead of broad selects [43.39ms]
+(pass) web quality performance source contracts > global chrome assets stay small and cacheable without changing page UI [14.55ms]
+(pass) web quality performance source contracts > restaurant search controls keep accessible names and keyboard-safe rows [0.47ms]
+(pass) web quality performance source contracts > mobile leaderboard rows keep stats visible inside narrow viewports [0.09ms]
+(pass) web quality performance source contracts > direct mobile routes use a self-hosted Korean font before fallback stacks [0.15ms]
+
+1 tests failed:
+(fail) web quality performance source contracts > overlay and review icon buttons expose stable accessible names [1.35ms]
+
+ 69 pass
+ 1 fail
+ 2868 expect() calls
+Ran 70 tests across 5 files. [2.56s]

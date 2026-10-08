@@ -1,0 +1,15 @@
+{
+  "scope": "actual PG17 membership-window blocks only; not whole canonical PG15/16 replay",
+  "sourceSha256": "15615ff122f66aeca8ad95de7d16535267d4ff7c818a268c23cea5484cb5aaa7",
+  "cases": [
+    {
+      "originalAdmin": false,
+      "originalInherit": true,
+      "setEnabledInWindow": true,
+      "allMembershipRowsRestored": true
+    }
+  ],
+  "baselineRestored": true,
+  "operatingWrites": false,
+  "status": "passed"
+}

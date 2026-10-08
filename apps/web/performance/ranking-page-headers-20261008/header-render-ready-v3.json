@@ -1,0 +1,86 @@
+[
+  {
+    "route": "leaderboard",
+    "w": 390,
+    "h": 844,
+    "name": "쯔동여지도 랭킹",
+    "url": "http://127.0.0.1:3228/leaderboard?__qa=headers-ready",
+    "box": {
+      "bottom": 74,
+      "height": 74,
+      "left": 0,
+      "right": 390,
+      "top": 0,
+      "width": 390,
+      "x": 0,
+      "y": 0
+    },
+    "font": "20px",
+    "overflow": false,
+    "titleClipped": false,
+    "variant": "page"
+  },
+  {
+    "route": "leaderboard",
+    "w": 768,
+    "h": 1024,
+    "name": "쯔동여지도 랭킹",
+    "url": "http://127.0.0.1:3228/leaderboard?__qa=headers-ready",
+    "box": {
+      "bottom": 87,
+      "height": 87,
+      "left": 0,
+      "right": 753,
+      "top": 0,
+      "width": 753,
+      "x": 0,
+      "y": 0
+    },
+    "font": "24px",
+    "overflow": false,
+    "titleClipped": false,
+    "variant": "page"
+  },
+  {
+    "route": "feed",
+    "w": 1440,
+    "h": 900,
+    "name": "리뷰",
+    "url": "http://127.0.0.1:3228/?panel=feed",
+    "box": {
+      "bottom": 126,
+      "height": 57,
+      "left": 0,
+      "right": 391,
+      "top": 69,
+      "width": 391,
+      "x": 0,
+      "y": 69
+    },
+    "font": "14px",
+    "overflow": false,
+    "titleClipped": false,
+    "variant": "panel"
+  },
+  {
+    "route": "leaderboard",
+    "w": 1440,
+    "h": 900,
+    "name": "랭킹",
+    "url": "http://127.0.0.1:3228/?panel=leaderboard",
+    "box": {
+      "bottom": 134,
+      "height": 65,
+      "left": 0,
+      "right": 391,
+      "top": 69,
+      "width": 391,
+      "x": 0,
+      "y": 69
+    },
+    "font": "14px",
+    "overflow": false,
+    "titleClipped": false,
+    "variant": "panel"
+  }
+]

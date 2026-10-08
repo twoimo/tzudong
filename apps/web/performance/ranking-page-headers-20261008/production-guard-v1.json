@@ -1,0 +1,10 @@
+{
+  "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+  "id": "i4fHH6tbzAA1jtCM",
+  "target": [
+    "production"
+  ],
+  "type": "sensitive",
+  "approvedSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "guardDisabled": false
+}

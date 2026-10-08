@@ -1,0 +1,24 @@
+{
+  "kind": "pg17-full-schema-contract-reconstruction",
+  "status": "passed",
+  "database": "ranking_clone",
+  "metadata": {
+    "ownerSet": false,
+    "memberCount": 29,
+    "booleanCases": 27,
+    "manifestRows": 1963,
+    "booleanMismatches": 0,
+    "postgresSuperuser": false
+  },
+  "assertionsPassed": 4,
+  "projections": {
+    "argumentOidRows": 8,
+    "droppedColumnPositions": 7,
+    "booleanAssociativityRows": 1
+  },
+  "temporaryRestoreSuperuserReverted": true,
+  "assertionCodeChanged": false,
+  "immutableTriggerDisabled": false,
+  "operatingWrites": false,
+  "userRowsCopied": 0
+}

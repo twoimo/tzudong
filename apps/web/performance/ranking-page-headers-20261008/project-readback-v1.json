@@ -1,0 +1,13 @@
+{
+  "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "name": "tzudong",
+  "accountId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+  "rootDirectory": "apps/web",
+  "nodeVersion": "24.x",
+  "repository": {
+    "org": "twoimo",
+    "repo": "tzudong",
+    "type": "github",
+    "productionBranch": "main"
+  }
+}

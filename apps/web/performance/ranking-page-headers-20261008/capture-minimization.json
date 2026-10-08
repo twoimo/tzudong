@@ -1,0 +1,5 @@
+{
+  "removedOriginalSha256": "40c60aac6ec79a4da0841fd2923ef33f59aafce11afcbac3c6b4604699b04307",
+  "reason": "capture extended below header; recaptured header only",
+  "userPayloadStored": false
+}

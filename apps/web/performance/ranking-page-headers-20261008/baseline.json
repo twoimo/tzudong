@@ -1,0 +1,25 @@
+{
+  "source": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+  "candidate_base": "5df2808c083c910b0b87ae7a2c4a24c5cbfbf166",
+  "viewport": [
+    390,
+    844
+  ],
+  "surface": "Codex IAB mobile emulation, not physical device",
+  "ranking_ui": "rank_load_error",
+  "rpc_status": 404,
+  "rpc_code": "PGRST202",
+  "database_catalog": {
+    "leaderboard": false,
+    "leaderboard_page": false,
+    "summaries": true
+  },
+  "direct_profile_select": {
+    "anon": false,
+    "authenticated": false,
+    "service_role": false
+  },
+  "profile_count": 20,
+  "invalid_nickname_count": 0,
+  "phone_hold": true
+}

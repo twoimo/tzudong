@@ -1,0 +1,7 @@
+{
+  "nextBuildId": "f3nfDofnncrVCnY2b4Gtw",
+  "newCandidateBuilds": 1,
+  "duplicatedVariantBuilds": 0,
+  "depsInstallationReason": "PinContract requires compiler in repository tree; shared symlink rejected",
+  "lockSha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694"
+}

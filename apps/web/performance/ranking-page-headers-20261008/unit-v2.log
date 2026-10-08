@@ -1,0 +1,86 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/public-profile-read.test.ts:
+(pass) public profile summary RPC boundary > uses the exact RPC contract and preserves requested ordinal order [0.75ms]
+(pass) public profile summary RPC boundary > allows omitted rows but rejects duplicates, reordered rows, and extra fields [0.22ms]
+(pass) public profile summary RPC boundary > drops only the deleted-account row instead of blanking the whole batch [0.04ms]
+(pass) public profile summary RPC boundary > still rejects an empty nickname and a reordered deleted-account row [0.07ms]
+(pass) public profile summary RPC boundary > preserves every bounded raw avatar reference needed for legacy repair [0.11ms]
+(pass) public profile summary RPC boundary > bounds inputs before transport and returns no raw provider diagnostic [0.16ms]
+(pass) public profile summary RPC boundary > classifies an invalid session without preserving the provider error [0.05ms]
+(pass) public profile leaderboard RPC boundary > maps the exact ranked response and validates deterministic order [0.19ms]
+(pass) public profile leaderboard RPC boundary > rejects invalid parameters and malformed or unsorted results [0.08ms]
+(pass) public profile leaderboard page RPC boundary > uses the exact null-or-paired cursor contract and proves after-cursor order [0.12ms]
+(pass) public profile leaderboard page RPC boundary > fetches 101+ equal-score rows sequentially across the UUID boundary [1.06ms]
+(pass) public profile leaderboard page RPC boundary > rejects malformed, duplicate, and no-progress second pages without publishing a prefix [0.93ms]
+(pass) public profile leaderboard page RPC boundary > rejects malformed cursor pairs before transport [0.09ms]
+(pass) public reviewer display labels > labels lookup failure separately from a missing deleted-account row [0.07ms]
+(pass) public reviewer display labels > lookup wrapper swallows RPC failures without inventing deleted-account labels [0.27ms]
+(pass) public reviewer display labels > reads array summaries even when Array.prototype.get exists [0.06ms]
+(pass) public reviewer display labels > reads map summaries by lowercase user id [0.01ms]
+(pass) public reviewer display labels > lookup wrapper batches more than 100 ids instead of failing the whole page [0.45ms]
+(pass) public profile caller convergence > routes public and self reads through the bounded RPC helper [4.42ms]
+
+tests-unit/mypage-mobile-cleanup-contract.test.ts:
+(pass) mypage mobile cleanup source contracts > layout fills the viewport without duplicate return chrome [2.31ms]
+(pass) mypage mobile cleanup source contracts > profile page keeps a quiet mobile-first action hierarchy without noisy duplicate chrome [5.18ms]
+(pass) mypage mobile cleanup source contracts > profile dashboard keeps exactly one border around the whole surface [0.41ms]
+(pass) mypage mobile cleanup source contracts > mobile loading keeps static mypage chrome and uses borderless dynamic skeletons [0.77ms]
+(pass) mypage mobile cleanup source contracts > mypage sections share a calm responsive frame across desktop and mobile [1.32ms]
+(pass) mypage mobile cleanup source contracts > profile photo controls are compact and not duplicated as a large mobile identity card [0.37ms]
+(pass) mypage mobile cleanup source contracts > mobile icon-only mypage actions have labels and touch-sized targets [0.63ms]
+(pass) mypage mobile cleanup source contracts > mypage list cards avoid cramped md columns and clipped card content [0.33ms]
+(pass) mypage mobile cleanup source contracts > mypage desktop cards fill stretched rows and keep touch targets [0.14ms]
+
+tests-unit/feed-query-state.test.ts:
+(pass) public feed query state > keeps a failed first page distinct from a confirmed empty feed [0.09ms]
+
+tests-unit/mobile-scroll-nav-visibility.test.ts:
+(pass) mobile scroll nav visibility > hides the bottom nav while scrolling down through the review feed [0.04ms]
+(pass) mobile scroll nav visibility > shows the bottom nav when scrolling back up
+(pass) mobile scroll nav visibility > can keep admin navigation hidden until the scroll frame reaches the top
+(pass) mobile scroll nav visibility > shows the bottom nav near the top even after it was hidden
+(pass) mobile scroll nav visibility > ignores tiny scroll jitter
+(pass) mobile scroll nav visibility > mobile auto-hide collapses the header banner with the bottom nav [0.08ms]
+(pass) mobile mypage scroll frame guards > mypage scroll frame uses the parent viewport instead of a nested 100vh calc [0.10ms]
+(pass) mobile mypage scroll frame guards > mypage scroll frame avoids snap locking so the top area remains freely scrollable [0.11ms]
+
+tests-unit/web-quality-performance-source.test.ts:
+(pass) Tailwind v4 source contracts > parses exact source directives and compiles all production entries with retained utilities [402.77ms]
+(pass) route CSS boundary verifier fixtures > inventories shared and exclusive home, general, admin, and deferred assets [7.31ms]
+(pass) route CSS boundary verifier fixtures > rejects malformed, decoy, negated-media, and budget-bypass CSS [14.43ms]
+(pass) route CSS ceiling boundaries > enforces exact and one-over raw and transfer ceilings for every route [1205.97ms]
+(pass) web quality performance source contracts > map marker HTML keeps image markers with WebP delivery and PNG fallback [0.12ms]
+(pass) web quality performance source contracts > global map exposes bounded Google failure exploration fallback [0.20ms]
+(pass) web quality performance source contracts > map marker WebP assets are present and at least 75% smaller than PNG fallbacks [0.79ms]
+(pass) web quality performance source contracts > popup ad banners load immediately for first-screen exposure while distant media has no src [0.14ms]
+(pass) web quality performance source contracts > home filter count queries run before dropdown open so triggers do not show stale zero counts [0.09ms]
+(pass) web quality performance source contracts > home map runtime renders directly while supporting queries stay intent-gated [9.74ms]
+(pass) web quality performance source contracts > mobile toast dark tokens and G007 announcement width stay explicit [0.18ms]
+(pass) web quality performance source contracts > naver marker click centering avoids slow duplicate recenter loops [0.17ms]
+(pass) web quality performance source contracts > device location floating action does not show expanding circle animations [0.81ms]
+(pass) web quality performance source contracts > profile/stamp/map regressions stay fixed while preserving deferred map loading [1.42ms]
+(pass) web quality performance source contracts > review like heart keeps the previous feed-style mobile and desktop overlay layout [0.51ms]
+(pass) web quality performance source contracts > auth-gated review actions open UI prompts without uncaught LOGIN_REQUIRED throws [0.19ms]
+(pass) web quality performance source contracts > overlay and review icon buttons expose stable accessible names [0.64ms]
+(pass) web quality performance source contracts > desktop direct feature routes hand off to the home left panel and suppress popup blockers [1.23ms]
+(pass) web quality performance source contracts > direct utility routes render clear fallback states instead of blank or invalid panel configs [0.42ms]
+(pass) web quality performance source contracts > admin utility APIs stay behind admin auth and short URLs cannot become open redirects [0.29ms]
+(pass) web quality performance source contracts > feed direct route defers heavy modals and detail panels until interaction [1.00ms]
+(pass) web quality performance source contracts > /mypage avoids client-side redirect work and defers desktop-only sidebar cost [3.02ms]
+(pass) web quality performance source contracts > page-level loaders keep route fallbacks single-owner while map fallbacks stay embedded [7.93ms]
+(pass) web quality performance source contracts > route loading boundaries keep skeleton ownership single-pass [4.14ms]
+(pass) web quality performance source contracts > intent-loaded mobile modal shells do not render desktop dialog on the first client paint [1.34ms]
+(pass) web quality performance source contracts > auth user state lookups have Supabase index migration coverage [0.41ms]
+(pass) web quality performance source contracts > user-facing Supabase reads avoid wide fanout and redundant stamp fetches [0.98ms]
+(pass) web quality performance source contracts > admin review queue avoids fetching approved review history [0.29ms]
+(pass) web quality performance source contracts > Supabase reads use explicit response shapes instead of broad selects [35.97ms]
+(pass) web quality performance source contracts > global chrome assets stay small and cacheable without changing page UI [15.59ms]
+(pass) web quality performance source contracts > restaurant search controls keep accessible names and keyboard-safe rows [0.29ms]
+(pass) web quality performance source contracts > mobile leaderboard rows keep stats visible inside narrow viewports [0.06ms]
+(pass) web quality performance source contracts > direct mobile routes use a self-hosted Korean font before fallback stacks [0.10ms]
+
+ 70 pass
+ 0 fail
+ 2890 expect() calls
+Ran 70 tests across 5 files. [1.92s]

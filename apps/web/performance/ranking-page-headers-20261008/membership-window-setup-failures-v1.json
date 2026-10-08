@@ -1,0 +1,11 @@
+{
+  "scope": "isolated fixture setup, not operating source execution",
+  "failedSetupAttempts": 3,
+  "sqlState": "0LP01",
+  "laterValidatedCase": {
+    "admin": false,
+    "inherit": true
+  },
+  "otherBooleanSetupCases": "not validated; database rejected fixture grant preparation",
+  "operatingWrites": false
+}
