@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
+import { MapPanelHeader } from "@/components/home/map-panel-chrome";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -881,30 +882,18 @@ export default function StampPage() {
                         onTouchMove={stampBottomNavAutoHide.onTouchMove}
                     >
                         {/* Header */}
-                        <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                                        <h1 className="flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
-                                            <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
-                                            <span className="min-w-0 truncate">쯔동여지도 도장</span>
-                                        </h1>
-                                        {isRestaurantsLoading ? (
-                                            <Skeleton
-                                                className="h-4 w-12 shrink-0 rounded-full"
-                                                data-stamp-total-count-skeleton="true"
-                                            />
-                                        ) : (
-                                            <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
-                                                ({totalRestaurantCount.toLocaleString()}개)
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
-                                        맛집을 찾아 도장을 찍어보세요!
-                                    </p>
-                                </div>
-                                <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+                        <MapPanelHeader
+                            variant="page"
+                            titleAs="h1"
+                            title="쯔동여지도 도장"
+                            titleIcon={<Trophy />}
+                            count={isRestaurantsLoading ? undefined : totalRestaurantCount}
+                            titleAddon={isRestaurantsLoading ? (
+                                <Skeleton className="h-4 w-12 shrink-0 rounded-full" data-stamp-total-count-skeleton="true" />
+                            ) : undefined}
+                            description="맛집을 찾아 도장을 찍어보세요!"
+                            actions={(
+                                <>
                                     {/* Unvisited Only Toggle */}
                                     <Button
                                         variant="ghost"
@@ -950,8 +939,9 @@ export default function StampPage() {
                                             {viewMode === 'grid' ? <List className="h-5 w-5" aria-hidden="true" /> : <Grid className="h-5 w-5" aria-hidden="true" />}
                                         </Button>
                                     )}
-                                </div>
-                            </div>
+                                </>
+                            )}
+                        >
 
                             {/* 필터 컨트롤 (Filter Controls) */}
                             {/* 모바일/태블릿: 필터 토글 버튼 */}
@@ -1109,7 +1099,7 @@ export default function StampPage() {
                                     필터 초기화
                                 </Button>
                             </div>
-                        </div>
+                        </MapPanelHeader>
 
                         <div
                             className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"

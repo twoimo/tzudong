@@ -2898,10 +2898,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(leaderboardPageSource).toContain("mobilePanel");
     expect(leaderboardPageSource).toContain('className="px-4"');
-    expect(leaderboardPageSource).toContain(
-      "flex flex-wrap items-start justify-between gap-3",
-    );
-    expect(leaderboardPageSource).toContain("basis-[min(11rem,100%)]");
+    expect(leaderboardPageSource).toContain('variant="page"');
+    const sharedHeaderSource = source("components/home/map-panel-chrome.tsx");
+    expect(sharedHeaderSource).toContain("flex flex-wrap items-start justify-between gap-3");
+    expect(sharedHeaderSource).toContain("basis-[min(11rem,100%)]");
     expect(leaderboardLoadingSource).not.toContain("compactLeftPanel");
     expect(leaderboardLoadingSource).toContain("return null");
     expect(leaderboardLoadingSource).toContain("한 번만");
