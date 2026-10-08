@@ -1676,7 +1676,7 @@ describe('local migration v2 receipt envelope', () => {
   test('rejects stale counts/schema, absent proofs, extra fields and provenance drift', () => {
     for (const patch of [
       { schema: 'local-receipt-v1' }, { serializer: 'receipt-v2' },
-      { ledger: Array(77).fill(null) }, { ledger: Array(88).fill(null) }, { ledger: Array(99).fill(null) }, { ledger: Array(101).fill(null) },
+      { ledger: Array(77).fill(null) }, { ledger: Array(88).fill(null) }, { ledger: Array(99).fill(null) }, { ledger: Array(100).fill(null) }, { ledger: Array(102).fill(null) },
       { replay_proofs: null }, { replay_proofs: [] }, { replay_proofs: undefined },
       { extra: true }, { config_sha256: 'drift' },
     ]) expect(() => validate({ ...receipt(), ...patch }, stack)).toThrow('local-receipt-v2');
