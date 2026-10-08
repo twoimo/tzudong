@@ -1,0 +1,20 @@
+{
+  "observedAtUtc": "2026-10-08T14:49:35.324003+00:00",
+  "sourceRelease": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "evidenceTipBeforeTeardown": "1528c04f73fd254dbaba0a278340b0a28354fa25",
+  "ownedBrowserTabsClosed": 3,
+  "userBrowserTabsPreserved": 1,
+  "temporaryEmulationCacheBypassScope": "closed owned tabs",
+  "ownedSqlContainer": "tzudong-ranking-clone-20261008",
+  "ownedSqlContainerImage": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "networkMode": "none",
+  "activeSqlClientProcessesObservedBeforeStop": 0,
+  "ownedSqlContainerStateAfterStop": "exited",
+  "sharedVmStopped": false,
+  "defaultDockerContext": "colima",
+  "privateSqlSnapshotsPreserved": true,
+  "frozenEvidenceChanged": false,
+  "physicalDeviceActions": 0,
+  "performanceAdmissionClaim": false,
+  "goalComplete": false
+}
