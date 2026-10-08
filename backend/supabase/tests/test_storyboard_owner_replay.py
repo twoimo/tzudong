@@ -1,6 +1,6 @@
 from pathlib import Path
 import unittest
-from backend.supabase.scripts.transform_storyboard_owner_replay import transform, PREFIX, SUFFIX, SOURCE_NAME
+from backend.supabase.scripts.transform_storyboard_owner_replay import transform, PREFIX, SUFFIX, SOURCE_NAME, SOURCE_BINDINGS
 
 ROOT = Path(__file__).resolve().parents[3]
 class StoryboardOwnerReplayTests(unittest.TestCase):
@@ -17,10 +17,16 @@ class StoryboardOwnerReplayTests(unittest.TestCase):
     def test_changed_source_is_denied(self):
         source=(ROOT/'backend/supabase/migrations'/SOURCE_NAME).read_bytes()
         with self.assertRaisesRegex(ValueError,'SOURCE_DRIFT'):transform(source+b'\n')
+    def test_historical_restore_uses_its_own_exact_source_binding(self):
+        name='20260920021531_storyboard_historical_restore.sql'
+        source=(ROOT/'backend/supabase/migrations'/name).read_bytes()
+        self.assertEqual(set(SOURCE_BINDINGS),{SOURCE_NAME,name})
+        self.assertTrue(transform(source,name).startswith(PREFIX))
+        with self.assertRaisesRegex(ValueError,'SOURCE_DRIFT'):transform(source,SOURCE_NAME)
     def test_generator_and_workflow_include_the_explicit_source_only_path(self):
         source=(ROOT/'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh').read_text()
         self.assertIn("'backend/supabase/scripts/transform_storyboard_owner_replay.py'",source)
-        case=source.split(SOURCE_NAME+')',1)[1].split(';;',1)[0]
+        case=source.split('20260920021531_storyboard_historical_restore.sql)',1)[1].split(';;',1)[0]
         self.assertIn('transform_storyboard_owner_replay.py',case)
         self.assertIn('storyboard-owner-lease-replay:',case)
         self.assertIn('ON_ERROR_STOP=1',case)

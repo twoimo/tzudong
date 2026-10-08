@@ -6,6 +6,10 @@ import hashlib
 SOURCE_NAME = '20260918021531_storyboard_mlx_worker.sql'
 SOURCE_SHA256 = '3584d659ad253971771bc1a1f49e2f19e837e609e375c22c078673095105a5fa'
 SOURCE_BYTES = 44490
+SOURCE_BINDINGS = {
+    SOURCE_NAME: (SOURCE_SHA256, SOURCE_BYTES),
+    '20260920021531_storyboard_historical_restore.sql': ('6cd66d48f9fde8b86d89f089da3a5f4cc15dd85475fa0769e5724d40f68d2b95', 39070),
+}
 PREFIX = b'''BEGIN;
 CREATE TEMP TABLE storyboard_owner_lease (needed boolean, members text) ON COMMIT DROP;
 DO $lease$ BEGIN
@@ -38,8 +42,9 @@ END $lease$;
 COMMIT;
 '''
 
-def transform(source):
-    if len(source) != SOURCE_BYTES or hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
+def transform(source, name=SOURCE_NAME):
+    binding = SOURCE_BINDINGS.get(name)
+    if binding is None or (hashlib.sha256(source).hexdigest(), len(source)) != binding:
         raise ValueError('STORYBOARD_REPLAY_SOURCE_DRIFT')
     lines = source.splitlines(keepends=True)
     if sum(line.strip(b'\r\n') == b'BEGIN;' for line in lines) != 1 or sum(line.strip(b'\r\n') == b'COMMIT;' for line in lines) != 1:
@@ -51,10 +56,10 @@ def main():
     parser.add_argument('--source', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
-    if args.source.name != SOURCE_NAME:
+    if args.source.name not in SOURCE_BINDINGS:
         raise ValueError('STORYBOARD_REPLAY_SOURCE_IDENTITY')
     with args.output.open('xb') as file:
-        file.write(transform(args.source.read_bytes()))
+        file.write(transform(args.source.read_bytes(), args.source.name))
 
 if __name__ == '__main__':
     main()
