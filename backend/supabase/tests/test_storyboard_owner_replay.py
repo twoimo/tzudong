@@ -1,0 +1,29 @@
+from pathlib import Path
+import unittest
+from backend.supabase.scripts.transform_storyboard_owner_replay import transform, PREFIX, SUFFIX, SOURCE_NAME
+
+ROOT = Path(__file__).resolve().parents[3]
+class StoryboardOwnerReplayTests(unittest.TestCase):
+    def test_source_is_unchanged_inside_one_bounded_transaction(self):
+        source=(ROOT/'backend/supabase/migrations'/SOURCE_NAME).read_bytes()
+        body=b''.join(line for line in source.splitlines(keepends=True) if line.strip(b'\r\n') not in (b'BEGIN;',b'COMMIT;'))
+        actual=transform(source)
+        self.assertEqual(actual,PREFIX+body+SUFFIX)
+        self.assertEqual(actual.count(b'GRANT privacy_workflow_owner TO postgres;'),1)
+        self.assertEqual(actual.count(b'REVOKE privacy_workflow_owner FROM postgres;'),1)
+        self.assertIn(b'pg_temp.storyboard_owner_lease',actual)
+        self.assertIn(b'STORYBOARD_REPLAY_MEMBERSHIP_DRIFT',actual)
+        self.assertNotIn(b'WITH ADMIN OPTION',actual)
+    def test_changed_source_is_denied(self):
+        source=(ROOT/'backend/supabase/migrations'/SOURCE_NAME).read_bytes()
+        with self.assertRaisesRegex(ValueError,'SOURCE_DRIFT'):transform(source+b'\n')
+    def test_generator_and_workflow_include_the_explicit_source_only_path(self):
+        source=(ROOT/'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh').read_text()
+        self.assertIn("'backend/supabase/scripts/transform_storyboard_owner_replay.py'",source)
+        case=source.split(SOURCE_NAME+')',1)[1].split(';;',1)[0]
+        self.assertIn('transform_storyboard_owner_replay.py',case)
+        self.assertIn('storyboard-owner-lease-replay:',case)
+        self.assertIn('ON_ERROR_STOP=1',case)
+        workflow=(ROOT/'.github/workflows/g014-catalog-contract-baseline.yml').read_text()
+        self.assertIn('backend/supabase/tests/test_storyboard_owner_replay.py',workflow)
+        self.assertIn('backend.supabase.tests.test_storyboard_owner_replay',workflow)

@@ -39,6 +39,7 @@ relevant_sources=(
   'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
   'backend/supabase/scripts/catalog_docker_endpoint.py'
   'backend/supabase/scripts/transform_g014_guardian_replay.py'
+  'backend/supabase/scripts/transform_storyboard_owner_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
   'backend/supabase/scripts/verify_admin_management_group_replay.py'
@@ -1476,6 +1477,12 @@ for migration in "${effective_migrations[@]}"; do
       }
       g026_chain_apply "self-contained-replay:${migration##*/}" "$migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
+      ;;
+    20260918021531_storyboard_mlx_worker.sql)
+      transformed_migration="$work_dir/storyboard-owner-replay.sql"
+      python3 "$script_dir/transform_storyboard_owner_replay.py" --source "$migration" --output "$transformed_migration"
+      g026_chain_apply "storyboard-owner-lease-replay:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     *)
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
