@@ -76,14 +76,17 @@ const createRestaurantSelectionMatcher = (selection: Restaurant) => {
     };
 };
 
-type SelectionCacheKey = Pick<Restaurant, 'id' | 'name' | 'lat' | 'lng'> & { mergedIds: string[] };
+type SelectionCacheKey = Pick<Restaurant, 'id' | 'name' | 'lat' | 'lng'> & { mergedIds: readonly string[] };
+const EMPTY_MERGED_IDS: readonly string[] = [];
 
 const selectionCacheKey = (selection: Restaurant): SelectionCacheKey => ({
     id: selection.id,
     name: selection.name,
     lat: selection.lat,
     lng: selection.lng,
-    mergedIds: selection.mergedRestaurants?.map((item) => item.id) ?? [],
+    mergedIds: selection.mergedRestaurants?.length
+        ? selection.mergedRestaurants.map((item) => item.id)
+        : EMPTY_MERGED_IDS,
 });
 
 const matchesSelectionCacheKey = (key: SelectionCacheKey, selection: Restaurant): boolean => {
@@ -194,7 +197,12 @@ export const resolveReleasedSearchSelectionResetPlan = ({
     return { nextReleasedSearchSelectionId: releasedSearchSelectionId } as const;
 };
 
-const rememberedUniqueSwipeLists = new WeakSet<Restaurant[]>();
+type SwipeListSnapshot = {
+    references: Restaurant[];
+    keys: SelectionCacheKey[];
+    unique: Restaurant[];
+};
+const swipeListSnapshots = new WeakMap<Restaurant[], SwipeListSnapshot>();
 let lastPostSearchDedupeExaminationCount = 0;
 
 export function getLastPostSearchDedupeExaminationCount() {
@@ -202,7 +210,16 @@ export function getLastPostSearchDedupeExaminationCount() {
 }
 
 const dedupeRestaurants = (restaurants: Restaurant[]): Restaurant[] => {
-    if (rememberedUniqueSwipeLists.has(restaurants)) return restaurants;
+    const snapshot = swipeListSnapshots.get(restaurants);
+    if (snapshot && snapshot.references.length === restaurants.length
+        && restaurants.every((restaurant, index) => snapshot.references[index] === restaurant
+            && matchesSelectionCacheKey(snapshot.keys[index], restaurant))) {
+        return snapshot.unique;
+    }
+    // Array identity alone is insufficient: callers can replace rows or edit
+    // matching fields in place. Drop the dependent results on any such change.
+    orderedVisibleCache.delete(restaurants);
+    nearestSwipeFallbackCache.delete(restaurants);
     lastPostSearchDedupeExaminationCount += 1;
     const seenIds = new Set<string>();
     const seenMergedIds = new Set<string>();
@@ -228,12 +245,13 @@ const dedupeRestaurants = (restaurants: Restaurant[]): Restaurant[] => {
         else restaurantsByName.set(restaurant.name, [restaurant]);
     });
 
-    if (uniqueRestaurants.length === restaurants.length) {
-        rememberedUniqueSwipeLists.add(restaurants);
-        return restaurants;
-    }
-    rememberedUniqueSwipeLists.add(uniqueRestaurants);
-    return uniqueRestaurants;
+    const unique = uniqueRestaurants.length === restaurants.length ? restaurants : uniqueRestaurants;
+    swipeListSnapshots.set(restaurants, {
+        references: restaurants.slice(),
+        keys: restaurants.map(selectionCacheKey),
+        unique,
+    });
+    return unique;
 };
 
 const getApproximateRestaurantDistance = (
@@ -291,8 +309,8 @@ export const buildRestaurantsForSwipe = ({
     return [...displayRestaurants, ...restaurantsToAdd];
 };
 
-// List-reference caches require replacing catalog/visible arrays on edits.
-// Bound query history while retaining common back-and-forth searches.
+// Snapshots validate relevant row fields before lookup. Weak owners release
+// list history when the list is no longer used; each history remains bounded.
 const MAX_SEARCH_CACHE_ENTRIES = 64;
 const rememberSelectionResult = <T>(cache: Map<string, T>, id: string, value: T) => {
     cache.delete(id);
@@ -324,6 +342,58 @@ export function getLastSwipeOrderBuildCount() {
     return lastSwipeOrderBuildCount;
 }
 
+export function getSwipeSelectionCacheState(visibleRestaurants: Restaurant[], allRestaurants: Restaurant[]) {
+    const orders = orderedVisibleCache.get(visibleRestaurants);
+    let allocatedOrderArrays = 0;
+    let retainedOrderReferences = 0;
+    const unique = swipeListSnapshots.get(visibleRestaurants)?.unique;
+    for (const order of orders?.values() ?? []) {
+        if (order.restaurants !== unique) {
+            allocatedOrderArrays += 1;
+            retainedOrderReferences += order.restaurants.length;
+        }
+    }
+    return {
+        orderEntries: orders?.size ?? 0,
+        fallbackEntries: nearestSwipeFallbackCache.get(allRestaurants)?.size ?? 0,
+        allocatedOrderArrays,
+        retainedOrderReferences,
+        snapshotRows: (swipeListSnapshots.get(visibleRestaurants)?.references.length ?? 0)
+            + (allRestaurants === visibleRestaurants ? 0 : swipeListSnapshots.get(allRestaurants)?.references.length ?? 0),
+    };
+}
+
+const orderRestaurantsForSelection = (restaurants: Restaurant[], selection: Restaurant): Restaurant[] => {
+    const matches = createRestaurantSelectionMatcher(selection);
+    let ordered: Restaurant[] | undefined;
+    let firstUnmatched = -1;
+    let head = 0;
+    let tail = restaurants.length - 1;
+    for (let index = 0; index < restaurants.length; index += 1) {
+        const restaurant = restaurants[index];
+        if (matches(restaurant)) {
+            if (!ordered && firstUnmatched !== -1) {
+                ordered = new Array<Restaurant>(restaurants.length);
+                for (let prefix = 0; prefix < firstUnmatched; prefix += 1) ordered[prefix] = restaurants[prefix];
+                for (let prior = firstUnmatched; prior < index; prior += 1) ordered[tail--] = restaurants[prior];
+            }
+            if (ordered) ordered[head] = restaurant;
+            head += 1;
+        } else {
+            if (firstUnmatched === -1) firstUnmatched = index;
+            if (ordered) ordered[tail--] = restaurant;
+        }
+    }
+    // No match, all matches, or an already leading match group needs no copy.
+    if (!ordered) return restaurants;
+    for (let left = head, right = ordered.length - 1; left < right; left += 1, right -= 1) {
+        const restaurant = ordered[left];
+        ordered[left] = ordered[right];
+        ordered[right] = restaurant;
+    }
+    return ordered;
+};
+
 export const buildPostSearchSwipeCandidates = ({
     visibleRestaurants,
     allRestaurants,
@@ -332,32 +402,19 @@ export const buildPostSearchSwipeCandidates = ({
     const dedupedVisibleRestaurants = dedupeRestaurants(visibleRestaurants);
     let orderedVisibleRestaurants = dedupedVisibleRestaurants;
     if (activeSearchedRestaurant) {
-        let orders = orderedVisibleCache.get(dedupedVisibleRestaurants);
+        let orders = orderedVisibleCache.get(visibleRestaurants);
         if (!orders) {
             orders = new Map();
-            orderedVisibleCache.set(dedupedVisibleRestaurants, orders);
+            orderedVisibleCache.set(visibleRestaurants, orders);
         }
         const cachedOrder = orders.get(activeSearchedRestaurant.id);
         if (cachedOrder && matchesSelectionCacheKey(cachedOrder.searched, activeSearchedRestaurant)) {
             orderedVisibleRestaurants = cachedOrder.restaurants;
+            // A hit refreshes recency without increasing the fixed capacity.
+            rememberSelectionResult(orders, activeSearchedRestaurant.id, cachedOrder);
         } else {
             lastSwipeOrderBuildCount += 1;
-            const matches = createRestaurantSelectionMatcher(activeSearchedRestaurant);
-            orderedVisibleRestaurants = new Array<Restaurant>(dedupedVisibleRestaurants.length);
-            let head = 0;
-            let tail = dedupedVisibleRestaurants.length - 1;
-            for (let index = 0; index < dedupedVisibleRestaurants.length; index += 1) {
-                const restaurant = dedupedVisibleRestaurants[index];
-                if (matches(restaurant)) orderedVisibleRestaurants[head++] = restaurant;
-                else orderedVisibleRestaurants[tail--] = restaurant;
-            }
-            // Non-matches were written backwards; restore their input order.
-            // This stable partition needs one result array, not two + concat.
-            for (let left = head, right = orderedVisibleRestaurants.length - 1; left < right; left += 1, right -= 1) {
-                const restaurant = orderedVisibleRestaurants[left];
-                orderedVisibleRestaurants[left] = orderedVisibleRestaurants[right];
-                orderedVisibleRestaurants[right] = restaurant;
-            }
+            orderedVisibleRestaurants = orderRestaurantsForSelection(dedupedVisibleRestaurants, activeSearchedRestaurant);
             rememberSelectionResult(orders, activeSearchedRestaurant.id, {
                 searched: selectionCacheKey(activeSearchedRestaurant),
                 restaurants: orderedVisibleRestaurants,
@@ -370,6 +427,7 @@ export const buildPostSearchSwipeCandidates = ({
     }
 
     const visibleRestaurant = orderedVisibleRestaurants[0];
+    const dedupedRestaurants = dedupeRestaurants(allRestaurants);
     let fallbacks = nearestSwipeFallbackCache.get(allRestaurants);
     if (!fallbacks) {
         fallbacks = new Map();
@@ -378,6 +436,7 @@ export const buildPostSearchSwipeCandidates = ({
     const cached = fallbacks.get(activeSearchedRestaurant.id);
     if (cached && matchesSelectionCacheKey(cached.searched, activeSearchedRestaurant)
         && matchesSelectionCacheKey(cached.visible, visibleRestaurant)) {
+        rememberSelectionResult(fallbacks, activeSearchedRestaurant.id, cached);
         const cachedFallback = cached.restaurant;
         return cachedFallback
             ? [...orderedVisibleRestaurants, cachedFallback]
@@ -385,7 +444,6 @@ export const buildPostSearchSwipeCandidates = ({
     }
 
     nearestFallbackScanCount += 1;
-    const dedupedRestaurants = dedupeRestaurants(allRestaurants);
     const matchesVisible = createRestaurantSelectionMatcher(visibleRestaurant);
     let nearestFallbackRestaurant: Restaurant | null = null;
     let nearestDistance = Number.POSITIVE_INFINITY;
