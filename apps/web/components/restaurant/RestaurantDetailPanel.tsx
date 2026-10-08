@@ -45,6 +45,7 @@ import {
     selectRelatedRestaurantReviewIds,
 } from "@/lib/restaurant-review-lookup";
 import { collectRestaurantMergedMedia, collectTzuyangReviewEntries, type TzuyangReviewEntry } from "@/lib/restaurant-merged-media";
+import { formatTzuyangReviewForDisplay } from "@/lib/tzuyang-review-display";
 import { buildRestaurantDetailMediaCopy } from "@/lib/restaurant-detail-media-copy";
 import { buildRestaurantAddressDisplayEntries, type RestaurantAddressEntryType } from "@/lib/restaurant-address-presenter";
 import {
@@ -209,7 +210,7 @@ function TzuyangReviewCard({
                 </div>
             ) : null}
             <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-                {entry.text}
+                {formatTzuyangReviewForDisplay(entry.text)}
             </p>
         </div>
     );

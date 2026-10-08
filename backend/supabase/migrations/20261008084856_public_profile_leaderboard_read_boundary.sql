@@ -10,8 +10,13 @@ DECLARE
   v_self_inherit boolean;
   v_self_admin boolean;
 BEGIN
+  PERFORM pg_catalog.set_config('public_profile_leaderboard.remove_legacy_grant','false',true);
   IF pg_catalog.current_setting('server_version_num')::integer < 170000 THEN
-    RAISE EXCEPTION 'public_profile_leaderboard_pg17_required';
+    IF NOT pg_catalog.pg_has_role(session_user,'privacy_workflow_owner','MEMBER') THEN
+      EXECUTE pg_catalog.format('GRANT privacy_workflow_owner TO %I',session_user);
+      PERFORM pg_catalog.set_config('public_profile_leaderboard.remove_legacy_grant','true',true);
+    END IF;
+    RETURN;
   END IF;
   PERFORM pg_catalog.set_config('public_profile_leaderboard.remove_self_grant','false',true);
   PERFORM pg_catalog.set_config('public_profile_leaderboard.restore_self_set','false',true);
@@ -51,8 +56,12 @@ BEGIN
     RAISE EXCEPTION 'public_profile_leaderboard_prerequisite_missing';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
-             WHERE n.nspname='public' AND p.proname='read_public_profile_leaderboard_page') THEN
-    RAISE EXCEPTION 'public_profile_leaderboard_identity_already_exists';
+             WHERE n.nspname='public' AND p.proname='read_public_profile_leaderboard_page'
+               AND (p.oid IS DISTINCT FROM pg_catalog.to_regprocedure('public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)')
+                    OR pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex') <> 'e8a132569e5ea419609003fdbeb2dcad6c8233d35584e850954e1d4488a62d19'
+                    OR pg_catalog.pg_get_function_result(p.oid) <> 'TABLE(user_id uuid, nickname text, review_count bigint, verified_review_count bigint, total_likes bigint, avg_likes_per_review numeric, quality_score numeric)'
+                    OR pg_catalog.pg_get_function_arguments(p.oid) <> 'p_period text, p_limit integer, p_after_quality_score numeric, p_after_user_id uuid')) THEN
+    RAISE EXCEPTION 'public_profile_leaderboard_existing_contract_drift';
   END IF;
   IF pg_catalog.has_table_privilege('anon','public.profiles','SELECT')
      OR pg_catalog.has_table_privilege('authenticated','public.profiles','SELECT')
@@ -64,6 +73,10 @@ BEGIN
 END
 $prerequisites$;
 
+DO $restore_leaderboard$
+BEGIN
+  IF pg_catalog.to_regprocedure('public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)') IS NULL THEN
+    EXECUTE $definition$
 CREATE FUNCTION public.read_public_profile_leaderboard_page(
   p_period text,
   p_limit integer,
@@ -198,6 +211,7 @@ BEGIN
 END
 $profile_leaderboard_page$;
 
+    $definition$;
 REVOKE ALL ON FUNCTION public.read_public_profile_leaderboard_page(
   text, integer, numeric, uuid
 ) FROM PUBLIC, anon, authenticated, service_role;
@@ -227,6 +241,10 @@ ON CONFLICT (source_signature, grantee) DO UPDATE
 SET function_schema = EXCLUDED.function_schema,
     function_name = EXCLUDED.function_name,
     identity_arguments = EXCLUDED.identity_arguments;
+
+  END IF;
+END
+$restore_leaderboard$;
 
 DO $readback$
 DECLARE
@@ -262,8 +280,10 @@ BEGIN
      OR EXISTS (
        SELECT 1
          FROM pg_catalog.aclexplode(v_acl) AS acl
-        WHERE acl.grantee = 0
-          AND acl.privilege_type = 'EXECUTE'
+        WHERE acl.grantee NOT IN (
+                'privacy_workflow_owner'::pg_catalog.regrole,
+                'anon'::pg_catalog.regrole, 'authenticated'::pg_catalog.regrole
+              ) OR acl.is_grantable
      ) THEN
     RAISE EXCEPTION 'public_profile_leaderboard_read_function_acl_drift';
   END IF;
@@ -300,7 +320,9 @@ RESET ROLE;
 
 DO $membership_cleanup$
 BEGIN
-  IF pg_catalog.current_setting('public_profile_leaderboard.remove_self_grant',true)='true' THEN
+  IF pg_catalog.current_setting('public_profile_leaderboard.remove_legacy_grant',true)='true' THEN
+    EXECUTE pg_catalog.format('REVOKE privacy_workflow_owner FROM %I',session_user);
+  ELSIF pg_catalog.current_setting('public_profile_leaderboard.remove_self_grant',true)='true' THEN
     EXECUTE pg_catalog.format('REVOKE privacy_workflow_owner FROM %I GRANTED BY %I',session_user,session_user);
   ELSIF pg_catalog.current_setting('public_profile_leaderboard.restore_self_set',true)='true' THEN
     EXECUTE pg_catalog.format('GRANT privacy_workflow_owner TO %I WITH SET FALSE GRANTED BY %I',session_user,session_user);
