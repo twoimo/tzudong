@@ -1,0 +1,117 @@
+{
+  "exitCode": 1,
+  "issues": [
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/server/app/admin/page.js",
+      "line": 1,
+      "column": 65174,
+      "ruleId": "react-hooks/rules-of-hooks",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/server/app/admin/page.js",
+      "line": 1,
+      "column": 66091,
+      "ruleId": "react-hooks/rules-of-hooks",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/server/chunks/189.js",
+      "line": 22,
+      "column": 38448,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/server/chunks/5199.js",
+      "line": 1,
+      "column": 2823,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/server/chunks/5224.js",
+      "line": 166,
+      "column": 70268,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/server/chunks/612.js",
+      "line": 1,
+      "column": 3084,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/server/instrumentation.js",
+      "line": 19,
+      "column": 505863,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/standalone/apps/web/.next-current-schema-followthrough-build/server/app/admin/page.js",
+      "line": 1,
+      "column": 65174,
+      "ruleId": "react-hooks/rules-of-hooks",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/standalone/apps/web/.next-current-schema-followthrough-build/server/app/admin/page.js",
+      "line": 1,
+      "column": 66091,
+      "ruleId": "react-hooks/rules-of-hooks",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/standalone/apps/web/.next-current-schema-followthrough-build/server/chunks/189.js",
+      "line": 22,
+      "column": 38448,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/standalone/apps/web/.next-current-schema-followthrough-build/server/chunks/5199.js",
+      "line": 1,
+      "column": 2823,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/standalone/apps/web/.next-current-schema-followthrough-build/server/chunks/5224.js",
+      "line": 166,
+      "column": 70268,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/standalone/apps/web/.next-current-schema-followthrough-build/server/chunks/612.js",
+      "line": 1,
+      "column": 3084,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/standalone/apps/web/.next-current-schema-followthrough-build/server/instrumentation.js",
+      "line": 19,
+      "column": 505863,
+      "ruleId": "react/display-name",
+      "severity": 2
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/static/chunks/5059-39d47944887c496c.js",
+      "line": 1,
+      "column": 80880,
+      "ruleId": "@next/next/no-location-assign-relative-destination",
+      "severity": 1
+    },
+    {
+      "file": "apps/web/.next-current-schema-followthrough-build/static/chunks/9731-24238b3b872bce43.js",
+      "line": 1,
+      "column": 2835,
+      "ruleId": "react/display-name",
+      "severity": 2
+    }
+  ]
+}

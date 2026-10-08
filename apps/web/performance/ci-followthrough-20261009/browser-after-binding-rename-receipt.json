@@ -1,0 +1,54 @@
+[
+  {
+    "source": "browser-check.mjs",
+    "exitCode": 0,
+    "outputRoot": "apps/web/performance/ci-followthrough-20261009/browser-check-after-binding-rename/performance/cms-followthrough-20261009",
+    "sourceSha256": "0ee6038c94ebd3d8576ff011545584de30453c7c3eb200a2166f9b34ef08f906",
+    "result": {
+      "evidence": "local-browser-with-synthetic-read-responses",
+      "hostedEvidence": false,
+      "modules": [],
+      "keyboard": {
+        "desktopEnterEscapeFocusReturn": true
+      },
+      "pageErrorCount": 0,
+      "blockedMutationCount": 0,
+      "failure": "expect(locator).toBeVisible() failed"
+    }
+  },
+  {
+    "source": "browser-selector-reconciliation.mjs",
+    "exitCode": 0,
+    "outputRoot": "apps/web/performance/ci-followthrough-20261009/browser-selector-reconciliation-after-binding-rename/performance/cms-followthrough-20261009",
+    "sourceSha256": "daf1ae559ff6009ab002e79cf240a34a24fbfd443937f03f5768e0b59d70a23f",
+    "result": {
+      "evidence": "local-browser-with-synthetic-read-responses",
+      "hostedEvidence": false,
+      "modules": [
+        {
+          "module": "overview",
+          "shellAndHeaderVisible": true
+        },
+        {
+          "module": "restaurants",
+          "shellAndHeaderVisible": true
+        },
+        {
+          "module": "knowledge-graph",
+          "shellAndHeaderVisible": true
+        },
+        {
+          "module": "sentry",
+          "shellAndHeaderVisible": true
+        },
+        {
+          "module": "storyboard",
+          "shellAndHeaderVisible": true
+        }
+      ],
+      "keyboard": {},
+      "pageErrorCount": 0,
+      "blockedMutationCount": 0
+    }
+  }
+]

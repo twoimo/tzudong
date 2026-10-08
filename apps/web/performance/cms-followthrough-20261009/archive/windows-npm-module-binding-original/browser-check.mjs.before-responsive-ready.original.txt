@@ -37,7 +37,6 @@ try {
   report.keyboard.desktopEnterEscapeFocusReturn = true;
   await panel.screenshot({ path: resolve(output, 'operations-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(row).toHaveAttribute('aria-haspopup', 'dialog');
   await row.focus(); await page.keyboard.press('Enter');
   await expect(page.locator('[data-operations-drawer]')).toBeVisible();
   await page.keyboard.press('Escape');

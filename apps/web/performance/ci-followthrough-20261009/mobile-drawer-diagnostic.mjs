@@ -2,7 +2,7 @@ import { chromium, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-const output = resolve('performance/cms-followthrough-20261009');
+const output = resolve('performance/ci-followthrough-20261009/mobile-drawer-diagnostic');
 const processEnv = execFileSync('ps', ['eww', '-p', process.env.CMS_DEV_SERVER_PID ?? '57309', '-o', 'command='], { encoding: 'utf8' });
 const token = processEnv.match(/(?:^| )E2E_ADMIN_ROUTE_BYPASS_TOKEN=([^\s]+)/)?.[1];
 if (!token) throw new Error('Existing local test bypass unavailable');
@@ -23,37 +23,35 @@ await context.route('**/*', async route => {
   }
   return route.continue();
 });
-const report = { evidence: 'local-browser-with-synthetic-read-responses', hostedEvidence: false, modules: [], keyboard: {}, pageErrorCount: 0, blockedMutationCount: 0 };
+const observations = [];
+const row = page.locator('[data-operations-row="pipeline"] button');
+const snapshot = async stage => observations.push({ stage, state: await page.evaluate(() => ({ width: innerWidth, desktopMedia: matchMedia('(min-width: 1024px)').matches, rowDialog: document.querySelector('[data-operations-row="pipeline"] button')?.getAttribute('aria-haspopup'), inspectorCount: document.querySelectorAll('[data-operations-inspector]').length, drawerCount: document.querySelectorAll('[data-operations-drawer]').length, focusedTag: document.activeElement?.tagName })) });
 try {
   await page.goto('http://127.0.0.1:19872/admin?module=llm', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const panel = page.locator('[data-admin-operations-panel]');
-  await expect(panel).toBeVisible({ timeout: 30000 });
-  const row = panel.locator('[data-operations-row="pipeline"] button');
+  await expect(page.locator('[data-admin-operations-panel]')).toBeVisible();
   await row.focus(); await page.keyboard.press('Enter');
-  await expect(panel.locator('[data-operations-inspector]')).toBeFocused();
+  await expect(page.locator('[data-operations-inspector]')).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(panel.locator('[data-operations-inspector]')).toHaveCount(0);
+  await expect(page.locator('[data-operations-inspector]')).toHaveCount(0);
   await expect(row).toBeFocused();
-  report.keyboard.desktopEnterEscapeFocusReturn = true;
-  await panel.screenshot({ path: resolve(output, 'operations-desktop.png') });
+  await snapshot('desktop-closed');
   await page.setViewportSize({ width: 390, height: 844 });
+  await snapshot('immediate-resize');
+  await row.focus(); await page.keyboard.press('Enter');
+  await snapshot('immediate-mobile-enter');
+  try { await expect(page.locator('[data-operations-drawer]')).toBeVisible({ timeout: 5000 }); observations.push({ stage: 'original-mobile-drawer', passed: true }); }
+  catch { observations.push({ stage: 'original-mobile-drawer', passed: false }); }
+  await snapshot('settled-mobile-state');
+  await page.screenshot({ path: resolve(output, 'mobile-drawer-current.png') });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-operations-inspector]')).toHaveCount(0);
   await expect(row).toHaveAttribute('aria-haspopup', 'dialog');
   await row.focus(); await page.keyboard.press('Enter');
   await expect(page.locator('[data-operations-drawer]')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-operations-drawer]')).toHaveCount(0);
   await expect(row).toBeFocused();
-  report.keyboard.mobileDrawerEscapeFocusReturn = true;
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  for (const moduleId of ['overview', 'restaurants', 'submissions', 'reviews', 'users', 'banners', 'insights', 'pipeline', 'knowledge-graph', 'sentry', 'youtube-thumbnail-generator', 'storyboard', 'routes', 'llm', 'audit']) {
-    try {
-      await page.goto(`http://127.0.0.1:19872/admin?module=${moduleId}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      await expect(page.locator('#admin-console-canvas')).toHaveAttribute('data-admin-console-active-module', moduleId, { timeout: 20000 });
-      const header = page.locator(`[data-admin-module-header-module="${moduleId}"]`);
-      await expect(header).toBeVisible({ timeout: 15000 });
-      report.modules.push({ module: moduleId, shellAndHeaderVisible: true });
-    } catch { report.modules.push({ module: moduleId, shellAndHeaderVisible: false }); }
-  }
-} catch (error) { report.failure = String(error.message).split('\n')[0]; }
-finally { report.pageErrorCount = pageErrorCount; report.blockedMutationCount = blockedMutationCount; writeFileSync(resolve(output, 'browser-results.json'), JSON.stringify(report, null, 2) + '\n'); await browser.close(); }
-console.log(JSON.stringify(report));
+  observations.push({ stage: 'responsive-ready-mobile-enter-escape-focus', passed: true });
+} catch { observations.push({ stage: 'diagnostic', passed: false }); }
+finally { writeFileSync(resolve(output, 'observations.json'), JSON.stringify({ observations, pageErrorCount, blockedMutationCount }, null, 2) + '\n'); await browser.close(); }
+console.log(JSON.stringify({ observations, pageErrorCount, blockedMutationCount }));

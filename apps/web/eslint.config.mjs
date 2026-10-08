@@ -1,10 +1,18 @@
+import { readdirSync } from 'node:fs';
+
 import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+
+// Match next.config.mjs's bounded root-level custom distDir contract.
+const generatedNextDistDirs = readdirSync(import.meta.dirname, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && /^\.next-[a-z0-9](?:[a-z0-9-]{0,47})$/.test(entry.name))
+    .map(entry => `${entry.name}/**`);
 
 const eslintConfig = [
     {
         ignores: [
             'node_modules/**',
             '.next/**',
+            ...generatedNextDistDirs,
             '.next-stale-*',
             '.next-stale-*/**',
             '**/.next-stale-*',

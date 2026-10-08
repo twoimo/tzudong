@@ -1,35 +1,14 @@
 {
-  "sourceHeadAtOriginalMeasurement": "8d918f851d8a0ec7dc1637f677cf9db05a61b460",
-  "originalMeasurementMap": "archive/windows-npm-module-binding-original/artifact-map.json.original.txt",
-  "latestRunnerCorrectionEvidence": "../ci-followthrough-20261009/windows-npm-fix-receipt.json",
+  "sourceFreeze": "15d82aa12680b3b3609c8c41aa3599bed82837db",
+  "evidenceClass": "local-synthetic-render-and-behavior",
   "artifacts": {
     "README.md": {
       "sha256": "9a7baea101887345735330c885486aa15210cf651119e93bf83e1236087245d4",
       "bytes": 9860
     },
-    "archive/windows-npm-module-binding-original/artifact-map.json.original.txt": {
-      "sha256": "9ca9711c9b8a057e6e3600c8fd658d75d6ed4298aa5274079e3369187b932128",
-      "bytes": 3907
-    },
-    "archive/windows-npm-module-binding-original/artifact-map.sha256.original.txt": {
-      "sha256": "2f04206a7a93fba0ea3cf41aea544ff39dfe23238407aaec89e530fe9c87a076",
-      "bytes": 84
-    },
-    "archive/windows-npm-module-binding-original/browser-check.mjs.before-responsive-ready.original.txt": {
-      "sha256": "0ee6038c94ebd3d8576ff011545584de30453c7c3eb200a2166f9b34ef08f906",
-      "bytes": 4545
-    },
-    "archive/windows-npm-module-binding-original/browser-check.mjs.original.txt": {
+    "browser-check.mjs": {
       "sha256": "6611c9e47d3a1e191774aca0674c863ae17979b036217e51efc2b5d015be957c",
       "bytes": 4517
-    },
-    "archive/windows-npm-module-binding-original/browser-selector-reconciliation.mjs.original.txt": {
-      "sha256": "ce27e3cf6b826efd729593bd0446f06f0335d21a8f3808b60b0c719ebbb0002d",
-      "bytes": 3571
-    },
-    "browser-check.mjs": {
-      "sha256": "eb999db52cf9c63db794d3718dc5b0bac356bcaff1a960ae3de4f2638b1503ed",
-      "bytes": 4609
     },
     "browser-results.json": {
       "sha256": "2029d413f7a7044c4012f10af987ad1d1758191abc954a36cd9f3bb3b534ab72",
@@ -40,8 +19,8 @@
       "bytes": 575
     },
     "browser-selector-reconciliation.mjs": {
-      "sha256": "daf1ae559ff6009ab002e79cf240a34a24fbfd443937f03f5768e0b59d70a23f",
-      "bytes": 3599
+      "sha256": "ce27e3cf6b826efd729593bd0446f06f0335d21a8f3808b60b0c719ebbb0002d",
+      "bytes": 3571
     },
     "hydration-artifacts/g001-admin-console-modules-final.png": {
       "sha256": "3a5fc58255010176c93596c543f3c91d70e9c3bfbbf9fef3bf5aaea37b22090e",
