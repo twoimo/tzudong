@@ -1,0 +1,34 @@
+import { expect, test } from 'bun:test';
+import { fixtureQuery } from '../performance/swipe-selection-cache-20261009/fixture-query-v3.mjs';
+
+const rows = [
+    { id: 'a', name: '첫 식당', approved_name: '첫 식당', lat: 37.5, lng: 127, categories: ['한식'], status: 'approved', youtube_meta: null },
+    { id: 'b', name: '둘,째 식당', approved_name: '둘,째 식당', lat: 38, lng: 127, categories: ['분식'], status: 'approved', youtube_meta: null },
+];
+const query = (input: string) => fixtureQuery(rows, new URLSearchParams(input));
+
+test('compact projection omits unrequested metadata and resolves approved-name alias', () => {
+    const result = query('select=id,name:approved_name,lat,lng');
+    expect(result.data[0]).toEqual({ id: 'a', name: '첫 식당', lat: 37.5, lng: 127 });
+    expect(result.data[0]).not.toHaveProperty('youtube_meta');
+    expect(result.total).toBe(2);
+});
+test('related-name in queries match quoted names including a comma', () => {
+    const parameters = new URLSearchParams({ approved_name: 'in.("둘,째 식당")', select: 'id,name:approved_name' });
+    expect(fixtureQuery(rows, parameters).data).toEqual([{ id: 'b', name: '둘,째 식당' }]);
+});
+test('single search and bounded viewport return the requested subset', () => {
+    expect(query('approved_name=ilike.%첫%').data.map(row => row.id)).toEqual(['a']);
+    expect(query('lat=gte.37&lat=lte.37.6&id=in.(a,b)').data.map(row => row.id)).toEqual(['a']);
+});
+test('category overlap and contains preserve actual array semantics', () => {
+    expect(query('categories=ov.{한식,분식}').data.length).toBe(2);
+    expect(query('categories=cs.{한식,분식}').data.length).toBe(0);
+});
+test('pagination and ordering keep total separate from the returned page', () => {
+    const result = query('order=id.desc&offset=1&limit=1&select=id');
+    expect(result).toEqual({ data: [{ id: 'a' }], total: 2 });
+});
+test('an unsupported predicate fails explicitly instead of silently returning all rows', () => {
+    expect(() => query('lat=unexpected.1')).toThrow('fixture_predicate_unsupported');
+});

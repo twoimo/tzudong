@@ -1,0 +1,16 @@
+✔ compact SELECT projection and alias (2.224792ms)
+✔ quoted name IN including comma (0.269708ms)
+✔ search and viewport subsets (0.618208ms)
+✔ array overlap versus contains (0.267541ms)
+✔ pagination and total (0.204083ms)
+✔ unsupported predicate is explicit (0.367333ms)
+✔ nullable coordinate predicates match SQL null semantics (0.092084ms)
+✔ popular weekly counts sort numerically (0.094333ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 62.516042

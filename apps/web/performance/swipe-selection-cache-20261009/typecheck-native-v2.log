@@ -1,0 +1,2 @@
+performance/swipe-selection-cache-20261009/before-probe-source.ts(417,45): error TS7006: Parameter 'visibleRestaurants' implicitly has an 'any' type.
+performance/swipe-selection-cache-20261009/before-probe-source.ts(417,65): error TS7006: Parameter 'allRestaurants' implicitly has an 'any' type.

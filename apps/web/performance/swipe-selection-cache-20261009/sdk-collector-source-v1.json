@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "sourceHost": "oapi.map.naver.com",
+  "sourceSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "sameAsBrowserSdk": true,
+  "collectorHostMentioned": true,
+  "neloLoggerIdentifierMentioned": true,
+  "collectorStorePathMentioned": true,
+  "rawSdkBodyPersisted": false,
+  "requestQueryPersisted": false,
+  "sourceClassification": "direct official SDK code corroboration, not a claim that all SDK errors disappear"
+}

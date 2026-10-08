@@ -1,0 +1,10 @@
+{
+  "phase": "AB",
+  "kind": "baseline",
+  "label": "ab-confirm-v6-p7-a",
+  "pair": 7,
+  "variant": "A",
+  "exit": 0,
+  "matched": true,
+  "endedAtUtc": "2026-10-08T18:01:15.859Z"
+}

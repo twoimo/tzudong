@@ -1,0 +1,45 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/swipe-render-cache.test.ts:
+(pass) swipe render cache correctness and capacity > invalidates search ordering when the same search id gets different merged ids [0.99ms]
+(pass) swipe render cache correctness and capacity > invalidates ordering when the same search id gets a new name or coordinates [0.04ms]
+(pass) swipe render cache correctness and capacity > detects an in-place edit of the active search merged ids [0.03ms]
+(pass) swipe render cache correctness and capacity > recomputes the nearest fallback when search coordinates change with the same id [0.05ms]
+(pass) swipe render cache correctness and capacity > recomputes fallback exclusion when the visible selection changes with the same id [0.05ms]
+(pass) swipe render cache correctness and capacity > bounds ordering history to 64 searches per visible list [0.56ms]
+(pass) swipe render cache correctness and capacity > bounds fallback history to 64 searches per catalog [0.45ms]
+(pass) swipe render cache correctness and capacity > preserves the order within both matched and unmatched groups [0.14ms]
+(pass) swipe render cache correctness and capacity > preserves empty, unavailable, invalid-coordinate and tie behavior [0.05ms]
+(pass) swipe render cache correctness and capacity > matches an uncached reference across 2,000 deterministic selection changes [106.21ms]
+
+tests-unit/mobile-home-search-selection.test.ts:
+(pass) mobile home search selection helpers > treats merged or coordinate-matched restaurants as the same selection [0.12ms]
+(pass) mobile home search selection helpers > keeps searched restaurant active only while it still matches the selected restaurant [0.05ms]
+(pass) mobile home search selection helpers > handles a searched restaurant only once until search state is cleared [0.03ms]
+(pass) mobile home search selection helpers > releases search ownership while keeping the current panel selection open [0.03ms]
+(pass) mobile home search selection helpers > plans search selection release only once for an active searched restaurant [0.02ms]
+(pass) mobile home search selection helpers > resets released search selection id when active search changes or clears [0.02ms]
+(pass) mobile home search selection helpers > adds active searched restaurant to swipe candidates when it is outside display ids [0.11ms]
+(pass) mobile home search selection helpers > does not duplicate active searched restaurant already present in display ids [0.01ms]
+(pass) mobile home search selection helpers > keeps selected search result in swipe candidates after search ownership is released [0.02ms]
+(pass) mobile home search selection helpers > does not duplicate selected restaurant that matches an existing display restaurant [0.02ms]
+(pass) mobile home search selection helpers > adds the nearest fallback restaurant when only one visible restaurant remains after search [0.08ms]
+(pass) mobile home search selection helpers > reuses the nearest fallback when the list and visible restaurant are unchanged [0.12ms]
+(pass) mobile home search selection helpers > reuses the searched swipe order for the same visible list [0.18ms]
+
+tests-unit/swipe-cache-list-mutation.test.ts:
+(pass) swipe cache invalidation for mutable list inputs > deduplicates a duplicate appended to an already examined array [0.11ms]
+(pass) swipe cache invalidation for mutable list inputs > refreshes order after a visible item changes its merged identity in place [0.04ms]
+(pass) swipe cache invalidation for mutable list inputs > refreshes same-name coordinate matches after a visible row changes [0.10ms]
+(pass) swipe cache invalidation for mutable list inputs > returns a replaced row object rather than a cached obsolete object [0.11ms]
+(pass) swipe cache invalidation for mutable list inputs > recomputes nearest fallback after catalog coordinates change in place [0.06ms]
+(pass) swipe cache invalidation for mutable list inputs > recomputes nearest fallback after a new catalog row is appended [0.02ms]
+(pass) swipe cache invalidation for mutable list inputs > revisits every query in a 128-search working set without changing results [4.40ms]
+(pass) swipe cache invalidation for mutable list inputs > reuses the original array when matches already form a leading group [0.14ms]
+(pass) swipe cache invalidation for mutable list inputs > keeps both histories at 64 entries after repeated 128-query traversals [27.61ms]
+(pass) swipe cache invalidation for mutable list inputs > invalidates dedupe after a nested merged ID is edited and a list is emptied [0.10ms]
+
+ 33 pass
+ 0 fail
+ 2067 expect() calls
+Ran 33 tests across 3 files. [216.00ms]

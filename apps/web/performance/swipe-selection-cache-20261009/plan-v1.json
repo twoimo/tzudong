@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "createdAtUtc": "2026-10-08T14:56:53.314918+00:00",
+  "baselineCommit": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "sourceBeforeSha256": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+  "runtime": "Bun 1.4.0 / JavaScriptCore; helper-only, not browser/UI memory guard",
+  "dataRows": 735,
+  "searchSets": [
+    8,
+    128
+  ],
+  "cacheLimitUnchanged": 64,
+  "independentProcessesPerVariant": 9,
+  "internalBatchPassesPerProcess": 32,
+  "order": "alternating AB/BA after baseline A/A; two warmup processes per variant",
+  "coldWarmSeparation": "first traversal separately; timed repeated traversal after two internal passes",
+  "correctness": "exact IDs and stable order versus uncached reference plus in-place mutation regression tests",
+  "cacheMetrics": [
+    "order builds",
+    "fallback scans",
+    "entry counts",
+    "retained result references",
+    "hit/miss/eviction when instrumented"
+  ],
+  "browserGuard": "unchanged 15% latency /20% natural memory; helper microbench cannot admit UI or waive guard",
+  "helperAcceptance": "no UI-performance claim; report all relative/absolute regressions and intervals; if per-call median growth >0.5ms reject before browser validation",
+  "performanceAdmission": false
+}

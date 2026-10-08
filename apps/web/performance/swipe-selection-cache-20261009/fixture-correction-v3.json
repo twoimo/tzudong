@@ -1,0 +1,12 @@
+{
+  "oldVersions": [
+    "v1",
+    "v2"
+  ],
+  "correction": "Apply requested SELECT projection and alias, approved_name IN list matching, categories semantics, ordering and range. Old producers oversupplied unrequested fields and returned no matches for name-IN lookups. Their raw results remain evidence for those synthetic conditions only, not correct production DTO-shape performance.",
+  "oldNaturalGuardFailuresPreserved": true,
+  "newComparisonRequiresBothVariantsOnV3": true,
+  "all735RestaurantIdsPreserved": true,
+  "newInputConformanceTests": 6,
+  "thresholdsChanged": false
+}

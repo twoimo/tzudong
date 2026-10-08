@@ -1,0 +1,134 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "buildId": "2z3_3BkyTtrG-JyDD3gKP",
+  "startedAtUtc": "2026-10-08T17:19:16.962Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 1,
+  "passes": 1,
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "state": {
+        "observedAt": 2711.7000000476837,
+        "inputToObservedMs": 618.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 109,
+        "maxFrameGapMs": 183.29999999999973,
+        "longTaskCount": 6,
+        "longTaskMs": 567,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 18,
+      "restaurantRequestsSinceQueryStart": 16,
+      "heap": {
+        "usedSize": 16464204,
+        "totalSize": 29425664,
+        "embedderHeapUsedSize": 12635368,
+        "backingStorageSize": 3503444
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 1465
+        },
+        {
+          "name": "Nodes",
+          "value": 1353
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 16556940
+        }
+      ]
+    }
+  ],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "browserVersion": "154.0.8037.98",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 2,
+  "initialHeap": {
+    "usedSize": 12132364,
+    "totalSize": 20250624,
+    "embedderHeapUsedSize": 5526264,
+    "backingStorageSize": 2012004
+  },
+  "endHeap": {
+    "usedSize": 16747500,
+    "totalSize": 29425664,
+    "embedderHeapUsedSize": 12777664,
+    "backingStorageSize": 3504060
+  },
+  "idleHeap": {
+    "usedSize": 17847328,
+    "totalSize": 29425664,
+    "embedderHeapUsedSize": 12777664,
+    "backingStorageSize": 3504082
+  },
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 2,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 1,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    },
+    "cspBlockedVendorHosts": {
+      "kr-col-ext.nelo.navercorp.com": 1
+    }
+  },
+  "requests": {
+    "restaurant": 18,
+    "otherFixture": 7,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  },
+  "endedAtUtc": "2026-10-08T17:19:32.933Z"
+}

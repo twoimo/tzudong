@@ -1,0 +1,9 @@
+{
+  "observedAtUtc": "2026-10-08T15:02:27.105543+00:00",
+  "phase": "aa",
+  "status": "preparation-cost-invalidated",
+  "completedIndependentSamplesAdmitted": 0,
+  "reason": "Uncached fixture reference performs quadratic allocation-heavy dedupe for already-unique synthetic rows before timed helper batches. Remove this preparation artifact for both variants; no measurement threshold changes. No source performance result derived.",
+  "ownedProcessesSignaled": 1,
+  "initialWorkerSha256": "2bd10a94d2e31b927211664dfdd6651d6c84a3e12980fb69ed4a63a16e208cf7"
+}

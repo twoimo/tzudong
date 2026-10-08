@@ -1,0 +1,235 @@
+{
+  "unit": "estimated milliseconds per helper call from 32-sweep timed batches",
+  "nIndependentPairs": 9,
+  "internalBatchesPerProcess": 32,
+  "p95": "not reported from nine independent observations",
+  "confidenceMethod": "paired-process bootstrap median difference, 10000 replicates, fixed seed 20261009",
+  "browserPerformanceAdmission": false,
+  "results": [
+    {
+      "scenario": "order8",
+      "beforeMedianMs": 9.610937500000027e-05,
+      "afterMedianMs": 0.004228027343749996,
+      "absoluteReductionMs": -0.004131917968749996,
+      "relativeReductionPercent": -4299.183059665079,
+      "paired95CiReductionMs": [
+        -0.005075359374999984,
+        -0.0030899257812500025
+      ],
+      "AAAbsoluteDifferenceRangeMs": [
+        1.4628906249911089e-06,
+        5.647656249999078e-05
+      ],
+      "beforeRangeMs": [
+        7.112499999999827e-05,
+        0.00010465429687499944
+      ],
+      "afterRangeMs": [
+        0.0026900253906249963,
+        0.005418294921874997
+      ],
+      "medianPairReductionMs": -0.0041233730468749966,
+      "helperPracticalGrowthLimitMs": 0.5,
+      "helperGrowthLimitPass": true,
+      "stateBefore": {
+        "orderEntries": 8,
+        "fallbackEntries": 0,
+        "allocatedOrderArrays": 8,
+        "retainedOrderReferences": 5880,
+        "snapshotRows": 0
+      },
+      "stateAfter": {
+        "orderEntries": 8,
+        "fallbackEntries": 0,
+        "allocatedOrderArrays": 8,
+        "retainedOrderReferences": 5880,
+        "snapshotRows": 735
+      },
+      "orderMissesBefore": 0,
+      "orderMissesAfter": 0,
+      "fallbackMissesBefore": 0,
+      "fallbackMissesAfter": 0,
+      "judgment": "helper slower"
+    },
+    {
+      "scenario": "order128",
+      "beforeMedianMs": 0.005051244140624994,
+      "afterMedianMs": 0.009930185913085934,
+      "absoluteReductionMs": -0.00487894177246094,
+      "relativeReductionPercent": -96.58891228839445,
+      "paired95CiReductionMs": [
+        -0.006100743530273442,
+        -0.0036812540283203132
+      ],
+      "AAAbsoluteDifferenceRangeMs": [
+        1.6301391601556553e-05,
+        0.003364364624023456
+      ],
+      "beforeRangeMs": [
+        0.004231724975585938,
+        0.007291666503906252
+      ],
+      "afterRangeMs": [
+        0.008338979003906247,
+        0.011819173217773435
+      ],
+      "medianPairReductionMs": -0.0042340137939453,
+      "helperPracticalGrowthLimitMs": 0.5,
+      "helperGrowthLimitPass": true,
+      "stateBefore": {
+        "orderEntries": 64,
+        "fallbackEntries": 0,
+        "allocatedOrderArrays": 64,
+        "retainedOrderReferences": 47040,
+        "snapshotRows": 0
+      },
+      "stateAfter": {
+        "orderEntries": 64,
+        "fallbackEntries": 0,
+        "allocatedOrderArrays": 64,
+        "retainedOrderReferences": 47040,
+        "snapshotRows": 735
+      },
+      "orderMissesBefore": 131072,
+      "orderMissesAfter": 131072,
+      "fallbackMissesBefore": 0,
+      "fallbackMissesAfter": 0,
+      "judgment": "helper slower"
+    },
+    {
+      "scenario": "unchanged-order128",
+      "beforeMedianMs": 0.008351465820312515,
+      "afterMedianMs": 0.008658299804687491,
+      "absoluteReductionMs": -0.0003068339843749768,
+      "relativeReductionPercent": -3.6740135321956564,
+      "paired95CiReductionMs": [
+        -0.0028767192382812695,
+        0.00045511877441409276
+      ],
+      "AAAbsoluteDifferenceRangeMs": [
+        7.955419921878981e-05,
+        0.0026065214843750267
+      ],
+      "beforeRangeMs": [
+        0.006625320434570314,
+        0.010631769775390654
+      ],
+      "afterRangeMs": [
+        0.0072415008544921555,
+        0.01045571398925782
+      ],
+      "medianPairReductionMs": -0.0006147308349609415,
+      "helperPracticalGrowthLimitMs": 0.5,
+      "helperGrowthLimitPass": true,
+      "stateBefore": {
+        "orderEntries": 64,
+        "fallbackEntries": 0,
+        "allocatedOrderArrays": 64,
+        "retainedOrderReferences": 47040,
+        "snapshotRows": 0
+      },
+      "stateAfter": {
+        "orderEntries": 64,
+        "fallbackEntries": 0,
+        "allocatedOrderArrays": 0,
+        "retainedOrderReferences": 0,
+        "snapshotRows": 735
+      },
+      "orderMissesBefore": 131072,
+      "orderMissesAfter": 131072,
+      "fallbackMissesBefore": 0,
+      "fallbackMissesAfter": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "scenario": "fallback8",
+      "beforeMedianMs": 0.0001349296874999517,
+      "afterMedianMs": 0.0033697929687495076,
+      "absoluteReductionMs": -0.003234863281249556,
+      "relativeReductionPercent": -2397.4436917381236,
+      "paired95CiReductionMs": [
+        -0.003587484375000116,
+        -0.002177896484376163
+      ],
+      "AAAbsoluteDifferenceRangeMs": [
+        4.558593750481066e-06,
+        3.084570312550383e-05
+      ],
+      "beforeRangeMs": [
+        0.000102292968750195,
+        0.00015608789062415696
+      ],
+      "afterRangeMs": [
+        0.002292072265624334,
+        0.0041750488281246945
+      ],
+      "medianPairReductionMs": -0.0032369804687490955,
+      "helperPracticalGrowthLimitMs": 0.5,
+      "helperGrowthLimitPass": true,
+      "stateBefore": {
+        "orderEntries": 8,
+        "fallbackEntries": 8,
+        "allocatedOrderArrays": 8,
+        "retainedOrderReferences": 8,
+        "snapshotRows": 0
+      },
+      "stateAfter": {
+        "orderEntries": 8,
+        "fallbackEntries": 8,
+        "allocatedOrderArrays": 0,
+        "retainedOrderReferences": 0,
+        "snapshotRows": 736
+      },
+      "orderMissesBefore": 0,
+      "orderMissesAfter": 0,
+      "fallbackMissesBefore": 0,
+      "fallbackMissesAfter": 0,
+      "judgment": "helper slower"
+    },
+    {
+      "scenario": "fallback128",
+      "beforeMedianMs": 0.05603185009765621,
+      "afterMedianMs": 0.05848949182128926,
+      "absoluteReductionMs": -0.0024576417236330528,
+      "relativeReductionPercent": -4.386151303856116,
+      "paired95CiReductionMs": [
+        -0.007227391723632848,
+        0.003538538696289173
+      ],
+      "AAAbsoluteDifferenceRangeMs": [
+        8.547985839846284e-05,
+        0.006432398315429744
+      ],
+      "beforeRangeMs": [
+        0.04916279602050777,
+        0.059189860107421666
+      ],
+      "afterRangeMs": [
+        0.05225930786132815,
+        0.06451692199707049
+      ],
+      "medianPairReductionMs": -0.004159388183593793,
+      "helperPracticalGrowthLimitMs": 0.5,
+      "helperGrowthLimitPass": true,
+      "stateBefore": {
+        "orderEntries": 64,
+        "fallbackEntries": 64,
+        "allocatedOrderArrays": 64,
+        "retainedOrderReferences": 64,
+        "snapshotRows": 0
+      },
+      "stateAfter": {
+        "orderEntries": 64,
+        "fallbackEntries": 64,
+        "allocatedOrderArrays": 0,
+        "retainedOrderReferences": 0,
+        "snapshotRows": 736
+      },
+      "orderMissesBefore": 131072,
+      "orderMissesAfter": 131072,
+      "fallbackMissesBefore": 131072,
+      "fallbackMissesAfter": 131072,
+      "judgment": "improvement not proven"
+    }
+  ]
+}

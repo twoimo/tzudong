@@ -1,0 +1,43 @@
+{
+  "baselineSource": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "candidateSource": "879a8657edf7ca5d2da6108edc9806381c2f8a5d",
+  "nIndependentProcessesPerVariant": 1,
+  "nDependentActionsPerProcess": 256,
+  "bothFunctionalFlowsPassed": true,
+  "sameSdkScriptSha": true,
+  "metrics": [
+    {
+      "name": "initialHeap",
+      "beforeMB": 12.532384,
+      "afterMB": 13.036596,
+      "absoluteReductionMB": -0.504211999999999,
+      "relativeReductionPercent": -4.0232728266226045,
+      "regressionPercent": 4.0232728266226045,
+      "fixed20PercentGuardPass": true
+    },
+    {
+      "name": "endHeap",
+      "beforeMB": 28.13032,
+      "afterMB": 46.969016,
+      "absoluteReductionMB": -18.838696000000002,
+      "relativeReductionPercent": -66.96936259523532,
+      "regressionPercent": 66.96936259523532,
+      "fixed20PercentGuardPass": false
+    },
+    {
+      "name": "idleHeap",
+      "beforeMB": 29.1635,
+      "afterMB": 48.105872,
+      "absoluteReductionMB": -18.942372,
+      "relativeReductionPercent": -64.95232739554581,
+      "regressionPercent": 64.95232739554581,
+      "fixed20PercentGuardPass": false
+    }
+  ],
+  "candidateAdmitted": false,
+  "productionPromotionAllowed": false,
+  "reason": "Natural endpoint and5s idle exceed fixed20% guard in pilot. Low sampled peak, functional passes or future GC/A/A diagnostics do not waive this failure.",
+  "confidenceInterval": null,
+  "populationImprovementProven": false,
+  "next": "Find retained snapshot metadata and transient allocation cost before a revised candidate."
+}

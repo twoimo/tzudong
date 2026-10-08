@@ -1,0 +1,185 @@
+{
+  "createdAtUtc": "2026-10-08T17:28:35.986251+00:00",
+  "sourceBefore": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "sourceAfter": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+  "runtime": "Node24.21.0/Chrome154.0.8037.98/Next16.3.6/Playwright1.63.0",
+  "fixtureVersion": 6,
+  "sdkScriptSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "phases": [
+    {
+      "name": "AA",
+      "runs": [
+        {
+          "kind": "baseline",
+          "label": "aa-confirm-v6-p0-a",
+          "pair": 0,
+          "variant": "A"
+        },
+        {
+          "kind": "baseline",
+          "label": "aa-confirm-v6-p0-b",
+          "pair": 0,
+          "variant": "B"
+        },
+        {
+          "kind": "baseline",
+          "label": "aa-confirm-v6-p1-a",
+          "pair": 1,
+          "variant": "A"
+        },
+        {
+          "kind": "baseline",
+          "label": "aa-confirm-v6-p1-b",
+          "pair": 1,
+          "variant": "B"
+        }
+      ]
+    },
+    {
+      "name": "AB",
+      "runs": [
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p0-b",
+          "pair": 0,
+          "variant": "B"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p0-a",
+          "pair": 0,
+          "variant": "A"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p1-a",
+          "pair": 1,
+          "variant": "A"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p1-b",
+          "pair": 1,
+          "variant": "B"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p2-b",
+          "pair": 2,
+          "variant": "B"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p2-a",
+          "pair": 2,
+          "variant": "A"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p3-a",
+          "pair": 3,
+          "variant": "A"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p3-b",
+          "pair": 3,
+          "variant": "B"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p4-b",
+          "pair": 4,
+          "variant": "B"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p4-a",
+          "pair": 4,
+          "variant": "A"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p5-b",
+          "pair": 5,
+          "variant": "B"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p5-a",
+          "pair": 5,
+          "variant": "A"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p6-a",
+          "pair": 6,
+          "variant": "A"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p6-b",
+          "pair": 6,
+          "variant": "B"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p7-b",
+          "pair": 7,
+          "variant": "B"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p7-a",
+          "pair": 7,
+          "variant": "A"
+        },
+        {
+          "kind": "candidate",
+          "label": "ab-confirm-v6-p8-b",
+          "pair": 8,
+          "variant": "B"
+        },
+        {
+          "kind": "baseline",
+          "label": "ab-confirm-v6-p8-a",
+          "pair": 8,
+          "variant": "A"
+        }
+      ]
+    }
+  ],
+  "independentAAProcesses": 4,
+  "independentABProcesses": 18,
+  "ABPairs": 9,
+  "dependentActionsPerProcess": 256,
+  "sameProcessPasses": [
+    "128 first traversal",
+    "same128 revisit"
+  ],
+  "sampling": {
+    "cpuRate": 4,
+    "cache": "disabled/SW bypassed",
+    "network": "remote SDK/tiles unthrottled, synthetic REST735/Auth401",
+    "naturalHeap": "initial/every16queries/end/5s idle",
+    "noForcedGcOrProfilers": true,
+    "frameProbe": "bounded4096 gap samples cleared peraction",
+    "background": "no own builds/tests/profilers during timed runs; external host load not fully controlled"
+  },
+  "guardUnchanged": {
+    "heapRegressionPercent": 20,
+    "inputLatencyRegressionPercent": 15
+  },
+  "statistics": "independent-process medians and paired bootstrap median difference95% CI; first/repeat separated, A/A noise descriptive; do not replace guard with noise or GC",
+  "primaryMetrics": [
+    "end heap",
+    "idle heap",
+    "observed-sample heap peak",
+    "input-to-observed median"
+  ],
+  "improvementClaim": "requires confidence interval and practical effect above AA noise; no p95 inference from9 independent pairs",
+  "expectedResidual": "NELO collector blocked by connect-src; retain2 console errors and classify, never widen policy or fake zero",
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "goalComplete": false
+}

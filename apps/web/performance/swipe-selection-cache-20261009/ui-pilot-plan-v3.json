@@ -1,0 +1,34 @@
+{
+  "baselineSource": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "candidateSource": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+  "phase": "independent process pair pilot before confirm, not admitted population result",
+  "order": [
+    "baseline",
+    "candidate"
+  ],
+  "independentProcessesPerVariant": 1,
+  "internalActionsPerProcess": 256,
+  "searchSetSize": 128,
+  "passes": 2,
+  "warmup": "initial SDK/root ready, then repeated exact sequence; cold initial and repeat pass reported separately",
+  "cpuRate": 4,
+  "naturalGcOnly": true,
+  "idleMs": 5000,
+  "guardUnchanged": {
+    "naturalHeapRegressionPercent": 20,
+    "latencyRegressionPercent": 15
+  },
+  "memorySampling": "before sequence, each16queries, endpoint and5s idle; observed sample peak cannot prove continuous maximum",
+  "latency": "trusted result click to first observed correct panel followed by two rAF; includes detection/polling; not field INP",
+  "frameCapture": "passive bounded4096 gaps cleared each action;4 synthetic screenshots/process; not continuous pixel flicker detection",
+  "data": "synthetic735/real remote SDK+tiles/Auth401",
+  "QAExcluded": true,
+  "productionChanged": false,
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "confirmRequirement": "matched fresh-process A/A and at least9 pairs before UI improvement claim; pilot alone insufficient",
+  "fixtureVersion": "v3: requested projection and IN matching",
+  "supersedes": "pilot v2 only for new DTO-shaped comparisons; old raw failures retained",
+  "oldGuardWaived": false
+}

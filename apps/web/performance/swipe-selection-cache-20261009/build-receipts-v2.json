@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "baseline",
+    "root": "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web",
+    "sourceCommit": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+    "distDir": ".next-swipe-cache-control-20261009",
+    "buildId": "2z3_3BkyTtrG-JyDD3gKP",
+    "pageManifestSha256": "cbf80af8baae1afb1c2c221ce88a219f7a13a1d791703896ec6c7fbd7a06acb0",
+    "lockSha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694",
+    "helperSourceSha256": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+    "cssActualDirectoryValidated": true,
+    "npmBuildExit": 1,
+    "npmCliCssDirectory": "default .next; manual exported same validator used on actual named dist",
+    "publicBuildSettingsCopiedToEvidence": false
+  },
+  {
+    "kind": "candidate",
+    "root": "/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web",
+    "sourceCommit": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+    "distDir": ".next-swipe-cache-pooled-v2",
+    "buildId": "1od_Z_KRw43giwu_TWJAC",
+    "pageManifestSha256": "93083cf53c195694d44fc42451863848b620d05d58fa8411a5065bbbee60fdee",
+    "lockSha256": "749eab126d3157e102c8b89caf1ad798a6179c509d96511618bc2b14ea6ff694",
+    "helperSourceSha256": "8e49bd94dba92f75013f184ab58a330d087681ce0db4db4467ef3667a54a80cb",
+    "cssActualDirectoryValidated": true,
+    "npmBuildExit": 0,
+    "npmCliCssDirectory": "default .next; manual exported same validator used on actual named dist",
+    "publicBuildSettingsCopiedToEvidence": false
+  }
+]

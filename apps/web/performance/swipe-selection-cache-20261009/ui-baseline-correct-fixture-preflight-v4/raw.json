@@ -1,0 +1,324 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "buildId": "2z3_3BkyTtrG-JyDD3gKP",
+  "startedAtUtc": "2026-10-08T16:53:35.671Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 8,
+  "passes": 1,
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "state": {
+        "observedAt": 2471.9000000953674,
+        "inputToObservedMs": 548.7000000476837,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 104,
+        "maxFrameGapMs": 200,
+        "longTaskCount": 4,
+        "longTaskMs": 405,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 18,
+      "restaurantRequestsSinceQueryStart": 16
+    },
+    {
+      "pass": 0,
+      "query": 1,
+      "state": {
+        "observedAt": 3056.2999999523163,
+        "inputToObservedMs": 367,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 55,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6070307,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 23,
+        "maxFrameGapMs": 166.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 172,
+        "layoutShiftWithoutInput": 0.0002709377568292462
+      },
+      "restaurantRequestsAtSample": 34,
+      "restaurantRequestsSinceQueryStart": 16
+    },
+    {
+      "pass": 0,
+      "query": 2,
+      "state": {
+        "observedAt": 3459,
+        "inputToObservedMs": 229.70000004768372,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 84,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5980299,
+          "lng": 126.963
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 19,
+        "maxFrameGapMs": 83.39999999999964,
+        "longTaskCount": 1,
+        "longTaskMs": 87,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 50,
+      "restaurantRequestsSinceQueryStart": 16
+    },
+    {
+      "pass": 0,
+      "query": 3,
+      "state": {
+        "observedAt": 3906.100000143051,
+        "inputToObservedMs": 246.70000004768372,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 98,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.589029,
+          "lng": 126.966
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 21,
+        "maxFrameGapMs": 83.29999999999973,
+        "longTaskCount": 1,
+        "longTaskMs": 109,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 66,
+      "restaurantRequestsSinceQueryStart": 16
+    },
+    {
+      "pass": 0,
+      "query": 4,
+      "state": {
+        "observedAt": 4335.299999952316,
+        "inputToObservedMs": 243,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 112,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5800282,
+          "lng": 126.969
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 21,
+        "maxFrameGapMs": 83.19999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 98,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 82,
+      "restaurantRequestsSinceQueryStart": 16
+    },
+    {
+      "pass": 0,
+      "query": 5,
+      "state": {
+        "observedAt": 4735.900000095367,
+        "inputToObservedMs": 230.79999995231628,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5710273,
+          "lng": 126.972
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 20,
+        "maxFrameGapMs": 66.60000000000036,
+        "longTaskCount": 1,
+        "longTaskMs": 94,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 98,
+      "restaurantRequestsSinceQueryStart": 16
+    },
+    {
+      "pass": 0,
+      "query": 6,
+      "state": {
+        "observedAt": 5117.5,
+        "inputToObservedMs": 228.79999995231628,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5620265,
+          "lng": 126.975
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 18,
+        "maxFrameGapMs": 83.30000000000018,
+        "longTaskCount": 1,
+        "longTaskMs": 96,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 114,
+      "restaurantRequestsSinceQueryStart": 16
+    },
+    {
+      "pass": 0,
+      "query": 7,
+      "state": {
+        "observedAt": 5502.799999952316,
+        "inputToObservedMs": 231,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5530256,
+          "lng": 126.978
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 18,
+        "maxFrameGapMs": 83.39999999999964,
+        "longTaskCount": 1,
+        "longTaskMs": 96,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 130,
+      "restaurantRequestsSinceQueryStart": 16,
+      "heap": {
+        "usedSize": 34445980,
+        "totalSize": 53542912,
+        "embedderHeapUsedSize": 22262080,
+        "backingStorageSize": 3338392
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 6412
+        },
+        {
+          "name": "Nodes",
+          "value": 4942
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 34465828
+        }
+      ]
+    }
+  ],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "browserVersion": "154.0.8037.98",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 2,
+  "initialHeap": {
+    "usedSize": 12292352,
+    "totalSize": 20774912,
+    "embedderHeapUsedSize": 5569760,
+    "backingStorageSize": 2012740
+  },
+  "endHeap": {
+    "usedSize": 21569080,
+    "totalSize": 54329344,
+    "embedderHeapUsedSize": 22262080,
+    "backingStorageSize": 3339114
+  },
+  "idleHeap": {
+    "usedSize": 22914956,
+    "totalSize": 54329344,
+    "embedderHeapUsedSize": 22346144,
+    "backingStorageSize": 3339452
+  },
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 20,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 19,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    }
+  },
+  "requests": {
+    "restaurant": 130,
+    "otherFixture": 17,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    },
+    "unsupportedFixtureQueries": 9,
+    "unsupportedCauses": {
+      "fixture_order_unsupported": 9
+    },
+    "issuedOperatorShapes": {
+      "status:eq": 9
+    }
+  },
+  "endedAtUtc": "2026-10-08T16:53:53.052Z"
+}

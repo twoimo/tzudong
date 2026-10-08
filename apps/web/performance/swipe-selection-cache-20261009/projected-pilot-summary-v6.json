@@ -1,0 +1,67 @@
+{
+  "nIndependentProcessesPerVariant": 1,
+  "nDependentActionsPerVariant": 256,
+  "fixtureVersion": 6,
+  "sourceBefore": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "sourceAfter": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+  "functionallyMatched": true,
+  "sameSDKBytes": true,
+  "unsupportedFixtureQueries": [
+    0,
+    0
+  ],
+  "metrics": [
+    {
+      "metric": "initialHeap",
+      "beforeMB": 12.117268,
+      "afterMB": 12.545732,
+      "absoluteReductionMB": -0.42846399999999996,
+      "relativeReductionPercent": -3.535978572067565,
+      "fixed20PercentRegressionGuardPass": true
+    },
+    {
+      "metric": "endHeap",
+      "beforeMB": 45.744876,
+      "afterMB": 42.559676,
+      "absoluteReductionMB": 3.1851999999999947,
+      "relativeReductionPercent": 6.9629656445018995,
+      "fixed20PercentRegressionGuardPass": true
+    },
+    {
+      "metric": "idleHeap",
+      "beforeMB": 46.871316,
+      "afterMB": 43.655792,
+      "absoluteReductionMB": 3.215524000000002,
+      "relativeReductionPercent": 6.86032369989356,
+      "fixed20PercentRegressionGuardPass": true
+    },
+    {
+      "metric": "session-median-input-to-observed-all",
+      "beforeMs": 218.80000007152557,
+      "afterMs": 227.5,
+      "absoluteReductionMs": -8.699999928474426,
+      "relativeReductionPercent": -3.9762339696665454,
+      "fixed15PercentRegressionGuardPass": true
+    },
+    {
+      "metric": "session-median-input-to-observed-first",
+      "beforeMs": 253.5,
+      "afterMs": 256.6999999284744,
+      "absoluteReductionMs": -3.1999999284744263,
+      "relativeReductionPercent": -1.2623273879583534,
+      "fixed15PercentRegressionGuardPass": true
+    },
+    {
+      "metric": "session-median-input-to-observed-repeat",
+      "beforeMs": 192.5,
+      "afterMs": 203.60000014305115,
+      "absoluteReductionMs": -11.100000143051147,
+      "relativeReductionPercent": -5.76623384054605,
+      "fixed15PercentRegressionGuardPass": true
+    }
+  ],
+  "confidenceIntervals": null,
+  "judgment": "single-pair descriptive pilot only; not proof of improvement or full memory-regression resolution",
+  "canonicalPerformanceAdmission": 0,
+  "priorFailureWaived": false
+}

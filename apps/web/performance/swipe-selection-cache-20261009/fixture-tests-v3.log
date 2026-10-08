@@ -1,0 +1,14 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/swipe-performance-fixture.test.ts:
+(pass) compact projection omits unrequested metadata and resolves approved-name alias [1.00ms]
+(pass) related-name in queries match quoted names including a comma [0.47ms]
+(pass) single search and bounded viewport return the requested subset [0.22ms]
+(pass) category overlap and contains preserve actual array semantics [0.33ms]
+(pass) pagination and ordering keep total separate from the returned page [0.05ms]
+(pass) an unsupported predicate fails explicitly instead of silently returning all rows [0.16ms]
+
+ 6 pass
+ 0 fail
+ 10 expect() calls
+Ran 6 tests across 1 file. [100.00ms]

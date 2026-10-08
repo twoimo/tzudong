@@ -1,0 +1,10 @@
+{
+  "explicitSecretPatternHits": 0,
+  "actualUserRowsOrReceiptImagesIncluded": false,
+  "screenshots": "synthetic REST restaurant labels only",
+  "heapSnapshotRawStringsIncluded": false,
+  "envCredentialsIncluded": false,
+  "physicalIdentifiersIncluded": false,
+  "manualScopeReview": "raw numeric samples/controlled fixtures/source/report only",
+  "limits": "pattern scan is not complete security certification"
+}

@@ -1,0 +1,18 @@
+
+> web@1.2.4 build
+> node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs
+
+▲ Next.js 16.3.6 (webpack) - Environments: .env.production.local ✓ Running next.config.mjs took 46ms - Experiments (use with caution):   · optimizePackageImports   · staleTimes    Creating an optimized production build ... ✓ Compiled successfully in 21.8s   Running TypeScript ...    We detected TypeScript in your project and reconfigured your tsconfig.json file for you.   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:     - include was updated to add '.next-swipe-cache-control-[REDACTED:phone]/types/**/*.ts'    - include was updated to add '.next-swipe-cache-control-[REDACTED:phone]/dev/types/**/*.ts'    Finished TypeScript in 21.2s ...   Collecting page data using 17 workers ...   Generating static pages using 17 workers (0/49) ...   Generating static pages using 17 workers (12/49)     Generating static pages using 17 workers (24/49)     Generating static pages using 17 workers (36/49)   ✓ Generating static pages using 17 workers (49/49) in 391ms   Finalizing page optimization ...   Collecting build traces ...  [REDACTED:bounded] ○  (Static)   prerendered as static content ƒ  (Dynamic)  server-rendered on demand  file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/scripts/verify-route-css-boundaries.mjs:24
+function fail(message) { throw new Error(`Route CSS boundary verification failed: ${message}`); }
+                               ^
+
+Error: Route CSS boundary verification failed: cannot read home manifest: ENOENT: no such file or directory, open '/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/.next/server/app/page_client-reference-manifest.js'
+    at fail (file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/scripts/verify-route-css-boundaries.mjs:24:32)
+    at readManifest (file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/scripts/verify-route-css-boundaries.mjs:261:165)
+    at verifyBuildRouteCssBoundaries (file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/scripts/verify-route-css-boundaries.mjs:264:33)
+    at file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/scripts/verify-route-css-boundaries.mjs:270:102
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.21.0

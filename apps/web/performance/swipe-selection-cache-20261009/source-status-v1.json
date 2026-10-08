@@ -1,0 +1,28 @@
+{
+  "createdAtUtc": "2026-10-08T15:19:48.159433+00:00",
+  "baselineCommit": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "sourceFiles": [
+    {
+      "path": "apps/web/lib/mobile-home-search-selection.ts",
+      "sha256": "e59093099543beaa46daca67ae7752d451a3189033dc8bea692b462c3d4cb9f2"
+    },
+    {
+      "path": "apps/web/tests-unit/swipe-cache-list-mutation.test.ts",
+      "sha256": "18a20464ab197bbf92afe6a9346a010feef86cc7a3ddd2f3c8e340776e533b0b"
+    }
+  ],
+  "sourceChanged": true,
+  "testsPassed": 33,
+  "physicalDeviceActions": 0,
+  "operatingDeploymentChanged": false,
+  "helperBenchV2Scope": "diagnostic: own type/lint checks overlapped part of measurement window; paired observations retained without causal UI claim",
+  "fieldReview": {
+    "browserDimensionMissing": true,
+    "tabletMisclassifiedAsDesktop": true,
+    "protocolV2RequiresOneNewMigration": true,
+    "rawUaOrIdentifiersRequired": false,
+    "existingDailyCountsAreUsers": false
+  },
+  "performanceAdmission": false,
+  "goalComplete": false
+}

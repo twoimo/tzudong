@@ -1,0 +1,15 @@
+{
+  "blockedVendorHost": "kr-col-ext.nelo.navercorp.com",
+  "observedDirective": "connect-src",
+  "sourcePolicyChanged": false,
+  "coreMapFlowObserved": {
+    "realSDK": true,
+    "mapConstructorCount": 1,
+    "selectedMarkerAndPanelPassesPerVariant": 256
+  },
+  "consoleErrorsPreserved": 2,
+  "earlierProviderLabel": "broad vendor-family regex, not a proven Maps functional failure",
+  "scope": "SDK-associated vendor log collector; public-host attribution needs official documentation corroboration. Keep blocked egress; no suppression, wildcard widening or fake zero-error report.",
+  "evidence": "ui-baseline-csp-host-diagnostic-v8/raw.json",
+  "fieldDelivery": 0
+}

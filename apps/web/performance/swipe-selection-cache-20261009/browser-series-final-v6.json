@@ -1,0 +1,229 @@
+{
+  "startedAtUtc": "2026-10-08T17:28:36.029Z",
+  "phases": [
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-confirm-v6-p0-a",
+      "pair": 0,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:30:20.122Z"
+    },
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-confirm-v6-p0-b",
+      "pair": 0,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:32:01.574Z"
+    },
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-confirm-v6-p1-a",
+      "pair": 1,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:33:36.302Z"
+    },
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-confirm-v6-p1-b",
+      "pair": 1,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:35:11.889Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p0-b",
+      "pair": 0,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:36:47.077Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p0-a",
+      "pair": 0,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:38:27.409Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p1-a",
+      "pair": 1,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:40:01.121Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p1-b",
+      "pair": 1,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:41:36.987Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p2-b",
+      "pair": 2,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:43:09.402Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p2-a",
+      "pair": 2,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:44:42.097Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p3-a",
+      "pair": 3,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:46:24.563Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p3-b",
+      "pair": 3,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:48:05.582Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p4-b",
+      "pair": 4,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:49:54.799Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p4-a",
+      "pair": 4,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:51:29.126Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p5-b",
+      "pair": 5,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:53:08.060Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p5-a",
+      "pair": 5,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:54:46.139Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p6-a",
+      "pair": 6,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:56:28.276Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p6-b",
+      "pair": 6,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:58:02.564Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p7-b",
+      "pair": 7,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T17:59:40.895Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p7-a",
+      "pair": 7,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T18:01:15.859Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-confirm-v6-p8-b",
+      "pair": 8,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T18:02:53.099Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-confirm-v6-p8-a",
+      "pair": 8,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-08T18:04:35.225Z"
+    }
+  ],
+  "plan": "browser-confirm-plan-v6.json",
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "endedAtUtc": "2026-10-08T18:04:35.227Z"
+}

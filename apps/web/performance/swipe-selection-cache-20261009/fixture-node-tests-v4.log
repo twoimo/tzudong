@@ -1,0 +1,15 @@
+✔ compact SELECT projection and alias (2.180416ms)
+✔ quoted name IN including comma (0.326666ms)
+✔ search and viewport subsets (1.085875ms)
+✔ array overlap versus contains (0.191625ms)
+✔ pagination and total (0.442583ms)
+✔ unsupported predicate is explicit (0.495834ms)
+✔ nullable coordinate predicates match SQL null semantics (0.212875ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 66.684167

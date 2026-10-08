@@ -1,0 +1,135 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/swipe-cache-list-mutation.test.ts:
+12 | describe('swipe cache invalidation for mutable list inputs', () => {
+13 |     test('deduplicates a duplicate appended to an already examined array', () => {
+14 |         const list = [row('a'), row('b')];
+15 |         expect(ids(order(list, null))).toEqual(['a', 'b']);
+16 |         list.push(row('a'));
+17 |         expect(ids(order(list, null))).toEqual(['a', 'b']);
+                                            ^
+error: expect(received).toEqual(expected)
+
+  [
+    "a",
+    "b",
++   "a",
+  ]
+
+- Expected  - 0
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/swipe-cache-list-mutation.test.ts:17:40)
+(fail) swipe cache invalidation for mutable list inputs > deduplicates a duplicate appended to an already examined array [1.40ms]
+22 |         const b = row('b');
+23 |         const list = [a, b];
+24 |         const searched = row('search');
+25 |         expect(ids(order(list, searched))).toEqual(['a', 'b']);
+26 |         b.mergedRestaurants = [row('search')];
+27 |         expect(ids(order(list, searched))).toEqual(['b', 'a']);
+                                                ^
+error: expect(received).toEqual(expected)
+
+  [
+-   "b",
+    "a",
++   "b",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/swipe-cache-list-mutation.test.ts:27:44)
+(fail) swipe cache invalidation for mutable list inputs > refreshes order after a visible item changes its merged identity in place [0.64ms]
+30 |     test('refreshes same-name coordinate matches after a visible row changes', () => {
+31 |         const list = [row('a'), row('b', { lat: 38 })];
+32 |         const searched = row('search', { name: 'target', lat: 38 });
+33 |         expect(ids(order(list, searched))).toEqual(['a', 'b']);
+34 |         list[1].name = 'target';
+35 |         expect(ids(order(list, searched))).toEqual(['b', 'a']);
+                                                ^
+error: expect(received).toEqual(expected)
+
+  [
+-   "b",
+    "a",
++   "b",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/swipe-cache-list-mutation.test.ts:35:44)
+(fail) swipe cache invalidation for mutable list inputs > refreshes same-name coordinate matches after a visible row changes [0.83ms]
+38 |     test('returns a replaced row object rather than a cached obsolete object', () => {
+39 |         const list = [row('a'), row('b')];
+40 |         const searched = row('b');
+41 |         expect(order(list, searched)[0]).toBe(list[1]);
+42 |         list[1] = row('b', { category: ['고기'] });
+43 |         expect(order(list, searched)[0]).toBe(list[1]);
+                                              ^
+error: expect(received).toBe(expected)
+
+Expected: {
+  id: "b",
+  name: "b",
+  lat: 37.5,
+  lng: 127,
+  category: [ "고기" ],
+}
+Received: {
+  id: "b",
+  name: "b",
+  lat: 37.5,
+  lng: 127,
+  category: [ "한식" ],
+}
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/swipe-cache-list-mutation.test.ts:43:42)
+(fail) swipe cache invalidation for mutable list inputs > returns a replaced row object rather than a cached obsolete object [1.03ms]
+47 |         const searched = row('search');
+48 |         const visible = [searched];
+49 |         const all = [row('near', { lng: 127.001 }), row('far', { lng: 127.01 })];
+50 |         expect(ids(order(visible, searched, all))).toEqual(['search', 'near']);
+51 |         all[0].lng = 128;
+52 |         expect(ids(order(visible, searched, all))).toEqual(['search', 'far']);
+                                                        ^
+error: expect(received).toEqual(expected)
+
+  [
+    "search",
+-   "far",
++   "near",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/swipe-cache-list-mutation.test.ts:52:52)
+(fail) swipe cache invalidation for mutable list inputs > recomputes nearest fallback after catalog coordinates change in place [0.25ms]
+56 |         const searched = row('search');
+57 |         const visible = [searched];
+58 |         const all = [row('far', { lng: 127.01 })];
+59 |         expect(ids(order(visible, searched, all))).toEqual(['search', 'far']);
+60 |         all.push(row('near', { lng: 127.001 }));
+61 |         expect(ids(order(visible, searched, all))).toEqual(['search', 'near']);
+                                                        ^
+error: expect(received).toEqual(expected)
+
+  [
+    "search",
+-   "near",
++   "far",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/ranking-page-headers-20261008/tzudong/apps/web/tests-unit/swipe-cache-list-mutation.test.ts:61:52)
+(fail) swipe cache invalidation for mutable list inputs > recomputes nearest fallback after a new catalog row is appended [0.09ms]
+(pass) swipe cache invalidation for mutable list inputs > revisits every query in a 128-search working set without changing results [5.70ms]
+
+ 1 pass
+ 6 fail
+ 13 expect() calls
+Ran 7 tests across 1 file. [115.00ms]

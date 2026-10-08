@@ -1,0 +1,8 @@
+{
+  "affectedArtifact": "ui-candidate-128-allocation-diagnostic-v1/raw.json",
+  "field": "snapshotDiagnostic.detachedObjects",
+  "originalValue": 1067,
+  "correction": "The v1 reducer counted any nonzero detachedness ordinal and therefore did not establish a detached-only count. That field is invalid for detached DOM claims. Raw v1 evidence is preserved; v2 records distinct ordinals without inventing a leak verdict.",
+  "otherStructuralCountsInvalidated": false,
+  "naturalGuardWaived": false
+}

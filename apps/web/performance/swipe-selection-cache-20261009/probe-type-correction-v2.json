@@ -1,0 +1,6 @@
+{
+  "previousSha256": "cc98d8a75c3f557639c8e2e9f5bf4d8e4adea8526a282f26fe08b8111846254b",
+  "currentSha256": "e528f8390f393e7d4e4224d723b34a42bf5ad53291000f13831fac6d7a00c331",
+  "change": "Type annotations on the read-only after-timing diagnostic export only. Baseline helper algorithms unchanged. Initial typecheck diagnostic is preserved.",
+  "performanceClaim": false
+}
