@@ -52,8 +52,15 @@ UPDATE public.profiles
  WHERE user_id BETWEEN 'f0000000-0000-4000-8000-000000000701'::uuid
                    AND 'f0000000-0000-4000-8000-000000000704'::uuid;
 
-INSERT INTO public.restaurants (id)
-VALUES ('f0000000-0000-4000-8000-000000000721'::uuid);
+DO $restaurant_fixture$
+BEGIN
+  IF pg_catalog.to_regclass('public.restaurants_backup') IS NOT NULL THEN
+    INSERT INTO public.restaurants_backup(id) VALUES ('f0000000-0000-4000-8000-000000000721'::uuid);
+  ELSE
+    INSERT INTO public.restaurants(id) VALUES ('f0000000-0000-4000-8000-000000000721'::uuid);
+  END IF;
+END
+$restaurant_fixture$;
 
 INSERT INTO public.reviews (
   id, user_id, restaurant_id, title, content, visited_at,
