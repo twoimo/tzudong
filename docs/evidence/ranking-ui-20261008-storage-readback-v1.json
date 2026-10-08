@@ -1,0 +1,14 @@
+{
+  "evidenceCommit": "48a9a34443dda2566553794d56b16924a6522b21",
+  "remoteBranch": "codex/ranking-ui-evidence-20261008",
+  "remoteRefSha": "48a9a34443dda2566553794d56b16924a6522b21",
+  "localGitBlobBytesCompared": 111,
+  "remoteTreeObjectsMatched": 111,
+  "remoteArtifactMapBytesHashVerified": true,
+  "remoteAllArtifactBytesIndividuallyDownloaded": false,
+  "artifactMapSha256": "8c277700a3954a1c83a61f7c846616ff0ad4b70721a12f0b61295d01b65ff04b",
+  "mappedArtifacts": 110,
+  "status": "passed",
+  "performanceAdmissionClaim": false,
+  "goalComplete": false
+}
