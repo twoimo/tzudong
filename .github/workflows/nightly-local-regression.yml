@@ -885,6 +885,10 @@ jobs:
             psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < backend/supabase/tests/local_profile_leaderboard_page.sql \
             > "$state/local-profile-leaderboard-page.log"
+          python3 backend/supabase/scripts/build-leaderboard-recovery-probe.py | \
+            docker exec -i "$LOCAL_DB_CONTAINER" \
+            psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+            > "$state/local-profile-leaderboard-recovery.log"
           complete_lifecycle_stage
           begin_lifecycle_stage 14 profile_mutation
           docker exec -i "$LOCAL_DB_CONTAINER" \

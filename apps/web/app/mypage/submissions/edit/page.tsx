@@ -1,5 +1,6 @@
 "use client";
 
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -573,7 +574,7 @@ export default function EditSubmissionsPage() {
                     </div>
                     {item.tzuyang_review && (
                       <p className="text-xs text-muted-foreground line-clamp-2">
-                        💬 {item.tzuyang_review}
+                        💬 {formatTzuyangReviewForDisplay(item.tzuyang_review)}
                       </p>
                     )}
                     {item.rejection_reason && item.item_status === "rejected" && (

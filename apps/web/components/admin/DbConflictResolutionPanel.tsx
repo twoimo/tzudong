@@ -1,3 +1,4 @@
+import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -272,7 +273,7 @@ export function DbConflictResolutionPanel({
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">츄양 리뷰</p>
                   <p className="text-xs text-muted-foreground line-clamp-3 mt-1">
-                    {newInfo.tzuyang_review}
+                    {formatTzuyangReviewForDisplay(newInfo.tzuyang_review || '')}
                   </p>
                 </div>
 
