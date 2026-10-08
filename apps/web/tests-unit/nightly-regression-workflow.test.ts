@@ -1016,7 +1016,9 @@ describe("nightly regression package and source contracts", () => {
       "python3 backend/supabase/scripts/local-migrate.py receipt",
     );
     expect(leaderboardBoundary).toBeGreaterThanOrEqual(0);
-    expect(mutationBoundary).toBeGreaterThan(leaderboardBoundary);
+    const recoveryBoundary = localWorkflowSource.indexOf("backend/supabase/scripts/build-leaderboard-recovery-probe.py");
+    expect(recoveryBoundary).toBeGreaterThan(leaderboardBoundary);
+    expect(mutationBoundary).toBeGreaterThan(recoveryBoundary);
     expect(migrationReceipt).toBeGreaterThan(mutationBoundary);
     expect(localWorkflowSource).toContain(
       "psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \\\n" +
