@@ -1,0 +1,11 @@
+{
+  "artifacts": [
+    {"path": "README.md", "bytes": 2356, "sha256": "7d8ed2f200bd682d23492fefb889bbfc7f0aa760694e8d9036c0e8e20174828c"},
+    {"path": "offline-admission.json", "bytes": 2138, "sha256": "c704cbbaa9da989afccab2810d24080df6778ba2759269e4d1d2172d18aedc57"},
+    {"path": "sanitizer.py", "bytes": 8611, "sha256": "cb0b4317d40fbd4b6f785208e1c5369b30acdcdcb4177048da2384b58302002e"},
+    {"path": "test_sanitizer.py", "bytes": 7906, "sha256": "46bdd4162c94368dc85180b29f985bd2b88fcd32b4ead053d0cbe172cf75c574"},
+    {"path": "test-proof.json", "bytes": 218, "sha256": "e37f6b975af2964061f62d851e6a9cecfad4971004e24fa08a60bdfa2cf4a8f9"},
+    {"path": "contract-review.md", "bytes": 4801, "sha256": "897fa8f4acd1c1e0eac5a3cbf080f3afa6fac61b0cde928b7cecddec22ffa7cf"},
+    {"path": "provider-reproduction-draft.md", "bytes": 3081, "sha256": "fdfdab7ba411b4953e156a1b4ad50a3fa02364a794dc1391bdbf012a1eab1ebe"}
+  ]
+}

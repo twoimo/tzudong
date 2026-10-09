@@ -1,0 +1,11 @@
+# One whole-video Gemini analysis: offline preparation
+
+Selected -D43ezc57z8, whole duration 835 seconds. The original validated /videos inventory and the 2026-10-09 public membership snapshot agree on identity/duration. There is no prior video state directory, receipt, analysis or uncertain/failed operation. Cached state is new; full clip is one static segment 0–835. No prior result is replayed or used as new admission.
+
+Protocol2, model gemini-3.8-flash, pinned watch commit, prompt/schema/media settings and timeout are unchanged. Fresh batch and single-video inventory are prepared privately; no operational ledger is created. maxVideos=1/maxCalls=2/maxInputTokens=1048576. Input/output windows are 1048576/65536; generation-only current published price window bound is USD1.032192. Runtime must preserve projectConcurrency1/RPM1; no global environment or provider quota is changed.
+
+Root fresh funding/account project match is verified. Prior UI evidence attests the existing funded vault copy belongs to that project. This agent cannot yet bind the exact key that will be injected at execution to that authoritative copy: executionCredentialProjectMatchVerified=false, actual match unknown (not an asserted mismatch). The local generic key is not being substituted. A private runtime credential locator/binding from root is the remaining technical input; no new human authorization or key creation is requested.
+
+Current Google billing documentation explicitly says GetTokens is unbilled/outside inference quota. The adapter sends direct REST models.countTokens; identifying the names as identical is an inference, not an exact zero-price or post-operation receipt. Root's displayed GCP/prepay balances and quota are admission context; do not attribute a future call to GCP credits or zero KRW without its delayed billing evidence.
+
+Source/config and original state hashes are in source-state-hashes.json; private 0700/0600 recovery snapshots and the prepared execute CLI are bound in plan.json. All originals remain unchanged. Caption collector remains paused-rate-limit. Provider POST calls=0, account/key/quota changes=0, shared vault publication=0. Await root's final plan/billing interpretation and execution instruction.

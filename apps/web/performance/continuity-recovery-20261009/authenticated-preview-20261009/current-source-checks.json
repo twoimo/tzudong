@@ -1,0 +1,22 @@
+{
+  "state": "passed",
+  "source": "current candidate working files",
+  "tests": {
+    "files": 5,
+    "passed": 109,
+    "failed": 0,
+    "assertions": 7511
+  },
+  "typecheckParity": {
+    "passed": true,
+    "diagnostics": 0,
+    "logicalInputs": 3129,
+    "nonLibraryContentSha256": "953d07a94dac3409d315e25f4162336f4c5ed34c4823692e49098ff6b15f7053"
+  },
+  "hostedSourceFixDeployment": false,
+  "remaining": [
+    "deploy exact trusted Preview origin fixes",
+    "apply current-state admin user RPC forward under protected procedure",
+    "verify actual affected UI and API after deployment"
+  ]
+}

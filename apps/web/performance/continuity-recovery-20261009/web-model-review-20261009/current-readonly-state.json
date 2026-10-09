@@ -1,0 +1,29 @@
+{
+  "operatingDb": {
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "serverVersionNum": 170006,
+    "ledgerCount": 80,
+    "latestVersion": "20261008124858",
+    "targetVersions": [],
+    "userMetadataRpc": false,
+    "userAuditReadRpc": false,
+    "userAuditAppendRpc": false,
+    "mutationPerformed": false
+  },
+  "production": {
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "deploymentId": "dpl_HXG5n1x3k4E2PBA4Vf4pEvXcqfye",
+    "url": "https://tzudong-niao9yn3r-twoimos-projects.vercel.app",
+    "sha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+    "state": "READY",
+    "target": "production"
+  },
+  "protectedBranches": {
+    "develop": "614b249175c35636a7062bf05cb01ebad538b10d",
+    "data": "0f3ad0c5521558ea2339789906629c97331eefee",
+    "main": "f31904e6dca2d9b608259cf150c5d0894db0928e"
+  },
+  "limit": "mutable read-only snapshot; refresh rollback/source/catalog immediately before apply or release",
+  "recordedAt": "2026-10-09T10:45:14.657499+00:00",
+  "observationWindow": "current goal turn; direct SQL/MCP readback before this record"
+}

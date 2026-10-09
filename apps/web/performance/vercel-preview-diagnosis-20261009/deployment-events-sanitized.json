@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "observedAt": "2026-10-09T04:24:47.638Z",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+    "nodeVersion": "24.x",
+    "updatedAt": 1791466063545
+  },
+  "deployments": [
+    {
+      "id": "dpl_G2kimSeJAxdU3FoBxg7nabEwVSeC",
+      "url": "tzudong-qv09jlwn4-twoimos-projects.vercel.app",
+      "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+      "projectName": "tzudong",
+      "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+      "state": "CANCELED",
+      "source": "git",
+      "target": null,
+      "gitSha": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+      "gitRef": "codex/pipeline-performance-restart-20261002",
+      "createdAt": 1791517300996,
+      "buildingAt": 1791517303243,
+      "retrievedEventCount": 12,
+      "events": [
+        {
+          "type": "stdout",
+          "timestamp": 1791517315590,
+          "text": "[vercel-ignore-build] skip: preview deployments are limited to develop; skipping non-production branch (env=preview, ref=codex/pipeline-performance-restart-20261002)"
+        },
+        {
+          "type": "stderr",
+          "timestamp": 1791517315597,
+          "summary": "cancellation-event"
+        }
+      ],
+      "cancellationMarkers": [
+        {
+          "type": "stderr",
+          "timestamp": 1791517315597,
+          "mentionsIgnoredCommand": true,
+          "mentionsExitZero": true,
+          "wordCount": 14
+        }
+      ],
+      "observedApplicationBuildLog": false
+    },
+    {
+      "id": "dpl_2anRkLjU4RPxtTkTLbnybUnBVoGb",
+      "url": "tzudong-9nyutgigx-twoimos-projects.vercel.app",
+      "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+      "projectName": "tzudong",
+      "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+      "state": "CANCELED",
+      "source": "git",
+      "target": null,
+      "gitSha": "2b6e7339fa75b1d403cb97a257e8d9d5b8b37e3c",
+      "gitRef": "codex/pipeline-performance-restart-20261002",
+      "createdAt": 1791518409131,
+      "buildingAt": 1791518415759,
+      "retrievedEventCount": 12,
+      "events": [
+        {
+          "type": "stdout",
+          "timestamp": 1791518444141,
+          "text": "[vercel-ignore-build] skip: preview deployments are limited to develop; skipping non-production branch (env=preview, ref=codex/pipeline-performance-restart-20261002)"
+        },
+        {
+          "type": "stderr",
+          "timestamp": 1791518444149,
+          "summary": "cancellation-event"
+        }
+      ],
+      "cancellationMarkers": [
+        {
+          "type": "stderr",
+          "timestamp": 1791518444149,
+          "mentionsIgnoredCommand": true,
+          "mentionsExitZero": true,
+          "wordCount": 14
+        }
+      ],
+      "observedApplicationBuildLog": false
+    }
+  ],
+  "tool": "official-Vercel-MCP-get_project/get_deployment/list_deployment_events",
+  "eventsLimit": 100,
+  "follow": 0,
+  "rawLogsPersisted": false,
+  "creatorCommitMessagesEnvironmentSecretsPersisted": false,
+  "conclusion": "Both exact git previews canceled after ignored build command exited0 for non-allowlisted feature branch; confirmed by actual skip log and cancellation event.",
+  "mutations": {
+    "deploymentCreates": 0,
+    "settings": 0,
+    "environment": 0,
+    "freeze": 0
+  }
+}

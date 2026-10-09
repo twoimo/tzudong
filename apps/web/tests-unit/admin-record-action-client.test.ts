@@ -9,9 +9,9 @@ function preview(body: RecordActionRequest): RecordActionReceipt {
   return { operationId: body.operationId, action: body.action, state: 'preview', previewHash: 'a'.repeat(64), targetIds: body.targetIds, auditId: null,
     expiresAt: new Date(Date.now() + 900000).toISOString(), readback: [{ id: target, kind: body.action.split('.')[0], status: 'pending', fingerprint: 'b'.repeat(64) }], mediaCleanupPending: false };
 }
-function fixture(options: { fixedCode?: string; maintenancePhase?: 'preview' | 'apply'; lostPreview?: boolean; lostApply?: boolean; conflict?: boolean; pendingGet?: boolean; failedGet?: boolean; delayPreview?: Promise<void>; delayApply?: Promise<void>; mutateReceipt?: (r: RecordActionReceipt) => unknown; media?: boolean; cleanupHold?: 'maintenance' | 'unadmitted'; cleanupComplete?: boolean; denied?: number; resultIds?: string[] } = {}) {
+function fixture(options: { fixedCode?: string; maintenancePhase?: 'preview' | 'apply'; lostPreview?: boolean; lostApply?: boolean; conflict?: boolean; pendingGet?: boolean; failedGet?: boolean; delayPreview?: Promise<void>; delayApply?: Promise<void>; mutateReceipt?: (r: RecordActionReceipt) => unknown; media?: boolean; cleanupHold?: 'maintenance' | 'unadmitted'; cleanupComplete?: boolean; cleanupPages?: number; denied?: number; resultIds?: string[] } = {}) {
   const calls: Array<{ method: string; path: string; operationId?: string; body?: RecordActionRequest }> = [];
-  let receipt: RecordActionReceipt | null = null;
+  let receipt: RecordActionReceipt | null = null, cleanupPage = 0;
   const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
     const url = new URL(request.url);
     if (options.denied) return Response.json({ error: 'provider text must stay hidden' }, { status: options.denied });
@@ -26,6 +26,11 @@ function fixture(options: { fixedCode?: string; maintenancePhase?: 'preview' | '
     if (url.pathname.endsWith('/media-cleanup')) {
       if (options.cleanupHold) return Response.json({ success: false, code: options.cleanupHold === 'maintenance' ? 'RECORD_ACTION_MAINTENANCE' : 'RECORD_ACTION_MEDIA_NOT_ADMITTED' }, { status: options.cleanupHold === 'maintenance' ? 423 : 503 });
       if (options.cleanupComplete && receipt) { receipt = { ...receipt, mediaCleanupPending: false }; return Response.json({ success: true, receipt }); }
+      if (options.cleanupPages && receipt) {
+        cleanupPage++;
+        receipt = { ...receipt, mediaCleanupPending: cleanupPage < options.cleanupPages };
+        return Response.json({ success: true, receipt });
+      }
       return Response.json({ code: 'RECORD_ACTION_UNCERTAIN' }, { status: 503 });
     }
     if (body.phase === options.maintenancePhase) return Response.json({ success: false, code: 'RECORD_ACTION_MAINTENANCE' }, { status: 423 });
@@ -98,7 +103,7 @@ describe('guarded record action client over real loopback HTTP', () => {
       expect(f.client.getSnapshot().phase).toBe('uncertain'); f.client.cancel(); expect(f.client.getSnapshot().phase).toBe('uncertain');
       await expect(f.client.run(input)).rejects.toThrow(); await f.client.apply(RECORD_ACTION_CONFIRMATION);
       expect(f.calls.filter(call => call.body?.phase === 'apply')).toHaveLength(1);
-      const saved = [...f.storage.values()][0]; expect(saved).not.toContain('합성'); expect(Object.keys(JSON.parse(saved)).sort()).toEqual(['action', 'cleanupAttempt', 'cleanupDeferred', 'operationId', 'previewHash', 'targetIds']);
+      const saved = [...f.storage.values()][0]; expect(saved).not.toContain('합성'); expect(Object.keys(JSON.parse(saved)).sort()).toEqual(['action', 'cleanupAttempt', 'cleanupContinuation', 'cleanupDeferred', 'operationId', 'previewHash', 'targetIds']);
       let recovered: RecordActionReceipt | undefined; f.options.pendingGet = false;
       const restored = createRecordActionClient({ actor: 'opaque-a', fetch: f.transport, storage: { getItem: () => saved, setItem: () => {}, removeItem: () => {} }, onRecovered: receipt => { recovered = receipt; } });
       await restored.recover(); expect(recovered?.auditId).toBe(audit); expect(f.calls.at(-1)?.method).toBe('GET');
@@ -376,6 +381,35 @@ test('definite cleanup admission stops resume only on explicit recovery after ho
       expect(f.events.filter(event => event === 'applied')).toHaveLength(1);
     } finally { f.close(); }
   }
+});
+
+test('successful bounded cleanup page requires explicit continuation and finishes the second page after reload', async () => {
+  const f = fixture({ media: true, cleanupPages: 2 });
+  try {
+    const result = f.client.run({ ...input, action: 'review.delete' });
+    await phase(f.client, 'confirming');
+    await f.client.apply(RECORD_ACTION_CONFIRMATION);
+    expect((await result).mediaCleanupPending).toBe(true);
+    expect(f.calls.filter(call => call.path.endsWith('/media-cleanup'))).toHaveLength(1);
+    expect(JSON.parse([...f.storage.values()][0])).toMatchObject({
+      operationId: operation, cleanupAttempt: false, cleanupDeferred: false, cleanupContinuation: true,
+    });
+
+    f.client.setActor(null);
+    const beforeRecovery = f.calls.length;
+    const restored = createRecordActionClient({ actor: 'opaque-a', fetch: f.transport, storage: recoveryStorage(f.storage) });
+    await restored.recover();
+    expect(f.calls.slice(beforeRecovery).map(call => call.method)).toEqual(['GET']);
+    expect(f.calls.filter(call => call.path.endsWith('/media-cleanup'))).toHaveLength(1);
+    expect(restored.getSnapshot().phase).toBe('uncertain');
+
+    await restored.readback();
+    expect(f.calls.slice(beforeRecovery).map(call => call.method)).toEqual(['GET', 'GET', 'POST', 'GET']);
+    expect(f.calls.filter(call => call.path.endsWith('/media-cleanup'))).toHaveLength(2);
+    expect(f.calls.filter(call => call.body?.phase === 'apply')).toHaveLength(1);
+    expect(restored.getSnapshot().phase).toBe('idle');
+    expect(f.storage.size).toBe(0);
+  } finally { f.close(); }
 });
 
 test('403, timeout, malformed admission status and unknown cleanup ACK never become resumable', async () => {

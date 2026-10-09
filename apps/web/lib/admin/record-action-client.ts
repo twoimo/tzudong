@@ -58,7 +58,7 @@ const legacyPendingKey = 'admin:record-action-pending:v1';
 type Identity = Pick<RecordActionRequest, 'operationId' | 'action' | 'targetIds' | 'previewHash'>;
 const sameIds = (left: string[], right: string[]) => left.length === right.length && [...left].sort().every((id, index) => id === [...right].sort()[index]);
 
-/** One immutable preview and at most one apply POST. Uncertainty can only issue GETs. */
+/** One immutable preview and at most one apply POST. Unknown cleanup effects can only issue GETs. */
 export function createRecordActionClient(options: {
   actor?: string | null;
   fetch?: typeof fetch;
@@ -79,11 +79,11 @@ export function createRecordActionClient(options: {
   const persist = () => {
     if (!identity) return;
     options.storage?.setItem(pendingKey, JSON.stringify({ operationId: identity.operationId, action: identity.action,
-      targetIds: identity.targetIds, previewHash: identity.previewHash, cleanupAttempt, cleanupDeferred }));
+      targetIds: identity.targetIds, previewHash: identity.previewHash, cleanupAttempt, cleanupDeferred, cleanupContinuation }));
   };
   let state = empty;
   let identity: Identity | null = null;
-  let epoch = 0, appliedAttempt = false, cleanupAttempt = false, cleanupDeferred = false;
+  let epoch = 0, appliedAttempt = false, cleanupAttempt = false, cleanupDeferred = false, cleanupContinuation = false;
   let resolve: ((receipt: RecordActionReceipt) => void) | null = null;
   let reject: ((error: RecordActionClientError) => void) | null = null;
   const listeners = new Set<() => void>();
@@ -132,7 +132,8 @@ export function createRecordActionClient(options: {
   async function complete(receipt: RecordActionReceipt, resumeCleanup: boolean) {
     const token = epoch;
     // Persist before transport: an uncertain Storage response may only be followed by GET.
-    if (receipt.action === 'review.delete' && receipt.mediaCleanupPending && !cleanupAttempt && (!cleanupDeferred || resumeCleanup)) {
+    if (receipt.action === 'review.delete' && receipt.mediaCleanupPending && !cleanupAttempt
+      && ((!cleanupDeferred && !cleanupContinuation) || resumeCleanup)) {
       try {
         // Other modals may have recovered the same identity before our GET completed.
         const saved = options.storage?.getItem(pendingKey);
@@ -141,20 +142,29 @@ export function createRecordActionClient(options: {
           const pending: unknown = JSON.parse(saved);
           if (!pending || typeof pending !== 'object' || !('operationId' in pending) || pending.operationId !== identity?.operationId) throw Error('PENDING_CHANGED');
           if ('cleanupAttempt' in pending && pending.cleanupAttempt === true) cleanupAttempt = true;
+          if ('cleanupDeferred' in pending && pending.cleanupDeferred === true) cleanupDeferred = true;
+          if ('cleanupContinuation' in pending && pending.cleanupContinuation === true) cleanupContinuation = true;
         }
-        if (!cleanupAttempt) {
-          cleanupAttempt = true; cleanupDeferred = false;
+        if (!cleanupAttempt && ((!cleanupDeferred && !cleanupContinuation) || resumeCleanup)) {
+          cleanupAttempt = true; cleanupDeferred = false; cleanupContinuation = false;
           persist();
           const cleaned = await request('POST', undefined, true);
           if (epoch !== token) return;
-          if (cleaned.state === 'applied') receipt = cleaned;
+          if (cleaned.state === 'applied') {
+            receipt = cleaned;
+            if (cleaned.mediaCleanupPending) {
+              // A successful bounded page is safe to continue, but only after an explicit readback.
+              cleanupAttempt = false; cleanupContinuation = true;
+              persist();
+            }
+          }
         }
       } catch (error) {
         if (epoch !== token) return;
         cleanupAttempt = true;
         // These exact endpoint responses prove admission stopped before any cleanup work.
         if (error instanceof RecordActionClientError && error.cleanupNotStarted) {
-          cleanupAttempt = false; cleanupDeferred = true;
+          cleanupAttempt = false; cleanupDeferred = true; cleanupContinuation = false;
           try { persist(); } catch { cleanupAttempt = true; }
         }
         // All other failures (including 403/timeouts/lost ACK) remain GET-only.
@@ -166,7 +176,11 @@ export function createRecordActionClient(options: {
     if (epoch !== token) return;
     const finish = resolve; resolve = null; reject = null;
     if (receipt.mediaCleanupPending) {
-      publish({ phase: 'uncertain', request: null, receipt, message: cleanupDeferred ? '삭제는 확인됐지만 사진 정리는 시작되지 않았습니다. 유지보수·설정 확인 후 기존 작업 결과를 조회하면 정리를 재개합니다.' : '삭제는 확인됐지만 사진 정리가 아직 완료되지 않았습니다. 기존 작업 결과를 조회하세요.' });
+      publish({ phase: 'uncertain', request: null, receipt, message: cleanupDeferred
+        ? '삭제는 확인됐지만 사진 정리는 시작되지 않았습니다. 유지보수·설정 확인 후 기존 작업 결과를 조회하면 정리를 재개합니다.'
+        : cleanupContinuation
+          ? '사진 정리 일부를 완료했습니다. 기존 작업 결과를 조회하면 다음 묶음을 정리합니다.'
+          : '삭제는 확인됐지만 사진 정리가 아직 완료되지 않았습니다. 기존 작업 결과를 조회하세요.' });
     } else {
       options.storage?.removeItem(pendingKey);
       publish({ ...empty }); identity = null;
@@ -210,9 +224,10 @@ export function createRecordActionClient(options: {
       if (!parsed || typeof parsed !== 'object' || !('operationId' in parsed) || !('action' in parsed) || !('targetIds' in parsed) || !('previewHash' in parsed)) throw Error('INVALID_PENDING_IDENTITY');
       // Only the original identity is persisted; recovery never reconstructs an apply payload.
       const candidate = { operationId: parsed.operationId, action: parsed.action, targetIds: parsed.targetIds, previewHash: parsed.previewHash, state: 'preview', auditId: null, expiresAt: new Date(now()).toISOString(), readback: [], mediaCleanupPending: false };
-      if (Object.keys(parsed).some(key => !['operationId', 'action', 'targetIds', 'previewHash', 'cleanupAttempt', 'cleanupDeferred'].includes(key)) || ('cleanupAttempt' in parsed && typeof parsed.cleanupAttempt !== 'boolean') || ('cleanupDeferred' in parsed && typeof parsed.cleanupDeferred !== 'boolean') || !isRecordActionReceipt(candidate)) throw Error('INVALID_PENDING_IDENTITY');
+      if (Object.keys(parsed).some(key => !['operationId', 'action', 'targetIds', 'previewHash', 'cleanupAttempt', 'cleanupDeferred', 'cleanupContinuation'].includes(key)) || ('cleanupAttempt' in parsed && typeof parsed.cleanupAttempt !== 'boolean') || ('cleanupDeferred' in parsed && typeof parsed.cleanupDeferred !== 'boolean') || ('cleanupContinuation' in parsed && typeof parsed.cleanupContinuation !== 'boolean') || !isRecordActionReceipt(candidate)) throw Error('INVALID_PENDING_IDENTITY');
       identity = candidate; cleanupAttempt = pendingKey === legacyPendingKey || !('cleanupAttempt' in parsed) || parsed.cleanupAttempt !== false;
       cleanupDeferred = 'cleanupDeferred' in parsed && parsed.cleanupDeferred === true;
+      cleanupContinuation = 'cleanupContinuation' in parsed && parsed.cleanupContinuation === true;
       await readback(false);
     } catch {
       appliedAttempt = true; options.onInvalidate?.(); uncertain();
@@ -226,7 +241,7 @@ export function createRecordActionClient(options: {
       ++epoch;
       reject?.(new RecordActionClientError('CANCELLED')); resolve = null; reject = null;
       actor = next; pendingKey = scopedKey(); identity = null;
-      appliedAttempt = false; cleanupAttempt = false; cleanupDeferred = false; notified = false;
+      appliedAttempt = false; cleanupAttempt = false; cleanupDeferred = false; cleanupContinuation = false; notified = false;
       publish({ ...empty });
     },
     canCancel: () => !appliedAttempt || state.phase === 'failed',
@@ -243,7 +258,7 @@ export function createRecordActionClient(options: {
       if (!parsed) return Promise.reject(new RecordActionClientError('RECORD_ACTION_INVALID_PAYLOAD'));
       // Parsing also copies/normalizes nested fields. Caller edits cannot change the reviewed payload.
       const original = structuredClone(parsed), token = ++epoch;
-      identity = original; appliedAttempt = false; cleanupAttempt = false; cleanupDeferred = false; notified = false;
+      identity = original; appliedAttempt = false; cleanupAttempt = false; cleanupDeferred = false; cleanupContinuation = false; notified = false;
       const result = new Promise<RecordActionReceipt>((yes, no) => { resolve = yes; reject = no; });
       publish({ phase: 'previewing', request: original, receipt: null, message: '' });
       void (async () => {

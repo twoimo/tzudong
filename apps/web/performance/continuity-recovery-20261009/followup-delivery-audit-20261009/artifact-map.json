@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "sha256",
+  "artifacts": [
+    {
+      "path": "source-bindings.json",
+      "sha256": "c51b38b5fbaab043844a2fba9931cfbc9a2b59a90f061abaa6032c1e67fcee50"
+    },
+    {
+      "path": "inventory.json",
+      "sha256": "7f5e06954ca37f1610bb9c773401bd6ea53d73c58312497ad7fd0f447b23ce55"
+    },
+    {
+      "path": "findings.md",
+      "sha256": "32c2a74412b152c71a4e1d78708c647333cfa7441298018a00ab36585d67a513"
+    },
+    {
+      "path": "staging-ready.txt",
+      "sha256": "e28840dc705d4434e350eb713a1f27bbcb8fe5a130dd3f4256a52f65f3ac4380"
+    }
+  ]
+}

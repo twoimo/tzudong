@@ -1,0 +1,45 @@
+{
+  "observedAt": "2026-10-09T04:43:56.170Z",
+  "project": "tzudong-free-zero",
+  "accountMatchVerified": true,
+  "method": "Aside google-accounts and fresh AI Studio billing/rate-limit snapshots; no account IDs, keys, cards or raw snapshots retained.",
+  "billing": {
+    "gcpCreditDisplayKrw": "₩9.47만",
+    "prepayCreditDisplayKrw": "₩10,000",
+    "autoRecharge": false,
+    "paidTier": 1,
+    "chartPeriod": "2026-10-01 through 2026-10-08",
+    "aggregateGrossKrw": 396.14,
+    "aggregateSavingsKrw": 396.14,
+    "aggregateTotalKrw": 0,
+    "billingLag": "Several hours; may exceed 24 hours",
+    "callSpecificAttributionVerified": false
+  },
+  "quota": {
+    "model": "gemini-3.8-flash",
+    "rpmLimit": 1000,
+    "tpmInputLimit": 2000000,
+    "rpdLimit": 10000,
+    "displayWindow": "last 28 days peak usage; not current available capacity",
+    "displayPeakRpm": 1,
+    "displayPeakTpm": 92170,
+    "displayPeakRpd": 3,
+    "lagMinutes": 15
+  },
+  "pricing": {
+    "date": "2026-10-09",
+    "model": "gemini-3.8-flash",
+    "standardInputUsdPerMillion": 0.75,
+    "standardOutputIncludingThinkingUsdPerMillion": 3.75,
+    "validThrough": "2026-12-31",
+    "source": "https://ai.google.dev/gemini-api/docs/pricing",
+    "countTokensRestZeroPriceVerified": false,
+    "billingDocsTokensName": "GetTokens",
+    "billingDocsSource": "https://ai.google.dev/gemini-api/docs/billing",
+    "limitations": "The billing page says GetTokens is unbilled, while direct REST models.countTokens is named differently. Do not claim exact zero-charge attribution or a current KRW total from this observation."
+  },
+  "paidCallsPerformed": 0,
+  "topupsPerformed": 0,
+  "settingsChanged": false,
+  "monetaryBounds": "No new paid analysis admitted by this receipt; aggregate credit visibility and quota are separate from exact per-operation cost/recovery admission."
+}

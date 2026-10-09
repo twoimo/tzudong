@@ -1,0 +1,23 @@
+{
+  "kind": "actual-four-bundle-owned-cluster",
+  "status": "passed",
+  "nonce": "acc8ae650ceab84e7d69a086",
+  "container": "tzudong-actual-bundle-acc8ae650ceab84e7d69a086",
+  "volume": "tzudong-actual-bundle-acc8ae650ceab84e7d69a086",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "owner": "actual-bundle-acc8ae650ceab84e7d69a086",
+  "network": "none",
+  "publishedPorts": 0,
+  "operatingWrites": false,
+  "hostedWrites": false,
+  "cleanup": {
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  },
+  "serverVersion": "17.6",
+  "snapshotManifestSha256": "ccd0373d1138301a586b75ab07f01ddcd061765d22e22da646e774cfc1e92563",
+  "sourceHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "replaySha256": "ef0a12c3e6b46fd3b99c535e7ab43e1bfb5d58306595ccd9e4c3534f0a0b2f7b",
+  "completedAt": "2026-10-09T08:34:59.352Z"
+}

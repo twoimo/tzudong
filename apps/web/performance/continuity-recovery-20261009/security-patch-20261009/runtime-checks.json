@@ -1,0 +1,40 @@
+{
+  "runtime": {
+    "node": "v24.21.0",
+    "sharp": "0.35.5",
+    "rsvg": "2.63.2",
+    "sourceMap": "1.2.2"
+  },
+  "imageChecks": [
+    {
+      "format": "png",
+      "width": 16,
+      "height": 16,
+      "bytes": 107
+    },
+    {
+      "format": "jpeg",
+      "width": 16,
+      "height": 16,
+      "bytes": 270
+    },
+    {
+      "format": "webp",
+      "width": 16,
+      "height": 16,
+      "bytes": 68
+    }
+  ],
+  "sourceMapChecks": {
+    "flatMapped": true,
+    "indexedColumnOneMapped": true,
+    "invalidOffsetsRejected": 4,
+    "indexedColumnZeroReturnsNull": true
+  },
+  "priorProbe": {
+    "failed": "indexed-column-zero-assertion",
+    "meaning": "expectation did not match observed indexed API; no before/after regression claim"
+  },
+  "providerCalls": 0,
+  "hostedDeployment": false
+}

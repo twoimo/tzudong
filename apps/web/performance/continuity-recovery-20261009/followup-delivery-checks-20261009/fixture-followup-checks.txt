@@ -1,0 +1,30 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/dependency-install-compatibility.test.ts:
+(pass) npm and Bun dependency installation compatibility > pins the fixed nanoid release in both release-authority lockfiles [3.93ms]
+(pass) npm and Bun dependency installation compatibility > keeps minimatch 3 compatible with the security-pinned Bun graph [1.22ms]
+(pass) npm and Bun dependency installation compatibility > excludes all three vulnerable brace-expansion ranges from both lockfiles [3.33ms]
+
+tests-unit/local-supabase-runtime.test.ts:
+(pass) local Supabase runtime source contract > rejects a development port absent from the admitted local browser origins [0.16ms]
+(pass) local Supabase runtime source contract > delegates replay ledger admission to Python over stdin and fails closed [0.52ms]
+(pass) local Supabase runtime source contract > runs the offline Python bridge and propagates authority rejection without diagnostics [137.77ms]
+(pass) local Supabase runtime source contract > validates the current source inventory fixture snapshots through the real offline authority [4985.52ms]
+(pass) local Supabase runtime source contract > derives a path-bound Compose project name [0.28ms]
+(pass) local Supabase runtime source contract > parses exact generated env lines and rejects duplicates or malformed keys [0.29ms]
+(pass) local Supabase runtime source contract > reconstructs STORAGE_SERVICE_KEY from JWT_SECRET when the generated env omitted it [0.20ms]
+(pass) local Supabase runtime source contract > passes only the bounded GitHub socket admission context to local stack status [0.07ms]
+(pass) local Supabase runtime source contract > passes an exact local-only environment to the type generation child [0.10ms]
+(pass) local Supabase runtime source contract > keeps local development isolated from ambient hosted credentials [2.31ms]
+(pass) local Supabase runtime source contract > fails closed on unadmitted next-dev spawners and pins the hosted argv marker [14.69ms]
+(pass) local Supabase runtime source contract > rejects malformed GitHub repository inputs while keeping status fail closed [0.16ms]
+(pass) local Supabase runtime source contract > loads non-database operator inputs into an isolated map before scrubbing [2.04ms]
+(pass) local Supabase runtime source contract > accepts only an explicit owner-only absolute operator env path [1.49ms]
+(pass) local Supabase runtime source contract > rejects group- or world-readable optional local env files [1.05ms]
+(pass) local Supabase runtime source contract > strict local clean wrapper skips repository dotenv and blocks Next dotenv reprocessing [344.34ms]
+(pass) local Supabase runtime source contract > clean wrapper forwards termination and exits with the signal status [50.01ms]
+
+ 20 pass
+ 0 fail
+ 144 expect() calls
+Ran 20 tests across 2 files. [5.73s]

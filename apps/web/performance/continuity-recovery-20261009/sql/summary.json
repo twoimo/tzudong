@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "observedAt": "2026-10-09T06:25:17.277Z",
+  "head": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "branch": "codex/pipeline-continuity-20261009",
+  "sourceHashes": {
+    "apps/web/scripts/apply-supabase-migration.mjs": {
+      "sha256": "a5596ae76cfb0a2d23002230d2f21b045e68f9866b5822b32a7474a86208a0c2",
+      "bytes": 19818
+    },
+    "apps/web/scripts/supabase-migration-transaction.mjs": {
+      "sha256": "3ca3608e61ef16601462dc9a517948dc4b224d7acc621244a1e3d79fce6ef08d",
+      "bytes": 12009
+    },
+    "apps/web/tests-unit/supabase-migration-transaction.test.ts": {
+      "sha256": "94bfa49dfe3743f03ae71af9155eb4a3ce1c923948f4ed910506f9b65f57b40b",
+      "bytes": 8044
+    }
+  },
+  "bun": {
+    "pass": 19,
+    "fail": 0,
+    "assertions": 129,
+    "log": "bun-tests.log"
+  },
+  "postgres": {
+    "pg15": {
+      "version": "15.8",
+      "status": "passed",
+      "cases": 13
+    },
+    "pg17": {
+      "version": "17.6",
+      "status": "passed",
+      "cases": 13
+    },
+    "actualCaller": "applyMigrationWithTerminalReadback",
+    "networkMode": "none",
+    "publishedPorts": 0,
+    "operatingWrites": false,
+    "cleanupVerified": true
+  },
+  "privilegeResult": {
+    "selectOnly": "MIGRATION_LEDGER_UNAVAILABLE",
+    "insertOnlyDatabaseAdmission": "MIGRATION_LEDGER_UNAVAILABLE",
+    "insertOnlyCallerOutcome": "MIGRATION_OUTCOME_UNCONFIRMED",
+    "ddlCreated": false,
+    "ledgerWritten": false
+  },
+  "immutableInputsMatchHead": true,
+  "limitations": [
+    "Isolated network-none PG15.8 and PG17.6 evidence only; no hosted or operating database write occurred.",
+    "An INSERT-only principal cannot perform the read-only reconciliation, so the caller returns MIGRATION_OUTCOME_UNCONFIRMED after the database admission guard rejects with MIGRATION_LEDGER_UNAVAILABLE."
+  ]
+}

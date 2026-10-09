@@ -1,0 +1,96 @@
+{
+  "schema": "tzudong-osk-organization-source-evidence/v1",
+  "scope": "tzudong",
+  "mode": "read-only",
+  "engine": {
+    "sha256Prefix": "790bb32659f2",
+    "version": "4.1.8"
+  },
+  "plan": {
+    "key": "organization:sha256:39086631d18f2fcdb7dbf5ae66749b7bd8e038a27134608a92df73256be1e253",
+    "snapshot": "sha256:7862ebb66173859d42d971ef0a076aecbe7b5d6f440ae0105c8069aabbf459ab",
+    "coverageRemainingBefore": 13,
+    "coverageTotal": 31,
+    "selectedCount": 3,
+    "officialCoverageRemainingAfterReadOnlyAudit": 13,
+    "reason": "No organization review write was submitted; this artifact records only the three selected source reads."
+  },
+  "reviewed": [
+    {
+      "unit": "261006-1i3c-axw2mngb:sha256:689c546986ffc83682a962a7edc0c83ec21478c70177e186f2decf9931dda9ce:0",
+      "id": "261006-1i3c-axw2mngb",
+      "name": "YT-tzuyang-Video-Ck5UrobZuKA",
+      "view": "0:3381",
+      "expectedViewHash": "view:sha256:4eccc79739737f1008c20d66a34913ac6b5c397aad45020fdd43ed3df512eaf0",
+      "actualViewHash": "view:sha256:4eccc79739737f1008c20d66a34913ac6b5c397aad45020fdd43ed3df512eaf0",
+      "hashMatched": true,
+      "classification": "caption-first-pass",
+      "analysisStatus": "pending",
+      "independentAudioVerified": false,
+      "independentFullVisualVerified": false,
+      "sourceStatus": "unverified",
+      "assessment": "Current text correctly preserves conflicting caption claims and treats tenure, ingredients, process and taste statements as unverified observations rather than independent facts."
+    },
+    {
+      "unit": "261006-1gn2-s5yq4t2q:sha256:21b628594acf4df28875b39d4082fb5138bae58393b45406e1077c92deb7e874:0",
+      "id": "261006-1gn2-s5yq4t2q",
+      "name": "YT-tzuyang-Video-Tsy8xRjMpB0",
+      "view": "0:3303",
+      "expectedViewHash": "view:sha256:646b3b81b82e335fdfd993939767eea170d8b6aa79dcb04b13f07a227b7bef1a",
+      "actualViewHash": "view:sha256:646b3b81b82e335fdfd993939767eea170d8b6aa79dcb04b13f07a227b7bef1a",
+      "hashMatched": true,
+      "classification": "caption-first-pass",
+      "analysisStatus": "pending",
+      "independentAudioVerified": false,
+      "independentFullVisualVerified": false,
+      "sourceStatus": "unverified",
+      "assessment": "Current text correctly keeps the 30-year history, spice levels, handmade cube, price and ranking as caption or speaker claims and records the blocked visual follow-up."
+    },
+    {
+      "unit": "261006-1dn0-bhr7lw23:sha256:53ae342691d01cc52d94b5794ea0caf06e85120b8f15de3ff0bbcaf814b3d866:0",
+      "id": "261006-1dn0-bhr7lw23",
+      "name": "YT-tzuyang-Video-3Z-ngM3DVi0",
+      "view": "0:3252",
+      "expectedViewHash": "view:sha256:393adc0830875d84bcb810ffe300fa4477eb9f327ebf91ce895867272332ed4e",
+      "actualViewHash": "view:sha256:393adc0830875d84bcb810ffe300fa4477eb9f327ebf91ce895867272332ed4e",
+      "hashMatched": true,
+      "classification": "caption-first-pass",
+      "analysisStatus": "pending",
+      "independentAudioVerified": false,
+      "independentFullVisualVerified": false,
+      "sourceStatus": "unverified",
+      "assessment": "Current text correctly distinguishes the 50/55-year caption discrepancy and does not promote the two-person order question, taste claims or recipe descriptions into verified facts."
+    }
+  ],
+  "aggregate": {
+    "selected": 3,
+    "hashMatched": 3,
+    "hashMismatched": 0,
+    "captionFirstPass": 3,
+    "independentAudioVerified": 0,
+    "independentFullVisualVerified": 0,
+    "nodeWrites": 0,
+    "hubWrites": 0,
+    "memoryWrites": 0,
+    "organizationReviewWrites": 0
+  },
+  "remainingScope": {
+    "officialRemaining": 13,
+    "readInThisAudit": 3,
+    "notReadInThisAudit": 10,
+    "missingHubLinks": [
+      "TZ-Claim--8wi-fVqTwk-1",
+      "TZ-Claim--8wi-fVqTwk-2",
+      "TZ-Claim--8wi-fVqTwk-3",
+      "TZ-Claim--8wi-fVqTwk-4",
+      "TZ-Claim--8wi-fVqTwk-R1-1",
+      "TZ-Menu--8wi-fVqTwk-1-1",
+      "TZ-Restaurant--8wi-fVqTwk-1"
+    ],
+    "nextExplicitQuestion": "Review 261005-0h69-sjf80q5g order observations and the publisher hub-link contract without promoting model observations to independently verified facts."
+  },
+  "conversationCapture": {
+    "incompleteTurnDiagnosticsClosed": false,
+    "reason": "The developer hook explicitly keeps those capture diagnostics open; this source audit did not evaluate or modify them."
+  }
+}

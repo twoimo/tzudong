@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-09T19:55:00+09:00",
+  "head": "c90544c813a89b077084953e42fb1431a4b1efed",
+  "disposition": {
+    "sourceAndEvidence": "ready-to-stage",
+    "protectedRelease": "held",
+    "operatingDatabaseApply": "held",
+    "currentPreviewDeployment": "not-proven"
+  },
+  "currentSource": {
+    "count": 28,
+    "bindingsPath": "source-bindings.json",
+    "canonicalSha256": "2e4325dbcbd461f7c2d617714ed088f0a390cd19c6320f41493a7cba42c7f4c0",
+    "diffCheck": "passed",
+    "adminRecordManifestLoad": "passed-held",
+    "adminUserForwardManifestLoad": "passed-held"
+  },
+  "verificationReceipts": {
+    "webUnit": {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-delivery-checks-20261009/web-unit-summary.json",
+      "sha256": "0cad8d225e0081d42ae95cb7eed640556e7bc42d8ec25212ffe922f42a2d8240",
+      "passed": 3283,
+      "skipped": 11,
+      "failed": 0,
+      "processes": 19
+    },
+    "productionBundleAndCss": {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/build-result.json",
+      "sha256": "4e8d8eabf9ffbe6005ece6ce9675578709335eef8733b53ad588822e04d8aa7c",
+      "status": "passed-local"
+    },
+    "npmAudit": {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/audit-all-after.json",
+      "sha256": "a9d397f318d3c444e511b7dc518bb610c3b47c28f86a966b117eb78de6a54590",
+      "vulnerabilities": 0
+    }
+  },
+  "evidenceMaps": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/five-plus-admin-user-rpc-forward-final-20261009/artifact-map.json",
+      "sha256": "44683b4fdfedc2ef5406cfe2f28bd630022db014d8fe0a6ec844b1f25fb2a67a",
+      "checksum": "passed",
+      "boundEntries": 26,
+      "currentMismatches": [
+        ".github/admin-user-rpc-forward-successor.v1.json",
+        "apps/web/scripts/admin-user-rpc-forward-successor.mjs",
+        "apps/web/tests-unit/admin-user-rpc-forward-successor.test.ts"
+      ],
+      "classification": "frozen-runtime-before-reachability-amendment",
+      "currentResolution": "separate-reachability-amendment"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/admin-user-rpc-forward-reachability-amendment-20261009/artifact-map.json",
+      "sha256": "76e9dcafb5471e6846d245a29cb57faad141a5f89be9e6258af5df4863b186d8",
+      "checksum": "passed",
+      "boundEntries": 5,
+      "currentMismatches": [],
+      "classification": "current-source-amendment"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/artifact-map.json",
+      "sha256": "73d85c40a60aef403cabfaeb4492df921076a72e3f32c9f79ea19f2f4b190363",
+      "checksum": "passed",
+      "boundEntries": 10,
+      "currentMismatches": [
+        "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/README.md",
+        "apps/web/bun.lock"
+      ],
+      "classification": "historical-before-final-bun-reconciliation",
+      "currentResolution": "current-source-binding-plus-full-unit-receipt"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-parser-fix/artifact-map.json",
+      "sha256": "52debe2c1c373f8b096106424fd9afc980f949bc3a47fabaf20b518d3aa69c4b",
+      "checksum": "passed",
+      "boundEntries": 7,
+      "currentMismatches": [],
+      "classification": "current"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-transport-fix/artifact-map.json",
+      "sha256": "94ac7c341c16621609fc247fb2e8fa3ad7e9322b2c8f7acae0724d4d63f28107",
+      "checksum": "passed",
+      "boundEntries": 8,
+      "currentMismatches": [
+        "apps/web/tests-unit/admin-record-sql-successor.test.ts"
+      ],
+      "classification": "current-runner-runtime-historical-test-fixture",
+      "currentResolution": "current-source-binding-plus-full-unit-receipt"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/artifact-map.json",
+      "sha256": "5ae3998025223430bbb16710cddd36f749411895d4a7df1960bb6f85a3b02c3d",
+      "checksum": "passed",
+      "boundEntries": 16,
+      "currentMismatches": [],
+      "classification": "frozen-review-inputs-and-current-disposition"
+    }
+  ],
+  "sqlRuntime": {
+    "proofPath": "apps/web/performance/continuity-recovery-20261009/five-plus-admin-user-rpc-forward-final-20261009/proof.json",
+    "proofSha256": "f585710ef57899e7de5dbaebd1c5117104a74a7e331bd24bdfd289939f701881",
+    "postgresVersion": "17.6",
+    "currentFiveSqlSourcesMatch": true,
+    "currentForwardSqlSourceMatches": true,
+    "hostedWrites": 0,
+    "operatingWrites": 0,
+    "personalRowsCopied": 0
+  },
+  "previewAndOperatingReadback": {
+    "previewDeploymentSourceRevision": "614b249175c35636a7062bf05cb01ebad538b10d",
+    "currentCandidateRevision": "c90544c813a89b077084953e42fb1431a4b1efed",
+    "currentSourceDeployed": false,
+    "operatingReadbackPath": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/user-management-rpc-readback.json",
+    "ledgerCount": 80,
+    "adminUserRpcExists": false,
+    "personalDataRead": false,
+    "writes": false
+  },
+  "privacy": {
+    "scannedEvidenceFiles": 69,
+    "privateKeyHits": 0,
+    "jwtHits": 0,
+    "providerSecretHits": 0,
+    "authorizationCookieHeaderValueHits": 0,
+    "credentialUriHits": 0,
+    "rawOcrPayloadHits": 0,
+    "phoneHits": 0,
+    "emailHits": 2,
+    "emailClassification": "synthetic fixture.invalid rows only",
+    "personalRowsPersisted": 0
+  },
+  "remainingReleaseHolds": [
+    "Both SQL successor manifests remain held.",
+    "The checkout is dirty and is not a clean detached checkout at protected main.",
+    "The operating database remains at ledger 80 and the admin user RPC is absent.",
+    "The authenticated Preview receipt is for an older deployed revision, not this candidate.",
+    "Hash-shaped five-stage receipt and writer-fence fields are not independently bound to canonical private receipt bytes.",
+    "The forward operatingReadbackSha256 field is format-checked but is not bound to canonical prior-state receipt bytes."
+  ]
+}

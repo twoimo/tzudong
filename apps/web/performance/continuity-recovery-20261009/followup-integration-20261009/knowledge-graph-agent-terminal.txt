@@ -1,0 +1,11 @@
+Provenance: terminal summaries supplied by /root/predecessor_readback_fix; original tool stream remains in that agent history. This is not an independently re-executed root log.
+
+/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.knowledge_graph.tests.test_longform_segments.SegmentExecutionTests.test_predecessor_write_ahead_recovers_only_exact_interrupted_observation
+.
+Ran 1 test in 0.060s
+OK
+
+/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest discover -s backend/knowledge_graph/tests -p 'test_*.py'
+ssss.s.....................................................................................................s...ss........
+Ran 119 tests in 4.249s
+OK (skipped=8)

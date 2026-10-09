@@ -1,0 +1,5 @@
+review 4228496143: node behavior tests 2/2 PASS; PostgreSQL 16 PATH rejected before initdb; post-start PostgreSQL 16 fixture rejected; actual temporary PostgreSQL 17.11 pre/post major checks and 6 migration cases PASS
+review 4228496152: checkout boundary tests 3/3 PASS; missing and unverified checkout return bounded nonzero; explicit pinned checkout proof matches historical request hashes PASS
+review 4228496189: offline fixture process tests 5/5 PASS; complete case exit0; public500, CLI nonzero, incomplete early break, and anonymous admin200 all fixed-code nonzero with partial evidence
+external effects: Vercel commands 0; provider calls 0; operating database writes 0; downloads/installations 0; commits/pushes 0
+

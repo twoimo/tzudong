@@ -109,6 +109,7 @@ describe('local Supabase runtime source contract', () => {
       'backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql',
       'backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql',
       'backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql',
+    'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql',
     ]);
     expect(generatedFixture.archivePlans).toHaveLength(2);
     const finalVerifier = generatedFixture.archivePlans.find((row: { migration_path: string }) => row.migration_path.endsWith('g014_pg17_owner_final_verifier.sql'));

@@ -1,0 +1,11 @@
+{
+  "dispatchedAt": "2026-10-09T09:05:55Z",
+  "hasVideo": false,
+  "model": "gemini-3.8-flash",
+  "payloadSha256": "1bb888763dc647849967c89dc5eca5dcfec912245aa48e6246307f1cf5fba4a2",
+  "providerPostOrdinal": 1,
+  "readbacks": 0,
+  "redirects": 0,
+  "retries": 0,
+  "schemaSha256": "e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360"
+}

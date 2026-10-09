@@ -1,0 +1,8 @@
+Provenance: terminal summary provided by /root/current_batch_delivery_audit. Original unified session69754; no redirected raw log retained. This is not a new root execution.
+Canonical module list: .github/workflows/security-audit.yml lines351-382.
+Runtime: /Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest <same29 modules as workflow>
+
+Ran 365 tests in 114.917s
+OK
+
+After forward SQL/verifier/local-replay hash updates: reconciliation --check passed and23 related source tests passed in4.784s; those3 files are outside the207-file reconciliation inventory and29-module suite.

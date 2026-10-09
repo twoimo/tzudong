@@ -1,0 +1,65 @@
+{
+  "admittedAt": "2026-10-09T07:48:18Z",
+  "admission": "admitted",
+  "executionAuthorized": true,
+  "purpose": "test_official_flat_structured_output_path",
+  "request": {
+    "model": "gemini-3.8-flash",
+    "maxOutputTokens": 65536,
+    "store": false,
+    "hasVideo": false,
+    "hasTools": false,
+    "hasCache": false,
+    "hasHistory": false,
+    "promptSha256": "81377b15578f67767fab3a8b4a72cede12c75a83544f103109ca4b437a4f671b",
+    "payloadCanonicalBytes": 661,
+    "payloadSha256": "2ce474279e7325fcaa3b2eeba5be7aa593ade0a6d17a2d36b1101ceb57a78bda",
+    "schemaCanonicalBytes": 112,
+    "schemaSha256": "0223a344ed49bececb5d8231c218f1b5212f1dd576eee80736b3df960460f437"
+  },
+  "controlDelta": {
+    "previousFullSchemaPayloadCanonicalBytes": 5884,
+    "previousFullSchemaPayloadSha256": "5b46a236cc80f8fc656f7151c3381bedd0a7d598971b65e806449f680fde897d",
+    "previousPayloadReconstructedMatch": true,
+    "onlyResponseFormatSchemaChanged": true,
+    "dtoReductionDiagnosticOnly": true,
+    "productSchemaAdoption": false,
+    "cacheAdoption": false
+  },
+  "preconditions": {
+    "sanitizerSha256": "cb0b4317d40fbd4b6f785208e1c5369b30acdcdcb4177048da2384b58302002e",
+    "sanitizerRegressionTests": 15,
+    "sanitizerRegressionFailures": 0,
+    "sharedBudgetNamespaceReuseRequired": true
+  },
+  "executionLimits": {
+    "providerPostMaximum": 1,
+    "retries": 0,
+    "automaticRetry": false,
+    "readbacks": 0,
+    "redirects": 0,
+    "timeoutSeconds": 120,
+    "requestsPerMinuteMaximum": 1,
+    "concurrencyMaximum": 1,
+    "maxResponseBodyBytesInMemory": 65536,
+    "generationRateCapUsd": 1.032192
+  },
+  "decisions": {
+    "failed835VideoResend": false,
+    "productionAdoption": false,
+    "schemaCauseConfirmedByThisControl": false,
+    "automaticVariantAfterResult": false
+  },
+  "persistence": {
+    "rawBody": false,
+    "generatedText": false,
+    "headers": false,
+    "key": false,
+    "responseId": false,
+    "failedReceiptWrite": false,
+    "successCacheWrite": false,
+    "queueWrite": false,
+    "vaultWrite": false,
+    "productionSourceWrite": false
+  }
+}

@@ -1,0 +1,242 @@
+/** Pure admission/SQL compilation for the existing reviewed migration caller. */
+import { createHash } from 'node:crypto';
+const fail = code => { const error = new Error(code); error.code = code; throw error; };
+const sha = value => createHash('sha256').update(value).digest('hex');
+const quote = value => `'${String(value).replaceAll("'", "''")}'`;
+const trim = value => value.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
+const IDENTIFIER_RUNE = /[\p{L}\p{Nd}_$]/u;
+const SPACE_RUNE = /\p{White_Space}/u;
+const SQL_STRUCTURE_KEYWORDS = Object.freeze({ END: 'END', CASE: 'CASE', BEGIN: 'BEGIN', ATOMIC: 'ATOMIC' });
+
+function previousRune(source, end) {
+  if (end <= 0) return '';
+  const tail = source.charCodeAt(end - 1);
+  return tail >= 0xdc00 && tail <= 0xdfff && end > 1
+    ? source.slice(end - 2, end)
+    : source[end - 1];
+}
+
+function sqlWordAt(source, start) {
+  const first = source.charCodeAt(start);
+  if (!((first >= 65 && first <= 90) || first === 95 || (first >= 97 && first <= 122))
+    || (start > 0 && IDENTIFIER_RUNE.test(previousRune(source, start)))) return null;
+  let end = start + 1;
+  while (end < source.length) {
+    const code = source.charCodeAt(end);
+    if (!((code >= 48 && code <= 57) || (code >= 65 && code <= 90) || code === 36 || code === 95 || (code >= 97 && code <= 122))) break;
+    end++;
+  }
+  const codePoint = source.codePointAt(end);
+  const next = codePoint === undefined ? '' : String.fromCodePoint(codePoint);
+  if (next && IDENTIFIER_RUNE.test(next)) return null;
+  const length = end - start;
+  const keyword = length >= 3 && length <= 6
+    ? (SQL_STRUCTURE_KEYWORDS[source.slice(start, end).toUpperCase()] ?? null)
+    : null;
+  return { end, keyword };
+}
+
+// Positions and a masked lexical view only. The returned statement bytes remain untouched.
+function sqlStructure(source) {
+  const masked = source.split('');
+  const spans = [];
+  const atomic = [];
+  let start = 0;
+  let parentheses = 0;
+  let previousWord = null;
+  let quoteKind = null;
+  let backslashEscapes = false;
+  let dollar = null;
+  let block = 0;
+  let line = false;
+  const hide = index => { if (source[index] !== '\n' && source[index] !== '\r') masked[index] = ' '; };
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i], n = source[i + 1];
+    if (line) { hide(i); if (c === '\n') line = false; continue; }
+    if (block) {
+      hide(i);
+      if (c === '/' && n === '*') { hide(i + 1); block++; i++; }
+      else if (c === '*' && n === '/') { hide(i + 1); block--; i++; }
+      continue;
+    }
+    if (dollar) {
+      hide(i);
+      if (source.startsWith(dollar, i)) {
+        for (let j = 1; j < dollar.length; j++) hide(i + j);
+        i += dollar.length - 1;
+        dollar = null;
+      }
+      continue;
+    }
+    if (quoteKind) {
+      hide(i);
+      if (backslashEscapes && c === '\\' && n !== undefined) { hide(i + 1); i++; continue; }
+      if (c === quoteKind) {
+        if (n === c) { hide(i + 1); i++; }
+        else { quoteKind = null; backslashEscapes = false; }
+      }
+      continue;
+    }
+    if (c === '\\') fail('MIGRATION_SQL_META_COMMAND_DENIED');
+    if (c === '-' && n === '-') { hide(i); hide(i + 1); line = true; i++; continue; }
+    if (c === '/' && n === '*') { hide(i); hide(i + 1); block = 1; i++; continue; }
+    if (c === "'" || c === '"') {
+      previousWord = null;
+      const prefix = source[i - 1];
+      const beforePrefix = source[i - 2];
+      backslashEscapes = c === "'" && (prefix === 'E' || prefix === 'e')
+        && !/[A-Za-z0-9_$]/.test(beforePrefix ?? '');
+      if (backslashEscapes) hide(i - 1);
+      hide(i);
+      quoteKind = c;
+      continue;
+    }
+    if (c === '$') {
+      const tag = /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.exec(source.slice(i))?.[0];
+      if (tag) {
+        previousWord = null;
+        for (let j = 0; j < tag.length; j++) hide(i + j);
+        dollar = tag;
+        i += tag.length - 1;
+        continue;
+      }
+    }
+    const word = sqlWordAt(source, i);
+    if (word) {
+      if (word.keyword === 'ATOMIC' && previousWord === 'BEGIN') {
+        atomic.push({ caseDepth: 0, parentheses });
+      } else if (atomic.length && word.keyword === 'CASE') {
+        atomic.at(-1).caseDepth++;
+      } else if (atomic.length && word.keyword === 'END') {
+        const frame = atomic.at(-1);
+        if (frame.caseDepth > 0) frame.caseDepth--;
+        else if (parentheses === frame.parentheses) atomic.pop();
+      }
+      previousWord = word.keyword;
+      i = word.end - 1;
+      continue;
+    }
+    if (c === '(') parentheses++;
+    else if (c === ')' && parentheses > 0) parentheses--;
+    if (!SPACE_RUNE.test(c)) previousWord = null;
+    if (c === ';' && atomic.length === 0 && parentheses === 0) {
+      const token = trim(source.slice(start, i));
+      if (token) spans.push({ start, end: i + 1, token });
+      start = i + 1;
+    }
+  }
+  if (quoteKind || dollar || block) fail('MIGRATION_SQL_UNTERMINATED');
+  const structure = masked.join('');
+  const token = trim(source.slice(start)); if (token) spans.push({ start, end: source.length, token });
+  return { spans, masked: structure };
+}
+export function statementSpans(source) {
+  return sqlStructure(source).spans;
+}
+function leadingSql(token) {
+  const { masked } = sqlStructure(token);
+  const first = masked.search(/\S/);
+  return first < 0 ? '' : trim(token.slice(first));
+}
+function sqlWords(source) {
+  return sqlStructure(source).masked.match(/[A-Za-z_][A-Za-z0-9_$]*/g)?.map(word => word.toUpperCase()) ?? [];
+}
+function transactionControl(source) {
+  const [first, second] = sqlWords(source);
+  if (['BEGIN', 'COMMIT', 'END', 'ROLLBACK', 'ABORT', 'SAVEPOINT', 'RELEASE'].includes(first)) return first;
+  if ((first === 'START' || first === 'PREPARE') && second === 'TRANSACTION') return `${first} TRANSACTION`;
+  return null;
+}
+export function migrationEnvelope(bytes, migration, originalVector) {
+  if (!Buffer.isBuffer(bytes) || sha(bytes) !== migration.sha256) fail('MIGRATION_FILE_DIGEST_MISMATCH');
+  const source = bytes.toString('utf8'); if (!Buffer.from(source).equals(bytes)) fail('MIGRATION_SQL_ENCODING_INVALID');
+  const spans = statementSpans(source);
+  if (!Array.isArray(originalVector) || !originalVector.length || JSON.stringify(spans.map(s => s.token)) !== JSON.stringify(originalVector)) fail('MIGRATION_VECTOR_MISMATCH');
+  const controls = spans.map((s, i) => transactionControl(s.token) ? i : -1).filter(i => i >= 0);
+  let execution = source;
+  if (controls.length) {
+    if (controls.length !== 2 || controls[0] !== 0 || controls[1] !== spans.length - 1 || leadingSql(spans[0].token).toUpperCase() !== 'BEGIN' || leadingSql(spans.at(-1).token).toUpperCase() !== 'COMMIT') fail('MIGRATION_TRANSACTION_CONTROL_DENIED');
+    const first = spans[0], last = spans.at(-1);
+    const beginStart = first.end - 1 - 5; // Exactly BEGIN; after admitted leading comments/whitespace.
+    if (source.slice(beginStart, first.end).toUpperCase() !== 'BEGIN;') fail('MIGRATION_TRANSACTION_ENVELOPE_INVALID');
+    const commitMatch = /COMMIT\s*;?\s*$/i.exec(source.slice(last.start, last.end));
+    if (!commitMatch) fail('MIGRATION_TRANSACTION_ENVELOPE_INVALID');
+    const commitStart = last.start + commitMatch.index;
+    const prefix = source.slice(0, beginStart), middle = source.slice(first.end, commitStart), suffix = source.slice(last.end);
+    execution = prefix + middle + suffix;
+    const inverse = execution.slice(0, prefix.length) + source.slice(beginStart, first.end) + execution.slice(prefix.length, prefix.length + middle.length) + source.slice(commitStart, last.end) + execution.slice(prefix.length + middle.length);
+    if (!Buffer.from(inverse).equals(bytes)) fail('MIGRATION_TRANSACTION_INVERSE_MISMATCH');
+  }
+  const match = /^backend\/supabase\/migrations\/(\d{14})_([a-z0-9_]+)\.sql$/.exec(migration.path);
+  if (!match) fail('MIGRATION_LEDGER_IDENTITY_INVALID');
+  return { execution, originalVector, version: match[1], name: match[2], sourceSha256: migration.sha256, vectorSha256: sha(JSON.stringify(originalVector)) };
+}
+function readQuery(contract) {
+  const spans = statementSpans(contract?.query ?? '');
+  if (spans.length !== 1 || sqlWords(spans[0].token)[0] !== 'SELECT' || !contract.expected || typeof contract.expected !== 'object' || Array.isArray(contract.expected) || !Object.keys(contract.expected).length) fail('MIGRATION_READBACK_CONTRACT_INSUFFICIENT');
+  // Trusted manifest queries only; disallow mutation/transaction keywords outside literals/comments.
+  const sql = leadingSql(spans[0].token);
+  const { masked } = sqlStructure(sql);
+  if (/\b(?:INSERT|UPDATE|DELETE|MERGE|COPY|CALL|DO|COMMIT|ROLLBACK|BEGIN|INTO|FOR\s+UPDATE|FOR\s+SHARE)\b/i.test(masked)) fail('MIGRATION_READBACK_CONTRACT_INSUFFICIENT');
+  return sql;
+}
+function capture(query, variable) {
+  return `EXECUTE ${quote(`SELECT jsonb_agg(to_jsonb(r)) FROM (${query}) r`)} INTO STRICT rows_value;
+ IF jsonb_typeof(rows_value) IS DISTINCT FROM 'array' OR jsonb_array_length(rows_value)<>1 OR (SELECT count(*) FROM jsonb_object_keys(rows_value->0))<>1 THEN RAISE EXCEPTION 'MIGRATION_READBACK_INVALID'; END IF;
+ SELECT value INTO STRICT ${variable} FROM jsonb_each(rows_value->0);
+ IF jsonb_typeof(${variable})='string' THEN ${variable}:=(${variable}#>>'{}')::jsonb; END IF;
+ IF jsonb_typeof(${variable}) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'MIGRATION_READBACK_INVALID'; END IF;`;
+}
+function block(body) { const tag = `$migration_${sha(body).slice(0, 24)}$`; if (body.includes(tag)) fail('MIGRATION_SQL_DELIMITER_COLLISION'); return `DO ${tag}\nDECLARE rows_value jsonb; observed jsonb; terminal_value jsonb;\nBEGIN\n${body}\nEND;\n${tag};`; }
+function ledgerEqual(plan) { return `EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=${quote(plan.version)} AND name IS NOT DISTINCT FROM ${quote(plan.name)} AND statements IS NOT DISTINCT FROM ARRAY(SELECT jsonb_array_elements_text(${quote(JSON.stringify(plan.originalVector))}::jsonb)))`; }
+export function atomicMigrationSql(plan, migration) {
+  const prior = readQuery(migration.expectedPriorState), terminal = readQuery(migration.terminalReadback);
+  const expectedPrior = `${quote(JSON.stringify(migration.expectedPriorState.expected))}::jsonb`, expectedTerminal = `${quote(JSON.stringify(migration.terminalReadback.expected))}::jsonb`;
+  const admission = block(`IF to_regclass('supabase_migrations.schema_migrations') IS NULL THEN RAISE EXCEPTION 'MIGRATION_LEDGER_UNAVAILABLE'; END IF;
+ IF NOT has_schema_privilege(current_user,'supabase_migrations','USAGE')
+  OR NOT has_table_privilege(current_user,'supabase_migrations.schema_migrations','SELECT')
+  OR NOT has_table_privilege(current_user,'supabase_migrations.schema_migrations','INSERT')
+  OR NOT (has_table_privilege(current_user,'supabase_migrations.schema_migrations','UPDATE')
+   OR has_table_privilege(current_user,'supabase_migrations.schema_migrations','DELETE')
+   OR has_table_privilege(current_user,'supabase_migrations.schema_migrations','TRUNCATE'))
+ THEN RAISE EXCEPTION 'MIGRATION_LEDGER_UNAVAILABLE'; END IF;`);
+  const contractGuard = block(`IF (SELECT count(*) FROM pg_attribute WHERE attrelid='supabase_migrations.schema_migrations'::regclass AND NOT attisdropped AND attnum>0 AND ((attname='version' AND atttypid='text'::regtype) OR (attname='name' AND atttypid='text'::regtype) OR (attname='statements' AND atttypid='text[]'::regtype)))<>3 THEN RAISE EXCEPTION 'MIGRATION_LEDGER_CONTRACT_INSUFFICIENT'; END IF;
+ IF ((SELECT count(*) FROM pg_attribute WHERE attrelid='supabase_migrations.schema_migrations'::regclass AND attnum>0 AND NOT attisdropped) NOT IN(3,6) OR ((SELECT count(*) FROM pg_attribute WHERE attrelid='supabase_migrations.schema_migrations'::regclass AND attnum>0 AND NOT attisdropped)=6 AND (SELECT count(*) FROM pg_attribute WHERE attrelid='supabase_migrations.schema_migrations'::regclass AND attnum>0 AND NOT attisdropped AND NOT attnotnull AND NOT atthasdef AND ((attname IN('created_by','idempotency_key') AND atttypid='text'::regtype) OR (attname='rollback' AND atttypid='text[]'::regtype)))<>3)) OR NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='supabase_migrations.schema_migrations'::regclass AND relkind='r' AND relpersistence='p' AND NOT relrowsecurity) OR NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='supabase_migrations.schema_migrations'::regclass AND contype='p' AND conkey=ARRAY[(SELECT attnum FROM pg_attribute WHERE attrelid='supabase_migrations.schema_migrations'::regclass AND attname='version')]::smallint[]) THEN RAISE EXCEPTION 'MIGRATION_LEDGER_CONTRACT_INSUFFICIENT'; END IF;`);
+  const priorGuard = block(`IF EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=${quote(plan.version)}) THEN
+  ${capture(terminal, 'terminal_value')}
+  IF ${ledgerEqual(plan)} AND terminal_value=${expectedTerminal} THEN RAISE EXCEPTION 'MIGRATION_ALREADY_APPLIED'; END IF;
+  RAISE EXCEPTION 'MIGRATION_LEDGER_CONFLICT';
+ ELSE
+  ${capture(prior, 'observed')}
+  IF observed IS DISTINCT FROM ${expectedPrior} THEN RAISE EXCEPTION 'MIGRATION_PRIOR_STATE_MISMATCH'; END IF;
+ END IF;
+`);
+  const terminalGuard = block(`${capture(terminal, 'observed')}
+ IF observed IS DISTINCT FROM ${expectedTerminal} THEN RAISE EXCEPTION 'MIGRATION_TERMINAL_READBACK_FAILED'; END IF;`);
+  const ledgerGuard = block(`IF NOT ${ledgerEqual(plan)} THEN RAISE EXCEPTION 'MIGRATION_LEDGER_READBACK_FAILED'; END IF;`);
+  return `SET LOCAL standard_conforming_strings=on; SET LOCAL lock_timeout='2s'; SET LOCAL statement_timeout='120s';\n${admission}\nLOCK TABLE supabase_migrations.schema_migrations IN EXCLUSIVE MODE;\n${contractGuard}\n${priorGuard}\n${plan.execution}\n${terminalGuard}\nINSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES(${quote(plan.version)},${quote(plan.name)},ARRAY(SELECT jsonb_array_elements_text(${quote(JSON.stringify(plan.originalVector))}::jsonb)));\n${ledgerGuard}\n${terminal};\n`;
+}
+function readbackExpression(query) {
+  return `(SELECT CASE WHEN jsonb_typeof(value)='string' THEN (value#>>'{}')::jsonb ELSE value END FROM jsonb_each((SELECT to_jsonb(r) FROM (${query}) r)))`;
+}
+export function reconciliationSql(plan, migration) {
+  const prior = readQuery(migration.expectedPriorState), terminal = readQuery(migration.terminalReadback);
+  // One fresh read-only psql transaction. Client branching prevents the server from planning an invalid state query.
+  return `SET TRANSACTION READ ONLY; SET LOCAL standard_conforming_strings=on; SET LOCAL statement_timeout='15s';
+ SELECT EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=${quote(plan.version)}) AS ledger_exists \\gset
+\\if :ledger_exists
+ SELECT json_build_object('ledger_exists',true,'ledger_equal',${ledgerEqual(plan)},'prior',NULL,'terminal',${readbackExpression(terminal)})::text;
+\\else
+ SELECT json_build_object('ledger_exists',false,'ledger_equal',false,'prior',${readbackExpression(prior)},'terminal',NULL)::text;
+\\endif`;
+}
+export function reconciliationOutcome(value, migration) {
+  const normalize = v => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(k => [k, normalize(v[k])])) : Array.isArray(v) ? v.map(normalize) : v;
+  const parse = v => typeof v === 'string' ? JSON.parse(v) : v;
+  try {
+    const equal = (a, b) => JSON.stringify(normalize(parse(a))) === JSON.stringify(normalize(b));
+    if (value.ledger_exists === true && value.ledger_equal === true && value.prior === null && equal(value.terminal, migration.terminalReadback.expected)) return 'committed';
+    if (value.ledger_exists === false && value.ledger_equal === false && equal(value.prior, migration.expectedPriorState.expected) && value.terminal === null) return 'not_applied';
+    return 'partial_conflict';
+  } catch { return 'unknown'; }
+}

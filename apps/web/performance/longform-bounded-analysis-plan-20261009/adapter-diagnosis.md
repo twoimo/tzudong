@@ -1,0 +1,9 @@
+# Offline adapter diagnosis
+
+No additional provider POST was made and no source was edited. Numeric status cannot be recovered from the existing execution: private stdout has no labeled HTTP status and stderr is empty. The adapter retained HTTP4xx class only; the pinned helper converted the numeric urllib HTTPError into SystemExit before the adapter emitted its fixed error.
+
+Reconstructed request fingerprint matches the real failed observation. Current official OpenAPI and installed SDK2.24.0 agree with its model/generation keys, YouTube content URI, optional MIME type, static duration-string offsets and text/JSON response_format object. A wholly offline mocked SDK dispatch preserved the payload and returned a synthetic BadRequestError with numeric status/statusCode400. This is SDK shape evidence, not recovery of the real failed status.
+
+No definite request mismatch was found. All used schema keywords are documented. Schema complexity remains possible because the response schema is5335 bytes and nested, but the official warning gives no specific rejection proof. Authentication/rate-limit/inference quota cannot be distinguished from this existing receipt. Successful countTokens alone does not establish Interactions generation admission.
+
+Minimal proposal: adapter carries numeric HTTP code and allowlisted category on AdapterError at HTTPError interception, without retaining raw diagnostics. Root-owned executor copies those optional fields into new failure receipts. Preserve AdapterError.code and the exact existing six-field observation contract, original request fingerprints, uncertain/lostACK/no-resend behavior and immutable old receipt/batch bytes. A source hash/config identity change must be explicit, not a silent migration or fresh-call reset. Await ownership assignment before editing.

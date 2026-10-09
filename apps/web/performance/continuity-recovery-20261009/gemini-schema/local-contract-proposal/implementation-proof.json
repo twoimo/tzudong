@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "scope": "offline implementation and predecessor-cache continuity for static-segment Gemini video analysis",
+  "status": {
+    "sourceImplemented": true,
+    "offlineVerification": "passed",
+    "providerAcceptance": "not_executed",
+    "productionAdoption": "incomplete"
+  },
+  "wireContract": {
+    "canonicalBytes": 365,
+    "sha256": "e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360",
+    "fullValidatorRetained": true,
+    "modelPromptEngineAndProcessingRetained": true
+  },
+  "predecessorIdentity": {
+    "adapterSha256": "d3c9a61c9c2e33289abefe187bae0b394c09ca8e66ade4f7a4d6017e7685145b",
+    "policySha256": "7934ff60da85f5a28a8884ecdfca2963785ba82edc78230fa7a90506b643aaa4",
+    "old835SecondResponseSchemaSha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd",
+    "old835SecondRequestSha256": "121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331",
+    "new835SecondRequestSha256": "ff7d0dd16ebe3a03430d528dfd00adcd37977423d6c7b54b4ab7b30ece7f4134",
+    "binding": "previous adapter source, policy source, per-segment full response schema, exact request, input, model, prompt, engine, processing parameters, receipt identity, and evidence identity"
+  },
+  "cacheContinuity": {
+    "successfulPredecessorReuse": {
+      "segments": 2,
+      "restartChecked": true,
+      "duplicateQueueChecked": true,
+      "attempted": 0,
+      "providerCalls": 0,
+      "evidenceBytesUnchanged": true,
+      "fullValidatorRerun": true
+    },
+    "failClosedStates": [
+      "missing_artifact",
+      "duplicate_artifact",
+      "corrupt_artifact",
+      "invalid_lineage",
+      "source_drift",
+      "policy_drift",
+      "model_drift",
+      "input_drift",
+      "schema_drift",
+      "rejected_predecessor"
+    ],
+    "failClosedDisposition": "readback_required",
+    "failClosedBecomesNew": false,
+    "rejected835SecondReceiptModified": false,
+    "rejected835SecondVideoSent": false
+  },
+  "verification": {
+    "boundedEquivalence": {
+      "cases": 112,
+      "validatorAccepted": 3,
+      "oldIntersectionAccepted": 3,
+      "newIntersectionAccepted": 3,
+      "divergences": 0,
+      "pass": true,
+      "limitation": "finite fixtures support the separate structural proof but are not a universal proof by themselves"
+    },
+    "knowledgeGraphSuite": {
+      "tests": 113,
+      "skipped": 8,
+      "pass": true
+    },
+    "focusedPredecessorTests": {
+      "tests": 4,
+      "pass": true
+    }
+  },
+  "source": {
+    "claudeVideoAdapterSha256": "f7a7d57c9e2318c09b24a9e437b266698a0c52faa8fb1a54e84e4a2568a44676",
+    "longformAnalysisSha256": "8685e89c84a106b983f4db2fdec8e6b54868185c21bdfec9ede2de1f00cc09e0",
+    "testClaudeVideoAdapterSha256": "1d4e189b92666af9747be2c81c190948a5dfbbead239e0b5cb691db56c259a40",
+    "testLongformAnalysisSha256": "b9735bc77c700bc08a48e4fbad9123d4f74c65dc051ea21fefbd7d3f9e903646",
+    "testLongformSegmentsSha256": "3acf77e6a455ab2e1c21561e73a9262a0c5d9e98cd400ab351a0baae592bdb3f"
+  },
+  "externalEffects": {
+    "providerCalls": 0,
+    "keyLookups": 0,
+    "videoResends": 0,
+    "databaseWrites": 0,
+    "queueWrites": 0,
+    "vaultWrites": 0,
+    "sourceCommits": 0,
+    "pushes": 0,
+    "merges": 0
+  },
+  "acceptanceBoundary": {
+    "reasonNotExecuted": "the exact previously authorized synthetic payload was not reconstructed in this implementation task, and the parent directed that the approved single POST must not be repeated",
+    "confirmedImplementedWireResult": null,
+    "nextGate": "a distinct exact provider wire-acceptance receipt"
+  }
+}

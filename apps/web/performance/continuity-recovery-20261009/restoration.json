@@ -1,0 +1,692 @@
+{
+  "observedAt": "2026-10-09T06:14:32.357758+00:00",
+  "snapshotRef": "refs/codex/snapshots/3fde712dbd61a49d905fc326901006f5b314da07",
+  "snapshotCommit": "7d4080365c237ed1effd6e66eb8e81332173b922",
+  "snapshotParent": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "newWorktree": "/Users/twoimo/.codex/worktrees/pipeline-continuity-20261009/tzudong",
+  "restoredFiles": [
+    {
+      "path": "apps/web/CLAUDE.md",
+      "sha256": "4b0edf64b35af8b5299de98e4178dbb09c660dbb2d8a66fba07b584e54b6943c",
+      "bytes": 690,
+      "userWorkPreserveUnstaged": true
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/codeql-thread-readback.json",
+      "sha256": "15db714d323724292a0342245a5e7d00c1199a6bbc6c27a01eef025664fc7c3f",
+      "bytes": 1040,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/adapter-diagnosis.json",
+      "sha256": "3d6f6e76e9e51a1de2fe56655fdf4717f9dde347748f09664d0015e368343bb2",
+      "bytes": 6403,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/adapter-diagnosis.md",
+      "sha256": "ae8241f771863498cbbe94a02a0e331d11bd2b1993b4b072279d985a4991cf53",
+      "bytes": 1819,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/artifact-map.sha256",
+      "sha256": "143264a903d5abd6dc678f59c127920bf116c8c7be4ed0067e099f60679caed1",
+      "bytes": 965,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/execution-handle.json",
+      "sha256": "fcd46373952cc0abe4eaacd0afaf4ddb87cab69060463f6d9d991d7a7878424f",
+      "bytes": 730,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/execution-report.md",
+      "sha256": "cac63507454ce919cc4400a09cf38774e964aa7bd543c3815c6cde31562b606b",
+      "bytes": 2320,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/execution-result.json",
+      "sha256": "5a9869e5f83752dfa205d0bfe5dfbb16dc010d9ee4ced2174133f1fb77584bc3",
+      "bytes": 5390,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/http-status-real-receipt-compatibility.json",
+      "sha256": "2406c2a64a63400430c01c2c6ca5dc311e369319ffee4f2d41aec5e830cd85b8",
+      "bytes": 401,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/local-execution-readback.json",
+      "sha256": "210a6f1d1ed798413e6e6a8075404cdd98205b7547d2cb932f3434f28c7334a7",
+      "bytes": 85,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/offline-adapter-contract-check.json",
+      "sha256": "757ef405e8807786e177779c95cb90ee11b121ba9a2b414424455c1c742906b7",
+      "bytes": 1058,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/plan.json",
+      "sha256": "665e393675b54d9125364c4cc9b07769d866aebd53dc0b491e30b32595b37f41",
+      "bytes": 8422,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/report.md",
+      "sha256": "ce8154b3813e4ad874436b9f70f3039b2150fec6ed6b6b932df87a2724ab2f00",
+      "bytes": 2239,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/root-admission.json",
+      "sha256": "e43f9fecbe523280e6b4f32e892e1855eb963e857dda38baca42521461e74ee3",
+      "bytes": 1244,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-bounded-analysis-plan-20261009/source-state-hashes.json",
+      "sha256": "8acbc95b9f714401fe02163cb24e5dcf1d914ab3581c7bde5924f8bdcdd4c744",
+      "bytes": 231559,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-public-resume-20261009/artifact-map.sha256",
+      "sha256": "1c15237555cd6861ed9a8fcc4bdc380f86a725fa0153954464784a82ef87f277",
+      "bytes": 347,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-public-resume-20261009/metadata-admission.json",
+      "sha256": "928b5ae8677dd0a23e92ba201f12538226fc3dbc3f8793350e0ef59dabef45a3",
+      "bytes": 389,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-public-resume-20261009/private-snapshot-ref.json",
+      "sha256": "96039928298576d6c2c9d9856f4785dc986d68d10266c85d9d2b47b7de8639b0",
+      "bytes": 453,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-public-resume-20261009/result.json",
+      "sha256": "92762c7d17dbaafdc9f45da4746f3407469d93bfaa636b8f06f9547c84dbaed7",
+      "bytes": 6157,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/artifact-map.sha256",
+      "sha256": "ea76c74b7f1a290b57f706783e173472a24570d504da49655cfa81301b2cca57",
+      "bytes": 408,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/card-removal-readback.json",
+      "sha256": "cc4f91907357b34124df9b791058dca2b0089c743ad91a6b7812af47787cf102",
+      "bytes": 545,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/fresh-funding-readback.json",
+      "sha256": "7f5d3cc62e7931c7111ccf0b8e7c2257f5f9d25e04bbafdff93b42288c9b6d5a",
+      "bytes": 1861,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/model-get.json",
+      "sha256": "f945ad4bd2d830074a199b5c62b68688c7106a9c7f784e2c698282a0904862e6",
+      "bytes": 364,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/offline-plan.json",
+      "sha256": "97f0ebabc82e041f8d8ac226f9f1413659c304f017b3ec6f7bf03b8945f9d3f3",
+      "bytes": 485,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/readiness.json",
+      "sha256": "9dbe7ab4972f26400154cee4935b61370edd9c31e8d65d1f929983dd6d82d4a6",
+      "bytes": 7578,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/report.md",
+      "sha256": "a7fc380660a711ec655e0b00f90ce4e73b8117f1f4317c5abb2a665b0853a5f7",
+      "bytes": 3543,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/longform-resume-readiness-20261009/state-bindings.json",
+      "sha256": "e1004273d51768a8e53abddcbf91684392a57ae398e648aa67a8cca232909edb",
+      "bytes": 1462,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/release-readiness-refresh/fresh-operating-preimage.json",
+      "sha256": "89a2956ea4f8673943658fc13e08f7a1e69fb465f112a50be7b8a34e587b374a",
+      "bytes": 5046,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/release-readiness-refresh/protected-develop-merge.json",
+      "sha256": "2fec941b625cbbddfa94ca8f98090ed73a873cdafdde70775510a6ceb46706d7",
+      "bytes": 614,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/admission-and-batch.py",
+      "sha256": "9013b3fd9356e48ba51476282ebcf805b9d942f49ff01e636cdbe1f66111a958",
+      "bytes": 6125,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/admission-batch-first-negative.json",
+      "sha256": "97fa53e8dffceb3b04926f3598248d63636f7d35c3043f8fb6ed426ac25c5424",
+      "bytes": 2352,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/admission-batch-g014-owner-denial.json",
+      "sha256": "4fd19132057dc3627122ef79f87a9ca359867187a792aa489c4ae959b18ab97f",
+      "bytes": 2511,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/admission-batch-runtime.json",
+      "sha256": "c56fb1c921d04b3040579e2b5a9cecbf33d3f9bfe9947e62241e683d13a1ff41",
+      "bytes": 3095,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/admission-batch-second-negative.json",
+      "sha256": "2d78e2ae9532a5b81395386923ed0b7214d29aef9d2c186f8026e8311f72fb8d",
+      "bytes": 2392,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/artifact-map.json",
+      "sha256": "add9fb5b83d3e07c5ed0b7afe0a1a553526839870ab4b9a0128cd2abae7cc5f1",
+      "bytes": 4085,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/artifact-map.sha256",
+      "sha256": "7959188db529ea49d75361c3b081ea784b40d640ebe1f92b3df612bcdedffb45",
+      "bytes": 84,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/bootstrap-snapshot-roles.mjs",
+      "sha256": "e88928fb0ae3c8bf12b29c7696d5efb5c7a2134ba1b7df4fb21fdfe8615ff5bb",
+      "bytes": 5256,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/exact-integration-proposal.md",
+      "sha256": "a985eb0f546a5886788db77fe0b657544812d7e2e2b0a7017c5a08e0ea89c80f",
+      "bytes": 5381,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/executor-principal-admission.json",
+      "sha256": "62dd1b93f03eb62e73ea4b4c01f4cb1df7283ae30d9997e3701f065de7b5464d",
+      "bytes": 249,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/final-receipt.json",
+      "sha256": "71b1a2a7ed6e56294d457b55195ab12c37ac1c2568c4a32f07d315937d6197bb",
+      "bytes": 884,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/fixture-lib.py",
+      "sha256": "aacc32934b8bd2fa17911833235598722a48d6db93c643bccd2733c13470871b",
+      "bytes": 10285,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/bootstrap-snapshot-roles.mjs",
+      "sha256": "648ad3c95a3eb9145d561bc88915a02d40b3bdedbc0f1955a4205728db4f99c9",
+      "bytes": 5271,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/fixture-lib.py",
+      "sha256": "9a862bdbfe0a9531df3c9be15cb13b2e9a16c669d764d73bf022c7e81fa61a7e",
+      "bytes": 10285,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/owned-container-id.txt",
+      "sha256": "ffba62756a9b819a005e03a64dd10f9aacb130ff90d898280c8346e30b8f214f",
+      "bytes": 65,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/pg15-caller-runtime-initial.json",
+      "sha256": "8c80f0b82512d7e8bba5a0bdecf2453a85da08e111409b415996c489cc2bd23a",
+      "bytes": 1286,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/pg15-caller-runtime.json",
+      "sha256": "796ac058a22c44949832e1c5930044c6ed6ed6dbf600e90c05bada1ccfa48163",
+      "bytes": 1658,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/pg15-resource.json",
+      "sha256": "1495ef3274000a2183cf25c473e23995f65ce1c40eb3620e36b739715066b64c",
+      "bytes": 401,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/pg17-caller-runtime-initial.json",
+      "sha256": "2dbfd73f7b7e93cae89d42efa042aa2581f8980d94bb2dad4273fac0a33ec48b",
+      "bytes": 1286,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/pg17-caller-runtime.json",
+      "sha256": "80ce00fc5fe138509de34cb3ad0cf91091e847f6dcd924f10041d1d0c549790b",
+      "bytes": 1658,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/prepare-owned-resource.py",
+      "sha256": "cda2a8b2c73e874d5bb540ca5d4273c234f227ef53b3879815bd806705e6502b",
+      "bytes": 1749,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/prepare-pg15.py",
+      "sha256": "a88e788c2b8426e0e6d48d603b010757479b7a55deb9484e29e92df85268a68b",
+      "bytes": 1768,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/pristine-reconstruction.json",
+      "sha256": "3f99084059d873562b1864d7f88b27c77b8f8cbdb796f174243f80dca8a1ec22",
+      "bytes": 4232,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/psql-shim/psql",
+      "sha256": "477611ed72de93b82abdeef6fc87d10b2071a7653b409d8edfc287cf9ca4f742",
+      "bytes": 982,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/real-ledger-shape-readback.json",
+      "sha256": "4763f6ead6154a2c23edda803b7ced0893d97a530871bdd43b7a96d8d8e0d1ec",
+      "bytes": 774,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/real-main-first-failure.json",
+      "sha256": "cfa6ed889304684894dfd9f231486fa6354c4256595ba922f6a0dd639f04a81a",
+      "bytes": 230,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/real-main-known-managed-profile-denied.json",
+      "sha256": "24bb17493153d5b86be63b79fbb1f54932df00e97a5ce762a358fd6f80d7ddb1",
+      "bytes": 239,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/real-main-runtime.json",
+      "sha256": "ec70713623de749c9a504caf924380a74e61e55a90c36c1292930e934cdf1cbd",
+      "bytes": 334,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/real-main-shim-syntax-negative.json",
+      "sha256": "cfa6ed889304684894dfd9f231486fa6354c4256595ba922f6a0dd639f04a81a",
+      "bytes": 230,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/real-main-uri-environment-negative.json",
+      "sha256": "cfa6ed889304684894dfd9f231486fa6354c4256595ba922f6a0dd639f04a81a",
+      "bytes": 230,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/reconstruct-pristine.mjs",
+      "sha256": "cf531d2444839dcb1e1f8841b0d97a3f38b234edb48317c26b54fc0ca781a621",
+      "bytes": 23802,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/resource-plan.json",
+      "sha256": "ea8b22283f32ad7c3a2e8fb3b5579ef5bcf56e6684cd31451626bb4458515f19",
+      "bytes": 716,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/role-bootstrap.json",
+      "sha256": "7adc5fca2995c9b7bcb06824d1639c5c93f45ac202b2b754ab17015f3f16ae8b",
+      "bytes": 542,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/runtime-caller.mjs",
+      "sha256": "0285760e391f8df6059749e2dac81fb696a551781591714e9d769c740832caf3",
+      "bytes": 8175,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130001_valid.sql",
+      "sha256": "18688084bf9b9ee766d2566176c194c5bedc15f5ff3a7ef8cd1d280216cdefb0",
+      "bytes": 88,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130002_mismatch.sql",
+      "sha256": "9a47cf0d8d89f3419cfb72f9a47e072792ba7a05f48f6b26a6fb8ea5ddba289a",
+      "bytes": 91,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130003_ddl.sql",
+      "sha256": "20993eadd9fcc63388ebd5f8d7a70a69dfbeb13fc56fff576a1b84a404833275",
+      "bytes": 128,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130004_lost.sql",
+      "sha256": "d4372fa72909097bd8cad8da747e46fab48f19cfda2c01e265c672e981000c9e",
+      "bytes": 87,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130005_multirow.sql",
+      "sha256": "72a4b25581e4dbd163b217bdb8427859455b1d8b374d2ee9ae2a66c28e961e8d",
+      "bytes": 91,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130006_invalidjson.sql",
+      "sha256": "de4822128db28555e7bbb3c4aff6e306117399a0171bebb28713cb805ea3e18b",
+      "bytes": 94,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130007_conflict.sql",
+      "sha256": "69f76d701af53d8e9dfd6ed67cd57b227fb2b9a044502493af8db119076dbc48",
+      "bytes": 91,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130008_insufficient.sql",
+      "sha256": "cdd8ba7c6b18080dab00197892a842c8c2d4c9901c0505da601557f13e8f5cae",
+      "bytes": 95,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/source-fixtures/20261009130009_prior_drift.sql",
+      "sha256": "2d209720fed3a563c723866cbac909e8613d426e3c37fb8ac8854d353c428019",
+      "bytes": 94,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/implementation/verify-real-main.py",
+      "sha256": "a53c15e7d817ba05c3757bd1cfe9e8ace09cf5601a2b0a6305ef5a7a67748bfe",
+      "bytes": 3140,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/minimum-adoption-proposal.md",
+      "sha256": "26f9f9c996cc4e729cb241c998e81a6c402a31d7fd63eadbf0997dcbc743ec58",
+      "bytes": 8214,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/owned-container-id.txt",
+      "sha256": "790adb866167fcd1cdd2f927bcee6a43da0adde4d5d9c6d32f708745532f89c4",
+      "bytes": 65,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/prepare-owned-resource.py",
+      "sha256": "cda2a8b2c73e874d5bb540ca5d4273c234f227ef53b3879815bd806705e6502b",
+      "bytes": 1749,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/pristine-reconstruction.json",
+      "sha256": "7093d7daa559ef5f837de294eaf41a91d9c9a53ec45f71667906793803520367",
+      "bytes": 4232,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/proposal-source-binding.json",
+      "sha256": "666007ffbbf1674ebb286cbef38755f22db2bf827ba09e90540d3326b6b6534c",
+      "bytes": 622,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/reconstruct-pristine.mjs",
+      "sha256": "01b2d20111d2e0859c280188f8fc85a83443ee1906c2335cf916770efd3cf3a5",
+      "bytes": 23787,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/resource-plan.json",
+      "sha256": "3bec8598eee255e884a12b6c179f7a6a3e77eb47b1807eea8d4b40485d5c2bbf",
+      "bytes": 716,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/response-cut-pre-barrier-runtime.json",
+      "sha256": "3a48e04010d385e6de8c6104c7b24d6713b85fbe06ce0505436d923a6e62e1bb",
+      "bytes": 390,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/response-discard-initial-runtime.json",
+      "sha256": "3a48e04010d385e6de8c6104c7b24d6713b85fbe06ce0505436d923a6e62e1bb",
+      "bytes": 390,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/response-loss-runtime.json",
+      "sha256": "8b3247de7cd85daaabb68a185d02025249de7305b94acd8ac2a83642c66cb494",
+      "bytes": 445,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/response-loss.py",
+      "sha256": "f5e75b1d2f6d8fb1fd60645e74391ca692ce95a3086c86fe9cba97e38f0e33dc",
+      "bytes": 3390,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/role-bootstrap.json",
+      "sha256": "8fde36c5bfd886aaddfd6bdf0568bbc628cd8ed9da82efd6841c588e5350e8c4",
+      "bytes": 542,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/scope.json",
+      "sha256": "f0642b2fa8689f64da6fb0ad7ac66b21dbb154acd775d00da59c1f325eacbe98",
+      "bytes": 408,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/transaction-experiments.py",
+      "sha256": "00aa14f707323a9b4411029a961186917041b6b36033712603b97747d5356993",
+      "bytes": 6555,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/operating-rollout-followthrough-20261009/transaction-executor-proposal/transaction-runtime.json",
+      "sha256": "710a798738e96424becb7011e78adb6e669e9bb1fdc30ecd30c720198c9d98a2",
+      "bytes": 3789,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/MERGE_PREVIEW_VERIFICATION.md",
+      "sha256": "89621c1ebdfababca2c7a7c826e40d0215dfc2ba9b0d0d36aa7dc54729169f38",
+      "bytes": 4789,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/README.md",
+      "sha256": "2b2992c7644c1b3737c07f15fa4e4faf646e72b697296e2cae91dc3d5c132211",
+      "bytes": 4686,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/artifact-map.json",
+      "sha256": "2aae99f2c02fc0c84dfcec7b7184320de52064bee6154b81b34762671bed3140",
+      "bytes": 2677,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/cli-inspect-auto-link-recovery.json",
+      "sha256": "f233ef4b31987da0898cbafcc0937e2495e81c9f7f6ecce3965f51db739a383e",
+      "bytes": 878,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/deployment-events-sanitized.json",
+      "sha256": "6be5bde94b8c2f3526570427375479b381e4fdaa28f3da2abdd9ded71c078749",
+      "bytes": 3287,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-browser-first-failure.json",
+      "sha256": "1cbdf9963d75e2552f97b582ee16b4e66552945235118bb35cca6c91aad35d55",
+      "bytes": 773,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-browser.json",
+      "sha256": "08dd0405b04a0b257d123ee916572d7b254b4e81e0ae96e0dcf50e847caeae99",
+      "bytes": 1026,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-http-first.json",
+      "sha256": "44a7a2a361d55fbe016459e255dc1c6e732bd7d17e52ad4e7fa18ada54860a0c",
+      "bytes": 1866,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-http-routes.json",
+      "sha256": "1f59779e13c34762846714b2f7faaf0a545d16a8cd1955caa8059035a4e95787",
+      "bytes": 9775,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-login-desktop.png",
+      "sha256": "be73eb96fe811d7ab44d5da08471e6abea93f30fdc33bfad3392e54d8f3e29e1",
+      "bytes": 31553,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-login-mobile.png",
+      "sha256": "8fe650a1ad478571eb119baaee86139d603fbf55ad2857c0369b3b0b142fb4fb",
+      "bytes": 30398,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-ready-sanitized.json",
+      "sha256": "04abc879599d83c97e2dc3f48e7701ae4de4d3a24ecd01f3d461e0c9c0686c29",
+      "bytes": 595,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-preview-verification-summary.json",
+      "sha256": "34ac50f9c153f0f8e59faad9db694df1053caf17b02febfcfef1fd4b43333e6c",
+      "bytes": 1216,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/merge-source-tree-binding.json",
+      "sha256": "2d02b5689ea05830ea07a93c1a48bb557f73c0673a3d6aaf2e2de1b7f247a72a",
+      "bytes": 323,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/source-and-local-decision.json",
+      "sha256": "88cb5064e2f4274010e74c7a74f3952b57e8b569e89b9988fc8574ae703fc7f9",
+      "bytes": 1998,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/verify-merge-preview-browser.mjs",
+      "sha256": "d89aca3ee70b77d405c630c736bada98bddda2e5e98fe6916b82e8772250412e",
+      "bytes": 3441,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/verify-merge-preview-http.py",
+      "sha256": "68656d301ce9ce112b7955e19244957503e4eef19a4b92994c3720ea2d3df746",
+      "bytes": 3503,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "sha256": "a5596ae76cfb0a2d23002230d2f21b045e68f9866b5822b32a7474a86208a0c2",
+      "bytes": 19818,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "3ca3608e61ef16601462dc9a517948dc4b224d7acc621244a1e3d79fce6ef08d",
+      "bytes": 12009,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-transaction.test.ts",
+      "sha256": "8645a41ebe1235a1f0dec2c48814b5fe74281615456ab6714eaf1ae0766bebfe",
+      "bytes": 7173,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "backend/knowledge_graph/claude_video_adapter.py",
+      "sha256": "d3c9a61c9c2e33289abefe187bae0b394c09ca8e66ade4f7a4d6017e7685145b",
+      "bytes": 15196,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "sha256": "7934ff60da85f5a28a8884ecdfca2963785ba82edc78230fa7a90506b643aaa4",
+      "bytes": 74579,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_claude_video_adapter.py",
+      "sha256": "24a02d85117761399c1d36ca01d11fd7b9cf451ffb3061a0dc15fee8e4b2b086",
+      "bytes": 16961,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+      "sha256": "e4c834bcad71f6ff2c0e0a925f010aca612f6ea7e56c16b875e91be2a603f24b",
+      "bytes": 19170,
+      "userWorkPreserveUnstaged": false
+    },
+    {
+      "path": "docs/operations/project-request-todos-20261009.md",
+      "sha256": "5a25b6d100dddc07cfadf3ba6a897ebbba0c6c1fcde72ea853288c12be146393",
+      "bytes": 78109,
+      "userWorkPreserveUnstaged": false
+    }
+  ],
+  "restoredCount": 113,
+  "expectedSourceHashesVerified": 8,
+  "completeVerificationClaimed": false,
+  "providerOrOperatingWrites": false,
+  "notes": "Exact snapshot bytes; final SQL 6-column profile needs checks after recovery. Prior Python80 reports remain historical until revalidated. User CLAUDE preserved and excluded from staging."
+}

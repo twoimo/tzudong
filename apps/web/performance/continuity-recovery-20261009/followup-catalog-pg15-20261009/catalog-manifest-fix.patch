@@ -1,0 +1,44 @@
+diff --git a/backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh b/backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh
+index 1e30924b..540db80b 100644
+--- a/backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh
++++ b/backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh
+@@ -1835,6 +1835,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash"
+     advisor-prerequisite-recovery.json advisor-prerequisites.sql advisor-replay.sql \
+     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
+     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
++    admin-user-rpc-forward-overlap-verification.sql admin-user-rpc-forward-overlap-receipt.json \
+     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
+     g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
+     g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \
+diff --git a/backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py b/backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py
+index c3289259..1aba1f51 100644
+--- a/backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py
++++ b/backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py
+@@ -92,6 +92,15 @@ class AdminUserManagementRpcForwardReplayTest(unittest.TestCase):
+         self.assertIn('.required_operating_ledger_count == 85', case)
+         self.assertNotIn('<"$migration"', case)
+ 
++        artifact_manifest = generator.rsplit(
++            '  cd -- "$staging_dir"\n', 1
++        )[1].split('    LC_ALL=C sort >artifact-manifest.txt', 1)[0]
++        for artifact in (
++            'admin-user-rpc-forward-overlap-verification.sql',
++            'admin-user-rpc-forward-overlap-receipt.json',
++        ):
++            self.assertEqual(artifact_manifest.count(artifact), 1)
++
+ 
+ if __name__ == '__main__':
+     unittest.main()
+diff --git a/backend/supabase/tests/test_compare_g024_clean_replays.py b/backend/supabase/tests/test_compare_g024_clean_replays.py
+index 093a7f84..588a3736 100644
+--- a/backend/supabase/tests/test_compare_g024_clean_replays.py
++++ b/backend/supabase/tests/test_compare_g024_clean_replays.py
+@@ -34,6 +34,7 @@ GENERATOR_ARTIFACTS = (
+     "advisor-prerequisite-recovery.json", "advisor-prerequisites.sql", "advisor-replay.sql",
+     "admin-user-ids-overlap-verification.sql", "admin-user-ids-overlap-receipt.json",
+     "admin-management-group-overlap-verification.sql", "admin-management-group-overlap-receipt.json",
++    "admin-user-rpc-forward-overlap-verification.sql", "admin-user-rpc-forward-overlap-receipt.json",
+     "g014-owner-pg15-verification.sql", "g014-owner-pg15-receipt.json",
+     "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
+     "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",

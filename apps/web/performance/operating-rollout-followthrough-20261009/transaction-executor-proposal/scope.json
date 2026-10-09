@@ -1,0 +1,8 @@
+{
+  "sourceEdits": false,
+  "approvedManifestOrPinChanged": false,
+  "operatingWrites": false,
+  "fixtureSchema": "owned disposable DB only; fixture_executor tables are explicitly synthetic, never operating migration ledger",
+  "sourceAuthority": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong",
+  "purpose": "transaction and reconciliation prototype for root adoption review"
+}

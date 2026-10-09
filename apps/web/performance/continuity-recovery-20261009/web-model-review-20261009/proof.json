@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "state": "three_independent_reviews_completed",
+  "dispatch": "two ephemeral plaintext CLI processes launched concurrently; SQL retried as frozen-source text after tool auto-review rejection",
+  "initialSqlSourceReviewCompleted": false,
+  "initialSqlReadBlock": "security state could not be determined by automatic approval review",
+  "reviews": [
+    {
+      "id": "sql",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "reasoningEffort": "high",
+      "threadId": "01a12030-3285-7a50-a80e-a6c51b6855b1",
+      "turnCompleted": true,
+      "turnFailed": false,
+      "reviewBasis": "frozen source text; tools not invoked",
+      "usageReportedByBridge": {
+        "input_tokens": 57083,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1079,
+        "reasoning_output_tokens": 0
+      },
+      "reportPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/sql-review.md"
+    },
+    {
+      "id": "gemini",
+      "requestedModel": "chatgpt-web/gpt-5.6-sol",
+      "reasoningEffort": "high",
+      "threadId": "01a1202d-3c17-7cf2-82cf-ff2240dc9529",
+      "turnCompleted": true,
+      "turnFailed": false,
+      "reviewBasis": "read-only local source and artifact maps; tests/providers not invoked",
+      "usageReportedByBridge": {
+        "input_tokens": 2665628,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 6173,
+        "reasoning_output_tokens": 0
+      },
+      "reportPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/gemini-review.md"
+    },
+    {
+      "id": "release-reachability",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "reasoningEffort": "high",
+      "threadId": "01a12061-67ac-7fe0-a9a3-6f347da55513",
+      "turnCompleted": true,
+      "turnFailed": false,
+      "reviewBasis": "frozen text-only forward planner and manifest before reachability correction",
+      "usageReportedByBridge": {
+        "input_tokens": 36692,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1033,
+        "reasoning_output_tokens": 0
+      },
+      "reportPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/release-reachability-review.md"
+    }
+  ],
+  "astraInvocationsThisTurn": 0,
+  "paidProviderApiCallsForReviews": 0,
+  "globalModelDefaultChanged": false,
+  "sourceChangedByWebReviews": false,
+  "operatingApply": false,
+  "interpretation": "model critiques are hypotheses; root validates each defect before adopting changes",
+  "confirmedRootFollowup": {
+    "actualRunnerAtomicity": "passed on PostgreSQL17.6; two real runner entrypoints",
+    "dbTargetValidation": "restricted direct/pooler targets and libpq environment expansion",
+    "parserCases": {
+      "beforePassed": 0,
+      "afterPassed": 4,
+      "cases": 4,
+      "runtime": "PostgreSQL17.6",
+      "providerVectorLimitation": "kept; unsupported new grammar fails closed"
+    },
+    "fullCurrentOperatingApply": false,
+    "protectedRevisionSelfReference": "removed; private admission matches clean detached HEAD and current exact origin/main readback; real local Git remote test passes"
+  }
+}

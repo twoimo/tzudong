@@ -1,0 +1,63 @@
+{
+  "schema": "ci-terminal-failure-diagnosis-v1",
+  "capturedAt": "2026-10-09T11:06:41Z",
+  "run": 37917774470,
+  "job": 113778058039,
+  "head": "c90544c813a89b077084953e42fb1431a4b1efed",
+  "jobName": "Ubuntu npm",
+  "failedStep": "Run npm run test:unit",
+  "terminal": {
+    "exitCode": 1,
+    "tests": 3056,
+    "files": 400,
+    "expectCalls": 87723,
+    "passed": 3020,
+    "skipped": 20,
+    "failed": 16,
+    "sharedError": "UNDECLARED_SOURCE_IMPORT",
+    "source": "apps/web/tests-unit/privacy-onboarding-route-runtime.test.ts",
+    "line": 140
+  },
+  "cause": {
+    "introducedByBatch": true,
+    "routeChange": "c90544c8 adds an import of @/lib/auth/callback-origin to app/auth/callback/route.ts.",
+    "fixtureGap": "The isolated VM fixture uses an explicit approvedSources allowlist and does not include lib/auth/callback-origin.ts, so module loading aborts before every route scenario.",
+    "environmentFailure": false,
+    "productionBehaviorFailureObserved": false,
+    "routeSha256": "d2cbe66c89c2961c362bda29241c0a540c3edf6e6d73981bc043cad7d39127d9",
+    "callbackOriginSha256": "ac03bcf4cd7fef2b768685f2d26e2c21b1ff091d02e73f55d484382349074109",
+    "fixtureSha256": "1083fafe66cfd5215bb947f27f75767058fdbac91ecc9d2ac330e7203661b7a0",
+    "fixtureUnchangedFromParent": true
+  },
+  "requiredCorrection": {
+    "path": "apps/web/tests-unit/privacy-onboarding-route-runtime.test.ts",
+    "change": "Add lib/auth/callback-origin.ts to approvedSources next to the existing auth helper entries.",
+    "scope": "fixture source allowlist only",
+    "runtimeOrSecurityRelaxation": false
+  },
+  "isolatedVerification": {
+    "source": "git archive c90544c8",
+    "runner": "Bun 1.4.0",
+    "preimage": {
+      "exitCode": 1,
+      "passed": 0,
+      "failed": 16,
+      "error": "UNDECLARED_SOURCE_IMPORT"
+    },
+    "withRequiredCorrection": {
+      "exitCode": 0,
+      "passed": 16,
+      "failed": 0
+    },
+    "repositorySourceEditedForVerification": false
+  },
+  "actions": {
+    "workflowReruns": 0,
+    "sourceEdits": 0,
+    "manifestEdits": 0,
+    "packageEdits": 0,
+    "hostedWrites": 0,
+    "commits": 0,
+    "pushes": 0
+  }
+}

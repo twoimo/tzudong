@@ -1,0 +1,48 @@
+{
+  "pk": [
+    1
+  ],
+  "rel": {
+    "rls": false,
+    "kind": "r",
+    "persistence": "p"
+  },
+  "columns": [
+    {
+      "name": "version",
+      "type": "text",
+      "default": false,
+      "notNull": true
+    },
+    {
+      "name": "statements",
+      "type": "text[]",
+      "default": false,
+      "notNull": false
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "default": false,
+      "notNull": false
+    },
+    {
+      "name": "created_by",
+      "type": "text",
+      "default": false,
+      "notNull": false
+    },
+    {
+      "name": "idempotency_key",
+      "type": "text",
+      "default": false,
+      "notNull": false
+    },
+    {
+      "name": "rollback",
+      "type": "text[]",
+      "default": false,
+      "notNull": false
+    }
+  ]
+}

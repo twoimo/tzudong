@@ -7,12 +7,27 @@
 
 상태 표기: **I 구현 / L 로컬 검증 / O 운영 반영 / R 실제 동작 확인**. `?`는 미확인이다. 검증 완료를 기록할 때 소스 SHA, 실제 실행 시각, 환경, 검증 결과와 증빙 경로를 함께 남긴다. 운영 대상이 없는 규칙·문서 항목은 이유를 적고 해당 칸을 적용 제외로 바꿀 수 있다. 과거 보고서는 탐색 근거이며 현재 운영 사실을 대신하지 않는다.
 
+## 2026-10-09 현재 실행 갱신
+
+- PR #3099가 `develop`의 `614b249175c35636a7062bf05cb01ebad538b10d`로 합쳐졌다. PR #3150의 커밋 `8571b65b5e8079d2f238389aaf68f41740aa170e`는 CI 통과 후 후속 수정 중이며, `data`·`main` 승격과 운영 적용은 아직 하지 않았다.
+- `tzudong`의 `preview/develop`에 기존 검증된 서버 키를 1회 설정하고 같은 SHA를 1회 재배포했다. 배포 `dpl_DRLjCuw7iGP8pH1ZwyMtvqjXAmuE`의 READY·SHA·프로젝트를 확인했다. 실제 인증 GET 6개가 500/503에서 200으로 복구됐다. 이는 기능 복구 증빙이며 성능·오류율 실험이 아니다.
+- 현재 Preview의 맛집은 전체 1,659건·표시 50건이며 자동 운영은 중지 상태다. 사용자 관리·감사 로그에는 세 RPC가 부재하므로 새 forward migration을 준비한다. 이전 ledger 52용 SQL을 현재 ledger 80에 그대로 실행하지 않는다.
+- 정확한 PostgreSQL 17.6에서 다섯 SQL의 단일 transaction, 중간·최종 불일치 rollback, G014와 guarded/manual/private 검증을 통과했다. 합성 전체 스키마 증빙이며 운영 적용이나 Storage API 물리 삭제 증빙은 아니다.
+- Preview OAuth·CSRF의 정확한 서버 origin, 오류 표시, GitHub 파이프라인 fallback을 수정했다. 관련 109개 검사·두 TypeScript 컴파일러 검사는 통과했다. 현재 수정 소스는 아직 배포되지 않았다.
+- Gemini 3.8 Flash schema control 실호출 1회는 HTTP 200·253 tokens였다. 영상 없는 제어 입력은 전체 영상 validator를 통과하지 않았으므로 영상 품질 완료나 비용 절감으로 세지 않는다.
+- `chatgpt-web/gpt-6-sol high`와 `chatgpt-web/gpt-5.6-sol high`의 병렬 독립 검토2건과 GPT-6 Web의 출시 절차 추가 검토1건을 완료했다. native V2 암호화 전달 거부 후 별도 plaintext CLI를 사용했으며, 첫 SQL 파일 읽기는 자동 승인 검토에서 거절되어 고정 소스 입력으로 검토했다. 실제 psql transport와 DB target 결함을 수정·검증했고, 추적 manifest의 커밋 자기참조도 제거해 실제 Git readback 검사를 통과했다. 전역 feature·모델·큐를 바꾸지 않았으며 Astra는 새로 사용하지 않았다.
+
+- 후속 검토에서 실제 psql transport의 stdin/transaction 결함과 DB target 허용 범위를 수정했다. PG17.6의 두 실제 runner commit/rollback, 파서 경계4/4, 최종 다섯 SQL+user/audit forward의 단일 transaction·ACL·조회 bounds·audit fixture 검증을 통과했다. 운영 적용은 아직 하지 않았다.
+- 보안 공지에 따라 sharp0.35.5(librsvg2.63.2)와 source-map-js1.2.2로 최소 패치했다. 전체 npm audit 취약점0, 설치 버전·이미지 처리·관련14개 검사·production bundle/CSS 경계를 확인했다. 전체 웹 검사에서 찾은 Bun patch metadata와 source-only replay inventory fixture 누락도 수정했다. 최종 웹 검사3283통과·11건너뜀·0실패이며, clean-checkout PG15 generate와 새 커밋의 CI·보호 승격·실제 운영 적용은 남았다.
+
+증빙: `apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/`, `actual-five-stage-replay-20261009/`, `gemini-schema/wire-schema-acceptance-20261009/`.
+
 ## 실행 목록 요약
 
 | 우선순위 | 작업 | 현재 상태 / 다음 조치 |
 | --- | --- | --- |
 | 1 | 관리자 저장·물리 파일 삭제·실패 복구 | 현재 스키마 atomic 승인·2연결 경합 검증 통과. Storage 8개 격리 시나리오 통과; managed 물리 삭제 admission은 미완료 |
-| 1 | 현재 운영 DB·배포·작업 큐·롤백 기준선 | 현재 운영 읽기 preflight 확인: ledger 80, 맛집 1,659건/해시 유지, 자동 검수 꺼짐, 대기 RPC 부재. 대기 SQL 4개 적용·배포·롤백 확인 필요 |
+| 1 | 현재 운영 DB·배포·작업 큐·롤백 기준선 | 현재 운영 읽기 preflight 확인: ledger 80, 맛집 1,659건/해시 유지, 자동 검수 꺼짐, 대기 RPC 부재. 다섯 SQL과 새 user/audit RPC forward의 순차 적용·배포·롤백 확인 필요 |
 | 1 | 크롤링→미디어→추출→평가→저장 최적화 | 증분·캐시·쿼터·병렬·배치 소스와 부분 측정 있음. 전체 공급자/운영 관측·품질 검증 필요 |
 | 1 | 검수 검색·페이지·전체 통계·상세·중복 경고 | 소스/로컬 증빙 있음. 운영 DB·실제 서비스에서 전체 의미 보존 확인 필요 |
 | 1 | Gemini 자동 분류·재검수·조건부 승인·자동 승인·보류 | 정책·원문·수동 수정·CAS·frozen target·중지/재개와 독립 정답 검증 필요 |
@@ -70,7 +85,7 @@
 
 ## 추가 대화 요구와 구체적 후속 Todo
 
-- [ ] A001 위 12개 사용자 제공 레퍼런스의 실제 탐색 증빙과 채택 요소를 연결한다. 이름·URL은 현재 채팅에서 회수했으며 실제 심층 탐색과 적용 검증은 별도로 확인한다. **[I:목록 회수 L:탐색 미확인 O:미확인 R:미확인]**
+- [x] A001 사용자 제공 레퍼런스 12개의 실제 탐색 증빙과 현재 채택 요소를 연결했다. 공개 홈 12개·채택 가능 캡처 20개, 기존 artifact map, 구현 source 12개의 현재 해시가 일치했다. Tremor의 표·필터와 shadcn/ui의 입력·메뉴를 주 기준으로 확인했다. 다른 10개는 현재 비교·제외 근거이며 과거 선택의 인과 증명으로 확대하지 않는다. 증빙: `continuity-recovery-20261009/design-reference-audit/README.md`. **[I:source 연결 L:공개 탐색·해시 확인 O:미확인 R:인증 화면 미확인]**
 - [ ] A002 공개 모든 경로 및 관리자 사이드바 모든 페이지·하위 경로를 실제 route inventory와 연결하고 CMS 리뉴얼 적용 여부를 페이지별로 확인한다. 대표 화면의 성공을 전체 완료로 확대하지 않는다. **[I:? L:? O:? R:?]**
 - [ ] A003 공개·관리자 공통 헤더의 제목/높이/정렬/간격/행동을 일관되게 구현하고 데스크톱·태블릿·모바일에서 캡처한다. **[I:? L:? O:? R:?]**
 - [ ] A004 KPI와 맛집 관리 헤더를 한 줄 구조로 통합하고 제목·건수·탭·뷰·자동 운영 행동을 보존한다. 좁은 화면에서는 핵심 행동을 숨기지 않는 접근 가능한 재배치를 검증한다. **[I:? L:? O:? R:?]**
@@ -606,3 +621,77 @@ PR #3099의48개 review를 현재 source와 대조했다.43개는 source/test bi
 정확한 Vercel 프로젝트를 read-only로 확인했으나99b12562와2b6e7339의 배포는 모두CANCELED였다. GitHub의 Vercel success를 실제READY·운영 배포 성공으로 해석하지 않는다. 취소 사유는 미확인, 추가 배포·환경·freeze 변경은 하지 않았다.
 
 운영 준비안 `docs/operations/record-sql-release-preparation-20261009.md`에 네 SQL의 exact SHA/현재manifest 미등록, active freeze 절차 제외, source COMMIT/terminal mismatch/ledger 기록 경계, legacy42501 및 Gemini 정책을 유지하는 rollback 부족분을 연결했다. Source-only 검사와 정식 운영 admission을 구분하며 운영 승인 내용·freeze·환경·큐는 변경하지 않았다.
+
+## 실행 후속 — develop preview·실제 수집/분석
+
+- [x] 필수Release/Promotion Path와현재sourcehead를확인하고PR3099를보호된develop에merge했다. SHA614b249175c35636a7062bf05cb01ebad538b10d, 후보56819502와tree동일. 원본dirty/user CLAUDE와queue는보존했다.
+- [x] exactGit-integrated preview dpl_He2HgNHEkNsdbQg556dGJsreTEgr의READY를확인했다. 인증된GET27개 및익명관리자API4개401을검증했다. 실제OAuth관리자세션/지도·전체clientdata/운영쓰기의성공증거는아니다.
+- [x] funded계정에서GCP₩9.47만·prepay₩10,000·autoRechargeOFF와3.8Flash의RPM1000/TPM2M/RPD10K표시한도를읽었다.28일peak와현재잔여quota·개별청구를구분한다.
+- [x] 롯데0488삭제preview를다시확인했지만유효대체수단요구와기존대체카드의invalid상태가유지돼취소했다. 삭제/새카드/충전/서비스해제0.
+- [x] 공개metadata200후collector를첫1편/동시성1만시도했다. caption429/exit75에서중단,완료611/pending459/추가·변경0,재전송0.
+- [x] 기존claude-video·Gemini3.8로새835초롱폼1편을기존보다낮은2call한도에서실행했다. countTokens86492성공, generation4xx거부,분석출력없음/재전송0. 정확한status·개별비용·독립검증은미확정. GetTokens무료문구의countTokens대응은추론으로명시했다.
+- [ ] 실제거부의HTTPstatus/공식payload를진단하고boundedreceipt를보완한다. 기존rejected기록과no-resend를보존한다.
+- [x] 기존 migration caller에 작은 pure transaction helper를 통합했다. prior → DDL → terminal → 원본 statement vector ledger를 DB commit 전에 검증하고, 불확실한 ACK는 readback만 수행한다. 기존 manifest 3개·pin·provider verify·G037은 유지했다. 로컬 PG15.8·17.6 각각 13개 사례로 확인했으며 운영 apply는 별도 미완료다.
+- [ ] 정식DBadmission/SQL등록·data/main승격·production배포와실제admin/providerflows를완료한다. developREADY를운영완료로세지않는다.
+
+증빙: release-readiness-refresh/protected-develop-merge.json, vercel-preview-diagnosis-20261009/MERGE_PREVIEW_VERIFICATION.md, longform-public-resume-20261009/result.json, longform-bounded-analysis-plan-20261009/execution-result.json.
+
+## 중단 후 복구와 현재 검증
+
+Git 스냅샷 `7d4080365c237ed1effd6e66eb8e81332173b922`에서 작업 소유 파일 113개를 새 후보로 정확히 복구했다. 부모는 `614b2491`이다. 사용자 `CLAUDE.md` 편집은 보존하고 stage에서 제외했다. 수정 소스 7개의 SHA를 확인했다.
+
+현재 검증은 Python 4개 모듈 80개 통과, Bun 2개 파일 18개 통과·124 assertions, PG15.8·17.6 각각 13개 사례다. Node24 targeted ESLint와 native7.0.2/compat6.0.2 parity는 진단 0개로 통과했다. 기존 승인 manifest 3개·pin·G037·SQL 4개 및 package/lock은 변경하지 않았다. 권한 부족은 DDL 전에 거부하며, 불확실한 COMMIT 응답과 exit0 뒤 손상된 stdout은 readback 1회로만 확인한다.
+
+합성 Gemini Interactions 요청 세 건을 각각 POST 1회·재시도 0회로 실행했다. 기본 텍스트는 200·78 tokens·2.460322초, 영상 없이 5,335-byte 전체 스키마를 넣은 요청은 400·사용량 미확인·1.192054초였다. 같은 입력과 65,536 output limit에서 response_format만 제거하면 200·1,982 tokens·18.149477초로 완료됐다. 하지만 synthetic DTO exact match가 false여서 스키마 제거는 채택하지 않는다. 서로 다른 조건의 지연은 성능 개선 비교가 아니며, 실제 청구·크레딧 귀속도 미확인이다. DTO와 제약을 유지하며 중복 스키마를 공유하는 대안을 준비한다.
+
+사용자는 미리보기 로그인 완료 및 로그인한 탭 연결을 선택했다고 답했다. 현재 메시지에는 실제 탭 참조가 없고 toolset에도 Codex 브라우저 읽기 도구가 없으며, 지원되는 Aside 프로필에도 해당 탭이 없다. 쿠키·토큰을 export하거나 CUA 거부를 우회하지 않는다. 실제 인증 흐름의 미검증 상태를 완료로 세지 않는다.
+
+소스·테스트·복구·미리보기·운영 증빙을 분리하며 전체 목표 완료 체크는 열린 상태다.
+
+## 후속 PR와 스키마 축약 검증
+
+복구한 source와 증빙은 PR #3150, head `c483542c480225af6830e10d1c29365f2b010989`로 push했다. Release와 Promotion Path는 통과했다. 이후 관측에서 aggregate CodeQL은 failure이고 다른 플랫폼 CI는 진행 중이므로 전체 CI 성공이나 병합 완료로 표시하지 않는다. 해당 실패의 실제 source 위치를 조사 중이다.
+
+CodeQL #88의 `js/redos`는 신규 migration helper의 literal masking 정규식에서 발생했다. 역슬래시 소비 분기를 배타적으로 수정하고, 30KB escaped literal 안의 INSERT/UPDATE/DELETE는 허용하되 literal 밖의 같은 명령은 계속 거부하는 회귀를 추가했다. 수정 후 Bun 2개 파일 19개 통과·128 assertions, Node24 targeted lint 및 diff-check가 통과했다. 새 head의 CodeQL 결과는 별도로 확인한다.
+
+수정 head `71da8656c45981e927821e935a09e00820e0bbd8`의 Release·Promotion Path가 통과했다. JavaScript/TypeScript analysis `1921629666`은 success·결과 0건이며 PR head의 alert #88이 해소된 것을 확인했다. Aggregate CodeQL의 missing-configuration neutral 경고와 진행 중인 플랫폼 CI는 별도로 유지하며 전체 CI·병합 완료로 해석하지 않는다. 증빙: `codeql-alert88-71da8656.json`.
+
+원본 schema의 모든 제약을 유지하는 local JSON Pointer 축약안을 작성했다. 고정 schema의 크기는 5,335 → 2,004 bytes, 절대 차이 −3,331 bytes, 감소율 62.44%다. 원본 canonical JSON과 확장 결과가 정확히 일치했고 영상 ID·정수·소수 경계 10개 사례도 통과했다. 고정 구조의 전수 집계이므로 95% 신뢰구간은 적용하지 않는다.
+
+단일 합성 API 수용 검증은 POST 1회·재시도 0회·영상 재전송 0회로 수행했다. HTTP 400, 1.212196초, 사용량 미확인이다. 축약안은 production source에 채택하지 않았다. 이 값은 속도 개선·품질·금액 절감 증빙이 아니다. 기존 실패한 835초 receipt와 성공 cache·queue는 유지했다.
+
+증빙: `apps/web/performance/continuity-recovery-20261009/pr-delivery.json`, `gemini-schema/proofs/schema-boundary-cases.json`, `gemini-schema/acceptance-probe-20261009/proof.json`. 실제 오류의 고정 코드·허용된 schema 필드만 추출하는 진단을 준비하고, 별도의 원문·secret 저장은 하지 않는다.
+
+그 후 동일 합성 요청의 단일 진단 POST에서 HTTP 400·`invalid_request`를 확인했지만 원인 category와 schema path는 unknown/null이었다. Sanitizer의 비밀값 echo·deep JSON·큰 index 등 회귀 15개가 통과했고 증빙 map 15개 항목의 바이트·해시를 재검증했다. Endpoint·model·response format·입력은 현재 공식 계약과 일치하므로 원인 미확정을 유지하며 추가 호출을 중단했다. 영상 재전송과 production schema 변경은 0건이다.
+
+OSK 조직 검토 3개 구간은 현행 view hash와 일치했다. caption-first-pass·미검증 출처 및 독립 전체 시각/음성 검증 0건을 유지하고 organization metadata를 deferred로 제출했다. 검토 잔여는 13 → 10개, 미해석 Link 7개와 대화 포착 incomplete는 그대로 열려 있다. 노드·허브·개인 기억·engine 변경은 없다.
+
+## 리뷰 보완과 실제 SQL 묶음 검증
+
+PR #3150의 미해결 리뷰 9개를 실제 실패 벡터와 대조했다. SQL lexer를 통합해 일반 문자열·E 문자열·dollar quote·중첩 주석을 구분하고, 주석이 끼어든 transaction control을 거부한다. Ledger 상태에 맞는 readback만 실행하며, generic transport 오류는 재조회가 일치해도 해당 시도의 commit을 확정하지 않는다. EXCLUSIVE lock 권한을 먼저 확인하고 catalog shape는 lock 뒤에 검증한다. 원문 오류·cause·임의 getter는 고정 코드 경계 밖으로 전달하지 않는다.
+
+현재 targeted Bun 3개 파일 34개 통과·307 assertions, ESLint 7개 파일 및 native7.0.2/compat6.0.2 parity 진단 0개다. 정확한 PG17.6에서 single executor 6개 사례, 생성된 4단계 fixture 31 assertions를 통과했다. 격리 fixture의 원격 host·host override·공유 DB·임의 options·누락된 identity 5개를 연결 전에 거부했고 psql 호출은 0회였다. 소유 DB·서버는 정리했으며 기존 서버는 변경하지 않았다.
+
+실제 SQL 4개도 canonical snapshot 기반의 격리 PG17.6 전체 schema에서 실행했다. Terminal mismatch는 target ledger 0행과 schema·role·metadata의 정확한 롤백을 확인했고, 성공은 synthetic prefix 3행 보존 + target ledger 4행 추가를 확인했다. G014 assertion 4개, guarded record phase 6개, manual preview phase 5개가 통과했다. Hosted data/ledger 복사 0건이며 실제 운영 적용 증빙으로 확대하지 않는다. 과거 PG17.11 결과와 그 당시 source 3개는 exact hash로 archive에 보존했다.
+
+단일 운영 읽기 snapshot은 ledger 80개/latest20261008124858, 맛집1,659개, 새 SQL 4개 미적용, 자동 검수 OFF/version1/batch50/daily50, runs/items/active0을 확인했다. 전체 catalog·ingress fence·approved main/source binding은 아직 migration admission으로 완성되지 않았다.
+
+Gemini의 최소 flat structured control은 model match·schema validation·videoId 일치로 완료됐다. 입력82·출력19·thinking855·total956 tokens, 7.802805초다. 복잡한 schema의 400과 구조화 출력 전체 경로 실패를 구분한 대조군이며 전체 DTO·영상 품질·비용 개선은 입증하지 않는다. 전체 strict validator를 유지하는 작은 wire schema와 성공 cache predecessor 연속성 보완은 별도 구현·검증 중이다.
+
+증빙: `continuity-recovery-20261009/actual-bundle-replay/`, `sql-bundle-implementation/shared-helper-final-pg17.6/`, `pr-resume/review-disposition-71da8656/`, `operating-readonly-snapshot.json`, `gemini-schema/flat-schema-control-20261009/`. 전체 목표와 운영 반영 체크는 열린 상태다.
+
+## Web 모델 병렬 검토 후속
+
+- [x] `chatgpt-web/gpt-6-sol` High와 `chatgpt-web/gpt-5.6-sol` High의 추가 검토 2개를 동시에 실행했다. 두 턴 모두 완료했고 도구 호출은 0회다. 공개 소스의 고정 사본만 검토했으며 실제 테스트·운영 실행으로 해석하지 않는다.
+- [x] 정량 검토에서 19개 subprocess의 3,283 pass·11 skip·0 fail·90,166 assertions 합계, parser p50 +0.459ms/+1.13%, Gemini 253 tokens 합계가 일치했다. Parser 95% 구간은 0을 포함하며 속도·비용 개선을 주장하지 않는다.
+- [x] 미디어 정리의 소유권 후보는 기존 M1의 소유자·리뷰 경로와 참조·fingerprint 방어를 확인했다. 서비스에도 target review UUID 대조를 추가했다. 실제 26건 상한 오류와 개별 조회 오류에 따른 뒤 작업 중단은 수정했다.
+- [ ] 새 CI의 Catalog `generate` 및 `orchestration-readiness` 실패를 수정한 소스로 다시 확인한다. `4908c5c4a3db30c1d86965c1ac144471f8872858`의 플랫폼 4개 CI·CodeQL·audit 통과를 전체 CI 통과로 확대하지 않는다.
+- [ ] 변경된 Preview alias·private cleanup·predecessor 응답 GET 복구·canonical admission을 관련 테스트와 보호 승격 이후 실제 서비스에서 확인한다.
+
+기존 관리자 로그인은 유지됐으나 사용자 관리 목록은 여전히 오류 상태다. 후보 배포 `dpl_8wQPzQGJDNiwWpPy5JZmn8Xf9tXB`는 기존 develop 전용 Preview 규칙으로 취소됐고, 실제 화면은 이전 `614b249175c35636a7062bf05cb01ebad538b10d`다. 운영 SQL·Storage 삭제·새 Gemini 공급자 호출은 이번 검토에서 0회다. 증빙: `continuity-recovery-20261009/followup-web-parallel-20261009/`.
+
+최종 로컬 통합에서 auth/cleanup 64개·SQL admission 23개가 통과했다. M5의 26개 작업은 25+1 두 페이지로 완료했으며 누락·중복 삭제 0건이다. 정확 PostgreSQL17.6 전체 schema의 원자 적용·terminal/preimage 롤백·RPC 권한·ledger 3+5+1=9 검증이 통과했다. 이는 합성 격리 환경이고 운영80→85→86 적용은 아직 수행하지 않았다.
+
+M5는 13,185 bytes/SHA256 `b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da`, vector13/SHA256 `c7b5ae6c7c64b00a31658bbf42165dd9e25ac41f794a1149c62d47f39cf33f4d`다. 후속 SQL은 새 M5 함수 preimage를 반영한 `2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae`다. 이전 raw proof는 유지했고 새 증빙은 `five-plus-admin-user-rpc-forward-m5-pagination-amendment-20261009/`에 분리했다.
+
+Five-stage 11개 private receipt와 forward prior-state receipt의 실제 canonical bytes·해시·project/revision/state·freshness를 확인하고 실제 origin/main과 clean detached checkout을 비교하도록 보완했다. 기본 launch는 held다. 별도로 넓은 publication/runtime 81개 묶음에서 failure2/error37의 기존 frozen closure·count drift가 관측돼 원시 로그와 기준선 대조를 남긴다. 이 결과를 통과로 표시하거나 frozen 조건을 완화하지 않는다.

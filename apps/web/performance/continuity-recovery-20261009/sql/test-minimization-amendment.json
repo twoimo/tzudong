@@ -1,0 +1,10 @@
+{
+  "reason": "Remove the newly added exact-source-string test; real PG15/17 privilege/admission behavior cases retain the required coverage. Existing tests are preserved.",
+  "beforeSha256": "94bfa49dfe3743f03ae71af9155eb4a3ce1c923948f4ed910506f9b65f57b40b",
+  "afterSha256": "8645a41ebe1235a1f0dec2c48814b5fe74281615456ab6714eaf1ae0766bebfe",
+  "priorTestCount": 19,
+  "currentTestCountExpected": 18,
+  "priorProofRetainedAsHistorical": true,
+  "priorTestFrozen": "test-before-minimization.ts.txt",
+  "productSourceUnchanged": true
+}

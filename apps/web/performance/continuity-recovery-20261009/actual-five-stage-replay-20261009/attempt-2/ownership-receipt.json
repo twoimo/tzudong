@@ -1,0 +1,40 @@
+{
+  "kind": "actual-five-bundle-owned-cluster",
+  "status": "unconfirmed",
+  "nonce": "ac82b1ad46ad43910262b680",
+  "container": "tzudong-actual-five-ac82b1ad46ad43910262b680",
+  "volume": "tzudong-actual-five-ac82b1ad46ad43910262b680",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "owner": "actual-five-ac82b1ad46ad43910262b680",
+  "network": "none",
+  "publishedPorts": 0,
+  "operatingWrites": false,
+  "hostedWrites": false,
+  "cleanup": {
+    "nativeClusterRemoved": true,
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  },
+  "nativeServerVersion": "17.6",
+  "nativeFullSchemaEligible": false,
+  "nativeMissingRequiredExtensions": [
+    "btree_gin",
+    "fuzzystrmatch",
+    "hypopg",
+    "index_advisor",
+    "pg_stat_statements",
+    "pg_trgm",
+    "pgcrypto",
+    "supabase_vault",
+    "uuid-ossp",
+    "vector"
+  ],
+  "imageSource": "local-cache-only",
+  "failure": {
+    "code": "OWNED_COMMAND_FAILED",
+    "fixedCode": null,
+    "exitCode": 1
+  },
+  "completedAt": "2026-10-09T09:50:52.491Z"
+}

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "scope": "frozen Web review sources/results and independent root disposition",
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/current-readonly-state.json",
+      "bytes": 1068,
+      "sha256": "a05940af166a5fc5705af3df8c55754143609a4bf883770850c7fa630a4f2929"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/disposition.md",
+      "bytes": 3094,
+      "sha256": "530fbf39cdd3516bb99843ecee3aa98e7609a9e700db0a17e1fbf2cd20e60929"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/20261009091342_admin_record_private_verification_cleanup.sql.source.txt",
+      "bytes": 11649,
+      "sha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/README.md",
+      "bytes": 269,
+      "sha256": "7c54ce7f39d429abf2e9b27e47a8f075010c9f14e12688385e887124fbd18a5b"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/admin-record-sql-successor.mjs.source.txt",
+      "bytes": 32664,
+      "sha256": "4e5771efa2173bb9a02a44acd5d854a7cc5e7588935e0bcc7077683b2d28619a"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/admin-record-sql-successor.v1.json.source.txt",
+      "bytes": 105556,
+      "sha256": "b88e6f9814a179c66aac344e65ae651653ccf02f8786a380eb5a11d0ced615b3"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/apply-supabase-migration.mjs.source.txt",
+      "bytes": 20613,
+      "sha256": "b86ebb0e1194c4b164f57467475e09afa3ef03655968732bd0d6c57e37789a0e"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/source-resolution.json",
+      "bytes": 2397,
+      "sha256": "5e7438019215aca01aad800f67d4b4aeb5f0a84a7acb860248c9ce104f110e30"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/supabase-migration-bundle.mjs.source.txt",
+      "bytes": 12236,
+      "sha256": "fdc6c175fe77cc11b6252c6d9b326061d67639c6e7fff728e94e70a85f25c5b6"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/supabase-migration-transaction.mjs.source.txt",
+      "bytes": 14804,
+      "sha256": "82e35949f693e54c0629fd2f98935b4c4b5b79227c66d6bc6dccb0584b5493f0"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-pre-reachability/admin-user-rpc-forward-successor.mjs.source.txt",
+      "bytes": 31766,
+      "sha256": "47339a1a5f94f66dfe11f4a26a4a2396246c44737a6068aa29e298b941429a7b"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-pre-reachability/admin-user-rpc-forward-successor.v1.json.source.txt",
+      "bytes": 2397,
+      "sha256": "a0bddef8d49a8dd5042ecc012388db5448ce65cd09f508e1b605fd6a604022ad"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-pre-reachability/source-resolution.json",
+      "bytes": 858,
+      "sha256": "58566972d462d164556162b9d308686746212b981e8c0d9616a57f04eec62f4c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/gemini-review.md",
+      "bytes": 3786,
+      "sha256": "6887078c37db322483fba44851f138709b2b84d8475b34fe985b1a7a61efc3b0"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/proof.json",
+      "bytes": 3255,
+      "sha256": "53a52661832f350bbc6d77f6a525b5aba90e2867ec09b18602a676413b865605"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/release-reachability-review.md",
+      "bytes": 3936,
+      "sha256": "1d84ad83791f2622296be210653d43022523401c2b9d2ff1e78a269db39a281c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/release-reachability-source-manifest.json",
+      "bytes": 355,
+      "sha256": "0d0bca2506fb7adf5a9aef0e6142559580df05cff36027f6cfea398a97a8691f"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/sql-review.md",
+      "bytes": 3897,
+      "sha256": "886a04b9675fe6cb441ea63d7d98b14102bb40e1ee56587d84badc386875553d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/sql-source-manifest.json",
+      "bytes": 1134,
+      "sha256": "520fb85d32909e996867c90470bd608fb93a7abfc0fa4db00dcd49c49b1d5ddb"
+    }
+  ]
+}

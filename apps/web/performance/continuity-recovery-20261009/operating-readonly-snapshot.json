@@ -1,0 +1,41 @@
+{
+  "observedAt": "2026-10-09 08:14:34 UTC",
+  "projectId": "aqlcofblfxdrjhhdmarw",
+  "projectConfirmed": true,
+  "projectHealthy": true,
+  "region": "ap-southeast-1",
+  "sourceHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "singleStatementSnapshot": true,
+  "readOnly": true,
+  "state": {
+    "serverVersion": "17.6",
+    "ledgerCount": 80,
+    "latestVersion": "20261008124858",
+    "ledgerRoot": "20a05410483d4de69bf09719c04b192a1b862925e82d59fc94b98dd47706ec96",
+    "pendingFourPresent": 0,
+    "restaurants": 1659,
+    "reviewPolicy": [
+      {
+        "enabled": false,
+        "version": 1,
+        "batchSize": 50,
+        "dailyLimit": 50
+      }
+    ],
+    "reviewRuns": 0,
+    "reviewItems": 0,
+    "activeReviewItems": 0,
+    "newPublicRpcs": 0
+  },
+  "earlierReadFailure": {
+    "sqlState": "42703",
+    "sourceColumnCorrection": "restaurant_review_items.state",
+    "operatingWrites": 0
+  },
+  "limits": {
+    "completeMigrationAdmission": false,
+    "fullCatalogOrIngressFenceVerified": false,
+    "operatingWrites": false,
+    "productionDeployment": false
+  }
+}

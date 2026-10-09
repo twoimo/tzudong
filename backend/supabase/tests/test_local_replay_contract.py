@@ -11,6 +11,7 @@ from backend.supabase.scripts import local_replay_contract as contract
 
 ROOT = Path(__file__).resolve().parents[3]
 PREDECESSOR = 'backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql'
+ADMIN_USER_RPC_ACCEPTED = 'backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql'
 
 
 class LocalReplayContractTests(unittest.TestCase):
@@ -24,7 +25,9 @@ class LocalReplayContractTests(unittest.TestCase):
                 verifier = next(p for p in plan['bindings'] if '/verify_' in p)
                 output = Path(directory) / Path(path).name
                 args = ['python3', str(ROOT / verifier), '--source', str(ROOT / path), '--output', str(output)]
-                if PREDECESSOR in plan['bindings']:
+                if 'admin_user_management_rpc_forward' in path:
+                    args += ['--predecessor', str(ROOT / ADMIN_USER_RPC_ACCEPTED)]
+                elif PREDECESSOR in plan['bindings']:
                     args += ['--predecessor', str(ROOT / PREDECESSOR)]
                 elif 'owner_final_verifier' in path:
                     args += ['--predecessor', str(ROOT / 'backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql')]
@@ -36,6 +39,16 @@ class LocalReplayContractTests(unittest.TestCase):
                 if 'admin_user_ids' in path:
                     receipt.update(schema='admin-ids-source-replay-overlap-v1', disposition='already-present-contract-verified',
                                    body_sha256='be57e320d7a79e6e7382bce9e942b3e684fc50246beb44deaa67c408cb553acd')
+                elif 'admin_user_management_rpc_forward' in path:
+                    receipt.update(
+                        schema='admin-user-rpc-forward-source-replay-v1',
+                        accepted_source_sha256='4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00',
+                        predecessor_sha256='b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf',
+                        disposition='already-present-contract-verified',
+                        operating_sql_executed=False,
+                        required_operating_server_version_num=170006,
+                        required_operating_ledger_count=85,
+                    )
                 elif 'admin_management_group' in path:
                     receipt.update(schema='admin-management-group-source-overlap-v1', already_present_contract_verified=True)
                 elif 'owner_final_verifier' in path:
@@ -58,7 +71,7 @@ class LocalReplayContractTests(unittest.TestCase):
         return contract.assemble_proof(path, self.sql[path], json.dumps(self.receipts[path]).encode())
 
     def test_generated_sql_and_exact_fixture_receipts_match_all_pins(self):
-        self.assertEqual(len(contract.supported_sources()), 5)
+        self.assertEqual(len(contract.supported_sources()), 6)
         for path in contract.supported_sources():
             proof = self.proof(path)
             self.assertNotEqual(proof['disposition'], 'applied')
@@ -195,8 +208,8 @@ class LocalReplayContractTests(unittest.TestCase):
         from backend.supabase.tests.test_local_migration_contract import local_migrate
         rows = [local_migrate._expected_snapshot_row(item) for item in local_migrate.build_manifest()['source']['files']]
         self.assertEqual(len(rows), len(local_migrate.migration_files()))
-        self.assertEqual(sum(row['status'] == 'applied' for row in rows), len(rows) - 3)
-        self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 2)
+        self.assertEqual(sum(row['status'] == 'applied' for row in rows), len(rows) - 4)
+        self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 3)
         self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 1)
         self.assertFalse(any('/applied-receipts/' in row['path'] for row in rows))
         local_migrate._validate_ledger_snapshot(rows)

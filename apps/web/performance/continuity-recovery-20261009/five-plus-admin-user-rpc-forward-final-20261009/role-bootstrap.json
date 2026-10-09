@@ -1,0 +1,14 @@
+{
+  "kind": "isolated-pg17-role-bootstrap",
+  "observedAt": "2026-10-09T11:07:17.126Z",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "serverVersion": "17.6",
+  "roleCount": 37,
+  "membershipCount": 29,
+  "schemaSha256": "fde46030bf7ac212631fcb02d4dff503e733899e853a7fe42202009aedf364c2",
+  "contractSha256": "44e840d04c5d9ad02055d470da1cae261273043fb9a48cc1e660f7d704bb055c",
+  "userRowsCopied": 0,
+  "operatingWrites": false,
+  "containerNetwork": "none",
+  "publishedPorts": 0
+}

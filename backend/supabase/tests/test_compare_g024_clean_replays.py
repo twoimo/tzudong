@@ -34,6 +34,7 @@ GENERATOR_ARTIFACTS = (
     "advisor-prerequisite-recovery.json", "advisor-prerequisites.sql", "advisor-replay.sql",
     "admin-user-ids-overlap-verification.sql", "admin-user-ids-overlap-receipt.json",
     "admin-management-group-overlap-verification.sql", "admin-management-group-overlap-receipt.json",
+    "admin-user-rpc-forward-overlap-verification.sql", "admin-user-rpc-forward-overlap-receipt.json",
     "g014-owner-pg15-verification.sql", "g014-owner-pg15-receipt.json",
     "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
     "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",
