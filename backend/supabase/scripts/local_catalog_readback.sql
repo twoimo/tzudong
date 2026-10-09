@@ -697,10 +697,12 @@ BEGIN
     JOIN pg_catalog.pg_namespace AS policy_schema ON policy_schema.oid = policy_relation.relnamespace
    WHERE policy_schema.nspname = 'storage'
      AND policy_relation.relname = 'objects';
-  IF policy_count <> 20 OR policy_names IS DISTINCT FROM ARRAY[
+  IF policy_count <> 22 OR policy_names IS DISTINCT FROM ARRAY[
     'local_nightly_avatar_insert',
     'local_nightly_avatar_read',
     'review_media_safe_delete',
+    'review_media_safe_insert',
+    'review_media_safe_update',
     'review_media_workflow_read',
     'review_photos_food_insert',
     'review_photos_food_update',
@@ -750,7 +752,7 @@ BEGIN
       policy_record.polwithcheck, policy_record.polrelid
     ), '');
 
-    IF policy_record.polname = ANY(ARRAY['review_media_safe_delete','review_media_workflow_read','review_photos_food_insert','review_photos_food_update','review_verifications_owner_delete','review_verifications_owner_insert','review_verifications_owner_read','review_verifications_safe_delete']) THEN
+    IF policy_record.polname = ANY(ARRAY['review_media_safe_delete','review_media_safe_insert','review_media_safe_update','review_media_workflow_read','review_photos_food_insert','review_photos_food_update','review_verifications_owner_delete','review_verifications_owner_insert','review_verifications_owner_read','review_verifications_safe_delete']) THEN
       CONTINUE; -- Checked by review_media_catalog_readback below.
     END IF;
 

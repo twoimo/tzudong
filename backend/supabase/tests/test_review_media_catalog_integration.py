@@ -20,6 +20,21 @@ PARENTS = (
 
 
 class ReviewMediaCatalogIntegrationTests(unittest.TestCase):
+    def test_early_sql_storage_inventory_admits_the_complete_canonical_receipt(self):
+        source = (ROOT / 'backend/supabase/scripts/local_catalog_readback.sql').read_text()
+        inventory = re.search(r'IF policy_count <> (\d+) OR policy_names IS DISTINCT FROM ARRAY\[(.*?)\]::text\[\] THEN', source, re.S)
+        self.assertIsNotNone(inventory)
+        expected = {row[3] for row in _receipt_rows() if row[0] == 'storage_policies'}
+        actual = re.findall(r"'([^']+)'", inventory.group(2))
+        self.assertEqual(int(inventory.group(1)), len(expected))
+        self.assertEqual(actual, sorted(expected))
+        dispatch = re.search(r'IF policy_record.polname = ANY\(ARRAY\[(.*?)\]\) THEN\s+CONTINUE; -- Checked by review_media_catalog_readback', source, re.S)
+        self.assertIsNotNone(dispatch)
+        names = set(re.findall(r"'([^']+)'", dispatch.group(1)))
+        for parent in PARENTS:
+            policies = set(re.findall(r'CREATE POLICY ([\w]+) ON storage\.objects', parent.read_text()))
+            self.assertTrue(policies <= names)
+
     def test_complete_receipt_remains_admitted(self):
         # Negative tests must reach their intended guard, not an earlier stale
         # inventory count after adding the two restrictive Storage policies.
@@ -131,12 +146,12 @@ class ReviewMediaCatalogIntegrationTests(unittest.TestCase):
     def test_ledger_applies_integration_normally_and_retains_current_overlap_proofs(self):
         manifest = local_migrate.verify_manifest()
         files = manifest["source"]["files"]
-        self.assertEqual(len(files), 130)
+        self.assertEqual(len(files), 132)
         integration = next(row for row in files if row["path"] == MIGRATION.relative_to(ROOT).as_posix())
         self.assertEqual(local_migrate._expected_terminal_status(integration), "applied")
         sql = local_migrate._execution_body(integration)
         self.assertEqual(sql, MIGRATION.read_bytes())
-        self.assertEqual(len(local_migrate._load_replay_contract().supported_sources()), 5)
+        self.assertEqual(len(local_migrate._load_replay_contract().supported_sources()), 6)
 
     def test_rejects_every_function_owner_body_role_and_identity_drift(self):
         for signature in (row[0] for row in local_migrate.REVIEW_MEDIA_FUNCTIONS):
