@@ -55,6 +55,19 @@ const heldRecord = Object.freeze({
 const fixedNow = new Date('2026-10-09T09:00:00.000Z');
 const revision = '71da8656c45981e927821e935a09e00820e0bbd8';
 const databaseUrl = 'postgresql://postgres.aqlcofblfxdrjhhdmarw:private-password@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres';
+const rollbackIdentity = Object.freeze({
+  deploymentId: 'dpl_CLEMRdaLUrai3Ph9J2czNRA64pyw',
+  deploymentSha: '8257581e09f6f58f72f6e0e2c4aa7e6c72caab43',
+  deploymentUrl: 'https://tzudong-a7wf62m0v-twoimos-projects.vercel.app/',
+  gitRef: 'main',
+  productionAliases: ['tzudong.app', 'www.tzudong.app'],
+  projectId: 'prj_sau35J5uUtShIQ9OKofRtOVVnTSl',
+  readyState: 'READY',
+  repository: 'twoimo/tzudong',
+  state: 'ready',
+  target: 'production',
+  teamId: 'team_OUj64KeLxJI3PkEbOaFZnorA',
+});
 const roots = ['1', '2', '3', '4', '5', '6'];
 const schemas = ['a', 'b', 'c', 'd', 'e', 'f'];
 const directories: string[] = [];
@@ -111,10 +124,8 @@ function admission(manifestRecord = executableRecord) {
     purpose: manifest.purpose,
     rehearsalReceiptSha256: 'c'.repeat(64),
     rollback: {
-      deploymentSha: 'd'.repeat(40),
-      deploymentUrl: 'https://tzudong-rollback-fixture.vercel.app/',
+      ...structuredClone(rollbackIdentity),
       readbackSha256: 'd'.repeat(64),
-      state: 'ready',
     },
     schemaVersion: 1,
     sourceReceiptSha256: 'e'.repeat(64),
@@ -168,9 +179,17 @@ function custodyFiles(document = admission()) {
     'rollback-readback-receipt.json': {
       ...common,
       kind: 'rollback-readback-receipt',
+      deploymentId: document.rollback.deploymentId,
       deploymentSha: document.rollback.deploymentSha,
       deploymentUrl: document.rollback.deploymentUrl,
+      gitRef: document.rollback.gitRef,
+      productionAliases: document.rollback.productionAliases,
+      projectId: document.rollback.projectId,
+      readyState: document.rollback.readyState,
+      repository: document.rollback.repository,
       state: document.rollback.state,
+      target: document.rollback.target,
+      teamId: document.rollback.teamId,
     },
   };
   document.sourceReceiptSha256 = sha256(canonicalBytes(receipts['source-receipt.json']));
@@ -202,6 +221,21 @@ const dependencies = (runPsqlImpl: (...args: any[]) => string, manifestRecord = 
   loadManifestImpl: () => manifestRecord,
   now: () => fixedNow,
   protectedMainReadbackImpl: (manifest: any) => protectedSourceReadbackBinding(manifest, revision),
+  rollbackReadbackImpl: ({ expected, now }: any) => ({
+    schemaVersion: 1,
+    kind: 'vercel-rollback-readback',
+    projectId: rollbackIdentity.projectId,
+    teamId: rollbackIdentity.teamId,
+    deploymentId: expected.deploymentId,
+    deploymentUrl: expected.deploymentUrl,
+    readyState: rollbackIdentity.readyState,
+    target: rollbackIdentity.target,
+    repository: rollbackIdentity.repository,
+    gitSha: expected.gitSha,
+    gitRef: expected.gitRef,
+    productionAliases: [...rollbackIdentity.productionAliases],
+    observedAt: now().toISOString(),
+  }),
   runPsqlImpl,
 });
 
@@ -249,9 +283,22 @@ test('protected main readback resolves the actual remote ref instead of trusting
     projectRef: record.manifest.projectRef,
     protectedSource: { ref: 'refs/heads/main', remote: 'origin', repositoryUrl: remote },
   };
-  expect(currentProtectedMainReadback(manifest, { repositoryRoot: checkout })).toEqual(
+  const protectedGitOptions: any[] = [];
+  expect(currentProtectedMainReadback(manifest, {
+    repositoryRoot: checkout,
+    spawnImpl: (command: string, args: string[], options: any) => {
+      protectedGitOptions.push(options);
+      return spawnSync(command, args, options);
+    },
+  })).toEqual(
     protectedSourceReadbackBinding(manifest, remoteRevision),
   );
+  expect(protectedGitOptions).toHaveLength(2);
+  expect(protectedGitOptions.every(options => (
+    options.timeout === 15_000
+    && options.killSignal === 'SIGKILL'
+    && options.maxBuffer === 1024 * 1024
+  ))).toBe(true);
   expect(() => currentProtectedMainReadback({
     ...manifest,
     protectedSource: { ...manifest.protectedSource, repositoryUrl: `${remote}-wrong` },
@@ -279,6 +326,7 @@ test('dedicated manifest pins the exact five-source chain, full vectors, toolcha
     expect(sha256(record.materials[index].bytes)).toBe(migration.sha256);
   });
   expect(manifest.sourceRoot).toBe('15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3');
+  expect(manifest.operatingTransition).toEqual({ beforeFive: 80, afterFive: 85 });
   expect(fiveMigrationBundleSuffixRoot(manifest.migrations)).toBe('81595e4e24fa962a349a51247099d1d25f483c06370ffc99523cb2c52cfb708c');
   expect(manifest.legacyReleaseManifest).toEqual({
     entries: 3,
@@ -351,6 +399,30 @@ test('in-memory held manifest rejects before checkout, transport or journal crea
   expect(() => readFileSync(files.journalPath)).toThrow();
 });
 
+test('exact 80 to 85 transition rejects prior count 81 before checkout, transport or journal creation', () => {
+  const document = admission();
+  document.stageStates.forEach((stage: any, index: number) => {
+    stage.bundle.priorCount = 81;
+    stage.bundle.ledgerCount = 81 + index;
+  });
+  const files = custodyFiles(document);
+  let gitFactsCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminRecordSuccessor({
+    ...files,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies(() => { transportCalls += 1; return ''; }),
+    gitFactsImpl: () => {
+      gitFactsCalls += 1;
+      return { clean: true, detached: true, revision };
+    },
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  expect(gitFactsCalls).toBe(0);
+  expect(transportCalls).toBe(0);
+  expect(() => readFileSync(files.journalPath)).toThrow();
+});
+
 test('fresh admission binds exact revision, rehearsal, rollback, external fences and all five schema/ledger stages', () => {
   const files = custodyFiles();
   const document = files.document;
@@ -362,6 +434,10 @@ test('fresh admission binds exact revision, rehearsal, rollback, external fences
   stale.expiresAt = '2026-10-09T08:59:59.000Z';
   expect(() => validateSuccessorAdmission(stale, record, {
     now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_EXPIRED');
+  expect(() => validateSuccessorAdmission(document, record, {
+    now: new Date(document.expiresAt),
     receiptDirectory: files.directory,
   })).toThrow('SUCCESSOR_ADMISSION_EXPIRED');
   const partial = structuredClone(document);
@@ -504,6 +580,101 @@ test('successful controller preflights before create-once journal and applies on
     journalPath: join(dirname(admissionPath), 'alternate.jsonl'),
   }, dependencies(() => { alternateCalls += 1; return ''; }))).toThrow('SUCCESSOR_JOURNAL_BINDING_MISMATCH');
   expect(alternateCalls).toBe(0);
+});
+
+test('admission expiring during preflight never issues a mutating apply', () => {
+  const document = admission();
+  const files = custodyFiles(document);
+  const exactExpiry = new Date(document.expiresAt);
+  const clock = [fixedNow, fixedNow, fixedNow, exactExpiry, exactExpiry];
+  let clockIndex = 0;
+  const calls: string[] = [];
+  expect(() => runAdminRecordSuccessor({
+    ...files,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies((_url, sql) => {
+      calls.push(sql);
+      return JSON.stringify(document.stageStates[0]);
+    }),
+    now: () => clock[Math.min(clockIndex++, clock.length - 1)],
+  })).toThrow('SUCCESSOR_ADMISSION_EXPIRED');
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toStartWith('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;');
+  expect(calls[0]).not.toContain('INSERT INTO supabase_migrations.schema_migrations');
+  const journal = readFileSync(files.journalPath, 'utf8');
+  expect(journal.trim().split('\n')).toHaveLength(2);
+  expect(journal).toContain('SUCCESSOR_ADMISSION_EXPIRED');
+});
+
+test('live rollback identity is checked once before journal or database access', () => {
+  const files = custodyFiles();
+  let rollbackCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminRecordSuccessor({
+    ...files,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies(() => { transportCalls += 1; return ''; }),
+    rollbackReadbackImpl: ({ expected, now }: any) => {
+      rollbackCalls += 1;
+      return {
+        schemaVersion: 1,
+        kind: 'vercel-rollback-readback',
+        projectId: 'prj_stale_web_project',
+        teamId: rollbackIdentity.teamId,
+        deploymentId: expected.deploymentId,
+        deploymentUrl: expected.deploymentUrl,
+        readyState: rollbackIdentity.readyState,
+        target: rollbackIdentity.target,
+        repository: rollbackIdentity.repository,
+        gitSha: expected.gitSha,
+        gitRef: expected.gitRef,
+        productionAliases: [...rollbackIdentity.productionAliases],
+        observedAt: now().toISOString(),
+      };
+    },
+  })).toThrow('SUCCESSOR_ROLLBACK_READBACK_INVALID');
+  expect(rollbackCalls).toBe(1);
+  expect(transportCalls).toBe(0);
+  expect(() => readFileSync(files.journalPath)).toThrow();
+});
+
+test('live rollback readback crossing exact expiry stops before journal or database access', () => {
+  const files = custodyFiles();
+  const exactExpiry = new Date(files.document.expiresAt);
+  const clock = [fixedNow, exactExpiry, exactExpiry];
+  let clockIndex = 0;
+  let rollbackCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminRecordSuccessor({
+    ...files,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies(() => { transportCalls += 1; return ''; }),
+    now: () => clock[Math.min(clockIndex++, clock.length - 1)],
+    rollbackReadbackImpl: ({ expected, now }: any) => {
+      rollbackCalls += 1;
+      return {
+        schemaVersion: 1,
+        kind: 'vercel-rollback-readback',
+        projectId: rollbackIdentity.projectId,
+        teamId: rollbackIdentity.teamId,
+        deploymentId: expected.deploymentId,
+        deploymentUrl: expected.deploymentUrl,
+        readyState: rollbackIdentity.readyState,
+        target: rollbackIdentity.target,
+        repository: rollbackIdentity.repository,
+        gitSha: expected.gitSha,
+        gitRef: expected.gitRef,
+        productionAliases: [...rollbackIdentity.productionAliases],
+        observedAt: now().toISOString(),
+      };
+    },
+  })).toThrow('SUCCESSOR_ADMISSION_EXPIRED');
+  expect(rollbackCalls).toBe(1);
+  expect(transportCalls).toBe(0);
+  expect(() => readFileSync(files.journalPath)).toThrow();
 });
 
 test('source mismatch, journal collision and fresh preflight mismatch all stop before mutation', () => {

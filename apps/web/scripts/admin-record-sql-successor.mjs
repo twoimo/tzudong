@@ -25,6 +25,14 @@ import {
   executeMigrationBundle,
   fiveMigrationBundleSuffixRoot,
 } from './supabase-migration-bundle.mjs';
+import {
+  TZUDONG_GITHUB_REPOSITORY,
+  TZUDONG_PRODUCTION_ALIASES,
+  TZUDONG_VERCEL_PROJECT_ID,
+  TZUDONG_VERCEL_TEAM_ID,
+  captureVercelRollbackReadbackSync,
+  normalizeVercelRollbackExpected,
+} from './vercel-rollback-readback.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 export const REPOSITORY_ROOT = resolve(dirname(SCRIPT_PATH), '../../..');
@@ -36,6 +44,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const PROJECT_REF = 'aqlcofblfxdrjhhdmarw';
 const PURPOSE = 'admin-record-current-state-five-stage';
 const ADMISSION_MAX_AGE_MS = 15 * 60 * 1000;
+const GIT_REMOTE_READ_TIMEOUT_MS = 15_000;
 const PRIVATE_RECEIPT_FILES = Object.freeze({
   protectedMain: 'protected-main-receipt.json',
   rehearsal: 'rehearsal-receipt.json',
@@ -61,6 +70,7 @@ const FIXED_CONTROLLER_CODES = new Set([
   'SUCCESSOR_MANIFEST_INVALID',
   'SUCCESSOR_PREFLIGHT_MISMATCH',
   'SUCCESSOR_READBACK_INVALID',
+  'SUCCESSOR_ROLLBACK_READBACK_INVALID',
   'SUCCESSOR_SOURCE_DRIFT',
 ]);
 
@@ -132,6 +142,7 @@ function assertToolchain(manifest) {
     'apps/web/scripts/supabase-migration-bundle.mjs',
     'apps/web/scripts/supabase-migration-transaction.mjs',
     'apps/web/scripts/apply-supabase-migration.mjs',
+    'apps/web/scripts/vercel-rollback-readback.mjs',
     'backend/supabase/scripts/g037_supabase_statement_vector.mjs',
   ];
   if (!Array.isArray(manifest.toolchain) || manifest.toolchain.length !== expected.length) fail('SUCCESSOR_MANIFEST_INVALID');
@@ -166,6 +177,7 @@ export function loadSuccessorManifest({
     'launchPolicy',
     'legacyReleaseManifest',
     'migrations',
+    'operatingTransition',
     'projectRef',
     'protectedSource',
     'purpose',
@@ -187,6 +199,10 @@ export function loadSuccessorManifest({
     || manifest.stateRootAlgorithm !== 'admin-record-successor-state/v1'
     || !Array.isArray(manifest.migrations)
     || manifest.migrations.length !== 5) fail('SUCCESSOR_MANIFEST_INVALID');
+  exactKeys(manifest.operatingTransition, ['afterFive', 'beforeFive'], 'SUCCESSOR_MANIFEST_INVALID');
+  if (!equal(manifest.operatingTransition, { beforeFive: 80, afterFive: 85 })) {
+    fail('SUCCESSOR_MANIFEST_INVALID');
+  }
   exactKeys(manifest.protectedSource, ['ref', 'remote', 'repositoryUrl'], 'SUCCESSOR_MANIFEST_INVALID');
   if (manifest.protectedSource.remote !== 'origin'
     || manifest.protectedSource.ref !== 'refs/heads/main'
@@ -406,6 +422,7 @@ function assertReceiptWindow(receipt, admission, createdAt, expiresAt, nowMs) {
   const observedAt = Date.parse(receipt.observedAt);
   if (!Number.isFinite(observedAt)
     || observedAt < createdAt
+    || observedAt >= expiresAt
     || observedAt > nowMs + 30_000
     || Date.parse(receipt.expiresAt) !== expiresAt) fail('SUCCESSOR_ADMISSION_INVALID');
 }
@@ -483,14 +500,24 @@ function validatePrivateReceipts(admission, manifestRecord, {
     admission.rollback.readbackSha256,
   );
   exactKeys(rollback, [
-    'deploymentSha', 'deploymentUrl', 'expiresAt', 'id', 'kind', 'manifestSha256',
-    'observedAt', 'projectRef', 'purpose', 'schemaVersion', 'sourceRevision', 'state',
+    'deploymentId', 'deploymentSha', 'deploymentUrl', 'expiresAt', 'gitRef', 'id', 'kind',
+    'manifestSha256', 'observedAt', 'productionAliases', 'projectId', 'projectRef',
+    'purpose', 'readyState', 'repository', 'schemaVersion', 'sourceRevision', 'state',
+    'target', 'teamId',
   ], 'SUCCESSOR_ADMISSION_INVALID');
   if (!common(rollback)
     || rollback.kind !== 'rollback-readback-receipt'
+    || rollback.deploymentId !== admission.rollback.deploymentId
     || rollback.deploymentSha !== admission.rollback.deploymentSha
     || rollback.deploymentUrl !== admission.rollback.deploymentUrl
-    || rollback.state !== admission.rollback.state) fail('SUCCESSOR_ADMISSION_INVALID');
+    || rollback.gitRef !== admission.rollback.gitRef
+    || !equal(rollback.productionAliases, admission.rollback.productionAliases)
+    || rollback.projectId !== admission.rollback.projectId
+    || rollback.readyState !== admission.rollback.readyState
+    || rollback.repository !== admission.rollback.repository
+    || rollback.state !== admission.rollback.state
+    || rollback.target !== admission.rollback.target
+    || rollback.teamId !== admission.rollback.teamId) fail('SUCCESSOR_ADMISSION_INVALID');
   assertReceiptWindow(rollback, admission, createdAt, expiresAt, nowMs);
 
   for (const key of Object.keys(manifest.requiredWriterFences).sort()) {
@@ -547,19 +574,28 @@ export function validateSuccessorAdmission(admission, manifestRecord, {
     assertHex(admission[field], 'SUCCESSOR_ADMISSION_INVALID');
   }
   assertHex(admission.journalPathSha256, 'SUCCESSOR_ADMISSION_INVALID');
-  exactKeys(admission.rollback, ['deploymentSha', 'deploymentUrl', 'readbackSha256', 'state'], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(admission.rollback, [
+    'deploymentId', 'deploymentSha', 'deploymentUrl', 'gitRef', 'productionAliases',
+    'projectId', 'readbackSha256', 'readyState', 'repository', 'state', 'target', 'teamId',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
   if (!REVISION.test(admission.rollback.deploymentSha)) fail('SUCCESSOR_ADMISSION_INVALID');
   assertHex(admission.rollback.readbackSha256, 'SUCCESSOR_ADMISSION_INVALID');
-  let rollbackUrl;
-  try { rollbackUrl = new URL(admission.rollback.deploymentUrl); } catch { fail('SUCCESSOR_ADMISSION_INVALID'); }
-  if (rollbackUrl.protocol !== 'https:'
-    || !rollbackUrl.hostname.endsWith('.vercel.app')
-    || rollbackUrl.pathname !== '/'
-    || rollbackUrl.port
-    || rollbackUrl.username
-    || rollbackUrl.password
-    || rollbackUrl.search
-    || rollbackUrl.hash
+  let normalizedRollback;
+  try {
+    normalizedRollback = normalizeVercelRollbackExpected({
+      deploymentId: admission.rollback.deploymentId,
+      deploymentUrl: admission.rollback.deploymentUrl,
+      gitRef: admission.rollback.gitRef,
+      gitSha: admission.rollback.deploymentSha,
+    });
+  } catch { fail('SUCCESSOR_ADMISSION_INVALID'); }
+  if (normalizedRollback.deploymentUrl !== admission.rollback.deploymentUrl
+    || admission.rollback.projectId !== TZUDONG_VERCEL_PROJECT_ID
+    || admission.rollback.teamId !== TZUDONG_VERCEL_TEAM_ID
+    || admission.rollback.repository !== TZUDONG_GITHUB_REPOSITORY
+    || !equal(admission.rollback.productionAliases, TZUDONG_PRODUCTION_ALIASES)
+    || admission.rollback.readyState !== 'READY'
+    || admission.rollback.target !== 'production'
     || admission.rollback.state !== 'ready') fail('SUCCESSOR_ADMISSION_INVALID');
 
   const createdAt = Date.parse(admission.createdAt);
@@ -569,7 +605,7 @@ export function validateSuccessorAdmission(admission, manifestRecord, {
     || expiresAt <= createdAt
     || expiresAt - createdAt > ADMISSION_MAX_AGE_MS
     || createdAt > nowMs + 30_000
-    || nowMs > expiresAt) fail('SUCCESSOR_ADMISSION_EXPIRED');
+    || nowMs >= expiresAt) fail('SUCCESSOR_ADMISSION_EXPIRED');
 
   const fenceKeys = Object.keys(manifest.requiredWriterFences).sort();
   exactKeys(admission.writerFences, fenceKeys, 'SUCCESSOR_ADMISSION_INVALID');
@@ -585,7 +621,10 @@ export function validateSuccessorAdmission(admission, manifestRecord, {
   const suffixRoot = fiveMigrationBundleSuffixRoot(manifest.migrations);
   const priorCount = admission.stageStates[0]?.bundle?.priorCount;
   const prefixRoot = admission.stageStates[0]?.bundle?.prefixRoot;
-  if (!Number.isSafeInteger(priorCount) || priorCount < 0) fail('SUCCESSOR_ADMISSION_INVALID');
+  if (priorCount !== manifest.operatingTransition.beforeFive
+    || priorCount + manifest.migrations.length !== manifest.operatingTransition.afterFive) {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
   assertHex(prefixRoot, 'SUCCESSOR_ADMISSION_INVALID');
   admission.stageStates.forEach((stage, index) => validateStageState(
     stage,
@@ -604,6 +643,36 @@ export function validateSuccessorAdmission(admission, manifestRecord, {
     receiptDirectory,
   });
   return Object.freeze({ createdAt, expiresAt, prefixRoot, priorCount, suffixRoot });
+}
+
+function assertAdmissionFresh(expiresAt, value) {
+  const nowMs = value instanceof Date ? value.getTime() : NaN;
+  if (!Number.isFinite(nowMs) || nowMs >= expiresAt) fail('SUCCESSOR_ADMISSION_EXPIRED');
+}
+
+function assertLiveRollbackReadback(admission, observed, { checkedAt, createdAt, expiresAt }) {
+  exactKeys(observed, [
+    'deploymentId', 'deploymentUrl', 'gitRef', 'gitSha', 'kind', 'observedAt',
+    'productionAliases', 'projectId', 'readyState', 'repository', 'schemaVersion',
+    'target', 'teamId',
+  ], 'SUCCESSOR_ROLLBACK_READBACK_INVALID');
+  const liveObservedAt = Date.parse(observed.observedAt);
+  if (observed.schemaVersion !== 1
+    || observed.kind !== 'vercel-rollback-readback'
+    || observed.deploymentId !== admission.rollback.deploymentId
+    || observed.deploymentUrl !== admission.rollback.deploymentUrl
+    || observed.gitRef !== admission.rollback.gitRef
+    || observed.gitSha !== admission.rollback.deploymentSha
+    || !equal(observed.productionAliases, admission.rollback.productionAliases)
+    || observed.projectId !== admission.rollback.projectId
+    || observed.readyState !== admission.rollback.readyState
+    || observed.repository !== admission.rollback.repository
+    || observed.target !== admission.rollback.target
+    || observed.teamId !== admission.rollback.teamId
+    || !Number.isFinite(liveObservedAt)
+    || liveObservedAt < createdAt
+    || liveObservedAt >= expiresAt
+    || liveObservedAt > checkedAt.getTime()) fail('SUCCESSOR_ROLLBACK_READBACK_INVALID');
 }
 
 export function assertLaunchReady(manifest) {
@@ -724,10 +793,19 @@ export function protectedSourceReadbackBinding(manifest, revision) {
   });
 }
 
-export function currentProtectedMainReadback(manifest, { repositoryRoot = REPOSITORY_ROOT } = {}) {
+export function currentProtectedMainReadback(manifest, {
+  repositoryRoot = REPOSITORY_ROOT,
+  spawnImpl = spawnSync,
+} = {}) {
   if (!manifest?.protectedSource) fail('SUCCESSOR_CHECKOUT_INVALID');
   const run = args => {
-    const result = spawnSync('/usr/bin/git', args, { cwd: repositoryRoot, encoding: 'utf8' });
+    const result = spawnImpl('/usr/bin/git', args, {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      killSignal: 'SIGKILL',
+      maxBuffer: 1024 * 1024,
+      timeout: GIT_REMOTE_READ_TIMEOUT_MS,
+    });
     if (result.error || result.status !== 0) fail('SUCCESSOR_CHECKOUT_INVALID');
     return result.stdout.trim();
   };
@@ -830,6 +908,7 @@ export function runAdminRecordSuccessor({
   gitFactsImpl = currentSuccessorGitFacts,
   loadManifestImpl = loadSuccessorManifest,
   protectedMainReadbackImpl = currentProtectedMainReadback,
+  rollbackReadbackImpl = captureVercelRollbackReadbackSync,
   runPsqlImpl,
 } = {}) {
   const manifestRecord = loadManifestImpl();
@@ -837,7 +916,7 @@ export function runAdminRecordSuccessor({
   const admissionFile = assertPrivateAdmissionPath(admissionPath);
   const admissionBytes = readFileSync(admissionFile);
   const admission = parseJsonObject(admissionBytes, 'SUCCESSOR_ADMISSION_INVALID');
-  validateSuccessorAdmission(admission, manifestRecord, {
+  const admissionWindow = validateSuccessorAdmission(admission, manifestRecord, {
     now: now(),
     receiptDirectory: dirname(admissionFile),
   });
@@ -847,6 +926,30 @@ export function runAdminRecordSuccessor({
     manifestRecord.manifest,
     protectedMainReadbackImpl(manifestRecord.manifest),
   );
+  let rollbackReadback;
+  try {
+    rollbackReadback = rollbackReadbackImpl({
+      expected: {
+        deploymentId: admission.rollback.deploymentId,
+        deploymentUrl: admission.rollback.deploymentUrl,
+        gitRef: admission.rollback.gitRef,
+        gitSha: admission.rollback.deploymentSha,
+      },
+      now,
+    });
+  } catch {
+    fail('SUCCESSOR_ROLLBACK_READBACK_INVALID');
+  }
+  const rollbackCheckedAt = now();
+  assertAdmissionFresh(admissionWindow.expiresAt, rollbackCheckedAt);
+  try {
+    assertLiveRollbackReadback(admission, rollbackReadback, {
+      ...admissionWindow,
+      checkedAt: rollbackCheckedAt,
+    });
+  } catch {
+    fail('SUCCESSOR_ROLLBACK_READBACK_INVALID');
+  }
   const journalFile = assertJournalPath(journalPath);
   if (sha256(Buffer.from(journalFile)) !== admission.journalPathSha256) fail('SUCCESSOR_JOURNAL_BINDING_MISMATCH');
   const plan = compileSuccessorPlan(manifestRecord, admission);
@@ -878,6 +981,7 @@ export function runAdminRecordSuccessor({
   });
   let result;
   try {
+    assertAdmissionFresh(admissionWindow.expiresAt, now());
     result = executeMigrationBundle(databaseUrl, plan, { runPsqlImpl: transport });
   } catch (error) {
     const bounded = boundedSuccessorError(error);
