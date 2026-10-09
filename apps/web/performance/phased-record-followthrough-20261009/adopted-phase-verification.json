@@ -1,0 +1,136 @@
+{
+  "kind": "adopted-additive-phase-pristine-pg17-and-source-contract-verification",
+  "status": "passed",
+  "sourceBindings": {
+    "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+    "backend/supabase/scripts/transform_registration_replay.py": "82a8a724ec3358a86a34f8b8d6c7bdc05537635c9f3aff4a49cbc7bc3cb02056",
+    "backend/supabase/tests/test_registration_replay.py": "6c0c74e467d7701b98b166f95159f8d9eb1d4ac88734552c2f92374010a2d0f3",
+    "backend/supabase/tests/test_admin_record_actions.py": "d6c3fdea927666bf488a3c4ba22c6551437d79d3b78e4e0c7fe8bd150ca88c58"
+  },
+  "pristineInput": {
+    "manifestSha256": "ccd0373d1138301a586b75ab07f01ddcd061765d22e22da646e774cfc1e92563",
+    "schemaSha256": "f849fcbd372bc4060a1142f11fbd4d29050a10c78f013b31e51115bd3ef12d46",
+    "pgVersion": "17.6",
+    "userRowsCopied": 0,
+    "roles": 37,
+    "members": 29,
+    "declaredOriginalReconstructionProjections": "8 argumentOID rows,7 droppedcolumn positions,27-case Boolean associativity; no assertioncode/immutabletrigger weakening"
+  },
+  "legacyObserved": [
+    {
+      "rpc": "approve_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "approve_edit_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "merge_restaurant_records_for_admin_review",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    }
+  ],
+  "legacyAfterM1Observed": [
+    {
+      "rpc": "approve_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "approve_edit_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "merge_restaurant_records_for_admin_review",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    }
+  ],
+  "legacyBehaviorSame": true,
+  "legacyFunctionalCompatibilityProved": false,
+  "currentColumnFailureScope": "Column-error execution is unreachable after the first privatehelper denial. No extra owner/helper grants were used to force deeper execution; no claim of current-column compatibility.",
+  "adoptedM1M2M3": {
+    "sourceHashes": [
+      {
+        "name": "20261004190259_admin_record_guarded_actions.sql",
+        "sha256": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551"
+      },
+      {
+        "name": "20261004192657_admin_evaluation_raw_warning_groups.sql",
+        "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+      },
+      {
+        "name": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+        "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+      }
+    ],
+    "g014AssertionsAfterM1": 4,
+    "g014AssertionsAfterM3": 4,
+    "legacyAclAllowlistMetadataPreserved": true,
+    "membersRolesImmutableManifestPreserved": true,
+    "persistentRpcBodiesUnchanged": {
+      "raw": "7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304",
+      "record": "5140ad2948b1890b1bbdf212bb89385b34ebad90fe9db60177ac91e7f760b892"
+    },
+    "migrationRollbackExact": true,
+    "guardedSixFlowsPassed": 6,
+    "guardedTransactionRollbackExact": true,
+    "actualConcurrencyPassed": true,
+    "noOwnerLegacyHelperGrants": true
+  },
+  "sourceChecks": {
+    "registrationReplayTests": 3,
+    "inverseByteAndDriftRejectionPreserved": true,
+    "pythonSyntax": "passed",
+    "changedSourceDiffWhitespace": "passed",
+    "newEvidenceEslint": "passed"
+  },
+  "interpretation": "AdditiveM1 is locally feasible and avoids new ACL retirement during phaseA, but does not make the three already-broken legacy RPCs work. Prefer explicit maintenance and actual consumer switch to guarded APIs; never claim the additive phase alone solves f319 compatibility. Source-only PG15 canonical replay still requires clean committed input, and no new phaseB retirement is adopted.",
+  "operations": {
+    "hostedDDL": 0,
+    "hostedDataWrites": 0,
+    "envChanges": 0,
+    "freezeChanges": 0,
+    "deploymentOrPromotion": 0,
+    "providerCalls": 0,
+    "paidCalls": 0,
+    "modelChanges": 0
+  },
+  "canonicalPG15": "Not run while relevant source inputs are dirty. Root batchcommit/clean detached checkout pending.",
+  "limits": [
+    "SQL synthetic fixtures and actuallocaltwo-connection race are not authenticated livefrontend/provider/Storage proof.",
+    "Existing legacy42501 is a preexisting sourcebehavior, not a transient rollout error.",
+    "Originalsharedrecord/ranking containers and their volumes were not changed.",
+    "Temporary fixturetable grants in the unchanged six-flow harness are transactionlocal androlledback; no privatelegacy-helper or owner privilege restoration was performed."
+  ],
+  "g014BodyMetadataReadback": "four exact reviewed bodies, owner/ACL/config/allnonbody metadataunchanged",
+  "cleanup": "owncontainer+volume removed with matchingrunlabels and absence readback; existingrecordruntime sameCIDrunning"
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "hosted-owner-final-contract-diagnostic",
+  "at": "2026-10-04T12:23:13.656300+00:00",
+  "exitCode": 3,
+  "sqlStates": [
+    "P0001"
+  ],
+  "matchedFixedConditions": [],
+  "assertionContext": [
+    "privacy_retention.assert_g014_public_rpc_allowlist"
+  ],
+  "forceRollback": true,
+  "ledgerWrite": false,
+  "diagnosticsPrinted": false
+}

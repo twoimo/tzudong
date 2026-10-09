@@ -6,7 +6,7 @@ const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..'
 
 describe('admin storyboard canvas shell extraction', () => {
   test('keeps canvas shell attributes in the extracted presentational component', () => {
-    const generatorSource = source('components/admin/storyboard/AdminStoryboardGenerator.tsx');
+    const generatorSource = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
     const shellSource = source('components/admin/storyboard/StoryboardCanvasShell.tsx');
 
     expect(generatorSource).toContain('StoryboardCanvasShell');
@@ -19,7 +19,7 @@ describe('admin storyboard canvas shell extraction', () => {
   });
 
   test('leaves provider readiness and trusted-image decisions in the orchestrator', () => {
-    const generatorSource = source('components/admin/storyboard/AdminStoryboardGenerator.tsx');
+    const generatorSource = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
     const shellSource = source('components/admin/storyboard/StoryboardCanvasShell.tsx');
 
     expect(generatorSource).toContain('mapStoryboardImageProviderReadiness');

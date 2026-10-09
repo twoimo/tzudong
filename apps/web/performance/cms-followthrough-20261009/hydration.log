@@ -1,0 +1,9 @@
+
+Running 1 test using 1 worker
+
+(node:90975) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] tests/admin-console-module-hydration.spec.ts:205:3 › admin console module hydration smoke › loads core admin modules without hydration/runtime errors
+  1 passed (35.2s)

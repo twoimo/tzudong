@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "principal": "service_role",
+  "externalCalls": 0,
+  "queuedCancelled": 1,
+  "runningCancelled": 1,
+  "policyDisabled": true,
+  "versionIncremented": true,
+  "lateWorkerFinishDisabled": true,
+  "workerReadbackCancelled": true,
+  "fixtureRollbackExact": true
+}

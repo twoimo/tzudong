@@ -1,0 +1,5 @@
+.next-local-18080/dev/types/app/s/[code]/page.ts(2,24): error TS2307: Cannot find module '../../../../../../app/s/[code]/page.js' or its corresponding type declarations.
+.next-local-18080/dev/types/app/s/[code]/page.ts(7,29): error TS2307: Cannot find module '../../../../../../app/s/[code]/page.js' or its corresponding type declarations.
+.next/types/app/s/[code]/page.ts(2,24): error TS2307: Cannot find module '../../../../../app/s/[code]/page.js' or its corresponding type declarations.
+.next/types/app/s/[code]/page.ts(7,29): error TS2307: Cannot find module '../../../../../app/s/[code]/page.js' or its corresponding type declarations.
+.next/types/validator.ts(260,39): error TS2307: Cannot find module '../../app/s/[code]/page.js' or its corresponding type declarations.

@@ -1,0 +1,50 @@
+{
+  "kind": "gemini-engine-admission-final-checkpoint",
+  "observedAt": "2026-10-04T11:07:53.789729+00:00",
+  "sourceAndArtifacts": [
+    {
+      "path": "apps/web/app/api/admin/evaluations/automation/route.ts",
+      "sha256": "59c62699517a28dd83403962b12466f9740511b9bc353603e1e2127c7a43443f",
+      "bytes": 4964
+    },
+    {
+      "path": "apps/web/components/admin/RestaurantReviewAutomation.tsx",
+      "sha256": "c32b6b9668aa025b0bf289940fc1e3529aec3de2058e9d3da109c8c09a24b7a0",
+      "bytes": 16472
+    },
+    {
+      "path": "apps/web/lib/admin/restaurant-review-automation.ts",
+      "sha256": "2bd224ce100d7fc8ba58a8c3669b72204034478af8712b9d7b57973e34f4dbde",
+      "bytes": 6491
+    },
+    {
+      "path": "backend/bin/run_restaurant_review_automation.py",
+      "sha256": "3ed7ed629c4038247fa85482349d40206d8b12314db9b9389bbfe0ea3889598b",
+      "bytes": 24155
+    },
+    {
+      "path": "backend/bin/tests/test_restaurant_review_automation.py",
+      "sha256": "6135a907e3748e79ee228a54b32d0aa47cca6cc78b04e75f3ef6caa4aa995670",
+      "bytes": 29008
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-judgment-browser-admission-20261004.json",
+      "sha256": "1f6866cea8b57f6743959d78e7717fd6956d70cb0c8bbe58b169033e159b9120",
+      "bytes": 13652
+    }
+  ],
+  "checks": {
+    "apiDtoTests": 15,
+    "workerTests": 28,
+    "syntheticBrowserAssertions": 67,
+    "typeDiagnostics": 0,
+    "productionBuild": "passed",
+    "routeCssBoundaries": "passed"
+  },
+  "sourceRollout": "new SQL not applied; start/run/tick rejected before mutation when metadata absent",
+  "limitations": [
+    "Last whole web suite is 2756 pass and 9 skip before this targeted admission delta",
+    "Synthetic browser and local checks do not establish current operating deployment",
+    "Actual AI correctness and invoice deduction unverified"
+  ]
+}

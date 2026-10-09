@@ -1,12 +1,18 @@
 "use client";
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
+import { createPortal } from 'react-dom';
+import { useRestaurantManagementHeader } from '@/components/admin/RestaurantManagementWorkspace';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { isEvaluationRecordStatus, isRecord, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
+import { fetchAdminEvaluationPage, isEvaluationCursorStale, type EvaluationWarnings } from '@/lib/admin/evaluation-page-client';
+import { filterEvaluationRecords } from '@/lib/admin/evaluation-query';
 import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
@@ -14,31 +20,32 @@ import { extractVideoIdFromYoutubeLink } from '../../../lib/dashboard/helpers';
 import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '../../../lib/dashboard/classifiers';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
 import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
+import { RestaurantReviewAutomation } from '@/components/admin/RestaurantReviewAutomation';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
+import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
 import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
 import { SubmissionListView, Review } from '@/components/admin/SubmissionListView';
 import { SubmissionRecord, ApprovalData, SubmissionItem, ItemDecision } from '@/components/admin/SubmissionDetailView';
 import { sanitizePrimaryStatusFilterValue } from '@/components/admin/evaluation-status-filter-options';
-import {
-  createNewRestaurantNotification,
-  createSubmissionApprovedNotification,
-  createSubmissionRejectedNotification,
-  createReviewApprovedNotification,
-  createReviewRejectedNotification
-} from '@/contexts/NotificationContext';
+import { createSubmissionApprovedNotification, createSubmissionRejectedNotification, createReviewApprovedNotification, createReviewRejectedNotification } from '@/contexts/NotificationContext';
 import { ClipboardCheck, Loader2, LayoutList, MonitorPlay, RotateCcw, Search, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { RECORD_CATEGORIES } from '@/lib/admin/record-action-contract';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
-import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName, matchesAdminEvaluationSearch } from '@/lib/admin-evaluation-name';
+import { getAdminEvaluationDisplayName, matchesAdminEvaluationSearch } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
-import { assertPrivacySafe } from '@/lib/privacy/sanitize';
+import { useRecordAction } from '@/lib/admin/use-record-action';
+import { isRecordActionCancelled, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from '@/lib/admin/record-action-client';
+import { submissionApprovalInput, submissionEditInput } from '@/lib/admin/evaluation-record-actions';
+import type { RecordActionReceipt } from '@/lib/admin/record-action-contract';
 import { fetchAdminProfileSummariesLookup, resolveAdminReviewerDisplay } from '@/lib/admin/profile-summaries';
 import {
   compareAdminEvaluationsByLatestDesc,
@@ -70,7 +77,6 @@ import {
 } from '@/lib/admin-restaurant-identity-warning';
 import { invalidateRestaurantDiscoveryQueries } from '@/lib/restaurant-discovery-cache';
 import {
-  assertLegacyBrowserAdminMutationEnabled,
   isLegacyBrowserAdminMutationEnabled,
 } from '@/lib/admin/guarded-mutation-contract';
 import {
@@ -152,33 +158,6 @@ const EVALUATION_FILTER_KEYS = [
   'category_TF',
   'status',
 ] as const;
-const EVALUATION_RESTORE_CONFIRMATION = '검수복원';
-type PendingRecordAction = {
-  kind: 'restore';
-  record: EvaluationRecord;
-};
-type RestaurantSubmissionUpdateOverride =
-  Database['public']['Tables']['restaurant_submissions']['Update'] & {
-    resolved_by_admin_id?: string;
-    admin_notes?: string | null;
-    restaurant_address?: string | null;
-    restaurant_phone?: string | null;
-    restaurant_categories?: string[] | null;
-  };
-
-type RestaurantSubmissionMutationTable = Omit<
-  Database['public']['Tables']['restaurant_submissions'],
-  'Update'
-> & {
-  Update: RestaurantSubmissionUpdateOverride;
-};
-
-function restaurantSubmissionMutation() {
-  return supabase.from<'restaurant_submissions', RestaurantSubmissionMutationTable>(
-    'restaurant_submissions',
-  );
-}
-
 const ADMIN_SUBMISSION_SELECT = [
   'id',
   'user_id',
@@ -271,23 +250,6 @@ interface StoredEvaluationPageState {
   isAlternateView?: boolean;
 }
 
-function isEvaluationRecordStatus(value: unknown): value is EvaluationRecordStatus {
-  switch (value) {
-    case 'pending':
-    case 'approved':
-    case 'rejected':
-    case 'hold':
-    case 'deleted':
-    case 'missing':
-    case 'db_conflict':
-    case 'geocoding_failed':
-    case 'address_review_geocode_recovered':
-    case 'not_selected':
-      return true;
-    default:
-      return false;
-  }
-}
 
 function sanitizeEvalFilters(value: unknown): EvalFiltersState {
   if (!isRecord(value)) {
@@ -415,9 +377,7 @@ type RestaurantRequestListRow =
     | 'review_audit_id'
     | 'updated_at'
   >>;
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+
 function parseValidatedRows<Row>(
   values: readonly unknown[],
   isRow: (value: unknown) => value is Row,
@@ -433,18 +393,6 @@ function parseValidatedRows<Row>(
   return rows;
 }
 
-
-function isNullableString(value: unknown): value is string | null {
-  return typeof value === 'string' || value === null;
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-
-function isNullableStringArray(value: unknown): value is string[] | null {
-  return value === null || isStringArray(value);
-}
 
 function isSubmissionRow(value: unknown): value is SubmissionRow {
   if (!isRecord(value)) return false;
@@ -617,57 +565,6 @@ function isMissingRestaurantRequestLifecycleError(error: SupabaseQueryError | nu
   return error?.code === '42703';
 }
 
-interface RestaurantRequestReviewResponse {
-  success?: boolean;
-  request?: RestaurantRequestRow | null;
-  auditId?: string | null;
-}
-
-const applyRestaurantRequestReadbackToSubmission = (
-  submission: SubmissionRecord,
-  request: RestaurantRequestRow | null | undefined,
-  auditId: string | null | undefined,
-  fallbackStatus: 'approved' | 'rejected',
-): SubmissionRecord => {
-  if (!request) {
-    return {
-      ...submission,
-      recommendation_audit_id: auditId || submission.recommendation_audit_id || null,
-    };
-  }
-
-  const status = request.status || fallbackStatus;
-
-  return {
-    ...submission,
-    status,
-    restaurant_name: request.restaurant_name,
-    restaurant_address: request.road_address || request.jibun_address || request.origin_address,
-    restaurant_phone: request.phone,
-    restaurant_categories: request.categories,
-    admin_notes: request.admin_note,
-    rejection_reason: request.rejection_reason,
-    resolved_by_admin_id: request.reviewed_by_admin_id,
-    reviewed_at: request.reviewed_at,
-    updated_at: request.updated_at || submission.updated_at,
-    recommendation_reason: request.recommendation_reason,
-    recommendation_status: status,
-    recommendation_admin_note: request.admin_note,
-    recommendation_audit_id: auditId || request.review_audit_id,
-    items: submission.items.map((item, index) =>
-      index === 0
-        ? {
-            ...item,
-            youtube_link: request.youtube_link || item.youtube_link,
-            tzuyang_review: request.recommendation_reason || item.tzuyang_review,
-            item_status: status,
-            rejection_reason: request.rejection_reason,
-          }
-        : item,
-    ),
-  };
-};
-
 type SubmissionOriginalRestaurantData = NonNullable<SubmissionRecord['original_restaurant_data']>;
 
 interface RestaurantLookupRow {
@@ -690,21 +587,6 @@ interface ReviewRestaurantRow {
   jibun_address: string | null;
 }
 
-interface ReviewApprovalTargetRow {
-  user_id: string;
-  restaurant_id: string;
-  is_verified: boolean;
-}
-
-interface RestaurantReviewCountRow {
-  name: string | null;
-  review_count: number | null;
-}
-
-function isNullableRecord(value: unknown): value is Record<string, unknown> | null {
-  return value === null || isRecord(value);
-}
-
 function isRestaurantLookupRow(value: unknown): value is RestaurantLookupRow {
   return isRecord(value)
     && typeof value.id === 'string'
@@ -725,591 +607,6 @@ function isReviewRestaurantRow(value: unknown): value is ReviewRestaurantRow {
     && isNullableString(value.approved_name)
     && isNullableString(value.road_address)
     && isNullableString(value.jibun_address);
-}
-
-function isReviewApprovalTargetRow(value: unknown): value is ReviewApprovalTargetRow {
-  return isRecord(value)
-    && typeof value.user_id === 'string'
-    && typeof value.restaurant_id === 'string'
-    && typeof value.is_verified === 'boolean';
-}
-
-function isRestaurantReviewCountRow(value: unknown): value is RestaurantReviewCountRow {
-  return isRecord(value)
-    && isNullableString(value.name)
-    && (typeof value.review_count === 'number' || value.review_count === null);
-}
-
-function isReviewPhotoRow(
-  value: unknown,
-): value is { verification_photo: string | null; food_photos: string[] | null } {
-  return isRecord(value)
-    && isNullableString(value.verification_photo)
-    && isNullableStringArray(value.food_photos);
-}
-
-function isRestaurantRequestRow(value: unknown): value is RestaurantRequestRow {
-  return isRestaurantRequestListRow(value)
-    && isNullableString(value.status)
-    && isNullableString(value.reviewed_by_admin_id)
-    && isNullableString(value.reviewed_at)
-    && isNullableString(value.admin_note)
-    && isNullableString(value.rejection_reason)
-    && isNullableString(value.review_audit_id)
-    && isNullableString(value.updated_at);
-}
-
-function parseRestaurantRequestReviewResponse(
-  value: unknown,
-): RestaurantRequestReviewResponse | null {
-  if (!isRecord(value)) return null;
-
-  const success = value.success;
-  if (success !== undefined && typeof success !== 'boolean') return null;
-
-  const requestValue = value.request;
-  let request: RestaurantRequestRow | null | undefined = undefined;
-  if (requestValue !== undefined) {
-    if (requestValue === null) {
-      request = null;
-    } else if (isRestaurantRequestRow(requestValue)) {
-      request = requestValue;
-    } else {
-      return null;
-    }
-  }
-
-  const auditIdValue = value.auditId;
-  if (auditIdValue !== undefined && !isNullableString(auditIdValue)) {
-    return null;
-  }
-
-  const response: RestaurantRequestReviewResponse = {};
-  if (typeof success === 'boolean') response.success = success;
-  if (request !== undefined) response.request = request;
-  if (auditIdValue !== undefined) response.auditId = auditIdValue;
-  return response;
-}
-
-type ParsedEvaluationResults = NonNullable<EvaluationRecord['evaluation_results']>;
-type ParsedLocationMatch = NonNullable<ParsedEvaluationResults['location_match_TF']>;
-type ParsedYoutubeMeta = NonNullable<EvaluationRecord['youtube_meta']>;
-
-function parseNumericEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['visit_authenticity'] {
-  if (!isRecord(value) || typeof value.eval_value !== 'number') {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
-  };
-}
-
-function parseBooleanEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['rb_grounding_TF'] {
-  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
-  };
-}
-
-function parseCategoryEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['category_TF'] {
-  if (
-    !isRecord(value)
-    || typeof value.eval_value !== 'boolean'
-    || (value.category_revision !== undefined && !isNullableString(value.category_revision))
-    || (value.eval_basis !== undefined && typeof value.eval_basis !== 'string')
-  ) {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-    category_revision: typeof value.category_revision === 'string' || value.category_revision === null
-      ? value.category_revision
-      : null,
-    ...(typeof value.eval_basis === 'string' ? { eval_basis: value.eval_basis } : {}),
-  };
-}
-
-function parseCategoryValidityEvaluationMetric(
-  value: unknown,
-): ParsedEvaluationResults['category_validity_TF'] {
-  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
-    return null;
-  }
-
-  return {
-    name: typeof value.name === 'string' ? value.name : '',
-    eval_value: value.eval_value,
-  };
-}
-
-function isLocationMatchEvidenceFamily(
-  value: unknown,
-): value is NonNullable<ParsedLocationMatch['evidence_families']>[number] {
-  return value === 'provider_candidate'
-    || value === 'source_geo'
-    || value === 'cross_provider'
-    || value === 'browser_verification'
-    || value === 'llm_verification'
-    || value === 'geocode_provider';
-}
-
-function isLocationMatchPendingReason(
-  value: unknown,
-): value is NonNullable<ParsedLocationMatch['pending_reason']> {
-  return value === 'insufficient_evidence'
-    || value === 'cross_country_mismatch'
-    || value === 'ambiguous_chain'
-    || value === 'multi_candidate'
-    || value === 'timeout'
-    || value === 'rate_limited';
-}
-
-function parseLocationMatchSecondPass(
-  value: unknown,
-): NonNullable<ParsedLocationMatch['second_pass']> | null {
-  if (!isRecord(value)) return null;
-
-  const parsedSecondPass: NonNullable<ParsedLocationMatch['second_pass']> = {};
-  if (typeof value.attempted === 'boolean') parsedSecondPass.attempted = value.attempted;
-  if (isNullableString(value.provider)) parsedSecondPass.provider = value.provider;
-  if (typeof value.timed_out === 'boolean') parsedSecondPass.timed_out = value.timed_out;
-  if (typeof value.rate_limited === 'boolean') parsedSecondPass.rate_limited = value.rate_limited;
-  if (typeof value.duration_ms === 'number' || value.duration_ms === null) {
-    parsedSecondPass.duration_ms = value.duration_ms;
-  }
-  return parsedSecondPass;
-}
-function parseLocationMatchAddress(
-  value: unknown,
-): NonNullable<ParsedLocationMatch['matched_address']> | null {
-  if (!isRecord(value)) return null;
-
-  const parsedAddress: NonNullable<ParsedLocationMatch['matched_address']> = {};
-  if (isNullableString(value.roadAddress)) parsedAddress.roadAddress = value.roadAddress;
-  if (isNullableString(value.jibunAddress)) parsedAddress.jibunAddress = value.jibunAddress;
-  if (isNullableString(value.englishAddress)) parsedAddress.englishAddress = value.englishAddress;
-  if (isNullableString(value.x)) parsedAddress.x = value.x;
-  if (isNullableString(value.y)) parsedAddress.y = value.y;
-  return parsedAddress;
-}
-
-function parseLocationMatchResult(value: unknown): ParsedEvaluationResults['location_match_TF'] {
-  if (!isRecord(value)) return null;
-
-  const parsedResult: ParsedLocationMatch = {};
-  if (typeof value.name === 'string') parsedResult.name = value.name;
-  if (typeof value.eval_value === 'boolean') parsedResult.eval_value = value.eval_value;
-  if (isNullableString(value.origin_name)) parsedResult.origin_name = value.origin_name;
-  if (
-    value.match_status === 'matched'
-    || value.match_status === 'pending'
-    || value.match_status === 'failed'
-  ) {
-    parsedResult.match_status = value.match_status;
-  }
-  if (
-    value.matched_provider === 'naver'
-    || value.matched_provider === 'google'
-    || value.matched_provider === 'playwright'
-    || value.matched_provider === 'gemini'
-    || value.matched_provider === 'ncp_geocode'
-    || value.matched_provider === null
-  ) {
-    parsedResult.matched_provider = value.matched_provider;
-  }
-  if (isNullableString(value.matched_name)) parsedResult.matched_name = value.matched_name;
-  if (isNullableString(value.naver_name)) parsedResult.naver_name = value.naver_name;
-  if (isNullableString(value.google_name)) parsedResult.google_name = value.google_name;
-  if (typeof value.origin_address === 'string') parsedResult.origin_address = value.origin_address;
-  if (value.matched_address === null) {
-    parsedResult.matched_address = null;
-  } else {
-    const matchedAddress = parseLocationMatchAddress(value.matched_address);
-    if (matchedAddress) parsedResult.matched_address = matchedAddress;
-  }
-  if (value.naver_address === null) {
-    parsedResult.naver_address = null;
-  } else if (Array.isArray(value.naver_address) && value.naver_address.every(isRecord)) {
-    parsedResult.naver_address = value.naver_address;
-  }
-  if (isStringArray(value.evidence_summary)) {
-    parsedResult.evidence_summary = value.evidence_summary;
-  }
-  const evidenceFamilies = value.evidence_families;
-  if (
-    Array.isArray(evidenceFamilies)
-    && evidenceFamilies.every(isLocationMatchEvidenceFamily)
-  ) {
-    parsedResult.evidence_families = evidenceFamilies;
-  }
-  if (value.pending_reason === null) {
-    parsedResult.pending_reason = null;
-  } else if (isLocationMatchPendingReason(value.pending_reason)) {
-    parsedResult.pending_reason = value.pending_reason;
-  }
-  if (value.second_pass === null) {
-    parsedResult.second_pass = null;
-  } else {
-    const secondPass = parseLocationMatchSecondPass(value.second_pass);
-    if (secondPass) parsedResult.second_pass = secondPass;
-  }
-  if (isNullableString(value.falseMessage)) parsedResult.falseMessage = value.falseMessage;
-
-  return parsedResult;
-}
-
-function parseEvaluationResults(value: unknown): EvaluationRecord['evaluation_results'] {
-  if (!isRecord(value)) return null;
-
-  return {
-    visit_authenticity: parseNumericEvaluationMetric(value.visit_authenticity),
-    rb_inference_score: parseNumericEvaluationMetric(value.rb_inference_score),
-    rb_grounding_TF: parseBooleanEvaluationMetric(value.rb_grounding_TF),
-    review_faithfulness_score: parseNumericEvaluationMetric(value.review_faithfulness_score),
-    category_TF: parseCategoryEvaluationMetric(value.category_TF),
-    category_validity_TF: parseCategoryValidityEvaluationMetric(value.category_validity_TF),
-    location_match_TF: parseLocationMatchResult(value.location_match_TF),
-  };
-}
-
-function parseYoutubeMeta(value: unknown): EvaluationRecord['youtube_meta'] {
-  if (!isRecord(value) || !isRecord(value.ads_info)) return null;
-  if (
-    typeof value.title !== 'string'
-    || typeof value.publishedAt !== 'string'
-    || typeof value.is_shorts !== 'boolean'
-    || typeof value.duration !== 'number'
-    || typeof value.ads_info.is_ads !== 'boolean'
-    || !isNullableString(value.ads_info.what_ads)
-  ) {
-    return null;
-  }
-
-  const parsedMeta: ParsedYoutubeMeta = {
-    title: value.title,
-    publishedAt: value.publishedAt,
-    is_shorts: value.is_shorts,
-    duration: value.duration,
-    ads_info: {
-      is_ads: value.ads_info.is_ads,
-      what_ads: value.ads_info.what_ads,
-    },
-  };
-  return parsedMeta;
-}
-
-type ParsedDbErrorDetails = NonNullable<EvaluationRecord['db_error_details']>;
-type ParsedAddressConsistencyReview =
-  NonNullable<ParsedDbErrorDetails['address_consistency_review']>;
-
-function parseDbErrorDetails(value: unknown): EvaluationRecord['db_error_details'] {
-  if (!isRecord(value)) return null;
-
-  const parsedDetails: ParsedDbErrorDetails = {};
-  if (value.error_type === 'duplicate') parsedDetails.error_type = 'duplicate';
-
-  const addressReviewValue = value.address_consistency_review;
-  if (isRecord(addressReviewValue)) {
-    const addressReview: ParsedAddressConsistencyReview = {};
-    if (typeof addressReviewValue.queue === 'string') {
-      addressReview.queue = addressReviewValue.queue;
-    }
-    if (typeof addressReviewValue.reason_ko === 'string') {
-      addressReview.reason_ko = addressReviewValue.reason_ko;
-    }
-    if (typeof addressReviewValue.generated_at === 'string') {
-      addressReview.generated_at = addressReviewValue.generated_at;
-    }
-    if (typeof addressReviewValue.validation_source === 'string') {
-      addressReview.validation_source = addressReviewValue.validation_source;
-    }
-    if (isNullableRecord(addressReviewValue.geocode_top)) {
-      addressReview.geocode_top = addressReviewValue.geocode_top;
-    }
-    if (typeof addressReviewValue.ahp_score === 'number') {
-      addressReview.ahp_score = addressReviewValue.ahp_score;
-    }
-    if (typeof addressReviewValue.ahp_label === 'string') {
-      addressReview.ahp_label = addressReviewValue.ahp_label;
-    }
-    if (typeof addressReviewValue.top_failing_criterion === 'string') {
-      addressReview.top_failing_criterion = addressReviewValue.top_failing_criterion;
-    }
-    if (isStringArray(addressReviewValue.evidence_families)) {
-      addressReview.evidence_families = addressReviewValue.evidence_families;
-    }
-    if (typeof addressReviewValue.suggested_action === 'string') {
-      addressReview.suggested_action = addressReviewValue.suggested_action;
-    }
-    if (Object.keys(addressReview).length > 0) {
-      parsedDetails.address_consistency_review = addressReview;
-    }
-  }
-
-  const conflictingRestaurantValue = value.conflicting_restaurant;
-  if (
-    isRecord(conflictingRestaurantValue)
-    && typeof conflictingRestaurantValue.id === 'string'
-    && typeof conflictingRestaurantValue.name === 'string'
-    && typeof conflictingRestaurantValue.jibun_address === 'string'
-    && (
-      conflictingRestaurantValue.road_address === undefined
-      || typeof conflictingRestaurantValue.road_address === 'string'
-    )
-  ) {
-    parsedDetails.conflicting_restaurant = {
-      id: conflictingRestaurantValue.id,
-      name: conflictingRestaurantValue.name,
-      jibun_address: conflictingRestaurantValue.jibun_address,
-      ...(typeof conflictingRestaurantValue.road_address === 'string'
-        ? { road_address: conflictingRestaurantValue.road_address }
-        : {}),
-    };
-  }
-  if (typeof value.similarity_score === 'number') {
-    parsedDetails.similarity_score = value.similarity_score;
-  }
-  if (typeof value.detected_at === 'string') {
-    parsedDetails.detected_at = value.detected_at;
-  }
-
-  return Object.keys(parsedDetails).length > 0 ? parsedDetails : null;
-}
-
-function getString(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
-function getNullableString(value: unknown): string | null {
-  return isNullableString(value) ? value : null;
-}
-
-function getNullableNumber(value: unknown): number | null {
-  return typeof value === 'number' ? value : null;
-}
-
-function normalizeEvaluationRecord(value: unknown): EvaluationRecord | null {
-  if (!isRecord(value) || typeof value.id !== 'string') return null;
-
-  const status = isEvaluationRecordStatus(value.status) ? value.status : 'pending';
-  const name = getString(value.name);
-  const roadAddress = getNullableString(value.road_address);
-  const jibunAddress = getNullableString(value.jibun_address);
-  const englishAddress = getNullableString(value.english_address);
-  const addressElements = isRecord(value.address_elements) ? value.address_elements : {};
-  const originAddress = isRecord(value.origin_address) ? value.origin_address : {};
-  const youtubeLink = getString(value.youtube_link);
-  const categories = isNullableStringArray(value.categories) ? value.categories : null;
-  const youtubeLinks = isNullableStringArray(value.youtube_links)
-    ? value.youtube_links
-    : (youtubeLink ? [youtubeLink] : null);
-
-  return {
-    id: value.id,
-    name,
-    phone: getNullableString(value.phone),
-    categories,
-    lat: getNullableNumber(value.lat),
-    lng: getNullableNumber(value.lng),
-    road_address: roadAddress,
-    jibun_address: jibunAddress,
-    english_address: englishAddress,
-    address_elements: addressElements,
-    origin_address: originAddress,
-    youtube_links: youtubeLinks,
-    youtube_meta: parseYoutubeMeta(value.youtube_meta),
-    unique_id: getNullableString(value.unique_id ?? value.trace_id),
-    tzuyang_reviews: Array.isArray(value.tzuyang_reviews)
-      ? value.tzuyang_reviews.filter(isRecord)
-      : [],
-    reasoning_basis: getNullableString(value.reasoning_basis),
-    evaluation_results: parseEvaluationResults(value.evaluation_results),
-    source_type: getNullableString(value.source_type),
-    geocoding_success: value.geocoding_success === true,
-    geocoding_false_stage: getNullableNumber(value.geocoding_false_stage),
-    status,
-    is_missing: value.is_missing === true,
-    is_not_selected: value.is_not_selected === true,
-    review_count: typeof value.review_count === 'number' ? value.review_count : 0,
-    created_by: getNullableString(value.created_by),
-    updated_by_admin_id: getNullableString(value.updated_by_admin_id),
-    db_error_details: parseDbErrorDetails(value.db_error_details),
-    created_at: getString(value.created_at),
-    updated_at: getString(value.updated_at),
-    restaurant_name: typeof value.restaurant_name === 'string'
-      ? value.restaurant_name
-      : undefined,
-    youtube_link: youtubeLink,
-    restaurant_info: {
-      name,
-      phone: getNullableString(value.phone),
-      category: categories?.[0] ?? '',
-      origin_address: getString(originAddress.address) || roadAddress || jibunAddress || '',
-      origin_lat: typeof originAddress.lat === 'number'
-        ? originAddress.lat
-        : (typeof value.lat === 'number' ? value.lat : 0),
-      origin_lng: typeof originAddress.lng === 'number'
-        ? originAddress.lng
-        : (typeof value.lng === 'number' ? value.lng : 0),
-      reasoning_basis: getString(value.reasoning_basis),
-      tzuyang_review: getString(value.tzuyang_review),
-      naver_address_info: roadAddress || jibunAddress
-        ? {
-            road_address: roadAddress,
-            jibun_address: jibunAddress || '',
-            english_address: englishAddress,
-            address_elements: addressElements,
-            x: typeof value.lng === 'number' ? value.lng.toString() : '',
-            y: typeof value.lat === 'number' ? value.lat.toString() : '',
-          }
-        : null,
-    },
-    ...(isNullableString(value.geocoding_fail_reason)
-      ? { geocoding_fail_reason: value.geocoding_fail_reason }
-      : {}),
-    ...(isNullableString(value.db_error_message)
-      ? { db_error_message: value.db_error_message }
-      : {}),
-    ...(isNullableString(value.missing_message)
-      ? { missing_message: value.missing_message }
-      : {}),
-    ...(isNullableString(value.approved_name)
-      ? { approved_name: value.approved_name }
-      : {}),
-    ...(isNullableString(value.origin_name)
-      ? { origin_name: value.origin_name }
-      : {}),
-    ...(isNullableString(value.naver_name)
-      ? { naver_name: value.naver_name }
-      : {}),
-    ...(isNullableString(value.google_name)
-      ? { google_name: value.google_name }
-      : {}),
-    ...(isNullableString(value.trace_id)
-      ? { trace_id: value.trace_id }
-      : {}),
-    ...(isNullableString(value.trace_id_name_source)
-      ? { trace_id_name_source: value.trace_id_name_source }
-      : {}),
-    ...(isNullableString(value.channel_name)
-      ? { channel_name: value.channel_name }
-      : {}),
-    ...(isNullableString(value.description_map_url)
-      ? { description_map_url: value.description_map_url }
-      : {}),
-    ...(isNullableRecord(value.recollect_version)
-      ? { recollect_version: value.recollect_version }
-      : {}),
-  };
-}
-
-function withAdminEvaluationDisplayName(record: EvaluationRecord): EvaluationRecord {
-  const displayName = getAdminEvaluationDisplayName({
-    approved_name: record.approved_name,
-    restaurant_name: record.restaurant_name,
-    name: record.name,
-    origin_name: record.origin_name,
-    naver_name: record.naver_name,
-    evaluation_results: record.evaluation_results,
-  });
-
-  return {
-    ...record,
-    name: displayName,
-    restaurant_name: displayName,
-    restaurant_info: record.restaurant_info
-      ? { ...record.restaurant_info, name: displayName }
-      : record.restaurant_info,
-  };
-}
-type ApprovalRpcResult = {
-  success?: boolean;
-  restaurant_id?: string;
-  created_restaurant_id?: string;
-};
-
-type SubmissionApprovalRpcResponse = {
-  data: unknown;
-  error: Error | null;
-};
-
-async function callSubmissionApprovalRpc(
-  functionName: string,
-  parameters: Record<string, unknown>,
-): Promise<SubmissionApprovalRpcResponse> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('submission-approval-rpc-unavailable');
-  }
-
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  const accessToken = sessionData.session?.access_token;
-  if (sessionError || !accessToken) {
-    throw new Error('submission-approval-session-unavailable');
-  }
-
-  const response = await fetch(
-    new URL(`/rest/v1/rpc/${encodeURIComponent(functionName)}`, supabaseUrl),
-    {
-      method: 'POST',
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(parameters),
-    },
-  );
-
-  const data: unknown = response.ok ? await response.json().catch(() => null) : null;
-  return {
-    data,
-    error: response.ok ? null : new Error('submission-approval-rpc-failed'),
-  };
-}
-
-function parseApprovalRpcResult(value: unknown): ApprovalRpcResult | null {
-  const result = Array.isArray(value) ? value[0] : value;
-
-  if (
-    !isRecord(result)
-    || (result.success !== undefined && typeof result.success !== 'boolean')
-    || (result.restaurant_id !== undefined && typeof result.restaurant_id !== 'string')
-    || (
-      result.created_restaurant_id !== undefined
-      && typeof result.created_restaurant_id !== 'string'
-    )
-  ) {
-    return null;
-  }
-
-  return {
-    ...(result.success === undefined ? {} : { success: result.success }),
-    ...(result.restaurant_id === undefined ? {} : { restaurant_id: result.restaurant_id }),
-    ...(
-      result.created_restaurant_id === undefined
-        ? {}
-        : { created_restaurant_id: result.created_restaurant_id }
-    ),
-  };
 }
 
 type AdminEvaluationPageWrapperProps = {
@@ -1460,7 +757,7 @@ function AdminEvaluationRouteSkeleton() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <AdminEvaluationTitleIcon embedded />
-              <h1 className="truncate bg-gradient-primary bg-clip-text text-lg font-bold text-transparent">관리자 데이터 검수</h1>
+              <h1 className="truncate text-base font-semibold leading-6">관리자 데이터 검수</h1>
             </div>
             <div className="mt-0.5 truncate text-xs text-muted-foreground">
               필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
@@ -1528,6 +825,7 @@ function AdminEvaluationPage({
   onInitialContentReady?: () => void;
 }) {
   const { toast } = useToast();
+  const managementHeader = useRestaurantManagementHeader();
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -1540,7 +838,6 @@ function AdminEvaluationPage({
 
     return user.id;
   };
-
 
 
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
@@ -1559,15 +856,67 @@ function AdminEvaluationPage({
     not_selected: 0,
     deleted: 0,
   });
+  const legacyEvaluationLoad = isLegacyBrowserAdminMutationEnabled();
+  const [serverFilteredTotal, setServerFilteredTotal] = useState(0);
+  const [pageReadError, setPageReadError] = useState(false);
+  const [recordViewsInvalidated, setRecordViewsInvalidated] = useState(false);
+  const [recordViewsRefreshing, setRecordViewsRefreshing] = useState(false);
+  const recordViewsEpochRef = useRef(0);
+  const recordViewsFenceRef = useRef(false);
+  const recordViewsRefreshRef = useRef<{ epoch: number; promise: Promise<void> } | null>(null);
+  const [pageWarnings, setPageWarnings] = useState<EvaluationWarnings>({});
+  const nextCursorRef = useRef<string | null>(null);
+  const pageEpochRef = useRef(0);
+  const pageAbortRef = useRef<AbortController | null>(null);
+  const reloadPagesRef = useRef<() => Promise<void>>(async () => {});
+  const pageRevisionRef = useRef<string | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
+  const [serverSearchQuery, setServerSearchQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setServerSearchQuery(searchQuery), 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [evalFilters, setEvalFilters] = useState<EvalFiltersState>({});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
   const [conflictPanelOpen, setConflictPanelOpen] = useState(false);
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [createRestaurantOpen, setCreateRestaurantOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
+
+  const detailRequestsRef = useRef(new Map<string, { promise: Promise<EvaluationRecord | null>; token: symbol; epoch: number }>());
+  const ensureEvaluationDetails = useCallback(async (record: EvaluationRecord): Promise<EvaluationRecord | null> => {
+    if (recordViewsFenceRef.current || (!legacyEvaluationLoad && (pageReadError || pageRevisionRef.current === null))) return null;
+    if (!record.read_summary) return record;
+    const existing = detailRequestsRef.current.get(record.id);
+    if (existing?.epoch === pageEpochRef.current) return existing.promise;
+    const epoch = pageEpochRef.current;
+    const token = Symbol();
+    const pending = (async () => {
+      try {
+        const revision = pageRevisionRef.current;
+        const suffix = revision ? `?revision=${encodeURIComponent(revision)}` : '';
+        const response = await fetch(`/api/admin/evaluations/${encodeURIComponent(record.id)}${suffix}`, { cache: 'no-store', signal: pageAbortRef.current?.signal });
+        if (response.status === 409) { await reloadPagesRef.current(); return null; }
+        if (!response.ok) throw new Error('EVALUATION_DETAIL_UNAVAILABLE');
+        const value: unknown = await response.json();
+        const parsed = isRecord(value) ? normalizeEvaluationRecord(value.record) : null;
+        if (!parsed || parsed.id !== record.id || parsed.read_summary || epoch !== pageEpochRef.current) return null;
+        const full = withAdminEvaluationDisplayName(parsed);
+        setAllRecords(previous => previous.map(row => row.id === full.id ? full : row));
+        return full;
+      } catch (error) {
+        if (epoch === pageEpochRef.current && !(error instanceof Error && error.name === 'AbortError')) toast({ variant: 'destructive', title: '상세 정보 로드 실패', description: '검수 상세 정보를 다시 불러와 주세요.' });
+        return null;
+      } finally {
+        if (detailRequestsRef.current.get(record.id)?.token === token) detailRequestsRef.current.delete(record.id);
+      }
+    })();
+    detailRequestsRef.current.set(record.id, { promise: pending, token, epoch });
+    return pending;
+  }, [toast, legacyEvaluationLoad, pageReadError]);
 
   // 승인 확인 모달 상태
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
@@ -1576,31 +925,23 @@ function AdminEvaluationPage({
     name: string;
     address: string;
   } | null>(null);
-  const [pendingRecordAction, setPendingRecordAction] = useState<PendingRecordAction | null>(null);
-  const [recordActionConfirmation, setRecordActionConfirmation] = useState('');
-
-  const clearPendingRecordAction = () => {
-    setPendingRecordAction(null);
-    setRecordActionConfirmation('');
-  };
-
   const getSameVideoDuplicateWarnings = useCallback((record: EvaluationRecord) => {
-    return findSameVideoDuplicateWarningCandidates(record, allRecords);
-  }, [allRecords]);
+    return legacyEvaluationLoad ? findSameVideoDuplicateWarningCandidates(record, allRecords) : (pageWarnings[record.id]?.sameVideo.candidates ?? []);
+  }, [allRecords, legacyEvaluationLoad, pageWarnings]);
 
   const notifySameVideoDuplicateWarning = useCallback((record: EvaluationRecord, actionLabel: string) => {
-    const message = formatSameVideoDuplicateWarning(getSameVideoDuplicateWarnings(record));
+    const message = legacyEvaluationLoad ? formatSameVideoDuplicateWarning(getSameVideoDuplicateWarnings(record)) : (pageWarnings[record.id]?.sameVideo.message ?? '');
     if (!message) return;
 
     toast({
       title: `같은 영상 중복 후보 확인 후 ${actionLabel}`,
       description: message,
     });
-  }, [getSameVideoDuplicateWarnings, toast]);
+  }, [getSameVideoDuplicateWarnings, toast, legacyEvaluationLoad, pageWarnings]);
 
   const getRestaurantIdentityWarnings = useCallback((record: EvaluationRecord) => {
-    return findRestaurantIdentityWarnings(record, allRecords);
-  }, [allRecords]);
+    return legacyEvaluationLoad ? findRestaurantIdentityWarnings(record, allRecords) : (pageWarnings[record.id]?.identity ?? findRestaurantIdentityWarnings(record));
+  }, [allRecords, legacyEvaluationLoad, pageWarnings]);
 
   const notifyRestaurantIdentityWarning = useCallback((record: EvaluationRecord, actionLabel: string) => {
     const warnings = getRestaurantIdentityWarnings(record);
@@ -1637,6 +978,15 @@ function AdminEvaluationPage({
     () => (embedded ? null : buildCanonicalAdminEvaluationsHref(searchParams)),
     [embedded, searchParams],
   );
+  const evaluationPageQuery = useMemo(() => {
+    if (legacyEvaluationLoad) return '';
+    const params = new URLSearchParams({ q: serverSearchQuery, filters: JSON.stringify(evalFilters) });
+    if (deepLinkFilter?.videoId) params.set('videoId', deepLinkFilter.videoId);
+    if (deepLinkFilter?.issue) params.set('issue', deepLinkFilter.issue);
+    if (deepLinkFilter?.reason) params.set('reason', deepLinkFilter.reason);
+    return params.toString();
+  }, [serverSearchQuery, evalFilters, deepLinkFilter, legacyEvaluationLoad]);
+
   const clearDeepLinkFilter = useCallback(() => {
     setDeepLinkFilter(null);
     deepLinkInitializedRef.current = true;
@@ -1691,7 +1041,6 @@ function AdminEvaluationPage({
   // URL 파라미터에 따라 Deep-link 필터 초기화
   useEffect(() => {
     if (deepLinkInitializedRef.current) return;
-    if (embedded) return;
 
     const videoId = searchParams.get('video_id')?.trim() || '';
     const issue = searchParams.get('issue')?.trim() || '';
@@ -1708,6 +1057,8 @@ function AdminEvaluationPage({
   }, [embedded, searchParams]);
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
   const [editingSubmission, setEditingSubmission] = useState<SubmissionRecord | null>(null);
+  const [submissionEditorOpen, setSubmissionEditorOpen] = useState(false);
+  const [submissionDraft, setSubmissionDraft] = useState<Parameters<typeof submissionEditInput>[1] | null>(null);
   const queryClient = useQueryClient();
   const invalidateAdminPendingCounts = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['admin-pending-counts'] });
@@ -1721,7 +1072,10 @@ function AdminEvaluationPage({
       if (!savedState) return;
 
       if (savedState.selectedStatuses) setSelectedStatuses(savedState.selectedStatuses);
-      if (savedState.searchQuery !== undefined) setSearchQuery(savedState.searchQuery);
+      if (savedState.searchQuery !== undefined) {
+        setSearchQuery(savedState.searchQuery);
+        setServerSearchQuery(savedState.searchQuery);
+      }
       if (savedState.evalFilters) setEvalFilters(savedState.evalFilters);
       if (savedState.isAlternateView !== undefined) setIsAlternateView(savedState.isAlternateView);
     } catch {
@@ -1799,144 +1153,8 @@ function AdminEvaluationPage({
     hasCheckedAuth.current = true;
   }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, toast, router]);
 
-  const filteredRecords = useMemo(() => {
-    let filtered = allRecords;
+  const filteredRecords = useMemo(() => legacyEvaluationLoad ? filterEvaluationRecords(allRecords, { searchQuery, evalFilters, deepLinkFilter }) : allRecords, [allRecords, searchQuery, evalFilters, deepLinkFilter, legacyEvaluationLoad]);
 
-    if (searchQuery.trim()) {
-      filtered = filtered.filter((record) => matchesAdminEvaluationSearch(record, searchQuery));
-    }
-
-    // 상태 필터링 (evalFilters.status)
-    if (evalFilters.status) {
-      // 'deleted' 필터 선택 시 이미 검색된 결과에서 deleted만 추출
-      if (evalFilters.status === 'deleted') {
-        filtered = filtered.filter(r => r.status === 'deleted');
-      } else {
-        filtered = filtered.filter(r => {
-          let match = false;
-
-          switch (evalFilters.status) {
-            case 'missing':
-              match = isAdminEvaluationRecordMissing(r);
-              break;
-            case 'not_selected':
-              match = isAdminEvaluationRecordNotSelected(r);
-              break;
-            case 'unconfirmed_map':
-              match = isAdminEvaluationRecordUnconfirmedMapLocation(r);
-              break;
-            case 'ready_for_approval':
-              match = isAdminEvaluationRecordReadyForApproval(r);
-              break;
-            default:
-              // 일반 상태: status 필드와 일치하는 레코드
-              match = r.status === evalFilters.status;
-              break;
-          }
-
-          return match;
-        });
-      }
-    }
-
-    // 1. Visit Authenticity 필터 (0-3점)
-    if (evalFilters.visit_authenticity) {
-      const targetScore = parseInt(evalFilters.visit_authenticity);
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.visit_authenticity?.eval_value === targetScore
-      );
-    }
-
-    // 2. RB Inference Score 필터 (0-2점)
-    if (evalFilters.rb_inference_score) {
-      const targetScore = parseInt(evalFilters.rb_inference_score);
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.rb_inference_score?.eval_value === targetScore
-      );
-    }
-
-    // 3. RB Grounding TF 필터 (T/F)
-    if (evalFilters.rb_grounding_TF) {
-      const targetValue = evalFilters.rb_grounding_TF === 'True';
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.rb_grounding_TF?.eval_value === targetValue
-      );
-    }
-
-    // 4. Review Faithfulness Score 필터 (0-1점)
-    if (evalFilters.review_faithfulness_score) {
-      const targetScore = parseFloat(evalFilters.review_faithfulness_score);
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.review_faithfulness_score?.eval_value === targetScore
-      );
-    }
-
-    // 5. 주소 정합 필터 (True/False/Failed) - 상세/테이블 표시와 같은 helper 사용
-    if (evalFilters.geocoding_success) {
-      const targetStatusByFilter: Record<string, ReturnType<typeof getAddressConsistencyStatus>[]> = {
-        true: ['true'],
-        false_match: ['false'],
-        false_geocode: ['failed'],
-        review: ['review', 'candidate'],
-      };
-      const targetStatuses = targetStatusByFilter[evalFilters.geocoding_success];
-      if (targetStatuses) {
-        filtered = filtered.filter(r => targetStatuses.includes(getAddressConsistencyStatus(r)));
-      }
-    }
-
-    // 6. Category Validity TF 필터 (T/F)
-    if (evalFilters.category_validity_TF) {
-      const targetValue = evalFilters.category_validity_TF === 'True';
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.category_validity_TF?.eval_value === targetValue
-      );
-    }
-
-    // 7. Category TF 필터 (T/F)
-    if (evalFilters.category_TF) {
-      const targetValue = evalFilters.category_TF === 'True';
-      filtered = filtered.filter(r =>
-        r.evaluation_results?.category_TF?.eval_value === targetValue
-      );
-    }
-
-    // 8. Status 필터는 위에서 이미 처리됨
-
-    // Deep-link 필터 (video_id/issue/reason)
-    if (deepLinkFilter?.videoId) {
-      filtered = filtered.filter((record) => (
-        extractVideoIdFromYoutubeLink(record.youtube_link) === deepLinkFilter.videoId
-      ));
-    }
-
-    if (deepLinkFilter?.issue === 'notSelection') {
-      filtered = filtered.filter((record) => record.is_not_selected === true);
-
-      if (deepLinkFilter.reason) {
-        filtered = filtered.filter((record) => (
-          toNotSelectionReason({
-            is_not_selected: record.is_not_selected,
-            is_missing: record.is_missing,
-            geocoding_false_stage: record.geocoding_false_stage,
-            geocoding_success: record.geocoding_success,
-          }) === deepLinkFilter.reason
-        ));
-      }
-    } else if (deepLinkFilter?.issue === 'ruleFalse') {
-      filtered = filtered.filter((record) => {
-        const message = getLocationMatchFalseMessage(record.evaluation_results);
-        if (!message) return false;
-        return deepLinkFilter.reason ? message === deepLinkFilter.reason : true;
-      });
-    } else if (deepLinkFilter?.issue === 'laajGap') {
-      filtered = filtered.filter((record) => (
-        hasRuleMetrics(record.evaluation_results) && !hasLaajMetrics(record.evaluation_results)
-      ));
-    }
-
-    return [...filtered].sort(compareAdminEvaluationsByLatestDesc);
-  }, [allRecords, searchQuery, evalFilters, deepLinkFilter]);
 
   // filteredRecords가 정의된 후에 useEffect 위치
   useEffect(() => {
@@ -1963,7 +1181,33 @@ function AdminEvaluationPage({
   }, [filteredRecords]);
 
   // 더 많은 레코드 로드
-  const loadMoreRecords = useCallback(() => {
+  const loadMoreRecords = useCallback(async () => {
+    if (recordViewsFenceRef.current) return;
+    if (!legacyEvaluationLoad) {
+      if (loadingMoreRef.current || !nextCursorRef.current) return;
+      const epoch = pageEpochRef.current;
+      loadingMoreRef.current = true;
+      setLoadingMore(true);
+      try {
+        const page = await fetchAdminEvaluationPage(evaluationPageQuery, nextCursorRef.current, pageAbortRef.current?.signal);
+        if (epoch !== pageEpochRef.current) return;
+        const records = page.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName);
+        setAllRecords(previous => [...new Map([...previous, ...records].map(record => [record.id, record])).values()]);
+        setPageWarnings(previous => ({ ...previous, ...page.warnings }));
+        nextCursorRef.current = page.nextCursor;
+        setStats(page.stats);
+        setServerFilteredTotal(page.filteredTotal);
+        setHasMore(page.nextCursor !== null);
+        hasMoreRef.current = page.nextCursor !== null;
+      } catch (error) {
+        if (epoch !== pageEpochRef.current || (error instanceof Error && error.name === 'AbortError')) return;
+        if (isEvaluationCursorStale(error)) await reloadPagesRef.current();
+        else toast({ variant: 'destructive', title: '데이터 로드 실패', description: '다음 검수 데이터를 불러오지 못했습니다.' });
+      } finally {
+        if (epoch === pageEpochRef.current) { loadingMoreRef.current = false; setLoadingMore(false); }
+      }
+      return;
+    }
     if (loadingMoreRef.current || !hasMoreRef.current) return;
 
     loadingMoreRef.current = true;
@@ -1984,18 +1228,18 @@ function AdminEvaluationPage({
         return [...prev, ...newRecords];
       });
     }, 100);
-  }, []);
+  }, [legacyEvaluationLoad, evaluationPageQuery, toast]);
 
   // 필터링 결과가 변경될 때마다 표시할 레코드 초기화
   useEffect(() => {
-    const nextHasMore = filteredRecords.length > PAGE_SIZE;
+    const nextHasMore = legacyEvaluationLoad ? filteredRecords.length > PAGE_SIZE : nextCursorRef.current !== null;
 
-    setDisplayedRecords(filteredRecords.slice(0, PAGE_SIZE));
+    setDisplayedRecords(legacyEvaluationLoad ? filteredRecords.slice(0, PAGE_SIZE) : filteredRecords);
     setHasMore(nextHasMore);
     hasMoreRef.current = nextHasMore;
     loadingMoreRef.current = false;
     setLoadingMore(false);
-  }, [filteredRecords]);
+  }, [filteredRecords, legacyEvaluationLoad]);
 
   const visibleDisplayedRecords = useMemo(() => {
     if (displayedRecords.length > 0 || filteredRecords.length === 0) {
@@ -2057,8 +1301,55 @@ function AdminEvaluationPage({
     }
   }, [isAlternateView, currentSlideIndex, displayedRecords.length, hasMore, loadingMore, loadMoreRecords]);
 
+  useEffect(() => {
+    if (isAlternateView && displayedRecords[currentSlideIndex]?.read_summary) void ensureEvaluationDetails(displayedRecords[currentSlideIndex]);
+  }, [isAlternateView, currentSlideIndex, displayedRecords, ensureEvaluationDetails]);
+
   // 전체 데이터 로드 (한 번만)
   const loadAllRecords = useCallback(async () => {
+    if (!legacyEvaluationLoad) {
+      const epoch = ++pageEpochRef.current;
+      pageAbortRef.current?.abort();
+      pageAbortRef.current = new AbortController();
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+      setLoading(true);
+      nextCursorRef.current = null;
+      pageRevisionRef.current = null;
+      detailRequestsRef.current.clear();
+      setPageReadError(false);
+      setAllRecords([]);
+      setDisplayedRecords([]);
+      setPageWarnings({});
+      setServerFilteredTotal(0);
+      setStats({ total: 0, pending: 0, approved: 0, hold: 0, db_conflict: 0, ready_for_approval: 0, unconfirmed_map: 0, missing: 0, not_selected: 0, deleted: 0 });
+      setHasMore(false);
+      hasMoreRef.current = false;
+      setCurrentSlideIndex(0);
+      try {
+        const page = await fetchAdminEvaluationPage(evaluationPageQuery, null, pageAbortRef.current.signal);
+        if (epoch !== pageEpochRef.current) return;
+        setAllRecords(page.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName));
+        setPageWarnings(page.warnings);
+        pageRevisionRef.current = page.revision;
+        setStats(page.stats);
+        setServerFilteredTotal(page.filteredTotal);
+        nextCursorRef.current = page.nextCursor;
+        setHasMore(page.nextCursor !== null);
+        hasMoreRef.current = page.nextCursor !== null;
+      } catch (error) {
+        if (epoch !== pageEpochRef.current || (error instanceof Error && error.name === 'AbortError')) return;
+        setAllRecords([]); setDisplayedRecords([]); setHasMore(false);
+        setPageReadError(true);
+        setPageWarnings({});
+        setServerFilteredTotal(0);
+        pageRevisionRef.current = null;
+        nextCursorRef.current = null;
+        hasMoreRef.current = false;
+        toast({ variant: 'destructive', title: '데이터 로드 실패', description: '검수 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.' });
+      } finally { if (epoch === pageEpochRef.current) setLoading(false); }
+      return;
+    }
     try {
       setLoading(true);
 
@@ -2172,30 +1463,35 @@ function AdminEvaluationPage({
     } finally {
       setLoading(false);
     }
-  }, [toast, user?.id]);
+  }, [toast, user?.id, legacyEvaluationLoad, evaluationPageQuery]);
+  useEffect(() => { reloadPagesRef.current = async () => { if (!recordViewsFenceRef.current) await loadAllRecords(); }; }, [loadAllRecords]);
 
   // 초기 데이터 로드
   useEffect(() => {
     // 이미 데이터를 로드했으면 건너뛰기 (컴포넌트 재마운트 시 중복 로드 방지)
-    if (hasLoadedData.current) {
+    if (legacyEvaluationLoad && hasLoadedData.current) {
       return;
     }
 
-    if (((user && isAdmin) || hasE2EAdminShellBypass) && !authLoading) {
+    if (!recordViewsFenceRef.current && ((user && isAdmin) || hasE2EAdminShellBypass) && !authLoading) {
       hasLoadedData.current = true;
       loadAllRecords();
     }
-  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, loadAllRecords]);
+  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, loadAllRecords, legacyEvaluationLoad]);
+  useEffect(() => () => { pageEpochRef.current++; pageAbortRef.current?.abort(); }, []);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
+    if (recordViewsFenceRef.current) return;
     setAllRecords(prev =>
       prev.map(r => r.id === recordId ? { ...r, ...updates } : r)
     );
+    if (!legacyEvaluationLoad) void loadAllRecords();
   };
 
   // 통계 재계산 (현재 allRecords 기준)
   const recalculateStats = useCallback(() => {
+    if (!legacyEvaluationLoad) return;
     const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
 
     const newStats: CategoryStats = {
@@ -2212,7 +1508,7 @@ function AdminEvaluationPage({
     };
 
     setStats(newStats);
-  }, [allRecords]);
+  }, [allRecords, legacyEvaluationLoad]);
 
   // allRecords가 변경될 때마다 통계 재계산
   useEffect(() => {
@@ -2223,6 +1519,9 @@ function AdminEvaluationPage({
 
   // 승인 핸들러 (오류 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    record = full;
     if (needsEvaluationRerun(record)) {
       toast({
         variant: 'destructive',
@@ -2275,7 +1574,7 @@ function AdminEvaluationPage({
 
     try {
       setLoading(true);
-      const adminUserId = requireAdminUserId();
+      requireAdminUserId();
       notifySameVideoDuplicateWarning(record, '승인');
 
       // YouTube 링크 추출 (단일 값)
@@ -2315,27 +1614,7 @@ function AdminEvaluationPage({
 
         // 유튜브 링크가 같은 경우: 중복 오류 처리 (기존 로직)
         // 중복 발견 시 에러 정보 저장
-        const errorDetails = {
-          error_type: 'duplicate' as const,
-          conflicting_restaurant_id: duplicateCheck.matchedRestaurant!.id,
-          detected_at: new Date().toISOString(),
-        };
 
-        // status는 유지하고 에러 메시지만 저장
-        assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'record duplicate error update');
-        await supabase
-          .from('restaurants')
-          .update({
-            db_error_message: '중복 후보가 확인되었습니다.',
-            db_error_details: errorDetails,
-          })
-          .eq('id', record.id);
-
-        // 상태 업데이트 (새로고침 없이)
-        updateRecordInState(record.id, {
-          db_error_message: '중복 후보가 확인되었습니다.',
-          db_error_details: errorDetails,
-        });
 
         toast({
           variant: 'destructive',
@@ -2348,189 +1627,63 @@ function AdminEvaluationPage({
       }
 
       // 실제 승인 처리 실행
-      await performApproval(record, adminUserId);
+      await performApproval(record);
 
-    } catch {
-      toast({
-        variant: 'destructive',
-        title: '승인 처리 실패',
-        description: '승인 처리에 실패했습니다. 잠시 후 다시 시도해주세요.',
-      });
+    } catch (error) {
+      notifyRecordActionError(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // 실제 승인 처리 실행 (중복 확인 후 재사용)
-  const performApproval = async (record: EvaluationRecord, adminUserId: string) => {
-    // 승인명은 관리자 수정값(approved_name)을 최우선으로 사용한다.
-    // 수정 후 승인 시 naver_name/google_name이 이전 후보명으로 남아 있어도 지도 노출명은 관리자 확정명을 따라야 한다.
-    const approvedName = getAdminEvaluationApprovalName(record);
-
-
-    // status를 'approved'로 업데이트 및 approved_name 저장
-    assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'restaurant approval update');
-    const updatedAt = new Date().toISOString();
-    const { error } = await supabase
-      .from('restaurants')
-      .update({
-        status: 'approved',
-        approved_name: approvedName,
-        db_error_message: null, // 에러 메시지 초기화
-        db_error_details: null, // 에러 상세 초기화
-        updated_by_admin_id: adminUserId,
-        updated_at: updatedAt,
-      })
-      .eq('id', record.id);
-      if (error) throw error;
-
-    // 상태 업데이트 (새로고침 없이 UI 반영)
-    updateRecordInState(record.id, {
-      status: 'approved',
-      name: approvedName,
-      approved_name: approvedName,
-      restaurant_name: approvedName,
-      db_error_message: null,
-      db_error_details: null,
-      updated_by_admin_id: adminUserId,
-      updated_at: updatedAt,
-      ...(record.restaurant_info
-        ? {
-            restaurant_info: {
-              ...record.restaurant_info,
-              name: approvedName,
-            },
-          }
-        : {}),
-    });
-
-    toast({
-      title: '승인 완료',
-      description: `✅ "${approvedName}" 맛집이 승인되었습니다`,
-    });
-    void invalidateRestaurantDiscoveryQueries(queryClient);
+  const performApproval = async (record: EvaluationRecord) => {
+    const receipt = await recordActions.run({ action: 'restaurant.approve', targetIds: [record.id], payload: {} });
+    await onRecordApplied(receipt);
   };
 
-  // 삭제 핸들러 (Soft Delete)
   const handleDelete = async (record: EvaluationRecord) => {
     notifyRestaurantIdentityWarning(record, '삭제');
     notifySameVideoDuplicateWarning(record, '삭제');
-
     try {
-      const adminUserId = requireAdminUserId();
-      const updatedAt = new Date().toISOString();
-      assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'restaurant delete update');
-
-      // Soft Delete: 휴지통 아이콘 클릭 즉시 status를 'deleted'로 변경
-      const { error } = await supabase
-        .from('restaurants')
-        .update({
-          status: 'deleted',
-          updated_by_admin_id: adminUserId,
-          updated_at: updatedAt,
-        })
-        .eq('id', record.id);
-
-      if (error) throw error;
-
-      // 상태 업데이트 (새로고침 없이)
-      updateRecordInState(record.id, {
-        status: 'deleted',
-        updated_by_admin_id: adminUserId,
-        updated_at: updatedAt,
-      });
-
-      toast({
-        title: '삭제 완료',
-        description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다`,
-      });
-      void invalidateRestaurantDiscoveryQueries(queryClient);
-      if (pendingRecordAction?.record.id === record.id) clearPendingRecordAction();
-    } catch {
-      toast({
-        variant: 'destructive',
-        title: '삭제 실패',
-        description: '삭제 처리에 실패했습니다. 잠시 후 다시 시도해주세요.',
-      });
-    }
+      requireAdminUserId();
+      const receipt = await recordActions.run({ action: 'restaurant.delete', targetIds: [record.id], payload: { reason: '관리자에 의해 삭제됨' } });
+      await onRecordApplied(receipt);
+    } catch (error) { notifyRecordActionError(error); }
   };
 
-  const handleRegisterMissing = (record: EvaluationRecord) => {
-    setSelectedMissingRecord(record);
+  const handleRegisterMissing = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    setSelectedMissingRecord(full);
     setMissingFormOpen(true);
   };
 
-  const handleResolveConflict = (record: EvaluationRecord) => {
-    setSelectedConflictRecord(record);
+  const handleResolveConflict = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    setSelectedConflictRecord(full);
     setConflictPanelOpen(true);
   };
 
-  const handleEdit = (record: EvaluationRecord) => {
-    setSelectedEditRecord(record);
+  const handleEdit = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (!full) return;
+    setSelectedEditRecord(full);
     setEditModalOpen(true);
   };
 
-  // 삭제된 레코드 복원 (pending 상태로 되돌리기)
   const handleRestore = async (record: EvaluationRecord) => {
-    if (pendingRecordAction?.kind !== 'restore' || pendingRecordAction.record.id !== record.id) {
-      setPendingRecordAction({ kind: 'restore', record });
-      setRecordActionConfirmation('');
-      return;
-    }
-
-    if (recordActionConfirmation !== EVALUATION_RESTORE_CONFIRMATION) {
-      toast({
-        variant: 'destructive',
-        title: '확인 문구가 필요합니다',
-        description: `"${EVALUATION_RESTORE_CONFIRMATION}"를 입력한 뒤 복원을 적용하세요.`,
-      });
-      return;
-    }
-
+    notifyRestaurantIdentityWarning(record, '복원');
+    notifySameVideoDuplicateWarning(record, '복원');
     try {
-      setLoading(true);
-      const adminUserId = requireAdminUserId();
-      const updatedAt = new Date().toISOString();
-      assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'restaurant restore update');
-
-      // status를 'pending'으로 업데이트
-      const { error } = await supabase
-        .from('restaurants')
-        .update({
-          status: 'pending',
-          updated_by_admin_id: adminUserId,
-          updated_at: updatedAt,
-        })
-        .eq('id', record.id);
-
-      if (error) throw error;
-
-      // 상태 업데이트 (새로고침 없이)
-      updateRecordInState(record.id, {
-        status: 'pending',
-        updated_by_admin_id: adminUserId,
-        updated_at: updatedAt,
-      });
-
-      toast({
-        title: '복원 완료',
-        description: `"${record.restaurant_name || record.name}"이(가) 미처리 상태로 복원되었습니다`,
-      });
-      void invalidateRestaurantDiscoveryQueries(queryClient);
-      clearPendingRecordAction();
-    } catch {
-      toast({
-        variant: 'destructive',
-        title: '복원 실패',
-        description: '복원 처리에 실패했습니다. 잠시 후 다시 시도해주세요.',
-      });
-    } finally {
-      setLoading(false);
-    }
+      requireAdminUserId();
+      const receipt = await recordActions.run({ action: 'restaurant.restore', targetIds: [record.id], payload: {} });
+      await onRecordApplied(receipt);
+    } catch (error) { notifyRecordActionError(error); }
   };
 
   // 사용자 제보 데이터 쿼리 (새 테이블 구조)
-  const { data: submissionsData = [], isLoading: submissionsLoading } = useQuery({
+  const submissionsQuery = useQuery({
     queryKey: ['admin-submissions-inline', user?.id, isAdmin],
     queryFn: async () => {
       if (!user || !isAdmin) return [];
@@ -2657,12 +1810,13 @@ function AdminEvaluationPage({
       });
 
     },
-    enabled: !!user && isAdmin,
-    refetchInterval: 30000,
+    enabled: !!user && isAdmin && !recordViewsInvalidated,
+    refetchInterval: recordViewsInvalidated ? false : 30000,
     refetchOnWindowFocus: true,
   });
+  const { data: submissionsData = [], isLoading: submissionsLoading } = submissionsQuery;
 
-  const { data: recommendationRequestsData = [], isLoading: recommendationRequestsLoading } = useQuery({
+  const recommendationRequestsQuery = useQuery({
     queryKey: ['admin-restaurant-requests-inline', user?.id, isAdmin],
     queryFn: async () => {
       if (!user || !isAdmin) return [];
@@ -2729,28 +1883,19 @@ function AdminEvaluationPage({
         original_restaurant_data: null,
       }));
     },
-    enabled: !!user && isAdmin,
-    refetchInterval: 30000,
+    enabled: !!user && isAdmin && !recordViewsInvalidated,
+    refetchInterval: recordViewsInvalidated ? false : 30000,
     refetchOnWindowFocus: true,
   });
+  const { data: recommendationRequestsData = [], isLoading: recommendationRequestsLoading } = recommendationRequestsQuery;
 
   const allSubmissionRecords = useMemo(
     () => [...submissionsData, ...recommendationRequestsData],
     [submissionsData, recommendationRequestsData],
   );
 
-  const updateRecommendationRequestReadbackInCache = useCallback((submission: SubmissionRecord) => {
-    queryClient.setQueryData<SubmissionRecord[]>(
-      ['admin-restaurant-requests-inline', user?.id, isAdmin],
-      (current) =>
-        current?.map((currentSubmission) =>
-          currentSubmission.id === submission.id ? submission : currentSubmission,
-        ) ?? current,
-    );
-  }, [isAdmin, queryClient, user?.id]);
-
   // 리뷰 데이터 쿼리
-  const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
+  const reviewsQuery = useQuery({
     queryKey: ['admin-reviews-inline', user?.id, isAdmin],
     queryFn: async () => {
       if (!user || !isAdmin) return [];
@@ -2789,18 +1934,20 @@ function AdminEvaluationPage({
         restaurants: restaurantsMap.get(review.restaurant_id) || { name: '삭제된 맛집', address: '' }
       }));
     },
-    enabled: !!user && isAdmin,
-    refetchInterval: 30000,
+    enabled: !!user && isAdmin && !recordViewsInvalidated,
+    refetchInterval: recordViewsInvalidated ? false : 30000,
   });
+  const { data: reviewsData = [], isLoading: reviewsLoading } = reviewsQuery;
 
-  const { data: canonicalPendingCounts } = useQuery({
+  const pendingCountsQuery = useQuery({
     queryKey: [...ADMIN_PENDING_COUNTS_QUERY_KEY, user?.id, isAdmin],
     queryFn: fetchAdminEvaluationPendingCounts,
-    enabled: !!user && isAdmin,
+    enabled: !!user && isAdmin && !recordViewsInvalidated,
     staleTime: 15 * 1000,
-    refetchInterval: 30 * 1000,
+    refetchInterval: recordViewsInvalidated ? false : 30 * 1000,
     refetchOnWindowFocus: true,
   });
+  const { data: canonicalPendingCounts } = pendingCountsQuery;
 
   // pending 리뷰(미승인, 거부 아닌) 건수 계산
   const pendingReviewsCount = useMemo(() => {
@@ -2834,671 +1981,132 @@ function AdminEvaluationPage({
   const totalPendingCount = getAdminPendingCountsTotal(pendingCounts);
   const pendingQueueSummaryText = showSubmissionView
     ? `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
-    : `필터링: ${filteredRecords.length}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
+    : `필터링: ${legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
   const isInitialEvaluationDataLoading = !showSubmissionView && loading && allRecords.length === 0;
-  const pendingQueueSummaryContent = showSubmissionView || !isInitialEvaluationDataLoading
+  const pendingQueueSummaryContent = recordViewsInvalidated ? '새 조회 필요' : !showSubmissionView && !legacyEvaluationLoad && pageReadError ? '검수 목록 조회 실패' : showSubmissionView || !isInitialEvaluationDataLoading
     ? pendingQueueSummaryText
     : '필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중';
 
-  // 리뷰 승인 mutation
+  const invalidateRecordViews = useCallback(() => {
+    recordViewsFenceRef.current = true;
+    ++recordViewsEpochRef.current;
+    ++pageEpochRef.current;
+    pageAbortRef.current?.abort();
+    nextCursorRef.current = null;
+    pageRevisionRef.current = null;
+    detailRequestsRef.current.clear();
+    loadingMoreRef.current = false;
+    hasMoreRef.current = false;
+    setAllRecords([]); setDisplayedRecords([]); setPageWarnings({});
+    setServerFilteredTotal(0); setHasMore(false); setLoadingMore(false); setLoading(false);
+    setCurrentSlideIndex(0); setPageReadError(true); setRecordViewsInvalidated(true);
+    setStats({ total: 0, pending: 0, approved: 0, hold: 0, db_conflict: 0, ready_for_approval: 0, unconfirmed_map: 0, missing: 0, not_selected: 0, deleted: 0 });
+    // reset cancels each query and clears its data without launching an automatic read.
+    for (const queryKey of [['admin-submissions-inline'], ['admin-restaurant-requests-inline'], ['admin-reviews-inline'], ['admin-pending-counts'], ADMIN_SHARED_PENDING_COUNTS_QUERY_KEY]) {
+      for (const query of queryClient.getQueryCache().findAll({ queryKey })) query.reset();
+    }
+  }, [queryClient]);
+  const refreshRecordViews = useCallback(() => {
+    const epoch = recordViewsEpochRef.current;
+    if (recordViewsRefreshRef.current?.epoch === epoch) return recordViewsRefreshRef.current.promise;
+    const promise = (async () => {
+      setRecordViewsRefreshing(true);
+      try {
+        await Promise.all([
+          submissionsQuery.refetch({ throwOnError: true }), recommendationRequestsQuery.refetch({ throwOnError: true }),
+          reviewsQuery.refetch({ throwOnError: true }), pendingCountsQuery.refetch({ throwOnError: true }), loadAllRecords(),
+        ]);
+        if (epoch !== recordViewsEpochRef.current) return;
+        if (!legacyEvaluationLoad && pageRevisionRef.current === null) throw new Error('CURRENT_RECORD_READ_FAILED');
+        recordViewsFenceRef.current = false;
+        setRecordViewsInvalidated(false);
+      } catch {
+        if (epoch === recordViewsEpochRef.current) invalidateRecordViews();
+      } finally {
+        if (recordViewsRefreshRef.current?.epoch === epoch) {
+          recordViewsRefreshRef.current = null;
+          setRecordViewsRefreshing(false);
+        }
+      }
+    })();
+    recordViewsRefreshRef.current = { epoch, promise };
+    return promise;
+  }, [submissionsQuery, recommendationRequestsQuery, reviewsQuery, pendingCountsQuery, loadAllRecords, legacyEvaluationLoad, invalidateRecordViews]);
+  useEffect(() => {
+    // Creation waits for the modal to verify every returned ID before publishing the list.
+    const refresh = () => { if (!createRestaurantOpen) void refreshRecordViews(); };
+    window.addEventListener(RECORD_VIEWS_INVALIDATED_EVENT, invalidateRecordViews);
+    window.addEventListener(RECORD_ACTION_APPLIED_EVENT, refresh);
+    return () => {
+      window.removeEventListener(RECORD_VIEWS_INVALIDATED_EVENT, invalidateRecordViews);
+      window.removeEventListener(RECORD_ACTION_APPLIED_EVENT, refresh);
+    };
+  }, [invalidateRecordViews, refreshRecordViews, createRestaurantOpen]);
+
+  const notifyRecordActionError = (error: unknown) => {
+    if (!isRecordActionCancelled(error)) toast({ variant: 'destructive', title: '변경 확인 필요', description: recordActionErrorMessage(error) });
+  };
+  const onRecordApplied = async (receipt: RecordActionReceipt) => {
+    toast({ title: '변경 확인 완료', description: [recordActionMediaNotice(receipt), `감사 ID: ${receipt.auditId}`].filter(Boolean).join(' ') });
+    await Promise.all([refreshRecordViews(), invalidateRestaurantDiscoveryQueries(queryClient)]);
+    invalidateAdminPendingCounts();
+  };
+  const recordActions = useRecordAction(receipt => { void onRecordApplied(receipt); }, { recover: true });
+  const notifyTransactionalResult = (work: Promise<unknown>) => {
+    void work.catch(() => toast({ title: '변경은 확인됐습니다', description: '작성자 알림 결과는 확인하지 못했습니다. 자동으로 다시 보내지 않습니다.' }));
+  };
+  const afterReviewAction = async (receipt: RecordActionReceipt, { reviewId, review }: { reviewId: string; review: Review }) => {
+    const row = receipt.readback.find(item => item.kind === 'review' && item.id === reviewId);
+    if (review?.user_id && row?.status === 'approved') notifyTransactionalResult(createReviewApprovedNotification(review.user_id, review.restaurants?.name || '맛집'));
+    if (review?.user_id && row?.status === 'rejected') notifyTransactionalResult(createReviewRejectedNotification(review.user_id, review.restaurants?.name || '맛집', ''));
+    await onRecordApplied(receipt);
+  };
+  const afterSubmissionAction = async (receipt: RecordActionReceipt, { submission }: { submission: SubmissionRecord }) => {
+    const status = receipt.readback.find(row => row.kind === 'submission' && row.id === submission.id)?.status;
+    if (submission.submission_type !== 'recommend' && submission.user_id) {
+      if (status === 'approved' || status === 'partially_approved') notifyTransactionalResult(createSubmissionApprovedNotification(submission.user_id, submission.restaurant_name, submission.submission_type, { submissionId: submission.id }));
+      if (status === 'rejected') notifyTransactionalResult(createSubmissionRejectedNotification(submission.user_id, submission.restaurant_name, '', submission.submission_type, { submissionId: submission.id }));
+    }
+    await onRecordApplied(receipt);
+  };
   const approveReviewMutation = useMutation({
-    mutationFn: async ({ reviewId, adminNote }: { reviewId: string; adminNote: string }) => {
-      const { data: review, error: reviewError } = await supabase
-        .from('reviews')
-        .select('user_id, restaurant_id, is_verified')
-        .eq('id', reviewId)
-        .single()
-        .overrideTypes<Record<string, unknown>, { merge: false }>();
-
-      if (reviewError) throw reviewError;
-      if (!isReviewApprovalTargetRow(review)) {
-        throw new Error('review-approval-target-invalid');
-      }
-      const typedReview = review;
-      const wasAlreadyVerified = typedReview.is_verified;
-
-      // 레스토랑 이름 조회
-      const { data: restaurant } = await supabase
-        .from('restaurants')
-        .select('name:approved_name, review_count')
-        .eq('id', typedReview.restaurant_id)
-        .single()
-        .overrideTypes<Record<string, unknown>, { merge: false }>();
-      const typedRestaurant = isRestaurantReviewCountRow(restaurant) ? restaurant : null;
-      assertPrivacySafe({ adminNote });
-
-      assertLegacyBrowserAdminMutationEnabled('review_moderation', 'review approval update');
-      const { error: approveError } = await supabase.from('reviews')
-        .update({
-          is_verified: true,
-          admin_note: adminNote || null,
-          is_edited_by_admin: !!adminNote,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', reviewId);
-
-      if (approveError) throw approveError;
-
-      if (!wasAlreadyVerified) {
-        await supabase.from('restaurants')
-          .update({
-            review_count: (typedRestaurant?.review_count ?? 0) + 1,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', typedReview.restaurant_id);
-      }
-
-      return {
-        reviewId,
-        userId: typedReview.user_id,
-        restaurantName: typedRestaurant?.name || '맛집'
-      };
-    },
-    onSuccess: ({ userId, restaurantName }) => {
-      toast({ title: '리뷰 승인됨', description: '리뷰가 승인되었습니다.' });
-      // 리뷰 작성자에게 승인 알림 전송
-      if (userId) {
-        createReviewApprovedNotification(userId, restaurantName);
-      }
-      queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
-      invalidateAdminPendingCounts();
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: '승인 실패', description: '리뷰 승인 처리에 실패했습니다. 잠시 후 다시 시도해주세요.' });
-    },
+    mutationFn: ({ reviewId, adminNote }: { reviewId: string; adminNote: string; review: Review }) => recordActions.run({ action: 'review.approve', targetIds: [reviewId], payload: { note: adminNote.trim() || undefined } }),
+    onSuccess: afterReviewAction, onError: notifyRecordActionError,
   });
-
-  // 리뷰 거부 mutation
   const rejectReviewMutation = useMutation({
-    mutationFn: async ({ reviewId, adminNote }: { reviewId: string; adminNote: string }) => {
-      const { data: review, error: reviewError } = await supabase
-        .from('reviews')
-        .select('user_id, restaurant_id, is_verified')
-        .eq('id', reviewId)
-        .single()
-        .overrideTypes<Record<string, unknown>, { merge: false }>();
-
-      if (reviewError) throw reviewError;
-      if (!isReviewApprovalTargetRow(review)) {
-        throw new Error('review-rejection-target-invalid');
-      }
-      const typedReview = review;
-
-      // 레스토랑 이름 조회
-      const { data: restaurant } = await supabase
-        .from('restaurants')
-        .select('name:approved_name, review_count')
-        .eq('id', typedReview.restaurant_id)
-        .single()
-        .overrideTypes<Record<string, unknown>, { merge: false }>();
-      const typedRestaurant = isRestaurantReviewCountRow(restaurant) ? restaurant : null;
-
-      const rejectionReason = adminNote || '관리자에 의해 거부됨';
-      assertPrivacySafe({ rejectionReason });
-      assertLegacyBrowserAdminMutationEnabled('review_moderation', 'review rejection update');
-      const { error: rejectError } = await supabase.from('reviews')
-        .update({
-          is_verified: false,
-          admin_note: `거부: ${rejectionReason}`,
-          is_edited_by_admin: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', reviewId);
-
-      if (rejectError) throw rejectError;
-
-      if (typedReview.is_verified) {
-        await supabase.from('restaurants')
-          .update({
-            review_count: Math.max((typedRestaurant?.review_count ?? 0) - 1, 0),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', typedReview.restaurant_id);
-      }
-
-      return {
-        reviewId,
-        userId: typedReview.user_id,
-        restaurantName: typedRestaurant?.name || '맛집',
-        rejectionReason
-      };
-    },
-    onSuccess: ({ userId, restaurantName, rejectionReason }) => {
-      toast({ title: '리뷰 거부됨', description: '리뷰가 거부되었습니다.' });
-      // 리뷰 작성자에게 거부 알림 전송 (거부 사유 포함)
-      if (userId) {
-        createReviewRejectedNotification(userId, restaurantName, rejectionReason);
-      }
-      queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
-      invalidateAdminPendingCounts();
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: '거부 실패', description: '리뷰 거부 처리에 실패했습니다. 잠시 후 다시 시도해주세요.' });
-    },
+    mutationFn: ({ reviewId, adminNote }: { reviewId: string; adminNote: string; review: Review }) => recordActions.run({ action: 'review.reject', targetIds: [reviewId], payload: { reason: adminNote.trim() || '관리자에 의해 거부됨' } }),
+    onSuccess: afterReviewAction, onError: notifyRecordActionError,
   });
-
-  // 리뷰 삭제 mutation (이미지도 함께 삭제)
   const deleteReviewMutation = useMutation({
-    mutationFn: async (reviewId: string) => {
-      // 1. 리뷰 정보 조회 (이미지 경로 확인)
-      const { data: reviewData, error: fetchError } = await supabase
-        .from('reviews')
-        .select('verification_photo, food_photos')
-        .eq('id', reviewId)
-        .single()
-        .overrideTypes<Record<string, unknown>, { merge: false }>();
-
-      if (fetchError) throw fetchError;
-
-      const review = isReviewPhotoRow(reviewData) ? reviewData : null;
-
-      assertLegacyBrowserAdminMutationEnabled('review_moderation', 'review delete mutation');
-      // 2. Storage에서 이미지 삭제
-      const photosToDelete: string[] = [];
-
-      if (review?.verification_photo) {
-        photosToDelete.push(review.verification_photo);
-      }
-
-      if (review?.food_photos && Array.isArray(review.food_photos)) {
-        photosToDelete.push(...review.food_photos);
-      }
-
-      if (photosToDelete.length > 0) {
-        await supabase.storage
-          .from('review-photos')
-          .remove(photosToDelete);
-      }
-
-      // 3. DB에서 리뷰 삭제
-      const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
-      if (error) throw error;
-
-      return { deletedPhotos: photosToDelete.length };
-    },
-    onSuccess: ({ deletedPhotos }) => {
-      toast({
-        title: '리뷰 삭제됨',
-        description: `리뷰가 삭제되었습니다. (이미지 ${deletedPhotos}개 삭제)`
-      });
-      queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
-      invalidateAdminPendingCounts();
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: '삭제 실패', description: '리뷰 삭제 처리에 실패했습니다. 잠시 후 다시 시도해주세요.' });
-    },
+    mutationFn: (reviewId: string) => recordActions.run({ action: 'review.delete', targetIds: [reviewId], payload: { reason: '관리자에 의해 삭제됨' } }),
+    onSuccess: onRecordApplied, onError: notifyRecordActionError,
   });
-
-  // 제보 승인 mutation (새 테이블 구조 - 아이템별 처리)
-		  const approveSubmissionMutation = useMutation({
-		    mutationFn: async ({
-      submission,
-      approvalData,
-      itemDecisions,
-      forceApprove,
-      editableData,
-      adminNote
-	    }: {
-      submission: SubmissionRecord;
-      approvalData: ApprovalData;
-      itemDecisions: Record<string, ItemDecision>;
-	      forceApprove: boolean;
-	      editableData: { name: string; address: string; phone: string; categories: string[] };
-	      adminNote?: string;
-		    }) => {
-		      if (!user) throw new Error('로그인이 필요합니다');
-      const trimmedApprovalAuditNote = adminNote?.trim() || '';
-      const approvalAuditNote = [
-        trimmedApprovalAuditNote,
-        forceApprove && !trimmedApprovalAuditNote.includes('forceApprove=true') ? 'forceApprove=true' : '',
-      ].filter(Boolean).join('\n') || null;
-      assertPrivacySafe({ adminNote: trimmedApprovalAuditNote });
-
-      if (submission.submission_type === 'recommend') {
-        const response = await fetch(`/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'approve',
-            ...(adminNote?.trim() ? { adminNote: adminNote.trim() } : {}),
-          }),
-        });
-        const payload: unknown = await response.json().catch(() => null);
-        const data = parseRestaurantRequestReviewResponse(payload);
-        if (!response.ok || !data?.success || !data.request || !data.auditId) {
-          throw new Error('추천 승인에 실패했습니다. 잠시 후 다시 시도해주세요.');
-        }
-        return {
-          submission: applyRestaurantRequestReadbackToSubmission(
-            submission,
-            data.request,
-            data.auditId,
-            'approved',
-          ),
-          restaurant: null,
-          recommendationAuditId: data.auditId,
-        };
-      }
-      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission approval direct RPC/update');
-      // Submission approval RPCs are absent from generated database types.
-
-	      const lat = parseFloat(approvalData.lat);
-      const lng = parseFloat(approvalData.lng);
-      if (isNaN(lat) || isNaN(lng)) throw new Error('올바른 좌표가 필요합니다');
-
-      // 승인할 아이템들 수집
-      const approvedItems = submission.items.filter((item: SubmissionItem) =>
-        item.item_status === 'pending' && itemDecisions[item.id]?.approved
-      );
-
-      if (approvedItems.length === 0) {
-        throw new Error('승인할 항목이 없습니다');
-      }
-
-      // 검증: 승인된 모든 아이템에 tzuyang_review와 metaData가 있어야 함
-      for (const item of approvedItems) {
-        const decision = itemDecisions[item.id];
-        if (!decision.tzuyang_review?.trim()) {
-          throw new Error('쯔양 리뷰를 입력해주세요');
-        }
-        if (!decision.metaData) {
-          throw new Error('YouTube 메타데이터가 없습니다. 메타데이터를 불러온 뒤 승인해주세요.');
-        }
-      }
-
-      let restaurant = null;
-
-      // 각 아이템별로 RPC 호출 (unique_id 생성, 중복 검사 등은 RPC에서 처리)
-      for (const item of submission.items) {
-        if (item.item_status !== 'pending') continue;
-
-        const decision = itemDecisions[item.id];
-        if (decision?.approved) {
-          // 관리자가 수정한 데이터로 restaurantData 구성
-          const restaurantData = {
-            name: editableData.name,
-            phone: editableData.phone || null,
-            categories: editableData.categories || [],
-            tzuyang_review: decision.tzuyang_review || null,  // 관리자가 수정한 리뷰
-            youtube_link: decision.youtube_link || item.youtube_link || null,  // 관리자가 수정한 링크
-            jibun_address: approvalData.jibun_address,
-            road_address: approvalData.road_address,
-            english_address: approvalData.english_address || null,
-            address_elements: approvalData.address_elements || {},
-            lat,
-            lng,
-            // YouTube 메타데이터 (모달에서 가져온 값)
-            youtube_meta: decision.metaData ? {
-              title: decision.metaData.title,
-              published_at: decision.metaData.publishedAt,
-              duration: decision.metaData.duration,
-              is_shorts: decision.metaData.is_shorts,
-              is_ads: decision.metaData.ads_info?.is_ads ?? false,
-              what_ads: decision.metaData.ads_info?.what_ads ?? null,
-            } : null,
-          };
-
-          assertPrivacySafe(restaurantData, { locationClass: 'business' });
-
-	          if (submission.submission_type === 'edit' && item.target_restaurant_id) {
-	            // 수정 제보: approve_edit_submission_item RPC 호출
-            const { data: result, error } = await callSubmissionApprovalRpc(
-	              'approve_edit_submission_item',
-	              {
-	                p_item_id: item.id,
-                p_admin_user_id: user.id,
-                p_updated_data: restaurantData,
-	              }
-	            );
-	            if (error) throw error;
-            const rpcResult = parseApprovalRpcResult(result);
-	            if (rpcResult && !rpcResult.success) {
-	              throw new Error('수정 승인에 실패했습니다.');
-	            }
-	            restaurant = { id: rpcResult?.restaurant_id || item.target_restaurant_id };
-	          } else {
-	            // 신규 제보: approve_submission_item RPC 호출
-            const { data: result, error } = await callSubmissionApprovalRpc(
-	              'approve_submission_item',
-	              {
-	                p_item_id: item.id,
-                p_admin_user_id: user.id,
-                p_restaurant_data: restaurantData,
-	              }
-	            );
-	            if (error) throw error;
-            const rpcResult = parseApprovalRpcResult(result);
-	            if (rpcResult && !rpcResult.success) {
-	              throw new Error('승인에 실패했습니다.');
-	            }
-	            restaurant = { id: rpcResult?.created_restaurant_id };
-	          }
-	        } else {
-	          // 거부
-          assertPrivacySafe({
-            rejectionReason: decision?.rejectionReason || '관리자에 의해 반려됨',
-          });
-          const { error: itemRejectionError } = await supabase
-            .from('restaurant_submission_items')
-            .update<{
-              item_status: 'rejected';
-              rejection_reason: string;
-            }>({
-              item_status: 'rejected',
-              rejection_reason: decision?.rejectionReason || '관리자에 의해 반려됨',
-            })
-            .eq('id', item.id);
-          if (itemRejectionError) throw itemRejectionError;
-	        }
-	      }
-
-	      // 관리자 메모 업데이트
-      const { error: submissionUpdateError } = await restaurantSubmissionMutation()
-        .update({
-          resolved_by_admin_id: user.id,
-          reviewed_at: new Date().toISOString(),
-          ...(approvalAuditNote ? { admin_notes: approvalAuditNote } : {}),
-        })
-        .eq('id', submission.id);
-      if (submissionUpdateError) throw submissionUpdateError;
-
-      return { submission, restaurant, recommendationAuditId: null };
-    },
-    onSuccess: ({ submission, recommendationAuditId }) => {
-      if (submission.submission_type === 'recommend') {
-        updateRecommendationRequestReadbackInCache(submission);
-        toast({ title: '추천 승인 완료', description: `추천이 승인되었습니다. 감사 ID: ${recommendationAuditId || '확인됨'}` });
-        queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
-        invalidateAdminPendingCounts();
-        return;
-      }
-      toast({ title: '제보 승인 완료', description: `"${submission.restaurant_name}" 맛집이 등록되었습니다` });
-      createNewRestaurantNotification(submission.restaurant_name, submission.restaurant_address || '', {
-        category: submission.restaurant_categories,
-        submissionId: submission.id
-      });
-      // 제보자에게 승인 알림 전송
-      if (submission.user_id) {
-        createSubmissionApprovedNotification(
-          submission.user_id,
-          submission.restaurant_name,
-          submission.submission_type,
-          { submissionId: submission.id }
-        );
-      }
-      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
-      invalidateAdminPendingCounts();
-      void invalidateRestaurantDiscoveryQueries(queryClient);
-      if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
-        setCurrentSubmissionIndex(currentSubmissionIndex - 1);
-      }
-    },
-	    onError: () => {
-	      toast({ variant: 'destructive', title: '승인 실패', description: '제보 승인 처리에 실패했습니다. 잠시 후 다시 시도해주세요.' });
-	    },
-	  });
-
-  // 제보 거부 mutation (모든 아이템 거부)
+  const approveSubmissionMutation = useMutation({
+    mutationFn: (input: Parameters<typeof submissionApprovalInput>[0]) => recordActions.run(submissionApprovalInput(input)),
+    onSuccess: afterSubmissionAction, onError: notifyRecordActionError,
+  });
   const rejectSubmissionMutation = useMutation({
-    mutationFn: async ({ submission, reason }: { submission: SubmissionRecord; reason: string }) => {
-      if (!user) throw new Error('로그인이 필요합니다');
-      assertPrivacySafe({ rejectionReason: reason });
-
-      if (submission.submission_type === 'recommend') {
-        const response = await fetch(`/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'reject',
-            rejectionReason: reason,
-          }),
-        });
-        const payload: unknown = await response.json().catch(() => null);
-        const data = parseRestaurantRequestReviewResponse(payload);
-        if (!response.ok || !data?.success || !data.request || !data.auditId) {
-          throw new Error('추천 거부에 실패했습니다. 잠시 후 다시 시도해주세요.');
-        }
-        return {
-          submission: applyRestaurantRequestReadbackToSubmission(
-            submission,
-            data.request,
-            data.auditId,
-            'rejected',
-          ),
-          reason: data.request.rejection_reason || reason,
-          recommendationAuditId: data.auditId,
-        };
-      }
-      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission rejection direct update');
-
-	      // 모든 pending 아이템 거부
-	      for (const item of submission.items) {
-	        if (item.item_status === 'pending') {
-          await supabase
-            .from('restaurant_submission_items')
-            .update<{
-              item_status: 'rejected';
-              rejection_reason: string;
-            }>({
-              item_status: 'rejected',
-              rejection_reason: reason,
-            })
-	            .eq('id', item.id);
-	        }
-	      }
-
-	      // 제보 상태 업데이트
-      const { error } = await restaurantSubmissionMutation()
-        .update({
-          rejection_reason: reason,
-          resolved_by_admin_id: user.id,
-          reviewed_at: new Date().toISOString(),
-        })
-	        .eq('id', submission.id);
-      if (error) throw error;
-      return { submission, reason, recommendationAuditId: null };
-    },
-    onSuccess: ({ submission, reason, recommendationAuditId }) => {
-      if (submission.submission_type === 'recommend') {
-        updateRecommendationRequestReadbackInCache(submission);
-        toast({ title: '추천 거부됨', description: `추천이 거부되었습니다. 감사 ID: ${recommendationAuditId || '확인됨'}` });
-        queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
-        invalidateAdminPendingCounts();
-        return;
-      }
-      toast({ title: '제보 거부됨', description: `"${submission.restaurant_name}" 제보가 거부되었습니다` });
-      // 제보자에게 거부 알림 전송 (거부 사유 포함)
-      if (submission.user_id) {
-        createSubmissionRejectedNotification(
-          submission.user_id,
-          submission.restaurant_name,
-          reason || '관리자에 의해 반려됨',
-          submission.submission_type,
-          { submissionId: submission.id }
-        );
-      }
-      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
-      invalidateAdminPendingCounts();
-      if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
-        setCurrentSubmissionIndex(currentSubmissionIndex - 1);
-      }
-    },
-	    onError: () => {
-	      toast({ variant: 'destructive', title: '거부 실패', description: '제보 거부 처리에 실패했습니다. 잠시 후 다시 시도해주세요.' });
-	    },
-	  });
-
-  // 제보 삭제 mutation (모든 아이템 거부로 변경)
+    mutationFn: ({ submission, reason }: { submission: SubmissionRecord; reason: string }) => recordActions.run({ action: submission.submission_type === 'recommend' ? 'recommendation.reject' : 'submission.reject', targetIds: [submission.id], payload: { reason } }),
+    onSuccess: afterSubmissionAction, onError: notifyRecordActionError,
+  });
   const deleteSubmissionMutation = useMutation({
-    mutationFn: async (submission: SubmissionRecord) => {
-      if (!user) throw new Error('로그인이 필요합니다');
-
-      if (submission.submission_type === 'recommend') {
-        const response = await fetch(`/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'reject',
-            rejectionReason: '관리자에 의해 삭제 처리됨',
-          }),
-        });
-        const payload: unknown = await response.json().catch(() => null);
-        const data = parseRestaurantRequestReviewResponse(payload);
-        if (!response.ok || !data?.success || !data.auditId) {
-          throw new Error('추천 삭제 처리에 실패했습니다. 잠시 후 다시 시도해주세요.');
-        }
-        return applyRestaurantRequestReadbackToSubmission(
-          submission,
-          data.request,
-          data.auditId,
-          'rejected',
-        );
-      }
-      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission delete direct update');
-
-	      // 모든 pending 아이템 거부
-	      for (const item of submission.items) {
-	        if (item.item_status === 'pending') {
-          await supabase
-            .from('restaurant_submission_items')
-            .update<{
-              item_status: 'rejected';
-              rejection_reason: string;
-            }>({
-              item_status: 'rejected',
-              rejection_reason: '관리자에 의해 삭제됨',
-            })
-	            .eq('id', item.id);
-	        }
-	      }
-
-	      // 제보 상태 업데이트
-      const { error } = await restaurantSubmissionMutation()
-        .update({
-          rejection_reason: '관리자에 의해 삭제됨',
-          resolved_by_admin_id: user.id,
-          reviewed_at: new Date().toISOString(),
-        })
-	        .eq('id', submission.id);
-      if (error) throw error;
-      return submission;
-    },
-    onSuccess: (submission) => {
-      if (submission.submission_type === 'recommend') {
-        updateRecommendationRequestReadbackInCache(submission);
-        toast({ title: '추천 삭제 처리됨', description: `"${submission.restaurant_name}" 추천이 거부 상태로 처리되었습니다. 감사 ID: ${submission.recommendation_audit_id || '확인됨'}` });
-        queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
-        invalidateAdminPendingCounts();
-        return;
-      }
-      toast({ title: '제보 삭제됨', description: `"${submission.restaurant_name}" 제보가 삭제되었습니다` });
-      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
-      invalidateAdminPendingCounts();
-      if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
-        setCurrentSubmissionIndex(currentSubmissionIndex - 1);
-      }
-    },
-	    onError: () => {
-	      toast({ variant: 'destructive', title: '삭제 실패', description: '제보 삭제 처리에 실패했습니다. 잠시 후 다시 시도해주세요.' });
-	    },
-	  });
-
-  // 핸들러 함수 (새 테이블 구조에 맞게 수정)
-  const handleApproveSubmission = (
-    submission: SubmissionRecord,
-    approvalData: ApprovalData,
-    itemDecisions: Record<string, ItemDecision>,
-    forceApprove: boolean,
-    editableData: { name: string; address: string; phone: string; categories: string[] },
-    adminNote?: string
-  ) => {
+    mutationFn: (submission: SubmissionRecord) => recordActions.run({ action: submission.submission_type === 'recommend' ? 'recommendation.reject' : 'submission.delete', targetIds: [submission.id], payload: { reason: '관리자에 의해 삭제됨' } }),
+    onSuccess: onRecordApplied, onError: notifyRecordActionError,
+  });
+  const handleApproveSubmission = (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean,
+    editableData: { name: string; address: string; phone: string; categories: string[] }, adminNote?: string) => {
     approveSubmissionMutation.mutate({ submission, approvalData, itemDecisions, forceApprove, editableData, adminNote });
   };
-
-  const handleRejectSubmission = (submission: SubmissionRecord, reason: string) => {
-    rejectSubmissionMutation.mutate({ submission, reason });
-  };
-
-  const handleDeleteSubmission = (submission: SubmissionRecord) => {
-    deleteSubmissionMutation.mutate(submission);
-  };
-
-  // 리뷰 핸들러
-  const handleApproveReview = (review: Review, adminNote: string) => {
-    approveReviewMutation.mutate({ reviewId: review.id, adminNote });
-  };
-
-  const handleRejectReview = (review: Review, adminNote: string) => {
-    rejectReviewMutation.mutate({ reviewId: review.id, adminNote });
-  };
-
-  const handleDeleteReview = (review: Review) => {
-    deleteReviewMutation.mutate(review.id);
-  };
-
-  // 제보 수정 저장 mutation (새 테이블 구조)
+  const handleRejectSubmission = (submission: SubmissionRecord, reason: string) => rejectSubmissionMutation.mutate({ submission, reason });
+  const handleDeleteSubmission = (submission: SubmissionRecord) => deleteSubmissionMutation.mutate(submission);
+  const handleApproveReview = (review: Review, adminNote: string) => approveReviewMutation.mutate({ reviewId: review.id, adminNote, review });
+  const handleRejectReview = (review: Review, adminNote: string) => rejectReviewMutation.mutate({ reviewId: review.id, adminNote, review });
+  const handleDeleteReview = (review: Review) => deleteReviewMutation.mutate(review.id);
   const updateSubmissionMutation = useMutation({
-    mutationFn: async (data: {
-      submission: SubmissionRecord;
-      updatedData: {
-        restaurant_name: string;
-        address: string;
-        phone: string;
-        categories: string[];
-        youtube_link: string;
-        description: string;
-      };
-    }) => {
-      const { submission, updatedData } = data;
-      assertPrivacySafe(updatedData);
-
-      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission edit direct update');
-	      // 제보 기본 정보 업데이트
-      const { error } = await restaurantSubmissionMutation()
-        .update({
-          restaurant_name: updatedData.restaurant_name,
-          restaurant_address: updatedData.address,
-          restaurant_phone: updatedData.phone || null,
-          restaurant_categories: updatedData.categories,
-        })
-        .eq('id', submission.id);
-
-      if (error) throw error;
-
-	      // 첫 번째 아이템의 youtube_link와 tzuyang_review 업데이트
-	      if (submission.items.length > 0) {
-	        const firstItem = submission.items[0];
-        await supabase
-          .from('restaurant_submission_items')
-          .update<{
-            youtube_link: string;
-            tzuyang_review: string | null;
-          }>({
-            youtube_link: updatedData.youtube_link,
-            tzuyang_review: updatedData.description || null,
-          })
-          .eq('id', firstItem.id);
-	      }
-
-      return submission;
-    },
-    onSuccess: (submission) => {
-      toast({ title: '제보 수정 완료', description: '제보 정보가 수정되었습니다' });
-      queryClient.invalidateQueries({
-        queryKey: ['admin-submissions-inline'],
-        refetchType: 'all',
-      });
-      void invalidateRestaurantDiscoveryQueries(queryClient);
-      setEditingSubmission(null);
-      setEditModalOpen(false);
-    },
-	    onError: () => {
-	      toast({ variant: 'destructive', title: '수정 실패', description: '제보 수정 처리에 실패했습니다. 잠시 후 다시 시도해주세요.' });
-	    },
-	  });
+    mutationFn: ({ submission, updatedData }: { submission: SubmissionRecord; updatedData: Parameters<typeof submissionEditInput>[1] }) => recordActions.run(submissionEditInput(submission, updatedData)),
+    onSuccess: async receipt => { await onRecordApplied(receipt); setEditingSubmission(null); setSubmissionDraft(null); },
+    onError: notifyRecordActionError,
+  });
 
   const initialContentLoading = initialView === 'submissions'
     ? submissionsLoading || recommendationRequestsLoading || reviewsLoading
@@ -3531,21 +2139,46 @@ function AdminEvaluationPage({
     return null;
   }
 
-  const pendingRecordActionRequiredPhrase = EVALUATION_RESTORE_CONFIRMATION;
-  const pendingRecordActionVerb = '복원';
-  const pendingRecordActionName = pendingRecordAction
-    ? (pendingRecordAction.record.restaurant_name || pendingRecordAction.record.name || '선택한 검수 항목')
-    : '';
-  const pendingRecordActionDuplicateWarnings = pendingRecordAction
-    ? getSameVideoDuplicateWarnings(pendingRecordAction.record)
-    : [];
-  const pendingRecordActionIdentityWarnings = pendingRecordAction
-    ? getRestaurantIdentityWarnings(pendingRecordAction.record)
-    : [];
-
   const embeddedModuleId: Extract<AdminConsoleRouteModuleId, 'restaurants' | 'submissions' | 'reviews'> = showSubmissionView
     ? (submissionInitialTab === 'reviews' ? 'reviews' : 'submissions')
     : 'restaurants';
+  const ModuleTitle = embedded ? 'h2' : 'h1';
+  const compactReviewHeader = embedded && embeddedModuleId === 'restaurants' && managementHeader !== null;
+
+  const reviewSummary = recordViewsInvalidated ? '새 조회 필요' : !legacyEvaluationLoad && pageReadError ? '조회 실패' : !isInitialEvaluationDataLoading
+    ? `전체 ${stats.total}건${stats.deleted > 0 ? ` · 삭제 ${stats.deleted}건` : ''}`
+    : '전체 집계 중';
+  const reviewViewActions = canSwitchEvaluationView && (
+    <>
+      {!showSubmissionView && <Button size="sm" variant="outline" data-admin-restaurant-create-trigger disabled={loading || recordActions.busy || recordViewsInvalidated || createRestaurantOpen} onClick={() => setCreateRestaurantOpen(true)}>맛집 등록</Button>}
+      <Button
+        variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={switchToEvaluationListView}
+        title="리스트 뷰"
+        aria-label="리스트 뷰"
+        aria-pressed={!isAlternateView && !showSubmissionView}
+        data-admin-evaluation-view-toggle="list"
+      >
+        <LayoutList className="h-4 w-4" />
+        <span className="sr-only">리스트</span>
+      </Button>
+      <Button
+        variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={switchToEvaluationSlideView}
+        title="슬라이드 뷰"
+        aria-label="슬라이드 뷰"
+        aria-pressed={isAlternateView && !showSubmissionView}
+        data-admin-evaluation-view-toggle="slide"
+      >
+        <MonitorPlay className="h-4 w-4" />
+        <span className="sr-only">슬라이드</span>
+      </Button>
+    </>
+  );
 
   return (
     <div
@@ -3555,24 +2188,41 @@ function AdminEvaluationPage({
       data-admin-embedded-module-shell={embedded ? "true" : undefined}
       data-admin-embedded-module-id={embedded ? embeddedModuleId : undefined}
     >
-      {/* Header */}
-      <div
+      {compactReviewHeader && managementHeader.count && createPortal(
+        <span data-admin-module-summary="true">{reviewSummary}</span>,
+        managementHeader.count,
+      )}
+      {compactReviewHeader && managementHeader.views && createPortal(
+        <div className="flex items-center gap-1 [&_button]:min-h-11 [&_button]:min-w-11 sm:[&_button]:min-h-8 sm:[&_button]:min-w-8" data-admin-evaluation-view-actions="top-right" data-admin-module-actions="top-right">
+          {reviewViewActions}
+        </div>,
+        managementHeader.views,
+      )}
+      {embedded && !compactReviewHeader && <AdminPageHeader
+        title={embeddedModuleId === 'submissions' ? '제보 관리' : embeddedModuleId === 'reviews' ? '리뷰 관리' : '관리자 데이터 검수'}
+        titleAs="h2" icon={ClipboardCheck}
+        summary={embeddedModuleId === 'restaurants' ? reviewSummary : pendingQueueSummaryContent}
+        data-admin-module-header="compact" data-admin-module-header-module={embeddedModuleId}
+        actions={canSwitchEvaluationView ? <div data-admin-evaluation-view-actions="top-right">{reviewViewActions}</div> : undefined}
+      />}
+      {/* Standalone modules retain their own header; the restaurant workspace owns its primary row. */}
+      {((!embedded && !compactReviewHeader) || deepLinkFilter) && <div
         className={embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}
         data-admin-module-header={embedded ? "compact" : undefined}
         data-admin-module-header-module={embedded ? embeddedModuleId : undefined}
       >
         <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            {!embedded && !compactReviewHeader && <div className="flex items-center gap-2">
               <AdminEvaluationTitleIcon embedded={embedded} />
-              <h1 className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
+              <ModuleTitle className="whitespace-nowrap text-base font-semibold leading-6">
                 {embeddedModuleId === 'submissions'
                   ? '제보 관리'
                   : embeddedModuleId === 'reviews'
                     ? '리뷰 관리'
                     : '관리자 데이터 검수'}
-              </h1>
-            </div>
+              </ModuleTitle>
+            </div>}
             {deepLinkFilter && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted-foreground">딥링크 필터:</span>
@@ -3601,50 +2251,21 @@ function AdminEvaluationPage({
                 </Button>
               </div>
             )}
-            <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
-              {pendingQueueSummaryContent}
-            </div>
+            {!embedded && !compactReviewHeader && <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
+              {embeddedModuleId === 'restaurants' ? reviewSummary : pendingQueueSummaryContent}
+            </div>}
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
-            <CategorySidebar
+          {!embedded && !compactReviewHeader && <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
+            {!recordViewsInvalidated && <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
               showStatusChips={!showSubmissionView}
             >
               <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right" data-admin-module-actions={embedded ? "top-right" : undefined}>
-                {canSwitchEvaluationView && (
-                  <>
-                    <Button
-                      variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={switchToEvaluationListView}
-                      title="리스트 뷰"
-                      aria-label="리스트 뷰"
-                      aria-pressed={!isAlternateView && !showSubmissionView}
-                      data-admin-evaluation-view-toggle="list"
-                    >
-                      <LayoutList className="h-4 w-4" />
-                      <span className="sr-only">리스트</span>
-                    </Button>
-                    <Button
-                      variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={switchToEvaluationSlideView}
-                      title="슬라이드 뷰"
-                      aria-label="슬라이드 뷰"
-                      aria-pressed={isAlternateView && !showSubmissionView}
-                      data-admin-evaluation-view-toggle="slide"
-                    >
-                      <MonitorPlay className="h-4 w-4" />
-                      <span className="sr-only">슬라이드</span>
-                    </Button>
-                  </>
-                )}
+                {reviewViewActions}
                 {!embedded && (
                   <>
                     {/* 사용자 제보 검수 버튼 */}
@@ -3682,91 +2303,25 @@ function AdminEvaluationPage({
 
               {/* 구분선 */}
               <div className="hidden h-6 w-px bg-border sm:block" />
-            </CategorySidebar>
-          </div>
+            </CategorySidebar>}
+          </div>}
         </div>
-      </div>
+      </div>}
 
+      {!showSubmissionView && <RestaurantReviewAutomation
+        controlsTarget={compactReviewHeader ? managementHeader.automation : undefined}
+        onApplied={() => { invalidateRecordViews(); void refreshRecordViews(); void invalidateRestaurantDiscoveryQueries(queryClient); }}
+      />}
+      {recordViewsInvalidated && <div role="alert" data-admin-record-views-invalidated className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 text-xs text-destructive"><span>변경 후 최신 정보를 다시 확인해야 합니다.</span><Button size="sm" variant="outline" disabled={recordActions.busy || recordViewsRefreshing} onClick={() => void refreshRecordViews()}>{recordViewsRefreshing ? '조회 중…' : '새로 조회'}</Button></div>}
       <div className="flex-1 min-h-0 flex flex-col" data-admin-module-content={embedded ? "bounded" : undefined}>
-        {pendingRecordAction && (
-          <section
-            role="region"
-            aria-label="검수 항목 작업 확인"
-            className="mx-2 mt-2 rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-sm shadow-sm sm:mx-3"
-          >
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0">
-                <p className="font-semibold text-foreground">
-                  {pendingRecordActionName} {pendingRecordActionVerb} 확인
-                </p>
-                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                  모바일과 데스크톱 모두 같은 흐름으로 처리합니다. 아래 문구를 입력한 뒤 적용하세요.
-                </p>
-                {pendingRecordActionIdentityWarnings.length > 0 && (
-                  <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-900">
-                    <p className="font-semibold">장소명 검증 경고 {pendingRecordActionIdentityWarnings.length}건</p>
-                    <p>{formatRestaurantIdentityWarning(pendingRecordActionIdentityWarnings)}</p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {pendingRecordActionIdentityWarnings.slice(0, 3).map((warning) => (
-                        <Badge key={warning.rule} variant="outline" className="border-red-300 bg-white/70 text-red-900">
-                          {warning.severity === 'block' ? '차단' : '확인'} · {warning.rule}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {pendingRecordActionDuplicateWarnings.length > 0 && (
-                  <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
-                    <p className="font-semibold">같은 영상 중복 후보 {pendingRecordActionDuplicateWarnings.length}건이 있습니다.</p>
-                    <p>복원 적용 전 같은 맛집 관계인지 확인하세요. 별도 필터 없이 현재 작업 확인 단계에서만 알려드립니다.</p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {pendingRecordActionDuplicateWarnings.slice(0, 3).map((candidate) => (
-                        <Badge key={candidate.id} variant="outline" className="border-amber-300 bg-white/70 text-amber-900">
-                          {candidate.name} · {candidate.rule}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-                <Input
-                  aria-label="검수 항목 작업 확인 문구"
-                  value={recordActionConfirmation}
-                  onChange={(event) => setRecordActionConfirmation(event.target.value)}
-                  placeholder={`${pendingRecordActionRequiredPhrase} 입력`}
-                  className="h-9 min-w-0 sm:w-44"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  onClick={clearPendingRecordAction}
-                  disabled={loading}
-                >
-                  취소
-                </Button>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  className="h-9"
-                  onClick={() => {
-                    void handleRestore(pendingRecordAction.record);
-                  }}
-                  disabled={loading || recordActionConfirmation !== pendingRecordActionRequiredPhrase}
-                >
-                  {pendingRecordActionVerb} 적용
-                </Button>
-              </div>
-            </div>
-          </section>
-        )}
+        {!recordViewsInvalidated && !legacyEvaluationLoad && pageReadError && !showSubmissionView ? <div role="alert" data-admin-evaluation-page-error="true" className="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-xs text-destructive"><span>검수 목록 조회 실패</span><Button size="sm" variant="outline" disabled={loading} onClick={() => void loadAllRecords()}>다시 조회</Button></div> : null}
+        {showSubmissionView && submissionInitialTab !== 'reviews' && <div className="admin-cms-toolbar">
+          <Button variant="outline" size="sm" disabled={recordActions.busy || recordViewsInvalidated || submissionsLoading || submissionsData.length === 0} onClick={() => setSubmissionEditorOpen(true)}>제보 수정</Button>
+        </div>}
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
-            submissions={allSubmissionRecords}
+            submissions={recordViewsInvalidated ? [] : allSubmissionRecords}
             onApprove={handleApproveSubmission}
             onReject={handleRejectSubmission}
             onDelete={handleDeleteSubmission}
@@ -3775,17 +2330,17 @@ function AdminEvaluationPage({
               queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
               invalidateAdminPendingCounts();
             }}
-            loading={submissionsLoading || recommendationRequestsLoading || approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
-            reviews={reviewsData}
+            loading={submissionsLoading || recommendationRequestsLoading || recordActions.busy || recordViewsInvalidated}
+            reviews={recordViewsInvalidated ? [] : reviewsData}
             onApproveReview={handleApproveReview}
             onRejectReview={handleRejectReview}
             onDeleteReview={handleDeleteReview}
-            reviewsLoading={reviewsLoading}
+            reviewsLoading={reviewsLoading || recordActions.busy || recordViewsInvalidated}
             initialTab={submissionInitialTab}
           />
         ) : isAlternateView ? (
           <EvaluationSlideView
-            records={visibleDisplayedRecords}
+            records={recordViewsInvalidated ? [] : visibleDisplayedRecords}
             currentIndex={currentSlideIndex}
             onNavigate={setCurrentSlideIndex}
             onApprove={handleApprove}
@@ -3794,20 +2349,20 @@ function AdminEvaluationPage({
             onRegisterMissing={handleRegisterMissing}
             onResolveConflict={handleResolveConflict}
             onEdit={handleEdit}
-            loading={loading}
+            loading={loading || recordViewsInvalidated}
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
           <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-2">
             <EvaluationTable
-              records={visibleDisplayedRecords}
+              records={recordViewsInvalidated ? [] : visibleDisplayedRecords}
               onApprove={handleApprove}
               onDelete={handleDelete}
               onRestore={handleRestore}
               onRegisterMissing={handleRegisterMissing}
               onResolveConflict={handleResolveConflict}
               onEdit={handleEdit}
-              loading={loading}
+              loading={loading || recordViewsInvalidated}
               evalFilters={evalFilters}
               isDeletedFilterActive={evalFilters.status === 'deleted'}
               searchQuery={searchQuery}
@@ -3819,6 +2374,7 @@ function AdminEvaluationPage({
                 }));
               }}
               onResetFilters={() => setEvalFilters({})}
+              onRequestDetails={async record => Boolean(await ensureEvaluationDetails(record))}
               onLoadMore={loadMoreRecords}
               hasMore={hasMore}
               isLoadingMore={loadingMore}
@@ -3834,12 +2390,22 @@ function AdminEvaluationPage({
             {/* 모든 데이터 로드 완료 메시지 */}
             {!hasMore && displayedRecords.length > 0 && (
               <div className="text-center py-4 text-muted-foreground text-sm">
-                모든 레코드를 불러왔습니다 ({visibleDisplayedRecords.length}개 / 전체 {filteredRecords.length}개)
+                모든 레코드를 불러왔습니다 ({visibleDisplayedRecords.length}개 / 전체 {legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}개)
               </div>
             )}
           </div>
         )}
       </div>
+
+      <AdminRestaurantModal
+        isOpen={createRestaurantOpen}
+        restaurant={null}
+        onClose={() => setCreateRestaurantOpen(false)}
+        onSuccess={() => {
+          void refreshRecordViews();
+          void invalidateRestaurantDiscoveryQueries(queryClient);
+        }}
+      />
 
       {/* Missing 레스토랑 등록 폼 */}
       <MissingRestaurantForm
@@ -3870,27 +2436,35 @@ function AdminEvaluationPage({
         onOpenChange={setEditModalOpen}
         onSuccess={(recordId, updates) => {
           updateRecordInState(recordId, updates);
-
-	          // 사용자 제보 수정 시 restaurant_submissions 테이블도 업데이트
-	          if (editingSubmission) {
-	            updateSubmissionMutation.mutate({
-	              submission: editingSubmission,
-              updatedData: {
-                restaurant_name: updates.name || editingSubmission.restaurant_name,
-                address: updates.road_address || updates.jibun_address || editingSubmission.restaurant_address || '',
-                phone: updates.phone || '',
-                categories: updates.categories || [],
-                youtube_link: updates.youtube_link || editingSubmission.items?.[0]?.youtube_link || '',
-                description: (typeof updates.tzuyang_reviews === 'string' ? updates.tzuyang_reviews : null) || updates.restaurant_info?.tzuyang_review || editingSubmission.items?.[0]?.tzuyang_review || '',
-              },
-            });
-          } else {
-            // 사용자 제보가 아닌 경우 쿼리만 무효화
-            queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
-            void invalidateRestaurantDiscoveryQueries(queryClient);
-          }
+          queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+          void invalidateRestaurantDiscoveryQueries(queryClient);
         }}
       />
+
+      <Dialog open={submissionEditorOpen} onOpenChange={setSubmissionEditorOpen}>
+        <DialogContent className="flex max-h-[90dvh] max-w-xl flex-col overflow-hidden">
+          <DialogHeader><DialogTitle className="text-base font-semibold leading-6">제보 수정</DialogTitle><DialogDescription>미처리 제보를 선택하고 변경 내용을 확인하세요.</DialogDescription></DialogHeader>
+          <div className="min-h-0 space-y-3 overflow-y-auto text-sm">
+            <label className="block space-y-1"><span>제보</span><select aria-label="수정할 제보" className="h-10 w-full rounded-md border bg-background px-2" value={editingSubmission?.id ?? ''} onChange={event => {
+              const selected = submissionsData.find(row => row.id === event.target.value) ?? null;
+              setEditingSubmission(selected);
+              setSubmissionDraft(selected ? { restaurant_name: selected.restaurant_name, address: selected.restaurant_address ?? '', phone: selected.restaurant_phone ?? '', categories: selected.restaurant_categories ?? [], youtube_link: selected.items[0]?.youtube_link ?? '', description: selected.items[0]?.tzuyang_review ?? '' } : null);
+            }}><option value="">선택하세요</option>{submissionsData.filter(row => !row.items[0] || row.items[0].item_status === 'pending').map(row => <option key={row.id} value={row.id}>{row.restaurant_name} · {row.id.slice(0, 8)}</option>)}</select></label>
+            {submissionDraft && <>
+              {([['restaurant_name', '맛집 이름'], ['address', '주소'], ['phone', '전화'], ['youtube_link', '영상 링크']] as const).map(([key, label]) => <label key={key} className="block space-y-1"><span>{label}</span><Input aria-label={`제보 ${label}`} value={submissionDraft[key]} onChange={event => setSubmissionDraft(previous => previous ? { ...previous, [key]: event.target.value } : null)} /></label>)}
+              <fieldset><legend className="mb-1">분류 (최대 5개)</legend><div className="flex flex-wrap gap-2">{RECORD_CATEGORIES.map(category => <label key={category} className="flex items-center gap-1"><input type="checkbox" checked={submissionDraft.categories.includes(category)} disabled={!submissionDraft.categories.includes(category) && submissionDraft.categories.length >= 5} onChange={event => setSubmissionDraft(previous => previous ? { ...previous, categories: event.target.checked ? [...previous.categories, category] : previous.categories.filter(item => item !== category) } : null)} />{category}</label>)}</div></fieldset>
+              <label className="block space-y-1"><span>첫 번째 영상 리뷰</span><textarea aria-label="제보 영상 리뷰" className="min-h-24 w-full rounded-md border bg-background p-2" value={submissionDraft.description} onChange={event => setSubmissionDraft(previous => previous ? { ...previous, description: event.target.value } : null)} /></label>
+            </>}
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setSubmissionEditorOpen(false)}>취소</Button><Button disabled={!editingSubmission || !submissionDraft || recordActions.busy} onClick={() => {
+            if (!editingSubmission || !submissionDraft) return;
+            setSubmissionEditorOpen(false);
+            updateSubmissionMutation.mutate({ submission: editingSubmission, updatedData: submissionDraft });
+          }}>변경 내용 확인</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {recordActions.dialog}
 
       {/* 승인 확인 모달 */}
       <AlertDialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
@@ -3918,13 +2492,10 @@ function AdminEvaluationPage({
                 setShowApprovalConfirm(false);
                 setLoading(true);
                 try {
-                  await performApproval(pendingApprovalRecord, requireAdminUserId());
-                } catch {
-                  toast({
-                    variant: 'destructive',
-                    title: '승인 실패',
-                    description: '승인 처리에 실패했습니다. 잠시 후 다시 시도해주세요.',
-                  });
+                  requireAdminUserId();
+                  await performApproval(pendingApprovalRecord);
+                } catch (error) {
+                  notifyRecordActionError(error);
                 } finally {
                   setLoading(false);
                   setPendingApprovalRecord(null);

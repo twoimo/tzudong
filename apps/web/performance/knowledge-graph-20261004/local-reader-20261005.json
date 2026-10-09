@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "environment": "actual local OSK export through the production server file reader; no browser/API network or operating deployment",
+  "revision": "f3bf0a6f5a2499c49ffcb5dee67018ab879a11fbf686fbfb9d4931b72186aabe",
+  "nodes": 21,
+  "edges": 79,
+  "nodePages": 5,
+  "edgePages": 8,
+  "missingNodes": 0,
+  "duplicateNodes": 0,
+  "missingEdges": 0,
+  "duplicateEdges": 0,
+  "wholeGraphSearch": true,
+  "selectedDetail": true,
+  "coverage": {
+    "analyzedCount": 0,
+    "asOf": "2026-10-04T06:14:04Z",
+    "eligibleCount": 1069,
+    "excludedShortsCount": 80,
+    "failedCount": 0,
+    "inventoryCount": 1149,
+    "pendingCount": 1069
+  },
+  "providerCalls": 0
+}

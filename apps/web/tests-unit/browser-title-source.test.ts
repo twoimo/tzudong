@@ -15,7 +15,6 @@ const staticTitleContracts = [
   ['app/privacy/page.tsx', '개인정보 처리방침 - 쯔동여지도'],
   ['app/data-deletion/page.tsx', '데이터 삭제 요청 - 쯔동여지도'],
   ['app/s/layout.tsx', '리다이렉트 중 - 쯔동여지도'],
-  ['app/s/[code]/page.tsx', '리다이렉트 중 - 쯔동여지도'],
   ['app/admin/layout.tsx', '관리자 콘솔 - 쯔동여지도'],
   ['app/admin/banners/layout.tsx', '배너 관리 - 관리자 콘솔 - 쯔동여지도'],
   ['app/admin/evaluations/layout.tsx', '맛집 관리 - 관리자 콘솔 - 쯔동여지도'],

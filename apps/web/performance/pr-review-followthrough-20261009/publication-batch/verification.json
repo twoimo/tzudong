@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "reviewThread": "PRRT_kwDOQGRyNc6qnYi8",
+  "reviewExportSha256": "77db26b5e60b785ca20280e2f7a2a8c221acbdd9d3fc3ec098890530b1746e70",
+  "command": [
+    "/Users/twoimo/Documents/osk-vault/.venv/bin/python",
+    "-B",
+    "-m",
+    "unittest",
+    "backend.knowledge_graph.tests.test_osk_publication",
+    "backend.knowledge_graph.tests.test_publication_checkpoint",
+    "backend.knowledge_graph.tests.test_publication_pages"
+  ],
+  "engineRuntimeSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+  "scope": "Pinned public API in disposable vault subprocesses only",
+  "exitCode": 0,
+  "durationSeconds": 16.688,
+  "sourceSha256Before": {
+    "backend/knowledge_graph/osk_publication.py": "51dfaff2fbb11cdc7f89d0b09ddb8b72de59e2f79bec54206dc82b7f574ca7b0",
+    "backend/knowledge_graph/tests/test_osk_publication.py": "373b7a94651aa944bc4337b806800f1d1a354f1bb2be25ccd45de859eef5a3b8",
+    "backend/knowledge_graph/OSK_PUBLICATION.md": "59e06eea9c494bfc137e61f11a5e611fd7b3550a09c3cad7713240886d7106e0",
+    "backend/knowledge_graph/publication_checkpoint.py": "37813ce9e8fea70174ba3b8f321b99e86e7445a3b22a96ef3ec1f6bebf4a0156",
+    "backend/knowledge_graph/publication_pages.py": "fca4b0d87ff26ea79fb3b8329179d882757d807c90819f9076b9f75beade20bf",
+    "backend/knowledge_graph/longform_analysis.py": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+    "backend/knowledge_graph/osk_projection.py": "a61120dd1faae686e0721001f84d60b9e06469e86d1fdc33fde940f368d9b3c7"
+  },
+  "sourceSha256After": {
+    "backend/knowledge_graph/osk_publication.py": "51dfaff2fbb11cdc7f89d0b09ddb8b72de59e2f79bec54206dc82b7f574ca7b0",
+    "backend/knowledge_graph/tests/test_osk_publication.py": "373b7a94651aa944bc4337b806800f1d1a354f1bb2be25ccd45de859eef5a3b8",
+    "backend/knowledge_graph/OSK_PUBLICATION.md": "59e06eea9c494bfc137e61f11a5e611fd7b3550a09c3cad7713240886d7106e0",
+    "backend/knowledge_graph/publication_checkpoint.py": "37813ce9e8fea70174ba3b8f321b99e86e7445a3b22a96ef3ec1f6bebf4a0156",
+    "backend/knowledge_graph/publication_pages.py": "fca4b0d87ff26ea79fb3b8329179d882757d807c90819f9076b9f75beade20bf",
+    "backend/knowledge_graph/longform_analysis.py": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+    "backend/knowledge_graph/osk_projection.py": "a61120dd1faae686e0721001f84d60b9e06469e86d1fdc33fde940f368d9b3c7"
+  },
+  "sourceStableDuringTests": true,
+  "providerCalls": 0,
+  "sharedVaultWrites": 0
+}

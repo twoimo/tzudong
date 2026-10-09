@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "environment": "existing OSK Python environment with fake pinned claude-video HTTP and isolated fixture state; no actual provider calls or real batch writes",
+  "tests": 73,
+  "failed": 0,
+  "skipped": 0,
+  "changedBehavior": [
+    "actual pinned upstream structured schema and token counting",
+    "contiguous900-second media segments",
+    "explicit confirmed-legacy-rejection repair with unchanged exhausted batch and usage receipts"
+  ],
+  "source": [
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "sha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86"
+    },
+    {
+      "path": "backend/knowledge_graph/claude_video_adapter.py",
+      "sha256": "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_analysis.py",
+      "sha256": "c8eb823f3fd51731f5164df7a9d2831d250bd2a2c041cf45f6b8e8cb125689b9"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_claude_video_adapter.py",
+      "sha256": "1eacc877197ce8a46a70860caddea2690b64a3507ac25f96e4c1e0cf926127f6"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+      "sha256": "8e85a2d08c3f6b123482e5c81af33d0ffefd5b7eb6cb9ce9bb3a46f2cb81e4fb"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_rejected_repair.py",
+      "sha256": "d34862cc83217a0f9ae62606ab2244d3afa1e9c408521cf6a1afdf7972b6ff84"
+    }
+  ],
+  "providerCalls": 0,
+  "operatingWrites": 0,
+  "full1069VideoCompletionProven": false
+}

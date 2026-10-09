@@ -28,12 +28,13 @@ export type OcrAiRuntimeConfig = OcrAiRuntimeConfigCandidate & {
 
 const ENV_PROVIDER_KEYS: Record<OcrRoutingProvider, readonly string[]> = {
   gemini: [
+    'GEMINI_CREDITS_API_KEY',
+    'GEMINI_OCR_API_KEY',
     'GEMINI_API_KEY',
     'GEMINI_OCR_YEON',
     'STORYBOARD_AGENT_GEMINI_API_KEY',
     'GEMINI_API_KEY_BYEON',
     'GOOGLE_API_KEY',
-    'NEXT_PUBLIC_GOOGLE_API_KEY',
   ],
 };
 
@@ -71,6 +72,10 @@ export function getEnvFallbackSecrets(
 ): Array<{ apiKey: string; source: 'environment'; sourceName: string }> {
   const seen = new Set<string>();
   const secrets: Array<{ apiKey: string; source: 'environment'; sourceName: string }> = [];
+  // A deliberately funded project is authoritative. Key rotation must not silently
+  // route a receipt to another project whose credits or data policy differ.
+  const fundedKey = sanitizeText(env.GEMINI_CREDITS_API_KEY);
+  if (fundedKey) return [{ apiKey: fundedKey, source: 'environment', sourceName: 'GEMINI_CREDITS_API_KEY' }];
   for (const envName of ENV_PROVIDER_KEYS[provider]) {
     const apiKey = sanitizeText(env[envName]);
     if (!apiKey || seen.has(apiKey)) continue;

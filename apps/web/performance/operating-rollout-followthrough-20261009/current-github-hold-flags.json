@@ -1,0 +1,9 @@
+{
+  "flags": {
+    "G037_WRITE_FREEZE": "active"
+  },
+  "missing": [
+    "TZUDONG_DATA_BRANCH_PUBLISH"
+  ],
+  "readOnly": true
+}

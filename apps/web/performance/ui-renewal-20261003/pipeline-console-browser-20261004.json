@@ -1,0 +1,218 @@
+{
+  "kind": "pipeline-console-synthetic-browser",
+  "browserSession": "tzudong-pipeline-astra",
+  "observedAt": "2026-10-04T09:51:10.650Z",
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0",
+  "sourceStart": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "1d476b9c8d8ae2125281f9771a5bf82d1bf15eb4a3c491501854f4a7fc815b3f"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "4d95e99c62bee331c9984d83be79982129bdab978fdd208fb1af210666d9798e"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "0875a1fa277741ff890882a3a24a7d114e459f351e67c133de30ce54383b9dfa"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "e4cb1fd12fcef34dccbc1739abc7a4296aad6091865edb891064bc395f10b6ec"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "1d476b9c8d8ae2125281f9771a5bf82d1bf15eb4a3c491501854f4a7fc815b3f"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "4d95e99c62bee331c9984d83be79982129bdab978fdd208fb1af210666d9798e"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "0875a1fa277741ff890882a3a24a7d114e459f351e67c133de30ce54383b9dfa"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "e4cb1fd12fcef34dccbc1739abc7a4296aad6091865edb891064bc395f10b6ec"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceStable": true,
+  "cases": [
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "width": 390,
+      "colorScheme": "dark",
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": true,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "width": 834,
+      "colorScheme": "light",
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "width": 834,
+      "colorScheme": "dark",
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": true,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "width": 1423,
+      "colorScheme": "light",
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "width": 1423,
+      "colorScheme": "dark",
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": true,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "scenario": "gha",
+      "controlsDisabled": true,
+      "falseHealthyOrLiveClaim": false,
+      "rawLeak": false
+    },
+    {
+      "scenario": "malformed",
+      "controlsDisabled": true,
+      "falseHealthyOrLiveClaim": false,
+      "rawLeak": false
+    },
+    {
+      "scenario": "unavailable",
+      "controlsDisabled": true,
+      "falseHealthyOrLiveClaim": false,
+      "rawLeak": false
+    }
+  ],
+  "mutationChecks": [
+    {
+      "action": "pause",
+      "dryRun": null,
+      "sameIdentity": true,
+      "ticketPreserved": true,
+      "fulfilledInBrowser": true
+    },
+    {
+      "action": "enqueue",
+      "dryRun": false,
+      "sameIdentity": true,
+      "ticketPreserved": true,
+      "fulfilledInBrowser": true
+    }
+  ],
+  "safety": {
+    "serverBoundPosts": 0,
+    "fixturePostsFulfilled": 5,
+    "otherPostsDenied": 0,
+    "externalDenied": 0,
+    "realProviderCalls": 0
+  },
+  "errors": {
+    "pageErrors": 0,
+    "consoleErrors": 13,
+    "expectedHttpFailures": true
+  },
+  "limitations": [
+    "All pipeline and manifest bodies are synthetic browser fixtures.",
+    "No real API preview ticket, worker execution, provider output, DB write, deployment or production availability was tested."
+  ]
+}

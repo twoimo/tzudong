@@ -1,0 +1,31 @@
+{
+  "source_hashes": {
+    "apps/web/lib/admin/evaluation-page-server.ts": "5fa1d1c5ee9148327dca10e915724b1a44b916b940f84657ba59e25a9210b2dd",
+    "apps/web/app/api/admin/evaluations/route.ts": "20527e2a9a9bcd94b4d605ec2b977873f982ad30a061e0c01c14fe1ecc0524be",
+    "apps/web/lib/admin-same-video-duplicate-warning.ts": "7904013149561b7fc7662cb5d05e56213147b45148e86242c82064a5529cbcb1",
+    "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3",
+    "backend/supabase/migrations/20261003220841_admin_evaluation_page_invoker_contract.sql": "4471f02096c0c7ee73d074ea7a3c4c0c36674edbaacbf998f4059d7b48d1f095",
+    "backend/supabase/scripts/verify_admin_page_conformance.py": "93a3d13fe8d473b390bc56534bd3ed6542a69dccb0da737cb92218dfc10d001a",
+    "apps/web/scripts/benchmark-evaluation-warning-gates.ts": "89e92a372b4e6022409369c5ff278eb27b95ffae74974aa7347cdea3ef9f643c",
+    "backend/supabase/migrations/20261004003503_admin_evaluation_display_revision.sql": "777f7fb596006864569d8f418f35bbe0a9e2adf9161833eeee612a6196a92781"
+  },
+  "artifacts": {
+    "admin-db-read-write-raw-20261004.json": "4ce007112361eaf76b0eaba012385eec8f57997e32d24df1c1306143919b877d",
+    "warning-gate-raw-20261004.json": "6327fbfa67f2d8db7ebefc47b9621efcb2c68c4a40160a091a40e57911fc01c2",
+    "admin-page-component-summary-20261004.json": "b14e1b12c66d83e45794ba9c282f7bcc358eed95080277f9de9815415a759316"
+  },
+  "coverage": {
+    "database_source_records": 1329,
+    "queries": 115,
+    "missing": 0,
+    "duplicates": 0,
+    "semantic_failures": 0,
+    "database_pairs": 7,
+    "warning_pairs": 7,
+    "web_suite_pass": 2704,
+    "web_suite_skip": 9,
+    "hosted_apply": false,
+    "pg_normalization_and_permission_tests": 11,
+    "g014_invoker_contract_tests": 8
+  }
+}

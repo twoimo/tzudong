@@ -1,0 +1,32 @@
+{
+  "kind": "google-ai-studio-post-ocr-readonly-observation",
+  "observedAtUtc": "2026-10-08T23:19:36.034114+00:00",
+  "project": "tzudong-free-zero",
+  "fundedAccountMatched": true,
+  "uniqueUiKeySuffixMatchesExistingVaultCopy": true,
+  "tier": 1,
+  "billingPlan": "prepay",
+  "prepayBalanceKRW": 10000,
+  "gcpCreditBalanceDisplay": "\u20a99.47\ub9cc",
+  "gcpBalanceExact": null,
+  "autoReloadEnabled": false,
+  "aggregatePeriodDisplayed": "October 1 - 8, 2026",
+  "aggregateGeminiCostKRW": 396.14,
+  "aggregateSavingsDisplayKRW": 396.14,
+  "aggregateTotalCostKRW": 0.0,
+  "paidGenerationStartedInThisFollowthrough": 1,
+  "billingChangesPerformed": false,
+  "credentialsChanged": false,
+  "tktAuthorityLocatorStatus": "unavailable_existing_wrapper_target_missing",
+  "credentialSource": "existing_readonly_vault_copy",
+  "limitations": [
+    "GCP balance is compact display, not exact cents/amount.",
+    "Aggregate savings are not attributed to these tests or an efficiency improvement.",
+    "Charges can lag several hours or more than 24 hours.",
+    "No billing account ID, card, key, personal data or raw snapshot retained.",
+    "No new key or funding change."
+  ],
+  "thisProbeCostConfirmed": false,
+  "thisProbeCreditDeductionConfirmed": false,
+  "billingAggregationUnchangedOnReadback": true
+}

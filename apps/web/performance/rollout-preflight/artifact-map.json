@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "kind": "rollout-preflight-and-operating-receipts",
+  "recordedAt": "2026-10-04T13:29:46.186248+00:00",
+  "files": [
+    {
+      "path": "apps/web/performance/rollout-preflight/failed-final-verifier-a2a50b99.sql",
+      "sha256": "a2a50b992a973c7eb12fe447769dc15374690f55488632a8c6e11119ea99ec97",
+      "bytes": 12170
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-apply-intent-20261004.json",
+      "sha256": "cdd64c9cc0cb54672e26c84315ec3ce6d5fadbcd08912eddf5afd39f1c9e8863",
+      "bytes": 4011
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-apply-intent-20261004.json.sha256",
+      "sha256": "4d7a024147e385de5d0faeaac03b8e0d2dc1ee1c955f92f4813490cad92abd01",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-apply-readback-20261004.json",
+      "sha256": "cb185d285e0470df881009473e259ee9eb62f92bc2934e9d8540487fa9471539",
+      "bytes": 23083
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-apply-readback-20261004.json.sha256",
+      "sha256": "dae3085ee4dd3cce29fc0f09f64e37083d206cb7ead8fc8b20c0acd31a183b3d",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-cli-dry-run-20261004.json",
+      "sha256": "92f6053e087ec38091aa991de335d5f3ae203f73a6d47f48b706b4c7acb69e1e",
+      "bytes": 2098
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-cli-dry-run-20261004.json.sha256",
+      "sha256": "c325ff52e03d2eed36feb593d898590f692066520daaa1a59f7376ef186c2909",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-intent-20261004.json",
+      "sha256": "7d06a7b24bf555ed26d4b30d287bb77b63a3416148acbde59465dc6170d1dc58",
+      "bytes": 407
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-intent-20261004.json.sha256",
+      "sha256": "eecf74132b1cd32c86d68109876064c33cbc88d258077878fd20a544dedb65d6",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-readback-20261004.json",
+      "sha256": "4c12d5b390e4fd3d61cf2b8bf49a13653c95652d2ec3ff8d513e11d4402f6b36",
+      "bytes": 22093
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-readback-20261004.json.sha256",
+      "sha256": "e3264e9250dc05f8a2290e51cf624d91f82e80a5d1dd68c2d6964839161b8b01",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-rollback-preview-20261004-v2.json",
+      "sha256": "8cb19014be25c03bae910d5d6009e803c85a258a2f9ff0c64cc144601f455fef",
+      "bytes": 493
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-rollback-preview-20261004-v2.json.sha256",
+      "sha256": "819e78dd26e7684ec38b7ebc5f61425bd3eb2881c88c218a5a94a533e3f36f0c",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-rollback-preview-20261004.json",
+      "sha256": "915017e334d44b049ea95a77becb8c0778c8153aef19a6a3d8f8f3c13da5d7ac",
+      "bytes": 446
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-g016-correction-rollback-preview-20261004.json.sha256",
+      "sha256": "21a3fcb6f767462658bde3fcbed1f559db87b98bda1fd63e183120c658768d1d",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-migration-ledger-20261004.json",
+      "sha256": "21c8b9c7e5c92d9e6f143cd4095e75ff37384fcf5e8d56ac26c53a97bb14ce8f",
+      "bytes": 17239
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-migration-ledger-20261004.json.sha256",
+      "sha256": "af7c6ddcf6da40e1e8e8ab50cd7bb6558c93dccc50b2778885b948dd55d3e5ec",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-contract-diagnostic-20261004.json",
+      "sha256": "3177ebe2bb96f9da8830d6328228ed8af87c46e97f79b397a70c6ae68b34b823",
+      "bytes": 348
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-contract-diagnostic-20261004.json.sha256",
+      "sha256": "6c010625e53ed91c8db2d235447f4b07ff504acddf7dcf62deb52e7feabe06d9",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-intent-20261004-v2.json",
+      "sha256": "a3af98af408d785ed87e4c26e7b21404b33d042479b2a960dab1c55e153e4219",
+      "bytes": 373
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-intent-20261004-v2.json.sha256",
+      "sha256": "fa4a8b0e29750cd21ff6c5087c2615dcf3346eb14fcf33664145066c0b4c38e8",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-intent-20261004.json",
+      "sha256": "abcf17563435cadef9ff64fcdd640ac41f11ff3b18b7ac031eb373a74722fb52",
+      "bytes": 339
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-intent-20261004.json.sha256",
+      "sha256": "2da41200a096b1e81e0f6cd5e1b1a6833dcb72f25ca6be5aa16127f952bbc9bf",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-readback-20261004-v2.json",
+      "sha256": "1bb5eed0ff56f8d9aa7b6a3f571a3ad8ad13845e1c6d27daf56f279a68f87c87",
+      "bytes": 22236
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-readback-20261004-v2.json.sha256",
+      "sha256": "67d75eed85f8680d4187d8bc8738b3ee2c6dd7622e890269a25e3e6ee069c35f",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-readback-20261004.json",
+      "sha256": "69f952e8f6f9168d315537406cd8f9b82e3f48d9d98a38e583b40e8501a33fb6",
+      "bytes": 21213
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-readback-20261004.json.sha256",
+      "sha256": "c694e299d89147d76c43d324eb4ddc08095c0120880cc941bd8ce3d4a6577aa0",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-rollback-diagnostic-20261004.json",
+      "sha256": "75cedd8e368c412c9dbfd60f10521d3f32f7ed59f37ba40a59e962933283f520",
+      "bytes": 424
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-final-rollback-diagnostic-20261004.json.sha256",
+      "sha256": "2356bf780ee3e66fbdf969d57ac0523960efa4089284a048673cb1b35ebf4bac",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-recovery-intent-20261004.json",
+      "sha256": "af809f27972ea1b146bc54775b9e2b3352df0d9caac28fa4dc6ff8c6a9dbda87",
+      "bytes": 375
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-recovery-intent-20261004.json.sha256",
+      "sha256": "f5009d8521afb541b26478946906726b7d386861351fc22f777ee6a29fb232e5",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-recovery-readback-20261004.json",
+      "sha256": "a897140bfbfaf01b839d359bf65fe81f8a848c5c2106e7229dd25275ea61aef8",
+      "bytes": 21511
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-owner-recovery-readback-20261004.json.sha256",
+      "sha256": "18ea0b2834ba4704eb22d229f68c638f0fea8bac4e76104f6dd32aced7d498f8",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-read-rpc-smoke-20261004.json",
+      "sha256": "866d294d644dde8de5743894fb3c6cd380e204471cda761a67eedf2986fe21d8",
+      "bytes": 880
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/hosted-read-rpc-smoke-20261004.json.sha256",
+      "sha256": "05b5d9d08affeeaf738f66331dfeacc3a3b07052a1547d67b9dd71638603d699",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/owner-final-replay-registration-20261004.json",
+      "sha256": "1c53c912bafee23ed21890ab5aafb559e1051cb665603c81770810f74c70bde1",
+      "bytes": 3412
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/owner-final-replay-registration-20261004.json.sha256",
+      "sha256": "9d5cdf7db583ed9a057ec5d94c8cee69d576e91f5f2758ec05103bfdf3f568f3",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/owner-final-verifier-report-20261004.md",
+      "sha256": "55ccd7102e9e711fcb59d9ce83345cd7f8e18173ad06c698b6dcac676beef27c",
+      "bytes": 5540
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/owner-recovery-plan-20261004.json",
+      "sha256": "fe627343025c9bcd9a970bdd1dbf8d97e956a261b0ed61b8d5b80f0e6b99d58c",
+      "bytes": 1514
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/owner-recovery-plan-20261004.json.sha256",
+      "sha256": "ee4a3116913587d65491b41285f46fc93ee7fc419b9f396e460d760dbdd6e2b2",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/selected-migration-workspace-plan.json",
+      "sha256": "0f7ed1db21e59569efc9ec30a651f00be9e4a8a317ba668b5ab3a3595e267847",
+      "bytes": 19060
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/selected-migration-workspace-plan.json.sha256",
+      "sha256": "132f5999dbbaa7e6cf34e57e9c04fd49bc614bbfacdde2539e69d7032e51bbfb",
+      "bytes": 65
+    },
+    {
+      "path": "apps/web/performance/rollout-preflight/selected-migration-workspace-report.md",
+      "sha256": "c2bf48596c3befca1bc333c90e6ae1f438a891e17bbac7e65969cf226a50b903",
+      "bytes": 5088
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "sha256": "8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004115554_g014_pg17_owner_final_verifier.sql",
+      "sha256": "a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004123034_g016_onboarding_allowlist_identity_correction.sql",
+      "sha256": "b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f"
+    }
+  ],
+  "limitations": [
+    "Operating receipts verify explicitly recorded SQL stages, not deployment, provider quality, or whole-pipeline performance.",
+    "Historical failed correction preview retains its source hash; it is not a success receipt."
+  ]
+}

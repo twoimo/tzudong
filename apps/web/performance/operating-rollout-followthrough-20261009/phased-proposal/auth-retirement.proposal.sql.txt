@@ -1,0 +1,77 @@
+-- PROPOSAL ONLY. Not an active migration; root must create/adopt through supported tooling.
+-- All __PIN_* literals must be replaced with reviewed phase-A/consumer receipt bindings.
+BEGIN;
+DO $retirement$
+DECLARE before_members jsonb; after_members jsonb; temporary_grant boolean:=false; helper oid;
+ consumer_receipt text:='__PIN_CONSUMER_CUTOVER_RECEIPT_SHA256__';
+ pg17_definer text:='__PIN_POST_ADDITIVE_PG17_DEFINER_SHA256__';
+ pg17_catalog text:='__PIN_POST_ADDITIVE_PG17_CATALOG_SHA256__';
+BEGIN
+ IF consumer_receipt !~ '^[a-f0-9]{64}$' OR pg17_definer !~ '^[a-f0-9]{64}$' OR pg17_catalog !~ '^[a-f0-9]{64}$'
+  THEN RAISE EXCEPTION 'RECORD_RETIREMENT_PREIMAGE_UNBOUND'; END IF;
+ IF current_user<>'postgres' OR session_user<>'postgres' OR current_setting('server_version_num')::int/10000<>17
+  THEN RAISE EXCEPTION 'RECORD_RETIREMENT_EXECUTOR'; END IF;
+ -- This only binds an already independently validated release receipt supplied by
+ -- the trusted executor. A GUC alone is not proof that Vercel/old consumers changed.
+ IF current_setting('tzudong.record_retirement.consumer_receipt_sha256',true) IS DISTINCT FROM consumer_receipt
+  THEN RAISE EXCEPTION 'RECORD_RETIREMENT_CONSUMER_RECEIPT'; END IF;
+ IF (SELECT encode(sha256(convert_to(prosrc,'UTF8')),'hex') FROM pg_proc WHERE oid=to_regprocedure('privacy_retention.assert_g014_definer_contract()')) IS DISTINCT FROM pg17_definer
+  OR (SELECT encode(sha256(convert_to(prosrc,'UTF8')),'hex') FROM pg_proc WHERE oid=to_regprocedure('privacy_retention.assert_g014_catalog_contract()')) IS DISTINCT FROM pg17_catalog
+  THEN RAISE EXCEPTION 'RECORD_RETIREMENT_SOURCE_DRIFT'; END IF;
+ SELECT jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor) INTO before_members FROM pg_auth_members m;
+ IF NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) THEN
+  IF pg_has_role('postgres','privacy_workflow_owner','SET') OR pg_has_role('postgres','privacy_workflow_owner','USAGE')
+   OR NOT EXISTS(SELECT 1 FROM pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole AND member='postgres'::regrole AND admin_option AND NOT inherit_option AND NOT set_option)
+   THEN RAISE EXCEPTION 'RECORD_RETIREMENT_MEMBERSHIP'; END IF;
+  EXECUTE 'GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE, INHERIT FALSE, SET TRUE GRANTED BY postgres';
+  temporary_grant:=true;
+ END IF;
+ IF to_regprocedure('pg_temp.admin_record_auth_retirement()') IS NOT NULL THEN RAISE EXCEPTION 'RECORD_RETIREMENT_HELPER'; END IF;
+ EXECUTE 'SET LOCAL ROLE privacy_workflow_owner';
+ EXECUTE $definition$
+ CREATE FUNCTION pg_temp.admin_record_auth_retirement() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $body$
+ DECLARE target oid; signature text; expected_body text; metadata jsonb;
+ BEGIN
+  IF session_user<>'postgres' OR current_user<>'privacy_workflow_owner' THEN RAISE EXCEPTION 'RECORD_RETIREMENT_EXECUTOR'; END IF;
+  PERFORM privacy_retention.assert_g014_workflow_owner_contract();
+  PERFORM privacy_retention.assert_g014_public_rpc_allowlist();
+  PERFORM privacy_retention.assert_g014_definer_contract();
+  PERFORM privacy_retention.assert_g014_catalog_contract();
+  FOR signature,expected_body IN SELECT * FROM (VALUES
+   ('public.approve_submission_item(uuid,uuid,jsonb)','d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f'),
+   ('public.approve_edit_submission_item(uuid,uuid,jsonb)','52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0'),
+   ('public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)','99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212')) pinned(signature,body_hash)
+  LOOP
+   target:=to_regprocedure(signature);
+   SELECT to_jsonb(p)-'proacl' INTO metadata FROM pg_proc p WHERE oid=target AND proowner='privacy_workflow_owner'::regrole
+    AND prosecdef AND proconfig=ARRAY['search_path=""']::text[] AND encode(sha256(convert_to(prosrc,'UTF8')),'hex')=expected_body;
+   IF metadata IS NULL OR NOT has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
+    OR (SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=signature AND grantee='authenticated')<>1
+    THEN RAISE EXCEPTION 'RECORD_RETIREMENT_LEGACY_DRIFT'; END IF;
+   EXECUTE 'REVOKE EXECUTE ON FUNCTION '||signature||' FROM authenticated';
+   DELETE FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=signature AND grantee='authenticated';
+   IF (SELECT to_jsonb(p)-'proacl' FROM pg_proc p WHERE oid=target) IS DISTINCT FROM metadata
+    OR has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
+    THEN RAISE EXCEPTION 'RECORD_RETIREMENT_LEGACY_DRIFT'; END IF;
+  END LOOP;
+  PERFORM privacy_retention.assert_g014_public_rpc_allowlist();
+  PERFORM privacy_retention.assert_g014_definer_contract();
+  PERFORM privacy_retention.assert_g014_catalog_contract();
+  DROP FUNCTION pg_temp.admin_record_auth_retirement();
+ END $body$;
+ $definition$;
+ EXECUTE 'REVOKE ALL ON FUNCTION pg_temp.admin_record_auth_retirement() FROM PUBLIC,anon,authenticated,service_role';
+ EXECUTE 'GRANT EXECUTE ON FUNCTION pg_temp.admin_record_auth_retirement() TO postgres';
+ EXECUTE 'RESET ROLE';
+ IF temporary_grant THEN EXECUTE 'REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres'; END IF;
+ SELECT jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor) INTO after_members FROM pg_auth_members m;
+ IF after_members IS DISTINCT FROM before_members THEN RAISE EXCEPTION 'RECORD_RETIREMENT_MEMBERSHIP_DRIFT'; END IF;
+ helper:=to_regprocedure('pg_temp.admin_record_auth_retirement()');
+ IF NOT EXISTS(SELECT 1 FROM pg_proc p WHERE oid=helper AND proowner='privacy_workflow_owner'::regrole AND prosecdef AND proconfig=ARRAY['search_path=""']::text[]
+  AND (SELECT count(*) FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))))=2
+  AND NOT EXISTS(SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee NOT IN ('privacy_workflow_owner'::regrole,'postgres'::regrole) OR a.is_grantable))
+  THEN RAISE EXCEPTION 'RECORD_RETIREMENT_HELPER'; END IF;
+ PERFORM pg_temp.admin_record_auth_retirement();
+ IF to_regprocedure('pg_temp.admin_record_auth_retirement()') IS NOT NULL THEN RAISE EXCEPTION 'RECORD_RETIREMENT_HELPER'; END IF;
+END $retirement$;
+COMMIT;

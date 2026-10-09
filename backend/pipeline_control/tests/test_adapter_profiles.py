@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from contextlib import contextmanager,redirect_stdout
+import io
 
 from backend.pipeline_control.adapter import execute_steps
 from backend.pipeline_control.graph import (
@@ -58,7 +60,7 @@ class GraphContractTests(unittest.TestCase):
         self.assertNotIn("--channel", argv)
         self.assertIn("--max-videos", argv)
         frames = build_argv(STEP_BY_ID["04-frames"], target="tzuyang")
-        self.assertIn("--delete-cache", frames)
+        self.assertNotIn("--delete-cache", frames)
         self.assertTrue(any(part.endswith("04-extract-frames-with-heatmap.js") for part in frames))
         self.assertEqual(
             STEP_BY_ID["03-2-visual"].script,
@@ -154,6 +156,26 @@ class ProfilePolicyTests(unittest.TestCase):
 
 
 class LiveGraphTests(unittest.TestCase):
+    def test_success_is_persisted_before_a_failed_media_cache_purge(self):
+        store=MemoryStore(clock=lambda:1000.0)
+        run,_=store.create_run(target='tzuyang',profile='lite_gha',idempotency_key='cleanup-failure',payload={'dryRun':False},actor='qa',request_id='req-cleanup',dry_run=False)
+        calls=[]
+        @contextmanager
+        def media_cache(*args,**kwargs):
+            def completed():
+                self.assertEqual(store.get(run.id).status,'Succeeded')
+                raise PermissionError('synthetic cleanup failure')
+            yield completed
+        with tempfile.TemporaryDirectory() as raw,patch.dict(os.environ,{'TZUDONG_DATA_SINK':'artifact_only','TZUDONG_EXECUTION_MODE':'live','TZUDONG_COMPUTE_PROFILE':'lite_gha'}), \
+             patch('backend.pipeline_control.worker.owned_media_cache',media_cache),redirect_stdout(io.StringIO()) as output:
+            path=Path(raw)/'summary.json'
+            result=process_one(store,live=True,runner=lambda argv:calls.append(argv) or 0,manifest_path=path)
+            payload=json.loads(path.read_text())
+        self.assertEqual(result,'Succeeded');self.assertEqual(store.get(run.id).status,'Succeeded')
+        self.assertIn('operation=media_cache_cleanup_deferred',output.getvalue())
+        self.assertNotIn('synthetic cleanup failure',output.getvalue())
+        self.assertEqual(payload['finalStatus'],'OK')
+
     def test_live_runner_uses_fixed_commands_and_quality_gate(self) -> None:
         seen: list[list[str]] = []
 

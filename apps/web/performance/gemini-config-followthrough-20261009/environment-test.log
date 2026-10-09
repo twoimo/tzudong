@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-console-uiux-source.test.ts:
+(pass) admin console beginner-friendly UI/UX source contract > adds storyboard generation as an operator-controlled admin module [100.54ms]
+(pass) Gemini environment example preserves OCR defaults and leaves paid workers unconfigured [118.48ms]
+
+ 2 pass
+ 42 filtered out
+ 0 fail
+ 1266 expect() calls
+Ran 2 tests across 1 file. [317.00ms]

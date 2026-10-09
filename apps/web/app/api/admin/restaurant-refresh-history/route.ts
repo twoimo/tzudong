@@ -292,9 +292,11 @@ function readbackStateForCandidate(candidate: CandidateRow, readbackRun?: Readba
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+    if (!auth.ok) { auth.response.headers.set("Cache-Control", "no-store"); return auth.response; }
 
     const { searchParams } = new URL(request.url);
+    const candidateId = searchParams.get("candidate_id");
+    if (candidateId !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidateId)) return noStoreJson({ code: "REFRESH_CANDIDATE_ID_INVALID" }, { status: 400 });
     const requestedStatus = searchParams.get("status");
     const status = isRefreshCandidateStatus(requestedStatus) ? requestedStatus : null;
     const search = searchParams.get("search")?.trim() || "";
@@ -308,7 +310,7 @@ export async function GET(request: NextRequest) {
     const baseCandidateQuery = supabase
       .from("restaurant_refresh_candidates")
       .select("id, restaurant_id, run_id, candidate_status, detected_change_types, previous_snapshot, candidate_snapshot, evidence, operator_decision, decided_at, applied_at, created_at");
-    const filteredCandidateQuery = status
+    const filteredCandidateQuery = candidateId !== null ? baseCandidateQuery.eq("id", candidateId) : status
       ? baseCandidateQuery.eq("candidate_status", status)
       : baseCandidateQuery;
 
@@ -316,7 +318,7 @@ export async function GET(request: NextRequest) {
       countRequest,
       filteredCandidateQuery
         .order("created_at", { ascending: false })
-        .limit(100)
+        .limit(candidateId !== null ? 1 : 100)
         .overrideTypes<CandidateRow[], { merge: false }>(),
     ]);
 
@@ -324,6 +326,8 @@ export async function GET(request: NextRequest) {
     if (candidateError) throw candidateError;
 
     const candidateRows = parseRows(candidates ?? [], isCandidateRow);
+    if (candidateId !== null && candidateRows.length === 0) return noStoreJson({ code: "REFRESH_CANDIDATE_NOT_FOUND" }, { status: 404 });
+    if (candidateId !== null && (candidateRows.length !== 1 || candidateRows[0].id.toLowerCase() !== candidateId.toLowerCase())) throw new Error("refresh_readback_invalid");
     const [restaurantMap, readbackRunMap] = await Promise.all([
       fetchRestaurantMap(
         supabase,
@@ -353,6 +357,7 @@ export async function GET(request: NextRequest) {
         };
       })
       .filter((row) => {
+        if (candidateId !== null) return true;
         if (!search) return true;
         const haystack = [
           row.restaurant_name,
@@ -384,7 +389,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ summary, candidates: rows }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[admin/restaurant-refresh-history] failed to list refresh history:");
-    return NextResponse.json({ error: "맛집 최신화 이력을 불러오지 못했습니다." }, { status: 500 });
+    return noStoreJson({ error: "맛집 최신화 이력을 불러오지 못했습니다." }, { status: 500 });
   }
 }
 

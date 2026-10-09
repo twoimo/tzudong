@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-09",
+  "evidenceClass": "local-source-and-mocked-contract-tests",
+  "head": "9ae2d740e5250fd96c6de1c1c3941db1435ff5e0",
+  "changes": [
+    "Blank server-only funded/OCR/storyboard/general Gemini keys; actual priority documented",
+    "Preserve OCR gemini-3.6-flash and MEDIUM baseline",
+    "Replace retired NVIDIA/Codex/MLX/BGE example wiring with current Gemini outbound and RAG contracts",
+    "ADMIN_RECORD_MUTATIONS_HOLD=active sample; only cleared permits new POST work",
+    "Active apps/web/README.md hosted setup aligns with current Gemini-only worker/RAG contract; legacy producers explicitly retired"
+  ],
+  "models": {
+    "ocr": "gemini-3.6-flash",
+    "storyboardText": "gemini-3.8-flash",
+    "storyboardImages": [
+      "gemini-3.1-flash-image",
+      "gemini-3-pro-image"
+    ],
+    "ragEmbedding": "gemini-embedding-001",
+    "ragDimensions": 1024,
+    "ragFingerprint": "gemini-embedding-001:1024:retrieval:l2:v1",
+    "ragRerank": "embedding_cosine",
+    "ragCaption": "gemini-3.8-flash"
+  },
+  "preservation": {
+    "fundedKeyBlank": true,
+    "operatorSecretsOrEnvRead": false,
+    "limitsOrPricesChanged": false,
+    "paidCalls": 0,
+    "deployments": 0,
+    "databaseWrites": 0,
+    "thumbnailConfigUnchanged": true,
+    "retiredOrTestSourcesDeleted": false,
+    "readmeThumbnailSectionsUnchanged": true
+  },
+  "tests": {
+    "environmentFocused": {
+      "passed": 2,
+      "failed": 0
+    },
+    "environmentSourceSuite": {
+      "passed": 44,
+      "failed": 0,
+      "note": "Earlier 44-test source suite before README followup; affected tests rerun through readmeFocused"
+    },
+    "geminiRelated": {
+      "passed": 63,
+      "failed": 0
+    },
+    "readmeFocused": {
+      "passed": 2,
+      "failed": 0,
+      "note": "After README and existing source assertion changes; full suite not repeated"
+    }
+  },
+  "audit": {
+    "activeStoryboardNonGeminiBypassObserved": false,
+    "guards": [
+      "production-store.generate asserts Gemini execution policy before queueing",
+      "outbound-worker asserts Gemini execution policy before generation; default client is GeminiStoryboardClient",
+      "client rejects non-allowlisted providers and models",
+      "old API routes return retired response; image-provider and MLX generation throw retired errors",
+      "local bridge storyboard image POST returns 410; separately approved thumbnail POST retained",
+      "retired CLI producers refuse before network/provider startup"
+    ],
+    "scopeLimit": "Source inspection and existing mocked tests only; no live worker, hosted environment, provider availability, quota or deployment proof. Historical provenance/manual imports and test hooks remain."
+  },
+  "sourceHashes": {
+    "apps/web/.env.example": "e5a3a386f0c07ca5ebab1fecdcc0288f0b0217bfd62d956515b98a1fc38fc1a7",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "de47f4b3de23ba8675b0589cfd19353e2e0b5b8f452e50d7b22dbe9e0a6d4809",
+    "apps/web/lib/ocr/runtime-config.ts": "cff9c05631ac5506099c1f8892bdd7e8edeb87e8ef404e38a3a46c9c8efc86fd",
+    "apps/web/lib/ocr/gemini.ts": "9299f5eeaffe145018d6b57b28ab565c5a901ec7d8fe9acefd166ee6b98a9d50",
+    "apps/web/lib/admin/storyboard/gemini-client.ts": "6b429c962599e394fb05c0be177b7185fe6c386f3c18c82285d6b75679b37195",
+    "apps/web/lib/admin/storyboard/gemini-models.ts": "b181ca2d8dc5d1e6f8ad5163d5a4f21813eb691f200b5a025569cbb24112ebb3",
+    "apps/web/lib/admin/storyboard/production-contract.ts": "6eaaf879cd439e9ccbc421e6345950a663b87e624df0a43d4092cdd4546b4717",
+    "apps/web/lib/admin/storyboard/production-store.ts": "8595c32824937899d22311b208594b83e46463ad7fe81c134f76235b18c14638",
+    "apps/web/lib/admin/storyboard/outbound-worker.ts": "c1f85047a82b72f2ebc0d3d7ff2a193fc2c92ad16813f3226022698769277fac",
+    "apps/web/lib/admin/storyboard/rag-worker-client.ts": "bf946e4fabe9584737576ff6cdb0617b2f15434b4766ea7a2ab3a069de3711e4",
+    "apps/web/lib/admin/storyboard/image-provider.ts": "1ad212579b1cf23083ef08db85a48ffac175fd928b241dad3ba55667f02614c9",
+    "apps/web/lib/admin/storyboard/mlx-client.ts": "03398824cda7606a0f3644552793116e9d32f85727938e0920d5d742806f4b0f",
+    "apps/web/lib/admin/storyboard/local-bridge-server.mts": "7e2809a2d06ae3eacde8f917eab9e6e2e5a2914ef028b6bc18f19f428dbe090e",
+    "apps/web/scripts/storyboard-gemini-worker.ts": "beb4288a2c75667b152b25432b8b886a5355b0b72cc3e6e260f6edd74553a705",
+    "apps/web/scripts/storyboard-gemini-only.mjs": "41e3836b746445758b787d2ad9c0c53ffe296e655699cb481e97f5b96b0af59a",
+    "backend/storyboard-agent/src/rag_worker.py": "1b275ad17101bfc76af39bb05443f0e08a9b0028b19eae030fbabe7bfdb8b973",
+    "backend/storyboard-agent/scripts/run_rag_worker.py": "7bc692cf14aa3cd94cbf7841f48ce5f4dcbc6ebb4328fbfddd957c1e41f1d2e9",
+    "apps/web/README.md": "114c09890d7e9b1b08b917c0acc5bf47de26f800c2ae54de2a660f1187795ca4"
+  }
+}

@@ -9,6 +9,9 @@ import sharp from 'sharp';
 import {
   buildStoryboardSceneImagePrompt,
   generateStoryboardSceneImages,
+  generateStoryboardSceneImage,
+  parseLocalCodexCommandStdout,
+  validateLocalCodexCommandResult,
   getStoryboardImageProviderAvailability,
   resolveLocalCodexStoryboardModel,
 } from '../lib/admin/storyboard/image-provider';
@@ -204,73 +207,9 @@ describe('admin storyboard image provider', () => {
       );
     }
   });
-  test('uses the local Codex GPT Image 2 gate instead of mock image generation', () => {
-    const missingProofPath = join(tmpdir(), `missing-storyboard-proof-${Date.now()}.json`);
-    const env = {
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: missingProofPath,
-    } as NodeJS.ProcessEnv;
+  test('preserves historical storyboard model label normalization independently of thumbnail configuration', () => {expect(resolveLocalCodexStoryboardModel({STORYBOARD_LOCAL_CODEX_IMAGE_MODEL:'gpt-image-2'})).toBe('gpt-image-2');expect(resolveLocalCodexStoryboardModel({THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL:'gpt-image-1'})).toBe('gpt-image-2');});
 
-    expect(resolveLocalCodexStoryboardModel(env)).toBe('gpt-image-2');
-    expect(getStoryboardImageProviderAvailability(env)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      command: process.execPath,
-      model: 'gpt-image-2',
-      providerId: 'local-codex',
-      modelProvenance: 'unverified',
-      target: { width: 1280, height: 720, aspectRatio: '16:9' },
-    });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: missingProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      model: 'gpt-image-2',
-      providerId: 'local-codex',
-      modelProvenance: 'unverified',
-    });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-1',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: missingProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_not_allowed',
-      model: 'gpt-image-1',
-      providerId: 'local-codex',
-      modelProvenance: 'unverified',
-    });
-    expect(resolveLocalCodexStoryboardModel({
-      THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-1',
-    } as NodeJS.ProcessEnv)).toBe('gpt-image-2');
-    expect(getStoryboardImageProviderAvailability({
-      ALLOW_LOCAL_CLI_THUMBNAIL: 'true',
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: missingProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      model: 'gpt-image-2',
-      providerId: 'local-codex',
-      modelProvenance: 'unverified',
-    });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_COMMAND: '/tmp/missing-codex-imagegen-storyboard-provider.py',
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: missingProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_bridge_unavailable',
-      model: 'gpt-image-2',
-      providerId: 'local-codex',
-      modelProvenance: 'unverified',
-    });
-  });
-
-  test('requires exact local-codex gpt-image-2 provenance before the client marks image generation ready', () => {
+  test('normalizes historical provider payloads with exact model and provenance boundaries', () =>{
     const proofDir = join(tmpdir(), `storyboard-proof-${Date.now()}`);
     const { proofPath } = writeExactProof(proofDir);
     const unverifiedAvailablePayload = {
@@ -340,90 +279,9 @@ describe('admin storyboard image provider', () => {
       model: 'gpt-image-2',
       modelProvenance: 'exact',
     });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: proofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: true,
-      reason: 'ready',
-      providerId: 'local-codex',
-      model: 'gpt-image-2',
-      modelProvenance: 'exact',
-      proof: {
-        authMode: 'codex_oauth',
-        requestToolType: 'image_generation',
-        requestToolModel: 'gpt-image-2',
-        responseId: 'resp_test_exact',
-        imageCallId: 'ig_test_exact',
-      },
-    });
-    const wrongEndpointDir = join(tmpdir(), `storyboard-wrong-endpoint-proof-${Date.now()}`);
-    const { proofPath: wrongEndpointProofPath } = writeExactProof(wrongEndpointDir, {
-      endpoint: 'https://example.com/backend-api/codex/responses',
-    });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: wrongEndpointProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      providerId: 'local-codex',
-      model: 'gpt-image-2',
-      modelProvenance: 'unverified',
-    });
-    const wrongItemDir = join(tmpdir(), `storyboard-wrong-item-proof-${Date.now()}`);
-    const { proofPath: wrongItemProofPath } = writeExactProof(wrongItemDir, {
-      rawImageItemTypes: ['message'],
-    });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: wrongItemProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      providerId: 'local-codex',
-      model: 'gpt-image-2',
-      modelProvenance: 'unverified',
-    });
-    const staleProofDir = join(tmpdir(), `storyboard-stale-proof-${Date.now()}`);
-    const { proofPath: staleProofPath } = writeExactProof(staleProofDir, {
-      generatedAt: '2020-01-01T00:00:00.000Z',
-    });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: staleProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      providerId: 'local-codex',
-      model: 'gpt-image-2',
-      modelProvenance: 'unverified',
-    });
-    const badDigestDir = join(tmpdir(), `storyboard-bad-digest-proof-${Date.now()}`);
-    const { proofPath: badDigestProofPath } = writeExactProof(badDigestDir, {
-      requestHash: 'not-a-sha256',
-    });
-    expect(getStoryboardImageProviderAvailability({
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: badDigestProofPath,
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      providerId: 'local-codex',
-      model: 'gpt-image-2',
-      modelProvenance: 'unverified',
-    });
-    rmSync(proofDir, { recursive: true, force: true });
-    rmSync(wrongEndpointDir, { recursive: true, force: true });
-    rmSync(wrongItemDir, { recursive: true, force: true });
-    rmSync(staleProofDir, { recursive: true, force: true });
-    rmSync(badDigestDir, { recursive: true, force: true });
-  });
+
+ rmSync(proofDir,{recursive:true,force:true});
+ });
 
   test('builds a single-scene cut prompt that forbids internal storyboard sheets, real likenesses, and baked text', () => {
     const prompt = buildStoryboardSceneImagePrompt(scene, {
@@ -490,379 +348,6 @@ describe('admin storyboard image provider', () => {
     expect(peakScenePrompt).toContain('dynamic wide hero shot');
     expect(peakScenePrompt).toContain('no drink-only frame');
     expect(peakScenePrompt).not.toContain('storefront intro / outside arrival');
-  });
-
-  test('strict-stops before executing the local Codex storyboard wrapper when exact provenance is unavailable', async () => {
-    const markerPath = join(tmpdir(), `storyboard-should-not-execute-${Date.now()}`);
-    const missingProofPath = join(tmpdir(), `missing-storyboard-proof-${Date.now()}.json`);
-    const localScript = `
-      const fs = require("node:fs");
-      fs.writeFileSync(process.env.STORYBOARD_EXEC_MARKER, "executed");
-    `;
-    const env = {
-      ALLOW_LOCAL_CLI_STORYBOARD_IMAGES: 'true',
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: missingProofPath,
-      STORYBOARD_EXEC_MARKER: markerPath,
-      STORYBOARD_LOCAL_CODEX_ARGS_JSON: JSON.stringify(['-e', localScript]),
-    } as NodeJS.ProcessEnv;
-
-    await expect(generateStoryboardSceneImages([scene], {
-      title: '실데이터 스토리보드',
-      logline: '반복시청 피크 기반 4컷 이미지',
-      request,
-    }, env)).rejects.toThrow(/exact gpt-image-2 backend provenance/);
-    expect(getStoryboardImageProviderAvailability(env)).toMatchObject({
-      available: false,
-      reason: 'local_codex_model_provenance_unverified',
-      model: 'gpt-image-2',
-      providerId: 'local-codex',
-      modelProvenance: 'unverified',
-    });
-    expect(existsSync(markerPath)).toBe(false);
-    rmSync(markerPath, { force: true });
-  });
-
-  test('executes the verified local Codex bridge and returns a trusted storyboard image', async () => {
-    const proofDir = join(tmpdir(), `storyboard-generate-proof-${Date.now()}`);
-    const { proofPath } = writeExactProof(proofDir);
-    const markerPath = join(tmpdir(), `storyboard-executed-${Date.now()}`);
-    const localScript = `
-      const fs = require("node:fs");
-      const path = require("node:path");
-      const crypto = require("node:crypto");
-      const sharp = require("sharp");
-      let body = "";
-      process.stdin.on("data", (chunk) => { body += chunk; });
-      process.stdin.on("end", () => {
-        void (async () => {
-          try {
-            const payload = JSON.parse(body);
-            fs.mkdirSync(path.dirname(payload.outputPath), { recursive: true });
-            const image = await sharp({
-              create: {
-                width: 1536,
-                height: 864,
-                channels: 3,
-                background: { r: 16, g: 32, b: 48 },
-              },
-            }).png().toBuffer();
-            fs.writeFileSync(payload.outputPath, image);
-            fs.writeFileSync(process.env.STORYBOARD_EXEC_MARKER, payload.prompt);
-            console.log(JSON.stringify({
-              ok: true,
-              providerId: "local-codex",
-              authMode: "codex_oauth",
-              endpoint: "https://chatgpt.com/backend-api/codex/responses",
-              agentModel: payload.agentModel,
-              requestToolType: "image_generation",
-              requestToolModel: "gpt-image-2",
-              model: "gpt-image-2",
-              modelProvenance: "exact",
-              responseId: "resp_generation_test",
-              imageCallId: "ig_generation_test",
-              imageItemCount: 1,
-              generatedImageItemTypes: ["image_generation_call"],
-              rawImageItemTypes: ["image_generation_call"],
-              requestHash: "${'a'.repeat(64)}",
-              responseHash: crypto.createHash("sha256").update(image).digest("hex"),
-              mime: "image/png",
-              bytes: image.length,
-              outputPath: payload.outputPath,
-              hasOpenAIAPIKey: false,
-              generatedAt: new Date().toISOString()
-            }));
-          } catch (error) {
-            console.error(error);
-            process.exitCode = 1;
-          }
-        })();
-      });
-    `;
-    const env = {
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_ARGS_JSON: JSON.stringify(['-e', localScript]),
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: proofPath,
-      STORYBOARD_EXEC_MARKER: markerPath,
-    } as NodeJS.ProcessEnv;
-
-    const images = await generateStoryboardSceneImages([scene], {
-      title: '실데이터 스토리보드',
-      logline: '반복시청 피크 기반 4컷 이미지',
-      request,
-    }, env);
-
-    expect(images).toHaveLength(1);
-    const image = images[0]?.image;
-    expect(image).toBeDefined();
-    expect(image?.dataUrl).toMatch(/^\/qa-history\/storyboard\/generated\/.+\/cut-01\.png$/);
-    expect(image?.providerId).toBe('local-codex');
-    expect(image?.model).toBe('gpt-image-2');
-    expect(image?.trustPolicy).toBe('storyboard-gpt-image-2-panel-v1');
-    expect(image?.warnings.join('\n')).toContain('exact_provenance: image_generation.gpt-image-2');
-    const publicPath = join(process.cwd(), 'public', image!.dataUrl);
-    const persistedBytes = readFileSync(publicPath);
-    const persistedMetadata = await sharp(persistedBytes).metadata();
-    expect(persistedMetadata).toMatchObject({
-      format: 'png',
-      width: 1280,
-      height: 720,
-    });
-    expect(image?.provenance?.responseHash).toBe(
-      createHash('sha256').update(persistedBytes).digest('hex'),
-    );
-    expect(image?.warnings.join('\n')).toContain(
-      `canonical_output: image/png 1280x720 bytes=${persistedBytes.length}`,
-    );
-    expect(image?.provenance).toMatchObject({
-      providerId: 'local-codex',
-      authMode: 'codex_oauth',
-      endpoint: 'https://chatgpt.com/backend-api/codex/responses',
-      agentModel: 'gpt-5.5',
-      requestToolType: 'image_generation',
-      requestToolModel: 'gpt-image-2',
-      model: 'gpt-image-2',
-      modelProvenance: 'exact',
-      responseId: 'resp_generation_test',
-      imageCallId: 'ig_generation_test',
-      imageItemCount: 1,
-      generatedImageItemTypes: ['image_generation_call'],
-      rawImageItemTypes: ['image_generation_call'],
-      requestHash: 'a'.repeat(64),
-      hasOpenAIAPIKey: false,
-    });
-    expect(isExactStoryboardGeneratedImageProvenance(image?.provenance)).toBe(true);
-    expect(isTrustedStoryboardGeneratedImage(image)).toBe(true);
-    expect(existsSync(markerPath)).toBe(true);
-    expect(existsSync(publicPath)).toBe(true);
-    rmSync(markerPath, { force: true });
-    rmSync(proofDir, { recursive: true, force: true });
-    rmSync(dirname(publicPath), { recursive: true, force: true });
-  });
-  test('fails closed when the local bridge proof does not bind its private output file', async () => {
-    const proofDir = join(tmpdir(), `storyboard-mismatched-proof-${Date.now()}`);
-    const { proofPath } = writeExactProof(proofDir);
-    const localScript = `
-      const fs = require("node:fs");
-      const path = require("node:path");
-      const sharp = require("sharp");
-      let body = "";
-      process.stdin.on("data", (chunk) => { body += chunk; });
-      process.stdin.on("end", () => {
-        void (async () => {
-          try {
-            const payload = JSON.parse(body);
-            const image = await sharp({
-              create: {
-                width: 1536,
-                height: 864,
-                channels: 3,
-                background: { r: 8, g: 16, b: 24 },
-              },
-            }).png().toBuffer();
-            fs.mkdirSync(path.dirname(payload.outputPath), { recursive: true });
-            fs.writeFileSync(payload.outputPath, image);
-            console.log(JSON.stringify({
-              ok: true,
-              providerId: "local-codex",
-              authMode: "codex_oauth",
-              endpoint: "https://chatgpt.com/backend-api/codex/responses",
-              agentModel: payload.agentModel,
-              requestToolType: "image_generation",
-              requestToolModel: "gpt-image-2",
-              model: "gpt-image-2",
-              modelProvenance: "exact",
-              responseId: "resp_mismatched_proof",
-              imageCallId: "ig_mismatched_proof",
-              imageItemCount: 1,
-              generatedImageItemTypes: ["image_generation_call"],
-              rawImageItemTypes: ["image_generation_call"],
-              requestHash: "${'a'.repeat(64)}",
-              responseHash: "${'b'.repeat(64)}",
-              mime: "image/png",
-              bytes: image.length,
-              outputPath: payload.outputPath,
-              hasOpenAIAPIKey: false,
-              generatedAt: new Date().toISOString()
-            }));
-          } catch (error) {
-            console.error(error);
-            process.exitCode = 1;
-          }
-        })();
-      });
-    `;
-    const env = {
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_ARGS_JSON: JSON.stringify(['-e', localScript]),
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE: proofPath,
-    } as NodeJS.ProcessEnv;
-
-    try {
-      await expect(generateStoryboardSceneImages([scene], {
-        title: '변조 감지 스토리보드',
-        logline: 'bridge proof와 파일 digest가 달라야 합니다.',
-        request,
-      }, env)).rejects.toThrow(/proof/);
-    } finally {
-      rmSync(proofDir, { recursive: true, force: true });
-    }
-  });
-
-  test('uses an operation-scoped OpenAI API key only for one guarded, abortable request header', async () => {
-    const originalFetch = globalThis.fetch;
-    const seen: Array<{
-      authorization?: string;
-      body?: string;
-      hasAbortSignal: boolean;
-    }> = [];
-    const mkdirSpy = spyOn(fsPromises, 'mkdir');
-    const writeFileSpy = spyOn(fsPromises, 'writeFile');
-    const statSpy = spyOn(fsPromises, 'stat');
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      expect(String(input)).toBe('https://api.openai.com/v1/images/generations');
-      const headers = new Headers(init?.headers);
-      seen.push({
-        authorization: headers.get('authorization') ?? undefined,
-        body: typeof init?.body === 'string' ? init.body : undefined,
-        hasAbortSignal: Boolean(init?.signal),
-      });
-      const source = await sharp({
-        create: {
-          width: 1536,
-          height: 864,
-          channels: 3,
-          background: { r: 48, g: 32, b: 16 },
-        },
-      }).png().toBuffer();
-      return new Response(JSON.stringify({
-        id: 'resp_browser_key_test',
-        created: Math.floor(Date.parse('2026-06-05T00:00:00.000Z') / 1000),
-        data: [{ b64_json: source.toString('base64') }],
-      }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
-    }) as typeof fetch;
-
-    try {
-      const env = {
-        STORYBOARD_LOCAL_CODEX_COMMAND: join(tmpdir(), `missing-local-codex-${Date.now()}`),
-        STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      } as NodeJS.ProcessEnv;
-      const browserKey = 'sk-proj_browserlocalonly1234567890';
-      expect(getStoryboardImageProviderAvailability(env, {
-        browserOpenAIApiKey: browserKey,
-      })).toMatchObject({
-        available: true,
-        reason: 'ready',
-        model: 'gpt-image-2',
-        providerId: 'browser-openai-api-key',
-        authMode: 'browser_memory_only_api_key',
-        browserKeyStorage: 'memory_only_operation_scoped',
-        command:
-          'browser component-memory API key (active operation; transmitted once in guarded request header; never persisted)',
-        modelProvenance: 'exact',
-      });
-
-      const images = await generateStoryboardSceneImages([scene], {
-        title: '프로덕션 키 스토리보드',
-        logline: '브라우저 키 기반 이미지',
-        request,
-      }, env, { browserOpenAIApiKey: browserKey });
-
-      expect(seen).toHaveLength(1);
-      expect(seen[0]?.authorization).toBe(`Bearer ${browserKey}`);
-      expect(seen[0]?.body).toContain('"model":"gpt-image-2"');
-      expect(seen[0]?.hasAbortSignal).toBe(true);
-      expect(seen[0]?.body).not.toContain(browserKey);
-      const image = images[0]?.image;
-      expect(image?.providerId).toBe('browser-openai-api-key');
-      expect(image?.model).toBe('gpt-image-2');
-      const browserDataUrl = image?.dataUrl ?? '';
-      const browserBytes = Buffer.from(browserDataUrl.replace(/^data:image\/png;base64,/, ''), 'base64');
-      expect(browserDataUrl).toMatch(/^data:image\/png;base64,/);
-      expect(await sharp(browserBytes).metadata()).toMatchObject({
-        format: 'png',
-        width: 1280,
-        height: 720,
-      });
-      expect(image?.provenance?.responseHash).toBe(
-        createHash('sha256').update(browserBytes).digest('hex'),
-      );
-      expect(image?.provenance).toMatchObject({
-        providerId: 'browser-openai-api-key',
-        authMode: 'browser_memory_only_api_key',
-        endpoint: 'https://api.openai.com/v1/images/generations',
-        requestToolModel: 'gpt-image-2',
-        model: 'gpt-image-2',
-        modelProvenance: 'exact',
-        hasOpenAIAPIKey: true,
-      });
-      expect(image?.warnings).toContain(
-        'browser_api_key_provider: API key exists only in component memory for the active operation and is transmitted once in the guarded request header.',
-      );
-      expect(image?.warnings).toContain(
-        'storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.',
-      );
-      expect(JSON.stringify(image)).not.toContain(browserKey);
-      expect(isExactStoryboardGeneratedImageProvenance(image?.provenance)).toBe(true);
-      expect(isTrustedStoryboardGeneratedImage(image)).toBe(true);
-      expect(mkdirSpy).not.toHaveBeenCalled();
-      expect(writeFileSpy).not.toHaveBeenCalled();
-      expect(statSpy).not.toHaveBeenCalled();
-    } finally {
-      globalThis.fetch = originalFetch;
-      mkdirSpy.mockRestore();
-      writeFileSpy.mockRestore();
-      statSpy.mockRestore();
-    }
-  });
-  test('fails closed on unallowlisted OpenAI image URLs without leaking provider URLs or tokens', async () => {
-    const originalFetch = globalThis.fetch;
-    const requestedUrls: string[] = [];
-    globalThis.fetch = (async (input: RequestInfo | URL) => {
-      requestedUrls.push(String(input));
-      return new Response(JSON.stringify({
-        id: 'resp_untrusted_url_test',
-        data: [{ url: 'https://127.0.0.1/private-image?token=do-not-leak' }],
-      }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
-    }) as typeof fetch;
-
-    try {
-      const env = {
-        STORYBOARD_LOCAL_CODEX_COMMAND: join(tmpdir(), `missing-local-codex-${Date.now()}`),
-        STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      } as NodeJS.ProcessEnv;
-      const browserKey = 'sk-proj_browserlocalonly1234567890';
-      let caught: unknown;
-      try {
-        await generateStoryboardSceneImages([scene], {
-          title: '프로덕션 키 스토리보드',
-          logline: '브라우저 키 기반 이미지',
-          request,
-        }, env, { browserOpenAIApiKey: browserKey });
-      } catch (error) {
-        caught = error;
-      }
-
-      expect(requestedUrls).toEqual(['https://api.openai.com/v1/images/generations']);
-      expect(caught).toMatchObject({
-        code: 'provider_execution_failed',
-        status: 502,
-      });
-      expect(caught).toBeInstanceOf(Error);
-      expect((caught as Error).message).not.toContain('127.0.0.1');
-      expect((caught as Error).message).not.toContain('do-not-leak');
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
   });
 
   test('trusts only storyboard-panel GPT Image 2 metadata and strips thumbnail-like history images', () => {
@@ -1020,4 +505,37 @@ describe('admin storyboard image provider', () => {
     expect(sanitized.storyboard.scenes[2].generatedImage).toBe(trustedImage);
     expect(sanitized.storyboard.scenes[3].generatedImage).toBe(sharedSeedImage);
   });
+});
+
+// Distinct former gates cannot reopen the retired execution surface.
+test.each([
+ ['browser operation key',{}, {browserOpenAIApiKey:'test-key'}],
+ ['local CLI gate',{ALLOW_LOCAL_CLI_STORYBOARD_IMAGES:'true'},{}],
+ ['configured command',{STORYBOARD_LOCAL_CODEX_COMMAND:process.execPath,STORYBOARD_LOCAL_CODEX_ARGS_JSON:'["-e","throw Error(\"must not run\")"]'},{}],
+ ['exact proof file gate',{STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE:'/private/unreadable-exact-proof.json'},{}],
+ ['invalid model alias',{STORYBOARD_LOCAL_CODEX_IMAGE_MODEL:'gpt-image-1'},{}],
+ ['thumbnail gate',{ALLOW_LOCAL_CLI_THUMBNAIL:'true',THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL:'gpt-image-2'},{}],
+])('retired image provider ignores %s and never reports ready',async (_label,env,options)=>{
+ expect(getStoryboardImageProviderAvailability(env,options)).toMatchObject({available:false,reason:'storyboard_workflow_retired',modelProvenance:'unverified'});
+ await expect(generateStoryboardSceneImages([{} as never],{} as never,env,options)).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+ await expect(generateStoryboardSceneImage({} as never,{} as never,env,options)).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+});
+test('retired image entrypoints never inspect settings or operation key getters',async()=>{
+ let reads=0;const guarded=new Proxy({}, {get(){reads++;throw Error('must not inspect provider inputs');}});
+ expect(getStoryboardImageProviderAvailability(guarded,guarded).available).toBe(false);
+ await expect(generateStoryboardSceneImages([{} as never],{} as never,guarded,guarded)).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+ expect(reads).toBe(0);
+});
+test.each([
+ ['wrong endpoint',{endpoint:'https://example.invalid/responses'}],
+ ['wrong raw item',{rawImageItemTypes:['image_url']}],
+ ['stale receipt',{generatedAt:'2000-01-01T00:00:00Z'}],
+ ['bad digest',{requestHash:'not-sha256'}],
+])('existing receipt parser rejects %s independently of execution',(_label,override)=>{
+ const dir=join(tmpdir(),'storyboard-receipt-'+Date.now()+'-'+Math.random());
+ try{const {proofPath}=writeExactProof(dir,override);const parsed=parseLocalCodexCommandStdout(readFileSync(proofPath,'utf8'));expect(()=>validateLocalCodexCommandResult(parsed,join(dir,'proof.png'))).toThrow('exact local-codex');}finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('existing exact receipt remains parseable without authorizing new image execution',()=>{
+ const dir=join(tmpdir(),'storyboard-exact-receipt-'+Date.now());
+ try{const {proofPath}=writeExactProof(dir);const parsed=parseLocalCodexCommandStdout(readFileSync(proofPath,'utf8'));expect(validateLocalCodexCommandResult(parsed,join(dir,'proof.png'))).toMatchObject({model:'gpt-image-2',modelProvenance:'exact',responseId:'resp_test_exact'});}finally{rmSync(dir,{recursive:true,force:true});}
 });

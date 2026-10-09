@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
+import { readAdminNaverCoordinate } from "@/lib/admin/naver-coordinate";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import "@/components/map/marker-icons.css";
@@ -382,14 +383,6 @@ function getAdminNaverMaps(): AdminNaverMapsApi | null {
     (window as Window & { naver?: { maps?: AdminNaverMapsApi } }).naver?.maps ??
     null
   );
-}
-
-function readAdminNaverCoordinate(
-  value: AdminNaverLatLngLike | undefined,
-  key: "lat" | "lng",
-) {
-  const coordinate = value?.[key];
-  return typeof coordinate === "function" ? coordinate() : coordinate;
 }
 
 function getAdminMapBbox(
@@ -1421,12 +1414,12 @@ function AdminMapInfoPanel({
               variant="outline"
               className={cn(
                 "rounded-full",
-                routeAhpAssessment.score >= 98
+                routeStops.length >= 2 && routeAhpAssessment.score >= 98
                   ? "border-emerald-700/25 text-emerald-800"
                   : "border-amber-700/25 text-amber-800",
               )}
             >
-              {routeAhpAssessment.score.toFixed(1)}점 후보
+              {routeStops.length >= 2 ? `${routeAhpAssessment.score.toFixed(1)}점 후보` : "준비 전"}
             </Badge>
           </div>
           <p className="mt-1 text-2xs leading-4 text-muted-foreground">

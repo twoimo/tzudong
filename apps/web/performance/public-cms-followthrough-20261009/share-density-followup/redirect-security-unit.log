@@ -1,0 +1,10 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/web-quality-performance-source.test.ts:
+(pass) web quality performance source contracts > admin utility APIs stay behind admin auth and short URLs cannot become open redirects [1.92ms]
+
+ 1 pass
+ 32 filtered out
+ 0 fail
+ 59 expect() calls
+Ran 1 test across 1 file. [279.00ms]

@@ -71,6 +71,7 @@ const DialogContent = React.forwardRef<
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
+        data-slot="dialog-content"
         ref={ref}
         // Every DialogContent in this app opens with the backdrop overlay, so the
         // surface is modal. Declare that for assistive tech the same way the app's

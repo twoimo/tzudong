@@ -1,0 +1,1812 @@
+{
+  "kind": "local_api_serialization_and_client_processing_replay",
+  "liveEvidenceEligible": false,
+  "sourceSha256": "73c831c808a32834b16008851dee955d2483e7f639ae675a1f2089b5d7033587",
+  "sourceRows": 1329,
+  "indexBuildMs": 10.868959,
+  "samplesPerImplementation": 100,
+  "omittedRows": 0,
+  "duplicateRows": 0,
+  "observations": [
+    {
+      "repeat": 0,
+      "implementation": "baseline",
+      "wallMs": 11.835249999999995,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 0,
+      "implementation": "candidate",
+      "wallMs": 1.8044589999999943,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 1,
+      "implementation": "candidate",
+      "wallMs": 0.7539170000000013,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 1,
+      "implementation": "baseline",
+      "wallMs": 10.956625000000003,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 2,
+      "implementation": "baseline",
+      "wallMs": 11.022333000000003,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 2,
+      "implementation": "candidate",
+      "wallMs": 0.8997909999999933,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 3,
+      "implementation": "candidate",
+      "wallMs": 0.7868339999999989,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 3,
+      "implementation": "baseline",
+      "wallMs": 9.127959000000004,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 4,
+      "implementation": "baseline",
+      "wallMs": 9.459000000000003,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 4,
+      "implementation": "candidate",
+      "wallMs": 1.5105419999999867,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 5,
+      "implementation": "candidate",
+      "wallMs": 0.5217919999999765,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 5,
+      "implementation": "baseline",
+      "wallMs": 9.564540999999991,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 6,
+      "implementation": "baseline",
+      "wallMs": 9.270332999999994,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 6,
+      "implementation": "candidate",
+      "wallMs": 0.6295409999999606,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 7,
+      "implementation": "candidate",
+      "wallMs": 1.0174579999999764,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 7,
+      "implementation": "baseline",
+      "wallMs": 10.078416000000004,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 8,
+      "implementation": "baseline",
+      "wallMs": 8.989582999999982,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 8,
+      "implementation": "candidate",
+      "wallMs": 0.6327080000000365,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 9,
+      "implementation": "candidate",
+      "wallMs": 0.4590840000000185,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 9,
+      "implementation": "baseline",
+      "wallMs": 11.586792000000003,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 10,
+      "implementation": "baseline",
+      "wallMs": 9.047374999999988,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 10,
+      "implementation": "candidate",
+      "wallMs": 1.0667499999999563,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 11,
+      "implementation": "candidate",
+      "wallMs": 0.6990000000000123,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 11,
+      "implementation": "baseline",
+      "wallMs": 14.841083999999967,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 12,
+      "implementation": "baseline",
+      "wallMs": 9.899499999999989,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 12,
+      "implementation": "candidate",
+      "wallMs": 0.7071250000000191,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 13,
+      "implementation": "candidate",
+      "wallMs": 0.5031250000000114,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 13,
+      "implementation": "baseline",
+      "wallMs": 11.859250000000031,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 14,
+      "implementation": "baseline",
+      "wallMs": 12.275332999999932,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 14,
+      "implementation": "candidate",
+      "wallMs": 0.720333000000096,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 15,
+      "implementation": "candidate",
+      "wallMs": 0.47270800000001145,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 15,
+      "implementation": "baseline",
+      "wallMs": 11.620249999999942,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 16,
+      "implementation": "baseline",
+      "wallMs": 9.910250000000019,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 16,
+      "implementation": "candidate",
+      "wallMs": 0.6563750000000255,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 17,
+      "implementation": "candidate",
+      "wallMs": 0.4731250000000955,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 17,
+      "implementation": "baseline",
+      "wallMs": 12.082625000000007,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 18,
+      "implementation": "baseline",
+      "wallMs": 11.349207999999976,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 18,
+      "implementation": "candidate",
+      "wallMs": 0.6232499999999845,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 19,
+      "implementation": "candidate",
+      "wallMs": 0.4392090000000053,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 19,
+      "implementation": "baseline",
+      "wallMs": 9.913667000000032,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 20,
+      "implementation": "baseline",
+      "wallMs": 8.617209000000003,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 20,
+      "implementation": "candidate",
+      "wallMs": 0.8650420000000167,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 21,
+      "implementation": "candidate",
+      "wallMs": 0.5048339999999598,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 21,
+      "implementation": "baseline",
+      "wallMs": 10.951666000000046,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 22,
+      "implementation": "baseline",
+      "wallMs": 10.79570799999999,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 22,
+      "implementation": "candidate",
+      "wallMs": 0.6230410000000575,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 23,
+      "implementation": "candidate",
+      "wallMs": 0.44220899999993435,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 23,
+      "implementation": "baseline",
+      "wallMs": 11.170499999999947,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 24,
+      "implementation": "baseline",
+      "wallMs": 10.052458999999999,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 24,
+      "implementation": "candidate",
+      "wallMs": 0.6104579999999942,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 25,
+      "implementation": "candidate",
+      "wallMs": 0.43287500000008095,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 25,
+      "implementation": "baseline",
+      "wallMs": 11.603624999999965,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 26,
+      "implementation": "baseline",
+      "wallMs": 9.742833000000019,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 26,
+      "implementation": "candidate",
+      "wallMs": 0.6595829999999978,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 27,
+      "implementation": "candidate",
+      "wallMs": 0.4647500000000946,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 27,
+      "implementation": "baseline",
+      "wallMs": 11.396375000000035,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 28,
+      "implementation": "baseline",
+      "wallMs": 10.598833999999897,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 28,
+      "implementation": "candidate",
+      "wallMs": 0.7626250000000709,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 29,
+      "implementation": "candidate",
+      "wallMs": 0.5898749999998927,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 29,
+      "implementation": "baseline",
+      "wallMs": 16.614207999999962,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 30,
+      "implementation": "baseline",
+      "wallMs": 12.184582999999975,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 30,
+      "implementation": "candidate",
+      "wallMs": 0.8478329999998095,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 31,
+      "implementation": "candidate",
+      "wallMs": 0.6228750000000218,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 31,
+      "implementation": "baseline",
+      "wallMs": 13.15083299999992,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 32,
+      "implementation": "baseline",
+      "wallMs": 8.85349999999994,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 32,
+      "implementation": "candidate",
+      "wallMs": 0.7838339999998425,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 33,
+      "implementation": "candidate",
+      "wallMs": 0.699500000000171,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 33,
+      "implementation": "baseline",
+      "wallMs": 12.223208999999997,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 34,
+      "implementation": "baseline",
+      "wallMs": 9.389625000000024,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 34,
+      "implementation": "candidate",
+      "wallMs": 0.6228750000000218,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 35,
+      "implementation": "candidate",
+      "wallMs": 0.43425000000002,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 35,
+      "implementation": "baseline",
+      "wallMs": 10.673457999999982,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 36,
+      "implementation": "baseline",
+      "wallMs": 9.676083000000062,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 36,
+      "implementation": "candidate",
+      "wallMs": 0.7481669999999667,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 37,
+      "implementation": "candidate",
+      "wallMs": 0.6747499999999036,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 37,
+      "implementation": "baseline",
+      "wallMs": 12.782500000000027,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 38,
+      "implementation": "baseline",
+      "wallMs": 10.227959000000055,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 38,
+      "implementation": "candidate",
+      "wallMs": 0.6324170000000322,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 39,
+      "implementation": "candidate",
+      "wallMs": 0.9412500000000819,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 39,
+      "implementation": "baseline",
+      "wallMs": 10.25412499999993,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 40,
+      "implementation": "baseline",
+      "wallMs": 9.975374999999985,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 40,
+      "implementation": "candidate",
+      "wallMs": 0.6092080000000806,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 41,
+      "implementation": "candidate",
+      "wallMs": 0.45754200000010314,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 41,
+      "implementation": "baseline",
+      "wallMs": 12.419542000000092,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 42,
+      "implementation": "baseline",
+      "wallMs": 9.985541999999896,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 42,
+      "implementation": "candidate",
+      "wallMs": 0.5730419999999867,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 43,
+      "implementation": "candidate",
+      "wallMs": 0.4066250000000764,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 43,
+      "implementation": "baseline",
+      "wallMs": 11.385874999999942,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 44,
+      "implementation": "baseline",
+      "wallMs": 11.667167000000063,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 44,
+      "implementation": "candidate",
+      "wallMs": 0.6704580000000533,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 45,
+      "implementation": "candidate",
+      "wallMs": 0.5175420000000486,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 45,
+      "implementation": "baseline",
+      "wallMs": 11.427541999999903,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 46,
+      "implementation": "baseline",
+      "wallMs": 9.288833999999952,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 46,
+      "implementation": "candidate",
+      "wallMs": 0.6299169999999776,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 47,
+      "implementation": "candidate",
+      "wallMs": 0.4534590000000662,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 47,
+      "implementation": "baseline",
+      "wallMs": 10.425917000000027,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 48,
+      "implementation": "baseline",
+      "wallMs": 13.753333999999995,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 48,
+      "implementation": "candidate",
+      "wallMs": 0.5970829999998841,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 49,
+      "implementation": "candidate",
+      "wallMs": 0.43366699999978664,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 49,
+      "implementation": "baseline",
+      "wallMs": 12.660542000000078,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 50,
+      "implementation": "baseline",
+      "wallMs": 9.05879200000004,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 50,
+      "implementation": "candidate",
+      "wallMs": 0.6138750000000073,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 51,
+      "implementation": "candidate",
+      "wallMs": 0.4390410000000884,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 51,
+      "implementation": "baseline",
+      "wallMs": 10.836541000000125,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 52,
+      "implementation": "baseline",
+      "wallMs": 12.819291999999905,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 52,
+      "implementation": "candidate",
+      "wallMs": 0.6047080000000733,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 53,
+      "implementation": "candidate",
+      "wallMs": 0.47012500000005275,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 53,
+      "implementation": "baseline",
+      "wallMs": 11.454250000000002,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 54,
+      "implementation": "baseline",
+      "wallMs": 9.343875000000025,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 54,
+      "implementation": "candidate",
+      "wallMs": 0.6097919999999704,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 55,
+      "implementation": "candidate",
+      "wallMs": 0.40829200000007404,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 55,
+      "implementation": "baseline",
+      "wallMs": 10.945540999999821,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 56,
+      "implementation": "baseline",
+      "wallMs": 12.413375000000315,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 56,
+      "implementation": "candidate",
+      "wallMs": 0.5758340000002136,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 57,
+      "implementation": "candidate",
+      "wallMs": 0.397707999999966,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 57,
+      "implementation": "baseline",
+      "wallMs": 10.788958000000093,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 58,
+      "implementation": "baseline",
+      "wallMs": 10.562249999999949,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 58,
+      "implementation": "candidate",
+      "wallMs": 0.6052909999998519,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 59,
+      "implementation": "candidate",
+      "wallMs": 0.49958299999980227,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 59,
+      "implementation": "baseline",
+      "wallMs": 10.292374999999993,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 60,
+      "implementation": "baseline",
+      "wallMs": 11.410875000000033,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 60,
+      "implementation": "candidate",
+      "wallMs": 0.5954999999999018,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 61,
+      "implementation": "candidate",
+      "wallMs": 0.846042000000125,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 61,
+      "implementation": "baseline",
+      "wallMs": 11.243333999999777,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 62,
+      "implementation": "baseline",
+      "wallMs": 8.861707999999908,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 62,
+      "implementation": "candidate",
+      "wallMs": 0.6187079999999696,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 63,
+      "implementation": "candidate",
+      "wallMs": 0.6900000000000546,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 63,
+      "implementation": "baseline",
+      "wallMs": 9.527625000000171,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 64,
+      "implementation": "baseline",
+      "wallMs": 12.106374999999844,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 64,
+      "implementation": "candidate",
+      "wallMs": 0.5654589999999189,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 65,
+      "implementation": "candidate",
+      "wallMs": 0.40354200000001583,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 65,
+      "implementation": "baseline",
+      "wallMs": 10.591792000000169,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 66,
+      "implementation": "baseline",
+      "wallMs": 8.484666000000288,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 66,
+      "implementation": "candidate",
+      "wallMs": 0.6137919999996484,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 67,
+      "implementation": "candidate",
+      "wallMs": 0.43191699999988487,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 67,
+      "implementation": "baseline",
+      "wallMs": 9.67929200000026,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 68,
+      "implementation": "baseline",
+      "wallMs": 12.015875000000051,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 68,
+      "implementation": "candidate",
+      "wallMs": 0.651915999999801,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 69,
+      "implementation": "candidate",
+      "wallMs": 0.4334159999998519,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 69,
+      "implementation": "baseline",
+      "wallMs": 9.573583999999755,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 70,
+      "implementation": "baseline",
+      "wallMs": 9.015458000000308,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 70,
+      "implementation": "candidate",
+      "wallMs": 0.5989999999997053,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 71,
+      "implementation": "candidate",
+      "wallMs": 0.45916600000009566,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 71,
+      "implementation": "baseline",
+      "wallMs": 10.236125000000357,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 72,
+      "implementation": "baseline",
+      "wallMs": 11.631875000000036,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 72,
+      "implementation": "candidate",
+      "wallMs": 0.696292000000085,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 73,
+      "implementation": "candidate",
+      "wallMs": 0.5125000000002728,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 73,
+      "implementation": "baseline",
+      "wallMs": 10.500292000000172,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 74,
+      "implementation": "baseline",
+      "wallMs": 9.469042000000172,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 74,
+      "implementation": "candidate",
+      "wallMs": 1.277625000000171,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 75,
+      "implementation": "candidate",
+      "wallMs": 0.4676249999997708,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 75,
+      "implementation": "baseline",
+      "wallMs": 9.38424999999961,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 76,
+      "implementation": "baseline",
+      "wallMs": 11.818166999999903,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 76,
+      "implementation": "candidate",
+      "wallMs": 0.5920830000000024,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 77,
+      "implementation": "candidate",
+      "wallMs": 0.45241600000008475,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 77,
+      "implementation": "baseline",
+      "wallMs": 11.661666999999852,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 78,
+      "implementation": "baseline",
+      "wallMs": 9.204791999999998,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 78,
+      "implementation": "candidate",
+      "wallMs": 0.61850000000004,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 79,
+      "implementation": "candidate",
+      "wallMs": 0.4358340000003409,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 79,
+      "implementation": "baseline",
+      "wallMs": 10.025666999999885,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 80,
+      "implementation": "baseline",
+      "wallMs": 11.925459000000046,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 80,
+      "implementation": "candidate",
+      "wallMs": 0.5837080000001151,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 81,
+      "implementation": "candidate",
+      "wallMs": 0.42770800000016607,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 81,
+      "implementation": "baseline",
+      "wallMs": 11.49612500000012,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 82,
+      "implementation": "baseline",
+      "wallMs": 8.52841699999999,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 82,
+      "implementation": "candidate",
+      "wallMs": 0.6033330000000205,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 83,
+      "implementation": "candidate",
+      "wallMs": 0.43116600000030303,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 83,
+      "implementation": "baseline",
+      "wallMs": 9.054791999999907,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 84,
+      "implementation": "baseline",
+      "wallMs": 13.445957999999791,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 84,
+      "implementation": "candidate",
+      "wallMs": 0.5886249999998654,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 85,
+      "implementation": "candidate",
+      "wallMs": 0.4929579999998168,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 85,
+      "implementation": "baseline",
+      "wallMs": 8.483832999999777,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 86,
+      "implementation": "baseline",
+      "wallMs": 9.362290999999914,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 86,
+      "implementation": "candidate",
+      "wallMs": 0.9415840000001481,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 87,
+      "implementation": "candidate",
+      "wallMs": 0.5243329999998423,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 87,
+      "implementation": "baseline",
+      "wallMs": 8.707875000000058,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 88,
+      "implementation": "baseline",
+      "wallMs": 13.226458000000093,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 88,
+      "implementation": "candidate",
+      "wallMs": 0.7331250000002001,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 89,
+      "implementation": "candidate",
+      "wallMs": 0.4889170000001286,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 89,
+      "implementation": "baseline",
+      "wallMs": 8.631875000000036,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 90,
+      "implementation": "baseline",
+      "wallMs": 9.728208999999879,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 90,
+      "implementation": "candidate",
+      "wallMs": 0.6744580000004134,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 91,
+      "implementation": "candidate",
+      "wallMs": 0.4968340000000353,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 91,
+      "implementation": "baseline",
+      "wallMs": 10.296958999999788,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 92,
+      "implementation": "baseline",
+      "wallMs": 11.599040999999943,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 92,
+      "implementation": "candidate",
+      "wallMs": 0.5858339999999771,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 93,
+      "implementation": "candidate",
+      "wallMs": 0.43079100000022663,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 93,
+      "implementation": "baseline",
+      "wallMs": 10.941125000000284,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 94,
+      "implementation": "baseline",
+      "wallMs": 8.745790999999826,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 94,
+      "implementation": "candidate",
+      "wallMs": 0.609375,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 95,
+      "implementation": "candidate",
+      "wallMs": 0.47333300000036616,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 95,
+      "implementation": "baseline",
+      "wallMs": 10.274832999999944,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 96,
+      "implementation": "baseline",
+      "wallMs": 11.740834000000177,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 96,
+      "implementation": "candidate",
+      "wallMs": 0.6332080000001952,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 97,
+      "implementation": "candidate",
+      "wallMs": 0.44362500000033833,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 97,
+      "implementation": "baseline",
+      "wallMs": 9.493750000000091,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 98,
+      "implementation": "baseline",
+      "wallMs": 9.47479199999998,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 98,
+      "implementation": "candidate",
+      "wallMs": 0.5849170000001322,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 99,
+      "implementation": "candidate",
+      "wallMs": 0.4097919999999249,
+      "payloadBytes": 163824,
+      "gzipBytes": 23115,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    },
+    {
+      "repeat": 99,
+      "implementation": "baseline",
+      "wallMs": 9.74237499999981,
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532,
+      "visibleIdsSha256": "3168ca068164447866a33569f351566fa0965ccd7227aee4ae90cf3ff0adb7bc",
+      "visibleRows": 50
+    }
+  ]
+}

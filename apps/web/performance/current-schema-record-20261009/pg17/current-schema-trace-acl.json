@@ -1,0 +1,49 @@
+{
+  "traceCases": 512,
+  "privateOperator": {
+    "anon": false,
+    "owner": "postgres",
+    "definer": true,
+    "service": true,
+    "authenticated": false
+  },
+  "traceMismatches": 0,
+  "legacyOwnerGrantMatrix": [
+    {
+      "ownerExec": false,
+      "signature": "public.canonicalize_youtube_link(text)",
+      "serviceExec": false
+    },
+    {
+      "ownerExec": false,
+      "signature": "public.extract_youtube_video_id(text)",
+      "serviceExec": true
+    },
+    {
+      "ownerExec": false,
+      "signature": "public.generate_unique_id(text,text,text)",
+      "serviceExec": false
+    },
+    {
+      "ownerExec": false,
+      "signature": "public.is_user_admin(uuid)",
+      "serviceExec": false
+    },
+    {
+      "ownerExec": false,
+      "signature": "public.normalize_restaurant_identity_name(text)",
+      "serviceExec": true
+    },
+    {
+      "ownerExec": false,
+      "signature": "public.resolve_restaurant_identity_name(text,text,text,text)",
+      "serviceExec": true
+    }
+  ],
+  "status": "passed",
+  "kind": "trace-equivalence-and-private-acl",
+  "observedAt": "2026-10-08T22:04:47.367955+00:00",
+  "operatingWrites": false,
+  "sourceSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "statisticalCI": "not_applicable_fixed_boundary_case_census"
+}

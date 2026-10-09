@@ -1,0 +1,38 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-knowledge-graph-shards.test.ts:
+(pass) lossless sharded knowledge graph reads > v1 export and existing query output remain compatible [1.59ms]
+(pass) lossless sharded knowledge graph reads > walks every Python hierarchy level with exact counts, ranges and local-file readback [50.48ms]
+(pass) lossless sharded knowledge graph reads > rejects corrupt, missing, cyclic, miscounted and foreign hierarchical indexes [0.82ms]
+(pass) lossless sharded knowledge graph reads > hierarchical totals and page DTOs retain safe exact counts above one million [0.04ms]
+(pass) lossless sharded knowledge graph reads > reads the full large Python export without loss, duplicate nodes or invented coverage [3772.42ms]
+(pass) lossless sharded knowledge graph reads > preserves Python Unicode scalar label bounds across the wire [64.19ms]
+(pass) lossless sharded knowledge graph reads > search and selected detail reach the last shard; cross-shard edges remain available [138.46ms]
+(pass) lossless sharded knowledge graph reads > edge pagination explicitly traverses all induced edges while preserving graph totals [33.30ms]
+(pass) lossless sharded knowledge graph reads > byte-bound node pages expose a next cursor instead of truncating large evidence/summary rows [53.02ms]
+(pass) lossless sharded knowledge graph reads > rejects stale, cross-query, cross-node-page and malformed cursors before returning a partial graph [1.31ms]
+(pass) lossless sharded knowledge graph reads > refuses foreign scope, wrong totals, arbitrary paths and missing/corrupt shards with fixed errors [90.46ms]
+(pass) lossless sharded knowledge graph reads > rejects hash-valid foreign scope, provenance extras and dangling cross-shard edges [90.38ms]
+(pass) actual local graph file reader > reads Python manifest/files through the route reader with global search, selected detail and edge cursors [92.91ms]
+(pass) actual local graph file reader > reads a fresh manifest and rejects old cursors before accessing replaced shards [69.31ms]
+(pass) actual local graph file reader > refuses missing, oversized, corrupted or symlinked files without leaking paths or partial rows [65.46ms]
+(pass) actual local graph file reader > retains the single-file export route and validates optional edge pagination DTO as a pair [3.98ms]
+
+tests-unit/admin-knowledge-graph.test.ts:
+(pass) bounded Tzudong knowledge graph reads > accepts the actual scope-only OSK export without treating its hub as analyzed video [0.24ms]
+(pass) bounded Tzudong knowledge graph reads > pages all nodes without loss or duplicates while preserving whole graph counts [0.45ms]
+(pass) bounded Tzudong knowledge graph reads > searches outside the first page and returns typed detail for the selected node [0.10ms]
+(pass) bounded Tzudong knowledge graph reads > rejects stale and cross-query cursors and bounded malformed queries [0.11ms]
+(pass) bounded Tzudong knowledge graph reads > refuses foreign scope, dangling edges, duplicate ids and invented coverage [0.21ms]
+(pass) bounded Tzudong knowledge graph reads > limits outbound evidence to the exact typed public video and timestamp [0.11ms]
+(pass) bounded Tzudong knowledge graph reads > admits backend canonical zero, fractional, rounded and exponent timestamps throughout the read contract [0.21ms]
+
+tests-unit/admin-knowledge-graph-titles.test.ts:
+(pass) title-only search finds exact sourced title while preserving identity and analysis coverage [0.11ms]
+(pass) legacy nodes stay valid; incomplete, foreign, unsafe, and fabricated stage contracts fail closed [0.08ms]
+(pass) strict file reader preserves optional title/stage and title-only search from Python shards [140.74ms]
+
+ 26 pass
+ 0 fail
+ 1471 expect() calls
+Ran 26 tests across 3 files. [5.25s]

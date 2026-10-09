@@ -1,0 +1,42 @@
+{
+  "supabase_changelog": {
+    "url": "https://supabase.com/changelog.md",
+    "httpStatus": 200,
+    "sha256": "f718b0dc1423d1984fc5f18b8ee81bec2847c6a0fdb6658262afa5a004ddf77a",
+    "file": "supabase_changelog.md"
+  },
+  "vercel_latest_release": {
+    "url": "https://api.github.com/repos/vercel/vercel-plugin/releases/latest",
+    "available": false,
+    "reason": "HTTPError",
+    "httpStatus": 404
+  },
+  "supabase_latest_release": {
+    "url": "https://api.github.com/repos/supabase-community/supabase-plugin/releases/latest",
+    "httpStatus": 200,
+    "sha256": "570fde706d8220b34acbdf05a265b903308d21087483902e12d2a4cab28e7c9a",
+    "file": "supabase_latest_release.json",
+    "tag_name": "v0.1.16",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-09-28T09:47:45Z",
+    "html_url": "https://github.com/supabase-community/supabase-plugin/releases/tag/v0.1.16"
+  },
+  "vercel_current_env_skill": {
+    "url": "https://raw.githubusercontent.com/vercel/vercel-plugin/main/skills/env-vars/SKILL.md",
+    "httpStatus": 200,
+    "sha256": "081d79b5b046276631c10b3db6ff07dbff4a59c057fc9bbc64aa364f82bb3045",
+    "file": "vercel_current_env_skill.md"
+  },
+  "supabase_current_feedback": {
+    "url": "https://raw.githubusercontent.com/supabase/agent-skills/main/skills/supabase/references/skill-feedback.md",
+    "httpStatus": 200,
+    "sha256": "09ad94c0291735dfc04c92557c8734fa259ec39e1d56bf2bd5c6a6529d838717",
+    "file": "supabase_current_feedback.md"
+  },
+  "vercel_upstream_manifest": {
+    "url": "https://raw.githubusercontent.com/vercel/vercel-plugin/main/.claude-plugin/plugin.json",
+    "version": "0.54.1",
+    "note": "Current manifest version; no stable GitHub release endpoint resolved. Not a managed directory update receipt."
+  }
+}

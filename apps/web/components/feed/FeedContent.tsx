@@ -580,7 +580,7 @@ export default function FeedContent({
         >
             <div className={cn(
                 "w-full mx-auto bg-background flex flex-col relative",
-                isOverlay ? "h-full" : "min-h-full md:border-x md:border-border md:shadow-sm max-w-2xl"
+                isOverlay ? "h-full" : "min-h-full max-w-2xl bg-card"
             )}>
                 {/* 헤더 */}
                 {showHeader && (

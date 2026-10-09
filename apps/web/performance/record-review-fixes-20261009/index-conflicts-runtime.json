@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "cases": [
+    "restaurant.create_video_only_named_conflict_rollback",
+    "restaurant.restore_video_only_named_conflict_rollback",
+    "unrelated_named_unique_retains_23505_rollback"
+  ],
+  "schemaStateRollbackExact": true,
+  "compositeSameVideoDifferentName": "passed in fixes-runtime deleted/create positive"
+}

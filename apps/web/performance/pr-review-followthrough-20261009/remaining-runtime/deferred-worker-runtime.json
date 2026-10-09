@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "externalCalls": 0,
+  "principal": "service_role",
+  "judgment": "synthetic DTO only; no model/provider invocation",
+  "cases": [
+    "prior_fingerprint_actual_tick_exclusion",
+    "applied_fingerprint_actual_tick_exclusion",
+    "confirmed_worker_deferred_then_classification_change"
+  ],
+  "fixtureRollbackExact": true,
+  "priorAndAppliedFingerprintExcluded": true,
+  "oneClaimOneBatch": true,
+  "confirmedDeferredReadbackAppliedHold": true,
+  "noPermanentSkip": true,
+  "maxCallsPerClaim": 1
+}

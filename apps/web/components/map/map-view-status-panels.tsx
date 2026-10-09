@@ -1,91 +1,29 @@
-export function MapViewErrorState({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
-    return (
-        <div className="flex items-center justify-center h-full bg-muted">
-            <div className="text-center space-y-4">
-                <div className="text-6xl">🚨</div>
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-destructive">
-                        지도 로딩 실패
-                    </h2>
-                    <p className="text-muted-foreground">
-                        지도를 불러오는데 문제가 발생했습니다.
-                    </p>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                        <p>🔧 오류: {error.message}</p>
-                    </div>
-                    <button
-                        onClick={resetErrorBoundary}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                    >
-                        다시 시도
-                    </button>
-                </div>
-            </div>
+import { MapPinOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+function MapStatusNotice({ title, description, onRetry }: { title: string; description: string; onRetry?: () => void }) {
+    return <div className="flex h-full items-center justify-center bg-background p-4" role="status">
+        <div className="max-w-xs space-y-3 text-center">
+            <MapPinOff className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden="true" />
+            <h2 className="text-base font-semibold text-foreground">{title}</h2>
+            <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+            {onRetry && <Button variant="outline" onClick={onRetry}>다시 시도</Button>}
         </div>
-    );
+    </div>;
+}
+
+export function MapViewErrorState({ resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+    return <MapStatusNotice title="지도를 불러오지 못했어요" description="잠시 후 다시 시도해 주세요." onRetry={resetErrorBoundary} />;
 }
 
 export function MapViewMissingApiKeyState() {
-    return (
-        <div className="flex items-center justify-center h-full bg-muted">
-            <div className="text-center space-y-4">
-                <div className="text-6xl">🔑</div>
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-destructive">
-                        Google Maps API 키 필요
-                    </h2>
-                    <p className="text-muted-foreground">
-                        .env 파일에 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY를 설정해주세요.
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
+    return <MapStatusNotice title="지도를 불러올 수 없어요" description="잠시 후 다시 확인해 주세요." />;
 }
 
 export function MapViewGoogleLoadErrorState() {
-    return (
-        <div className="flex items-center justify-center h-full bg-muted">
-            <div className="text-center space-y-4">
-                <div className="text-6xl">❌</div>
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-destructive">
-                        구글 지도 로딩 실패
-                    </h2>
-                    <p className="text-muted-foreground">
-                        Google Maps API를 불러오는데 실패했습니다. 콘솔에 InvalidKeyMapError가 표시되면
-                        브라우저 도메인 제한과 Maps JavaScript API 활성화 상태를 먼저 확인해 주세요.
-                    </p>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                        <p>🔧 해결 방법:</p>
-                        <p>1. Google Cloud Console에서 API 키 확인</p>
-                        <p>2. Application restrictions → HTTP referrers 설정</p>
-                        <p>3. 다음 도메인 추가: <code className="bg-muted px-1 rounded">localhost:3000/*</code></p>
-                        <p>4. Maps JavaScript API 활성화 및 InvalidKeyMapError 여부 확인</p>
-                </div>
-            </div>
-        </div>
-        </div>
-    );
+    return <MapStatusNotice title="해외 지도를 불러오지 못했어요" description="잠시 후 다시 확인해 주세요." />;
 }
 
-export function NaverMapLoadErrorState({ message }: { message: string }) {
-    return (
-        <div className="flex items-center justify-center h-full bg-muted">
-            <div className="text-center space-y-4">
-                <div className="text-6xl">❌</div>
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-destructive">
-                        지도 로딩 실패
-                    </h2>
-                    <p className="text-muted-foreground">
-                        네이버 지도 API를 불러오는데 실패했습니다.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                        {message}
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
+export function NaverMapLoadErrorState(_props: { message: string }) {
+    return <MapStatusNotice title="지도를 불러오지 못했어요" description="잠시 후 다시 확인해 주세요." />;
 }

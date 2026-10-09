@@ -1,0 +1,29 @@
+{
+  "kind": "current-production-rollback-readback",
+  "observedAt": "2026-10-04T10:51:29.091Z",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "projectName": "tzudong",
+  "nodeVersion": "24.x",
+  "framework": "nextjs",
+  "productionDeploymentId": "dpl_D6wm9mbMeZEbLtHM3PFXMctZ9txm",
+  "target": "production",
+  "readyState": "READY",
+  "productionAliases": [
+    "www.tzudong.app",
+    "internal.tzudong.app",
+    "tzudong.app",
+    "tzudong-twoimos-projects.vercel.app",
+    "tzudong-git-main-twoimos-projects.vercel.app"
+  ],
+  "rollbackSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+  "repository": "twoimo/tzudong",
+  "branch": "main",
+  "rootDirectoryVerified": true,
+  "operatingWrites": 0,
+  "limitations": [
+    "Current deployment and Git-connected project read back; no operating changes deployed in this phase."
+  ],
+  "rootDirectory": "apps/web",
+  "repositoryVerifiedByCli": true,
+  "cliVersion": "56.5.0"
+}

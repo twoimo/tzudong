@@ -730,9 +730,9 @@ function InsightsClientLoadingSkeleton() {
             data-insights-client-loading="true"
             role="status"
             aria-busy="true"
-            aria-label="핵심 인사이트 화면 로딩 중"
+            aria-label="영상 성과 분석 화면 로딩 중"
         >
-            <span className="sr-only">핵심 인사이트 필터와 트리맵 영역을 불러오는 중입니다.</span>
+            <span className="sr-only">영상 성과 분석 필터와 트리맵 영역을 불러오는 중입니다.</span>
             <div className="min-h-0 flex-1 overflow-hidden p-2 md:p-4">
                 <Card className="flex h-full min-h-0 flex-col overflow-hidden border border-border">
                     <div className="border-b border-border p-2 md:p-3">
@@ -1270,7 +1270,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         <AdminEmbeddedModuleShell
             moduleId="insights"
             titleId="admin-insights-title"
-            title="핵심 인사이트"
+            title="영상 성과 분석"
             icon={Lightbulb}
             summary={summary}
             contentClassName="p-2"
@@ -1334,9 +1334,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                             <div className={cn("flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3", embedded ? "min-w-0" : "min-w-max")}>
                                 <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
 
-                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
                                     <span className="text-2xs text-muted-foreground">모드</span>
-                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         {VIEW_MODE_OPTIONS.map((option) => (
                                             <Button
                                                 key={option.value}
@@ -1351,9 +1351,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     </div>
                                 </div>
 
-                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
                                     <span className="text-2xs text-muted-foreground">지표</span>
-                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         {METRIC_OPTIONS.map((option) => (
                                             <Button
                                                 key={option.value}
@@ -1368,9 +1368,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     </div>
                                 </div>
 
-                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
                                     <span className="text-2xs text-muted-foreground">기준</span>
-                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         {periodOptionsForView.map((option) => (
                                             <Button
                                                 key={option.value}
@@ -1385,9 +1385,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     </div>
                                 </div>
 
-                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
                                     <span className="text-2xs text-muted-foreground">클러스터</span>
-                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         <Button
                                             size="sm"
                                             variant={clusterStep === null ? 'default' : 'ghost'}

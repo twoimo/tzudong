@@ -1,0 +1,7 @@
+
+> web@1.2.4 typecheck:native
+> node scripts/run-typecheck.mjs --compiler native
+
+components/admin/pipeline/AdminPipelineDashboard.tsx(108,36): error TS18048: 'snapshot' is possibly 'undefined'.
+components/admin/pipeline/AdminPipelineDashboard.tsx(108,68): error TS18048: 'snapshot' is possibly 'undefined'.
+components/admin/storyboard/LocalStoryboardWorkspace.tsx(211,140): error TS2353: Object literal may only specify known properties, and 'isAllowedStoryboardGeminiModel' does not exist in type '(() => { id: "chatgpt-manual" | "gemini-api" | "grok-manual" | "local-mlx" | "manual" | "openai-api" | "xai-api"; model: string; }) | { id: "chatgpt-manual" | "gemini-api" | "grok-manual" | "local-mlx" | "manual" | "openai-api" | "xai-api"; model: string; }'.

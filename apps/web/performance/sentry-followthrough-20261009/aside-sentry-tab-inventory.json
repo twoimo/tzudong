@@ -1,0 +1,8 @@
+{
+  "fixedCode": "ASIDE_TAB_INVENTORY_READ",
+  "account": "u0",
+  "observedTabCount": 8,
+  "omittedCount": 0,
+  "sentryTabs": [],
+  "scope": "Metadata only; no page adoption/navigation or account membership proof"
+}

@@ -1,0 +1,602 @@
+{
+  "at": "2026-10-04T19:28:48.699Z",
+  "readOnly": true,
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "state": {
+    "tls": {
+      "ssl": false,
+      "bits": null,
+      "version": null
+    },
+    "tick": {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "kind": "f",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\"",
+        "lock_timeout=2s"
+      ],
+      "strict": false,
+      "identity": "restaurant_review_automation_tick(uuid)",
+      "language": "plpgsql",
+      "parallel": "u",
+      "leakproof": false,
+      "bodySha256": "c23d8d0f085e7e320f9d8cac73f05f64292cb06c728ff00acf13de926ad6dd79",
+      "returnType": "jsonb",
+      "returnsSet": false,
+      "volatility": "v",
+      "metadataSha256": "bae4d1c99603dba4c296bd071bd1efca25e2543a48c8cbf4e9eb6412e5c95f16",
+      "securityDefiner": false
+    },
+    "ledger": [
+      {
+        "name": "db_performance_optimization",
+        "version": "20251219",
+        "statement_count": 85,
+        "statements_sha256": null,
+        "statements_array_sha256": "1bf32699724ac34c4b57653cb44db6e933756bec73b292bc8092c13823173eaf"
+      },
+      {
+        "name": "create_ocr_logs",
+        "version": "20260118",
+        "statement_count": 6,
+        "statements_sha256": null,
+        "statements_array_sha256": "e8d1bca67629a99c9a9d711b17ae9862b8813e88ff3cef365097caf2ff81e4ca"
+      },
+      {
+        "name": "allow_ocr_logs_user_insert",
+        "version": "20260425",
+        "statement_count": 2,
+        "statements_sha256": null,
+        "statements_array_sha256": "2e15c07ce8b9aa5bd5c9e625aae269c01d204b2459d99e795b75b3672b75ec8f"
+      },
+      {
+        "name": "optimize_auth_user_state_indexes",
+        "version": "20260506065538",
+        "statement_count": 1,
+        "statements_sha256": "c73a8b94dd569bec3391965082c55781c909d7b307a8d252ee8d08370afb9a3d",
+        "statements_array_sha256": "99728b618bba31ee458c3e00ea6b852c05d8f08c35625163af77f59c62a1ce66"
+      },
+      {
+        "name": "optimize_app_query_indexes",
+        "version": "20260506085634",
+        "statement_count": 4,
+        "statements_sha256": null,
+        "statements_array_sha256": "8cfae29b1187057887ee73442bb54e776180e160be1165b5b610641f863cfd2b"
+      },
+      {
+        "name": "drop_server_costs",
+        "version": "20260509000100",
+        "statement_count": 1,
+        "statements_sha256": "55360756d24574ecac2d08c67ac530cf73f193442c7a5f87faa99b84c74df7ff",
+        "statements_array_sha256": "c06d024483064fd9de5983809bb1aba29cde728479c380ef4d8a8d43cedb78e8"
+      },
+      {
+        "name": "drop_admin_ai_settings",
+        "version": "20260509000200",
+        "statement_count": 1,
+        "statements_sha256": "5bef619bd3531a4a22df4539c0ebf74c1ed42b3d6d14eebd529bea6e26e1df8f",
+        "statements_array_sha256": "5c67d500f47699b953622343c9cc8045b21abf7003725dc42f5f069a3f7c0947"
+      },
+      {
+        "name": "create_restaurant_popular_rank_snapshots",
+        "version": "20260523093000",
+        "statement_count": 11,
+        "statements_sha256": null,
+        "statements_array_sha256": "e5bf0e7ef78981118c170a4a7a0103f6c3c99c71619cfb39546dba980dd86bc0"
+      },
+      {
+        "name": "create_youtube_kpi_snapshots",
+        "version": "20260525143908",
+        "statement_count": 1,
+        "statements_sha256": "f38b1b229bf532ba685c994a55000c79c6f3bd2ca07a9f3ed889028ee813f600",
+        "statements_array_sha256": "344c8d1f40d4de75b75fcea660db8464859f6d9076b71c7430a6bea7e3db42ea"
+      },
+      {
+        "name": "add_youtube_channel_growth_snapshot_deltas",
+        "version": "20260526083932",
+        "statement_count": 3,
+        "statements_sha256": null,
+        "statements_array_sha256": "9b1a60d8229550679b95227b4b44236ec9d663b775cdad91b87590dd189d5f51"
+      },
+      {
+        "name": "harden_public_api_grants_and_rpcs",
+        "version": "20260531084217",
+        "statement_count": 6,
+        "statements_sha256": null,
+        "statements_array_sha256": "60f2df3abf11eb26a4dc32ceb5790b1eec1828106dea58a07e8fdd50f05b0b34"
+      },
+      {
+        "name": "tighten_public_table_data_api_grants",
+        "version": "20260531084516",
+        "statement_count": 55,
+        "statements_sha256": null,
+        "statements_array_sha256": "36a642e25911c96518d2f92d44bba0da4f9ea32cb0aab7d51d97ca932f210ec5"
+      },
+      {
+        "name": "storyboard_custom_gpt_rag_documents",
+        "version": "20260627080000",
+        "statement_count": 21,
+        "statements_sha256": null,
+        "statements_array_sha256": "06439d1af87fab01b2cae4618a504db6263231441e3f4c8be920f21c54f1002e"
+      },
+      {
+        "name": "storyboard_documents_hybrid_v2_indexes",
+        "version": "20260627153000",
+        "statement_count": 9,
+        "statements_sha256": null,
+        "statements_array_sha256": "2f11a386c3ede093145b703d9d11d1766281ce90b9c34768660d4529df6684e1"
+      },
+      {
+        "name": "storyboard_documents_hybrid_rrf_type_fix",
+        "version": "20260627154500",
+        "statement_count": 7,
+        "statements_sha256": null,
+        "statements_array_sha256": "08a9897fb1268c6336523c08ea62f8ffa9fa81c953862eb1c197bd4acf9a750c"
+      },
+      {
+        "name": "restaurant_request_review_lifecycle",
+        "version": "20260702000100",
+        "statement_count": 29,
+        "statements_sha256": null,
+        "statements_array_sha256": "cc4ad38a54f7c1ba2cd11a2b605c38fc630d987732dbe46610b6805af1059275"
+      },
+      {
+        "name": "restaurant_submission_submit_contract",
+        "version": "20260704000100",
+        "statement_count": 6,
+        "statements_sha256": null,
+        "statements_array_sha256": "55658870c82f7b78d37828030668b4461bdb8e31f9edd3913750545bb6076c52"
+      },
+      {
+        "name": "restaurant_destructive_admin_audit",
+        "version": "20260704000200",
+        "statement_count": 10,
+        "statements_sha256": null,
+        "statements_array_sha256": "adadb604c132a88fd5bc7f374d9c7291c8685ae0b3fd0d01a2c5e8ff02e2481c"
+      },
+      {
+        "name": "admin_restaurant_map_overlays",
+        "version": "20260707000100",
+        "statement_count": 10,
+        "statements_sha256": null,
+        "statements_array_sha256": "4349377139306cecca93be89eaccb5467f46a05e53fa7c958ea7fd71d822e86b"
+      },
+      {
+        "name": "admin_restaurant_map_overlay_audit_apply",
+        "version": "20260707000200",
+        "statement_count": 14,
+        "statements_sha256": null,
+        "statements_array_sha256": "d5472f44f59508410dc2fb0af8db8a9c31efaa89d5a2206e2136a8908881df4f"
+      },
+      {
+        "name": "admin_trend_schema_foundation",
+        "version": "20260707000300",
+        "statement_count": 36,
+        "statements_sha256": null,
+        "statements_array_sha256": "af51e04a9ddfeb15c21a479ca3c3bec6dc26cc3806a5a4a1892f8361fb61b0a4"
+      },
+      {
+        "name": "admin_trend_job_request_rpcs",
+        "version": "20260707000400",
+        "statement_count": 9,
+        "statements_sha256": null,
+        "statements_array_sha256": "e55ea8bbe2af57260a3aee6b58f5167859e6bedbbce738a4d759ba90601047d9"
+      },
+      {
+        "name": "admin_trend_proposal_review_rpc",
+        "version": "20260707000500",
+        "statement_count": 5,
+        "statements_sha256": null,
+        "statements_array_sha256": "36593707511a377a37bc0dac39f8dd950064c536c87b664ae466fbfce02de991"
+      },
+      {
+        "name": "admin_trend_proposal_approval_rpc",
+        "version": "20260707000600",
+        "statement_count": 5,
+        "statements_sha256": null,
+        "statements_array_sha256": "3059524ccb2fdfc8f1ccb5da254a0948997a2193eaa73c375a7cb2823e7ad7c0"
+      },
+      {
+        "name": "release_auth_session_revocation",
+        "version": "20260711000100",
+        "statement_count": 37,
+        "statements_sha256": null,
+        "statements_array_sha256": "67bd95fd083f4781a3988ff494434059751974a05bd32a6796218d404c7a365a"
+      },
+      {
+        "name": "g010_privacy_foundation",
+        "version": "20260712000100",
+        "statement_count": 111,
+        "statements_sha256": null,
+        "statements_array_sha256": "1bc745dfe164cacb05b90e3cd8010e0164697c5fda994eaac0c8fe6baf84f410"
+      },
+      {
+        "name": "g010_notification_marketing",
+        "version": "20260712000200",
+        "statement_count": 55,
+        "statements_sha256": null,
+        "statements_array_sha256": "4c6d0c76ac319bd4c428bc22eb094fda928c2ec0ce543f631008164164dd9362"
+      },
+      {
+        "name": "g010_account_deletion",
+        "version": "20260712000300",
+        "statement_count": 91,
+        "statements_sha256": null,
+        "statements_array_sha256": "b4787dfec6dec0319ece07004f76e5164deef8a857e5c0fd36ac11a6a6d7e385"
+      },
+      {
+        "name": "g010_retention_separation",
+        "version": "20260712000400",
+        "statement_count": 100,
+        "statements_sha256": null,
+        "statements_array_sha256": "fe04a2cb2e6cb72debe14bcdb2b3ef8718c95400e548726d4b74e029684b821d"
+      },
+      {
+        "name": "g010_incident_workflow",
+        "version": "20260712000500",
+        "statement_count": 63,
+        "statements_sha256": null,
+        "statements_array_sha256": "0e7f88b912686c88b2c5521e1a4ceea3f7dc558e01f2df10b3e3671b466727ba"
+      },
+      {
+        "name": "g010_ocr_log_minimization",
+        "version": "20260712000600",
+        "statement_count": 5,
+        "statements_sha256": null,
+        "statements_array_sha256": "b2dd5f025514e7d4c6681b1597ad379f92b475995339c56bf5ac2105babf4797"
+      },
+      {
+        "name": "g013_short_url_security",
+        "version": "20260713000100",
+        "statement_count": 21,
+        "statements_sha256": null,
+        "statements_array_sha256": "662b2162b134e7e8069c8e51b09c61526c9a09ca3729bb2f7e7ad6b6412b2357"
+      },
+      {
+        "name": "g013_ocr_quota_security",
+        "version": "20260713000200",
+        "statement_count": 21,
+        "statements_sha256": null,
+        "statements_array_sha256": "952a4be9a0b29ef8b0b0ddcd6aa1fd3eb15541232c01a862d866ffcdff856990"
+      },
+      {
+        "name": "g013_admin_provider_budgets",
+        "version": "20260713000300",
+        "statement_count": 28,
+        "statements_sha256": null,
+        "statements_array_sha256": "9cf938badbb412ba28e0b26017ca0c5665a5fcbb8220c1331aa165b1c5c7098b"
+      },
+      {
+        "name": "g013_address_admin_approval",
+        "version": "20260713000450",
+        "statement_count": 26,
+        "statements_sha256": null,
+        "statements_array_sha256": "24d10cdb1f74b3eaeee84f107f72ef92fccbfa080e6d872a52519cd1e3d108fe"
+      },
+      {
+        "name": "g014_public_api_private_boundary",
+        "version": "20260713002000",
+        "statement_count": 81,
+        "statements_sha256": null,
+        "statements_array_sha256": "37b71dabf1fe9e85fae8ed653f1c18b43c2e267d536c141802d9128024d4534e"
+      },
+      {
+        "name": "g014_privacy_workflows",
+        "version": "20260713002100",
+        "statement_count": 87,
+        "statements_sha256": null,
+        "statements_array_sha256": "eec3ed09188782bf0ca3e5b9e45a6d97395ce321322faec287e96340792d043d"
+      },
+      {
+        "name": "g014_marketing_state_machine",
+        "version": "20260713002200",
+        "statement_count": 121,
+        "statements_sha256": null,
+        "statements_array_sha256": "b86b585a4a97e3af63f8144af0ad0cbfbc57500692b236649883c16247e535a6"
+      },
+      {
+        "name": "g014_account_deletion_state_machine",
+        "version": "20260713002300",
+        "statement_count": 258,
+        "statements_sha256": null,
+        "statements_array_sha256": "2873d20a2fb559abcb0e853944e86201bca66b0611cf248992bdae0af223ab3d"
+      },
+      {
+        "name": "g014_retention_adapters_receipts",
+        "version": "20260713002400",
+        "statement_count": 138,
+        "statements_sha256": null,
+        "statements_array_sha256": "0c0193cf6feb3ea733385dd4eb4ed34427781e149a683658ef0d4da88da7641b"
+      },
+      {
+        "name": "g014_catalog_contract",
+        "version": "20260713002500",
+        "statement_count": 0,
+        "statements_sha256": null,
+        "statements_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "g014_account_deletion_receipt_parity",
+        "version": "20260713002600",
+        "statement_count": 10,
+        "statements_sha256": null,
+        "statements_array_sha256": "3452f5ae651c7dabb742547e4c8b136a56d00458f076252a7f189ce90970af0a"
+      },
+      {
+        "name": "g028_account_deletion_reauth_proof",
+        "version": "20260713002700",
+        "statement_count": 32,
+        "statements_sha256": null,
+        "statements_array_sha256": "869dc6e3635da02c4cca88c3061605812d188b30e761c1a92b8f12b7ab1df3bb"
+      },
+      {
+        "name": "g016_privacy_audit_owner_policy",
+        "version": "20260801000100",
+        "statement_count": 0,
+        "statements_sha256": null,
+        "statements_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "g016_onboarding_confirmation_freshness",
+        "version": "20260801000200",
+        "statement_count": 0,
+        "statements_sha256": null,
+        "statements_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "g041_privacy_audit_lock_privilege",
+        "version": "20260804000100",
+        "statement_count": 0,
+        "statements_sha256": null,
+        "statements_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "g041_privacy_onboarding_workflow_privileges",
+        "version": "20260804000200",
+        "statement_count": 0,
+        "statements_sha256": null,
+        "statements_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "g041_privacy_eligibility_auth_boundary",
+        "version": "20260804000300",
+        "statement_count": 7,
+        "statements_sha256": null,
+        "statements_array_sha256": "c7c33f0f76e5b3a949e48af75d117104ce15bbe5c9a37d34ea98dff8e10d2547"
+      },
+      {
+        "name": "g041_auth_boundary_closure",
+        "version": "20260804000400",
+        "statement_count": 0,
+        "statements_sha256": null,
+        "statements_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "g041_auth_workflow_bridge",
+        "version": "20260804000500",
+        "statement_count": 0,
+        "statements_sha256": null,
+        "statements_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "advisor_followup_hardening",
+        "version": "20260903174413",
+        "statement_count": 17,
+        "statements_sha256": null,
+        "statements_array_sha256": "9bc0ce1bb00777a5f49e5176fee8d28ce936918d3d9372def9fa3bf2ab06b287"
+      },
+      {
+        "name": "g014_pg17_workflow_owner_contract",
+        "version": "20260906064252",
+        "statement_count": 1,
+        "statements_sha256": "92e475c2ca55bb82ad8132ced6b0ecda473508f2b035f59d3d6140b2e2481f8d",
+        "statements_array_sha256": "42af1eec6543319af14934859b15cbb3c77e6a6ceea80cdc1d9432783491b0aa"
+      },
+      {
+        "name": "public_profile_summary_read_boundary",
+        "version": "20260920171524",
+        "statement_count": 1,
+        "statements_sha256": "ba1ab811fb096d35845341bd1dd75d479c59ae19e517f2b0c8c79159f10e9fc3",
+        "statements_array_sha256": "d3847ad7f221699b1543a4909542b7bae51dfad410737cd44f5153ea9edfbaa9"
+      },
+      {
+        "name": "app_web_vitals_aggregate",
+        "version": "20261001130038",
+        "statement_count": 1,
+        "statements_sha256": "0d5b9c10461fe0fb878593ad353ddea7d386ce70cee2810aae1fd0929df369d3",
+        "statements_array_sha256": "d941b031ce979f1a9d304fa2469433d4f61205f2a37c1602b2598947515728f9"
+      },
+      {
+        "name": "app_web_vitals_ingest_budget",
+        "version": "20261001155606",
+        "statement_count": 1,
+        "statements_sha256": "d840c7547925f0dafa87fc5e354fe7ff9ae87648d3a56fa5e0ca0021a1316be5",
+        "statements_array_sha256": "a2101ab3388e3aa275a883f2dee8bb891f1e486bd1b9ddf22eeff1dc8dc488c8"
+      },
+      {
+        "name": "admin_evaluation_pagination",
+        "version": "20261002235102",
+        "statement_count": 1,
+        "statements_sha256": "f58f8023a4484acc67c14ce0449d12dce13257b998c139120e437fe767b4d519",
+        "statements_array_sha256": "48cee87e7f8c92802461a1bd7a6e22fa78f949e96040b56deef772874dceea73"
+      },
+      {
+        "name": "storyboard_production_foundation",
+        "version": "20261003000711",
+        "statement_count": 1,
+        "statements_sha256": "3364e8c2857b6cb89975f1f91c4b36ffc6007804002152b1db93a597765d5e7e",
+        "statements_array_sha256": "30f06d50415282606dddb6506a05a8fe73d2f29a9e91af940436fae77892c125"
+      },
+      {
+        "name": "storyboard_historical_restore",
+        "version": "20261003000811",
+        "statement_count": 1,
+        "statements_sha256": "27f610ca03aa1f2513a99c7984f4d07874bbdc9f1069cf2de1775e5cd1da5100",
+        "statements_array_sha256": "53e3762f7a9de765566cc160b10c7994f9340be244042aac6a8f1cfde8eb7ad9"
+      },
+      {
+        "name": "storyboard_gemini_only",
+        "version": "20261003000812",
+        "statement_count": 1,
+        "statements_sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470",
+        "statements_array_sha256": "153425b7877d6f6c8f8a06c46db39ea960041e6eab13098acce317a79105c77c"
+      },
+      {
+        "name": "g014_current_service_rpc_registry",
+        "version": "20261003065736",
+        "statement_count": 1,
+        "statements_sha256": "9fa8a42fc86b5fb00c25d65c02d1c9410a82ac5948359bec2f6beb1f03e2bf28",
+        "statements_array_sha256": "6dd1beed17b51fcbb90b9c2a32d2b29b87157f338d0f3649f507efbe689be8a8"
+      },
+      {
+        "name": "restaurant_review_automation",
+        "version": "20261003081915",
+        "statement_count": 1,
+        "statements_sha256": "1cff7056df006070a76b466a2ad04cf386fdb8d6b868fba491f6cb88a56246e0",
+        "statements_array_sha256": "c5b9db3cb74c87b3e4c46878eca592d59183eddadd21d7a6899b7eef87d53cfb"
+      },
+      {
+        "name": "restore_service_identity_helpers",
+        "version": "20261003095444",
+        "statement_count": 1,
+        "statements_sha256": "bc4ffbde4062f9d3c0bd9b9bf09960dcd681aa39c5df5589779b06929b258aeb",
+        "statements_array_sha256": "078413e8243b735cd5c3c1c1340c0ae194ff87d524a7c4cec3896249f8b59108"
+      },
+      {
+        "name": "g014_service_invoker_contract",
+        "version": "20261003113923",
+        "statement_count": 1,
+        "statements_sha256": "527286d204fc8a5b07891763535fcb27ce6e28a0e2489c27796a63bc306b6f9c",
+        "statements_array_sha256": "9f9ad8e20d5ab00c6114dc392e611fb19618b93124c9e525bb00611e042cb22d"
+      },
+      {
+        "name": "restaurant_review_manual_guards",
+        "version": "20261003171449",
+        "statement_count": 11,
+        "statements_sha256": null,
+        "statements_array_sha256": "dccbb79e7db8a588bb6114f99cf35e9f8bbd692f4bdc4458995adc6081de9052"
+      },
+      {
+        "name": "restaurant_review_manual_invoker_contract",
+        "version": "20261003172126",
+        "statement_count": 3,
+        "statements_sha256": null,
+        "statements_array_sha256": "7e9391fbdd82ffe7e0deb29628fae7895d8369edd3dbff315a38fd1a598d54ab"
+      },
+      {
+        "name": "storyboard_service_role_bridge",
+        "version": "20261003182338",
+        "statement_count": 11,
+        "statements_sha256": null,
+        "statements_array_sha256": "cf0f7b5b82999d4f7ec0e41df693bede6951ed9991f4592703ffa3772255032b"
+      },
+      {
+        "name": "restaurant_review_claim_progress",
+        "version": "20261003193717",
+        "statement_count": 4,
+        "statements_sha256": null,
+        "statements_array_sha256": "16369b39084d9da9c3ac0e2eb435155b159e5ee2f8854b8b4b3e5631551898b4"
+      },
+      {
+        "name": "storyboard_uncertain_lease_recovery",
+        "version": "20261003205335",
+        "statement_count": 5,
+        "statements_sha256": null,
+        "statements_array_sha256": "94e3b27dbfdbe5b1fe7733c0a131756cc723fa15e5603cf14d7a11749a66cbfa"
+      },
+      {
+        "name": "admin_evaluation_read_helpers",
+        "version": "20261003212017",
+        "statement_count": 14,
+        "statements_sha256": null,
+        "statements_array_sha256": "ac1f2b62aba8fea08bebd6dedd4a224eedec72a6ba24a6fd02bb06c2df07bca3"
+      },
+      {
+        "name": "admin_evaluation_keyset_queries",
+        "version": "20261003215116",
+        "statement_count": 35,
+        "statements_sha256": null,
+        "statements_array_sha256": "2854a91490e0c828ef25e5888e4b8b0483289786eb19cf64bc41b6071e32133e"
+      },
+      {
+        "name": "admin_evaluation_page_invoker_contract",
+        "version": "20261003220841",
+        "statement_count": 3,
+        "statements_sha256": null,
+        "statements_array_sha256": "29fd5931beb9a7735bb06d795503aaecd4bea43c5bd67c1966a55fa8fee18e05"
+      },
+      {
+        "name": "admin_evaluation_display_revision",
+        "version": "20261004003503",
+        "statement_count": 3,
+        "statements_sha256": null,
+        "statements_array_sha256": "16e9963121ab3f768099df4a7c83353cb60db784fe0d00bc3dae94bda1ab55e5"
+      },
+      {
+        "name": "restaurant_review_identity_evidence",
+        "version": "20261004010334",
+        "statement_count": 3,
+        "statements_sha256": null,
+        "statements_array_sha256": "208c8e9094c84e207b9a23d2c2e7b612780386879f293b7eea852356a047f143"
+      },
+      {
+        "name": "storyboard_claim_capability_order",
+        "version": "20261004023841",
+        "statement_count": 3,
+        "statements_sha256": null,
+        "statements_array_sha256": "6082ef147fd7c6e10d3c9af6e83d13a8a760837f521dd43d6026ab3385f8a51a"
+      },
+      {
+        "name": "restaurant_review_category_contract",
+        "version": "20261004045404",
+        "statement_count": 3,
+        "statements_sha256": null,
+        "statements_array_sha256": "390c1fe3ebf6f999a849d23b0d0e9415d6f1ea4e5a04bb70a15315d7460310af"
+      },
+      {
+        "name": "g014_pg17_owner_final_verifier",
+        "version": "20261004115554",
+        "statement_count": 1,
+        "statements_sha256": "6fb6476eb8d5bea2c440831d4a9ab1e5be372f11165c21c1a4a0a4eec0590751",
+        "statements_array_sha256": "b376f880e488f5fa734128154b701c02dafe8d223664467b002417428138dd7e"
+      },
+      {
+        "name": "restaurant_review_gemini_decision",
+        "version": "20261004120000",
+        "statement_count": 11,
+        "statements_sha256": null,
+        "statements_array_sha256": "2531b67e63ca32aa2ad9019db095ac40a8c5b9fc801d87711c7ee71752e3dde4"
+      },
+      {
+        "name": "g016_onboarding_allowlist_identity_correction",
+        "version": "20261004123034",
+        "statement_count": 1,
+        "statements_sha256": "3d1d4e045f1a034e092f2b4cb19a95a165efad59e413af1353bf98c4f8e37ae0",
+        "statements_array_sha256": "f18f3ab22b084963c08818fc4f15cf70c4c8f469fd91a0a07fa1565b0058b467"
+      }
+    ],
+    "policy": {
+      "enabled": false,
+      "version": 1,
+      "batchSize": 50,
+      "lastRunAt": null,
+      "dailyLimit": 50
+    },
+    "database": "postgres",
+    "readOnly": "on",
+    "observedAt": "2026-10-04T19:28:47.432558+00:00",
+    "currentUser": "postgres",
+    "sessionUser": "postgres",
+    "serverVersion": "17.6",
+    "restaurantCount": 1659,
+    "queuedReviewItems": 0,
+    "runningReviewItems": 0,
+    "restaurantRowsSha256": "ee15e454b24b8ce161cf043f47eaedd08a208048f9f280158cc7ece8dfd28c25",
+    "restaurantRowsConcatSha256": "5e734c30b4f1a8327a2f2861bdf62d48acc765f1ee021dd65426460e3bd0dc2d",
+    "restaurantRowsNewlineSha256": "32a58ac590418a889708c0fc97539fe7ca5b20a97f0ba43c7b5226340acc8458"
+  }
+}

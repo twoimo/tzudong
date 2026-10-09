@@ -18,6 +18,7 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { logSafeError } from '../../utils/privacy-log.mjs';
+import { withStageWriter } from '../../utils/frame-receipt.mjs';
 import {
     buildTranscriptYtDlpInvocation,
     extractTrustedYoutubeVideoId,
@@ -132,6 +133,37 @@ function getLatestMeta(dataPath, videoId) {
 function getLatestTranscript(dataPath, videoId) {
     const transcriptFile = path.join(dataPath, 'transcript', `${videoId}.jsonl`);
     return getLatestData(transcriptFile);
+}
+
+// Legacy records may lack optional producer fields, but never identity or content.
+function isValidTranscriptRecord(record, videoId, channelName) {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
+    if (extractVideoId(record.youtube_link) !== videoId) return false;
+    if (record.channel_name !== undefined && record.channel_name !== channelName) return false;
+    if (record.recollect_id !== undefined && (!Number.isSafeInteger(record.recollect_id) || record.recollect_id < 0)) return false;
+    return Array.isArray(record.transcript) && record.transcript.length > 0
+        && record.transcript.every(segment => segment && typeof segment === 'object'
+            && Number.isFinite(segment.start) && segment.start >= 0
+            && typeof segment.text === 'string' && segment.text.trim().length > 0
+            // Missing optional legacy duration is distinct from invalid content.
+            && (segment.duration == null || (Number.isFinite(segment.duration) && segment.duration >= 0)));
+}
+
+function appendTranscriptRecord(file, record) {
+    let separator = '';
+    if (fs.existsSync(file)) {
+        const handle = fs.openSync(file, 'r');
+        try {
+            const size = fs.fstatSync(handle).size;
+            if (size) {
+                const finalByte = Buffer.alloc(1);
+                fs.readSync(handle, finalByte, 0, 1, size - 1);
+                if (finalByte[0] !== 10) separator = '\n';
+            }
+        } finally { fs.closeSync(handle); }
+    }
+    // Preserve damaged historical bytes and restore a valid latest-record boundary.
+    fs.appendFileSync(file, separator + JSON.stringify(record) + '\n', 'utf8');
 }
 
 // -----------------------------------------------------------------------------
@@ -360,15 +392,17 @@ function loadPermanentSkipUrls() {
 }
 
 // 블랙리스트 업데이트 (자막 없는 URL 기록)
-function updateNoTranscriptPermanent(youtubeUrl) {
+async function updateNoTranscriptPermanent(youtubeUrl, ledgerPath = NO_TRANSCRIPT_PERMANENT) {
+    const directory = path.dirname(ledgerPath);
+    return withStageWriter(path.join(directory, '.writer'), async assertWriterAvailable => {
     try {
-        if (!fs.existsSync(NO_TRANSCRIPT_DIR)) {
-            fs.mkdirSync(NO_TRANSCRIPT_DIR, { recursive: true });
+        if (!fs.existsSync(directory)) {
+            fs.mkdirSync(directory, { recursive: true });
         }
 
         let entries = [];
-        if (fs.existsSync(NO_TRANSCRIPT_PERMANENT)) {
-            const content = fs.readFileSync(NO_TRANSCRIPT_PERMANENT, 'utf-8');
+        if (fs.existsSync(ledgerPath)) {
+            const content = fs.readFileSync(ledgerPath, 'utf-8');
             entries = JSON.parse(content);
         }
 
@@ -384,10 +418,18 @@ function updateNoTranscriptPermanent(youtubeUrl) {
             log('warning', `no_transcript 추가: ${youtubeUrl}`);
         }
 
-        fs.writeFileSync(NO_TRANSCRIPT_PERMANENT, JSON.stringify(entries, null, 2), 'utf-8');
+        const staging = fs.mkdtempSync(path.join(directory, '.write-'));
+        try {
+            const temporary = path.join(staging, 'permanent.json');
+            fs.writeFileSync(temporary, JSON.stringify(entries, null, 2), { encoding: 'utf8', flag: 'wx' });
+            assertWriterAvailable();
+            fs.renameSync(temporary, ledgerPath);
+        } finally { fs.rmSync(staging, { recursive: true, force: true }); }
     } catch (error) {
         logFailure('warning', 'TRANSCRIPT_PERMANENT_SKIP_UPDATE_FAILED', error);
+        throw error;
     }
+    });
 }
 
 // Puppeteer 설정
@@ -770,12 +812,21 @@ async function getTranscript(videoId, {
 /**
  * 채널 자막 수집 (recollect_id 기반)
  */
-async function collectChannelTranscripts(channelName, channelConfig, {
+async function collectChannelTranscripts(channelName, channelConfig, options = {}) {
+    const dataPath = options.dataPath || path.resolve(__dirname, '../../', channelConfig.data_path);
+    return withStageWriter(path.join(dataPath, '.stage-locks', 'transcript'), assertWriterAvailable =>
+        collectChannelTranscriptsLocked(channelName, channelConfig, { ...options, dataPath, assertWriterAvailable }));
+}
+
+async function collectChannelTranscriptsLocked(channelName, channelConfig, {
     dataPath = path.resolve(__dirname, '../../', channelConfig.data_path),
     getTranscriptForVideo = getTranscript,
     acquireSlot = acquirePuppeteerSlot,
     releaseSlot = releasePuppeteerSlot,
     waitForDelay = (duration) => new Promise(resolve => setTimeout(resolve, duration)),
+    loadSkipUrls = loadPermanentSkipUrls,
+    recordNoTranscript = updateNoTranscriptPermanent,
+    assertWriterAvailable,
 } = {}) {
     const transcriptDir = path.join(dataPath, 'transcript');
 
@@ -796,13 +847,13 @@ async function collectChannelTranscripts(channelName, channelConfig, {
     }
 
     // 2. 모든 video ID 로드
-    const allVideoIds = loadVideoIdsFromTxt(dataPath).filter(vid => !deletedIds.has(vid));
+    const allVideoIds = [...new Set(loadVideoIdsFromTxt(dataPath))].filter(vid => !deletedIds.has(vid));
 
     if (!fs.existsSync(transcriptDir)) {
         fs.mkdirSync(transcriptDir, { recursive: true });
     }
 
-    const permanentSkipUrls = loadPermanentSkipUrls();  // 블랙리스트 로드
+    const permanentSkipUrls = loadSkipUrls();  // 블랙리스트 로드
     log('info', `채널: ${channelConfig.name}`);
     log('info', `전체 URL: ${allVideoIds.length}개`);
 
@@ -834,7 +885,7 @@ async function collectChannelTranscripts(channelName, channelConfig, {
         // 수집 조건:
         // 1. 신규 수집: transcript가 없는 경우
         // 2. 재수집: transcript.recollect_id < meta.recollect_id AND duration_changed
-        if (!latestTranscript) {
+        if (!isValidTranscriptRecord(latestTranscript, videoId, channelName)) {
             // 신규 수집
             toCollect.push({ videoId, recollectVars: ['new_video'], metaRecollectId });
         } else if (transcriptRecollectId < metaRecollectId && recollectVars.includes('duration_changed')) {
@@ -855,6 +906,7 @@ async function collectChannelTranscripts(channelName, channelConfig, {
     const REST_DURATION = 180000; // 3분 (180초)
 
     for (let i = 0; i < toCollect.length; i++) {
+        assertWriterAvailable();
         const { videoId, recollectVars, metaRecollectId } = toCollect[i];
         let treeCleanupFailure = null;
 
@@ -882,14 +934,18 @@ async function collectChannelTranscripts(channelName, channelConfig, {
                 };
 
                 const outputFile = path.join(transcriptDir, `${videoId}.jsonl`);
-                fs.appendFileSync(outputFile, JSON.stringify(outputData) + '\n', 'utf-8');
+                if (!isValidTranscriptRecord(outputData, videoId, channelName)) {
+                    throw Object.assign(new Error('TRANSCRIPT_RESULT_INVALID'), { code: 'TRANSCRIPT_RESULT_INVALID' });
+                }
+                assertWriterAvailable();
+                appendTranscriptRecord(outputFile, outputData);
 
                 stats.success++;
                 log('success', `[Success] ${videoId} (${result.transcript.length} lines) via ${result.source}`);
             } else {
-                stats.noTranscript++;
                 // 블랙리스트에 추가
-                updateNoTranscriptPermanent(`https://www.youtube.com/watch?v=${videoId}`);
+                await recordNoTranscript(`https://www.youtube.com/watch?v=${videoId}`);
+                stats.noTranscript++;
                 log('debug', `    → 자막 없음 (All failed)`);
             }
         } catch (error) {
@@ -978,7 +1034,7 @@ async function main() {
     log('info', '='.repeat(60));
 }
 
-export { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript };
+export { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript, isValidTranscriptRecord, updateNoTranscriptPermanent };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     main().catch(error => {

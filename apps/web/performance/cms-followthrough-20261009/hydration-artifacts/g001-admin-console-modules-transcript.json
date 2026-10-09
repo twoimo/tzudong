@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "kind": "playwright-browser-automation-report",
+  "scope": "local-read-only-synthetic-failure-states",
+  "sidebarModuleCount": 15,
+  "blockedMutationCount": 0,
+  "visited": [
+    {
+      "path": "/admin",
+      "moduleId": "overview",
+      "headerSelector": "[data-admin-dashboard-management=\"true\"] [data-admin-page-header]",
+      "readySelector": "[data-admin-dashboard-management=\"true\"]"
+    },
+    {
+      "path": "/admin?module=routes",
+      "moduleId": "routes",
+      "headerSelector": "[data-admin-module-header-module=\"routes\"]",
+      "readySelector": "[aria-label=\"관리자 지도 운영 개요 2분할\"]"
+    },
+    {
+      "path": "/admin?module=restaurants",
+      "moduleId": "restaurants",
+      "headerSelector": "[data-admin-restaurant-primary-header=\"true\"]",
+      "readySelector": "#scroll-container"
+    },
+    {
+      "path": "/admin?module=restaurant-refresh-history",
+      "moduleId": "restaurant-refresh-history",
+      "headerSelector": "[data-admin-restaurant-primary-header=\"true\"]",
+      "readySelector": "[data-admin-restaurant-refresh-history=\"true\"]"
+    },
+    {
+      "path": "/admin?module=submissions",
+      "moduleId": "submissions",
+      "headerSelector": "[data-admin-module-header-module=\"submissions\"]",
+      "readySelector": "#scroll-container"
+    },
+    {
+      "path": "/admin?module=reviews",
+      "moduleId": "reviews",
+      "headerSelector": "[data-admin-module-header-module=\"reviews\"]",
+      "readySelector": "#scroll-container"
+    },
+    {
+      "path": "/admin?module=storyboard",
+      "moduleId": "storyboard",
+      "headerSelector": "[data-local-storyboard-workspace=\"true\"] [data-admin-page-header]",
+      "readySelector": "[data-local-storyboard-workspace=\"true\"]"
+    },
+    {
+      "path": "/admin?module=banners",
+      "moduleId": "banners",
+      "headerSelector": "[data-admin-module-header-module=\"banners\"]",
+      "readySelector": "[aria-labelledby=\"banner-list-title\"]"
+    },
+    {
+      "path": "/admin?module=users",
+      "moduleId": "users",
+      "headerSelector": "[data-admin-module-header-module=\"users\"]",
+      "readySelector": "[data-admin-users-summary]"
+    },
+    {
+      "path": "/admin?module=insights",
+      "moduleId": "insights",
+      "headerSelector": "[data-admin-module-header-module=\"insights\"]",
+      "readySelector": "[data-admin-embedded-module-id=\"insights\"]"
+    },
+    {
+      "path": "/admin?module=audit",
+      "moduleId": "audit",
+      "headerSelector": "[data-admin-module-header-module=\"audit\"]",
+      "readySelector": "[data-admin-audit-coverage=\"partial-domain-specific\"]"
+    },
+    {
+      "path": "/admin?module=youtube-thumbnail-generator",
+      "moduleId": "youtube-thumbnail-generator",
+      "headerSelector": "[data-admin-module-header-module=\"youtube-thumbnail-generator\"]",
+      "readySelector": "[data-admin-youtube-thumbnail-generator=\"true\"]"
+    },
+    {
+      "path": "/admin?module=llm",
+      "moduleId": "llm",
+      "headerSelector": "[data-admin-module-header-module=\"llm\"]",
+      "readySelector": "[data-admin-operations-panel]"
+    },
+    {
+      "path": "/admin?module=pipeline",
+      "moduleId": "pipeline",
+      "headerSelector": "[data-admin-module-header-module=\"pipeline\"]",
+      "readySelector": "[data-admin-pipeline-dashboard=\"true\"]"
+    },
+    {
+      "path": "/admin?module=knowledge-graph",
+      "moduleId": "knowledge-graph",
+      "headerSelector": "[data-admin-knowledge-graph-panel] [data-admin-page-header]",
+      "readySelector": "[data-knowledge-canvas]"
+    },
+    {
+      "path": "/admin?module=sentry",
+      "moduleId": "sentry",
+      "headerSelector": "[data-admin-sentry-panel] [data-admin-page-header]",
+      "readySelector": "[data-admin-sentry-panel]"
+    }
+  ],
+  "runtimeErrors": [],
+  "screenshot": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/cms-followthrough-20261009/hydration-artifacts/g001-admin-console-modules-final.png"
+}

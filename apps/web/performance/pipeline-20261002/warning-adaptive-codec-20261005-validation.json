@@ -1,0 +1,72 @@
+{
+  "status": "sourceReady_opt_in_only",
+  "verifiedAt": "2026-10-04T21:27:27.902584+00:00",
+  "globalDefault": "WARNING_STREAM",
+  "optIn": "ADMIN_EVALUATION_WARNING_READ_PATH=raw",
+  "rpcSignature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+  "checks": {
+    "webTests": {
+      "passed": 27,
+      "failed": 0,
+      "inProcessSyntheticAuthHandlerReads": 100
+    },
+    "postgresTests": {
+      "passed": 13,
+      "failed": 0,
+      "unicode17Vectors": 20034
+    },
+    "eslint": "passed",
+    "nativeTypecheck": "passed",
+    "compatTypecheck": "passed",
+    "canonicalParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3202,
+      "logicalInputNamesSha256": "aa6dbdf84663dc01660deef2e4f121cc391f1d6bed2d2e765cb01062c5a5d29c",
+      "nonLibraryContentSha256": "8f94f0102d4610e7e186adf62328ddfcaec64e3933fc55d4f18d24b568eeb858"
+    },
+    "parityEarlierAttempts": "Wrapper returned only fixed Error twice. Native/compat separately passed and isolated logical-input comparison had 3201 equal inputs. Final canonical wrapper passed with 3202 inputs; earlier cause not proven. Shared script was not edited."
+  },
+  "resourceCounts": {
+    "pairedReads": 56,
+    "pairedRpcOrStreamCalls": 3941,
+    "httpPageReadTrials": 100,
+    "httpGets": 1325,
+    "httpRpcCalls": 1325,
+    "fullReferenceMatchedReads": 156
+  },
+  "sourceSnapshot": "/Users/twoimo/.codex/worktrees/pipeline-performance-20261002/tzudong/tmp/warning-adaptive-codec-frozen-20261005-source",
+  "runtimeSourceBeforeAfterMatch": true,
+  "finalWorkingTreeMatchesMeasuredSource": true,
+  "ownedSourcesSha256": {
+    "apps/web/lib/admin/evaluation-page-server.ts": "bb7690e071aee367ca3c9fa6c4197bc16ad362ce33dc4f616e43e6c01c965eb4",
+    "apps/web/lib/admin/evaluation-warning-adaptive-codec.ts": "9872f35d53c059be7f547b6d9bc11898e6fedf69158cf6e57920f367970c3b88",
+    "apps/web/lib/admin/evaluation-warning-raw-groups.ts": "a79a1a922fad44a906ebdad24efd12e788cf300568d22b0091635af527798dc8",
+    "apps/web/tests-unit/admin-evaluation-page-server.test.ts": "cfb3fe042e565a1bfa8dd44e4f6964248b83841d77d40ea975902d6e7e07f362",
+    "apps/web/tests-unit/admin-evaluation-page-api.test.ts": "f445e3085da64a403e72c86972a3447177ad841f0dffca68057d9018de8ace47",
+    "apps/web/tests-unit/admin-evaluation-raw-warning-groups.test.ts": "1fe992db852186f4f75be2941af04c8363c8d9d463ffb86442d6e273b6cc8006",
+    "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+    "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+    "backend/supabase/tests/test_admin_evaluation_raw_warning_groups.py": "51de7f8c94fccb61481e1567d9ea626b3df0e3b8282ffe822faf9c0c0253220f",
+    "backend/supabase/tests/test_raw_warning_invoker_contract.py": "4f42339727c7e3d3d9e2b5049f7db07501bc0f1a5dcba119d47a76564200ffb8",
+    "backend/bin/benchmark_evaluation_warning_adaptive_codec.py": "a95ad75b32054874fc3ac77fe401131d12aa50bd87e9871d1de60d5e41587004",
+    "backend/bin/measure_evaluation_warning_codec_http.py": "dd31bb5b5d30435f99609fb565ab9df236ba5ec7fa264741a33bf428c34d13ec",
+    "backend/bin/summarize_evaluation_warning_adaptive_codec.py": "7b6f3fdf07721f853965d68a4a69faa739892d91513d6ad267a59d164604651d"
+  },
+  "operations": {
+    "productionDBReads": 0,
+    "productionDBWrites": 0,
+    "externalProviderCalls": 0,
+    "paidCalls": 0,
+    "commits": 0,
+    "pushes": 0,
+    "ownedFixtureCleanup": "completed",
+    "existingBrowserOrServerChanges": 0
+  },
+  "limits": [
+    "No global default adoption. Small time/CPU improvement not established. Unique RSS increases in all seven pairs.",
+    "Loopback PG/Node transport is not hosted PostgREST, product authentication or provider performance proof.",
+    "G014/G024 shared manifest/full replay and hosted non-superuser owner admission remain root release work. Applied SQL unchanged.",
+    "Node RSS only; DB RSS and request/header/compressed-byte accounting not measured. Final logical reads exclude oracle/setup SQL and excluded experiments."
+  ]
+}

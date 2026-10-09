@@ -1,0 +1,166 @@
+TAP version 13
+# Subtest: original pinned bundle reproduces discarded per-key Errors
+ok 1 - original pinned bundle reproduces discarded per-key Errors
+  ---
+  duration_ms: 23.111417
+  type: 'test'
+  ...
+# Subtest: unknown source bytes are never patched
+ok 2 - unknown source bytes are never patched
+  ---
+  duration_ms: 0.290709
+  type: 'test'
+  ...
+# Subtest: v1.33.0 bundle: ordinary success
+ok 3 - v1.33.0 bundle: ordinary success
+  ---
+  duration_ms: 4.406042
+  type: 'test'
+  ...
+# Subtest: v1.33.0 bundle: empty Errors
+ok 4 - v1.33.0 bundle: empty Errors
+  ---
+  duration_ms: 2.513667
+  type: 'test'
+  ...
+# Subtest: v1.33.0 bundle: mixed success and error
+ok 5 - v1.33.0 bundle: mixed success and error
+  ---
+  duration_ms: 4.358833
+  type: 'test'
+  ...
+# Subtest: v1.33.0 bundle: Key-less error
+ok 6 - v1.33.0 bundle: Key-less error
+  ---
+  duration_ms: 4.136917
+  type: 'test'
+  ...
+# Subtest: v1.33.0 bundle: malformed Errors
+ok 7 - v1.33.0 bundle: malformed Errors
+  ---
+  duration_ms: 3.719625
+  type: 'test'
+  ...
+# Subtest: v1.33.0 bundle: request rejection remains failure
+ok 8 - v1.33.0 bundle: request rejection remains failure
+  ---
+  duration_ms: 2.847167
+  type: 'test'
+  ...
+# Subtest: v1.33.0 bundle: empty input retains version-specific behavior
+ok 9 - v1.33.0 bundle: empty input retains version-specific behavior
+  ---
+  duration_ms: 4.460083
+  type: 'test'
+  ...
+# Subtest: v1.33.0 source: ordinary success
+ok 10 - v1.33.0 source: ordinary success
+  ---
+  duration_ms: 4.710416
+  type: 'test'
+  ...
+# Subtest: v1.33.0 source: empty Errors
+ok 11 - v1.33.0 source: empty Errors
+  ---
+  duration_ms: 2.683542
+  type: 'test'
+  ...
+# Subtest: v1.33.0 source: mixed success and error
+ok 12 - v1.33.0 source: mixed success and error
+  ---
+  duration_ms: 2.794834
+  type: 'test'
+  ...
+# Subtest: v1.33.0 source: Key-less error
+ok 13 - v1.33.0 source: Key-less error
+  ---
+  duration_ms: 1.598375
+  type: 'test'
+  ...
+# Subtest: v1.33.0 source: malformed Errors
+ok 14 - v1.33.0 source: malformed Errors
+  ---
+  duration_ms: 1.575667
+  type: 'test'
+  ...
+# Subtest: v1.33.0 source: request rejection remains failure
+ok 15 - v1.33.0 source: request rejection remains failure
+  ---
+  duration_ms: 2.374583
+  type: 'test'
+  ...
+# Subtest: v1.33.0 source: empty input retains version-specific behavior
+ok 16 - v1.33.0 source: empty input retains version-specific behavior
+  ---
+  duration_ms: 5.080167
+  type: 'test'
+  ...
+# Subtest: v1.80.1 source: ordinary success
+ok 17 - v1.80.1 source: ordinary success
+  ---
+  duration_ms: 9.990416
+  type: 'test'
+  ...
+# Subtest: v1.80.1 source: empty Errors
+ok 18 - v1.80.1 source: empty Errors
+  ---
+  duration_ms: 10.323792
+  type: 'test'
+  ...
+# Subtest: v1.80.1 source: mixed success and error
+ok 19 - v1.80.1 source: mixed success and error
+  ---
+  duration_ms: 6.483834
+  type: 'test'
+  ...
+# Subtest: v1.80.1 source: Key-less error
+ok 20 - v1.80.1 source: Key-less error
+  ---
+  duration_ms: 8.148875
+  type: 'test'
+  ...
+# Subtest: v1.80.1 source: malformed Errors
+ok 21 - v1.80.1 source: malformed Errors
+  ---
+  duration_ms: 10.432625
+  type: 'test'
+  ...
+# Subtest: v1.80.1 source: request rejection remains failure
+ok 22 - v1.80.1 source: request rejection remains failure
+  ---
+  duration_ms: 10.524166
+  type: 'test'
+  ...
+# Subtest: v1.80.1 source: empty input retains version-specific behavior
+ok 23 - v1.80.1 source: empty input retains version-specific behavior
+  ---
+  duration_ms: 10.668541
+  type: 'test'
+  ...
+# Subtest: v1.80.1: settles all chunks, first success, last partial
+ok 24 - v1.80.1: settles all chunks, first success, last partial
+  ---
+  duration_ms: 36.217542
+  type: 'test'
+  ...
+# Subtest: v1.80.1: settles all chunks, first partial, last success
+ok 25 - v1.80.1: settles all chunks, first partial, last success
+  ---
+  duration_ms: 23.591334
+  type: 'test'
+  ...
+# Subtest: v1.80.1: settles all chunks, rejection and partial
+ok 26 - v1.80.1: settles all chunks, rejection and partial
+  ---
+  duration_ms: 16.717
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 417.479875

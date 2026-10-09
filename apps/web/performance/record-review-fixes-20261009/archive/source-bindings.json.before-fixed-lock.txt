@@ -1,0 +1,14 @@
+{
+  "head": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "workingSourcesNotCommitted": true,
+  "files": {
+    "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+    "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql": "5a1adc3211ebfde3c13a45c55e3192328d45bd6b750e60d708c80d850a9b69ea",
+    "backend/supabase/scripts/transform_registration_replay.py": "e5e13a191fd08709104ad6f20c68d926f564bfc2188a7d1432112128307cbcd5",
+    "apps/web/lib/admin/evaluation-record-actions.ts": "df92369624a080f630fb666b9d923f907671230c78f090a5051d2b3047cff3aa",
+    "apps/web/tests-unit/admin-record-metadata-roundtrip.test.ts": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65"
+  },
+  "sourceFrozen": true,
+  "pendingCanonicalPg15": "root freeze commit and clean detached source required",
+  "operatingWrites": false
+}

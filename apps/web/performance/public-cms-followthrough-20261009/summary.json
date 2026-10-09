@@ -1,0 +1,64 @@
+{
+  "startingHead": "b085e1d36ad8a8bc5626738b9921b194f50324a1",
+  "routePatterns": 22,
+  "baselineCaptures": 66,
+  "stableReplacementCaptures": 15,
+  "viewports": {
+    "desktop": [
+      1440,
+      1000
+    ],
+    "tablet": [
+      820,
+      1180
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "authShortMobile": [
+      390,
+      600
+    ]
+  },
+  "browserFlowCases": {
+    "authAndLegal": 5,
+    "leaderboard": 3,
+    "stamp": 2,
+    "passed": 10,
+    "failedFinalCases": 0
+  },
+  "unit": {
+    "passed": 57,
+    "failed": 0
+  },
+  "eslint": "passed",
+  "typecheckParity": {
+    "status": "passed",
+    "diagnostics": 0
+  },
+  "baselineDocumentOverflowXMax": 0,
+  "baselineReducedMotionCssAnimationCountMax": 0,
+  "blockedNonGetRequestsInBaseline": 35,
+  "blockedCounterIncludesReadRpcPosts": true,
+  "operatingWritesSent": false,
+  "operatingAuthOrPrivateDataEvidence": false,
+  "deploymentEvidence": false,
+  "remaining": [
+    "A persistent TypeError is recorded on the invalid short-link fallback; valid share-link redirect and runtime require separate investigation.",
+    "Authenticated account/profile/bookmark/review/submission/insights content was not exercised; guards/redirects are not success evidence.",
+    "Live map SDK, map search/select/directions/location and restaurant data require provider-capable checks.",
+    "Programmatic current-user scroll uses the new preference helper and passes unit branches; the logged-in automatic anchor flow was not exercised.",
+    "CSS motion count and basic control-name/overflow probes are not full accessibility conformance or physical-device proof."
+  ],
+  "processOwnership": {
+    "checkedAt": "2026-10-08T23:11:41.371154+00:00",
+    "ownedHarnessProcessesRemaining": 0,
+    "preexistingDevServerPid": 57309,
+    "preexistingDevServerPort": 19872,
+    "preexistingDevServerStillRunning": true,
+    "devDistDir": ".next-local-18080",
+    "devServerStartedOrStoppedByHelper": false,
+    "browserLifecycle": "All custom harnesses close browser in finally. Playwright fixture teardown completed on failed and passed executions. No existing user tabs, profiles or storage states adopted."
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+      "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "performance/public-cms-followthrough-20261009/public-ui.config.mjs",
+      "--grep",
+      "stamp list and search.*tablet"
+    ],
+    "configFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui.config.mjs",
+    "rootDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/stamp-debug-run-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "public-cms-readonly.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/stamp-debug-run.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "public-cms-readonly.spec.ts",
+      "file": "public-cms-readonly.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "stamp list and search failures stay distinct from empty success at tablet",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 17648,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:134:25",
+                    "location": {
+                      "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                      "column": 25,
+                      "line": 134
+                    },
+                    "snippet": "  132 |     await search.fill('합성읽기검증');\n  133 |     await expect.poll(() => readStates.some(read => read.search && read.outage), { timeout: 15_000 }).toBe(true);\n> 134 |     await expect(error).toBeVisible({ timeout: 15_000 });\n      |                         ^\n  135 |     await testInfo.attach('sanitized-read-states', { body: JSON.stringify(readStates), contentType: 'application/json' });\n  136 |     await page.screenshot({ path: testInfo.outputPath('stamp-search-read-error.png') });\n  137 |     outage = false;"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                        "column": 25,
+                        "line": 134
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })\u001b[22m\n\n\n  132 |     await search.fill('합성읽기검증');\n  133 |     await expect.poll(() => readStates.some(read => read.search && read.outage), { timeout: 15_000 }).toBe(true);\n> 134 |     await expect(error).toBeVisible({ timeout: 15_000 });\n      |                         ^\n  135 |     await testInfo.attach('sanitized-read-states', { body: JSON.stringify(readStates), contentType: 'application/json' });\n  136 |     await page.screenshot({ path: testInfo.outputPath('stamp-search-read-error.png') });\n  137 |     outage = false;\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:134:25"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:00:11.911Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/stamp-debug-run-output/public-cms-readonly-stamp--96b99-rom-empty-success-at-tablet/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                    "column": 25,
+                    "line": 134
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-110afd81b1fe8afe26ac",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 108,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-08T23:00:11.553Z",
+    "duration": 19981.069,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

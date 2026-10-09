@@ -1,4 +1,5 @@
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
+import { getEvaluationConflictTargetId } from '@/lib/admin/normalize-evaluation-record';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -71,6 +72,7 @@ interface EvaluationTableProps {
   onFilterChange: (key: string, value: string) => void;
   onResetFilters: () => void;
   onLoadMore?: () => void;
+  onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
   hasMore?: boolean;
   isLoadingMore?: boolean;
 }
@@ -275,6 +277,8 @@ interface EvaluationTableRowProps {
   onDelete: (record: EvaluationRecord) => void;
   onRestore?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
+  onRegisterMissing?: (record: EvaluationRecord) => void;
+  onResolveConflict?: (record: EvaluationRecord) => void;
   loading?: boolean;
   thumbnailState?: 'loading' | 'loaded' | 'error';
   thumbnailUrl?: string;
@@ -292,6 +296,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
       onDelete,
       onRestore,
       onEdit,
+      onRegisterMissing,
+      onResolveConflict,
       loading,
       thumbnailState,
       thumbnailUrl,
@@ -311,13 +317,13 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     return (
       <TableRow
         ref={ref}
-        className={cn("group hover:bg-muted transition-colors cursor-pointer", isExpanded && "bg-muted border-l-4 border-l-primary")}
+        className={cn("group bg-card hover:bg-primary/5 transition-colors cursor-pointer", isExpanded && "bg-primary/5 border-l-4 border-l-primary")}
         onClick={onToggleExpand}
       >
         <TableCell
           className={cn(
             "sticky left-0 z-10 px-2 sm:px-4 transition-colors",
-            isExpanded ? "bg-muted" : "bg-background group-hover:bg-muted"
+            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
           <Button
@@ -342,7 +348,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         <TableCell
           className={cn(
             "min-w-[220px] sm:min-w-[280px] lg:sticky lg:left-12 lg:z-10 transition-colors",
-            isExpanded ? "lg:bg-muted" : "lg:bg-background lg:group-hover:bg-muted"
+            isExpanded ? "lg:bg-card lg:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "lg:bg-card lg:group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
           <div className="flex items-center gap-3">
@@ -440,7 +446,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         <TableCell
           className={cn(
             "sticky right-[120px] z-10 min-w-[84px] text-center lg:right-[160px] lg:min-w-[96px] transition-colors",
-            isExpanded ? "bg-muted" : "bg-background group-hover:bg-muted"
+            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
           <div className="flex flex-col items-center gap-1">
@@ -452,10 +458,13 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         <TableCell
           className={cn(
             "sticky right-0 z-10 min-w-[120px] lg:min-w-[160px] transition-colors",
-            isExpanded ? "bg-muted" : "bg-background group-hover:bg-muted"
+            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
           )}
         >
-          <div className="flex justify-center gap-1 lg:gap-2">
+          <div className="flex flex-wrap justify-center gap-1 lg:gap-2">
+            {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-8 px-2 lg:px-3" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
+            {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-8 px-2 lg:px-3" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
+
             {record.status === 'deleted' ? (
               // 삭제된 레코드 - 되돌리기 버튼만 표시
               <>
@@ -583,11 +592,10 @@ export function EvaluationTable({
   onFilterChange,
   onResetFilters,
   onLoadMore,
+  onRequestDetails,
   hasMore = false,
   isLoadingMore = false,
 }: EvaluationTableProps) {
-  void onRegisterMissing;
-  void onResolveConflict;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showMobileAdvancedFilters, setShowMobileAdvancedFilters] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -612,15 +620,20 @@ export function EvaluationTable({
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+  const expansionEpoch = useRef(0);
+  const toggleExpand = useCallback(async (id: string) => {
+    const epoch = ++expansionEpoch.current;
+    if (expandedId === id) { setExpandedId(null); return; }
+    const record = records.find(row => row.id === id);
+    if (record && onRequestDetails && !(await onRequestDetails(record))) return;
+    if (epoch === expansionEpoch.current) setExpandedId(id);
+  }, [expandedId, records, onRequestDetails]);
 
   // 키보드 네비게이션 핸들러
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 입력 필드나 모달이 포커스된 경우 무시
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+      if (document.activeElement?.matches('input, textarea, select, [contenteditable=true]') || document.activeElement?.closest('[role=dialog], [role=alertdialog]')) {
         return;
       }
 
@@ -640,7 +653,7 @@ export function EvaluationTable({
 
         if (nextIndex !== -1) {
           const nextRecord = records[nextIndex];
-          setExpandedId(nextRecord.id);
+          void toggleExpand(nextRecord.id);
 
           // 스크롤 이동
           const rowElement = rowRefs.current[nextRecord.id];
@@ -682,7 +695,7 @@ export function EvaluationTable({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [records, expandedId]);
+  }, [records, expandedId, toggleExpand]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -1127,7 +1140,7 @@ export function EvaluationTable({
 
   const mobileCards = (
     <>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden">
         {records.map((record) => {
         const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
         const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
@@ -1170,7 +1183,7 @@ export function EvaluationTable({
               data-layout-primitives="stack frame"
               data-admin-evaluation-mobile-card="true"
               className={cn(
-                "rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm",
+                "rounded-xl border border-border/70 bg-card/95 p-2.5",
                 getMobileCardTone(record.status),
                 isExpanded && "shadow-sm"
               )}
@@ -1180,16 +1193,17 @@ export function EvaluationTable({
                 <h2 id={titleId} className="line-clamp-2 text-sm font-semibold">
                   {record.restaurant_name || record.name || '이름 없음'}
                 </h2>
-                <p className="mt-0.5 text-2xs text-muted-foreground">
-                  {publishedAt} | ID {record.id.slice(0, 8)}
-                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
+                  <span>{publishedAt}</span>
+                  <Badge variant="outline" className="rounded-full text-2xs">주소 {geocodingText}</Badge>
+                </div>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1">
                 {getStatusBadge(record.status)}
               </div>
             </div>
 
-            <div className="mt-2 flex items-start gap-2">
+            {(canonicalYoutubeUrl || hasAdminEvaluationYoutubeTitle(record)) && <div className="mt-2 flex items-start gap-2">
               {canonicalYoutubeUrl && videoId && (
                 <a
                   href={canonicalYoutubeUrl}
@@ -1241,23 +1255,25 @@ export function EvaluationTable({
                   </a>
                 )}
               </div>
-            </div>
+            </div>}
 
-            <div className="-mx-1 mt-3 overflow-x-auto px-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[visitValue,inferenceValue,groundingValue].some(value => value !== '-') && <div className="-mx-1 mt-2 overflow-x-auto px-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex min-w-max flex-nowrap gap-1.5">
-                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">방문 {visitValue}</Badge>
-                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">추론 {inferenceValue}</Badge>
-                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">근거 {groundingValue}</Badge>
-                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">주소 {geocodingText}</Badge>
+                {visitValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">방문 {visitValue}</Badge>}
+                {inferenceValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">추론 {inferenceValue}</Badge>}
+                {groundingValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">근거 {groundingValue}</Badge>}
               </div>
-            </div>
+            </div>}
 
-            <div className="mt-3 flex flex-nowrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-1.5">
+            {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
+            {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
+
               {record.status === 'deleted' ? (
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 w-full rounded-full"
+                  className="h-11 min-w-0 flex-1 rounded-lg"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRestore?.(record);
@@ -1272,7 +1288,7 @@ export function EvaluationTable({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-9 min-w-0 flex-1 rounded-full"
+                    className="h-11 min-w-0 flex-1 rounded-lg"
                     onClick={(e) => {
                       e.stopPropagation();
                       onEdit?.(record);
@@ -1287,7 +1303,7 @@ export function EvaluationTable({
                     variant="destructive"
                     aria-label="검수 항목 삭제"
                     title="검수 항목 삭제"
-                    className="h-9 w-10 rounded-full p-0"
+                    className="h-11 w-11 shrink-0 rounded-lg p-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(record);
@@ -1301,7 +1317,7 @@ export function EvaluationTable({
                 <>
                   <Button
                     size="sm"
-                    className="h-9 min-w-0 flex-1 rounded-full"
+                    className="h-11 min-w-0 flex-1 rounded-lg"
                     onClick={(e) => {
                       e.stopPropagation();
                       onApprove(record);
@@ -1316,7 +1332,7 @@ export function EvaluationTable({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-9 min-w-0 flex-1 rounded-full"
+                      className="h-11 min-w-0 flex-1 rounded-lg"
                       onClick={(e) => {
                         e.stopPropagation();
                         onEdit(record);
@@ -1332,7 +1348,7 @@ export function EvaluationTable({
                     variant="destructive"
                     aria-label="검수 항목 삭제"
                     title="검수 항목 삭제"
-                    className="h-9 w-10 rounded-full p-0"
+                    className="h-11 w-11 shrink-0 rounded-lg p-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(record);
@@ -1343,20 +1359,23 @@ export function EvaluationTable({
                   </Button>
                 </>
               )}
-            </div>
-
             <Button
               variant="ghost"
               size="sm"
-              className="mt-2 h-8 w-full justify-between rounded-full bg-muted/40 px-3 text-xs"
+              aria-label="전체 검수 정보"
+              aria-expanded={isExpanded}
+              aria-controls={`admin-evaluation-mobile-details-${record.id}`}
+              className="h-11 shrink-0 gap-1 rounded-lg bg-muted/40 px-2 text-xs"
               onClick={() => toggleExpand(record.id)}
             >
-              전체 검수 정보
+              상세
               {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </Button>
+            </div>
 
             {isExpanded && (
-              <div className="mt-2 space-y-2 rounded-xl bg-muted/35 p-2.5 text-2xs">
+              <div id={`admin-evaluation-mobile-details-${record.id}`} className="mt-2 space-y-2 rounded-xl bg-muted/35 p-2.5 text-2xs">
+                <p className="break-all font-mono text-muted-foreground">ID {record.id}</p>
                 <div>
                   <p className="font-semibold text-foreground">평가 항목</p>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -1682,6 +1701,8 @@ export function EvaluationTable({
                     onDelete={onDelete}
                     onRestore={onRestore}
                     onEdit={onEdit}
+                    onRegisterMissing={onRegisterMissing}
+                    onResolveConflict={onResolveConflict}
                     loading={loading}
                     thumbnailState={thumbnailInfo?.state}
                     thumbnailUrl={thumbnailInfo?.url}

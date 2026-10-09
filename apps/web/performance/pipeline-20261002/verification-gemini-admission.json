@@ -1,0 +1,55 @@
+{
+  "kind": "gemini_admission_and_transport_verification",
+  "measuredAt": "2026-10-02T16:39:31.798Z",
+  "nodeSdkDeadlineAndChunk": {
+    "passed": 18,
+    "failed": 0
+  },
+  "nodeMapNetworkPolicy": {
+    "passed": 8,
+    "failed": 0
+  },
+  "pythonPerformanceRestartAndRawErrorClosure": {
+    "passed": 27,
+    "failed": 0
+  },
+  "pythonGeminiGuardrail": {
+    "passed": 3,
+    "failed": 0
+  },
+  "pythonRestartRecheckAfterAssetUpdate": {
+    "passed": 11,
+    "failed": 0,
+    "scope": "Subset of 27 above; not added to distinct total."
+  },
+  "actualGoogleRequests": 0,
+  "pairedRunsPerCondition": 7,
+  "conditions": 2,
+  "observations": 28,
+  "sourceFiles": {
+    "backend/utils/gemini-client.mjs": "d40616c78160636207e2d1e7e92a3f5daa2305492410300e1ef4a356f47d7498",
+    "backend/utils/provider-budget.mjs": "b1260aaf47f8c8bfe55d996ba45bd1cbd2b48d08afb6453ddc53af62a38e0bc7",
+    "backend/utils/provider_budget.py": "f4bde2eb38e4de766a1b5b7ef8fe930a4123af1e69acd6402d284c0962fd0bf0",
+    "backend/restaurant-crawling/scripts/final_merge_chunk.mjs": "2520820e959fd345738ff7fdaf0ea790ae8f284d5e5e4101b1c1e82a4dff8fb3",
+    "backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs": "2c77880875451eadc3ee5c0894f21b8f0cf7160ae40321d74247ed648d487358",
+    "backend/restaurant-evaluation/scripts/gemini_api_request.mjs": "81bbe400493f020d095d8dec2318e2b97f79c9b1a1428ac952d5b062f44aa54e"
+  },
+  "installedSdkDefaultHttpAttempts": 1,
+  "configuredSdkHttpAttempts": 1,
+  "wireSettingsEquivalent": true,
+  "timeoutClientPermitReturnedBeforeSettlement": {
+    "before": 1,
+    "after": 0
+  },
+  "cacheAssetPathsShellSyntaxChecked": true,
+  "formalPerformanceClaim": "not_established",
+  "limits": [
+    "Client abort does not prove server cancellation or billing reversal.",
+    "TPM/RPD and multi-host totals remain unproved."
+  ],
+  "initialVerificationIssues": [
+    "Map swap fixture compared a noncanonical macOS temporary path; canonical hook execution now asserted.",
+    "Initial request hashes compared JSON object property order; final hashes canonicalize keys, preserve arrays and match SDK deep equality."
+  ],
+  "fileReadProtection": "Bigint identity plus mtime/ctime detect in-place modification; actual swap and same-size mutation paths pass."
+}

@@ -10,7 +10,6 @@ describe("admin sidebar order normalization", () => {
   test("keeps server and client defaults stable for review and operations sections", () => {
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["검수"]).toEqual([
       "restaurants",
-      "restaurant-refresh-history",
       "submissions",
       "reviews",
     ]);
@@ -20,6 +19,8 @@ describe("admin sidebar order normalization", () => {
       "banners",
       "insights",
       "pipeline",
+      "knowledge-graph",
+      "sentry",
     ]);
 
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
@@ -37,7 +38,7 @@ describe("admin sidebar order normalization", () => {
     );
 
     expect([...sidebarModuleIds].sort()).toEqual(
-      [...ADMIN_CONSOLE_MODULE_IDS].sort(),
+      ADMIN_CONSOLE_MODULE_IDS.filter(id => id !== 'restaurant-refresh-history').sort(),
     );
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
       "youtube-thumbnail-generator",
@@ -66,7 +67,6 @@ describe("admin sidebar order normalization", () => {
 
     expect(normalized.items["검수"]).toEqual([
       "restaurants",
-      "restaurant-refresh-history",
       "submissions",
       "reviews",
     ]);
@@ -76,6 +76,8 @@ describe("admin sidebar order normalization", () => {
       "banners",
       "insights",
       "pipeline",
+      "knowledge-graph",
+      "sentry",
     ]);
 
     expect(normalized.items["실험실"]).toEqual([
@@ -99,7 +101,6 @@ describe("admin sidebar order normalization", () => {
     expect(normalized.sections).toEqual(["운영", "홈", "검수", "실험실"]);
     expect(normalized.items["검수"]).toEqual([
       "restaurants",
-      "restaurant-refresh-history",
       "submissions",
       "reviews",
     ]);
@@ -109,6 +110,8 @@ describe("admin sidebar order normalization", () => {
       "users",
       "insights",
       "pipeline",
+      "knowledge-graph",
+      "sentry",
     ]);
   });
 });

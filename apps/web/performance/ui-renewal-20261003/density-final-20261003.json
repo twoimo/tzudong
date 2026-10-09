@@ -1,0 +1,193 @@
+{
+  "kind": "verified-synthetic-layout",
+  "samplesPerViewport": 1,
+  "populationConfidenceInterval": null,
+  "observations": [
+    {
+      "cards": [
+        {
+          "bottom": 226.5,
+          "height": 120.5,
+          "id": "subscribers",
+          "value": "13,500,000",
+          "width": 173.5,
+          "x": 10,
+          "y": 106
+        },
+        {
+          "bottom": 226.5,
+          "height": 120.5,
+          "id": "views",
+          "value": "2,450,000",
+          "width": 173.5,
+          "x": 191.5,
+          "y": 106
+        },
+        {
+          "bottom": 355,
+          "height": 120.5,
+          "id": "likes",
+          "value": "14,000",
+          "width": 173.5,
+          "x": 10,
+          "y": 234.5
+        },
+        {
+          "bottom": 355,
+          "height": 120.5,
+          "id": "comments",
+          "value": "1,350",
+          "width": 173.5,
+          "x": 191.5,
+          "y": 234.5
+        },
+        {
+          "bottom": 468,
+          "height": 105,
+          "id": "videos",
+          "value": "5",
+          "width": 355,
+          "x": 10,
+          "y": 363
+        }
+      ],
+      "h1": [
+        "쯔양 성과 대시보드"
+      ],
+      "overflow": 0,
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleKpiCount": 5,
+      "chart": {
+        "height": 222,
+        "width": 321
+      }
+    },
+    {
+      "cards": [
+        {
+          "bottom": 200,
+          "height": 152,
+          "id": "subscribers",
+          "value": "13,500,000",
+          "width": 282,
+          "x": 220,
+          "y": 48
+        },
+        {
+          "bottom": 200,
+          "height": 152,
+          "id": "views",
+          "value": "2,450,000",
+          "width": 282,
+          "x": 510,
+          "y": 48
+        },
+        {
+          "bottom": 360,
+          "height": 152,
+          "id": "likes",
+          "value": "14,000",
+          "width": 282,
+          "x": 220,
+          "y": 208
+        },
+        {
+          "bottom": 360,
+          "height": 152,
+          "id": "comments",
+          "value": "1,350",
+          "width": 282,
+          "x": 510,
+          "y": 208
+        },
+        {
+          "bottom": 497,
+          "height": 129,
+          "id": "videos",
+          "value": "5",
+          "width": 572,
+          "x": 220,
+          "y": 368
+        }
+      ],
+      "h1": [
+        "쯔양 성과 대시보드"
+      ],
+      "overflow": 0,
+      "viewport": [
+        834,
+        1194
+      ],
+      "visibleKpiCount": 5,
+      "chart": {
+        "height": 218,
+        "width": 534
+      }
+    },
+    {
+      "cards": [
+        {
+          "bottom": 198.78125,
+          "height": 150.78125,
+          "id": "subscribers",
+          "value": "13,500,000",
+          "width": 235.1875,
+          "x": 220,
+          "y": 48
+        },
+        {
+          "bottom": 198.78125,
+          "height": 150.78125,
+          "id": "views",
+          "value": "2,450,000",
+          "width": 235.203125,
+          "x": 463.1875,
+          "y": 48
+        },
+        {
+          "bottom": 198.78125,
+          "height": 150.78125,
+          "id": "likes",
+          "value": "14,000",
+          "width": 235.203125,
+          "x": 706.390625,
+          "y": 48
+        },
+        {
+          "bottom": 198.78125,
+          "height": 150.78125,
+          "id": "comments",
+          "value": "1,350",
+          "width": 235.203125,
+          "x": 949.59375,
+          "y": 48
+        },
+        {
+          "bottom": 198.78125,
+          "height": 150.78125,
+          "id": "videos",
+          "value": "5",
+          "width": 235.1875,
+          "x": 1192.796875,
+          "y": 48
+        }
+      ],
+      "h1": [
+        "쯔양 성과 대시보드"
+      ],
+      "overflow": 0,
+      "viewport": [
+        1440,
+        1000
+      ],
+      "visibleKpiCount": 5,
+      "chart": {
+        "height": 296,
+        "width": 319
+      }
+    }
+  ]
+}

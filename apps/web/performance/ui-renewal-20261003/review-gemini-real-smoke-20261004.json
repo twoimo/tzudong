@@ -1,0 +1,31 @@
+{
+  "kind": "real-gemini-synthetic-review-smoke",
+  "requestedModel": "gemini-3.8-flash",
+  "inputSha256": "3509c1cc519a18ca8f82e50012fdecabc962dc604c7f1acfdfe1ca10d1fcc70c",
+  "promptSha256": "27f9d1b8347bd8c5abb4d5145c7a6efd70dcce019691ab7c823be2f5822302e1",
+  "synthetic": true,
+  "dbWrites": 0,
+  "samples": 1,
+  "confidenceInterval": null,
+  "costVerified": false,
+  "state": "completed",
+  "observedAt": "2026-10-04T09:57:31.016Z",
+  "passed": true,
+  "providerRequests": 1,
+  "elapsedMs": 4763.951916999999,
+  "servedModel": "gemini-3.8-flash",
+  "recommendation": "hold",
+  "evidenceCodes": [
+    "insufficient_evidence"
+  ],
+  "usage": {
+    "promptTokenCount": 360,
+    "candidatesTokenCount": 422,
+    "thoughtsTokenCount": 971,
+    "totalTokenCount": 1753
+  },
+  "limitations": [
+    "One synthetic case is not model accuracy evidence.",
+    "No operational approval, database, deployment or billing readback."
+  ]
+}

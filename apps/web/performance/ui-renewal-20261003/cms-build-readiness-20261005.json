@@ -1,0 +1,36 @@
+{
+  "kind": "isolated-CMS-source-build",
+  "verifiedAt": "2026-10-04T18:31:38.322542+00:00",
+  "candidateCommit": "7c7e1eedec5853da0ab3e5d6e39dc49f4bc09579",
+  "installedNode": "24.21.0",
+  "installedNext": "16.3.8",
+  "installedReact": "19.3.0",
+  "productionSourceComparison": "Tracked TS/TSX/CSS/MJS/JSON comparison found no production source differences from candidate HEAD; differences were performance evidence, one test and task tsconfig preview includes.",
+  "build": {
+    "exitCode": 0,
+    "compiler": "webpack",
+    "compileSeconds": 26.3,
+    "typecheckSeconds": 12.8,
+    "generatedStaticPages": 48
+  },
+  "cssRawBytes": {
+    "home": 193609,
+    "generalApp": 372392,
+    "admin": 383123,
+    "deferred": 193609
+  },
+  "typecheckParity": {
+    "diagnostics": 0,
+    "logicalInputs": 3254
+  },
+  "scopeLimits": [
+    "No production deployment or hosted correctness proof.",
+    "Pending refresh-history guard source was excluded from this build.",
+    "No comparative latency/cost claim."
+  ],
+  "ci": {
+    "head": "7c7e1eedec5853da0ab3e5d6e39dc49f4bc09579",
+    "admin": "failed stale banner layout/selection assertions; corrected affected13 tests pass",
+    "wholeWorkflow": "not complete at observation"
+  }
+}

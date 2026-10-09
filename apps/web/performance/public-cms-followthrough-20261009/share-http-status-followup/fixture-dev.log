@@ -1,0 +1,45 @@
+▲ Next.js 16.3.8 (webpack)
+- Local:         http://127.0.0.1:20370
+- Network:       http://127.0.0.1:20370
+✓ Ready in 313ms
+✓ Running next.config.mjs took 7ms
+
+ GET /legacy/invalid-code 404 in 2.4s (next.js: 2.2s, application-code: 119ms)
+ GET /legacy/invalid-code 404 in 32ms (next.js: 3ms, application-code: 30ms)
+ GET /legacy/FAIL00 404 in 57ms (next.js: 2ms, application-code: 55ms)
+ GET /legacy/FAIL00 404 in 30ms (next.js: 1.9ms, application-code: 28ms)
+ GET /notice/invalid-code 200 in 864ms (next.js: 777ms, application-code: 87ms)
+ GET /notice/invalid-code 200 in 24ms (next.js: 3ms, application-code: 21ms)
+ GET /notice/MISSNG 200 in 35ms (next.js: 4ms, application-code: 32ms)
+ GET /notice/MISSNG 200 in 25ms (next.js: 1.4ms, application-code: 24ms)
+ GET /notice/FAIL00 200 in 30ms (next.js: 4ms, application-code: 26ms)
+ GET /notice/FAIL00 200 in 26ms (next.js: 1.6ms, application-code: 25ms)
+ GET /s/invalid-code 404 in 642ms (next.js: 617ms, application-code: 25ms)
+ GET /s/invalid-code 404 in 6ms (next.js: 3ms, application-code: 3ms)
+ GET /s/MISSNG 404 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /s/MISSNG 404 in 8ms (next.js: 1.5ms, application-code: 6ms)
+ GET /s/FAIL00 503 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /s/FAIL00 503 in 7ms (next.js: 1.0ms, application-code: 6ms)
+ GET /s/VALID1 307 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /s/BADURL 307 in 4ms (next.js: 0.9ms, application-code: 3ms)
+ GET /s/invalid-code 404 in 18ms (next.js: 6ms, application-code: 12ms)
+ GET /s/invalid-code 404 in 4ms (next.js: 1.1ms, application-code: 3ms)
+ GET / 200 in 506ms (next.js: 444ms, application-code: 61ms)
+ GET /s/MISSNG 404 in 55ms (next.js: 10ms, application-code: 45ms)
+ GET /s/MISSNG 404 in 19ms (next.js: 10ms, application-code: 9ms)
+ GET / 200 in 18ms (next.js: 2ms, application-code: 16ms)
+ GET /s/FAIL00 503 in 6ms (next.js: 2ms, application-code: 4ms)
+ GET /s/FAIL00 503 in 5ms (next.js: 1.3ms, application-code: 4ms)
+ GET / 200 in 18ms (next.js: 1.2ms, application-code: 17ms)
+ GET /s/VALID1 307 in 5ms (next.js: 1.1ms, application-code: 4ms)
+ GET /s/BADURL 307 in 6ms (next.js: 1.2ms, application-code: 4ms)
+ GET /s/invalid-code 404 in 5ms (next.js: 2ms, application-code: 2ms)
+ GET /s/invalid-code 404 in 5ms (next.js: 1.0ms, application-code: 4ms)
+⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
+▲ Next.js 16.3.8 (webpack)
+- Local:         http://127.0.0.1:20370
+- Network:       http://127.0.0.1:20370
+✓ Ready in 432ms
+✓ Running next.config.mjs took 15ms
+
+[?25h

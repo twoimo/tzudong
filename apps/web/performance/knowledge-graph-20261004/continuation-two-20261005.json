@@ -1,0 +1,93 @@
+{
+  "kind": "bounded-real-claude-video-continuation",
+  "intent": {
+    "at": "2026-10-04T19:53:41.784907+00:00",
+    "kind": "bounded-longform-continuation",
+    "model": "gemini-3.8-flash",
+    "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+    "batchId": "root-two-20261005",
+    "maxNewVideos": 2,
+    "maxCalls": 2,
+    "maxInputTokens": 2097152,
+    "projectConcurrency": 1,
+    "pacingRequestsPerMinute": 1,
+    "additionalBillingChanges": false,
+    "pricingSource": "https://ai.google.dev/gemini-api/docs/pricing",
+    "standardRateBasisThrough": "2026-12-31",
+    "inputModelLimitPerCall": 1048576,
+    "outputModelLimitPerCall": 65536,
+    "priceOnlyUpperUsd": 2.064384,
+    "actualCreditBalanceReadback": false,
+    "actualCostVerified": false
+  },
+  "execution": {
+    "phase": "execution",
+    "batchId": "root-two-20261005",
+    "attempted": 2,
+    "succeeded": 1,
+    "reused": 1,
+    "blocked": 0,
+    "unconfirmed": 1,
+    "deferredByBudget": 1066,
+    "code": "READBACK_REQUIRED",
+    "reservations": {
+      "reservedCalls": 2,
+      "reservedInputTokens": 2097152
+    }
+  },
+  "receipts": [
+    {
+      "videoId": "-8wi-fVqTwk",
+      "receiptSha256": "2561d4acef40710cceaf198e56145290e9e8748c6b42dc233c9341c2d2e00866",
+      "state": "succeeded",
+      "code": "COMPLETED",
+      "elapsedSeconds": 18.484443,
+      "usage": {
+        "cost": null,
+        "costVerified": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "rawUsageFields": {
+          "total_tokens": 87930
+        },
+        "totalTokens": 87930,
+        "usageCompleteness": "partial"
+      },
+      "identity": {
+        "configSha256": "d65888483dfc70791b71430a02678c1a0c0457d24762fa19f52025d194718733",
+        "inputSha256": "25c7488d45a6238f741220f5626d63802990005daf348958c0d6c9146e50ee1e",
+        "videoId": "-8wi-fVqTwk"
+      },
+      "sourcePath": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/videos/-8wi-fVqTwk/55f021214093142607c536986bf98b9202768779fb78cd7f8e6efdf5ad9f487d.receipt.json"
+    },
+    {
+      "videoId": "-1OU4tkFJns",
+      "receiptSha256": "952cd2aeb47593154fa6ce3cbf992d6450a8c3ba55cc44d0a85da78a818f2062",
+      "state": "uncertain",
+      "code": "ANALYSIS_EVIDENCE_INVALID",
+      "elapsedSeconds": 17.158482,
+      "usage": {
+        "cost": null,
+        "costVerified": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "rawUsageFields": {
+          "total_tokens": 73649
+        },
+        "totalTokens": 73649,
+        "usageCompleteness": "partial"
+      },
+      "identity": {
+        "configSha256": "d65888483dfc70791b71430a02678c1a0c0457d24762fa19f52025d194718733",
+        "inputSha256": "c432a4daea662590f7c5bc2efc88cfff2deed7be49e380aa903cc509bc0f5ea4",
+        "videoId": "-1OU4tkFJns"
+      },
+      "sourcePath": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/videos/-1OU4tkFJns/84f9fd3be82a2e8e788024ac0cf0bf8957be456886019e5e8886de3aad7f3dd5.receipt.json"
+    }
+  ],
+  "oldPilotPreserved": true,
+  "retryPerformed": false,
+  "independentlyVerified": false,
+  "actualCostVerified": false,
+  "claimScope": "Two real watch invocations: one structurally admitted result and one rejected evidence result; not a population accuracy or performance claim."
+}

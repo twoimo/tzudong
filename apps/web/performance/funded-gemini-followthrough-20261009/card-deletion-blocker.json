@@ -1,0 +1,19 @@
+{
+  "kind": "authorized-card-deletion-current-ui-blocker",
+  "observedAtUtc": "2026-10-08T23:19:36.034603+00:00",
+  "requestedCard": "Lotte \u2022\u2022\u2022\u2022 0488",
+  "targetPresent": true,
+  "deleteFormOpened": true,
+  "validReplacementRequiredByProvider": true,
+  "existingAlternativeSelectable": false,
+  "newCardRegistrationRequired": true,
+  "newCardRegistrationAuthorized": false,
+  "savedAndDeleted": false,
+  "chargesOrFundingChanges": false,
+  "dialogCanceled": true,
+  "limitations": [
+    "Payment provider requires a valid replacement before removal.",
+    "No card number, other card identifier, expiration, billing ID, personal data or raw snapshot retained.",
+    "No fake card, funding unlink, account closure or repeat top-up performed."
+  ]
+}

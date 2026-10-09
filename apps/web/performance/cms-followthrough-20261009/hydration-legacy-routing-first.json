@@ -1,0 +1,164 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+      "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "performance/cms-followthrough-20261009/hydration.config.mjs",
+      "--grep",
+      "loads core admin modules without hydration/runtime errors"
+    ],
+    "configFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/cms-followthrough-20261009/hydration.config.mjs",
+    "rootDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "e2eAdminRouteBypassToken": "design-fixture-local-only",
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/cms-followthrough-20261009/hydration-run-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "design-fixture-local-only",
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "admin-console-module-hydration.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/cms-followthrough-20261009/hydration-run.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "admin-console-module-hydration.spec.ts",
+      "file": "admin-console-module-hydration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "admin console module hydration smoke",
+          "file": "admin-console-module-hydration.spec.ts",
+          "line": 203,
+          "column": 6,
+          "specs": [
+            {
+              "title": "loads core admin modules without hydration/runtime errors",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 37163,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#admin-console-canvas')\nExpected: \u001b[32m\"restaurant\u001b[7m-refresh-history\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"restaurant\u001b[7ms\u001b[27m\"\u001b[39m\nTimeout:  30000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" locator('#admin-console-canvas') with timeout 30000ms\u001b[22m\n\u001b[2m  - waiting for locator('#admin-console-canvas')\u001b[22m\n\u001b[2m    63 × locator resolved to <section tabindex=\"-1\" role=\"region\" id=\"admin-console-canvas\" aria-label=\"관리자 콘솔 작업 화면\" data-scroll-owner=\"admin-canvas\" data-admin-console-content=\"true\" data-admin-console-active-module=\"restaurants\" data-admin-console-focus-order=\"skip-link sidebar canvas module-actions\" class=\"h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain scrollbar-hide border-y border-border bg-background p-2 font-sans tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-v…>…</section>\u001b[22m\n\u001b[2m       - unexpected value \"restaurants\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#admin-console-canvas')\nExpected: \u001b[32m\"restaurant\u001b[7m-refresh-history\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"restaurant\u001b[7ms\u001b[27m\"\u001b[39m\nTimeout:  30000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" locator('#admin-console-canvas') with timeout 30000ms\u001b[22m\n\u001b[2m  - waiting for locator('#admin-console-canvas')\u001b[22m\n\u001b[2m    63 × locator resolved to <section tabindex=\"-1\" role=\"region\" id=\"admin-console-canvas\" aria-label=\"관리자 콘솔 작업 화면\" data-scroll-owner=\"admin-canvas\" data-admin-console-content=\"true\" data-admin-console-active-module=\"restaurants\" data-admin-console-focus-order=\"skip-link sidebar canvas module-actions\" class=\"h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain scrollbar-hide border-y border-border bg-background p-2 font-sans tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-v…>…</section>\u001b[22m\n\u001b[2m       - unexpected value \"restaurants\"\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/admin-console-module-hydration.spec.ts:240:59",
+                        "location": {
+                          "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/admin-console-module-hydration.spec.ts",
+                          "column": 59,
+                          "line": 240
+                        },
+                        "snippet": "  238 |     for (const target of ADMIN_MODULE_SMOKE_TARGETS) {\n  239 |       await gotoAndHidePopup(page, target.path);\n> 240 |       await expect(page.locator('#admin-console-canvas')).toHaveAttribute(\n      |                                                           ^\n  241 |         'data-admin-console-active-module',\n  242 |         target.moduleId,\n  243 |         { timeout: 30_000 },"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/admin-console-module-hydration.spec.ts",
+                            "column": 59,
+                            "line": 240
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#admin-console-canvas')\nExpected: \u001b[32m\"restaurant\u001b[7m-refresh-history\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"restaurant\u001b[7ms\u001b[27m\"\u001b[39m\nTimeout:  30000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" locator('#admin-console-canvas') with timeout 30000ms\u001b[22m\n\u001b[2m  - waiting for locator('#admin-console-canvas')\u001b[22m\n\u001b[2m    63 × locator resolved to <section tabindex=\"-1\" role=\"region\" id=\"admin-console-canvas\" aria-label=\"관리자 콘솔 작업 화면\" data-scroll-owner=\"admin-canvas\" data-admin-console-content=\"true\" data-admin-console-active-module=\"restaurants\" data-admin-console-focus-order=\"skip-link sidebar canvas module-actions\" class=\"h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain scrollbar-hide border-y border-border bg-background p-2 font-sans tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-v…>…</section>\u001b[22m\n\u001b[2m       - unexpected value \"restaurants\"\u001b[22m\n\n\n  238 |     for (const target of ADMIN_MODULE_SMOKE_TARGETS) {\n  239 |       await gotoAndHidePopup(page, target.path);\n> 240 |       await expect(page.locator('#admin-console-canvas')).toHaveAttribute(\n      |                                                           ^\n  241 |         'data-admin-console-active-module',\n  242 |         target.moduleId,\n  243 |         { timeout: 30_000 },\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/admin-console-module-hydration.spec.ts:240:59"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-08T22:08:22.642Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/cms-followthrough-20261009/hydration-run-output/admin-console-module-hydra-7239e-ut-hydration-runtime-errors/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/admin-console-module-hydration.spec.ts",
+                        "column": 59,
+                        "line": 240
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "38d9986e8708b545cbf7-8313ea43a4978cc723f1",
+              "file": "admin-console-module-hydration.spec.ts",
+              "line": 204,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-08T22:08:22.395Z",
+    "duration": 39411.731,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

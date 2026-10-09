@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "ownedContainerRemoved": true,
+  "ownedVolumeRemoved": true,
+  "parentContainerIdUnchanged": true,
+  "parentContainerRunning": true,
+  "otherResourcesChanged": false,
+  "labelsVerifiedBeforeDeletion": true
+}

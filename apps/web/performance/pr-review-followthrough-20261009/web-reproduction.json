@@ -1,0 +1,17 @@
+{
+  "pendingZeroCase": {
+    "counts": [
+      2,
+      0,
+      4
+    ],
+    "total": 6,
+    "commentPremiseReproduced": false
+  },
+  "pipelineMissingManifest": {
+    "snapshotPartial": false,
+    "displayJobStatus": "Unknown",
+    "currentDashboardReliable": true,
+    "commentPremiseReproduced": true
+  }
+}

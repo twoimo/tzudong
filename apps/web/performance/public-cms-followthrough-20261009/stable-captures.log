@@ -1,0 +1,15 @@
+desktop /feed stable=true
+desktop /leaderboard stable=true
+desktop /stamp stable=true
+desktop /user/00000000-0000-4000-8000-000000000009 stable=true
+desktop /privacy/onboarding stable=true
+tablet /feed stable=true
+tablet /leaderboard stable=true
+tablet /stamp stable=true
+tablet /user/00000000-0000-4000-8000-000000000009 stable=true
+tablet /privacy/onboarding stable=true
+mobile /feed stable=true
+mobile /leaderboard stable=true
+mobile /stamp stable=true
+mobile /user/00000000-0000-4000-8000-000000000009 stable=true
+mobile /privacy/onboarding stable=true

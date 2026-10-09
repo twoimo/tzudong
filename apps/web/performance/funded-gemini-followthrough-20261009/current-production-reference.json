@@ -1,0 +1,17 @@
+{
+  "observedAtUtc": "2026-10-08T23:42:40.577Z",
+  "readOnly": true,
+  "operatingWrites": false,
+  "id": "dpl_HXG5n1x3k4E2PBA4Vf4pEvXcqfye",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "projectName": "tzudong",
+  "state": "READY",
+  "url": "tzudong-niao9yn3r-twoimos-projects.vercel.app",
+  "gitSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "gitRef": "main",
+  "source": "cli",
+  "policySafeRollback": "unverified",
+  "limitations": [
+    "Current deployment reference only; does not attest new source deployment or model policy-safe rollback."
+  ]
+}

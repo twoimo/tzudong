@@ -1,0 +1,35 @@
+{
+  "schema": "tzudong-current-schema-canonical-pg15-blocker-v1",
+  "observedAt": "2026-10-08T22:06:33.121913+00:00",
+  "sourceHead": "8d918f851d8a0ec7dc1637f677cf9db05a61b460",
+  "guardedSqlSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "command": [
+    "/opt/homebrew/bin/bash",
+    "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+    "--output-dir",
+    "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/current-schema-record-20261009/pg15/run-a",
+    "--docker-context",
+    "colima-tzudong-catalog-20261007"
+  ],
+  "exitCode": 1,
+  "result": "blocked-relevant-source-inputs-must-be-clean",
+  "blockingFile": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+  "blockingLines": [
+    66,
+    69
+  ],
+  "requiredCondition": "Relevant source inputs must be clean in git status --porcelain=v1 --untracked-files=all",
+  "dirtyRelevantInputs": [
+    "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql"
+  ],
+  "canonicalReplayExecuted": false,
+  "hashComparisonExecuted": false,
+  "dockerMutationExecuted": false,
+  "hostedOperationExecuted": false,
+  "protectedExistingResources": [
+    "tzudong-record-runtime-v3-20261009",
+    "tzudong_fresh_pg17_61d148a598b0",
+    "tzudong-ranking-clone-20261008"
+  ],
+  "nextDependency": "Root must provide a clean committed candidate with the intended guarded SQL bytes. Then run run-a and run-b and compare_g024_clean_replays.py unchanged."
+}

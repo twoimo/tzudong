@@ -1,0 +1,36 @@
+{
+  "sourceM1Sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+  "meaning": "Local code/test status only; no remote comment or resolution, no deployed claim",
+  "threads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o1c8W",
+      "status": "addressed",
+      "reason": "manual preview eligibility forward source and actual tick parity; separate service-role existing auth gap remains"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B3s",
+      "status": "addressed",
+      "reason": "selective canonical video-only conflict, actual composite unique race; same-video different-name preserved"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B30",
+      "status": "addressed",
+      "reason": "actual PG17 canonical metadata and consumer/producer roundtrip"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQp4",
+      "status": "addressed",
+      "reason": "canonical video-only restore fixed-code rollback, no global rejection"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYiv",
+      "status": "addressed",
+      "reason": "deleted entity recreation unique admin trace with old trace/provenance retained"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYi2",
+      "status": "addressed",
+      "reason": "parent and child reject/delete reason parity"
+    }
+  ]
+}

@@ -147,10 +147,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       ": view?.project.request.providers.text;",
     );
     expect(localStoryboardSource).toContain(
-      'const retryBlocked = !!retryProvider && retryProvider.id !== "local-mlx";',
+      'const retryBlocked = !!retryProvider && retryProvider.id !== "gemini-api";',
     );
     expect(localStoryboardSource).toContain(
-      'const regenerateBlocked = !!view && view.project.request.providers.image.id !== "local-mlx";',
+      'const regenerateBlocked = !!view && view.project.request.providers.image.id !== "gemini-api";',
     );
     expect(localStoryboardSource).toContain(
       "disabled={locked || retryBlocked || scenesComplete",
@@ -180,7 +180,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("keeps storyboard global CSS and component inline geometry in parity", () => {
     const appGlobalsSource = source("app/app-globals.css");
     const storyboardSource = source(
-      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "components/admin/storyboard/LegacyStoryboardReference.tsx",
     );
     const canvasShellSource = source(
       "components/admin/storyboard/StoryboardCanvasShell.tsx",
@@ -520,14 +520,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       expect(sharedShellSource).not.toContain("TrendProposalQueue");
     }
   });
-  test("aligns mobile admin menu state and KPI loading without desktop restyle", () => {
+  test("preserves active menu state and KPI loading in the renewed console", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const guardedSource = source("lib/admin/guarded-mutation-contract.ts");
 
     expect(consoleSource).toContain('aria-current={isActive ? "page" : undefined}');
     expect(consoleSource).toContain('data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}');
     expect(consoleSource).toContain('data-admin-console-menu-item-state={isActive ? "active" : "inactive"}');
-    expect(consoleSource).toContain('? "border-primary/20 bg-primary text-primary-foreground shadow-primary"');
+    expect(consoleSource.includes('? "border-transparent bg-primary/8 text-primary"')).toBe(true);
     expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="true"');
     expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="live"');
     expect(consoleSource).toContain("shouldShowMobileDashboardLoadingPrompt");
@@ -562,7 +562,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
         /const shouldSuppressMobileBottomNav =([\s\S]*?)const shouldRenderMobileBottomNav/,
       )?.[1] ?? "";
     expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/auth/")');
-    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname?.startsWith("/admin")');
+    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/admin")');
     expect(mainLayoutSource).toContain(': "0px"');
   });
 
@@ -586,19 +586,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const routeSource = source("lib/admin/admin-module-routing.ts");
     const shellSource = source("components/admin/AdminEmbeddedModuleShell.tsx");
+    const headerSource = source("components/admin/AdminPageHeader.tsx");
 
     expect(shellSource).toContain("export function AdminEmbeddedModuleShell");
     expect(shellSource).toContain('data-admin-embedded-module-shell="true"');
     expect(shellSource).toContain("data-admin-embedded-module-id={moduleId}");
     expect(shellSource).toContain('data-admin-module-header="compact"');
     expect(shellSource).toContain("data-admin-module-header-module={moduleId}");
-    expect(shellSource).toContain('data-admin-module-summary="true"');
-    expect(shellSource).toContain('data-admin-module-actions="top-right"');
+    expect(headerSource).toContain('data-admin-module-summary="true"');
+    expect(headerSource).toContain('data-admin-module-actions="top-right"');
     expect(shellSource).toContain('data-admin-module-content="bounded"');
-    expect(shellSource).toContain(
-      '"shrink-0 border-b border-border bg-card px-2 py-1.5"',
-    );
-    expect(shellSource).toContain("bg-gradient-primary bg-clip-text");
+    expect(shellSource).toContain('<AdminPageHeader');
+    expect(shellSource).toContain('actions={actions}');
+    expect(shellSource).toContain('summary={summary}');
+    expect(shellSource).not.toContain("bg-gradient-primary bg-clip-text");
     expect(shellSource).toContain('"min-h-0 min-w-0 flex-1 overflow-hidden"');
     expect(shellSource).toContain('moduleId === "overview"');
 
@@ -1295,7 +1296,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<caption className="sr-only">관리자 사용자 목록 로딩</caption>',
     );
     expect(usersSource).toContain(
-      '<th scope="col" className="px-3 py-2 font-semibold">사용자</th>',
+      '<th scope="col" className="w-[40%] px-3 py-2 font-semibold">사용자</th>',
     );
     expect(refreshHistorySource).toContain(
       "function RefreshCandidateListSkeleton()",
@@ -1449,7 +1450,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(homeSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).toContain(
-      'getSidebarConsoleItems(["users", "banners", "insights", "pipeline"])',
+      'getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"])',
     );
     expect(opsSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).not.toContain('"storyboard"');
@@ -1473,7 +1474,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(labSectionSource.indexOf('id: "llm"')).toBeLessThan(
       labSectionSource.indexOf('"audit"'),
     );
-    expect(consoleSource).toContain('title: "핵심 인사이트"');
+    expect(consoleSource).toContain('title: "영상 성과 분석"');
     expect(consoleSource).toContain("fetchAdminDashboardInsightSummary");
     expect(consoleSource).toContain("/api/insights/treemap");
     expect(consoleSource).toContain(
@@ -1503,7 +1504,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).not.toContain('var(--font-noto-serif-kr, "Noto Serif KR")');
     expect(appGlobalsSource).not.toContain("serif !important;");
     expect(consoleSource).toContain(
-      "grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible",
+      "grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible",
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
     expect(consoleSource).toContain('? "overflow-y-auto"');
@@ -1542,7 +1543,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42",
     );
-    expect(consoleSource).toMatch(/>\s*Tzuyang KPI Dashboard\s*</);
+    expect(consoleSource).toContain('<AdminPageHeader title="쯔양 성과 대시보드"');
     expect(consoleSource).not.toMatch(/>\s*쯔양 KPI 대시보드\s*</);
     expect(consoleSource).not.toContain(
       "구독자·조회수·좋아요·댓글·영상 수를 1페이지 KPI 보드에서 한눈에 봅니다.",
@@ -1616,18 +1617,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "sparklineData={subscriberSparklinePoints}",
     );
-    expect(consoleSource).toContain("YouTube Data API");
     expect(consoleSource).toContain("로컬 채널 스냅샷 없음 · KPI 수집 후 표시");
     expect(consoleSource).toContain("채널 통계 확인 필요");
-    expect(consoleSource).toContain(
-      '<div className="hidden min-w-0 md:block">',
-    );
-    expect(consoleSource).toContain(
-      '<h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">',
-    );
+    expect(consoleSource).not.toContain('<div className="hidden min-w-0 md:block">');
+    expect(consoleSource).toContain('<AdminPageHeader title="쯔양 성과 대시보드"');
     expect(consoleSource).toContain("data-admin-dashboard-kpi-value-size=\"bounded\"");
-    expect(consoleSource).toContain("text-sm font-black");
-    expect(consoleSource).toContain("sm:text-base");
+    expect(consoleSource).toContain("text-xl font-semibold");
+    expect(consoleSource).toContain("sm:text-2xl");
     expect(consoleSource).not.toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
     expect(consoleSource).toContain("min-w-44 space-y-1");
@@ -1731,7 +1727,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-card-title-row="single-line"',
     );
     expect(consoleSource).toContain(
-      "truncate whitespace-nowrap text-2xs font-extrabold leading-none text-foreground",
+      "text-sm font-semibold leading-5 text-foreground",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-card-title-actions="single-line-scroll"',
@@ -2613,10 +2609,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("periodMetricScopeLabel");
     expect(consoleSource).not.toContain("기간 업로드</span>");
     expect(consoleSource).toContain(
-      "현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}",
+      "현재 구독자 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}",
     );
     expect(consoleSource).toContain(
-      "`현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`",
+      "`${selectedPeriodLabel} 구독자 순증 ${formatSignedNumber(subscriberDelta)}`",
     );
     expect(consoleSource).toContain(
       'const subscriberCardTitle = "현재 구독자"',
@@ -2673,7 +2669,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-metric-tooltip="beginner-plain"',
     );
     expect(consoleSource).toContain(
-      'className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+      'className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
     );
     expect(consoleSource).not.toContain("md:h-5 md:w-5");
     expect(consoleSource).toContain(
@@ -2705,13 +2701,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 채널 구독자 수를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain(
-      "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
+      "relative z-0 grid min-h-[96px] grid-rows-[auto_minmax(0,1fr)_auto] gap-2 overflow-visible p-2.5 sm:p-3 hover:z-20 focus-within:z-20",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-row="single-line"',
     );
     expect(consoleSource).toContain(
-      "truncate whitespace-nowrap text-2xs font-extrabold tracking-[0.04em] text-muted-foreground",
+      "text-xs font-medium leading-5 text-muted-foreground",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-actions="single-line-scroll"',
@@ -3355,7 +3351,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(appGlobalsSource).toContain("@media (max-width: 767px)");
     expect(appGlobalsSource).toContain(
-      '[data-admin-dashboard-management="true"] .recharts-wrapper',
+      '[data-admin-dashboard-management="true"] .recharts-responsive-container',
     );
     expect(appGlobalsSource).toContain("max-width: 100% !important;");
     expect(appGlobalsSource).toContain(
@@ -3414,12 +3410,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'export const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"]',
     );
     expect(sidebarOrderSource).toContain('"routes",');
-    expect(sidebarOrderSource).toContain('"restaurant-refresh-history",');
+    expect(sidebarOrderSource).not.toContain('"restaurant-refresh-history",');
     expect(sidebarOrderSource).toContain(
-      '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
+      '검수: ["restaurants", "submissions", "reviews"]',
     );
     expect(sidebarOrderSource).toContain(
-      '운영: ["users", "banners", "insights", "pipeline"]',
+      '운영: ["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"]',
     );
     expect(sidebarOrderSource).toContain(
       '실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"]',
@@ -5407,7 +5403,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("adds storyboard generation as an operator-controlled admin module", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const storyboardSource = source(
-      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "components/admin/storyboard/LegacyStoryboardReference.tsx",
     );
     const canvasShellSource = source(
       "components/admin/storyboard/StoryboardCanvasShell.tsx",
@@ -5418,11 +5414,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     const appGlobalsSource = source("app/app-globals.css");
     const routeSource = source("app/api/admin/storyboard/route.ts");
-    expect(routeSource).toContain("mode: 'async_job_control_plane'");
-    expect(routeSource).toContain("buildStoryboardJobInsert");
-    expect(routeSource).not.toContain("generateStoryboardWithBackendAgent");
+    expect(routeSource).not.toContain("buildStoryboardJobInsert");
     const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
     const imageRouteSource = source("app/api/admin/storyboard/images/route.ts");
+    for (const retired of [routeSource,chatRouteSource,imageRouteSource]) {
+      expect(retired).toContain("retiredStoryboardApi");
+      expect(retired).not.toContain("generateStoryboardWithBackendAgent");
+    }
     const imageProviderSource = source(
       "lib/admin/storyboard/image-provider.ts",
     );
@@ -5446,7 +5444,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "lib/admin/storyboard/history-client.ts",
     );
     const storyboardImageWrapperSource = source(
-      "scripts/codex-imagegen-storyboard-provider.py",
+      "scripts/codex-imagegen-provider-core.py",
     );
     const backendAgentWrapperSource = source(
       "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
@@ -5785,17 +5783,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("!isStoryboardImageProviderAvailable");
     expect(storyboardSource).not.toContain("이미지 생성 준비 상태");
     expect(storyboardSource).toContain("이미지 생성 설정 필요");
-    expect(imageRouteSource).toContain("StoryboardImageGenerationError");
-    expect(imageRouteSource).toContain("normalizeRouteError(error)");
-    expect(imageRouteSource).toContain(
-      "return jsonError(error.code, error.status, error.message)",
-    );
-    expect(imageRouteSource).toContain("generateStoryboardSceneImages(");
+    expect(imageRouteSource).not.toContain("generateStoryboardSceneImages(");
     expect(imageProviderSource).toContain(
       "new StoryboardImageGenerationError(",
     );
     expect(imageProviderSource).toContain("'provider_unavailable'");
-    expect(imageProviderSource).toContain("backend provenance");
+    expect(imageProviderSource).toContain("STORYBOARD_WORKFLOW_RETIRED");
+    expect(imageProviderSource).not.toContain("fetch(");
+    expect(imageProviderSource).not.toContain("spawn(");
     expect(storyboardSource).not.toContain(
       "STORYBOARD_IMAGE_PROVIDER_MODEL_ENV",
     );
@@ -6278,7 +6273,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "local_codex_model_provenance_unverified",
     );
     expect(imageProviderSource).toContain(
-      "backend provenance를 증명할 수 없어 중단",
+      "storyboard_workflow_retired",
     );
     expect(storyboardSource).toContain(
       "fetch(STORYBOARD_CHAT_AGENT_STREAM_URL",
@@ -7639,118 +7634,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "isLocalPlaywrightHost(requestHeaders.get('host'))",
     );
     expect(requireAdminSource).toContain("return 'e2e-admin-route-bypass'");
-    expect(routeSource).toContain("buildStoryboardJobInsert");
-    expect(routeSource).toContain("sanitizeStoryboardJobRow");
-    expect(routeSource).not.toContain("generateStoryboardWithBackendAgent");
-    expect(routeSource).toContain(
-      "backendAgent: await getPublicStoryboardBackendAgentStatus()",
-    );
-    expect(chatRouteSource).toContain("generateStoryboardChatWithBackendAgent");
-    expect(chatRouteSource).toContain("STORYBOARD_ROUTE_SSE_HEADERS");
-    expect(chatRouteSource).toContain("event: ${event}");
-    expect(chatRouteSource).toContain("getInitialStatusMessages");
-    expect(chatRouteSource).toContain("getResolvedStatusMessage");
-    expect(chatRouteSource).toContain("normalizeRouteImageAttachments");
-    expect(chatRouteSource).toContain(
-      "STORYBOARD_CHAT_IMAGE_ATTACHMENT_LIMIT = 3",
-    );
-    expect(chatRouteSource).toContain(
-      "STORYBOARD_CHAT_IMAGE_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024",
-    );
-    expect(chatRouteSource).toContain(
-      "'첨부한 사진을 참고해서 스토리보드 방향을 제안해줘.'",
-    );
-    expect(chatRouteSource).toContain(
-      "imageAttachments: imageAttachmentResult.attachments",
-    );
-    expect(chatRouteSource).toContain("사진 ${imageAttachmentCount}장 첨부");
-    expect(chatRouteSource).toContain("작업으로 이해했어요");
-    expect(chatRouteSource).toContain("곧 화면에 바로 반영할게요");
-    expect(chatRouteSource).toContain("send('status'");
-    expect(chatRouteSource).toContain("send('patch', publicResult)");
-    expect(chatRouteSource).toContain("duplicateResultOmitted: true");
-    expect(chatRouteSource).not.toContain("send('done', publicResult)");
-    expect(chatRouteSource).toContain("await requireAdmin({");
-    expect(imageRouteSource).toContain("generateStoryboardSceneImages");
-    expect(imageRouteSource).toContain(
-      "getStoryboardImageProviderAvailability",
-    );
-    expect(imageRouteSource).toContain("await requireAdmin({");
-    expect(imageRouteSource).toContain(
-      "maxScenesPerRequest: STORYBOARD_IMAGE_GENERATION_BATCH_SIZE",
-    );
-    expect(imageRouteSource).toContain(
-      "STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE",
-    );
-    expect(imageRouteSource).toContain("bun run storyboard:image-proof");
-    expect(imageRouteSource).toContain(
-      "STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER",
-    );
-    expect(imageRouteSource).toContain(
-      "normalizeStoryboardBrowserOpenAIApiKey",
-    );
-    expect(imageRouteSource).toContain(
-      "browserKeyStorage: 'memory_only_operation_scoped'",
-    );
-    expect(imageRouteSource).toContain(
-      '활성 작업 동안 컴포넌트 메모리에만 존재하며, 보호된 요청 헤더로 한 번만 전송되고 저장되지 않음',
-    );
-    expect(imageProviderSource).toContain("STORYBOARD_IMAGE_PROVIDER_MODEL");
-    expect(imageProviderSource).toContain(
-      "providerId: STORYBOARD_IMAGE_PROVIDER_ID",
-    );
-    expect(imageProviderSource).toContain(
-      "STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID",
-    );
-    expect(imageProviderSource).toContain("modelProvenance: 'unverified'");
-    expect(imageProviderSource).toContain(
-      "modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE",
-    );
-    expect(imageProviderSource).toContain(
-      "STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE",
-    );
-    expect(imageProviderSource).toContain("hasOpenAIAPIKey !== false");
-    expect(imageProviderSource).toContain(
-      "proof.endpoint !== LOCAL_CODEX_RESPONSES_ENDPOINT",
-    );
-    expect(imageProviderSource).toContain(
-      "proof.rawImageItemTypes[0] !== 'image_generation_call'",
-    );
-    expect(imageProviderSource).toContain("proof.generatedImageItemTypes");
-    expect(imageProviderSource).toContain(
-      "toStoryboardGeneratedImageProvenance",
-    );
-    expect(imageProviderSource).toContain(
-      "provenance: toStoryboardGeneratedImageProvenance(finalProof)",
-    );
-    expect(imageProviderSource).toContain("LOCAL_CODEX_PROVENANCE_MAX_AGE_MS");
-    expect(imageProviderSource).toContain("isSha256Hex(proof.requestHash)");
-    expect(imageProviderSource).toContain(
-      "isFreshGeneratedAt(proof.generatedAt)",
-    );
-    expect(imageProviderSource).toContain(
-      "requestToolType: 'image_generation'",
-    );
-    expect(imageProviderSource).toContain(
-      "requestToolModel: STORYBOARD_IMAGE_PROVIDER_MODEL",
-    );
-    expect(imageProviderSource).toContain(
-      "exact_provenance: ${finalProof.requestToolType}.${finalProof.requestToolModel}",
-    );
-    expect(imageProviderSource).toContain("browser_memory_only_api_key");
-    expect(imageProviderSource).toContain(
-      "storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.",
-    );
-    expect(imageRouteSource).not.toMatch(/\b(?:localStorage|sessionStorage)\b/);
+    for (const retired of [routeSource,chatRouteSource,imageRouteSource]) {
+      expect(retired).toContain("retiredStoryboardApi");
+      expect(retired).not.toContain("generateStoryboardWithBackendAgent");
+    }
+    // Historical receipts remain parseable; the former producer cannot become ready or execute.
+    for (const contract of ["STORYBOARD_IMAGE_PROVIDER_MODEL", "hasOpenAIAPIKey !== false", "proof.endpoint !== LOCAL_CODEX_RESPONSES_ENDPOINT", "proof.rawImageItemTypes[0] !== 'image_generation_call'", "proof.generatedImageItemTypes", "LOCAL_CODEX_PROVENANCE_MAX_AGE_MS", "isSha256Hex(proof.requestHash)", "isFreshGeneratedAt(proof.generatedAt)", "validateLocalCodexCommandResult", "STORYBOARD_WORKFLOW_RETIRED", "storyboard_workflow_retired"]) {
+      expect(imageProviderSource).toContain(contract);
+    }
+    for (const forbidden of ["fetch(", "spawn(", "STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE", "OPENAI_API_KEY:"]) expect(imageProviderSource).not.toContain(forbidden);
     expect(imageProviderSource).not.toMatch(/\b(?:localStorage|sessionStorage)\b/);
-    expect(imageProviderSource).toContain(
-      'browser component-memory API key (active operation; transmitted once in guarded request header; never persisted)',
-    );
-    expect(imageProviderSource).toContain(
-      'browser_api_key_provider: API key exists only in component memory for the active operation and is transmitted once in the guarded request header.',
-    );
-    expect(imageProviderSource).toContain("redactProviderSecretText");
-    expect(imageProviderSource).toContain("OPENAI_API_KEY: ''");
     expect(storyboardSource).not.toContain(
       "STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY",
     );
@@ -7806,9 +7699,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(localBridgeServerSource).toContain(
       "providerId: STORYBOARD_IMAGE_PROVIDER_ID",
     );
-    expect(localBridgeScriptSource).toContain(
-      "startStoryboardLocalBridgeServer",
-    );
+    expect(localBridgeScriptSource).toContain("storyboard-gemini-worker");
     expect(imageReadinessSource).toContain("gpt-image-2");
     expect(imageReadinessSource).toContain("browser-openai-api-key");
     expect(imageReadinessSource).toContain("x-storyboard-openai-api-key");
@@ -7823,9 +7714,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(imageProviderSource).not.toContain(
       "THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL",
     );
-    expect(imageProviderSource).toContain(
-      "codex-imagegen-storyboard-provider.py",
-    );
+    expect(imageProviderSource).not.toContain("codex-imagegen-storyboard-provider.py");
     expect(imageProviderSource).toContain("generateStoryboardSceneImage");
     expect(imageProviderSource).toContain("buildStoryboardSceneImagePrompt");
     expect(imageProviderSource).toContain("no recognizable face");
@@ -7874,23 +7763,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardImageWrapperSource).toContain("tool_choice");
     expect(storyboardImageWrapperSource).toContain("image_generation_call");
-    expect(backendAgentWrapperSource).toContain("codex_cli_oauth");
-    expect(backendAgentWrapperSource).toContain("gpt-5.5");
-    expect(backendAgentWrapperSource).toContain("STORYBOARD_AGENT_CODEX_MODEL");
-    expect(backendAgentWrapperSource).toContain(
-      "STORYBOARD_AGENT_CODEX_EFFORT",
-    );
-    expect(backendAgentWrapperSource).toContain('model_reasoning_effort="');
-    expect(backendAgentWrapperSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS");
-    expect(backendAgentWrapperSource).toContain("codex_oauth_env");
-    expect(backendAgentWrapperSource).toContain("CODEX_API_KEY");
-    expect(backendAgentWrapperSource).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
-    expect(backendAgentWrapperSource).toContain("OPENAI_API_KEY");
-    expect(backendAgentWrapperSource).toContain("Do not run shell commands");
-    expect(backendAgentWrapperSource).toContain(
-      "gpt-image-2 is handled by the separate image provider",
-    );
-    expect(backendAgentWrapperSource).toContain("from utils.privacy_log import redact_log_text, safe_error_name");
+    expect(backendAgentWrapperSource).toContain("storyboard_gemini_only");
+    expect(backendAgentWrapperSource).toContain("storyboard:gemini-worker");
+    expect(backendAgentWrapperSource).not.toContain("subprocess");
+    expect(backendAgentWrapperSource).not.toContain("load_dotenv");
+    expect(backendAgentWrapperSource).not.toContain("OPENAI_API_KEY");
     expect(backendAgentRequirementsSource).toContain("langgraph");
     expect(backendAgentRequirementsSource).toContain("langchain-openai");
     expect(backendAgentRequirementsSource).toContain("supabase");
@@ -7901,62 +7778,26 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardImageWrapperSource).toContain(
       "does not read or use OPENAI_API_KEY",
     );
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_COMMAND");
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_ROOT=");
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_PYTHON");
-    expect(envExampleSource).toContain(
-      "STORYBOARD_AGENT_RUNTIME=codex_cli_oauth",
-    );
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_CODEX_EFFORT=low");
-    expect(envExampleSource).toContain(
-      "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
-    );
-    expect(envExampleSource).toContain("셸 메타문자/인자는 허용하지 않는다");
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS=120000");
-    expect(envExampleSource).toContain("Remote service bridge");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_COMMAND");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_ROOT=");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_CODEX_MODEL=gpt-5.5");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_CODEX_EFFORT=low");
-    expect(readmeSource).toContain(
-      "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
-    );
-    expect(readmeSource).toContain("Remote service bridge");
-    expect(backendAgentSource).toContain("BACKEND_AGENT_ROOT");
-    expect(backendAgentSource).toContain("backend/storyboard-agent");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_COMMAND");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_ROOT");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_PYTHON");
-    expect(backendAgentSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentPython");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentCommand");
-    expect(backendAgentSource).toContain("UNSAFE_COMMAND_PATTERN");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentPythonCommand");
-    expect(backendAgentSource).toContain("shouldRunThroughWindowsCommandShell");
-    expect(backendAgentSource).toContain("buildWindowsCommandShellSpec");
-    expect(backendAgentSource).toContain("shell: false");
-    expect(backendAgentSource).not.toContain("shell: true");
-    expect(backendAgentSource).toContain("sanitizeCommandOutput");
-    expect(backendAgentSource).toContain("BACKEND_AGENT_ROOT");
-    expect(backendAgentSource).toContain("backend_agent_local_adapter");
-    expect(backendAgentSource).toContain("backend_agent_command");
-    expect(backendAgentSource).toContain(
-      "generateStoryboardChatWithBackendAgent",
-    );
-    expect(backendAgentSource).toContain(
-      'DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = "gpt-5.5"',
-    );
-    expect(backendAgentSource).toContain(
-      'DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "low"',
-    );
-    expect(backendAgentSource).toContain("resolveStoryboardAgentCodexModel");
-    expect(backendAgentSource).toContain("resolveStoryboardAgentCodexEffort");
-    expect(backendAgentSource).toContain("createStoryboardChatCanvasPatch");
-    expect(backendAgentSource).toContain("shouldGenerate");
-    expect(backendAgentSource).toContain("shouldReset");
-    expect(backendAgentSource).toContain("src/graph.py");
-    expect(backendAgentSource).toContain("src/state/slots.py");
-    expect(backendAgentSource).toContain("src/prompts/designer.py");
+    expect(envExampleSource).toContain("storyboard:gemini-worker");
+    expect(envExampleSource).toContain("GEMINI_CREDITS_API_KEY=");
+    expect(envExampleSource).toContain("STORYBOARD_GEMINI_API_KEY=");
+    expect(envExampleSource).toContain("STORYBOARD_RAG_WORKER_URL=");
+    const activeExampleKeys = envExampleSource.split("\n")
+      .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line))
+      .map((line) => line.split("=", 1)[0]);
+    expect(activeExampleKeys.some((key) => /^(NVIDIA_NIM_|STORYBOARD_AGENT_|STORYBOARD_BGE_)/.test(key))).toBe(false);
+    expect(readmeSource).toContain("storyboard:gemini-worker");
+    expect(readmeSource).toContain("producers are retired and refuse execution");
+    expect(readmeSource).toContain("STORYBOARD_RAG_WORKER_URL=");
+    expect(readmeSource).toContain("gemini-embedding-001:1024:retrieval:l2:v1");
+    const activeReadmeKeys = readmeSource.split("\n")
+      .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line))
+      .map((line) => line.split("=", 1)[0]);
+    expect(activeReadmeKeys.some((key) => /^(NVIDIA_NIM_|STORYBOARD_AGENT_|STORYBOARD_BGE_)/.test(key))).toBe(false);
+    for (const preserved of ["normalizeStoryboardBackendAgentOutput", "isCasualStoryboardChatMessage", "__runStoryboardAgentCommandForTests", "UNSAFE_COMMAND_PATTERN", "STORYBOARD_WORKFLOW_RETIRED"]) expect(backendAgentSource).toContain(preserved);
+    const productionGenerator = backendAgentSource.slice(backendAgentSource.indexOf("export async function generateStoryboardWithBackendAgent"), backendAgentSource.indexOf("export function normalizeStoryboardBackendAgentOutput"));
+    expect(productionGenerator).toContain("STORYBOARD_WORKFLOW_RETIRED");
+    expect(productionGenerator).not.toContain("runStoryboardAgentCommand(");
     expect(typesSource).toContain(
       "export type StoryboardGenerationMode = 'local_heatmap' | 'backend_agent';",
     );
@@ -7984,24 +7825,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "fallbackReason: StoryboardFallbackReason | null;",
     );
     expect(typesSource).toContain("dataModeLabel: string;");
-    const storyboardGetSource = routeSource.slice(
-      routeSource.indexOf("export async function GET"),
-      routeSource.indexOf("export async function POST"),
-    );
-    const storyboardPostSource = routeSource.slice(
-      routeSource.indexOf("export async function POST"),
-    );
-    expect(routeSource).toContain("await requireAdmin({");
-    expect(storyboardPostSource.indexOf("await requireAdmin({")).toBeLessThan(
-      storyboardPostSource.indexOf("const bodyResult = await readStoryboardRouteJson(")
-    );
-    expect(storyboardGetSource.indexOf("await requireAdmin({")).toBeLessThan(
-      storyboardGetSource.indexOf("} = loadStoryboardHeatmapSources"),
-    );
-    expect(routeSource).toContain("isFallbackData");
-    expect(routeSource).toContain("fallbackReason");
-    expect(routeSource).toContain("dataModeLabel");
-    expect(routeSource).not.toContain("mode: 'local_heatmap_fixture'");
+    const retiredGateSource = source("lib/admin/storyboard/retired-api.ts");
+    expect(retiredGateSource.indexOf("await requireAdmin")).toBeLessThan(retiredGateSource.indexOf("Response.json"));
+    expect(retiredGateSource).toContain("status: 410");
+    expect(retiredGateSource).toContain("private, no-store");
     expect(generatorSource).toContain("backend/storyboard-agent");
     expect(generatorSource).toContain("most_replayed_markers");
     expect(generatorSource).toContain("TZUYANG_HEATMAP_DIR");
@@ -8303,7 +8130,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<ThemeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />',
     );
     expect(consoleSource).toContain(
-      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);",
     );
     expect(consoleSource).toContain(
       "const [showSidebarLabels, setShowSidebarLabels] = useState(false);",
@@ -8328,7 +8155,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "data-admin-sidebar-badge-tone={section.label}",
     );
     expect(appGlobalsSource).toContain(".dark {");
-    expect(appGlobalsSource).toContain("--background: 24 10% 10%;");
+    expect(appGlobalsSource).toContain("--background: 220 18% 9%;");
     expect(consoleSource).toContain(
       "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col",
     );
@@ -8460,7 +8287,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(preferenceRouteSource).toContain('from "@/lib/admin/sidebar-order"');
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
     expect(sidebarOrderSource).toContain(
-      '운영: ["users", "banners", "insights", "pipeline"]',
+      '운영: ["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"]',
     );
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(
@@ -8704,8 +8531,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("function AnnouncementWorkspace");
     expect(usersSource).toContain("flex h-full min-h-0 flex-col overflow-hidden bg-background");
-    expect(usersSource).toContain("gap-2 overflow-y-auto p-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]");
-    expect(usersSource).toContain("h-9 rounded-full pl-9 sm:rounded-lg");
+    expect(usersSource).toContain("admin-cms-inspector-body");
+    expect(usersSource).toContain("h-9 rounded-md pl-9");
     expect(consoleSource).toContain(
       "const controller = new AbortController();",
     );
@@ -8717,7 +8544,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const loadUsers = useCallback(async (signal?: AbortSignal)",
     );
     expect(usersSource).toContain("return () => controller.abort();");
-    expect(usersSource).toContain("if (!signal?.aborted)");
+    expect(usersSource).toContain("if (generation === usersReadGeneration.current && !signal?.aborted)");
+    expect(usersSource).toContain("const generation = ++usersReadGeneration.current;");
+    expect(usersSource).toContain("generation !== usersReadGeneration.current || signal?.aborted");
     expect(evaluationsSource).toContain(
       'embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5"',
     );
@@ -8762,12 +8591,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("배너 관리 화면 준비 중");
     expect(consoleSource).not.toContain("공지사항 운영 화면 준비 중");
     expect(consoleSource).not.toContain("사용자 관리 화면 준비 중");
-    expect(bannersSource).toContain('embedded ? "shrink-0 px-2 py-1.5"');
+    expect(bannersSource).toContain('<AdminPageHeader title="배너 관리"');
     expect(bannersSource).toContain(
       'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-sans"',
     );
     expect(bannersSource).toContain(
-      "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
+      "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(bannersSource).toContain(
       "bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length",
@@ -8784,12 +8613,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'Badge variant="secondary" className="rounded-full text-2xs"',
     );
     expect(bannersSource).not.toContain("bannersLoading && <Loader2");
-    expect(bannersSource).toContain(
-      "모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.",
-    );
+    expect(bannersSource).toContain("Boolean(pendingReadback)");
     expect(bannersSource).toContain("deleteConfirmation !== '배너삭제'");
     expect(bannersSource).toContain(
-      "onClick={() => { setBannerToDelete(editingBanner); void handleDelete(); }}",
+      "onClick={() => void handleDelete()}",
     );
     expect(bannersSource).toContain("if (!bannerToDelete) return;");
     expect(bannersSource).toContain(
@@ -8868,7 +8695,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const OVERRIDE_APPROVAL_CONFIRMATION = '무시승인'",
     );
     expect(submissionSource).toContain(
-      "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
+      "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(submissionSource).toContain('aria-label="제보 상세 작업 패널"');
     expect(submissionSource).toContain('aria-label="리뷰 상세 작업 패널"');
@@ -8969,19 +8796,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(adminEvaluationSource).toContain("road_address");
     expect(adminEvaluationSource).toContain("submission_type: 'recommend' as const");
     expect(adminEvaluationSource).toContain("admin-restaurant-requests-inline");
-    expect(adminEvaluationSource).toContain("applyRestaurantRequestReadbackToSubmission");
+    expect(adminEvaluationSource).toContain("submissionApprovalInput");
     expect(adminEvaluationSource).toContain("restaurant_phone: request.phone");
     expect(adminEvaluationSource).toContain("restaurant_name: request.restaurant_name");
     expect(adminEvaluationSource).toContain("restaurant_categories: request.categories");
     expect(adminEvaluationSource).toContain("recommendation_admin_note: request.admin_note");
-    expect(adminEvaluationSource).toContain("recommendation_audit_id: auditId || request.review_audit_id");
-    expect(adminEvaluationSource).toContain("updateRecommendationRequestReadbackInCache");
-    expect(adminEvaluationSource).toContain("queryClient.setQueryData<SubmissionRecord[]>");
+    expect(adminEvaluationSource).toContain("recommendation_audit_id: request.review_audit_id ?? null");
+    expect(adminEvaluationSource).toContain("invalidateRecordViews");
+    expect(adminEvaluationSource).toContain("refreshRecordViews");
     expect(adminEvaluationSource).toContain("ADMIN_RESTAURANT_REQUEST_LEGACY_SELECT");
     expect(adminEvaluationSource).toContain("isMissingRestaurantRequestLifecycleError(requestsError)");
-    expect(adminEvaluationSource).toContain(
-      "/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review",
-    );
+    expect(adminEvaluationSource).toContain("recommendation.reject");
     expect(pendingCountsSource).toContain('.from("restaurant_requests")');
     expect(pendingCountsSource).toContain("recommendationRequests");
     expect(pendingCountsSource).toContain("recommendationRequestsLifecycleReady");
@@ -8992,37 +8817,33 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(submissionSource).toContain("const RECOMMEND_APPROVE_CONFIRMATION = '추천승인'");
     expect(submissionSource).toContain("const RECOMMEND_REJECT_CONFIRMATION = '추천거부'");
     expect(submissionSource).toContain("쯔양 제보");
-    expect(submissionSource).toContain("추천 검수");
     expect(submissionSource).toContain("renderRecommendationDetailContent");
     expect(submissionSource).toContain("추천 승인 확인 문구가 일치하지 않습니다.");
     expect(submissionSource).toContain("추천 거부 확인 문구가 일치하지 않습니다.");
     expect(submissionSource).not.toContain("submission.submission_type === 'recommend' && !canApprove");
-    expect(submissionSource).toContain("const canDeleteSubmissionCard = submission.submission_type !== 'recommend';");
-    expect(submissionSource).toContain("onClick={(event) => {");
-    expect(submissionSource).toContain("event.stopPropagation();");
+    expect(submissionSource).toContain("selectedSubmission.submission_type !== 'recommend'");
+    expect(submissionSource).toContain('onClick={handleDeleteSelectedSubmission}');
+    expect(submissionSource).toContain('data-admin-moderation-drawer');
+    expect(submissionSource).toContain('rowTriggerRef.current?.focus()');
 
-    expect(submissionSource).toContain(
-      'className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}',
-    );
-    expect(submissionSource).not.toContain(
-      `className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}\n                                style={isMobile ? { touchAction: 'pan-y' } : undefined}`,
-    );
-    expect(
-      submissionSource.match(/onPointerDown=\{isMobile \? handleSubmissionTabPointerDown : undefined\}/g)
-        ?.length ?? 0,
-    ).toBe(1);
-    expect(submissionSource).toContain(
-      ") : (\n                    <div className={listContainerClassName}>",
-    );
+    expect(submissionSource).toContain('aria-label="제보·리뷰 종류"');
+    expect(submissionSource).toContain('aria-pressed={activeTab === tab.id}');
+    expect(submissionSource).toContain("onClick={() => setActiveTabWithReset(tab.id)}");
+    expect(submissionSource.match(/onPointerDown=\{isMobile && activeTab === 'reviews' \? handleSubmissionTabPointerDown : undefined\}/g)?.length ?? 0).toBe(1);
+    const pointerDown = submissionSource.slice(submissionSource.indexOf('const handleSubmissionTabPointerDown'), submissionSource.indexOf('const handleSubmissionTabPointerMove'));
+    expect(pointerDown).not.toContain('setPointerCapture');
+    const pointerMove = submissionSource.slice(submissionSource.indexOf('const handleSubmissionTabPointerMove'), submissionSource.indexOf('const handleSubmissionTabPointerEnd'));
+    expect(pointerMove).toContain('Math.abs(dx) >= SUBMISSION_TAB_SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy)');
+    expect(pointerMove).toContain('setPointerCapture');
+    const rowsMarkup = submissionSource.slice(submissionSource.indexOf('<table className="admin-cms-table'), submissionSource.indexOf('<div ref={loadMoreSentinelRef}'));
+    expect(rowsMarkup).toContain('openSubmissionDetail(submission)');
+    expect(rowsMarkup).not.toContain('onApprove');
+    expect(rowsMarkup).not.toContain('onDelete');
+    expect(rowsMarkup).not.toContain('handleConfirm');
     expect(reviewRouteSource).toContain("requireAdmin()");
-    expect(reviewRouteSource).toContain("createSupabaseServiceRoleClient()");
-    expect(reviewRouteSource).toContain("review_restaurant_request");
-    expect(reviewRouteSource).not.toContain('.from("restaurant_request_review_audit"');
-    expect(reviewRouteSource).toContain("review_audit_id");
-    expect(reviewRouteSource).toContain("검토 상태를 확인하지 못했습니다");
-    expect(reviewRouteSource).toContain('buildMutationAuditReceipt');
-    expect(reviewRouteSource).toContain('domain: "restaurant_request_reviews"');
-    expect(reviewRouteSource).toContain('source: RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE');
+    expect(reviewRouteSource).toContain("isTrustedSameOriginMutation(request)");
+    expect(reviewRouteSource).toContain("RECORD_ACTION_ENDPOINT_RETIRED");
+    expect(reviewRouteSource).not.toContain("createSupabaseServiceRoleClient");
     expect(migrationSource).toContain("add column if not exists status text");
     expect(migrationSource).toContain("restaurant_requests_status_check");
     expect(migrationSource).toContain("create table if not exists public.restaurant_request_review_audit");
@@ -9038,100 +8859,42 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(submissionSource).toContain("tabIndex={-1}");
   });
 
-  test("guards legacy direct browser admin restaurant and review mutations", () => {
-    const reviewPanelSource = source("components/admin/AdminReviewPanel.tsx");
-    const restaurantModalSource = source("components/admin/AdminRestaurantModal.tsx");
-
-    expect(reviewPanelSource).toContain(
-      'import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";',
-    );
-    expect(restaurantModalSource).toContain(
-      'import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";',
-    );
-
-    for (const action of ["approve_review", "reject_review", "delete_review"]) {
-      expect(reviewPanelSource).toContain(
-        `assertLegacyBrowserAdminMutationEnabled("review_moderation", "${action}")`,
-      );
+  test("routes home reviews and restaurant forms through the guarded server client", () => {
+    const review = source("components/admin/AdminReviewPanel.tsx");
+    const modal = source("components/admin/AdminRestaurantModal.tsx");
+    for (const action of ["review.approve", "review.reject", "review.delete"]) {
+      expect(review).toContain(`action: '${action}'`);
     }
-
-    for (const action of [
-      "update_restaurant",
-      "insert_restaurant",
-      "delete_restaurant_link",
-      "update_restaurant_link",
-      "insert_restaurant_link",
-      "delete_restaurant",
-    ]) {
-      expect(restaurantModalSource).toContain(
-        action === "update_restaurant" || action === "insert_restaurant"
-          ? `restaurant ? "update_restaurant" : "insert_restaurant"`
-          : `assertLegacyBrowserAdminMutationEnabled("restaurant_record", "${action}")`,
-      );
+    expect(review).toContain("recordActions.dialog");
+    expect(review).not.toContain("assertLegacyBrowserAdminMutationEnabled");
+    expect(review).not.toMatch(/\.update[<(]|\.delete\(|review_count:/);
+    expect(modal).toContain("useRecordAction");
+    expect(modal).toContain("recordActions.run");
+    for (const method of ["update", "insert", "upsert", "delete"]) {
+      expect(modal).not.toMatch(new RegExp(`\\.from\\([^)]*\\)[\\s\\S]{0,100}\\.${method}\\(`));
     }
-
-    expect(
-      reviewPanelSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("review_moderation", "approve_review")',
-      ),
-    ).toBeLessThan(reviewPanelSource.indexOf(".update({"));
-    expect(
-      reviewPanelSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("review_moderation", "delete_review")',
-      ),
-    ).toBeLessThan(reviewPanelSource.indexOf(".delete()"));
-
-    expect(
-      restaurantModalSource.indexOf(
-        'restaurant ? "update_restaurant" : "insert_restaurant"',
-      ),
-    ).toBeLessThan(restaurantModalSource.indexOf(".update({"));
-    expect(
-      restaurantModalSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("restaurant_record", "insert_restaurant_link")',
-      ),
-    ).toBeLessThan(restaurantModalSource.indexOf(".insert({"));
-    expect(
-      restaurantModalSource.indexOf(
-        'assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant")',
-      ),
-    ).toBeLessThan(restaurantModalSource.lastIndexOf(".update({"));
+    expect(modal).not.toContain("assertLegacyBrowserAdminMutationEnabled");
+    expect(modal).toContain("recordActions.dialog");
   });
 
-  test("retires legacy browser admin evaluation mutations behind the explicit guard flag", () => {
-    const adminEvaluationSource = source("app/admin/evaluations/page.tsx");
-
-    const expectGuardBefore = (domain: string, operation: string, privilegedSnippet: string) => {
-      const guardCall = `assertLegacyBrowserAdminMutationEnabled('${domain}', '${operation}')`;
-      const guardIndex = adminEvaluationSource.indexOf(guardCall);
-      expect(guardIndex).toBeGreaterThanOrEqual(0);
-      const privilegedIndex = adminEvaluationSource.indexOf(privilegedSnippet, guardIndex);
-      expect(privilegedIndex).toBeGreaterThan(guardIndex);
-    };
-
-    expect(adminEvaluationSource).toContain("@/lib/admin/guarded-mutation-contract");
-    expect(adminEvaluationSource).toContain("assertLegacyBrowserAdminMutationEnabled");
-    expect(adminEvaluationSource).toContain("isLegacyBrowserAdminMutationEnabled");
-    expect(adminEvaluationSource).toContain(
-      "autoDeleteTargets.length > 0 && user?.id && isLegacyBrowserAdminMutationEnabled()",
-    );
-
-    expectGuardBefore("restaurant_record", "record duplicate error update", "db_error_details: errorDetails");
-    expectGuardBefore("restaurant_record", "restaurant approval update", "status: 'approved'");
-    expectGuardBefore("restaurant_record", "restaurant delete update", "status: 'deleted'");
-    expectGuardBefore("restaurant_record", "restaurant restore update", "status: 'pending'");
-    expectGuardBefore("review_moderation", "review approval update", "is_verified: true");
-    expectGuardBefore("review_moderation", "review rejection update", "is_verified: false");
-    expectGuardBefore("review_moderation", "review delete mutation", ".from('review-photos')");
-    expectGuardBefore("review_moderation", "review delete mutation", "supabase.from('reviews').delete()");
-    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "'approve_edit_submission_item'");
-    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "'approve_submission_item'");
-    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "resolved_by_admin_id: user.id");
-    expectGuardBefore("restaurant_submission", "submission rejection direct update", "item_status: 'rejected'");
-    expectGuardBefore("restaurant_submission", "submission rejection direct update", "rejection_reason: reason");
-    expectGuardBefore("restaurant_submission", "submission delete direct update", "rejection_reason: '관리자에 의해 삭제됨'");
-    expectGuardBefore("restaurant_submission", "submission edit direct update", "restaurant_name: updatedData.restaurant_name");
-    expectGuardBefore("restaurant_submission", "submission edit direct update", "youtube_link: updatedData.youtube_link");
+  test("evaluation moderation uses server-bound preview, confirmation and readback for every active domain", () => {
+    const page = source("app/admin/evaluations/page.tsx");
+    const commands = page.slice(page.indexOf("  const notifyRecordActionError ="), page.indexOf("  const initialContentLoading"));
+    const restaurantCommands = page.slice(page.indexOf("  const handleApprove ="), page.indexOf("  // 사용자 제보 데이터 쿼리"));
+    for (const commandsSource of [commands, restaurantCommands]) {
+      expect(commandsSource).not.toMatch(/\.update[<(]|\.delete\(|\.storage|callSubmissionApprovalRpc|assertLegacyBrowserAdminMutationEnabled/);
+    }
+    for (const action of ["restaurant.approve", "restaurant.delete", "restaurant.restore", "review.approve", "review.reject", "review.delete", "submission.reject", "submission.delete", "recommendation.reject"]) {
+      expect(page).toContain(`'${action}'`);
+    }
+    expect(page).toContain("submissionApprovalInput(input)");
+    expect(page).toContain("submissionEditInput(submission, updatedData)");
+    expect(page).toContain("{recordActions.dialog}");
+    const route = source("app/api/admin/record-actions/route.ts");
+    const post = route.slice(route.indexOf('export async function POST'));
+    expect(post.indexOf("await requireAdmin()")).toBeLessThan(post.indexOf("runRecordAction(transport()"));
+    expect(route).toContain("isTrustedSameOriginMutation(request)");
+    expect(route).toContain("readBoundedJsonRequest");
   });
 
   test("excludes Python QA seeds from actual GPT Image 2 page history", () => {
@@ -9177,7 +8940,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
   test("keeps storyboard provider credentials in synchronously clearable component refs without Web Storage", () => {
     const storyboardSource = source(
-      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "components/admin/storyboard/LegacyStoryboardReference.tsx",
     );
     const legacyStorageAliases = [
       "STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY",
@@ -9271,7 +9034,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
   test("exposes storyboard RAG trace and mid-stream steer contracts in chat", () => {
     const storyboardSource = source(
-      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "components/admin/storyboard/LegacyStoryboardReference.tsx",
     );
     const backendAgentSource = source("lib/admin/storyboard/backend-agent.ts");
     const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
@@ -9286,9 +9049,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(backendAgentSource).toContain("exaone3.5:7.8b");
     expect(backendAgentSource).toContain("EEVE-Korean-Instruct-10.8B");
     expect(backendAgentSource).toContain("solar:10.7b-instruct-v1-q5_0");
-    expect(chatRouteSource).toContain("sendBackendRagTrace(send, result)");
-    expect(chatRouteSource).toContain("normalizeRouteTraceStatus");
-    expect(chatRouteSource).toContain("sanitizeStatusText(candidate.detail, 520)");
+    expect(chatRouteSource).toContain("retiredStoryboardApi");
+    expect(chatRouteSource).toContain("retiredStoryboardApi");
+    expect(chatRouteSource).toContain("retiredStoryboardApi");
     expect(storyboardSource).toContain("생각 중 · RAG 추적");
     expect(storyboardSource).toContain("function isStoryboardRagProcessIntent");
     expect(storyboardSource).toContain(
@@ -9314,6 +9077,36 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "disabled={isChatAgentStreaming}\n                      autoComplete=\"off\"",
     );
     expect(backendAgentSource).toContain("rag|r\\.a\\.g");
-    expect(chatRouteSource).toContain("rag|r\\.a\\.g");
+    expect(chatRouteSource).toContain("retiredStoryboardApi");
   });
+});
+
+// Resolve the actual public example through the runtime parsers, with no real credentials or calls.
+test("Gemini environment example preserves OCR defaults and leaves paid workers unconfigured", async () => {
+  const { parse } = await import("dotenv");
+  const { resolveOcrAiRuntimeConfig } = await import("../lib/ocr/runtime-config");
+  const { getGeminiOcrDefaultModel, getGeminiOcrThinkingLevel } = await import("../lib/ocr/gemini");
+  const { resolveStoryboardGeminiKey } = await import("../lib/admin/storyboard/gemini-client");
+  const env = parse(source(".env.example"));
+  const readmeEnvBlock = source("README.md").match(/```env\n([\s\S]*?)\n```/)?.[1];
+  expect(readmeEnvBlock).toBeDefined();
+  const readmeEnv = parse(readmeEnvBlock!);
+  for (const key of ["GEMINI_CREDITS_API_KEY", "GEMINI_OCR_API_KEY", "STORYBOARD_GEMINI_API_KEY", "GEMINI_API_KEY", "STORYBOARD_RAG_WORKER_URL", "GEMINI_OCR_DEFAULT_MODEL", "GEMINI_OCR_THINKING_LEVEL"]) {
+    expect(readmeEnv[key]).toBe(env[key]);
+  }
+  for (const key of ["GEMINI_CREDITS_API_KEY", "GEMINI_OCR_API_KEY", "STORYBOARD_GEMINI_API_KEY", "GEMINI_API_KEY", "STORYBOARD_RAG_WORKER_URL"]) {
+    expect(env[key]).toBe("");
+  }
+  const ocr = await resolveOcrAiRuntimeConfig(env);
+  expect(ocr.provider).toBe("gemini");
+  expect(ocr.model).toBe(getGeminiOcrDefaultModel({}));
+  expect(getGeminiOcrThinkingLevel(env)).toBe(getGeminiOcrThinkingLevel({}));
+  expect(ocr.apiKey).toBeNull();
+  expect(ocr.fallbackCandidates).toEqual([]);
+  expect(resolveStoryboardGeminiKey(env)).toBeNull();
+  const configured = { ...env, GEMINI_CREDITS_API_KEY: "synthetic-funded", GEMINI_API_KEY: "synthetic-other" };
+  expect((await resolveOcrAiRuntimeConfig(configured)).credentialCandidates).toHaveLength(1);
+  expect((await resolveOcrAiRuntimeConfig(configured)).apiKey).toBe("synthetic-funded");
+  expect(resolveStoryboardGeminiKey(configured)).toBe("synthetic-funded");
+  for (const key of ["GEMINI_BUDGET_PROJECT", "GEMINI_BUDGET_PATH", "GEMINI_REQUESTS_PER_MINUTE", "GEMINI_MAX_INFLIGHT"]) expect(env).not.toHaveProperty(key);
 });

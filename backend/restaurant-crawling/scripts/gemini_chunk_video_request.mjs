@@ -1,3 +1,5 @@
+import { retryAfterSeconds } from '../../utils/provider-budget.mjs';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, withGeminiDeadline as fetchWithTimeout, logGeminiUsage } from '../../utils/gemini-client.mjs';
 /**
  * Gemini File API를 사용한 청크 비디오 멀티모달 분석
  * (@google/genai — 헬스체크/런타임과 동일한 SDK)
@@ -5,7 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { GoogleGenAI, FileState } from '@google/genai';
+import { FileState } from '@google/genai';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 import { pathToFileURL } from 'node:url';
 
@@ -133,7 +135,7 @@ function promoteClassifiedError(error) {
     return promoted;
 }
 
-async function generateChunkContent(ai, modelName, promptText, processedFile, mimeType, thinkingLevel) {
+export async function generateChunkContent(ai, modelName, promptText, processedFile, mimeType, thinkingLevel) {
     const contents = [{
         role: 'user',
         parts: [
@@ -150,14 +152,14 @@ async function generateChunkContent(ai, modelName, promptText, processedFile, mi
         model: modelName,
         contents,
     };
-    if (thinkingLevel) {
-        request.config = {
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-            thinkingConfig: { thinkingLevel },
-        };
-    }
-    return fetchWithTimeout(() => ai.models.generateContent(request), GENERATE_TIMEOUT_MS);
+    request.config = omitUnsupportedGeminiSampling(modelName, {
+        // Gemini 3 reasoning uses the default sampling settings (temperature 1.0).
+        // Newer sampling fields are also filtered by the shared GenerateContent policy.
+        ...(/^(?:models\/)?gemini-3(?:\.\d+)?(?:-|$)/.test(modelName) ? {} : { temperature: 0.2 }),
+        maxOutputTokens: 4096,
+        ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
+    });
+    return generateWithProjectBudget(ai, request, GENERATE_TIMEOUT_MS);
 }
 
 
@@ -182,22 +184,14 @@ function fileIsFailed(file) {
     return file?.state === FileState.FAILED || file?.state === 'FAILED';
 }
 
-/** API 호출 타임아웃 래퍼 */
-async function fetchWithTimeout(fn, timeoutMs = 60000) {
-    let timeoutId;
-    const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(createReasonError('GEMINI_API_TIMEOUT')), timeoutMs);
-    });
-    return Promise.race([fn(), timeoutPromise]).finally(() => clearTimeout(timeoutId));
-}
-
 async function waitForProcessing(ai, fileName) {
     await new Promise(r => setTimeout(r, 2000));
 
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         try {
             console.log(`GEMINI_FILE_STATUS_CHECK attempt=${i + 1}/${MAX_POLL_ATTEMPTS}`);
-            const file = await fetchWithTimeout(() => ai.files.get({ name: fileName }), 30000);
+            const file = await fetchWithTimeout(abortSignal => ai.files.get({ name: fileName,
+                config: { abortSignal, httpOptions: { timeout: 30000 } } }), 30000);
             console.log('GEMINI_FILE_STATUS_RECEIVED');
             if (fileIsActive(file)) return file;
             if (fileIsFailed(file)) throw createReasonError('GEMINI_FILE_PROCESSING_FAILED');
@@ -213,7 +207,7 @@ async function waitForProcessing(ai, fileName) {
 }
 
 async function runSingleAttempt(apiKey, modelName, promptText, videoPath, outputFile) {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGeminiClient(apiKey);
     let uploadedName = '';
 
     try {
@@ -221,11 +215,13 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         const mimeType = resolveMimeType(videoPath);
 
         console.log('GEMINI_FILE_UPLOAD_STARTED');
-        const uploadedFile = await fetchWithTimeout(() => ai.files.upload({
+        const uploadedFile = await fetchWithTimeout(abortSignal => ai.files.upload({
             file: videoPath,
             config: {
                 mimeType,
                 displayName,
+                abortSignal,
+                httpOptions: { timeout: UPLOAD_TIMEOUT_MS },
             },
         }), UPLOAD_TIMEOUT_MS);
         uploadedName = fileNameOf(uploadedFile);
@@ -251,6 +247,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         }
 
         const text = typeof result?.text === 'string' ? result.text : '';
+        logGeminiUsage(result);
         if (!text) throw createReasonError('GEMINI_EMPTY_RESPONSE');
 
         fs.writeFileSync(outputFile, text);
@@ -268,7 +265,8 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
     } finally {
         if (uploadedName) {
             try {
-                await fetchWithTimeout(() => ai.files.delete({ name: uploadedName }), 15000);
+                await fetchWithTimeout(abortSignal => ai.files.delete({ name: uploadedName,
+                    config: { abortSignal, httpOptions: { timeout: 15000 } } }), 15000);
                 console.log('[정리] 업로드된 파일 삭제 완료');
             } catch (e) {
                 logSafeError(e, line => console.warn(`GEMINI_FILE_CLEANUP_FAILED ${line.trim()}`));
@@ -349,7 +347,7 @@ async function main() {
             console.warn('GEMINI_CHUNK_TRANSIENT_RETRY');
         }
 
-        const waitSec = 30 * (retry + 1);
+        const waitSec = retryAfterSeconds(lastError) ?? 30 * (retry + 1);
         console.log(`GEMINI_CHUNK_RETRY_DELAY seconds=${waitSec}`);
         await new Promise(r => setTimeout(r, waitSec * 1000));
     }

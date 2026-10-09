@@ -1,0 +1,79 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/storyboard-production-api.test.ts:
+(pass) worker authentication and proof boundary > hashes canonical 32-byte-or-longer base64url token text with SHA256 [0.47ms]
+(pass) worker authentication and proof boundary > DB lookup gets only the hash and must return one UUID owner [2.23ms]
+(pass) worker authentication and proof boundary > requires paired heartbeat job and lease and forbids full document or diagnostic fields [1.69ms]
+(pass) worker authentication and proof boundary > requires configured local model, installed catalog capability and consistent evidence [3.44ms]
+(pass) worker authentication and proof boundary > manual proof is always generated as unverified user import [0.11ms]
+(pass) admin/API contracts and bounded failures > reads a recovered uncertain job without dropping the project snapshot [1.73ms]
+(pass) admin/API contracts and bounded failures > historical restore validates its strict envelope [0.25ms]
+(pass) admin/API contracts and bounded failures > restore goes through the atomic admin RPC without worker or model calls [1.21ms]
+(pass) admin/API contracts and bounded failures > restore refuses missing or corrupt original bytes before any mutation [8.59ms]
+(pass) admin/API contracts and bounded failures > full restore re-hashes only the bounded original and still proves every asset [4.48ms]
+(pass) admin/API contracts and bounded failures > versions and preview use the authenticated existing project GET handler [0.57ms]
+(pass) admin/API contracts and bounded failures > restore DB failures have bounded HTTP codes [1.40ms]
+(pass) admin/API contracts and bounded failures > all admin endpoints require auth before params, body, storage or DB work [0.20ms]
+(pass) admin/API contracts and bounded failures > synthetic dev/e2e identities cannot become UUID owners [0.12ms]
+(pass) admin/API contracts and bounded failures > admin mutations reject cross-origin even with an arbitrary bearer header [0.07ms]
+(pass) admin/API contracts and bounded failures > invalid IDs and unknown payload fields fail before DB calls [1.63ms]
+(pass) admin/API contracts and bounded failures > external providers need consent and configured official APIs never dispatch [0.49ms]
+(pass) admin/API contracts and bounded failures > actual JSON size is bounded even with a false content-length [0.32ms]
+(pass) admin/API contracts and bounded failures > fixed error response never includes exception strings or DB diagnostics [0.13ms]
+(pass) admin/API contracts and bounded failures > worker endpoint authenticates before consuming invalid JSON [0.07ms]
+(pass) multipart and transactional image checkpoints > rejects unknown and duplicate multipart fields [1.50ms]
+(pass) multipart and transactional image checkpoints > bounds chunked multipart bytes before parsing a file [1.09ms]
+(pass) multipart and transactional image checkpoints > manual image import rejects projectId mismatch and provenance metadata [2.02ms]
+(pass) multipart and transactional image checkpoints > rechecks lease after upload and removes unreferenced variants after cancellation [7.30ms]
+(pass) multipart and transactional image checkpoints > reads back an uncertain checkpoint before cleanup and accepts only its committed asset [4.87ms]
+(pass) multipart and transactional image checkpoints > keeps uploaded files private when checkpoint readback is itself uncertain [4.04ms]
+(pass) multipart and transactional image checkpoints > rejects mismatched MIME or provenance before any upload [6.34ms]
+(pass) private asset downloads and bounded reopenable exports > exports original plus WebP bytes and preserves request/document fields [5.23ms]
+(pass) private asset downloads and bounded reopenable exports > selects only the exact DB variant basename and checks MIME and SHA256 [5.19ms]
+(pass) private asset downloads and bounded reopenable exports > refuses URL parameters and extra/duplicate variant selectors [0.38ms]
+(pass) private asset downloads and bounded reopenable exports > export rejects document asset claims that differ from authoritative rows [5.42ms]
+(pass) private asset downloads and bounded reopenable exports > checks total base64 export budget before downloading any object [7.44ms]
+
+tests-unit/storyboard-retired-cli.test.ts:
+(pass) retired storyboard producer entrypoints > refuses old producers even when the former manual gates are enabled [262.43ms]
+
+tests-unit/storyboard-gemini-client.test.ts:
+(pass) Gemini storyboard worker client > installed SDK serializes 3.8 draft without removed sampling fields and preserves the existing contract [3.10ms]
+(pass) Gemini storyboard worker client > installed SDK does not itself remove obsolete model-specific sampling fields [0.19ms]
+(pass) Gemini storyboard worker client > both Nano Banana models retain their independent image configuration on the SDK wire [0.64ms]
+(pass) Gemini storyboard worker client > prefers the funded server credential and never a public key [0.03ms]
+(pass) Gemini storyboard worker client > coalesces repeated metadata polling through a bounded catalog and returns independent objects [0.42ms]
+(pass) Gemini storyboard worker client > validates structured scenes and actual response model provenance [0.20ms]
+(pass) Gemini storyboard worker client > advertises available models when one optional lookup is unavailable [0.14ms]
+(pass) Gemini storyboard worker client > rejects an empty verified catalog and preserves caller cancellation [0.12ms]
+(pass) Gemini storyboard worker client > returns a completed result even when optional usage telemetry fails [0.12ms]
+(pass) Gemini storyboard worker client > rejects different response models and all non-Gemini or unapproved request models [0.15ms]
+(pass) Gemini storyboard worker client > performs no work after abort and does not leak provider diagnostics [0.13ms]
+
+tests-unit/storyboard-gemini-rag.test.ts:
+(pass) Gemini RAG isolation and existing data preservation without paid calls > rejects old fingerprints even at matching dimensions without a second call [0.51ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > new versioned writes preserve the old external identity and metadata [2.45ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > query vector search is isolated; legacy text is still returned and is never vector-selected [2.03ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > provider failure has no write or hidden retry and does not return raw diagnostic [0.76ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > legacy read failure does not silently discard existing documents or rerank [0.33ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > user-supplied query vectors cannot replace the server embedding [0.11ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > invalid reused vectors and mismatched spaces fail before worker transport [0.28ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > rejects forged candidate IDs rather than accepting provider-supplied content [0.17ms]
+
+tests-unit/gemini-ocr.test.ts:
+(pass) gemini receipt ocr helper > retains older explicit sampling while omitting removed controls for modern Flash models [0.29ms]
+(pass) gemini receipt ocr helper > installed SDK sends no obsolete sampling override for the configured OCR baseline and 3.8 [0.73ms]
+(pass) gemini receipt ocr helper > does not spend a provider call after caller cancellation [0.33ms]
+(pass) gemini receipt ocr helper > stops fallback after cancellation during a request and drops duplicate models [0.18ms]
+(pass) gemini receipt ocr helper > defaults to gemini-3.6-flash as the authoritative OCR baseline [0.02ms]
+(pass) gemini receipt ocr helper > defaults OCR thinking to medium and allows env override [0.02ms]
+(pass) gemini receipt ocr helper > builds Gemini multimodal parts without exposing secrets [0.02ms]
+(pass) gemini receipt ocr helper > calls configured Gemini model and normalizes receipt JSON [0.24ms]
+(pass) gemini receipt ocr helper > falls through Gemini model list before failing [0.08ms]
+(pass) gemini receipt ocr helper > does not include the API key in missing-key errors [0.03ms]
+(pass) gemini receipt ocr helper > throws provider error with attempts when all Gemini candidates fail [0.09ms]
+
+ 63 pass
+ 0 fail
+ 438 expect() calls
+Ran 63 tests across 5 files. [634.00ms]

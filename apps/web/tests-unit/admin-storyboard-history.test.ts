@@ -164,10 +164,8 @@ describe('admin storyboard local history persistence', () => {
       join(process.cwd(), 'app/api/admin/storyboard/images/route.ts'),
       'utf8',
     );
-    expect(routeSource).toContain(
-      'STORYBOARD_LOCAL_HISTORY_WRITE: process.env.STORYBOARD_LOCAL_HISTORY_WRITE',
-    );
-    expect(routeSource).not.toContain("STORYBOARD_LOCAL_HISTORY_WRITE || '1'");
+    expect(routeSource).toContain('retiredStoryboardApi');
+    expect(routeSource).not.toContain('persistLocalStoryboardHistory');
   });
 
   test('writes only sanitized trusted-image storyboard history in local development', async () => {
@@ -212,7 +210,7 @@ describe('admin storyboard local history persistence', () => {
 
 test('labels storyboard history as actual records vs public preview examples', () => {
   const componentSource = readFileSync(
-    join(process.cwd(), 'components/admin/storyboard/AdminStoryboardGenerator.tsx'),
+    join(process.cwd(), 'components/admin/storyboard/LegacyStoryboardReference.tsx'),
     'utf8',
   );
   expect(componentSource).toContain('공용 예시 미리보기');

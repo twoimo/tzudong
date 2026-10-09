@@ -1,0 +1,136 @@
+{
+  "environment": "synthetic local fixture, owned browser session; no live mutation",
+  "viewports": [
+    {
+      "module": "users",
+      "width": 390,
+      "documentOverflow": 0,
+      "moduleOverflow": 0,
+      "heading": [
+        "16px",
+        "600",
+        "24px"
+      ],
+      "toolbar": "sticky",
+      "screenshot": "/tmp/tzudong-users-390-astra-final.png"
+    },
+    {
+      "module": "users",
+      "width": 834,
+      "documentOverflow": 0,
+      "moduleOverflow": 0,
+      "heading": [
+        "16px",
+        "600",
+        "24px"
+      ],
+      "toolbar": "sticky",
+      "screenshot": "/tmp/tzudong-users-834-astra-final.png"
+    },
+    {
+      "module": "users",
+      "width": 1423,
+      "documentOverflow": 0,
+      "moduleOverflow": 0,
+      "heading": [
+        "16px",
+        "600",
+        "24px"
+      ],
+      "toolbar": "sticky",
+      "screenshot": "/tmp/tzudong-users-1423-astra-final.png"
+    },
+    {
+      "module": "banners",
+      "width": 390,
+      "documentOverflow": 0,
+      "moduleOverflow": 0,
+      "heading": [
+        "16px",
+        "600",
+        "24px"
+      ],
+      "toolbar": "sticky",
+      "screenshot": "/tmp/tzudong-banners-390-astra-final.png"
+    },
+    {
+      "module": "banners",
+      "width": 834,
+      "documentOverflow": 0,
+      "moduleOverflow": 0,
+      "heading": [
+        "16px",
+        "600",
+        "24px"
+      ],
+      "toolbar": "sticky",
+      "screenshot": "/tmp/tzudong-banners-834-astra-final.png"
+    },
+    {
+      "module": "banners",
+      "width": 1423,
+      "documentOverflow": 0,
+      "moduleOverflow": 0,
+      "heading": [
+        "16px",
+        "600",
+        "24px"
+      ],
+      "toolbar": "sticky",
+      "screenshot": "/tmp/tzudong-banners-1423-astra-final.png"
+    }
+  ],
+  "finalConsoleErrorLines": 0,
+  "finalConsoleWarningLines": 0,
+  "finalPageErrorsEmpty": true,
+  "earlierHmrError": "Earlier shared compilation triggered normalize-evaluation module reload errors; not reproduced after fresh navigation.",
+  "sourceHashes": {
+    "apps/web/components/admin/AdminUsersPanel.tsx": "20e3d0eff46f40839e2192b8e32012368570731088629b6e953acdad63d9b5e6",
+    "apps/web/app/admin/banners/page.tsx": "823dced90286531e8f9590f8e44782de903131151ea6de9a3a1101d345e44c33",
+    "apps/web/tests-unit/admin-user-management-source.test.ts": "fc7e56b9b2791d34a4d407767ec2753059e9b6b145ce357ff389a399b950a848",
+    "apps/web/tests-unit/admin-users-mutation-scope.test.ts": "32c70f1db4bf7a4eb35543109093c091c14b8fa39c43e8dcd5fca8ddfe0caa54"
+  },
+  "unitTests": {
+    "passed": 20,
+    "failed": 0,
+    "files": 4
+  },
+  "eslint": {
+    "files": 4,
+    "errors": 0,
+    "warnings": 0
+  },
+  "browserBehavior": {
+    "users": {
+      "keyboardSelection": true,
+      "focusMovesToDetail": true,
+      "dirtySwitchRequiresDiscardOrKeep": true,
+      "roleConfirmationDoesNotUnlockAccountAction": true,
+      "filterEmptyDistinct": true,
+      "profileSaveReadbackSuccess": true,
+      "readbackFailureWarning": true,
+      "duplicateMutationBlockedDuringReadbackFailure": true,
+      "retryReadbackSuccess": true,
+      "syntheticInterceptedMutations": 2
+    },
+    "banners": {
+      "keyboardSelection": true,
+      "focusMovesToEditor": true,
+      "dirtySwitchRequiresDiscardOrKeep": true,
+      "dirtyDeleteBlocked": true,
+      "saveReadbackSuccess": true,
+      "readbackFailureWarning": true,
+      "duplicateSaveBlocked": true,
+      "retryReadbackSuccess": true,
+      "typedDeleteReadback": true,
+      "syntheticInterceptedMutations": 3
+    }
+  },
+  "limits": [
+    "All rendered records and mutation responses were synthetic. Mutations were intercepted in owned browser memory and never forwarded.",
+    "Actual hosted permissions, production readback and deployment were not exercised.",
+    "Banner linked-media cleanup warning is implemented but fixture banner had no media, so that failure branch was not exercised in the browser.",
+    "Initial and pending skeleton source contracts are retained; final snapshots target settled ready states.",
+    "Final combined TypeScript parity belongs to root; earlier native diagnostics were confined to another owned browser script."
+  ]
+}

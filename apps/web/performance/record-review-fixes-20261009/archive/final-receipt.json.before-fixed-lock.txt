@@ -1,0 +1,42 @@
+{
+  "schema": "record-review-fixes/final-v2",
+  "status": "authorized local source stabilized; existing service-role manual mutation authorization gap remains",
+  "source": {
+    "head": "3f86d6999d4a6b00e6221510a0728358747fa997",
+    "workingSourcesNotCommitted": true,
+    "files": {
+      "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql": "5a1adc3211ebfde3c13a45c55e3192328d45bd6b750e60d708c80d850a9b69ea",
+      "backend/supabase/scripts/transform_registration_replay.py": "e5e13a191fd08709104ad6f20c68d926f564bfc2188a7d1432112128307cbcd5",
+      "apps/web/lib/admin/evaluation-record-actions.ts": "df92369624a080f630fb666b9d923f907671230c78f090a5051d2b3047cff3aa",
+      "apps/web/tests-unit/admin-record-metadata-roundtrip.test.ts": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65"
+    },
+    "sourceFrozen": true,
+    "pendingCanonicalPg15": "root freeze commit and clean detached source required",
+    "operatingWrites": false
+  },
+  "operatingWrites": false,
+  "additionalGrants": false,
+  "appliedMigrationsEdited": false,
+  "commitPushPromotion": false,
+  "checks": {
+    "pristinePG17": "pristine-reconstruction-final.json",
+    "threeMigrationApplyRollback": "final-three-migration-replay.json",
+    "newFixCases": "fixes-final-runtime.json",
+    "canonicalVideoOnly": "index-conflicts-runtime-v2-final.json",
+    "actualCompositeUniqueRace": "composite-race-runtime-final.json",
+    "casIdempotencyConcurrency": "current-schema-concurrency-final.json",
+    "manualPreviewApplyRollbackG014MetadataActualTickParity": "manual-preview-runtime-final.json",
+    "manualOwnerPrincipalCasStopAndWrongSourceFixedCode": "manual-guards-runtime-final.json",
+    "normalizerProducer": "consumer-final-check.json",
+    "registrationAdapterUnittest": "3 passed after final exact SHA update",
+    "targetedEslint": "exit 0; unchanged TS source since lint",
+    "nativeCompatParity": "typecheck-parity.json; unchanged TS source since passing parity"
+  },
+  "g014": "All four passed after M1, after M3, after forward manual migration. Immutable manifest/legacy ACL/allowlist/role/member metadata preserved.",
+  "remainingGap": "manual-principal-gap-final.json: service-role invoker manual run/stop needs catalog revision FOR UPDATE but has SELECT and no UPDATE; 42501. No grant or lock bypass. Owner-principal stop/CAS is functional evidence only, not service-role readiness.",
+  "indexConvergenceProposal": "index-convergence-forward-proposal.sql.txt (NOT ADOPTED), historical crawler mutual-backup video-only identity audit and independent PG15 preimage required before drop.",
+  "canonicalPg15": "Pending root freeze commit and clean detached checkout; current SQL not operating-applied. Historical old SQL proofs not used for admission.",
+  "cleanup": "cleanup-final.json",
+  "historicalEvidence": "All earlier positive/negative records preserved; prior summary/map archived as *.txt."
+}

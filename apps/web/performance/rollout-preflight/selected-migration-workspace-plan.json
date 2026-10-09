@@ -1,0 +1,489 @@
+{
+  "schemaVersion": 1,
+  "kind": "selected-migration-workspace-plan",
+  "databaseMutations": false,
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "forwardSet": "admin-20261004",
+  "baseLedgerSha256": "e456fc3ac8d39fa467c5c4e6d50d0e9f62e345cf4959e1deb384d262596b54f6",
+  "historyMirrorCount": 62,
+  "pendingCount": 13,
+  "pending": [
+    {
+      "version": "20261003171449",
+      "name": "restaurant_review_manual_guards",
+      "file": "20261003171449_restaurant_review_manual_guards.sql",
+      "sha256": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271"
+    },
+    {
+      "version": "20261003172126",
+      "name": "restaurant_review_manual_invoker_contract",
+      "file": "20261003172126_restaurant_review_manual_invoker_contract.sql",
+      "sha256": "8ce3a87564b8b5bb2c4caffd1b62bc2f50c3055f11fc7dc3e2fa9700cffa1af3"
+    },
+    {
+      "version": "20261003182338",
+      "name": "storyboard_service_role_bridge",
+      "file": "20261003182338_storyboard_service_role_bridge.sql",
+      "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+    },
+    {
+      "version": "20261003193717",
+      "name": "restaurant_review_claim_progress",
+      "file": "20261003193717_restaurant_review_claim_progress.sql",
+      "sha256": "a4e98f4c406fc6207468917bcc2ae8ffb958ec2303b314c04ab25705261fc79c"
+    },
+    {
+      "version": "20261003205335",
+      "name": "storyboard_uncertain_lease_recovery",
+      "file": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+      "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+    },
+    {
+      "version": "20261003212017",
+      "name": "admin_evaluation_read_helpers",
+      "file": "20261003212017_admin_evaluation_read_helpers.sql",
+      "sha256": "404331acabd4c3d570e21b0fc1a3d1e2c34dd9525eea7bdbc944bc7c087f261c"
+    },
+    {
+      "version": "20261003215116",
+      "name": "admin_evaluation_keyset_queries",
+      "file": "20261003215116_admin_evaluation_keyset_queries.sql",
+      "sha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3"
+    },
+    {
+      "version": "20261003220841",
+      "name": "admin_evaluation_page_invoker_contract",
+      "file": "20261003220841_admin_evaluation_page_invoker_contract.sql",
+      "sha256": "4471f02096c0c7ee73d074ea7a3c4c0c36674edbaacbf998f4059d7b48d1f095"
+    },
+    {
+      "version": "20261004003503",
+      "name": "admin_evaluation_display_revision",
+      "file": "20261004003503_admin_evaluation_display_revision.sql",
+      "sha256": "777f7fb596006864569d8f418f35bbe0a9e2adf9161833eeee612a6196a92781"
+    },
+    {
+      "version": "20261004010334",
+      "name": "restaurant_review_identity_evidence",
+      "file": "20261004010334_restaurant_review_identity_evidence.sql",
+      "sha256": "27f4fd99e909c9d19e7160c79b0a0cfe5ee3e5f7d137e4d3f53de7819f94af63"
+    },
+    {
+      "version": "20261004023841",
+      "name": "storyboard_claim_capability_order",
+      "file": "20261004023841_storyboard_claim_capability_order.sql",
+      "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+    },
+    {
+      "version": "20261004045404",
+      "name": "restaurant_review_category_contract",
+      "file": "20261004045404_restaurant_review_category_contract.sql",
+      "sha256": "5f16d4f5b50d4a343a737d96be6465c7bef3a51fd89789deff141f928f5ee600"
+    },
+    {
+      "version": "20261004120000",
+      "name": "restaurant_review_gemini_decision",
+      "file": "20261004120000_restaurant_review_gemini_decision.sql",
+      "sha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc"
+    }
+  ],
+  "aliases": [],
+  "dependencyAdapters": [],
+  "verifiedReceipts": [
+    {
+      "version": "20261003000711",
+      "sha256": "3364e8c2857b6cb89975f1f91c4b36ffc6007804002152b1db93a597765d5e7e",
+      "representedOriginal": "20260918021531_storyboard_mlx_worker.sql",
+      "newAliasCreated": false
+    },
+    {
+      "version": "20261003000811",
+      "sha256": "27f610ca03aa1f2513a99c7984f4d07874bbdc9f1069cf2de1775e5cd1da5100",
+      "representedOriginal": "20260920021531_storyboard_historical_restore.sql",
+      "newAliasCreated": false
+    }
+  ],
+  "separateOwnerRecovery": "20260906064252_g014_pg17_workflow_owner_contract.sql",
+  "ownerRecoveryIncluded": false,
+  "hostedFinalAssertionExecutorReady": false,
+  "optionalWarningRpcIncluded": false,
+  "fileCount": 75,
+  "baseLedgerCheckSha256": "1f75a5fb9e86037cf63fbbb48865e1c82c11a6c6613cbbd27a86fb0327b40741",
+  "files": [
+    {
+      "name": "20251219_db_performance_optimization.sql",
+      "kind": "history-mirror",
+      "sha256": "e6c842438740109bda6d2caa3a9ba4411b13f46b379d73cffeb3e7d40f4d1dba"
+    },
+    {
+      "name": "20260118_create_ocr_logs.sql",
+      "kind": "history-mirror",
+      "sha256": "cbdc640006dbea6898881122bb15b9b1c7dfbf870bb3752a660cbf0f6c5cddc4"
+    },
+    {
+      "name": "20260425_allow_ocr_logs_user_insert.sql",
+      "kind": "history-mirror",
+      "sha256": "a168a3925f80bdeb5a555f5afa9a89aae2da6c79c46b99509c2551f8194b66ad"
+    },
+    {
+      "name": "20260506065538_optimize_auth_user_state_indexes.sql",
+      "kind": "history-mirror",
+      "sha256": "d1ebc6470ed89bc9450fec72e020b410273e83ef0585405a6cc05fbf1af99d52"
+    },
+    {
+      "name": "20260506085634_optimize_app_query_indexes.sql",
+      "kind": "history-mirror",
+      "sha256": "71e63a59c410ea165f8fa632c4ea8cc121aabaf999a086e80e79df97344b742d"
+    },
+    {
+      "name": "20260509000100_drop_server_costs.sql",
+      "kind": "history-mirror",
+      "sha256": "9592413953170eb1eadff0398c1f46f2d707a0a98587d6cbee02c4849c049f33"
+    },
+    {
+      "name": "20260509000200_drop_admin_ai_settings.sql",
+      "kind": "history-mirror",
+      "sha256": "6062e53ae358b5fd1e7aef26a5e6baebeaf99b4b20a202740b14b9b4a42deb60"
+    },
+    {
+      "name": "20260523093000_create_restaurant_popular_rank_snapshots.sql",
+      "kind": "history-mirror",
+      "sha256": "c59dd793ebf04df6c3119fd9056cf5aa7da0b3cd058356aa52b7e88dae99a669"
+    },
+    {
+      "name": "20260525143908_create_youtube_kpi_snapshots.sql",
+      "kind": "history-mirror",
+      "sha256": "fa1ea327b276cea5316938108915004f9d0d03794d9fe3d12a50f61eb12f8fc6"
+    },
+    {
+      "name": "20260526083932_add_youtube_channel_growth_snapshot_deltas.sql",
+      "kind": "history-mirror",
+      "sha256": "8aa3c731136079e4d3481659712f07c82d913892b5fb5b6133f9d5b3e26018e5"
+    },
+    {
+      "name": "20260531084217_harden_public_api_grants_and_rpcs.sql",
+      "kind": "history-mirror",
+      "sha256": "f60dd9338ef58e9b728510b60ee62512d53d4416f49c9fa3ea90eebdcd978b1a"
+    },
+    {
+      "name": "20260531084516_tighten_public_table_data_api_grants.sql",
+      "kind": "history-mirror",
+      "sha256": "614873fcf68785aa8eefb23dcd9e64984a2dbae1bb1ad902f8938eb6513b128b"
+    },
+    {
+      "name": "20260627080000_storyboard_custom_gpt_rag_documents.sql",
+      "kind": "history-mirror",
+      "sha256": "23b523a8f14646b64e078fd872b980602ed8f0ce058ced2100e034da2b2a90a2"
+    },
+    {
+      "name": "20260627153000_storyboard_documents_hybrid_v2_indexes.sql",
+      "kind": "history-mirror",
+      "sha256": "2b5a22069137bab37a94ff1ac7f5bc41ba4906f9ff1bd9d411a34f330abc6e2c"
+    },
+    {
+      "name": "20260627154500_storyboard_documents_hybrid_rrf_type_fix.sql",
+      "kind": "history-mirror",
+      "sha256": "9edbc276565b1c918ae37c9ba8f972415d4382f032adbac9a6d7f11e81f9b498"
+    },
+    {
+      "name": "20260702000100_restaurant_request_review_lifecycle.sql",
+      "kind": "history-mirror",
+      "sha256": "5aa9b6930dc478a2d1dca27d0c828615348c970eacea86fe463587f86085e171"
+    },
+    {
+      "name": "20260704000100_restaurant_submission_submit_contract.sql",
+      "kind": "history-mirror",
+      "sha256": "762cf56dde62c2af9552d8ecfec56a51d5b49f1cc95f66faed7c29f1471945ac"
+    },
+    {
+      "name": "20260704000200_restaurant_destructive_admin_audit.sql",
+      "kind": "history-mirror",
+      "sha256": "58ae7cb584b86bdb98d512fee961d2103873b4e761a6cdbb592367486b96f779"
+    },
+    {
+      "name": "20260707000100_admin_restaurant_map_overlays.sql",
+      "kind": "history-mirror",
+      "sha256": "857b0ca1f69ac9702f17c3f0dfaa722c16e9613c274308fad2b6ee710f3aee0b"
+    },
+    {
+      "name": "20260707000200_admin_restaurant_map_overlay_audit_apply.sql",
+      "kind": "history-mirror",
+      "sha256": "705b12777cb0b51e985c0a4c26235fea40ad1ca11e5fcf182e63b9fb29fe4c4b"
+    },
+    {
+      "name": "20260707000300_admin_trend_schema_foundation.sql",
+      "kind": "history-mirror",
+      "sha256": "a1ef9c0b0c2e95a3cff1dd34462d06c0f1d3200859569046c50218787b60023e"
+    },
+    {
+      "name": "20260707000400_admin_trend_job_request_rpcs.sql",
+      "kind": "history-mirror",
+      "sha256": "8d2fa44d881c18951cce2f6ce903fc571a71e71debc16efeefcf18a941fb1dbd"
+    },
+    {
+      "name": "20260707000500_admin_trend_proposal_review_rpc.sql",
+      "kind": "history-mirror",
+      "sha256": "351b51a08819584c329cd97f0d3da1e8c28219e89f597c2f0866cb01db0c1f68"
+    },
+    {
+      "name": "20260707000600_admin_trend_proposal_approval_rpc.sql",
+      "kind": "history-mirror",
+      "sha256": "564da681bcc863d87cd6763411328b24a728e2c3b322ef8827982d2ee80e4648"
+    },
+    {
+      "name": "20260711000100_release_auth_session_revocation.sql",
+      "kind": "history-mirror",
+      "sha256": "56bc66acac3548b4cdeedcb0177e27bf15128d4f19658afe94d452fc8021194a"
+    },
+    {
+      "name": "20260712000100_g010_privacy_foundation.sql",
+      "kind": "history-mirror",
+      "sha256": "c35f294ae2ddf038b0ac0c53a9816d23b2b04e8b8aef1c83611206b44c507f3e"
+    },
+    {
+      "name": "20260712000200_g010_notification_marketing.sql",
+      "kind": "history-mirror",
+      "sha256": "3bb5692dc4305356ec428b597ad9379f9abdc49866cfd59a4ab51d5fdb7d5250"
+    },
+    {
+      "name": "20260712000300_g010_account_deletion.sql",
+      "kind": "history-mirror",
+      "sha256": "0e515730a37213c03a4e882edb33075781f5731dcc464be32d64c30d0823a3b8"
+    },
+    {
+      "name": "20260712000400_g010_retention_separation.sql",
+      "kind": "history-mirror",
+      "sha256": "1d379344fe84e1ec5a966f3773ebb4393ca91d44f39983e4b64495fc5b340d5f"
+    },
+    {
+      "name": "20260712000500_g010_incident_workflow.sql",
+      "kind": "history-mirror",
+      "sha256": "7a897930f54ca8c7145ccd55aa0943065c800674a3da55156878474b17c67bb4"
+    },
+    {
+      "name": "20260712000600_g010_ocr_log_minimization.sql",
+      "kind": "history-mirror",
+      "sha256": "b49582b47039e345b9ec68164ad668101bc1593bfba5c9c8fb5b484c321663d6"
+    },
+    {
+      "name": "20260713000100_g013_short_url_security.sql",
+      "kind": "history-mirror",
+      "sha256": "c3f8e71f55eb18710402d9222fadfb2a5a88950d8e99bc27955c0fbca26d8b62"
+    },
+    {
+      "name": "20260713000200_g013_ocr_quota_security.sql",
+      "kind": "history-mirror",
+      "sha256": "954092b5766a89d741c64d29bddcd1752652c01207e00119219aa2effed2e8cb"
+    },
+    {
+      "name": "20260713000300_g013_admin_provider_budgets.sql",
+      "kind": "history-mirror",
+      "sha256": "98a467279eae51b0243091fc199a540c402519c6848f0e6fac4e50cdd927a90d"
+    },
+    {
+      "name": "20260713000450_g013_address_admin_approval.sql",
+      "kind": "history-mirror",
+      "sha256": "6f045e1cd40f63a1986b28eeb5aaec934ca46b09740a8a7bb898c651bd2b4eec"
+    },
+    {
+      "name": "20260713002000_g014_public_api_private_boundary.sql",
+      "kind": "history-mirror",
+      "sha256": "3153d7dc435b33a510df4aaa909a2b23ad0aa15b607df1c8df622f437c8b1ec9"
+    },
+    {
+      "name": "20260713002100_g014_privacy_workflows.sql",
+      "kind": "history-mirror",
+      "sha256": "bfa94ceb4e060b265cb96788def89d90913473366badc30b97dbb898a761c153"
+    },
+    {
+      "name": "20260713002200_g014_marketing_state_machine.sql",
+      "kind": "history-mirror",
+      "sha256": "bcdbc6640bc38175762a93210f9273aaafa09aa228d35970d301f1e923abcf83"
+    },
+    {
+      "name": "20260713002300_g014_account_deletion_state_machine.sql",
+      "kind": "history-mirror",
+      "sha256": "3f968c8e8b74f43b3110abfb3133e74fa2e2dc8d309f9a2c8e791c2413446481"
+    },
+    {
+      "name": "20260713002400_g014_retention_adapters_receipts.sql",
+      "kind": "history-mirror",
+      "sha256": "51640f6e231b0c333fc2d87101fc7bd1a25c75df82e3a0e683cf22c636772b82"
+    },
+    {
+      "name": "20260713002500_g014_catalog_contract.sql",
+      "kind": "history-mirror",
+      "sha256": "be77ee3823fc00c60365973d223cdb3a587aa32531b6e29bd0e639362be1a922"
+    },
+    {
+      "name": "20260713002600_g014_account_deletion_receipt_parity.sql",
+      "kind": "history-mirror",
+      "sha256": "43a0864739e6bdd7e02331796dc1e5016ef77a33cd7e5c2ff77732f2edc5e167"
+    },
+    {
+      "name": "20260713002700_g028_account_deletion_reauth_proof.sql",
+      "kind": "history-mirror",
+      "sha256": "3d1154561f9c6c4d92706f1e38eaf2b7d9ce23a99e64e301c18e270272b33758"
+    },
+    {
+      "name": "20260801000100_g016_privacy_audit_owner_policy.sql",
+      "kind": "history-mirror",
+      "sha256": "3c139db24ec85309adf41fdbc43c5f7d8006f12c7fce8b2909fd5f31793e183a"
+    },
+    {
+      "name": "20260801000200_g016_onboarding_confirmation_freshness.sql",
+      "kind": "history-mirror",
+      "sha256": "7263606451536dee75408f2ef6ff50760e9804dc36d6a1c8ed60fb562bdacd9f"
+    },
+    {
+      "name": "20260804000100_g041_privacy_audit_lock_privilege.sql",
+      "kind": "history-mirror",
+      "sha256": "8162b3c5c6ef0c920f16b341cc43c3bf22f30f1a4931a017f793c00b3ea353d6"
+    },
+    {
+      "name": "20260804000200_g041_privacy_onboarding_workflow_privileges.sql",
+      "kind": "history-mirror",
+      "sha256": "4907256014a56fc11fd1fc0845eed423ad04acaef5023a234570d0b3035bf601"
+    },
+    {
+      "name": "20260804000300_g041_privacy_eligibility_auth_boundary.sql",
+      "kind": "history-mirror",
+      "sha256": "fdb08f5d381dc3a9ef65170f70be23395a451e50a3556629e4e46c4a5e433043"
+    },
+    {
+      "name": "20260804000400_g041_auth_boundary_closure.sql",
+      "kind": "history-mirror",
+      "sha256": "4c0434e7e59974c65be861c64e2400d0c5085d41af37f5ab28e26bb963e51092"
+    },
+    {
+      "name": "20260804000500_g041_auth_workflow_bridge.sql",
+      "kind": "history-mirror",
+      "sha256": "0a897af83630e39bd0502fffa82f8d31628d31624b17d6f339f8f22de558b67a"
+    },
+    {
+      "name": "20260903174413_advisor_followup_hardening.sql",
+      "kind": "history-mirror",
+      "sha256": "02598f664febec3d9c52d1d3c9d783c6558a1adcbf6c1a3bc94ed91b7f5f301f"
+    },
+    {
+      "name": "20260920171524_public_profile_summary_read_boundary.sql",
+      "kind": "history-mirror",
+      "sha256": "0f4f9f70903137e1793b7f5e4f4266b69195302a5e2cc8ec84c623487ec6e6d5"
+    },
+    {
+      "name": "20261001130038_app_web_vitals_aggregate.sql",
+      "kind": "history-mirror",
+      "sha256": "bbd302fdaf7062a664130f05080d69ae08cd8348b1b4a8c4c877b1e3487b2b62"
+    },
+    {
+      "name": "20261001155606_app_web_vitals_ingest_budget.sql",
+      "kind": "history-mirror",
+      "sha256": "f35451f8240308ba2a8fb2e573ef6fda37d5096ed66cab7e4f4097bd7376880d"
+    },
+    {
+      "name": "20261002235102_admin_evaluation_pagination.sql",
+      "kind": "history-mirror",
+      "sha256": "f2da737cc737f96562815f2285a018432de7f4d2e2a657695634b23eefb24230"
+    },
+    {
+      "name": "20261003000711_storyboard_production_foundation.sql",
+      "kind": "history-mirror",
+      "sha256": "f599f614f1552325eef6d16acee6b2196930c8fd4efd4b6add2ee9d3fdd5c115"
+    },
+    {
+      "name": "20261003000811_storyboard_historical_restore.sql",
+      "kind": "history-mirror",
+      "sha256": "ec9f7577fa9987cc6d4cfefaf81db071acf8925a30b76fed433f390f988581cd"
+    },
+    {
+      "name": "20261003000812_storyboard_gemini_only.sql",
+      "kind": "history-mirror",
+      "sha256": "468b0fd8d842c8299dfec6c23d8b370cd32970d56e1ddd26d45f768a859b9dea"
+    },
+    {
+      "name": "20261003065736_g014_current_service_rpc_registry.sql",
+      "kind": "history-mirror",
+      "sha256": "49fdeaa413ab111b9d56c61bfb2b4f57ea2a32b943ca0efea3af2f88048106c9"
+    },
+    {
+      "name": "20261003081915_restaurant_review_automation.sql",
+      "kind": "history-mirror",
+      "sha256": "e67f09e04d18baee9ea8c5a8fd37b46701ec5f9e58300ddf664f8b495617bdc6"
+    },
+    {
+      "name": "20261003095444_restore_service_identity_helpers.sql",
+      "kind": "history-mirror",
+      "sha256": "6bce4210a9e01c4c714b0099d9c419cc0da7e31193e612a54049cdebbbec7a18"
+    },
+    {
+      "name": "20261003113923_g014_service_invoker_contract.sql",
+      "kind": "history-mirror",
+      "sha256": "e9697debcd085498f37edede5d9d0b7ecd9d4000eaa662a9fcde8f297bf47b3b"
+    },
+    {
+      "name": "20261003171449_restaurant_review_manual_guards.sql",
+      "kind": "forward",
+      "sha256": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271"
+    },
+    {
+      "name": "20261003172126_restaurant_review_manual_invoker_contract.sql",
+      "kind": "forward",
+      "sha256": "8ce3a87564b8b5bb2c4caffd1b62bc2f50c3055f11fc7dc3e2fa9700cffa1af3"
+    },
+    {
+      "name": "20261003182338_storyboard_service_role_bridge.sql",
+      "kind": "forward",
+      "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+    },
+    {
+      "name": "20261003193717_restaurant_review_claim_progress.sql",
+      "kind": "forward",
+      "sha256": "a4e98f4c406fc6207468917bcc2ae8ffb958ec2303b314c04ab25705261fc79c"
+    },
+    {
+      "name": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+      "kind": "forward",
+      "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+    },
+    {
+      "name": "20261003212017_admin_evaluation_read_helpers.sql",
+      "kind": "forward",
+      "sha256": "404331acabd4c3d570e21b0fc1a3d1e2c34dd9525eea7bdbc944bc7c087f261c"
+    },
+    {
+      "name": "20261003215116_admin_evaluation_keyset_queries.sql",
+      "kind": "forward",
+      "sha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3"
+    },
+    {
+      "name": "20261003220841_admin_evaluation_page_invoker_contract.sql",
+      "kind": "forward",
+      "sha256": "4471f02096c0c7ee73d074ea7a3c4c0c36674edbaacbf998f4059d7b48d1f095"
+    },
+    {
+      "name": "20261004003503_admin_evaluation_display_revision.sql",
+      "kind": "forward",
+      "sha256": "777f7fb596006864569d8f418f35bbe0a9e2adf9161833eeee612a6196a92781"
+    },
+    {
+      "name": "20261004010334_restaurant_review_identity_evidence.sql",
+      "kind": "forward",
+      "sha256": "27f4fd99e909c9d19e7160c79b0a0cfe5ee3e5f7d137e4d3f53de7819f94af63"
+    },
+    {
+      "name": "20261004023841_storyboard_claim_capability_order.sql",
+      "kind": "forward",
+      "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+    },
+    {
+      "name": "20261004045404_restaurant_review_category_contract.sql",
+      "kind": "forward",
+      "sha256": "5f16d4f5b50d4a343a737d96be6465c7bef3a51fd89789deff141f928f5ee600"
+    },
+    {
+      "name": "20261004120000_restaurant_review_gemini_decision.sql",
+      "kind": "forward",
+      "sha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc"
+    }
+  ]
+}

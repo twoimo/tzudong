@@ -1,0 +1,126 @@
+{
+  "schema": "public-flat-membership/v1",
+  "observedAtUtc": "2026-10-09T00:34:34.628933+00:00",
+  "tab": "streams",
+  "channelId": "UCfpaSruWW3S4dibonKXENjA",
+  "sourceUrl": "https://www.youtube.com/@tzuyang6145/streams",
+  "reportedPlaylistCount": 18,
+  "entryCount": 18,
+  "rows": [
+    {
+      "id": "WQSrbO9yH3Q",
+      "duration": 7277,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "J9mrmZ3S_ps",
+      "duration": 6096,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "9YoNoltBYPo",
+      "duration": 3312,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "N1BF4F4cz9o",
+      "duration": 4251,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "Su915VcW8Cc",
+      "duration": 7680,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "KQdyVGZnKeU",
+      "duration": 5478,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "tIj8UsDrRgM",
+      "duration": 5031,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "jrlZoC_LImQ",
+      "duration": 1380,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "WcGId4hQFN8",
+      "duration": 4835,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "11MTBs8k15g",
+      "duration": 6860,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "VwdegbFqNaI",
+      "duration": 7671,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "OrbUprSf_98",
+      "duration": 9841,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "HFKUFBirCr0",
+      "duration": 11811,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "qfiLjXAu_Mw",
+      "duration": 17653,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "OaHuBj6YH84",
+      "duration": 9782,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "HddyXcoPRtw",
+      "duration": 8683,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "L79gwuMulig",
+      "duration": 2932,
+      "liveStatus": "was_live",
+      "channelId": null
+    },
+    {
+      "id": "RkMdigpgVF0",
+      "duration": 16254,
+      "liveStatus": "was_live",
+      "channelId": null
+    }
+  ],
+  "rawResponseSha256": "37dd3e3ca74e91d26f58c534bd414a30ec68207835a834a69b59f502cc9fe9de",
+  "rawResponseBytes": 16510,
+  "rawPersonalContactFieldsPersisted": false,
+  "noPlaylistLimit": true,
+  "exitCode": 0,
+  "noMediaOrCaptionsDownloaded": true,
+  "canonicalSourceOrQueueChanged": false
+}

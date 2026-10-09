@@ -1,0 +1,64 @@
+{
+  "schema": "record-review-fixes/v1",
+  "status": "local fixes verified; service-role manual mutation remains blocked",
+  "source": {
+    "head": "3f86d6999d4a6b00e6221510a0728358747fa997",
+    "workingSourcesNotCommitted": true,
+    "files": {
+      "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "8cbaa9d042f32bd4a42e60580e6aa8e32c67b9a1b942d9fbef738767324f24ce",
+      "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql": "5a1adc3211ebfde3c13a45c55e3192328d45bd6b750e60d708c80d850a9b69ea",
+      "backend/supabase/scripts/transform_registration_replay.py": "7dece462d7dfb9ef10369cc971b2c9b89b1974f182c89b92dc135b67adf461fa",
+      "apps/web/lib/admin/evaluation-record-actions.ts": "df92369624a080f630fb666b9d923f907671230c78f090a5051d2b3047cff3aa",
+      "apps/web/tests-unit/admin-record-metadata-roundtrip.test.ts": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65"
+    },
+    "pendingCanonicalPg15": "root freeze commit and clean detached source required",
+    "operatingWrites": false
+  },
+  "operatingWrites": false,
+  "additionalHelperOrOwnerGrants": false,
+  "remoteCommentsOrResolutions": false,
+  "commitPushPromotion": false,
+  "checks": {
+    "pristineSnapshotHashAndRoles": "passed seven input artifacts, 37 roles, 29 memberships",
+    "m1m2m3ApplyRollback": "fixed-three-migration-replay.json",
+    "g014": "4 assertions after M1, after M3, and after new manual migration",
+    "sixGuardedFlows": "passed with rollback",
+    "newFixRuntimeCases": "fixes-runtime.json",
+    "canonicalVideoOnlyConflicts": "index-conflicts-runtime-v2.json",
+    "actualCompositeUniqueRace": "composite-race-runtime.json",
+    "existingCasConcurrency": "current-schema-concurrency-20261009.json",
+    "manualEligibilityActualTickParity": "manual-preview-runtime.json",
+    "manualPriorBodyMetadataRollback": "manual-preview-initial-runtime.json",
+    "manualOwnerCasStopWrongBodyNegative": "manual-guards-runtime.json",
+    "normalizerAndProducer": "5 Bun tests, 35 assertions passed; actual PG17 output source SHA bound",
+    "registrationAdapter": "3 unittest tests passed, exact hash/inverse bytes/changed source rejection",
+    "targetedEslint": "exit 0 evaluation-record-actions.ts and admin-record-metadata-roundtrip.test.ts",
+    "nativeCompatTypecheckParity": "typecheck-parity.json"
+  },
+  "remainingGap": {
+    "kind": "preexisting service-role manual run/stop authorization failure",
+    "sqlState": "42501",
+    "object": "pipeline_control.admin_evaluation_catalog_revision",
+    "effectivePermissions": {
+      "SELECT": true,
+      "UPDATE": false
+    },
+    "trigger": "public.restaurant_review_automation_manual is invoker and requires FOR UPDATE on catalog revision",
+    "evidence": "manual-principal-gap.json",
+    "constraints": "No added grants or lock bypass; owner-principal functional CAS/stop does not prove service-role usability. Root needs a separately approved privilege/G014/source design before operational manual apply."
+  },
+  "indexConvergence": {
+    "status": "not adopted",
+    "exactForwardSqlProposal": "index-convergence-forward-proposal.sql.txt",
+    "preimages": "index-proposal-preimages.json",
+    "dependency": "Original crawler mutual-backup video-only identity contract requires consumer audit and independent PG15 preimage binding before index drop adoption."
+  },
+  "historicalFailuresPreserved": [
+    "fixes-runtime-fixture-missing-geocoding.json",
+    "fixes-runtime-create-double-compose.json",
+    "manual-service-role-catalog-lock-negative.json",
+    "archive/m1-before-create-double-compose-fix.sql.txt"
+  ],
+  "canonicalPg15": "Pending root batch commit and clean detached source; old canonical results are historical only.",
+  "cleanup": "cleanup.json"
+}

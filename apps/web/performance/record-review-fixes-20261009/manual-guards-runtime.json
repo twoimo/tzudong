@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "principal": "postgres source owner; not service-role deployment proof",
+  "serviceRoleMutationBlocked": "42501 admin_evaluation_catalog_revision FOR UPDATE",
+  "versionHashCasStopRollback": true,
+  "driftRejectedFixedCode": "REVIEW_MANUAL_PREVIEW_SOURCE_DRIFT",
+  "driftRollbackExact": true
+}

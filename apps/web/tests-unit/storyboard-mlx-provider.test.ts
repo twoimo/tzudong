@@ -99,15 +99,15 @@ describe('loopback transport and real HTTP boundaries', () => {
       .request('/health')).rejects.toThrow('local_model_unavailable');
     expect(receipts).toEqual([]);
   });
-  test('cancellation during request preparation cannot start inference', async () => {
-    let calls = 0;
+  test('cancellation during request preparation cannot start inference', async () =>{
+    let calls = 0; let serialized=0;
     const server = createServer((_req, res) => { calls++; res.end('{}'); });
     try {
       const controller = new AbortController();
       const transport = new MlxTransport({ origin: await listen(server) });
-      const body = { toJSON() { controller.abort(); return {}; } };
-      await expect(transport.request('/v1/chat/completions', body, controller.signal)).rejects.toThrow('generation_cancelled');
-      expect(calls).toBe(0);
+      const body = { toJSON() { serialized++; controller.abort(); return {}; } };
+      await expect(transport.request('/v1/chat/completions', body, controller.signal)).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+      expect(calls).toBe(0);expect(serialized).toBe(0);
     } finally { await close(server); }
   });
   test('rejects DNS, credentials, proxy paths, remote IPs and redirect-shaped origins', () => {
@@ -151,28 +151,16 @@ describe('loopback transport and real HTTP boundaries', () => {
       controller.abort(); await expect(pending).rejects.toThrow('generation_cancelled');
     } finally { await close(server); }
   });
-  test('missing catalog models cannot trigger generation or remote fallback', async () => {
+  test('missing catalog models cannot trigger generation or remote fallback', async () =>{
     const paths: string[] = [];
     const server = createServer((req, res) => { paths.push(req.url!); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(req.url === '/health' ? { status: 'ok' } : { data: [] })); });
     try {
       const client = new MlxStoryboardClient(new MlxTransport({ origin: await listen(server) }));
-      await expect(client.draft(request())).rejects.toThrow('model_not_installed');
-      expect(paths).toEqual(['/health', '/v1/models']);
+      await expect(client.draft(request())).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');
+      expect(paths).toEqual([]);
     } finally { await close(server); }
   });
-  test('repairs a malformed draft once and records the actual response model', async () => {
-    let generations = 0;
-    const server = createServer((req, res) => {
-      req.resume(); res.writeHead(200, { 'Content-Type': 'application/json' });
-      if (req.url === '/health') res.end('{"status":"ok"}');
-      else if (req.url === '/v1/models') res.end(JSON.stringify({ data: [{ id: 'installed-text', owned_by: 'mlx-serve', capabilities: ['chat'], bytes_on_disk: 100 }] }));
-      else { generations++; res.end(JSON.stringify({ id: 'response-test', model: 'installed-text', choices: [{ finish_reason: 'stop', message: { content: generations === 1 ? '{}' : JSON.stringify(draft()) } }] })); }
-    });
-    try {
-      const client = new MlxStoryboardClient(new MlxTransport({ origin: await listen(server) }));
-      const result = await client.draft(request()); expect(generations).toBe(2); expect(result.provenance.modelEvidence).toBe('response'); expect(result.draft.scenes).toHaveLength(5);
-    } finally { await close(server); }
-  });
+  test('repairs a malformed draft once and records the actual response model', async () => { let calls=0;const server=createServer((_req,res)=>{calls++;res.end('{}');});try{const client=new MlxStoryboardClient(new MlxTransport({origin:await listen(server)}));await expect(client.draft(request())).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');await expect(client.image(request(),'fixture')).rejects.toThrow('STORYBOARD_WORKFLOW_RETIRED');expect(calls).toBe(0);}finally{await close(server);} });
 });
 
 describe('provider-neutral private images', () => {

@@ -1,0 +1,641 @@
+-- Guarded human administration; no model, approval policy or applied migration is rewritten.
+BEGIN;
+CREATE TABLE pipeline_control.admin_record_operations (
+ id uuid PRIMARY KEY, actor uuid NOT NULL, action text NOT NULL, target_ids uuid[] NOT NULL,
+ payload_sha text NOT NULL CHECK(payload_sha ~ '^[a-f0-9]{64}$'), expected jsonb NOT NULL,
+ preview_hash text NOT NULL, expires_at timestamptz NOT NULL, state text NOT NULL CHECK(state IN ('preview','applied')),
+ receipt jsonb NOT NULL, cleanup_blocked boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE pipeline_control.admin_record_audit (
+ id uuid PRIMARY KEY, operation_id uuid UNIQUE NOT NULL REFERENCES pipeline_control.admin_record_operations(id),
+ actor uuid NOT NULL, action text NOT NULL, target_ids uuid[] NOT NULL, payload_sha text NOT NULL,
+ before_fingerprints jsonb NOT NULL, after_fingerprints jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+);
+-- Object names are isolated cleanup work, never copied to audit or browser receipts.
+CREATE TABLE pipeline_control.admin_record_media_cleanup (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(), operation_id uuid NOT NULL REFERENCES pipeline_control.admin_record_operations(id),
+ bucket text NOT NULL CHECK(bucket='review-photos'), object_name text NOT NULL, object_fingerprint text,
+ state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','inflight','uncertain','done')),
+ UNIQUE(operation_id,bucket,object_name)
+);
+ALTER TABLE pipeline_control.admin_record_operations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pipeline_control.admin_record_audit ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pipeline_control.admin_record_media_cleanup ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON pipeline_control.admin_record_operations,pipeline_control.admin_record_audit,pipeline_control.admin_record_media_cleanup FROM PUBLIC,anon,authenticated;
+GRANT SELECT,INSERT,UPDATE ON pipeline_control.admin_record_operations,pipeline_control.admin_record_media_cleanup TO service_role;
+GRANT DELETE ON pipeline_control.admin_record_media_cleanup TO service_role;
+GRANT SELECT,INSERT ON pipeline_control.admin_record_audit TO service_role;
+
+CREATE FUNCTION pipeline_control.admin_record_hash(value jsonb) RETURNS text
+LANGUAGE sql IMMUTABLE SECURITY INVOKER SET search_path='' AS $$ SELECT encode(sha256(convert_to(value::text,'UTF8')),'hex') $$;
+-- A durable retirement fence spans the DB commit and the separate Storage API delete.
+-- The only metadata reads are from storage.objects. Object deletion itself remains through Storage API.
+CREATE INDEX admin_record_media_path ON pipeline_control.admin_record_media_cleanup(bucket,object_name,state);
+CREATE FUNCTION pipeline_control.admin_record_storage_snapshot(path text) RETURNS text
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path='' AS $$
+ SELECT pipeline_control.admin_record_hash(to_jsonb(o)-'last_accessed_at') FROM storage.objects o WHERE bucket_id='review-photos' AND name=path
+$$;
+CREATE FUNCTION pipeline_control.admin_record_reference_fence() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE path text;
+BEGIN
+ -- Serialize all new references to each path with claim; foreign/external paths have no tombstone and remain allowed.
+ FOR path IN SELECT DISTINCT x FROM unnest(coalesce(NEW.food_photos,'{}'::text[])||ARRAY[NEW.verification_photo]) x WHERE x IS NOT NULL ORDER BY x LOOP
+  PERFORM pg_advisory_xact_lock(hashtextextended('review-photo:'||path,0));
+  IF EXISTS(SELECT 1 FROM pipeline_control.admin_record_media_cleanup WHERE bucket='review-photos' AND object_name=path AND state IN ('inflight','uncertain','done')) THEN
+   RAISE EXCEPTION 'RECORD_ACTION_MEDIA_RETIRED';
+  END IF;
+ END LOOP;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER admin_record_reference_fence BEFORE INSERT OR UPDATE OF verification_photo,food_photos ON public.reviews
+ FOR EACH ROW EXECUTE FUNCTION pipeline_control.admin_record_reference_fence();
+CREATE FUNCTION pipeline_control.admin_record_object_fence() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE path text;
+BEGIN
+ -- Cover ordinary uploads/upserts and privileged storage writes equally. DELETE is deliberately left to Storage.
+ -- A read-access timestamp update does not replace content and is safe.
+ IF TG_OP='UPDATE' AND (to_jsonb(NEW)-'last_accessed_at')=(to_jsonb(OLD)-'last_accessed_at') THEN RETURN NEW; END IF;
+ FOR path IN SELECT DISTINCT x FROM unnest(CASE WHEN TG_OP='UPDATE' THEN ARRAY[CASE WHEN OLD.bucket_id='review-photos' THEN OLD.name END,CASE WHEN NEW.bucket_id='review-photos' THEN NEW.name END] ELSE ARRAY[CASE WHEN NEW.bucket_id='review-photos' THEN NEW.name END] END) x WHERE x IS NOT NULL ORDER BY x LOOP
+  PERFORM pg_advisory_xact_lock(hashtextextended('review-photo:'||path,0));
+  IF EXISTS(SELECT 1 FROM pipeline_control.admin_record_media_cleanup WHERE bucket='review-photos' AND object_name=path AND state IN ('inflight','uncertain','done')) THEN
+   -- Storage v1.33.0 TUS DELETE uses canUpload/testPermission: version '1' is
+   -- written in a transaction which is always rolled back before termination.
+   -- Permit only that BEFORE probe; the deferred AFTER constraint below rejects
+   -- any commit, including forged request GUCs. No persistent write is exempt.
+   IF TG_WHEN='BEFORE' AND NEW.version='1'
+     AND current_setting('request.method',true)='DELETE'
+     AND current_setting('storage.operation',true)='storage.tus.upload.delete'
+     AND current_setting('request.path',true) ~ '^/upload/resumable/[A-Za-z0-9_-]+$'
+     THEN CONTINUE; END IF;
+   RAISE EXCEPTION 'RECORD_ACTION_MEDIA_RETIRED';
+  END IF;
+ END LOOP;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER admin_record_object_fence BEFORE INSERT OR UPDATE ON storage.objects
+ FOR EACH ROW EXECUTE FUNCTION pipeline_control.admin_record_object_fence();
+-- A rollback-only permission probe must never become a committed replacement.
+CREATE CONSTRAINT TRIGGER admin_record_object_commit_fence AFTER INSERT OR UPDATE ON storage.objects
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION pipeline_control.admin_record_object_fence();
+REVOKE ALL ON FUNCTION pipeline_control.admin_record_reference_fence(),pipeline_control.admin_record_object_fence() FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION pipeline_control.admin_record_storage_snapshot(text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION pipeline_control.admin_record_storage_snapshot(text) TO service_role;
+
+CREATE FUNCTION pipeline_control.admin_record_snapshot(action text, ids uuid[]) RETURNS jsonb
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE result jsonb:='{}'; row_value jsonb; related uuid[]:=ids; n integer;
+BEGIN
+ IF action LIKE 'restaurant.%' THEN
+   IF action='restaurant.merge' THEN
+    SELECT array_agg(DISTINCT r.id ORDER BY r.id) INTO related FROM public.restaurants r JOIN public.restaurants seed ON seed.id=ANY(ids)
+     AND (r.id=seed.id OR (r.status<>'deleted' AND public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(r.approved_name,r.origin_name,r.naver_name,r.google_name))=public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(seed.approved_name,seed.origin_name,seed.naver_name,seed.google_name))
+      AND nullif(coalesce(nullif(r.jibun_address,''),r.road_address),'')=nullif(coalesce(nullif(seed.jibun_address,''),seed.road_address),'')));
+    IF cardinality(related)>25 THEN RAISE EXCEPTION 'RECORD_ACTION_LIMIT'; END IF;
+   END IF;
+   IF (SELECT count(*) FROM public.restaurants WHERE id=ANY(ids))<>cardinality(ids) THEN RAISE EXCEPTION 'RECORD_ACTION_NOT_FOUND'; END IF;
+   FOR row_value IN SELECT to_jsonb(r) FROM public.restaurants r WHERE id=ANY(related) ORDER BY id LOOP
+    result:=result||jsonb_build_object('restaurant:'||(row_value->>'id'),pipeline_control.admin_record_hash(row_value));
+   END LOOP;
+
+ ELSIF action LIKE 'submission.%' THEN
+   SELECT to_jsonb(s) INTO row_value FROM public.restaurant_submissions s WHERE id=ids[1];
+   IF row_value IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_NOT_FOUND'; END IF;
+   result:=jsonb_build_object('submission:'||ids[1],pipeline_control.admin_record_hash(row_value));
+   SELECT count(*) INTO n FROM public.restaurant_submission_items WHERE submission_id=ids[1];
+   IF n>25 THEN RAISE EXCEPTION 'RECORD_ACTION_LIMIT'; END IF;
+   FOR row_value IN SELECT to_jsonb(i) FROM public.restaurant_submission_items i WHERE submission_id=ids[1] ORDER BY id LOOP
+    result:=result||jsonb_build_object('item:'||(row_value->>'id'),pipeline_control.admin_record_hash(row_value));
+   END LOOP;
+   SELECT array_agg(target_restaurant_id) INTO related FROM public.restaurant_submission_items WHERE submission_id=ids[1] AND target_restaurant_id IS NOT NULL;
+ ELSIF action LIKE 'review.%' THEN
+   SELECT to_jsonb(r) INTO row_value FROM public.reviews r WHERE id=ids[1];
+   IF row_value IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_NOT_FOUND'; END IF;
+   result:=jsonb_build_object('review:'||ids[1],pipeline_control.admin_record_hash(row_value||jsonb_build_object('__media_fingerprints',
+    (SELECT jsonb_object_agg(path,pipeline_control.admin_record_storage_snapshot(path)) FROM
+     (SELECT DISTINCT x path FROM jsonb_array_elements_text(coalesce(nullif(row_value->'food_photos','null'::jsonb),'[]'::jsonb)||jsonb_build_array(row_value->>'verification_photo')) x WHERE x IS NOT NULL) media))));
+   related:=ARRAY[(row_value->>'restaurant_id')::uuid];
+ ELSIF action LIKE 'recommendation.%' THEN
+   SELECT to_jsonb(r) INTO row_value FROM public.restaurant_requests r WHERE id=ids[1];
+   IF row_value IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_NOT_FOUND'; END IF;
+   result:=jsonb_build_object('recommendation:'||ids[1],pipeline_control.admin_record_hash(row_value));
+ END IF;
+ IF action LIKE 'submission.%' OR action LIKE 'review.%' THEN
+   FOR row_value IN SELECT to_jsonb(r) FROM public.restaurants r WHERE id=ANY(related) ORDER BY id LOOP
+    result:=result||jsonb_build_object('restaurant:'||(row_value->>'id'),pipeline_control.admin_record_hash(row_value));
+   END LOOP;
+ END IF;
+ RETURN result;
+END $$;
+
+CREATE FUNCTION pipeline_control.admin_record_readback(snapshot jsonb) RETURNS jsonb
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE entry record; result jsonb:='[]'; kind text; target uuid; status_value text;
+BEGIN
+ FOR entry IN SELECT key,value FROM jsonb_each(snapshot) ORDER BY key LOOP
+  kind:=split_part(entry.key,':',1);target:=split_part(entry.key,':',2)::uuid;status_value:=NULL;
+  IF entry.value='null'::jsonb THEN status_value:='deleted';
+  ELSIF kind='restaurant' THEN SELECT status INTO status_value FROM public.restaurants WHERE id=target;
+  ELSIF kind='submission' THEN SELECT status::text INTO status_value FROM public.restaurant_submissions WHERE id=target;
+  ELSIF kind='item' THEN SELECT item_status INTO status_value FROM public.restaurant_submission_items WHERE id=target;
+  ELSIF kind='recommendation' THEN SELECT status INTO status_value FROM public.restaurant_requests WHERE id=target;
+  ELSIF kind='review' THEN SELECT CASE WHEN is_verified THEN 'approved' WHEN admin_note LIKE '거부: %' THEN 'rejected' ELSE 'pending' END INTO status_value FROM public.reviews WHERE id=target;
+  END IF;
+  IF status_value IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_READBACK_MISMATCH'; END IF;
+  result:=result||jsonb_build_array(jsonb_build_object('id',target,'kind',kind,'status',status_value,'fingerprint',entry.value));
+ END LOOP;
+ RETURN result;
+END $$;
+
+CREATE FUNCTION pipeline_control.admin_record_validate_restaurant(row_value jsonb, exclude_ids uuid[]) RETURNS void
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE categories jsonb:=row_value->'categories';
+BEGIN
+ IF nullif(btrim(row_value->>'approved_name'),'') IS NULL OR length(row_value->>'approved_name')>160
+  OR jsonb_typeof(categories) IS DISTINCT FROM 'array' OR jsonb_array_length(categories) NOT BETWEEN 1 AND 15
+  OR EXISTS(SELECT 1 FROM jsonb_array_elements(categories) x WHERE jsonb_typeof(x)<>'string' OR x#>>'{}' <> ALL(ARRAY['치킨','중식','돈까스·회','피자','패스트푸드','찜·탕','족발·보쌈','분식','카페·디저트','한식','고기','양식','아시안','야식','도시락']))
+  OR (SELECT count(*)<>count(DISTINCT x) FROM jsonb_array_elements(categories) x)
+  OR jsonb_typeof(row_value->'lat') IS DISTINCT FROM 'number' OR jsonb_typeof(row_value->'lng') IS DISTINCT FROM 'number'
+  OR (row_value->>'lat')::numeric NOT BETWEEN -90 AND 90 OR (row_value->>'lng')::numeric NOT BETWEEN -180 AND 180
+  OR nullif(btrim(coalesce(row_value->>'jibun_address',row_value->>'road_address')),'') IS NULL
+  OR row_value->'geocoding_success' IS DISTINCT FROM 'true'::jsonb
+  OR coalesce(row_value->>'youtube_link','') !~ '^https://(www\.)?youtube\.com/watch\?v=[A-Za-z0-9_-]{11}$'
+ THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;
+ IF EXISTS(SELECT 1 FROM public.restaurants r WHERE NOT (id=ANY(array_remove(exclude_ids,NULL))) AND status<>'deleted'
+  AND public.extract_youtube_video_id(r.youtube_link)=public.extract_youtube_video_id(row_value->>'youtube_link')
+  AND public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(r.approved_name,r.origin_name,r.naver_name,r.google_name))=
+      public.normalize_restaurant_identity_name(row_value->>'approved_name')) THEN RAISE EXCEPTION 'RECORD_ACTION_DUPLICATE'; END IF;
+END $$;
+
+-- Compose only permitted domain fields. Omission preserves the saved value; JSON null is an explicit clear.
+CREATE FUNCTION pipeline_control.admin_record_compose(row_value jsonb, changes jsonb) RETURNS jsonb
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE k text;
+BEGIN
+ IF jsonb_typeof(changes) IS DISTINCT FROM 'object' OR EXISTS(SELECT 1 FROM jsonb_object_keys(changes) x WHERE x<>ALL(ARRAY[
+  'approved_name','phone','categories','youtube_link','tzuyang_review','road_address','jibun_address','english_address','address_elements','lat','lng','geocoding_success','youtube_meta']))
+ THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+ FOREACH k IN ARRAY ARRAY['approved_name','phone','youtube_link','tzuyang_review','road_address','jibun_address','english_address'] LOOP
+  IF changes ? k AND (jsonb_typeof(changes->k) NOT IN ('string','null') OR length(changes->>k)>4000) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+ END LOOP;
+ IF (changes ? 'approved_name' AND (nullif(btrim(changes->>'approved_name'),'') IS NULL OR length(changes->>'approved_name')>160))
+  OR (changes ? 'phone' AND length(changes->>'phone')>80)
+  OR (changes ? 'youtube_link' AND changes->'youtube_link'<>'null'::jsonb AND changes->>'youtube_link' !~ '^https://(www\.)?youtube\.com/watch\?v=[A-Za-z0-9_-]{11}$')
+  OR (changes ? 'geocoding_success' AND jsonb_typeof(changes->'geocoding_success')<>'boolean')
+  OR (changes ? 'youtube_meta' AND jsonb_typeof(changes->'youtube_meta')<>'object')
+  OR (changes ? 'address_elements' AND jsonb_typeof(changes->'address_elements') NOT IN ('array','object','null'))
+ THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;
+ FOREACH k IN ARRAY ARRAY['lat','lng'] LOOP
+  IF changes ? k THEN
+   IF jsonb_typeof(changes->k)<>'number' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;
+   IF (changes->>k)::numeric NOT BETWEEN (CASE k WHEN 'lat' THEN -90 ELSE -180 END) AND (CASE k WHEN 'lat' THEN 90 ELSE 180 END) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;
+  END IF;
+ END LOOP;
+ IF changes ? 'categories' THEN
+  IF jsonb_typeof(changes->'categories')<>'array' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;
+  IF jsonb_array_length(changes->'categories') NOT BETWEEN 1 AND 15 OR EXISTS(SELECT 1 FROM jsonb_array_elements(changes->'categories') x WHERE jsonb_typeof(x)<>'string' OR x#>>'{}'<>ALL(ARRAY['치킨','중식','돈까스·회','피자','패스트푸드','찜·탕','족발·보쌈','분식','카페·디저트','한식','고기','양식','아시안','야식','도시락'])) OR (SELECT count(*)<>count(DISTINCT x) FROM jsonb_array_elements(changes->'categories') x) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;
+ END IF;
+ IF changes ? 'youtube_meta' THEN
+  IF EXISTS(SELECT 1 FROM jsonb_object_keys(changes->'youtube_meta') meta_key WHERE meta_key<>ALL(ARRAY['title','published_at','duration','is_shorts','is_ads','what_ads'])) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+  changes:=changes||jsonb_build_object('youtube_meta',coalesce(nullif(row_value->'youtube_meta','null'::jsonb),'{}'::jsonb)||(changes->'youtube_meta'));
+ END IF;
+ RETURN row_value||changes;
+END $$;
+CREATE FUNCTION pipeline_control.admin_record_identity_check(row_value jsonb,exclude_ids uuid[]) RETURNS void
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+BEGIN
+ IF EXISTS(SELECT 1 FROM public.restaurants r WHERE NOT(id=ANY(array_remove(exclude_ids,NULL))) AND status<>'deleted'
+  AND public.extract_youtube_video_id(r.youtube_link)=public.extract_youtube_video_id(row_value->>'youtube_link')
+  AND public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(r.approved_name,r.origin_name,r.naver_name,r.google_name))=
+      public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(row_value->>'approved_name',row_value->>'origin_name',row_value->>'naver_name',row_value->>'google_name')))
+ THEN RAISE EXCEPTION 'RECORD_ACTION_DUPLICATE'; END IF;
+END $$;
+-- The final row was composed/validated before any staging writes. Never copy evaluation or provenance from a request.
+CREATE FUNCTION pipeline_control.admin_record_write(id_value uuid,row_value jsonb,actor uuid,approve boolean) RETURNS void
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE patched public.restaurants:=jsonb_populate_record(NULL::public.restaurants,row_value);
+BEGIN
+ UPDATE public.restaurants SET approved_name=patched.approved_name,phone=patched.phone,categories=patched.categories,
+  youtube_link=patched.youtube_link,tzuyang_review=patched.tzuyang_review,road_address=patched.road_address,jibun_address=patched.jibun_address,
+  english_address=patched.english_address,address_elements=patched.address_elements,lat=patched.lat,lng=patched.lng,
+  geocoding_success=patched.geocoding_success,youtube_meta=patched.youtube_meta,updated_by_admin_id=actor,updated_at=clock_timestamp(),
+  status=CASE WHEN approve THEN 'approved' ELSE status END,is_missing=CASE WHEN approve THEN false ELSE is_missing END WHERE id=id_value;
+END $$;
+CREATE FUNCTION pipeline_control.admin_record_patch(id_value uuid, changes jsonb, actor uuid, approve boolean DEFAULT false) RETURNS void
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE row_value jsonb;
+BEGIN
+ SELECT to_jsonb(r) INTO row_value FROM public.restaurants r WHERE id=id_value;
+ IF row_value IS NULL OR row_value->>'status'='deleted' THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+ row_value:=pipeline_control.admin_record_compose(row_value,changes);
+ IF approve THEN PERFORM pipeline_control.admin_record_validate_restaurant(row_value,ARRAY[id_value]);
+ ELSE PERFORM pipeline_control.admin_record_identity_check(row_value,ARRAY[id_value]); END IF;
+ PERFORM pipeline_control.admin_record_write(id_value,row_value,actor,approve);
+END $$;
+
+CREATE FUNCTION pipeline_control.admin_record_create(changes jsonb,actor uuid) RETURNS uuid
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE created uuid:=gen_random_uuid();
+BEGIN
+ changes:=pipeline_control.admin_record_compose('{}'::jsonb,changes);
+ PERFORM pipeline_control.admin_record_validate_restaurant(changes,'{}'::uuid[]);
+ IF nullif(btrim(changes->>'tzuyang_review'),'') IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_EVIDENCE_REQUIRED'; END IF;
+ INSERT INTO public.restaurants(id,approved_name,source_type,status,trace_id,youtube_link,lat,lng,jibun_address,categories,geocoding_success,updated_by_admin_id)
+ VALUES(created,changes->>'approved_name','admin','pending',encode(sha256(convert_to(coalesce(changes->>'youtube_link','')||'|'||coalesce(changes->>'approved_name','')||'|'||coalesce(changes->>'tzuyang_review',''),'UTF8')),'hex'),changes->>'youtube_link',(changes->>'lat')::numeric,(changes->>'lng')::numeric,
+  changes->>'jibun_address',ARRAY(SELECT jsonb_array_elements_text(changes->'categories')),true,actor);
+ PERFORM pipeline_control.admin_record_patch(created,changes,actor,true);
+ RETURN created;
+END $$;
+
+-- Service-only actor predicate; protected role tables remain unavailable to Data API callers.
+CREATE FUNCTION pipeline_control.admin_record_assert_operator(actor uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF actor IS NULL OR NOT EXISTS (
+  SELECT 1 FROM public.user_roles role JOIN public.user_account_status account ON account.user_id=role.user_id
+  WHERE role.user_id=actor AND role.role='admin' AND account.account_status='active' AND account.disabled_at IS NULL
+ ) THEN RAISE EXCEPTION 'RECORD_ACTION_FORBIDDEN' USING ERRCODE='42501'; END IF;
+END $$;
+REVOKE ALL ON FUNCTION pipeline_control.admin_record_assert_operator(uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION pipeline_control.admin_record_assert_operator(uuid) TO service_role;
+
+CREATE FUNCTION public.admin_record_action(p_actor uuid,p_phase text,p_operation_id uuid,p_action text DEFAULT NULL,
+ p_target_ids uuid[] DEFAULT '{}'::uuid[],p_payload jsonb DEFAULT '{}'::jsonb,p_preview_hash text DEFAULT NULL) RETURNS jsonb
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+<<work>>
+DECLARE op pipeline_control.admin_record_operations; ids uuid[]; fingerprint jsonb; after_state jsonb; digest text;
+ receipt jsonb; audit uuid; row_value jsonb; changed jsonb; item jsonb; target uuid; created uuid; source_id uuid;
+ classification text; photo text; job pipeline_control.admin_record_media_cleanup; expected_count integer; pending_count integer; final_rows jsonb; final_row jsonb; key_name text; related_ids uuid[];
+BEGIN
+ PERFORM pipeline_control.admin_record_assert_operator(p_actor);
+ IF current_user NOT IN ('service_role','postgres') OR p_operation_id IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_FORBIDDEN'; END IF;
+ PERFORM set_config('lock_timeout','2s',true);
+ PERFORM pg_advisory_xact_lock(hashtextextended('admin-record:'||p_operation_id,0));
+ SELECT * INTO op FROM pipeline_control.admin_record_operations WHERE id=p_operation_id FOR UPDATE;
+ IF FOUND AND op.actor<>p_actor THEN RAISE EXCEPTION 'RECORD_ACTION_FORBIDDEN'; END IF;
+ IF p_phase='readback' THEN
+  IF op.id IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_NOT_FOUND'; END IF;
+  RETURN op.receipt||jsonb_build_object('mediaCleanupUnmanaged',op.cleanup_blocked,'mediaCleanupPending',EXISTS(SELECT 1 FROM pipeline_control.admin_record_media_cleanup WHERE operation_id=op.id AND state<>'done'));
+ END IF;
+ IF p_phase LIKE 'cleanup_%' THEN
+  IF op.id IS NULL OR op.state<>'applied' OR op.action<>'review.delete' THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+  IF p_phase='cleanup_read' THEN
+   RETURN jsonb_build_object('jobs',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'bucket',bucket,'objectName',object_name,'state',state) ORDER BY id)
+     FROM pipeline_control.admin_record_media_cleanup WHERE operation_id=op.id AND state<>'done'),'[]'::jsonb));
+  END IF;
+  SELECT * INTO job FROM pipeline_control.admin_record_media_cleanup WHERE operation_id=op.id AND id=(p_payload->>'jobId')::uuid FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'RECORD_ACTION_NOT_FOUND'; END IF;
+  IF p_phase='cleanup_claim' AND job.state='pending' THEN
+   PERFORM pg_advisory_xact_lock(hashtextextended('review-photo:'||job.object_name,0));
+   IF EXISTS(SELECT 1 FROM public.reviews WHERE verification_photo=job.object_name OR job.object_name=ANY(food_photos))
+     OR job.object_fingerprint IS DISTINCT FROM pipeline_control.admin_record_storage_snapshot(job.object_name) THEN
+    -- A new reference or changed object is protected, not a failed database moderation.
+    DELETE FROM pipeline_control.admin_record_media_cleanup WHERE id=job.id;
+    UPDATE pipeline_control.admin_record_operations SET cleanup_blocked=true WHERE id=op.id;
+    RETURN jsonb_build_object('ok',true,'claimed',false);
+   END IF;
+   UPDATE pipeline_control.admin_record_media_cleanup SET state='inflight' WHERE id=job.id;
+   RETURN jsonb_build_object('ok',true,'claimed',true);
+  ELSIF p_phase='cleanup_absent' THEN
+   PERFORM pg_advisory_xact_lock(hashtextextended('review-photo:'||job.object_name,0));
+   IF pipeline_control.admin_record_storage_snapshot(job.object_name) IS NOT NULL THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+   UPDATE pipeline_control.admin_record_media_cleanup SET state='done' WHERE id=job.id;
+  ELSIF p_phase='cleanup_uncertain' AND job.state='inflight' THEN
+   UPDATE pipeline_control.admin_record_media_cleanup SET state='uncertain' WHERE id=job.id;
+  ELSE RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+  RETURN jsonb_build_object('ok',true);
+ END IF;
+ IF p_phase NOT IN ('preview','apply') OR jsonb_typeof(p_payload) IS DISTINCT FROM 'object' OR octet_length(p_payload::text)>65536
+  OR p_action NOT IN ('restaurant.approve','restaurant.edit','restaurant.create','restaurant.delete','restaurant.restore','restaurant.register_missing','restaurant.merge','restaurant.hold',
+    'submission.approve','submission.reject','submission.delete','submission.edit','review.approve','review.reject','review.delete','recommendation.approve','recommendation.reject')
+  THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+ SELECT coalesce(array_agg(x ORDER BY x),'{}'::uuid[]) INTO ids FROM unnest(p_target_ids) x;
+ IF cardinality(ids)<>(CASE WHEN p_action='restaurant.create' THEN 0 WHEN p_action='restaurant.merge' THEN 2 WHEN p_action='restaurant.edit' THEN cardinality(ids) ELSE 1 END)
+  OR (p_action='restaurant.edit' AND cardinality(ids) NOT BETWEEN 1 AND 25)
+  OR array_position(ids,NULL) IS NOT NULL OR (SELECT count(*)<>count(DISTINCT x) FROM unnest(ids) x)
+  THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+ IF (p_action IN ('restaurant.delete','restaurant.hold','submission.reject','submission.delete','review.reject','review.delete','recommendation.reject') AND (nullif(btrim(p_payload->>'reason'),'') IS NULL OR length(p_payload->>'reason')>500)) OR length(p_payload->>'note')>500 THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+ digest:=pipeline_control.admin_record_hash(p_payload);
+ IF op.id IS NOT NULL THEN
+  IF op.action IS DISTINCT FROM p_action OR op.target_ids IS DISTINCT FROM ids OR op.payload_sha IS DISTINCT FROM digest THEN RAISE EXCEPTION 'RECORD_ACTION_IDEMPOTENCY_CONFLICT'; END IF;
+  IF p_phase='apply' AND p_preview_hash IS DISTINCT FROM op.preview_hash THEN RAISE EXCEPTION 'RECORD_ACTION_PREVIEW_MISMATCH'; END IF;
+  IF op.state='applied' THEN RETURN op.receipt; END IF;
+  IF op.expires_at<=clock_timestamp() THEN RAISE EXCEPTION 'RECORD_ACTION_PREVIEW_EXPIRED'; END IF;
+ ELSIF p_phase='apply' THEN RAISE EXCEPTION 'RECORD_ACTION_PREVIEW_REQUIRED'; END IF;
+ -- One deterministic lock order also excludes new duplicate inserts and review counter races.
+ -- These short bounded transactions never contain a provider/storage call.
+ LOCK TABLE public.restaurants,public.restaurant_submissions,public.restaurant_submission_items,public.reviews,public.restaurant_requests IN SHARE ROW EXCLUSIVE MODE;
+ IF p_action='review.delete' THEN
+  FOR photo IN SELECT DISTINCT x FROM public.reviews r CROSS JOIN LATERAL unnest(coalesce(r.food_photos,'{}'::text[])||ARRAY[r.verification_photo]) x WHERE r.id=ids[1] AND x IS NOT NULL ORDER BY x LOOP
+   PERFORM pg_advisory_xact_lock(hashtextextended('review-photo:'||photo,0));
+  END LOOP;
+ END IF;
+ fingerprint:=pipeline_control.admin_record_snapshot(p_action,ids);
+ IF op.id IS NOT NULL AND fingerprint IS DISTINCT FROM op.expected THEN RAISE EXCEPTION 'RECORD_ACTION_STALE'; END IF;
+ IF p_phase='preview' THEN
+  IF op.id IS NOT NULL THEN RETURN op.receipt; END IF;
+  receipt:=jsonb_build_object('operationId',p_operation_id,'action',p_action,'state','preview','targetIds',ids,'auditId',NULL,
+    'previewHash',pipeline_control.admin_record_hash(jsonb_build_array(p_actor,p_operation_id,p_action,ids,digest,fingerprint)),
+    'expiresAt',clock_timestamp()+interval '15 minutes','readback',pipeline_control.admin_record_readback(fingerprint),'mediaCleanupPending',false);
+  INSERT INTO pipeline_control.admin_record_operations(id,actor,action,target_ids,payload_sha,expected,preview_hash,expires_at,state,receipt)
+   VALUES(p_operation_id,p_actor,p_action,ids,digest,fingerprint,receipt->>'previewHash',(receipt->>'expiresAt')::timestamptz,'preview',receipt);
+  RETURN receipt;
+ END IF;
+ audit:=gen_random_uuid(); target:=ids[1];
+ IF p_action LIKE 'restaurant.%' THEN
+  SELECT to_jsonb(r) INTO row_value FROM public.restaurants r WHERE id=target;
+  IF p_action='restaurant.create' THEN
+   IF jsonb_typeof(coalesce(p_payload->'additions','[]'::jsonb))<>'array' OR jsonb_array_length(coalesce(p_payload->'additions','[]'::jsonb))>24 THEN RAISE EXCEPTION 'RECORD_ACTION_LIMIT'; END IF;
+   created:=pipeline_control.admin_record_create(p_payload->'changes',p_actor); ids:=ARRAY[created];
+   FOR changed IN SELECT value FROM jsonb_array_elements(coalesce(p_payload->'additions','[]'::jsonb)) LOOP
+    created:=pipeline_control.admin_record_create(changed,p_actor); ids:=array_append(ids,created);
+   END LOOP;
+  ELSIF p_action='restaurant.edit' THEN
+   IF jsonb_typeof(coalesce(p_payload->'perTargetChanges','[]'::jsonb))<>'array'
+    OR jsonb_typeof(coalesce(p_payload->'removeIds','[]'::jsonb))<>'array' OR jsonb_typeof(coalesce(p_payload->'additions','[]'::jsonb))<>'array'
+    OR cardinality(ids)+jsonb_array_length(coalesce(p_payload->'additions','[]'::jsonb))>25
+    OR cardinality(ids)-jsonb_array_length(coalesce(p_payload->'removeIds','[]'::jsonb))+jsonb_array_length(coalesce(p_payload->'additions','[]'::jsonb))<1
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(p_payload->'perTargetChanges','[]'::jsonb)) x WHERE NOT ((x->>'id')::uuid=ANY(ids)))
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(p_payload->'perTargetChanges','[]'::jsonb)) x GROUP BY x->>'id' HAVING count(*)>1)
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(coalesce(p_payload->'removeIds','[]'::jsonb)) x WHERE NOT (x::uuid=ANY(ids)))
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(coalesce(p_payload->'removeIds','[]'::jsonb)) x GROUP BY x HAVING count(*)>1)
+    THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+   final_rows:='{}'::jsonb;
+   FOREACH target IN ARRAY ids LOOP
+    SELECT to_jsonb(r) INTO row_value FROM public.restaurants r WHERE id=target;
+    IF row_value->>'status'='deleted' THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+    IF coalesce(p_payload->'removeIds','[]'::jsonb) ? target::text THEN
+     IF EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(p_payload->'perTargetChanges','[]'::jsonb)) x WHERE x->>'id'=target::text) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+    ELSE
+     SELECT value->'changes' INTO changed FROM jsonb_array_elements(coalesce(p_payload->'perTargetChanges','[]'::jsonb)) WHERE value->>'id'=target::text;
+     final_row:=pipeline_control.admin_record_compose(row_value,(p_payload->'changes')||coalesce(changed,'{}'::jsonb));
+     PERFORM pipeline_control.admin_record_identity_check(final_row,ids);
+     final_rows:=final_rows||jsonb_build_object(target::text,final_row);
+    END IF;
+   END LOOP;
+   -- The canonical unique index is immediate. Vacate claimed video identities only inside this transaction,
+   -- then write saved final rows; any final collision rolls the entire transaction back.
+   UPDATE public.restaurants SET youtube_link=NULL WHERE id=ANY(ids) AND final_rows ? id::text;
+   UPDATE public.restaurants SET status='deleted',updated_by_admin_id=p_actor,updated_at=clock_timestamp()
+    WHERE id=ANY(ids) AND NOT(final_rows ? id::text);
+   FOR key_name,final_row IN SELECT key,value FROM jsonb_each(final_rows) ORDER BY key LOOP
+    PERFORM pipeline_control.admin_record_identity_check(final_row,ARRAY[key_name::uuid]);
+    PERFORM pipeline_control.admin_record_write(key_name::uuid,final_row,p_actor,false);
+   END LOOP;
+   FOR changed IN SELECT value FROM jsonb_array_elements(coalesce(p_payload->'additions','[]'::jsonb)) LOOP
+    created:=pipeline_control.admin_record_create(changed,p_actor);ids:=array_append(ids,created);
+   END LOOP;
+  ELSIF p_action='restaurant.register_missing' THEN
+   IF p_action='restaurant.register_missing' AND row_value->'is_missing' IS DISTINCT FROM 'true'::jsonb THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+   PERFORM pipeline_control.admin_record_patch(target,p_payload->'changes',p_actor,p_action='restaurant.register_missing');
+  ELSIF p_action='restaurant.approve' THEN
+   IF row_value->>'status' NOT IN ('pending','hold') THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+   row_value:=pipeline_control.admin_record_compose(row_value,coalesce(p_payload->'changes','{}'::jsonb));
+   IF nullif(btrim(row_value->>'approved_name'),'') IS NULL THEN
+    row_value:=row_value||jsonb_build_object('approved_name',public.resolve_restaurant_identity_name(row_value->>'approved_name',row_value->>'origin_name',row_value->>'naver_name',row_value->>'google_name'));
+   END IF;
+   -- Explicit human approval may revisit a held/admin-owned row, but cannot invent evaluation evidence.
+   classification:=pipeline_control.restaurant_review_decision(row_value||jsonb_build_object('status','pending','updated_by_admin_id',NULL,'created_by',NULL,'source_type','crawler'));
+   IF classification<>'approve:all_checks_passed' THEN RAISE EXCEPTION 'RECORD_ACTION_EVIDENCE_REQUIRED'; END IF;
+   PERFORM pipeline_control.admin_record_validate_restaurant(row_value,ARRAY[target]);
+   PERFORM pipeline_control.admin_record_write(target,row_value,p_actor,true);
+  ELSIF p_action='restaurant.merge' THEN
+   target:=(p_payload->>'mergeTargetId')::uuid;
+   IF NOT target=ANY(ids) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+   SELECT x INTO source_id FROM unnest(ids) x WHERE x<>target;
+   SELECT to_jsonb(r) INTO changed FROM public.restaurants r WHERE id=target;
+   SELECT to_jsonb(r) INTO row_value FROM public.restaurants r WHERE id=source_id;
+   IF row_value->>'status'='deleted' OR changed->>'status'='deleted' THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+   row_value:=pipeline_control.admin_record_compose(row_value,coalesce(p_payload->'incomingChanges','{}'::jsonb));
+   -- Fill missing target business information; preserve populated administrator fields and all evaluation JSON.
+   FOREACH key_name IN ARRAY ARRAY['approved_name','phone','road_address','jibun_address','english_address','address_elements','lat','lng','geocoding_success'] LOOP
+    IF changed->key_name IS NULL OR changed->key_name IN ('null'::jsonb,'""'::jsonb,'{}'::jsonb,'false'::jsonb) THEN changed:=changed||jsonb_build_object(key_name,row_value->key_name); END IF;
+   END LOOP;
+   changed:=changed||jsonb_build_object('categories',(SELECT coalesce(jsonb_agg(x ORDER BY x),'[]'::jsonb) FROM (SELECT DISTINCT value x FROM jsonb_array_elements(coalesce(nullif(changed->'categories','null'::jsonb),'[]'::jsonb)||coalesce(nullif(row_value->'categories','null'::jsonb),'[]'::jsonb))) c));
+   IF nullif(changed->>'youtube_link','') IS NULL OR public.extract_youtube_video_id(changed->>'youtube_link')=public.extract_youtube_video_id(row_value->>'youtube_link') THEN
+    changed:=changed||jsonb_build_object('youtube_link',coalesce(nullif(changed->>'youtube_link',''),row_value->>'youtube_link'),
+     'youtube_meta',coalesce(nullif(row_value->'youtube_meta','null'::jsonb),'{}'::jsonb)||coalesce(nullif(changed->'youtube_meta','null'::jsonb),'{}'::jsonb),
+     'tzuyang_review',coalesce(nullif(changed->>'tzuyang_review',''),row_value->>'tzuyang_review'));
+    UPDATE public.restaurants SET status='deleted',updated_by_admin_id=p_actor,updated_at=clock_timestamp(),db_error_message=NULL,db_error_details=NULL WHERE id=source_id;
+   ELSE
+    -- A different video remains a separate active link row; retain its own video metadata, review and evaluation.
+    FOREACH key_name IN ARRAY ARRAY['approved_name','phone','categories','road_address','jibun_address','english_address','address_elements','lat','lng','geocoding_success'] LOOP
+     row_value:=row_value||jsonb_build_object(key_name,changed->key_name);
+    END LOOP;
+    PERFORM pipeline_control.admin_record_identity_check(row_value,ARRAY[source_id]);
+    PERFORM pipeline_control.admin_record_write(source_id,row_value,p_actor,false);
+    UPDATE public.restaurants SET db_error_message=NULL,db_error_details=NULL WHERE id=source_id;
+   END IF;
+   PERFORM pipeline_control.admin_record_identity_check(changed,ARRAY[target]);
+   PERFORM pipeline_control.admin_record_write(target,changed,p_actor,false);
+  ELSE
+   IF p_action='restaurant.restore' THEN
+    IF row_value->>'status'<>'deleted' THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+    IF EXISTS(SELECT 1 FROM public.restaurants r WHERE id<>target AND status<>'deleted' AND public.extract_youtube_video_id(r.youtube_link)=public.extract_youtube_video_id(row_value->>'youtube_link') AND public.normalize_restaurant_identity_name(r.approved_name)=public.normalize_restaurant_identity_name(row_value->>'approved_name')) THEN RAISE EXCEPTION 'RECORD_ACTION_DUPLICATE'; END IF;
+   ELSIF row_value->>'status'='deleted' THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+   UPDATE public.restaurants SET status=CASE p_action WHEN 'restaurant.delete' THEN 'deleted' WHEN 'restaurant.restore' THEN 'pending' ELSE 'hold' END,
+     updated_by_admin_id=p_actor,updated_at=clock_timestamp() WHERE id=target;
+  END IF;
+ ELSIF p_action LIKE 'submission.%' THEN
+  SELECT to_jsonb(s) INTO row_value FROM public.restaurant_submissions s WHERE id=target;
+  IF row_value->>'status' NOT IN ('pending','partially_approved') THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+  IF p_action='submission.edit' THEN
+   changed:=p_payload->'changes';
+   IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'itemChanges') x GROUP BY x->>'id' HAVING count(*)>1)
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'itemChanges') x WHERE NOT EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE id=(x->>'id')::uuid AND submission_id=target AND item_status='pending'))
+    THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+   UPDATE public.restaurant_submissions SET restaurant_name=changed->>'restaurant_name',restaurant_address=CASE WHEN changed ? 'restaurant_address' THEN changed->>'restaurant_address' ELSE restaurant_address END,
+    restaurant_phone=CASE WHEN changed ? 'restaurant_phone' THEN changed->>'restaurant_phone' ELSE restaurant_phone END,restaurant_categories=ARRAY(SELECT jsonb_array_elements_text(changed->'restaurant_categories')),updated_at=clock_timestamp() WHERE id=target;
+   FOR item IN SELECT value FROM jsonb_array_elements(p_payload->'itemChanges') LOOP
+    UPDATE public.restaurant_submission_items SET youtube_link=item->>'youtube_link',tzuyang_review=CASE WHEN item ? 'tzuyang_review' THEN item->>'tzuyang_review' ELSE tzuyang_review END WHERE id=(item->>'id')::uuid;
+   END LOOP;
+  ELSIF p_action='submission.approve' THEN
+   IF row_value->>'submission_type' IS NULL OR row_value->>'submission_type' NOT IN ('new','edit') THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+   SELECT count(*) INTO pending_count FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='pending';
+   IF jsonb_typeof(p_payload->'items') IS DISTINCT FROM 'array' OR jsonb_array_length(p_payload->'items')<>pending_count OR pending_count=0
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'items') x GROUP BY x->>'id' HAVING count(*)>1)
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'items') x WHERE x->>'decision' IS NULL OR x->>'decision' NOT IN ('approve','reject') OR NOT EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE id=(x->>'id')::uuid AND submission_id=target AND item_status='pending'))
+    THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+   FOR item IN SELECT value FROM jsonb_array_elements(p_payload->'items') ORDER BY value->>'id' LOOP
+    IF item->>'decision'='approve' THEN
+     SELECT target_restaurant_id INTO source_id FROM public.restaurant_submission_items WHERE id=(item->>'id')::uuid;
+     IF row_value->>'submission_type'='new' AND source_id IS NOT NULL THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+     IF row_value->>'submission_type'='edit' THEN
+      SELECT to_jsonb(r) INTO final_row FROM public.restaurants r WHERE id=source_id AND status<>'deleted';
+      IF final_row IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+     ELSE final_row:='{}'::jsonb; END IF;
+     final_row:=pipeline_control.admin_record_compose(final_row,item->'changes');
+     -- Preserve the existing submission URL canonicalization without a privileged helper call.
+     final_row:=final_row||jsonb_build_object('youtube_link',CASE
+      WHEN public.extract_youtube_video_id(final_row->>'youtube_link')<>'' THEN 'https://www.youtube.com/watch?v='||public.extract_youtube_video_id(final_row->>'youtube_link')
+      ELSE nullif(btrim(final_row->>'youtube_link'),'') END);
+     PERFORM pipeline_control.admin_record_validate_restaurant(final_row||jsonb_build_object('geocoding_success',true),ARRAY[source_id]);
+     IF nullif(btrim(final_row->>'tzuyang_review'),'') IS NULL OR jsonb_typeof(final_row->'youtube_meta') IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'RECORD_ACTION_EVIDENCE_REQUIRED'; END IF;
+     -- Preserve the inherited fuzzy admission policy, but expose its actual domain reason rather than claiming stale CAS.
+     IF EXISTS(SELECT 1 FROM public.restaurants r WHERE r.status<>'deleted' AND r.id IS DISTINCT FROM source_id AND
+      ((public.extract_youtube_video_id(r.youtube_link)=public.extract_youtube_video_id(final_row->>'youtube_link') AND extensions.similarity(coalesce(r.approved_name,r.origin_name,''),final_row->>'approved_name')>0.8)
+       OR extensions.similarity(coalesce(r.jibun_address,''),final_row->>'jibun_address')>0.9
+       OR extensions.similarity(coalesce(r.road_address,''),coalesce(final_row->>'road_address',''))>0.9)) THEN RAISE EXCEPTION 'RECORD_ACTION_DUPLICATE_REVIEW'; END IF;
+     -- Use the current-schema service invoker path in the same locked/audited operation.
+     -- Edit approval retains existing status, missing marker, evaluation and provenance.
+     IF row_value->>'submission_type'='edit' THEN
+      PERFORM pipeline_control.admin_record_write(source_id,final_row||jsonb_build_object('geocoding_success',true),p_actor,false);
+     ELSE
+      source_id:=pipeline_control.admin_record_create(final_row||jsonb_build_object('geocoding_success',true),p_actor);
+      UPDATE public.restaurants SET source_type='user_submission_new',created_by=(row_value->>'user_id')::uuid WHERE id=source_id;
+     END IF;
+     UPDATE public.restaurant_submission_items SET item_status='approved',target_restaurant_id=source_id,rejection_reason=NULL
+      WHERE id=(item->>'id')::uuid AND submission_id=target AND item_status='pending';
+     IF NOT FOUND THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+    ELSE
+     IF nullif(btrim(item->>'reason'),'') IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+     UPDATE public.restaurant_submission_items SET item_status='rejected',rejection_reason=item->>'reason'
+      WHERE id=(item->>'id')::uuid AND submission_id=target AND item_status='pending';
+     IF NOT FOUND THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+    END IF;
+   END LOOP;
+  ELSE
+   UPDATE public.restaurant_submission_items SET item_status='rejected',rejection_reason=p_payload->>'reason' WHERE submission_id=target AND item_status='pending';
+  END IF;
+  IF p_action<>'submission.edit' THEN
+   UPDATE public.restaurant_submissions SET status=(CASE
+    WHEN EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='pending') THEN 'pending'
+    WHEN NOT EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='approved') THEN 'rejected'
+    WHEN EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='rejected') THEN 'partially_approved' ELSE 'approved' END)::public.submission_status,
+    resolved_by_admin_id=p_actor,reviewed_at=clock_timestamp(),admin_notes=coalesce(p_payload->>'note',admin_notes),updated_at=clock_timestamp() WHERE id=target;
+  END IF;
+ ELSIF p_action LIKE 'review.%' THEN
+  SELECT to_jsonb(r) INTO row_value FROM public.reviews r WHERE id=target;
+  IF p_action='review.delete' THEN
+   FOR photo IN SELECT value FROM jsonb_array_elements_text(coalesce(row_value->'food_photos','[]'::jsonb)||jsonb_build_array(row_value->>'verification_photo')) LOOP
+    IF coalesce(photo,'')<>'' THEN
+     -- Only the existing owner's immutable upload prefix, never URLs or traversal.
+     IF photo !~ ('^'||(row_value->>'user_id')||'/reviews/'||target||'/(verification|food)/[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.(avif|jpe?g|png|webp)$') OR length(photo)>1024 THEN
+      UPDATE pipeline_control.admin_record_operations SET cleanup_blocked=true WHERE id=op.id; op.cleanup_blocked:=true; CONTINUE;
+     END IF;
+     IF EXISTS(SELECT 1 FROM public.reviews r WHERE id<>target AND (verification_photo=photo OR photo=ANY(food_photos))) THEN
+      UPDATE pipeline_control.admin_record_operations SET cleanup_blocked=true WHERE id=op.id; op.cleanup_blocked:=true; CONTINUE; END IF;
+     PERFORM pg_advisory_xact_lock(hashtextextended('review-photo:'||photo,0));
+     INSERT INTO pipeline_control.admin_record_media_cleanup(operation_id,bucket,object_name,object_fingerprint)
+      VALUES(op.id,'review-photos',photo,pipeline_control.admin_record_storage_snapshot(photo)) ON CONFLICT DO NOTHING;
+    END IF;
+   END LOOP;
+   DELETE FROM public.reviews WHERE id=target;
+  ELSE
+   UPDATE public.reviews SET is_verified=p_action='review.approve',admin_note=CASE WHEN p_action='review.reject' THEN '거부: '||(p_payload->>'reason') ELSE p_payload->>'note' END,
+    is_edited_by_admin=true,edited_by_admin_id=p_actor,edited_at=clock_timestamp(),updated_at=clock_timestamp() WHERE id=target;
+  END IF;
+  UPDATE public.restaurants SET review_count=(SELECT count(*) FROM public.reviews WHERE restaurant_id=(row_value->>'restaurant_id')::uuid),updated_at=clock_timestamp() WHERE id=(row_value->>'restaurant_id')::uuid;
+ ELSIF p_action LIKE 'recommendation.%' THEN
+  SELECT to_jsonb(r) INTO row_value FROM public.restaurant_requests r WHERE id=target;
+  IF row_value->>'status'<>'pending' THEN RAISE EXCEPTION 'RECORD_ACTION_STATE_CONFLICT'; END IF;
+  -- Keep the existing domain audit identity but do not duplicate free text into audit.
+  INSERT INTO public.restaurant_request_review_audit(id,request_id,admin_user_id,action,before_status,after_status)
+   VALUES(audit,target,p_actor,split_part(p_action,'.',2),'pending',CASE WHEN p_action='recommendation.approve' THEN 'approved' ELSE 'rejected' END);
+  UPDATE public.restaurant_requests SET status=CASE WHEN p_action='recommendation.approve' THEN 'approved' ELSE 'rejected' END,
+   reviewed_by_admin_id=p_actor,reviewed_at=clock_timestamp(),admin_note=p_payload->>'note',
+   rejection_reason=CASE WHEN p_action='recommendation.reject' THEN p_payload->>'reason' ELSE NULL END,review_audit_id=audit,updated_at=clock_timestamp() WHERE id=target;
+ END IF;
+ IF p_action='review.delete' THEN
+  after_state:=fingerprint-('review:'||target);
+  SELECT pipeline_control.admin_record_hash(to_jsonb(r)) INTO classification FROM public.restaurants r WHERE id=(row_value->>'restaurant_id')::uuid;
+  after_state:=after_state||jsonb_build_object('restaurant:'||(row_value->>'restaurant_id'),classification,'review:'||target,NULL);
+ ELSIF p_action='restaurant.merge' THEN
+  SELECT array_agg(split_part(key,':',2)::uuid) INTO related_ids FROM jsonb_object_keys(fingerprint) key;
+  after_state:=pipeline_control.admin_record_snapshot('restaurant.edit',related_ids);
+ ELSE after_state:=pipeline_control.admin_record_snapshot(p_action,ids); END IF;
+ INSERT INTO pipeline_control.admin_record_audit(id,operation_id,actor,action,target_ids,payload_sha,before_fingerprints,after_fingerprints)
+  VALUES(audit,op.id,p_actor,p_action,ids,digest,fingerprint,after_state);
+ receipt:=op.receipt||jsonb_build_object('state','applied','auditId',audit,'targetIds',ids,
+  'readback',pipeline_control.admin_record_readback(after_state),
+  'mediaCleanupUnmanaged',op.cleanup_blocked,'mediaCleanupPending',EXISTS(SELECT 1 FROM pipeline_control.admin_record_media_cleanup WHERE operation_id=op.id AND state<>'done'));
+ UPDATE pipeline_control.admin_record_operations SET state='applied',receipt=work.receipt WHERE id=op.id;
+ RETURN receipt;
+END $$;
+
+REVOKE ALL ON FUNCTION pipeline_control.admin_record_create(jsonb,uuid),pipeline_control.admin_record_readback(jsonb),pipeline_control.admin_record_hash(jsonb),pipeline_control.admin_record_snapshot(text,uuid[]),
+ pipeline_control.admin_record_compose(jsonb,jsonb),pipeline_control.admin_record_identity_check(jsonb,uuid[]),pipeline_control.admin_record_write(uuid,jsonb,uuid,boolean),
+ pipeline_control.admin_record_validate_restaurant(jsonb,uuid[]),pipeline_control.admin_record_patch(uuid,jsonb,uuid,boolean),
+ public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION pipeline_control.admin_record_create(jsonb,uuid),pipeline_control.admin_record_readback(jsonb),pipeline_control.admin_record_hash(jsonb),pipeline_control.admin_record_snapshot(text,uuid[]),
+ pipeline_control.admin_record_compose(jsonb,jsonb),pipeline_control.admin_record_identity_check(jsonb,uuid[]),pipeline_control.admin_record_write(uuid,jsonb,uuid,boolean),
+ pipeline_control.admin_record_validate_restaurant(jsonb,uuid[]),pipeline_control.admin_record_patch(uuid,jsonb,uuid,boolean),
+ public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text) TO service_role;
+-- G014 registration follows below, in this same transaction.
+DO $registration$
+DECLARE before_members jsonb; after_members jsonb; temporary_grant boolean:=false; helper oid;
+BEGIN
+ IF current_user<>'postgres' OR session_user<>'postgres' THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_EXECUTOR'; END IF;
+ SELECT jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor) INTO before_members FROM pg_auth_members m;
+ IF NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) THEN
+  IF current_setting('server_version_num')::int/10000<>17 OR pg_has_role('postgres','privacy_workflow_owner','SET')
+    OR pg_has_role('postgres','privacy_workflow_owner','USAGE')
+    OR NOT EXISTS(SELECT 1 FROM pg_auth_members m WHERE roleid='privacy_workflow_owner'::regrole AND member='postgres'::regrole AND admin_option AND NOT inherit_option AND NOT set_option)
+    THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_MEMBERSHIP'; END IF;
+  EXECUTE 'GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE, INHERIT FALSE, SET TRUE GRANTED BY postgres';
+  temporary_grant:=true;
+ END IF;
+ IF to_regprocedure('pg_temp.admin_record_registration()') IS NOT NULL THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_HELPER'; END IF;
+ EXECUTE 'SET LOCAL ROLE privacy_workflow_owner';
+ EXECUTE $definition$
+ CREATE FUNCTION pg_temp.admin_record_registration() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $body$
+ DECLARE name text; target oid; definition text; source text; metadata jsonb; expected text[]; rewritten text;
+  anchor text:=$anchor$      'public.restaurant_review_automation_status()',$anchor$;
+  signature text:='public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)';
+ BEGIN
+  IF session_user<>'postgres' OR current_user<>'privacy_workflow_owner' THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_EXECUTOR'; END IF;
+  FOREACH name IN ARRAY ARRAY['definer','catalog'] LOOP
+   target:=to_regprocedure('privacy_retention.assert_g014_'||name||'_contract()');
+   -- Exact fresh PG15+warning branch and actual PG17 nonce-bound hosted branch.
+   expected:=CASE WHEN name='definer' THEN ARRAY['f3fe7e01b85da1718b91ff0439e204b2c07f9795b6bda720b277a50e56eb51d8','a5fff8ca63e34d41fc7c56e5a646023d44645750a7abf9ae0c0efc35818aa964']
+    ELSE ARRAY['06076b2296e9cf2cef9748ef43390a7805fe90c0a9145f96e9fed8ff62f9f330','8e9101ecdbb506e25a9ace2a40f7de9cc0dcf3f06d80cc1a75fe07a55effbeab'] END;
+   SELECT pg_get_functiondef(p.oid),prosrc,to_jsonb(p)-'prosrc' INTO definition,source,metadata FROM pg_proc p
+    WHERE oid=target AND proowner='privacy_workflow_owner'::regrole AND prosecdef AND proconfig=ARRAY['search_path=""']::text[];
+   IF definition IS NULL OR NOT(encode(sha256(convert_to(source,'UTF8')),'hex')=ANY(expected))
+    OR (length(source)-length(replace(source,anchor,'')))/length(anchor)<>1 THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_SOURCE_DRIFT'; END IF;
+   rewritten:=replace(source,anchor,'      '''||signature||''','||chr(10)||anchor);
+   EXECUTE replace(definition,source,rewritten);
+   IF (SELECT to_jsonb(p)-'prosrc' FROM pg_proc p WHERE oid=target) IS DISTINCT FROM metadata
+    OR (SELECT prosrc FROM pg_proc WHERE oid=target) IS DISTINCT FROM rewritten THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_METADATA_DRIFT'; END IF;
+  END LOOP;
+  INSERT INTO privacy_retention.g014_public_rpc_allowlist(function_schema,function_name,identity_arguments,grantee,source_signature)
+   SELECT n.nspname,p.proname,p.proargtypes::text,'service_role',signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.oid=to_regprocedure(signature);
+  -- Additive phase: preserve the three exact legacy browser-admin entrances.
+  -- Authenticated retirement follows only a separately reviewed consumer cutover.
+  FOREACH signature IN ARRAY ARRAY[
+   'public.approve_submission_item(uuid,uuid,jsonb)',
+   'public.approve_edit_submission_item(uuid,uuid,jsonb)',
+   'public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)'] LOOP
+   target:=to_regprocedure(signature);
+   SELECT to_jsonb(p) INTO metadata FROM pg_proc p WHERE oid=target AND proowner='privacy_workflow_owner'::regrole
+    AND prosecdef AND proconfig=ARRAY['search_path=""']::text[];
+   IF metadata IS NULL OR NOT has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
+    OR (SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=signature AND grantee='authenticated')<>1
+    THEN RAISE EXCEPTION 'RECORD_ACTION_LEGACY_RPC_DRIFT'; END IF;
+   IF (SELECT to_jsonb(p) FROM pg_proc p WHERE oid=target) IS DISTINCT FROM metadata
+    OR NOT has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
+    THEN RAISE EXCEPTION 'RECORD_ACTION_LEGACY_RPC_DRIFT'; END IF;
+  END LOOP;
+  -- No owner/ACL/lookup-path changes to either assertion. Their actual bodies remain authoritative.
+  PERFORM privacy_retention.assert_g014_public_rpc_allowlist();
+  PERFORM privacy_retention.assert_g014_definer_contract();
+  DROP FUNCTION pg_temp.admin_record_registration();
+ END $body$;
+ $definition$;
+ EXECUTE 'REVOKE ALL ON FUNCTION pg_temp.admin_record_registration() FROM PUBLIC,anon,authenticated,service_role';
+ EXECUTE 'GRANT EXECUTE ON FUNCTION pg_temp.admin_record_registration() TO postgres';
+ EXECUTE 'RESET ROLE';
+ IF temporary_grant THEN EXECUTE 'REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres'; END IF;
+ SELECT jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor) INTO after_members FROM pg_auth_members m;
+ IF after_members IS DISTINCT FROM before_members THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_MEMBERSHIP_DRIFT'; END IF;
+ helper:=to_regprocedure('pg_temp.admin_record_registration()');
+ IF NOT EXISTS(SELECT 1 FROM pg_proc p WHERE oid=helper AND proowner='privacy_workflow_owner'::regrole AND prosecdef AND proconfig=ARRAY['search_path=""']::text[]
+  AND (SELECT count(*) FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))))=2
+  AND NOT EXISTS(SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee NOT IN ('privacy_workflow_owner'::regrole,'postgres'::regrole) OR a.is_grantable))
+  THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_HELPER'; END IF;
+ PERFORM pg_temp.admin_record_registration();
+ IF to_regprocedure('pg_temp.admin_record_registration()') IS NOT NULL THEN RAISE EXCEPTION 'RECORD_ACTION_REGISTRATION_HELPER'; END IF;
+END $registration$;
+NOTIFY pgrst,'reload schema';
+COMMIT;

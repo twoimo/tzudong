@@ -644,7 +644,7 @@ function assertUnambiguousEntry(entry, type, code) {
         !entry ||
         entry.isSymbolicLink?.() ||
         (type === 'directory' && !entry.isDirectory?.()) ||
-        (type === 'file' && (!entry.isFile?.() || entry.nlink !== 1))
+        (type === 'file' && (!entry.isFile?.() || (entry.nlink !== 1 && entry.nlink !== 1n)))
     ) {
         throw mapNetworkError(code);
     }
@@ -653,10 +653,10 @@ function assertUnambiguousEntry(entry, type, code) {
 function canonicalContainedRoot(root, { filesystem = fs, code = 'MAP_PATH_REJECTED' } = {}) {
     if (!path.isAbsolute(root)) throw mapNetworkError(code);
     try {
-        const listed = filesystem.lstatSync(root);
+        const listed = filesystem.lstatSync(root, { bigint: true });
         assertUnambiguousEntry(listed, 'directory', code);
         const canonical = filesystem.realpathSync.native(root);
-        const stated = filesystem.statSync(canonical);
+        const stated = filesystem.statSync(canonical, { bigint: true });
         assertUnambiguousEntry(stated, 'directory', code);
         if (!sameFileIdentity(listed, stated)) throw mapNetworkError(code);
         return canonical;
@@ -681,11 +681,11 @@ function resolveContainedPath(root, relativePath, {
         for (const [index, segment] of portablePath.split('/').entries()) {
             current = path.join(current, segment);
             const expectedType = index === portablePath.split('/').length - 1 ? type : 'directory';
-            const listed = filesystem.lstatSync(current);
+            const listed = filesystem.lstatSync(current, { bigint: true });
             assertUnambiguousEntry(listed, expectedType, code);
             const canonical = filesystem.realpathSync.native(current);
             if (!isContainedPath(canonicalRoot, canonical)) throw mapNetworkError(code);
-            const stated = filesystem.statSync(canonical);
+            const stated = filesystem.statSync(canonical, { bigint: true });
             assertUnambiguousEntry(stated, expectedType, code);
             if (!sameFileIdentity(listed, stated)) throw mapNetworkError(code);
             current = canonical;
@@ -719,7 +719,7 @@ function readContainedRegularFile(root, relativePath, {
     let descriptor;
     try {
         descriptor = filesystem.openSync(filename, filesystem.constants.O_RDONLY | noFollow);
-        const before = filesystem.fstatSync(descriptor);
+        const before = filesystem.fstatSync(descriptor, { bigint: true });
         assertUnambiguousEntry(before, 'file', 'MAP_FILE_READ_REJECTED');
         if (before.size > maxBytes) throw mapNetworkError('MAP_FILE_TOO_LARGE');
 
@@ -732,13 +732,14 @@ function readContainedRegularFile(root, relativePath, {
         }
         if (offset > maxBytes) throw mapNetworkError('MAP_FILE_TOO_LARGE');
 
-        const after = filesystem.fstatSync(descriptor);
+        const after = filesystem.fstatSync(descriptor, { bigint: true });
         assertUnambiguousEntry(after, 'file', 'MAP_FILE_READ_REJECTED');
-        if (!sameFileIdentity(before, after) || before.size !== after.size || after.size !== offset) {
+        if (!sameFileIdentity(before, after) || before.size !== after.size || after.size !== BigInt(offset)
+            || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs) {
             throw mapNetworkError('MAP_FILE_READ_REJECTED');
         }
         const stableFilename = resolveContainedPath(root, relativePath, { filesystem });
-        const stable = filesystem.statSync(stableFilename);
+        const stable = filesystem.statSync(stableFilename, { bigint: true });
         if (!sameFileIdentity(after, stable)) throw mapNetworkError('MAP_FILE_READ_REJECTED');
         return buffer.subarray(0, offset).toString(encoding);
     } catch (error) {
@@ -1964,18 +1965,25 @@ Return exactly one JSON object with only a reviews array. Every review must have
 
     log('info', 'MAP_GEMINI_API_ATTEMPTED');
     try {
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const { createGeminiClient, generateWithProjectBudget, logGeminiUsage } = await import('../../utils/gemini-client.mjs');
+        const ai = createGeminiClient(geminiApiKey, GEMINI_LIMITS.totalTimeoutMs);
         const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_MAP_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
-        const model = genAI.getGenerativeModel({
+        const request = {
             model: modelName,
-            generationConfig: {
+            config: {
                 temperature: 0.2,
                 maxOutputTokens: GEMINI_LIMITS.maxOutputTokens,
                 responseMimeType: 'application/json',
                 thinkingConfig: { thinkingLevel }
             }
-        });
+        };
+        // Keep the bounded parser's interface while forwarding its abort signal.
+        const model = { generateContent: async (contents, options) => {
+            const result = await generateWithProjectBudget(ai, { ...request, contents,
+                config: { ...request.config, abortSignal: options.signal } }, GEMINI_LIMITS.totalTimeoutMs);
+            logGeminiUsage(result);
+            return { response: { text: () => result.text } };
+        } };
         const parsed = await requestBoundedGeminiJson(model, prompt);
         const validated = validateReviews(parsed, placeNames, VALID_CATEGORIES);
         log('success', 'MAP_GEMINI_API_COMPLETED');

@@ -1,0 +1,56 @@
+{
+  "status": "local_verified",
+  "sourceBase": "a863240b180d0824aaa60c251a6601cef41558df",
+  "objectiveComplete": false,
+  "changes": [
+    "Home review approve/reject/delete use the existing guarded record client; browser writes and manual review-count updates are removed.",
+    "Notifications use the submitted review and confirmed readback; recovery sends no duplicate notification.",
+    "Public/detail/feed/user/admin review caches are invalidated. Counts identify loaded rows.",
+    "An empty pending page can load the next page; failure retains loaded rows and waits for explicit retry."
+  ],
+  "checks": {
+    "affectedTests": {
+      "passed": 97,
+      "failed": 0,
+      "newCallerCases": 8,
+      "kind": "isolated callbacks and React static markup, not browser or operating DB"
+    },
+    "typescript": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3266,
+      "logicalInputNamesSha256": "c3f0ad516c8219ad78e2b6bb1b365928ed18ddfec33b13e748bb056a533c2e89",
+      "nonLibraryContentSha256": "ecd8e57bc6a498aae8a089fd803e706969b42c75473e1d139e5d8d4ada74b3f4",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    },
+    "eslint": "passed",
+    "productionBuild": "Next.js 16.3.8 webpack, compiled and generated 50 pages",
+    "cssBoundaries": "passed"
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "bun": "1.4.0"
+  },
+  "delegation": {
+    "newAstraAgents": 0,
+    "newSolAgents": 1,
+    "model": "gpt-6.1-sol",
+    "effort": "medium",
+    "purpose": "read-only independent review",
+    "quotaSavingsMeasured": false
+  },
+  "sourceHashes": {
+    "apps/web/components/admin/AdminReviewPanel.tsx": "de0a73dbd6ef0152ea1a4775380afe6d899a86ecbcc006fce290fc2f8ff9d021",
+    "apps/web/tests-unit/admin-home-review-actions.test.ts": "e06ec9702374534c8f4c74bd87cb28dcfa1f483434714888b003200aea14fd93",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "9d1ddc7c097a81e6b5a7d2b18016e8a42539c41e08eed83080302854825489c0",
+    "apps/web/tests-unit/mobile-desktop-parity-source.test.ts": "a3719c81e40210fbb0ae99f9cce6b27b137fdfdfd83c341bd975959edf7450d0"
+  },
+  "remaining": [
+    "Actual browser checks at three viewport classes and current operating record RPC deployment/readback.",
+    "Storage partial-S3 deletion admission remains unresolved; physical-photo deletion is not attested.",
+    "Remaining full objective, protected promotion and deployment/live verification."
+  ]
+}

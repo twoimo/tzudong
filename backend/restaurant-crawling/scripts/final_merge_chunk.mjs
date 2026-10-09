@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
@@ -55,7 +55,7 @@ async function main() {
             .replace('{CHUNK_JSON_DATA}', chunkJsonData)
             .replace('{FULL_TRANSCRIPT}', fullTranscriptText);
 
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const ai = createGeminiClient(apiKey);
         const modelName = process.env.CURRENT_MODEL || 'gemini-3.7-flash';
         const thinkingLevel = resolveThinkingLevel(
             process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL,
@@ -63,19 +63,19 @@ async function main() {
             'MEDIUM',
         );
 
-        const model = genAI.getGenerativeModel({
+        const response = await generateWithProjectBudget(ai, {
             model: modelName,
-            generationConfig: {
+            contents: promptText,
+            config: omitUnsupportedGeminiSampling(modelName, {
                 temperature: 0.1,
                 maxOutputTokens: 8192,
                 responseMimeType: "application/json",
                 thinkingConfig: { thinkingLevel },
-            }
+            })
         });
 
-        const result = await model.generateContent(promptText);
-        const response = await result.response;
-        const text = response.text();
+        logGeminiUsage(response);
+        const text = requireGeminiText(response);
         
         fs.writeFileSync(outputFile, text);
         process.exit(0);

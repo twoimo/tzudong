@@ -1,0 +1,168 @@
+{
+  "environment": {
+    "node": "24.21.0",
+    "bun": "1.4.0",
+    "mode": "local"
+  },
+  "groups": [
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 2952,
+      "failure_count": 0,
+      "skip_count": 1,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 7,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 5,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 15,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 6,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 3,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 2,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 71,
+      "failure_count": 0,
+      "skip_count": 8,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 13,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 24,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 4,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 7,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 9,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 3,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 15,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 8,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 1,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 16,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    },
+    {
+      "schema": "nightly-unit-failure-sites-v2",
+      "test_count": 8,
+      "failure_count": 0,
+      "skip_count": 0,
+      "sites": [],
+      "omitted_site_count": 0
+    }
+  ],
+  "summary": {
+    "groups": 19,
+    "run": 3169,
+    "skipped": 9,
+    "failed": 0,
+    "passed": 3160
+  }
+}

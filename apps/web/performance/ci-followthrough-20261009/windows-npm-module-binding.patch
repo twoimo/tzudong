@@ -1,0 +1,47 @@
+--- a/apps/web/performance/cms-followthrough-20261009/browser-check.mjs
++++ b/apps/web/performance/cms-followthrough-20261009/browser-check.mjs
+@@ -44,14 +44,14 @@
+   await expect(row).toBeFocused();
+   report.keyboard.mobileDrawerEscapeFocusReturn = true;
+   await page.setViewportSize({ width: 1440, height: 1000 });
+-  for (const module of ['overview', 'restaurants', 'submissions', 'reviews', 'users', 'banners', 'insights', 'pipeline', 'knowledge-graph', 'sentry', 'youtube-thumbnail-generator', 'storyboard', 'routes', 'llm', 'audit']) {
++  for (const moduleId of ['overview', 'restaurants', 'submissions', 'reviews', 'users', 'banners', 'insights', 'pipeline', 'knowledge-graph', 'sentry', 'youtube-thumbnail-generator', 'storyboard', 'routes', 'llm', 'audit']) {
+     try {
+-      await page.goto(`http://127.0.0.1:19872/admin?module=${module}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+-      await expect(page.locator('#admin-console-canvas')).toHaveAttribute('data-admin-console-active-module', module, { timeout: 20000 });
+-      const header = page.locator(`[data-admin-module-header-module="${module}"]`);
++      await page.goto(`http://127.0.0.1:19872/admin?module=${moduleId}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
++      await expect(page.locator('#admin-console-canvas')).toHaveAttribute('data-admin-console-active-module', moduleId, { timeout: 20000 });
++      const header = page.locator(`[data-admin-module-header-module="${moduleId}"]`);
+       await expect(header).toBeVisible({ timeout: 15000 });
+-      report.modules.push({ module, shellAndHeaderVisible: true });
+-    } catch { report.modules.push({ module, shellAndHeaderVisible: false }); }
++      report.modules.push({ module: moduleId, shellAndHeaderVisible: true });
++    } catch { report.modules.push({ module: moduleId, shellAndHeaderVisible: false }); }
+   }
+ } catch (error) { report.failure = String(error.message).split('\n')[0]; }
+ finally { report.pageErrorCount = pageErrorCount; report.blockedMutationCount = blockedMutationCount; writeFileSync(resolve(output, 'browser-results.json'), JSON.stringify(report, null, 2) + '\n'); await browser.close(); }
+--- a/apps/web/performance/cms-followthrough-20261009/browser-selector-reconciliation.mjs
++++ b/apps/web/performance/cms-followthrough-20261009/browser-selector-reconciliation.mjs
+@@ -25,15 +25,15 @@
+ });
+ const report = { evidence: 'local-browser-with-synthetic-read-responses', hostedEvidence: false, modules: [], keyboard: {}, pageErrorCount: 0, blockedMutationCount: 0 };
+ try {
+-  for (const module of ['overview', 'restaurants', 'knowledge-graph', 'sentry', 'storyboard']) {
++  for (const moduleId of ['overview', 'restaurants', 'knowledge-graph', 'sentry', 'storyboard']) {
+     try {
+-      await page.goto(`http://127.0.0.1:19872/admin?module=${module}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+-      await expect(page.locator('#admin-console-canvas')).toHaveAttribute('data-admin-console-active-module', module, { timeout: 20000 });
++      await page.goto(`http://127.0.0.1:19872/admin?module=${moduleId}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
++      await expect(page.locator('#admin-console-canvas')).toHaveAttribute('data-admin-console-active-module', moduleId, { timeout: 20000 });
+       const selectors = { overview: '[data-admin-dashboard-management="true"]', restaurants: '[data-admin-restaurant-primary-header="true"]', 'knowledge-graph': '[data-admin-knowledge-graph-panel] [data-admin-page-header]', sentry: '[data-admin-sentry-panel] [data-admin-page-header]', storyboard: '[data-local-storyboard-workspace="true"] [data-admin-page-header]' };
+-      const header = page.locator(selectors[module]);
++      const header = page.locator(selectors[moduleId]);
+       await expect(header).toBeVisible({ timeout: 15000 });
+-      report.modules.push({ module, shellAndHeaderVisible: true });
+-    } catch { report.modules.push({ module, shellAndHeaderVisible: false }); }
++      report.modules.push({ module: moduleId, shellAndHeaderVisible: true });
++    } catch { report.modules.push({ module: moduleId, shellAndHeaderVisible: false }); }
+   }
+ } catch (error) { report.failure = String(error.message).split('\n')[0]; }
+ finally { report.pageErrorCount = pageErrorCount; report.blockedMutationCount = blockedMutationCount; writeFileSync(resolve(output, 'browser-selector-reconciliation.json'), JSON.stringify(report, null, 2) + '\n'); await browser.close(); }

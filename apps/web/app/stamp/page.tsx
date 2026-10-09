@@ -325,7 +325,7 @@ export default function StampPage() {
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading } = useRestaurants({
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError, refetch: refetchRestaurants } = useRestaurants({
         enabled: true,
         includeVerifiedReviewCounts: false,
     });
@@ -365,7 +365,7 @@ export default function StampPage() {
     }, [allMergedRestaurants, authLoading, isRestaurantsLoading, reviewContinuationQuery, router, user]);
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
-    const { data: allRestaurants = [] } = useQuery({
+    const { data: allRestaurants = [], isLoading: isSearchLoading, isError: isSearchError, refetch: refetchSearch } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
@@ -392,7 +392,7 @@ export default function StampPage() {
                 }));
             } catch (error) {
                 console.error('맛집 검색 중 오류:', describeErrorCodeForLog(error));
-                return [];
+                throw new Error('STAMP_RESTAURANTS_UNAVAILABLE');
             }
         },
         enabled: !!searchQuery.trim(),
@@ -897,9 +897,9 @@ export default function StampPage() {
 
 
     // [Check before render]
-    const isStampDynamicLoading =
-        !isMounted ||
-        (isRestaurantsLoading && !searchQuery);
+    const isStampSearchActive = !!searchQuery.trim();
+    const isStampReadError = isStampSearchActive ? isSearchError : isRestaurantsError;
+    const isStampDynamicLoading = !isMounted || (isStampSearchActive ? isSearchLoading : isRestaurantsLoading);
     const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet;
     const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
     const shouldShowStampFilters = isMounted && (!isMobileOrTablet || isFilterExpanded);
@@ -928,10 +928,10 @@ export default function StampPage() {
                             titleAs="h1"
                             title="쯔동여지도 도장"
                             titleIcon={<Trophy />}
-                            count={isRestaurantsLoading ? undefined : totalRestaurantCount}
+                            count={isRestaurantsLoading || isRestaurantsError ? undefined : totalRestaurantCount}
                             titleAddon={isRestaurantsLoading ? (
                                 <Skeleton className="h-4 w-12 shrink-0 rounded-full" data-stamp-total-count-skeleton="true" />
-                            ) : undefined}
+                            ) : isRestaurantsError ? <span className="text-xs text-muted-foreground" role="status">전체 수 확인 불가</span> : undefined}
                             description="맛집을 찾아 도장을 찍어보세요!"
                             actions={(
                                 <>
@@ -1172,6 +1172,14 @@ export default function StampPage() {
                                         </div>
                                     )}
                                     <StampGridSkeleton count={STAMP_PAGE_SIZE} showHeader={false} />
+                                </div>
+                            ) : isStampReadError ? (
+                                <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
+                                    <p className="font-medium text-foreground">도장 맛집을 불러오지 못했습니다</p>
+                                    <p className="text-xs">잠시 후 다시 조회해 주세요.</p>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => { void (isStampSearchActive ? refetchSearch() : refetchRestaurants()); }}>
+                                        다시 시도
+                                    </Button>
                                 </div>
                             ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */

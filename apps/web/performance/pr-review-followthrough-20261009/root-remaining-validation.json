@@ -1,0 +1,81 @@
+{
+  "observedAtUtc": "2026-10-09T03:35:47.672769+00:00",
+  "sourceHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "workingSourceEvidence": true,
+  "threads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6ouwJC",
+      "source": "apps/web/lib/admin/evaluation-page-server.ts",
+      "sourceSha256": "04933165d80cd1cac653a6b1d1d31c7ffffc18a858365790485772789b4d0620",
+      "testBindings": {
+        "apps/web/tests-unit/admin-evaluation-page-server.test.ts": "3ade0958ce0deaf49d1798752e6455f3508461b1276cecb2d883dcae33f7bab7",
+        "apps/web/tests-unit/admin-evaluation-page-api.test.ts": "0b5fd29100051a2ddf4c53761d3b1e31ae8059e0e23dcde63fdc3999eec02e90"
+      },
+      "verification": "37 selected web tests passed with banner parity; targeted warning33 already retained",
+      "resolvedRemotely": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxXry",
+      "source": "backend/bin/review_decision_gemini.mjs",
+      "sourceSha256": "64d4a5841b3332abccf4767c0a438f6794717ad5e9aefb6cf1d9e7d74cc3e474",
+      "testBindings": {
+        "backend/bin/tests/review_decision_gemini.test.mjs": "210016aa0262b724461f07849c50f811070d0fcf9829a2af8a8f2617eb3a2d74"
+      },
+      "verification": "6 Node24 SDK tests passed with source lock-matched @google/genai2.24.0, only synthetic/intercepted requests",
+      "resolvedRemotely": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxtOt",
+      "source": "apps/web/app/admin/banners/page.tsx",
+      "sourceSha256": "178a3029d5d6761c68adbd55e22545286efd26b32460d2454646cc2e1cdea647",
+      "testBindings": {
+        "apps/web/tests-unit/mobile-desktop-parity-source.test.ts": "a3719c81e40210fbb0ae99f9cce6b27b137fdfdfd83c341bd975959edf7450d0"
+      },
+      "verification": "Banner responsive/guard source case passed within selected37 and full web3223; source evidence only",
+      "resolvedRemotely": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o0iU8",
+      "source": "apps/web/app/admin/evaluations/page.tsx",
+      "sourceSha256": "ee773aeb062d58f5170b213f3ca672aafe0ec2673c2bb6f9f8dd0ba97967163a",
+      "testBindings": {
+        "apps/web/tests-unit/admin-evaluation-reload-state.test.ts": "09f4055e8afaa5e2f8842d91c9259f2536a2f4d621ce05cb3baf6f97b1777a22"
+      },
+      "verification": "3 actual extracted paged callback tests passed: failed/late reload cannot republish stale stats/revision",
+      "resolvedRemotely": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6ozOtb",
+      "source": "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql",
+      "sourceSha256": "a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545",
+      "testBindings": {
+        "backend/supabase/tests/test_g014_owner_final_replay.py": "ca66f653cb95fa681b4f7809f5843036bbd49353234fa0bcbf25cd51ed42f8ca"
+      },
+      "verification": "2 source contract tests passed; verifier is outside active migration chain; full canonical PG15 remains separate",
+      "resolvedRemotely": false
+    }
+  ],
+  "fullWeb": {
+    "pass": 3223,
+    "skip": 9,
+    "fail": 0,
+    "sourceFilesBeforeAfterEqual": 1330,
+    "postSuiteDelta": "Only graph node query parameter removed after separate reproduced byte-bound edge-cursor defect; 19 affected tests pass. Final build pending."
+  },
+  "pythonSelected": {
+    "run": 37,
+    "pass": 2,
+    "skip": 35,
+    "meaning": "Missing runtime environment was not treated as passing category/deferred tests; dedicated actual PG17 proof requested."
+  },
+  "sdkRuntime": {
+    "node": "24.21.0",
+    "npm": "11.6.2",
+    "genai": "2.24.0",
+    "dotenv": "18.0.3",
+    "sourcePinsChanged": false,
+    "temporaryBackendLinkRemoved": true
+  },
+  "operatingOrPaidCalls": 0,
+  "reviewDecisionLogSha256": "72ece7ee02d2ed6fc047500dc189c3c8784a5f73a27b0df53295ec4e9d67696b"
+}

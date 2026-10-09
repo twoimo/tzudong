@@ -1,0 +1,54 @@
+{
+  "scope": "local synthetic fixture; no operation/provider writes",
+  "checks": {
+    "appliedReadOnly": true,
+    "appliedReadbackVisible": true,
+    "closureApplyDisabled": true,
+    "desktopDirtyProtected": true,
+    "desktopOverflow": false,
+    "dirtyNoticeFocused": true,
+    "filteredEmptyState": true,
+    "mobileContinuePreservedDraft": true,
+    "mobileEscapePreservedDraft": true,
+    "mobileFinalOverflow": false,
+    "mobileFocusReturned": true,
+    "mobileHeadingFocus": true,
+    "mobileOverflow": false,
+    "mobileSearchWidth": 296,
+    "mobileSheet": true,
+    "mutationRequests": 0,
+    "partialFailureKeepsRows": true,
+    "rejectedReadOnly": true,
+    "retryRecovered": true,
+    "tabletFocusReturned": true,
+    "tabletHeadingFocus": true,
+    "tabletOverflow": false,
+    "tabletReadOnly": true,
+    "tabletSheet": true
+  },
+  "targetedTests": {
+    "passed": 22,
+    "failed": 0,
+    "assertions": 223
+  },
+  "lint": "pass",
+  "diffCheck": "pass",
+  "screenshots": [
+    "/tmp/tzudong-refresh-1423.png",
+    "/tmp/tzudong-refresh-834.png",
+    "/tmp/tzudong-refresh-390-list.png",
+    "/tmp/tzudong-refresh-390-dirty.png"
+  ],
+  "source": {
+    "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx": "ac4b61cccfa4ead711d28876a737f4ed1b287d851477c92197c68a24a29f7d22",
+    "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts": "3b401c28b56cd3b4494c466e16af2878a78094f1a113b5bf46cf7431aea047b2"
+  },
+  "fixtureLoginLimitation": "Initial fixture session redirect to MyPage produced one hydration mismatch in MyPageLayoutContent logout markup; outside refresh panel.",
+  "browserErrorBufferCount": 1,
+  "newAdminErrorMessages": 0,
+  "browserErrorBufferLimitation": "errors --clear retained the initial MyPage hydration message; final buffer contains the same message, no new admin message.",
+  "apiLimitations": [
+    "GET omits stored operator_notes; history shows the available snapshots, evidence, decisions and readback state.",
+    "Local rendering and mocked responses do not prove live writes or recrawl completion."
+  ]
+}

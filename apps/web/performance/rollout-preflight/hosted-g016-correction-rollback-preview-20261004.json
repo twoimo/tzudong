@@ -1,0 +1,17 @@
+{
+  "kind": "hosted-g016-correction-rollback-preview",
+  "at": "2026-10-04T13:00:52.105742+00:00",
+  "exitCode": 3,
+  "sqlStates": [
+    "P0001"
+  ],
+  "matchedConditions": [],
+  "fixedCodes": [],
+  "assertionContext": [
+    "privacy_retention.assert_g014_catalog_contract"
+  ],
+  "forceRollback": true,
+  "ledgerWrite": false,
+  "diagnosticsPrinted": false,
+  "sourceSha256": "f0376d381ee31fbf7e4abe5125f45cc618ddffde4f87e0a709be48410057b854"
+}

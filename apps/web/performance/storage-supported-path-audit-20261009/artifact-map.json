@@ -1,0 +1,35 @@
+{
+  "evidenceClass": "publisher-source-and-readonly-analysis",
+  "operatingWrites": false,
+  "runtimeExperimentExecuted": false,
+  "artifacts": {
+    "analysis.md": {
+      "sha256": "2bef8885f05036a86abe364a0d047a491b30f1b84b133cb94ef351cbb8d8fc39",
+      "bytes": 9015
+    },
+    "experiment-design.json": {
+      "sha256": "11cb9b0eb0471bc86c9688b6284ef525f183d310f026af9e9efa6c6189159d44",
+      "bytes": 5396
+    },
+    "installed-pinned-image-metadata.json": {
+      "sha256": "d786ab19b9dc20a2ab52e8fc98e1b62d5b510975f6574a0b5c2d642817863ee6",
+      "bytes": 291
+    },
+    "publisher-tag-resolution.json": {
+      "sha256": "8c91ba59fe445f39db494acd55457a49e63fa3dae8130dec2565d37ba5a10b5c",
+      "bytes": 223
+    },
+    "tus-s3-store-2.0.0-source.json": {
+      "sha256": "8813109591801ae93a4c8c01c73d1b9910ddce2556b230de29efb2883062c8f1",
+      "bytes": 349
+    },
+    "v1.33.0-sources.json": {
+      "sha256": "d7fd837259392ae5b43b21dc33510bacc273dfcf23b5659c95e8a07631664df9",
+      "bytes": 2549
+    },
+    "v1.80.1-sources.json": {
+      "sha256": "94d464a2477086562a830dd9bb3b6ce3f3647204b8a2618762d527700f3e1b6b",
+      "bytes": 2549
+    }
+  }
+}

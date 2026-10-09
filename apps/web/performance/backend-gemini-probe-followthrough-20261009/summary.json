@@ -1,0 +1,86 @@
+{
+  "schema": "backend-gemini-probe-followthrough/v1",
+  "observedAtUtc": "2026-10-08T23:46:30.610618+00:00",
+  "sourceCommit": "d8942781ad76727176efd87f97ce9b578b522bc7",
+  "sourceChanges": [
+    "backend/bin/probe_gemini_pipeline.mjs",
+    "backend/utils/tests/gemini-client.test.mjs"
+  ],
+  "request": {
+    "model": "gemini-3.7-flash",
+    "maxOutputTokens": 4096,
+    "thinkingLevel": "MEDIUM",
+    "samplingFieldsSent": [],
+    "sdkTimeoutMs": 60000,
+    "sdkMaxAttempts": 1,
+    "configuredQuotaChanged": false
+  },
+  "credentialPriority": [
+    "GEMINI_CREDITS_API_KEY",
+    "GEMINI_API_KEY",
+    "GEMINI_API_KEY_BYEON"
+  ],
+  "fundedKeyErrorFallback": false,
+  "receipt": {
+    "exclusiveReservationBeforeQuotaOrRequest": true,
+    "fsyncBeforeRequest": true,
+    "sameOutputRepeatBlocked": true,
+    "interruptionAndLostAckRetainUnconfirmedReceipt": true,
+    "permissions": "0600",
+    "cliOutputFieldsPreserved": [
+      "status",
+      "apiCallsStarted",
+      "elapsedMs",
+      "usage"
+    ]
+  },
+  "modelProvenance": {
+    "requestedModelField": "model",
+    "returnedModelField": "responseModelVersion",
+    "accepted": "SDK-returned gemini-3.7-flash or three-digit revision, with optional models/ prefix removed",
+    "missingOrUnrecognized": null,
+    "provenanceSeparateFromConnectivityStatus": true,
+    "otherFamilyOrUnsafeMetadata": "null/unrecognized; never copy diagnostic value",
+    "notProofOf": "actual paid model execution or billing; tests use synthetic SDK responses"
+  },
+  "verification": {
+    "targetedNodeTests": {
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "one parent and nine actual CLI subtests; mock fetch terminates every SDK request"
+    },
+    "node24SyntaxChecks": "passed",
+    "gitDiffCheck": "passed",
+    "dependencyVersions": {
+      "@google/genai": "2.24.0",
+      "@google/generative-ai": "0.24.1",
+      "dotenv": "18.0.3"
+    },
+    "projectPinsAndSharedInstallationsChanged": false,
+    "firstAttempt": "active backend dependency missing before tests could run; retained separately",
+    "isolatedRuntime": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/backend-probe-isolated-20261009"
+  },
+  "paidProviderCalls": 0,
+  "operatingCalls": 0,
+  "envFilesModified": false,
+  "packagePinsModified": false,
+  "moneySpent": null,
+  "confidenceInterval95": null,
+  "performanceSavingsClaim": false,
+  "limits": [
+    "The active backend lacks an installed node_modules directory. Verification used exact lock-matched dependencies in a private runtime copy.",
+    "Real Gemini 3.7 response/model/billing/credit attribution remains unverified.",
+    "Caller scan found review_recheck_gemini.mjs, restaurant-evaluation gemini_api_request.mjs and benchmark_gemini_admission.mjs still sending sampling overrides under some existing model paths; they were not modified in this owned probe-only scope."
+  ],
+  "officialSources": [
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/generate-content/whats-new-gemini-3.6",
+      "finding": "Starting 3.6 Flash/3.5 Flash-Lite and future models, sampling fields are deprecated/ignored and future generations error; remove them."
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.5",
+      "finding": "Sampling defaults recommended for all Gemini 3.x; same guidance applies to GenerateContent."
+    }
+  ]
+}

@@ -5,14 +5,16 @@ IFS=$'\n\t'
 umask 077
 
 usage() {
-  printf 'usage: %s --output-dir PATH\n' "${0##*/}" >&2
+  printf 'usage: %s --output-dir PATH [--docker-context NAME]\n' "${0##*/}" >&2
   exit 64
 }
 
 output_dir=''
+catalog_context=''
 while (($#)); do
   case "$1" in
     --output-dir) (($# >= 2)) || usage; output_dir=$2; shift 2 ;;
+    --docker-context) (($# >= 2)) || usage; catalog_context=$2; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -40,10 +42,17 @@ relevant_sources=(
   'backend/supabase/scripts/catalog_docker_endpoint.py'
   'backend/supabase/scripts/transform_g014_guardian_replay.py'
   'backend/supabase/scripts/transform_storyboard_owner_replay.py'
+  'backend/supabase/scripts/transform_registration_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
   'backend/supabase/scripts/verify_admin_management_group_replay.py'
   'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+  'backend/supabase/scripts/verify_g014_owner_final_replay.py'
+  'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
+  'backend/supabase/scripts/operational_sql_receipts.py'
+  'backend/supabase/applied-receipts/owner-recovery-20261004'
+  'apps/web/performance/rollout-preflight/hosted-owner-final-readback-20261004-v2.json'
+  'backend/supabase/scripts/local_replay_contract.py'
   'backend/supabase/scripts/admin_management_group_plan.py'
   'backend/supabase/scripts/advisor_successor_plan.py'
   'backend/supabase/scripts/g037_supabase_statement_vector.mjs'
@@ -81,6 +90,20 @@ g026_behavior_receipt="$staging_dir/g026-behavior-receipt.json"
 docker_endpoint=''
 
 compose() {
+  # The isolated DOCKER_CONFIG intentionally carries no user credentials or
+  # cliPluginsExtraDirs. macOS/Homebrew may install Compose only there, so use
+  # its existing standalone v2-compatible executable without copying config.
+  local catalog_compose_cli catalog_compose_version
+  catalog_compose_cli=$(command -v docker-compose || true)
+  if [[ -n "$catalog_compose_cli" ]]; then
+    catalog_compose_version=$(env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config" \
+      DOCKER_HOST="$docker_endpoint" "$catalog_compose_cli" version --short 2>/dev/null || true)
+    if [[ "$catalog_compose_version" =~ ^v?([2-9]|[1-9][0-9])\. ]]; then
+      env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config" DOCKER_HOST="$docker_endpoint" \
+        "$catalog_compose_cli" --project-name "$project" --env-file "$env_file" -f "$compose_file" "$@"
+      return
+    fi
+  fi
   env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config" \
     DOCKER_HOST="$docker_endpoint" \
     docker compose --project-name "$project" --env-file "$env_file" -f "$compose_file" "$@"
@@ -506,9 +529,16 @@ evidence_scope_file="$staging_dir/evidence-scope.txt"
 printf '%s\n' "$reconstruction_purpose" >"$evidence_scope_file"
 migration_order_predecessor='20260417_prevent_active_restaurant_identity_duplicates.sql'
 migration_order_successor='20260417_harden_submission_identity_duplicate_checks.sql'
+# Hosted had restored helper grants before its registry migration. Reconstruct
+# that prerequisite from the immutable corrective source, exactly once, before
+# verifying the registry; do not weaken or rewrite any applied SQL.
+service_identity_predecessor='20261003095444_restore_service_identity_helpers.sql'
+service_identity_successor='20261003065736_g014_current_service_rpc_registry.sql'
 declare -A migration_order_override_counts=(
   ["$migration_order_predecessor"]=0
   ["$migration_order_successor"]=0
+  ["$service_identity_predecessor"]=0
+  ["$service_identity_successor"]=0
 )
 declare -A backend_migrations_by_name=()
 declare -A app_migrations_by_name=()
@@ -594,7 +624,7 @@ while IFS= read -r -d '' name; do
     fi
   fi
 done < <(printf '%s\0' "${!all_migration_names[@]}" | LC_ALL=C sort -z)
-for name in "$migration_order_predecessor" "$migration_order_successor"; do
+for name in "$migration_order_predecessor" "$migration_order_successor" "$service_identity_predecessor" "$service_identity_successor"; do
   ((migration_order_override_counts[$name] == 1)) || {
     printf 'migration-order override source must be present exactly once: %s\n' "$name" >&2; exit 1;
   }
@@ -607,10 +637,14 @@ effective_migrations=()
 for migration in "${applied_migrations[@]}"; do
   name=${migration##*/}
   case "$name" in
-    "$migration_order_predecessor")
+    "$migration_order_predecessor"|"$service_identity_predecessor")
       ;;
     "$migration_order_successor")
       effective_migrations+=("${applied_migrations_by_name[$migration_order_predecessor]}")
+      effective_migrations+=("$migration")
+      ;;
+    "$service_identity_successor")
+      effective_migrations+=("${applied_migrations_by_name[$service_identity_predecessor]}")
       effective_migrations+=("$migration")
       ;;
     *)
@@ -641,7 +675,11 @@ initialization_inputs_hash=$(sha256sum -- "$initialization_inputs" | cut -d' ' -
 
 # Admit the account's saved local context before isolating operation config.
 # The resolver never changes context and admits only the fixed local endpoints.
-docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py") || {
+if [[ -n "$catalog_context" ]]; then
+  docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py" --context "$catalog_context")
+else
+  docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py")
+fi || {
   printf 'unable to admit a canonical local Docker endpoint\n' >&2
   exit 1
 }
@@ -1378,6 +1416,61 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20261004190259_admin_record_guarded_actions.sql|20261004194715_admin_evaluation_raw_warning_invoker_contract.sql)
+      registration_replay="$work_dir/${migration##*/}.pg15-registration-replay.sql"
+      python3 "$script_dir/transform_registration_replay.py" --source "$migration" --output "$registration_replay"
+      g026_chain_apply 'registration-pg15-replay-transformer' "$script_dir/transform_registration_replay.py"
+      g026_chain_apply 'registration-pg15-replay-window' "$registration_replay"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$registration_replay"
+      ;;
+    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
+      storyboard_replay="$work_dir/${migration##*/}.owner-replay.sql"
+      python3 "$script_dir/transform_storyboard_history_replay.py" \
+        --source "$migration" --bundle "$g026_bundle" --output "$storyboard_replay"
+      g026_chain_apply 'storyboard-history-replay-transformer' "$script_dir/transform_storyboard_history_replay.py"
+      g026_chain_apply 'storyboard-history-replay-window' "$storyboard_replay"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$storyboard_replay"
+      ;;
+    20261003113923_g014_service_invoker_contract.sql|20261003172126_restaurant_review_manual_invoker_contract.sql|20261003220841_admin_evaluation_page_invoker_contract.sql|20261004050600_admin_evaluation_warning_invoker_contract.sql)
+      if [[ ${migration##*/} == '20261003113923_g014_service_invoker_contract.sql' ]]; then
+        # The immutable contract requires the older storyboard functions to
+        # already be service-role invokers. Apply the exact additive bridge
+        # before that assertion in this isolated source-only replay.
+        storyboard_dependency="$backend_migrations_dir/20261003182338_storyboard_service_role_bridge.sql"
+        storyboard_dependency_replay="$work_dir/storyboard-before-service-invoker.owner-replay.sql"
+        python3 "$script_dir/transform_storyboard_history_replay.py" \
+          --source "$storyboard_dependency" --bundle "$g026_bundle" --output "$storyboard_dependency_replay"
+        g026_chain_apply 'storyboard-invoker-prerequisite-canonical' "$storyboard_dependency"
+        g026_chain_apply 'storyboard-invoker-prerequisite-transformer' "$script_dir/transform_storyboard_history_replay.py"
+        g026_chain_apply 'storyboard-invoker-prerequisite-window' "$storyboard_dependency_replay"
+        compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$storyboard_dependency_replay"
+      fi
+      invoker_replay="$work_dir/${migration##*/}.owner-replay.sql"
+      python3 "$script_dir/transform_service_invoker_replay.py" \
+        --source "$migration" --bundle "$g026_bundle" --output "$invoker_replay"
+      g026_chain_apply 'service-invoker-owner-replay-transformer' "$script_dir/transform_service_invoker_replay.py"
+      g026_chain_apply 'service-invoker-owner-replay-window' "$invoker_replay"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$invoker_replay"
+      ;;
+    20261003065736_g014_current_service_rpc_registry.sql)
+      # Bounded catalog metadata only: diagnose a source-replay prerequisite
+      # without printing function bodies, request data, or credentials. Keep
+      # the applied migration and its fail-closed prerequisite check immutable.
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At -c "
+        WITH required(signature) AS (VALUES
+          ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)'),
+          ('public.extract_youtube_video_id(text)'),
+          ('public.normalize_restaurant_identity_name(text)'),
+          ('public.record_app_web_vitals(text,text,text,text,smallint)'),
+          ('public.record_app_web_vitals_bounded(text,text,text,text,smallint)'),
+          ('public.resolve_restaurant_identity_name(text,text,text,text)')
+        ) SELECT jsonb_agg(jsonb_build_object('signature',required.signature,
+          'present',p.oid IS NOT NULL,'owner',pg_get_userbyid(p.proowner),
+          'serviceAllowed',has_function_privilege('service_role',p.oid,'EXECUTE'))
+          ORDER BY required.signature)
+        FROM required LEFT JOIN pg_proc p ON p.oid=to_regprocedure(required.signature);"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
+      ;;
     20260906064252_g014_pg17_workflow_owner_contract.sql)
       owner_verification="$staging_dir/g014-owner-pg15-verification.sql"
       python3 "$script_dir/verify_g014_pg17_owner_replay.py" --source "$migration" --output "$owner_verification"
@@ -1511,6 +1604,83 @@ BEGIN
 END $$;
 SQL
   fi
+done
+# Archived operations are NOT effective migrations. Run only their pinned
+# read-only PG15 catalog verifiers after the fresh source chain; never replay
+# the snapshot-specific SQL or insert a fabricated hosted migration receipt.
+python3 - "$repo_root" <<'PY_ARCHIVE' >"$staging_dir/operational-archive-binding.json"
+import json, sys
+from pathlib import Path
+root = Path(sys.argv[1]); sys.path.insert(0, str(root))
+from backend.supabase.scripts.operational_sql_receipts import verify_archive
+print(json.dumps(verify_archive(root=root), sort_keys=True))
+PY_ARCHIVE
+g026_chain_apply 'operational-archive-validator' "$script_dir/operational_sql_receipts.py"
+g026_chain_apply 'operational-archive-binding' "$staging_dir/operational-archive-binding.json"
+for migration in \
+  "$repo_root/backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql" \
+  "$repo_root/backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql"; do
+  g026_chain_apply "archived-operational-source:${migration##*/}" "$migration"
+  case "${migration##*/}" in
+    20261004115554_g014_pg17_owner_final_verifier.sql)
+      final_verification="$staging_dir/g014-owner-final-pg15-verification.sql"
+      # Hash-bound catalog verification only: never execute the hosted PG17 mutation/verifier.
+      python3 - "$repo_root" "$migration" "$final_verification" <<'PY'
+import sys
+from pathlib import Path
+root, source, output = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+with output.open('xb') as destination:
+    destination.write(contract.generate_verification_sql(source.relative_to(root).as_posix()))
+PY
+      for dependency in verify_g014_owner_final_replay.py verify_g014_pg17_owner_replay.py verify_g016_identity_correction_replay.py local_replay_contract.py; do
+        g026_chain_apply "g014-owner-final-source-dependency:$dependency" "$script_dir/$dependency"
+      done
+      g026_chain_apply "g014-owner-final-pg15-verification" "$final_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$final_verification" >"$staging_dir/g014-owner-final-pg15-receipt.json"
+      python3 - "$repo_root" "$migration" "$final_verification" "$staging_dir/g014-owner-final-pg15-receipt.json" <<'PY'
+import sys
+from pathlib import Path
+root, source, sql, receipt = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+proof = contract.assemble_proof(source.relative_to(root).as_posix(), sql.read_bytes(), receipt.read_bytes())
+contract.validate_proof(proof, sql.read_bytes())
+PY
+      g026_chain_apply "g014-owner-final-pg15-receipt" "$staging_dir/g014-owner-final-pg15-receipt.json"
+      ;;
+    20261004123034_g016_onboarding_allowlist_identity_correction.sql)
+      final_verification="$staging_dir/g016-identity-pg15-verification.sql"
+      # Hash-bound catalog verification only: never execute the hosted PG17 mutation/verifier.
+      python3 - "$repo_root" "$migration" "$final_verification" <<'PY'
+import sys
+from pathlib import Path
+root, source, output = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+with output.open('xb') as destination:
+    destination.write(contract.generate_verification_sql(source.relative_to(root).as_posix()))
+PY
+      for dependency in verify_g014_owner_final_replay.py verify_g014_pg17_owner_replay.py verify_g016_identity_correction_replay.py local_replay_contract.py; do
+        g026_chain_apply "g016-identity-source-dependency:$dependency" "$script_dir/$dependency"
+      done
+      g026_chain_apply "g016-identity-pg15-verification" "$final_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$final_verification" >"$staging_dir/g016-identity-pg15-receipt.json"
+      python3 - "$repo_root" "$migration" "$final_verification" "$staging_dir/g016-identity-pg15-receipt.json" <<'PY'
+import sys
+from pathlib import Path
+root, source, sql, receipt = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root))
+from backend.supabase.scripts import local_replay_contract as contract
+proof = contract.assemble_proof(source.relative_to(root).as_posix(), sql.read_bytes(), receipt.read_bytes())
+contract.validate_proof(proof, sql.read_bytes())
+PY
+      g026_chain_apply "g016-identity-pg15-receipt" "$staging_dir/g016-identity-pg15-receipt.json"
+      ;;
+  esac
 done
 [[ "$g026_phase_b_applied" == 1 ]] || {
   printf 'G026 phase-B slot was not applied exactly once\n' >&2
@@ -1678,6 +1848,9 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
+    g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
+    g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \
+    operational-archive-binding.json \
     postgres-image-00000000000001-auth-schema.sql pre-20260214-overlap-classification.jsonl \
     reconstruction-compatibility-exclusions.jsonl reconstruction-compatibility-relocations.jsonl reconstruction-source-members.tsv \
     storage-container-migration-files.tsv storage-inventory-files.tsv storage-migration-inventory-source-map.tsv storage-migration-ledger.tsv \

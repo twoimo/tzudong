@@ -17,6 +17,7 @@ from backend.pipeline_control.adapter import (
     execute_steps,
     noop_event_sink,
 )
+from backend.pipeline_control.media_cache import owned_media_cache
 from backend.pipeline_control.graph import AdapterGraphError, STEP_SPECS
 from backend.pipeline_control.profiles import (
     ProfileError,
@@ -540,21 +541,45 @@ def process_one(
         collected.append(event)
         noop_event_sink(event)
 
+    success_recorded = False
     try:
         with _bound_pipeline_execution_environment(
             data_sink=data_sink,
             execution_mode=execution_mode,
             compute_profile=run.profile,
         ):
-            result = execute_steps(
-                run,
-                should_stop=should_stop,
-                emit=emit,
-                live=use_live and not run.dry_run,
-                runner=runner,
-                data_sink=data_sink,
-                compute_profile=run.profile,
-            )
+            with owned_media_cache(run.id, enabled=use_live and not run.dry_run) as media_completed:
+                result = execute_steps(
+                    run,
+                    should_stop=should_stop,
+                    emit=emit,
+                    live=use_live and not run.dry_run,
+                    runner=runner,
+                    data_sink=data_sink,
+                    compute_profile=run.profile,
+                )
+                if result == 'Succeeded':
+                    if execution_mode == "live":
+                        store.finish_succeeded(run.id)
+                    else:
+                        store.finish_dry_run(run.id)
+                    success_recorded = True
+                    try:
+                        media_completed()
+                    except (OSError, ValueError, AdapterGraphError):
+                        # Settled provider/DB work stays successful. Purge is
+                        # recoverable local cleanup, never a reason to replay it.
+                        print("operation=media_cache_cleanup_deferred")
+                elif result in {"Failed", "Cancelled", "Paused"}:
+                    try: media_completed(result)
+                    except (OSError, ValueError, AdapterGraphError):
+                        print("operation=media_cache_cleanup_deferred")
+    except OSError:
+        store.finish_failed(run.id, "worker_io_failed")
+        write_run_manifest("Failed", manifest_path, events=collected, run=run,
+                           execution_mode=execution_mode, data_sink=data_sink,
+                           store=store, job_id_scope=job_id_scope)
+        return "Failed"
     except (KafkaPublishError, AdapterGraphError, ProfileError) as exc:
         store.finish_failed(run.id, exc.code)
         write_run_manifest(
@@ -581,7 +606,7 @@ def process_one(
             job_id_scope=job_id_scope,
         )
         return "Failed"
-    if result == "Succeeded":
+    if result == "Succeeded" and not success_recorded:
         if execution_mode == "live":
             store.finish_succeeded(run.id)
         else:

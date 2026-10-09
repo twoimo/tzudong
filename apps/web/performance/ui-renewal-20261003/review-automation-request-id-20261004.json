@@ -1,0 +1,45 @@
+{
+  "kind": "review-automation-request-id-rendered-fixture",
+  "passed": true,
+  "environment": {
+    "node": "v24.21.0",
+    "browser": "154.0.8037.97",
+    "origin": "http://127.0.0.1:18794",
+    "synthetic": true
+  },
+  "sourceSha256": "3905095c7b29ec7362b376962cf66aeed6a6df15fb8567378f0fc99127fbb000",
+  "results": [
+    {
+      "width": 390,
+      "uncertainAttempts": 2,
+      "sameIdForRetry": true,
+      "newIdAfterCancellation": true,
+      "confirmedReadback": true,
+      "dialogOverflow": 0,
+      "pageOverflow": 0
+    },
+    {
+      "width": 834,
+      "uncertainAttempts": 2,
+      "sameIdForRetry": true,
+      "newIdAfterCancellation": true,
+      "confirmedReadback": true,
+      "dialogOverflow": 0,
+      "pageOverflow": 0
+    },
+    {
+      "width": 1440,
+      "uncertainAttempts": 2,
+      "sameIdForRetry": true,
+      "newIdAfterCancellation": true,
+      "confirmedReadback": true,
+      "dialogOverflow": 0,
+      "pageOverflow": 0
+    }
+  ],
+  "pageErrors": 0,
+  "expectedConsoleErrors": 6,
+  "unexpectedWrites": 0,
+  "hostedWrites": 0,
+  "realProviderCalls": 0
+}

@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: installed SDK serializes model-specific chunk config without changing content or output limits
+ok 1 - installed SDK serializes model-specific chunk config without changing content or output limits
+  ---
+  duration_ms: 7286.6005
+  type: 'test'
+  ...
+# Subtest: chunk CLI keeps sampling through thinking fallback and propagates other provider failures
+ok 2 - chunk CLI keeps sampling through thinking fallback and propagates other provider failures
+  ---
+  duration_ms: 6354.577416
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13807.658083

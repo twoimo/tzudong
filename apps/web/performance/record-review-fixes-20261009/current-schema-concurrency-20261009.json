@@ -1,0 +1,149 @@
+{
+  "schema": "current-schema-real-concurrency/v1",
+  "status": "passed",
+  "sourceDatabase": "tzudong_phase_full_cdda9eb9",
+  "disposableDatabase": "tzudong_concurrency_20261009_1c64cfcdbae1",
+  "cleanupMode": "drop owned disposable database, not per-table seed deletion",
+  "operatingWrites": false,
+  "sourceDatabaseWrites": false,
+  "functionRoleTriggerChanges": false,
+  "externalCalls": 0,
+  "container": {
+    "name": "tzudong-record-fixes-20261009-a1390aca",
+    "id": "16e2db2a9be2035edeeb737f55ef1ac5485c0f8dba29fae31dc6aaf4a491ca11",
+    "image": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "owner": "01a0f860-10d0-71b0-bb2a-95c2b52e025e",
+    "network": "none",
+    "ports": 0
+  },
+  "sourceRowsBefore": {
+    "auth.users": 0,
+    "public.reviews": 0,
+    "public.profiles": 0,
+    "public.user_roles": 0,
+    "public.user_stats": 0,
+    "public.restaurants": 0,
+    "public.user_account_status": 0,
+    "public.restaurant_submissions": 0,
+    "public.restaurant_submission_items": 0,
+    "pipeline_control.admin_record_audit": 0,
+    "pipeline_control.admin_record_operations": 0,
+    "pipeline_control.admin_record_media_cleanup": 0
+  },
+  "sourceFingerprintsBefore": {
+    "roles": "f36c8c6136534d26c85802bbc0238a566dccf9d3ed3240df1eca3af553b29433",
+    "triggers": "8b0fe0bfb941d8846e5885c850836ddc0cf8945e758b2c74d063ca304cd779c6",
+    "functions": "9eacd1cc3f877dea9504aa4ef5d9d685100a8c06fed61ff531be6dfc8a1f600c",
+    "membership": "114df90c3371b32ed304caf7677be3df50de7ce269438203fa28150d4828a82a"
+  },
+  "sourceSchemaBefore": "758bf4f83db8d006190a4f1ea3190b6d3a1da479112c779050588821e7208ae6",
+  "copyRowsBefore": {
+    "auth.users": 0,
+    "public.reviews": 0,
+    "public.profiles": 0,
+    "public.user_roles": 0,
+    "public.user_stats": 0,
+    "public.restaurants": 0,
+    "public.user_account_status": 0,
+    "public.restaurant_submissions": 0,
+    "public.restaurant_submission_items": 0,
+    "pipeline_control.admin_record_audit": 0,
+    "pipeline_control.admin_record_operations": 0,
+    "pipeline_control.admin_record_media_cleanup": 0
+  },
+  "copyFingerprintsBefore": {
+    "roles": "f36c8c6136534d26c85802bbc0238a566dccf9d3ed3240df1eca3af553b29433",
+    "triggers": "8b0fe0bfb941d8846e5885c850836ddc0cf8945e758b2c74d063ca304cd779c6",
+    "functions": "9eacd1cc3f877dea9504aa4ef5d9d685100a8c06fed61ff531be6dfc8a1f600c",
+    "membership": "114df90c3371b32ed304caf7677be3df50de7ce269438203fa28150d4828a82a"
+  },
+  "copySchemaBefore": "758bf4f83db8d006190a4f1ea3190b6d3a1da479112c779050588821e7208ae6",
+  "seedSqlSha256": "7db3b7a9542ae4d789e742e2396e5e9c9e60e0016db08def45c3f5bc0f7446d6",
+  "syntheticRowsAfterSeed": {
+    "auth.users": 2,
+    "public.reviews": 0,
+    "public.profiles": 2,
+    "public.user_roles": 3,
+    "public.user_stats": 2,
+    "public.restaurants": 1,
+    "public.user_account_status": 2,
+    "public.restaurant_submissions": 3,
+    "public.restaurant_submission_items": 3,
+    "pipeline_control.admin_record_audit": 0,
+    "pipeline_control.admin_record_operations": 0,
+    "pipeline_control.admin_record_media_cleanup": 0
+  },
+  "differentOperation": {
+    "blockingObserved": true,
+    "winnerApplied": true,
+    "loserFixedCode": "RECORD_ACTION_STALE",
+    "winnerAudit": 1,
+    "loserAudit": 0,
+    "restaurantCount": 1,
+    "loserState": "preview",
+    "resultVerifiedBeforeAnyResend": true
+  },
+  "sameOperation": {
+    "previewBlockingObserved": true,
+    "applyBlockingObserved": true,
+    "previewReceiptEqual": true,
+    "applyReceiptEqual": true,
+    "receiptSha256": "da23ad426c121d8a58a328ecba1fc038021cbe938e2c77f9737b083fd3c09c57",
+    "auditCount": 1,
+    "createdRestaurantCount": 1,
+    "restaurantsTotalIncludingExistingTarget": 2
+  },
+  "copyFingerprintsAfter": {
+    "roles": "f36c8c6136534d26c85802bbc0238a566dccf9d3ed3240df1eca3af553b29433",
+    "triggers": "8b0fe0bfb941d8846e5885c850836ddc0cf8945e758b2c74d063ca304cd779c6",
+    "functions": "9eacd1cc3f877dea9504aa4ef5d9d685100a8c06fed61ff531be6dfc8a1f600c",
+    "membership": "114df90c3371b32ed304caf7677be3df50de7ce269438203fa28150d4828a82a"
+  },
+  "copySchemaAfter": "758bf4f83db8d006190a4f1ea3190b6d3a1da479112c779050588821e7208ae6",
+  "disposableRowsBeforeDrop": {
+    "auth.users": 2,
+    "public.reviews": 0,
+    "public.profiles": 2,
+    "public.user_roles": 3,
+    "public.user_stats": 2,
+    "public.restaurants": 2,
+    "public.user_account_status": 2,
+    "public.restaurant_submissions": 3,
+    "public.restaurant_submission_items": 3,
+    "pipeline_control.admin_record_audit": 2,
+    "pipeline_control.admin_record_operations": 3,
+    "pipeline_control.admin_record_media_cleanup": 0
+  },
+  "disposableDatabaseAbsentReadback": true,
+  "zeroResidualByDatabaseRemoval": true,
+  "perTableZeroRowsQueriedInDisposableAfterCleanup": false,
+  "sourceRowsAfter": {
+    "auth.users": 0,
+    "public.reviews": 0,
+    "public.profiles": 0,
+    "public.user_roles": 0,
+    "public.user_stats": 0,
+    "public.restaurants": 0,
+    "public.user_account_status": 0,
+    "public.restaurant_submissions": 0,
+    "public.restaurant_submission_items": 0,
+    "pipeline_control.admin_record_audit": 0,
+    "pipeline_control.admin_record_operations": 0,
+    "pipeline_control.admin_record_media_cleanup": 0
+  },
+  "sourceFingerprintsAfter": {
+    "roles": "f36c8c6136534d26c85802bbc0238a566dccf9d3ed3240df1eca3af553b29433",
+    "triggers": "8b0fe0bfb941d8846e5885c850836ddc0cf8945e758b2c74d063ca304cd779c6",
+    "functions": "9eacd1cc3f877dea9504aa4ef5d9d685100a8c06fed61ff531be6dfc8a1f600c",
+    "membership": "114df90c3371b32ed304caf7677be3df50de7ce269438203fa28150d4828a82a"
+  },
+  "sourceSchemaAfter": "758bf4f83db8d006190a4f1ea3190b6d3a1da479112c779050588821e7208ae6",
+  "sourceRowsExact": true,
+  "sourceSchemaExact": true,
+  "sourceFunctionsRolesMembershipTriggersExact": true,
+  "limitations": [
+    "Disposed committed synthetic rows by dropping only the owned disposable database; did not bypass last-admin fence or query its tables as zero after drop.",
+    "Actual two service-role connections and observed blocking; not provider/UI/hosted performance evidence.",
+    "No automatic resend after uncertain or failed apply; results read back first."
+  ]
+}

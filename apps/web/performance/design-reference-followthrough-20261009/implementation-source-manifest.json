@@ -1,0 +1,50 @@
+[
+  {
+    "path": "styles/admin-ui.css",
+    "sha256": "248a28f912a3e8a806566ceaffe9a4efc65b22bc5e31b9811c24bba066e4d9df"
+  },
+  {
+    "path": "styles/product-ui.css",
+    "sha256": "1a9617cf6b4c71880d98743469625a983a5e016a7e770558d142fbdbf961e5be"
+  },
+  {
+    "path": "styles/light-root-tokens.css",
+    "sha256": "0b4b2c01f56d8f8f091ceff23e5d94a448b88ca65eb64716b104380ecc6450aa"
+  },
+  {
+    "path": "components/admin/AdminPageHeader.tsx",
+    "sha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6"
+  },
+  {
+    "path": "components/admin/AdminEmbeddedModuleShell.tsx",
+    "sha256": "3a157aec7dbfc2c7ed3ca872618f927bc117b1059e0f0bfa425a4bf82ac9e5f8"
+  },
+  {
+    "path": "components/admin/AdminOperationsPanel.tsx",
+    "sha256": "b88367d4b6832063f9e8fa1ad1136cf746882daa7050562b7dfcd433039c205f"
+  },
+  {
+    "path": "components/admin/RestaurantManagementWorkspace.tsx",
+    "sha256": "4e02f26c7be0acdce7819e33b5ed344cea2ae759ee521972d70852ddaa6ebc7b"
+  },
+  {
+    "path": "components/ui/dialog.tsx",
+    "sha256": "8379400c15bdb9eb059cfb9f6f684ac1b6cc4bb78457a4eac4d4ee730a0c7a44"
+  },
+  {
+    "path": "components/ui/table.tsx",
+    "sha256": "7e14bb73af54fa5edf3459c5b818db5ec726b356707626ec8a08f9f38f04a4a1"
+  },
+  {
+    "path": "components/layout/ScrollEffects.tsx",
+    "sha256": "8ce3ecd93ed884ed513b174b6f7dbf41325bd28827eb06bab7a8b7ae19decaea"
+  },
+  {
+    "path": "components/auth/AuthModal.tsx",
+    "sha256": "81381862ee291953a264a24e10bbdf5c34bde7add545be3aa854a73542eb9fcb"
+  },
+  {
+    "path": "components/home/map-panel-chrome.tsx",
+    "sha256": "d788279b7edb1a0a6f60f8305f284e70c6a71e6aef84ae51a8dd558dcb4af17c"
+  }
+]

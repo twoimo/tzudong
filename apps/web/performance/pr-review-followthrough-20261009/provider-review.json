@@ -1,0 +1,452 @@
+{
+  "date": "2026-10-09",
+  "auditHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "reviewHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "exportPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/pr-3099-review-current-20261009.json",
+  "exportSha256": "77db26b5e60b785ca20280e2f7a2a8c221acbdd9d3fc3ec098890530b1746e70",
+  "hasNextPage": false,
+  "scope": "Backend provider/Gemini/evaluation/automated-review only; excludes knowledge_graph, Supabase, media/frame extraction/cache lifecycle, pipeline worker/run_parallel. RAG paid-endpoint admission is reviewed as provider security.",
+  "counts": {
+    "addressed": 6,
+    "unaddressed": 4,
+    "obsolete": 0
+  },
+  "threads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxVfH",
+      "reviewPath": "backend/restaurant-evaluation/scripts/12-transform.py",
+      "reviewLine": 872,
+      "isOutdatedInExport": false,
+      "status": "addressed",
+      "finding": "Cold or invalid transform receipt now bootstraps positively owned current video/source-family rows, retires removed restaurants/changed traces, and archives old records. Absent-source rows remain protected for partial input.",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-evaluation/scripts/12-transform.py",
+          "startLine": 867,
+          "endLine": 929,
+          "sha256": "ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/utils/tests/test_pipeline_restart_integration.py",
+          "startLine": 87,
+          "endLine": 108,
+          "sha256": "281f6e0a37d0d66beb77ca16a80ea20bd8bea8350454fe46775d3e59c7c1d780"
+        }
+      ],
+      "verification": "Two first-receipt regressions passed locally.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4177146314"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxXry",
+      "reviewPath": "backend/bin/review_decision_gemini.mjs",
+      "reviewLine": null,
+      "isOutdatedInExport": true,
+      "status": "addressed",
+      "finding": "Response identity removes models/ and accepts the stable exact model or three-digit service revision; canonical SQL provenance retains the configured model. Alternate/dated/preview identities are rejected.",
+      "sourceEvidence": [
+        {
+          "path": "backend/bin/review_decision_gemini.mjs",
+          "startLine": 14,
+          "endLine": 29,
+          "sha256": "64d4a5841b3332abccf4767c0a438f6794717ad5e9aefb6cf1d9e7d74cc3e474"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/bin/tests/review_decision_gemini.test.mjs",
+          "startLine": 21,
+          "endLine": 45,
+          "sha256": "210016aa0262b724461f07849c50f811070d0fcf9829a2af8a8f2617eb3a2d74"
+        }
+      ],
+      "verification": "Existing identity regressions inspected; fresh Node suite blocked at module load.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4177159983"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o0iU-",
+      "reviewPath": "backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs",
+      "reviewLine": null,
+      "isOutdatedInExport": true,
+      "status": "addressed",
+      "finding": "Chunk config omits sampling for Gemini 3; shared transport also removes unsupported modern sampling before SDK invocation, including fallback.",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs",
+          "startLine": 156,
+          "endLine": 158,
+          "sha256": "1af2143ca6a697b4f7f313365a5e1662cf14fd951b241293c03d66c4373dd7b4"
+        },
+        {
+          "path": "backend/utils/gemini-client.mjs",
+          "startLine": 51,
+          "endLine": 74,
+          "sha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/tests/test_gemini_chunk_generation_config.mjs",
+          "startLine": 43,
+          "endLine": 44,
+          "sha256": "c757455012adef64cd6b435aa802a7885012a2423baba567de90ad91cac3f028"
+        },
+        {
+          "path": "backend/utils/tests/gemini-client.test.mjs",
+          "startLine": 183,
+          "endLine": 192,
+          "sha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+        }
+      ],
+      "verification": "Existing configured-model/thinking fallback assertions inspected; no fresh JS pass claimed.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4178502641"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o1c8T",
+      "reviewPath": "backend/restaurant-crawling/scripts/final_merge_chunk.mjs",
+      "reviewLine": 70,
+      "isOutdatedInExport": false,
+      "status": "addressed",
+      "finding": "Final merge explicitly filters config, and shared adapter filters again. Local temperature default remains for older models but is absent for modern request wire.",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/final_merge_chunk.mjs",
+          "startLine": 66,
+          "endLine": 76,
+          "sha256": "d423d3a6715234f741c10cfbd6dbdf7ca2f373d6282cc654e8592bf088761bd9"
+        },
+        {
+          "path": "backend/utils/gemini-client.mjs",
+          "startLine": 51,
+          "endLine": 74,
+          "sha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/utils/tests/gemini-client.test.mjs",
+          "startLine": 405,
+          "endLine": 439,
+          "sha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+        }
+      ],
+      "verification": "Existing mocked wire tests cover 3.8 final merge; fresh Node suite blocked at module load.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4178878488"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o1c8X",
+      "reviewPath": "backend/bin/run_restaurant_review_automation.py",
+      "reviewLine": 327,
+      "isOutdatedInExport": false,
+      "status": "unaddressed",
+      "finding": "After completing one recheck, run_once still issues a second general automation tick with a new request ID; this can admit another candidate batch beyond the single claimed recheck.",
+      "sourceEvidence": [
+        {
+          "path": "backend/bin/run_restaurant_review_automation.py",
+          "startLine": 275,
+          "endLine": 327,
+          "sha256": "3ed7ed629c4038247fa85482349d40206d8b12314db9b9389bbfe0ea3889598b"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/bin/tests/test_restaurant_review_automation.py",
+          "startLine": 55,
+          "endLine": 78,
+          "sha256": "6135a907e3748e79ee228a54b32d0aa47cca6cc78b04e75f3ef6caa4aa995670"
+        }
+      ],
+      "verification": "Focused mocked test passes while explicitly asserting the second tick; it confirms current behavior, not this review fixed.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4178878501"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pz8hq",
+      "reviewPath": "backend/restaurant-crawling/scripts/gemini_api_request.mjs",
+      "reviewLine": 127,
+      "isOutdatedInExport": false,
+      "status": "addressed",
+      "finding": "Frame-based Gemini request config is explicitly filtered and then passed through shared policy before SDK transport; frame extraction/media caching are not covered.",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/gemini_api_request.mjs",
+          "startLine": 120,
+          "endLine": 136,
+          "sha256": "99c5543d225d81f7570d69323546dbe1ee886fac3b086007544643af22e48db7"
+        },
+        {
+          "path": "backend/utils/gemini-client.mjs",
+          "startLine": 51,
+          "endLine": 74,
+          "sha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/utils/tests/gemini-client.test.mjs",
+          "startLine": 405,
+          "endLine": 439,
+          "sha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+        }
+      ],
+      "verification": "Existing independent crawler SDK-wire regression inspected; no fresh JS pass claimed.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4204517872"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pz8ht",
+      "reviewPath": "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+      "reviewLine": 1974,
+      "isOutdatedInExport": false,
+      "status": "addressed",
+      "finding": "Map-review local config retains older-model temperature, but actual generateWithProjectBudget call filters unsupported modern sampling before SDK transport without changing model/output/thinking.",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+          "startLine": 1970,
+          "endLine": 1988,
+          "sha256": "7a169e8ffccbc2ec4444574215d5d07441bfc15bde7d184033febf2ec5095a24"
+        },
+        {
+          "path": "backend/utils/gemini-client.mjs",
+          "startLine": 51,
+          "endLine": 74,
+          "sha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/utils/tests/gemini-client.test.mjs",
+          "startLine": 382,
+          "endLine": 402,
+          "sha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+        }
+      ],
+      "verification": "Shared adapter mocked-wire regression inspected; independent live map-provider behavior was not tested.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4204517876"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qTx8x",
+      "reviewPath": "backend/restaurant-crawling/scripts/02-collect-meta.py",
+      "reviewLine": 939,
+      "isOutdatedInExport": false,
+      "status": "unaddressed",
+      "finding": "When recipe changed/missing and analyzer is unavailable/disabled, prior what_ads is not reused and no regeneration occurs; latest metadata is appended with null attribution. Existing provider failure guard does not cover disabled analysis.",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/02-collect-meta.py",
+          "startLine": 936,
+          "endLine": 960,
+          "sha256": "767f4b0fd7a2161e644d10cd1bacfc25b50473c2ce9f6513800bfde8b17b2341"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py",
+          "startLine": 18,
+          "endLine": 45,
+          "sha256": "530be2c0ab09101534c451d0a724d1f2f2c4fd67b9dd209a9f5ce95b606565c0"
+        }
+      ],
+      "verification": "Existing tests cover enabled changed-recipe regeneration and provider failure, not no-analyzer prior attribution preservation.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4217712689"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qTx9B",
+      "reviewPath": "backend/utils/provider_budget.py",
+      "reviewLine": 72,
+      "isOutdatedInExport": false,
+      "status": "unaddressed",
+      "finding": "Persistent lease pruning selects only id,pid and alive checks only os.kill(pid,0); stored started is acquisition time, not verified process birth identity. PID reuse can retain a stale concurrency permit.",
+      "sourceEvidence": [
+        {
+          "path": "backend/utils/provider_budget.py",
+          "startLine": 54,
+          "endLine": 78,
+          "sha256": "f4bde2eb38e4de766a1b5b7ef8fe930a4123af1e69acd6402d284c0962fd0bf0"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/utils/tests/test_pipeline_performance.py",
+          "startLine": 107,
+          "endLine": 117,
+          "sha256": "93931c54f1f533695d5ea4d55d6b6b8c7ad2e52ac573a6db4581748f5c803feb"
+        }
+      ],
+      "verification": "Focused dead-process/release regression passes; it does not test PID reuse.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4217712713"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qmBxR",
+      "reviewPath": "backend/storyboard-agent/src/rag_worker.py",
+      "reviewLine": 597,
+      "isOutdatedInExport": false,
+      "status": "unaddressed",
+      "finding": "Paid embed/rerank/caption endpoints have no inbound authentication or loopback guard; launcher accepts arbitrary configured host. Caption can read caller-selected local image paths. Default loopback is insufficient when bound externally.",
+      "sourceEvidence": [
+        {
+          "path": "backend/storyboard-agent/src/rag_worker.py",
+          "startLine": 682,
+          "endLine": 698,
+          "sha256": "1b275ad17101bfc76af39bb05443f0e08a9b0028b19eae030fbabe7bfdb8b973"
+        },
+        {
+          "path": "backend/storyboard-agent/src/rag_worker.py",
+          "startLine": 741,
+          "endLine": 753,
+          "sha256": "1b275ad17101bfc76af39bb05443f0e08a9b0028b19eae030fbabe7bfdb8b973"
+        },
+        {
+          "path": "backend/storyboard-agent/scripts/run_rag_worker.py",
+          "startLine": 18,
+          "endLine": 26,
+          "sha256": "7bc692cf14aa3cd94cbf7841f48ce5f4dcbc6ebb4328fbfddd957c1e41f1d2e9"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "backend/storyboard-agent/tests/test_rag_worker_observability.py",
+          "startLine": 350,
+          "endLine": 353,
+          "sha256": "beabc5f5e349a5a93b1fcd4a81bb51a9b6b6edd848317b16e8e7660190efbd6b"
+        }
+      ],
+      "verification": "Current invalid-frame regression is not endpoint authentication coverage. No external bind/network/provider test was performed.",
+      "commentUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4225243306"
+    }
+  ],
+  "excludedBackendThreads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6ouwJG",
+      "path": "backend/supabase/migrations/20261003081915_restaurant_review_automation.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxVfM",
+      "path": "backend/supabase/migrations/20261004120000_restaurant_review_gemini_decision.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxtOq",
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "reason": "Root-owned knowledge_graph review"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6ozOtb",
+      "path": "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o1c8W",
+      "path": "backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pzgnD",
+      "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pz8hv",
+      "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pz8hy",
+      "path": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B3s",
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B30",
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B33",
+      "path": "backend/bin/run_parallel_laaj.py",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qTx83",
+      "path": "backend/restaurant-crawling/scripts/02-collect-meta.py",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qjvAp",
+      "path": "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQpu",
+      "path": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQp4",
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQqB",
+      "path": "backend/pipeline_control/media_cache.py",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQqH",
+      "path": "backend/pipeline_control/worker.py",
+      "reason": "Other scope: media/frames/cache/pipeline worker/run_parallel"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYiv",
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYiz",
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYi2",
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "reason": "Other agent: backend/supabase"
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYi8",
+      "path": "backend/knowledge_graph/osk_publication.py",
+      "reason": "Root-owned knowledge_graph review"
+    }
+  ],
+  "verification": {
+    "pythonFocused": {
+      "passed": 5,
+      "failed": 0,
+      "log": "provider-python-focused.log",
+      "inScopePassed": 4,
+      "rootOwnedMembershipCheckPassed": 1,
+      "note": "Membership check ran before root scope exclusion; no membership review classification included."
+    },
+    "nodeFocused": {
+      "passed": 0,
+      "moduleLoadFailures": 2,
+      "reason": "ERR_MODULE_NOT_FOUND: backend @google/genai missing from Node ESM resolution",
+      "observedNodeVersion": "v26.10.0",
+      "log": "provider-node-focused.log",
+      "note": "No JS tests executed; no packages/pins installed or changed."
+    },
+    "providerCalls": 0,
+    "externalWrites": 0,
+    "sourceEdits": 0,
+    "resolveActions": 0
+  },
+  "limitations": [
+    "Addressed means current local source and specified evidence, not GitHub resolve/deployed verification.",
+    "Outdated flags are not correctness or authorization evidence.",
+    "Potential RAG exposure depends on actual configured bind/network boundary; live exposure unverified."
+  ]
+}

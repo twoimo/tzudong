@@ -1,0 +1,9 @@
+{
+  "kind": "root-test-portability-followup",
+  "producerFilesChangedAfterMeasurement": false,
+  "testFileSha256": "26f2c196a45cf8db5afb35b5a578a5071b8ddb3d851c62761f5dbad524b2961d",
+  "stageExecutionTestsPassed": 8,
+  "systemBashFallbackCasesPassed": 1,
+  "shellSyntax": "passed",
+  "testChange": "Exercise builtin on Bash>=4.2, actual date fallback on older Bash; safe quoted marker path."
+}

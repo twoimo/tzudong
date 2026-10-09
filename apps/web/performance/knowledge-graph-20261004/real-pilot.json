@@ -1,0 +1,38 @@
+{
+  "kind": "claude-video-real-pilot",
+  "requestedModel": "gemini-3.8-flash",
+  "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+  "videoId": "QWtvZ6NfNJ8",
+  "durationSeconds": 1008,
+  "providerRequests": 1,
+  "receiptSha256": "c2c58c94262c5ec9182d3e41d8ffcdf2176bb774f60cbdd65d2db47ae227dc93",
+  "analysisSha256": "954ac9e1aa42226e016d691b687791050a215491858ded0ce842ea650ad26359",
+  "elapsedSeconds": 19.473894,
+  "usage": {
+    "cost": null,
+    "costVerified": false,
+    "inputTokens": null,
+    "outputTokens": null,
+    "rawUsageFields": {
+      "total_tokens": 93409
+    },
+    "totalTokens": 93409,
+    "usageCompleteness": "partial"
+  },
+  "coverage": {
+    "complete": true,
+    "endSeconds": 1008,
+    "independentlyVerified": false,
+    "limitations": [],
+    "startSeconds": 0
+  },
+  "counts": {
+    "restaurants": 1,
+    "menus": 7,
+    "claims": 2
+  },
+  "samples": 1,
+  "confidenceInterval": null,
+  "observationsIndependentlyVerified": false,
+  "costVerified": false
+}

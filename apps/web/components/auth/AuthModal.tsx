@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, memo, type CSSProperties } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -109,7 +110,7 @@ const EMPTY_MARKETING_CONSENT: MarketingConsent = {
   night_push: false,
 };
 const UNDER_14_SIGNUP_UNAVAILABLE_CODE = "UNDER_14_SIGNUP_UNAVAILABLE";
-const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "만 14세 미만 이용자의 가입은 운영자 승인 보호자 확인 경로가 배포되고 읽기검증될 때까지 이용할 수 없습니다.";
+const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "현재 만 14세 미만은 가입할 수 없습니다.";
 const POLICY_VERSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POLICY_CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
@@ -146,7 +147,7 @@ function OnboardingConsentFields({
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">연령대 확인 (필수)</legend>
         <p className="text-xs text-muted-foreground">
-          생년월일이나 주민등록번호를 받지 않습니다. 만 14세 미만 가입은 운영자 승인 보호자 확인 경로가 배포되고 읽기검증될 때까지 이용할 수 없습니다.
+          생년월일이나 주민등록번호를 받지 않습니다. 현재 만 14세 이상만 가입할 수 있습니다.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -630,7 +631,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
   const privacyOnboardingContent = (
     <div className="space-y-4" data-testid="privacy-onboarding-modal">
       <p className="rounded-lg border border-primary/25 bg-primary/5 p-3 text-sm leading-6" role="status">
-        Google 로그인은 완료되었습니다. 서비스 이용에 필요한 항목만 확인해주세요.
+        Google 로그인 후 서비스 이용에 필요한 항목을 확인해주세요.
       </p>
       <OnboardingConsentFields
         ageBand={ageBand}
@@ -680,7 +681,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             description={isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "쯔양의 맛집을 리뷰하고 공유하세요"}
             titleId="auth-sheet-title"
             descriptionId="auth-sheet-description"
-            icon={<span className="text-xl">🔥</span>}
+            icon={<Image src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 object-contain" />}
             action={(
               <Button type="button" variant="ghost" size="icon" aria-label="로그인 바텀시트 닫기" onClick={onClose}>
                 <X className="h-5 w-5" />
@@ -936,9 +937,9 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME} style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}>
           <DialogHeader className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-xl sm:text-2xl">🔥</span>
+            <div className="flex items-center gap-3" data-auth-brand="tzudong">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40">
+                <Image src="/logo.webp" alt="" width={36} height={36} className="h-9 w-9 object-contain" />
               </div>
               <DialogTitle className="text-xl sm:text-2xl font-semibold text-foreground">
                 {isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}

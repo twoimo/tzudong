@@ -963,4 +963,5 @@ jobs:
           python3 backend/bin/run_hosted_new_video_pipeline.py \
             --channel tzuyang \
             --limit 3 \
+            --review-automation \
             --preview-out backend/log/cron/hosted-apply-preview.json

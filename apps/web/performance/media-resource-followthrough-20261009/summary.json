@@ -1,0 +1,150 @@
+{
+  "cold": {
+    "wallMs": {
+      "pairs": 7,
+      "baselineMean": 512.1691427858813,
+      "candidateMean": 614.0150773405496,
+      "absoluteReductionMean": -101.8459345546684,
+      "relativeReductionMeanPercent": -29.35468056860119,
+      "pairedT95CiAbsoluteReduction": [
+        -284.07577832265696,
+        80.38390921332017
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -194.5967205600547,
+        54.3617022755955
+      ],
+      "pairedDifferenceStddev": 197.038094309451,
+      "baselineCvPercent": 37.53601655936551,
+      "candidateCvPercent": 4.688652991715681
+    },
+    "cpuMs": {
+      "pairs": 7,
+      "baselineMean": 3683.3948571428573,
+      "candidateMean": 4049.5045714285716,
+      "absoluteReductionMean": -366.10971428571435,
+      "relativeReductionMeanPercent": -9.938211453246106,
+      "pairedT95CiAbsoluteReduction": [
+        -428.007198479115,
+        -304.2122300923137
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -410.2867142857143,
+        -320.0541428571427
+      ],
+      "pairedDifferenceStddev": 66.92735984312728,
+      "baselineCvPercent": 0.9646481843592609,
+      "candidateCvPercent": 1.9756381510963064
+    },
+    "peakTreeRssMiB": {
+      "pairs": 7,
+      "baselineMean": 1227.345982142857,
+      "candidateMean": 348.1919642857143,
+      "absoluteReductionMean": 879.1540178571429,
+      "relativeReductionMeanPercent": 71.68710784463413,
+      "pairedT95CiAbsoluteReduction": [
+        814.945234355314,
+        943.3628013589718
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        833.75,
+        926.7566964285714
+      ],
+      "pairedDifferenceStddev": 69.42647854780701,
+      "baselineCvPercent": 6.505416856764391,
+      "candidateCvPercent": 18.707116825902812
+    },
+    "ffmpegCalls": {
+      "pairs": 7,
+      "baselineMean": 12,
+      "candidateMean": 12,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": 0.0,
+      "pairedT95CiAbsoluteReduction": [
+        0.0,
+        0.0
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": 0.0,
+      "baselineCvPercent": 0.0,
+      "candidateCvPercent": 0.0
+    }
+  },
+  "restart": {
+    "wallMs": {
+      "pairs": 7,
+      "baselineMean": 166.72219642038857,
+      "candidateMean": 184.85202370876712,
+      "absoluteReductionMean": -18.12982728837856,
+      "relativeReductionMeanPercent": -14.186686229235205,
+      "pairedT95CiAbsoluteReduction": [
+        -44.415251747864914,
+        8.155597171107797
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -38.73351755152856,
+        -1.0226547518478972
+      ],
+      "pairedDifferenceStddev": 28.421414607622207,
+      "baselineCvPercent": 16.914286328497447,
+      "candidateCvPercent": 2.9800159938440776
+    },
+    "cpuMs": {
+      "pairs": 7,
+      "baselineMean": 155.51085714285713,
+      "candidateMean": 173.52885714285713,
+      "absoluteReductionMean": -18.018,
+      "relativeReductionMeanPercent": -11.81980401543985,
+      "pairedT95CiAbsoluteReduction": [
+        -26.26056750057206,
+        -9.775432499427941
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -23.788285714285713,
+        -11.810285714285707
+      ],
+      "pairedDifferenceStddev": 8.912369999051885,
+      "baselineCvPercent": 4.727828814832293,
+      "candidateCvPercent": 1.9877567379527548
+    },
+    "peakTreeRssMiB": {
+      "pairs": 7,
+      "baselineMean": 51.544642857142854,
+      "candidateMean": 64.75669642857143,
+      "absoluteReductionMean": -13.212053571428571,
+      "relativeReductionMeanPercent": -25.85981513503313,
+      "pairedT95CiAbsoluteReduction": [
+        -15.880430100071399,
+        -10.543677042785744
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -15.015625,
+        -11.169642857142858
+      ],
+      "pairedDifferenceStddev": 2.8852125164155504,
+      "baselineCvPercent": 4.8438586742821785,
+      "candidateCvPercent": 2.3940992515679325
+    },
+    "ffmpegCalls": {
+      "pairs": 7,
+      "baselineMean": 0,
+      "candidateMean": 0,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": null,
+      "pairedT95CiAbsoluteReduction": [
+        0.0,
+        0.0
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": 0.0,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    }
+  }
+}

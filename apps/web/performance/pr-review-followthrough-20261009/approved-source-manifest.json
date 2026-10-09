@@ -1,0 +1,69 @@
+{
+  "capturedAtUtc": "2026-10-09T03:21:09.056619+00:00",
+  "sourceHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "productSourceStable": true,
+  "productFiles": [
+    {
+      "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+      "sha256": "ac95a69229ef6f05d1cf1c8ae499a0d789dda1b950ce493dfa7d5953443ee09f",
+      "bytes": 15503
+    },
+    {
+      "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "523582aeb764484cc08675a57716ba3b706a0ffb1216d933b838c66eb0e5cc2c",
+      "bytes": 22831
+    },
+    {
+      "path": "apps/web/lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "3b759a1a33cff70d7263f77e41a5b59dba4945bde90dd6ede44b94177a0bdf38",
+      "bytes": 13117
+    },
+    {
+      "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+      "sha256": "bdc3eab4355b2cdcb8cb91e536e436e0a0325a1198dd3f57153ae49c4b31a54f",
+      "bytes": 48150
+    },
+    {
+      "path": "apps/web/app/api/admin/users/route.ts",
+      "sha256": "f8dcebe1fac30b1d9906788712f6cb0117197a63d5b37a1751eed23dc231749b",
+      "bytes": 7517
+    },
+    {
+      "path": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+      "sha256": "fca88da9967813e8856e6e93cd742ed597135a170b346f71431ec9a90a96a8d4",
+      "bytes": 43818
+    },
+    {
+      "path": "apps/web/app/api/admin/restaurant-refresh-history/route.ts",
+      "sha256": "5ac591b330752f003cb0b703436acc6a3605ab4884467c888d8daa264f3add52",
+      "bytes": 24478
+    }
+  ],
+  "testFiles": [
+    {
+      "path": "apps/web/tests-unit/admin-exact-readback-api.test.ts",
+      "sha256": "321f8ee3d5d8d0a621bd20b047a21fe81a4a14a94d9a6912857924977858d34e",
+      "bytes": 5133
+    },
+    {
+      "path": "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
+      "sha256": "1d72375cca38087b20a3d14c5bfdd5287122dbac1d4f0c8401accd9a5584615e",
+      "bytes": 12599
+    },
+    {
+      "path": "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+      "sha256": "b384dab65461048497cbdb6456260fcc7fec845ae5c178abb2ee1bf2231b6905",
+      "bytes": 25187
+    },
+    {
+      "path": "apps/web/tests-unit/pipeline-flow-view-model.test.ts",
+      "sha256": "5e4a81052121728cd5e6187f36bf8dd2593fe065441e05fc7243a289279bc9b5",
+      "bytes": 19718
+    },
+    {
+      "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "sha256": "821db86b002aebc0a5302942bdeab2f91db2009d45720cbc2d2fe71e7403e7dc",
+      "bytes": 431315
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/supabase-entrypoint-source.test.ts:
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > only the frozen allowlist of files constructs a Supabase client [0.27ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > each canonical entrypoint constructs exactly its expected primitive from the expected SDK package [0.22ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > canonical entrypoints share one Supabase URL config so Local and Hosted use the same entrypoints [0.09ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > the privileged Storage client keeps only .storage and stays server-only [0.03ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > general server code routes Local_Database access through an entrypoint, not the SDK [0.03ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > no first-party source opens a direct Postgres connection that bypasses Supabase [32.98ms]
+
+tests-unit/public-surface-design-contract.test.ts:
+(pass) public surface design contract > page inventory is exactly the 27-row matrix [6.43ms]
+(pass) public surface design contract > loading files use the three-way taxonomy and do not treat null loaders as missing [5.05ms]
+(pass) public surface design contract > error files stay at root plus feed, global-map, and mypage [4.28ms]
+(pass) public surface design contract > AppRuntimeLayout families are exactly the eleven segment layouts [4.66ms]
+(pass) public surface design contract > pins all five CSS owner-to-importer mappings and forbids a sixth Tailwind entry [32.07ms]
+(pass) public surface design contract > freezes each Tailwind owner path and not @source scope [0.83ms]
+(pass) public surface design contract > records dual 404 contexts and keeps not-found a server module [0.44ms]
+(pass) public surface design contract > imports the shared light-mode token partial with per-owner cascade context [0.58ms]
+(pass) public surface design contract > horizontal allowlist enumerates data-horizontal-scroll-owner values only [62.23ms]
+(pass) public surface design contract > family chrome stays Korean-first and legal pages stay chrome-less [0.67ms]
+
+ 16 pass
+ 0 fail
+ 160 expect() calls
+Ran 16 tests across 2 files. [324.00ms]

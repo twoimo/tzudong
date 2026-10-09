@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useRecordAction } from '@/lib/admin/use-record-action';
+import { isRecordActionCancelled, recordActionErrorMessage } from '@/lib/admin/record-action-client';
+import { RECORD_CATEGORIES, type RecordActionReceipt, type RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
+import { isEvaluationRecordStatus, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,12 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { checkDbConflict } from '@/lib/db-conflict-checker';
-import { mergeAdminReviewRestaurant } from '@/lib/admin-review-merge';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -33,23 +34,7 @@ import {
   ADMIN_MODAL_SCROLL_BODY,
 } from './admin-modal-styles';
 
-const CATEGORY_OPTIONS = [
-  '한식',
-  '일식',
-  '중식',
-  '양식',
-  '아시안',
-  '치킨',
-  '피자',
-  '햄버거',
-  '분식',
-  '카페/디저트',
-  '베이커리',
-  '술집',
-  '뷔페',
-  '고기/구이',
-  '기타',
-];
+const CATEGORY_OPTIONS = RECORD_CATEGORIES;
 
 interface MissingRestaurantFormProps {
   record: EvaluationRecord | null;
@@ -89,24 +74,40 @@ interface GeocodedAddressData {
   y: string;
 }
 
-interface MergeTargetRestaurantRow {
-  updated_at: string;
+export function MissingRestaurantForm(props: MissingRestaurantFormProps) {
+  return props.open ? <MissingRestaurantEditor {...props} /> : null;
 }
 
-export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }: MissingRestaurantFormProps) {
+function MissingRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSuccess }: MissingRestaurantFormProps) {
+  const [record] = useState(incomingRecord);
   const { toast } = useToast();
-  const { user } = useAuth();
-  const getErrorMessage = (error: unknown, fallback: string) =>
-    error instanceof Error && error.message ? error.message : fallback;
-  const requireAdminUserId = () => {
-    if (!user?.id) {
-      throw new Error('로그인이 필요합니다');
+  const [working, setLoading] = useState(false);
+  const [confirmedReceipt, setConfirmedReceipt] = useState<RecordActionReceipt | null>(null);
+  const refreshAfterAction = async (receipt: RecordActionReceipt) => {
+    if (!record) return;
+    setConfirmedReceipt(receipt);
+    try {
+      const response = await fetch(`/api/admin/evaluations/${encodeURIComponent(record.id)}`, { cache: 'no-store' });
+      const value = response.ok ? await response.json() : null;
+      const current = normalizeEvaluationRecord(value?.record);
+      if (!current || current.id !== record.id || current.read_summary || (value?.record?.name !== null && typeof value?.record?.name !== 'string') || !isEvaluationRecordStatus(value?.record?.status) || !Number.isFinite(Date.parse(value?.record?.updated_at))) throw new Error('RECORD_CURRENT_READ_FAILED');
+      onSuccess(record.id, withAdminEvaluationDisplayName(current));
+      toast({ title: '작업 결과 확인 완료' });
+      onOpenChange(false);
+    } catch {
+      toast({ variant: 'destructive', title: '적용은 확인되었습니다', description: '현재 정보 조회에 실패했습니다. 저장을 반복하지 말고 다시 불러와 주세요.' });
     }
-
-    return user.id;
   };
+  const recordActions = useRecordAction(receipt => {
+    if (record && receipt.targetIds.includes(record.id)) void refreshAfterAction(receipt);
+  });
+  const loading = working || recordActions.busy || confirmedReceipt !== null;
+
+  const getErrorMessage = (_error: unknown, fallback: string) => fallback;
   const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record?.youtube_link);
-  const [loading, setLoading] = useState(false);
+  const initialFormRef = useRef('');
+  const initializedRef = useRef(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -136,14 +137,17 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
   // record가 변경될 때 폼 데이터 초기화 (쯔양 리뷰 포함)
   useEffect(() => {
-    if (record && record.restaurant_info) {
-      setFormData({
+    if (record && record.restaurant_info && !initializedRef.current) {
+      initializedRef.current = true;
+      const initialForm = {
         name: record.restaurant_info.name || '',
         address: record.restaurant_info.origin_address || '',
         phone: record.restaurant_info.phone || '',
         category: record.restaurant_info.category || '',
         tzuyang_review: record.restaurant_info.tzuyang_review || '',
-      });
+      };
+      initialFormRef.current = JSON.stringify(initialForm);
+      setFormData(initialForm);
     }
   }, [record]);
 
@@ -189,6 +193,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || geocoding || !record) return;
     if (!record) return;
 
     // 지오코딩 결과 확인
@@ -269,158 +274,63 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       await registerNewRestaurant(geocodingData, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
 
     } catch (error: unknown) {
-      console.error('레스토랑 등록 실패:');
+      if (isRecordActionCancelled(error)) return;
       toast({
         variant: 'destructive',
         title: '등록 실패',
-        description: getErrorMessage(error, '레스토랑 등록 중 오류가 발생했습니다.'),
+        description: recordActionErrorMessage(error),
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // 병합 처리 함수
-  const handleMerge = async (existingRestaurant: ConflictRestaurant, trimmedName: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
-    try {
-      const adminUserId = requireAdminUserId();
-
-      const mergeTargetQuery = await supabase
-        .from('restaurants' as never)
-        .select('updated_at')
-        .eq('id', existingRestaurant.id)
-        .single();
-      const mergeTargetError = mergeTargetQuery.error;
-      const mergeTargetRestaurant = mergeTargetQuery.data as MergeTargetRestaurantRow | null;
-
-      if (mergeTargetError || !mergeTargetRestaurant) {
-        throw new Error('병합 대상 레스토랑을 찾을 수 없습니다.');
-      }
-
-      const normalizedNewYoutubeMeta =
-        record?.youtube_meta &&
-        typeof record.youtube_meta === 'object' &&
-        !Array.isArray(record.youtube_meta)
-          ? (record.youtube_meta as Record<string, unknown>)
-          : undefined;
-
-      await mergeAdminReviewRestaurant({
-        targetRestaurantId: existingRestaurant.id,
-        sourceRestaurantId: record!.id,
-        adminUserId,
-        expectedTargetUpdatedAt: mergeTargetRestaurant.updated_at,
-        incomingYoutubeLink: canonicalYoutubeUrl,
-        incomingYoutubeMeta: normalizedNewYoutubeMeta ?? null,
-        incomingTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
-        incomingCategory: trimmedCategory || null,
-      });
-
-      toast({
-        title: '병합 완료',
-        description: `${trimmedName} 레스토랑에 영상 링크가 병합되었습니다.`,
-      });
-
-      onSuccess(record!.id, {
-        status: 'deleted',
-        updated_by_admin_id: adminUserId,
-        updated_at: new Date().toISOString(),
-        db_error_message: null,
-        db_error_details: null,
-      });
-      onOpenChange(false);
-      resetForm();
-    } catch (error: unknown) {
-      toast({
-        variant: 'destructive',
-        title: '병합 실패',
-        description: getErrorMessage(error, '병합 중 오류가 발생했습니다.'),
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleMerge = async (existingRestaurant: ConflictRestaurant, _trimmedName: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
+    if (!record) return;
+    const meta = record.youtube_meta;
+    const incomingChanges: RestaurantRecordChanges = {
+      ...(meta ? { youtube_meta: {
+        title: meta.title, published_at: meta.publishedAt, duration: meta.duration, is_shorts: meta.is_shorts,
+        is_ads: meta.ads_info.is_ads, what_ads: meta.ads_info.what_ads ? [meta.ads_info.what_ads] : null,
+      } } : {}),
+      youtube_link: canonicalYoutubeUrl,
+      tzuyang_review: trimmedTzuyangReview || record.restaurant_info?.tzuyang_review || null,
+      categories: [trimmedCategory] as RestaurantRecordChanges['categories'],
+    };
+    const payload = { mergeTargetId: existingRestaurant.id, incomingChanges };
+    await refreshAfterAction(await recordActions.run({ action: 'restaurant.merge', targetIds: [existingRestaurant.id, record.id], payload }));
   };
 
-  // 새 레스토랑 등록 함수
   const registerNewRestaurant = async (geocodingData: GeocodedAddressData, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
-    try {
-      const adminUserId = requireAdminUserId();
-
-      const { error: updateError } = await supabase
-        .from('restaurants' as never)
-        .update({
-          approved_name: trimmedName,
-          road_address: geocodingData.road_address,
-          jibun_address: geocodingData.jibun_address,
-          english_address: geocodingData.english_address,
-          address_elements: geocodingData.address_elements,
-          lat: parseFloat(geocodingData.y),
-          lng: parseFloat(geocodingData.x),
-          phone: trimmedPhone || null,
-          categories: trimmedCategory ? [trimmedCategory] : [],
-          updated_by_admin_id: adminUserId,
-          youtube_link: canonicalYoutubeUrl,
-          youtube_meta: record!.youtube_meta ?? null,
-          tzuyang_review: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
-          status: 'approved',
-          geocoding_success: true,
-          geocoding_false_stage: null,
-          is_missing: false,
-          updated_at: new Date().toISOString(),
-          db_error_message: null,
-          db_error_details: null,
-        } as never)
-        .eq('id', record!.id);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: '등록 완료',
-        description: `${trimmedName} 레스토랑이 성공적으로 등록되었습니다.`,
-      });
-
-      onSuccess(record!.id, {
-        status: 'approved',
-        approved_name: trimmedName,
-        phone: trimmedPhone || null,
-        categories: trimmedCategory ? [trimmedCategory] : [],
-        road_address: geocodingData.road_address,
-        jibun_address: geocodingData.jibun_address,
-        english_address: geocodingData.english_address,
-        address_elements: geocodingData.address_elements as unknown as Record<string, unknown>,
-        lat: parseFloat(geocodingData.y),
-        lng: parseFloat(geocodingData.x),
-        geocoding_success: true,
-        geocoding_false_stage: null,
-        is_missing: false,
-        updated_by_admin_id: adminUserId,
-        updated_at: new Date().toISOString(),
-        db_error_message: null,
-        db_error_details: null,
-      });
-      onOpenChange(false);
-      resetForm();
-    } catch (error: unknown) {
-      toast({
-        variant: 'destructive',
-        title: '등록 실패',
-        description: getErrorMessage(error, '레스토랑 등록 중 오류가 발생했습니다.'),
-      });
-    } finally {
-      setLoading(false);
-    }
+    if (!record) return;
+    const changes: RestaurantRecordChanges = {
+      approved_name: trimmedName, phone: trimmedPhone || null,
+      categories: [trimmedCategory] as RestaurantRecordChanges['categories'],
+      road_address: geocodingData.road_address, jibun_address: geocodingData.jibun_address,
+      english_address: geocodingData.english_address,
+      address_elements: geocodingData.address_elements as RestaurantRecordChanges['address_elements'],
+      lat: Number(geocodingData.y), lng: Number(geocodingData.x),
+      youtube_link: canonicalYoutubeUrl, tzuyang_review: trimmedTzuyangReview || record.restaurant_info?.tzuyang_review || null,
+      geocoding_success: true,
+    };
+    await refreshAfterAction(await recordActions.run({ action: 'restaurant.register_missing', targetIds: [record.id], payload: { changes } }));
   };
 
   // 오류 경고 후 강제 등록
   const handleForceRegister = async () => {
+    if (loading) return;
     setShowConflictWarning(false);
     if (pendingGeocodingData && pendingFormData) {
-      await registerNewRestaurant(
+      setLoading(true);
+      try { await registerNewRestaurant(
         pendingGeocodingData,
         pendingFormData.name,
         pendingFormData.phone,
         pendingFormData.category,
         pendingFormData.tzuyang_review
-      );
+      ); } catch (error) {
+        if (!isRecordActionCancelled(error)) toast({ variant: 'destructive', title: '등록 실패', description: recordActionErrorMessage(error) });
+      } finally { setLoading(false); }
     }
   };
 
@@ -440,11 +350,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       const data: NaverGeocodingResponse & { error?: string } = await response.json();
 
       if (!response.ok) {
-        return { success: false, error: data.error || 'Naver 지오코딩 요청에 실패했습니다.' };
+        return { success: false, error: 'Naver 지오코딩 요청에 실패했습니다.' };
       }
 
       if (data.errorMessage) {
-        return { success: false, error: data.errorMessage };
+        return { success: false, error: '주소 조회에 실패했습니다.' };
       }
 
       if (!data.addresses || data.addresses.length === 0) {
@@ -469,28 +379,16 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      address: '',
-      phone: '',
-      category: '',
-      tzuyang_review: '',
-    });
-    setGeocodingResult(null);
-  };
-
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      resetForm();
-    }
+    if (loading || geocoding) return;
+    if (!newOpen && (JSON.stringify(formData) !== initialFormRef.current || geocodingResult !== null)) { setDiscardOpen(true); return; }
     onOpenChange(newOpen);
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className={ADMIN_MODAL_CONTENT_MD_FLEX}>
+        <DialogContent className={ADMIN_MODAL_CONTENT_MD_FLEX} onInteractOutside={event => event.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Missing 레스토랑 등록</DialogTitle>
             <DialogDescription>
@@ -499,7 +397,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
+            <fieldset disabled={loading || geocoding} className="space-y-4 py-4">
               {/* 유튜브 링크 표시 */}
               {record && (
                 <div className="rounded-lg bg-muted p-3">
@@ -649,7 +547,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
                   rows={3}
                 />
               </div>
-            </div>
+            </fieldset>
+            {confirmedReceipt && <Button type="button" variant="outline" onClick={() => void refreshAfterAction(confirmedReceipt)}>현재 정보 다시 불러오기</Button>}
 
             <DialogFooter className={ADMIN_MODAL_FOOTER_DIVIDER}>
               <Button
@@ -719,6 +618,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {recordActions.dialog}
+      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}><AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
+        <AlertDialogHeader><AlertDialogTitle>변경 내용을 버릴까요?</AlertDialogTitle><AlertDialogDescription>저장하지 않은 편집 내용이 있습니다.</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogFooter><AlertDialogCancel>계속 편집</AlertDialogCancel><AlertDialogAction onClick={() => onOpenChange(false)}>변경 버리기</AlertDialogAction></AlertDialogFooter>
+      </AlertDialogContent></AlertDialog>
     </>
   );
 }

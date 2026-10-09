@@ -1,0 +1,31 @@
+{
+  "schema": "record-media-storage-compatibility-v1",
+  "status": "passed",
+  "storageImage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177",
+  "databaseImage": "supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+  "s3Image": "cgr.dev/chainguard/minio@sha256:0d54f6c86e53138c6cfc242e21309a18941624d9034d9cdf598dbba61f69d872",
+  "recordSqlSha256": "97af1726a2e2b399388fcb617266378237893bbe868c25ffa19ee748b2c4833f",
+  "harnessSha256": "735665d6b10909c69f726bf00f20b20c2e05a9a3546728d770babbd67151e689",
+  "tests": [
+    {
+      "name": "standard_upload_claim_delete_physical_absence",
+      "passed": true
+    },
+    {
+      "name": "upsert_before_claim_protects_replacement",
+      "passed": true
+    },
+    {
+      "name": "claimed_path_rejects_user_and_service_upsert",
+      "passed": true
+    },
+    {
+      "name": "copy_rejects_retired_destination_allows_fresh_path",
+      "passed": true
+    }
+  ],
+  "physicalBackend": "s3",
+  "syntheticOnly": true,
+  "hostedOperations": 0,
+  "canonicalReplay": false
+}

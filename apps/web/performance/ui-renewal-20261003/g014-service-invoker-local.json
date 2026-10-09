@@ -1,0 +1,27 @@
+{
+  "kind": "isolated-g014-service-invoker-contract-verification",
+  "postgresVersion": "17.6",
+  "runtime": "Python 3.14.7 / psycopg2 / macOS arm64 / owned Unix socket",
+  "migrationSha256": "527286d204fc8a5b07891763535fcb27ce6e28a0e2489c27796a63bc306b6f9c",
+  "testsPassed": 5,
+  "testsSkipped": 0,
+  "negativeMutationCases": 147,
+  "identities": 21,
+  "checks": [
+    "known invokers accepted",
+    "assertion metadata and ACL preserved",
+    "rollback restored source",
+    "repeat migration rejected with no write",
+    "owner, security mode, search path, browser grants, service grant and grant-option drift denied",
+    "unknown invoker denied",
+    "legacy definer protection retained",
+    "second assertion source mismatch rolled back both patches"
+  ],
+  "canonicalFullReplay": "pending CI",
+  "hostedOperationBodiesTested": false,
+  "initialFixtureFailure": {
+    "errors": 4,
+    "reason": "isolated fixture lacked privacy_auth_bridge; fixture now creates only the absent role and cleans it up"
+  },
+  "formalPerformanceClaim": false
+}

@@ -1,0 +1,67 @@
+{
+  "schema": "credited-gemini-model-discovery-v1",
+  "observedAtUtc": "2026-10-08T19:02:04.610689+00:00",
+  "endpoint": "https://generativelanguage.googleapis.com/v1beta/models",
+  "httpStatus": 200,
+  "credentialSource": "existing authorized backend GEMINI_API_KEY vault copy",
+  "modelsReturned": 62,
+  "pages": 1,
+  "complete": true,
+  "selectedModels": [
+    {
+      "name": "models/gemini-3-pro-image-preview",
+      "displayName": "Nano Banana Pro",
+      "version": "3.0",
+      "inputTokenLimit": 131072,
+      "outputTokenLimit": 32768,
+      "supportedGenerationMethods": [
+        "generateContent",
+        "countTokens",
+        "batchGenerateContent"
+      ]
+    },
+    {
+      "name": "models/gemini-3.1-flash-image",
+      "displayName": "Nano Banana 2",
+      "version": "3.0",
+      "inputTokenLimit": 65536,
+      "outputTokenLimit": 65536,
+      "supportedGenerationMethods": [
+        "generateContent",
+        "countTokens",
+        "batchGenerateContent"
+      ]
+    },
+    {
+      "name": "models/gemini-3.8-flash",
+      "displayName": "Gemini 3.8 Flash",
+      "version": "3.0",
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536,
+      "supportedGenerationMethods": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ]
+    },
+    {
+      "name": "models/gemini-embedding-001",
+      "displayName": "Gemini Embedding 001",
+      "version": "001",
+      "inputTokenLimit": 2048,
+      "outputTokenLimit": 1,
+      "supportedGenerationMethods": [
+        "embedContent",
+        "countTextTokens",
+        "countTokens",
+        "asyncBatchEmbedContent"
+      ]
+    }
+  ],
+  "missingRequestedIds": [],
+  "inferenceCalls": 0,
+  "billingChanges": 0,
+  "hostedWrites": 0,
+  "generationAvailabilityVerified": false
+}

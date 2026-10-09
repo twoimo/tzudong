@@ -1,0 +1,87 @@
+{
+  "passed": true,
+  "kind": "actual-page-synthetic-browser",
+  "origin": "http://127.0.0.1:18794",
+  "results": [
+    {
+      "width": 390,
+      "label": "preview",
+      "overflow": 0,
+      "viewportOverflow": 0
+    },
+    {
+      "width": 390,
+      "cancellationSentNoApply": true
+    },
+    {
+      "width": 834,
+      "label": "preview",
+      "overflow": 0,
+      "viewportOverflow": 0
+    },
+    {
+      "width": 834,
+      "cancellationSentNoApply": true
+    },
+    {
+      "width": 1423,
+      "label": "preview",
+      "overflow": 0,
+      "viewportOverflow": 0
+    },
+    {
+      "width": 1423,
+      "cancellationSentNoApply": true
+    },
+    {
+      "casConflictBlocksReplay": true
+    },
+    {
+      "inflightCancellationBlocked": true,
+      "singleApply": true
+    },
+    {
+      "lostApplyRecoveredByOriginalId": true
+    },
+    {
+      "reloadRecoveredByOriginalId": true,
+      "noReplay": true
+    },
+    {
+      "reachableSubmissionEdit": true
+    },
+    {
+      "reviewApprovalGuarded": true
+    }
+  ],
+  "deniedUnexpectedWrites": 0,
+  "syntheticNotifications": 1,
+  "pageErrors": 0,
+  "actualWrites": 0,
+  "providerCalls": 0,
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0",
+  "sourceStable": true,
+  "source": [
+    {
+      "path": "app/admin/evaluations/page.tsx",
+      "sha256": "459fbca12dfee4c462dc637c175137190a11ad7b1dfe39019badc691589aa272"
+    },
+    {
+      "path": "lib/admin/record-action-client.ts",
+      "sha256": "a6622c088dfd0b3e72937fb58b5bd96ac0fb5bc12a7455b782a74bd08b52b095"
+    },
+    {
+      "path": "lib/admin/use-record-action.tsx",
+      "sha256": "bbb84c8859d7703573cd7e73d480c53ee713b4200c86dacf2e6f184699ff3f27"
+    },
+    {
+      "path": "lib/admin/evaluation-record-actions.ts",
+      "sha256": "7161a3b1d3c9c86ddb3917d5dfe92cfa16ba41189f7e92760a9b4af020c56eab"
+    },
+    {
+      "path": "lib/admin/record-action-contract.ts",
+      "sha256": "78eb5c8ddb2c7c53855f9e8a4350b7be337d15e79f47e9ef82bb177d190ba260"
+    }
+  ]
+}

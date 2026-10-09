@@ -116,7 +116,7 @@ MIGRATION_ORDER_OVERRIDES = {
 }
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
-EXPECTED_LEDGER_UNITS = 104
+EXPECTED_LEDGER_UNITS = 130
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -4458,7 +4458,11 @@ def _capture_replay_proofs(executor: PsqlExecutor) -> dict[str, Any]:
 def _capture_replay_sql(executor: PsqlExecutor, migration_path: str, sql: bytes) -> bytes:
     # This pinned catalog-only verifier requires the postgres login identity.
     # Source migrations and ledger operations retain their supabase_admin actor.
-    if migration_path == "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql":
+    if migration_path in {
+        "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+        "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql",
+        "backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql",
+    }:
         return executor.capture(sql, role="postgres")
     return executor.capture(sql)
 

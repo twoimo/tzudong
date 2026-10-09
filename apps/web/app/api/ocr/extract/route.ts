@@ -187,8 +187,10 @@ export async function POST(req: Request) {
         let usedCandidate: OcrAiRuntimeConfigCandidate | null = null;
         let failedAttemptCount = 0;
         for (const candidate of effectiveCandidates) {
+            req.signal.throwIfAborted();
             const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
             for (const credential of credentials) {
+                req.signal.throwIfAborted();
                 try {
                     ocrResult = await callGeminiReceiptOcr({
                         apiKey: credential.apiKey,
@@ -196,10 +198,12 @@ export async function POST(req: Request) {
                         mimeType: 'image/jpeg',
                         prompt: OCR_PROMPT,
                         env: { ...process.env, GEMINI_OCR_MODEL: candidate.models.join(',') },
+                        signal: req.signal,
                     });
                     usedCandidate = candidate;
                     break;
                 } catch {
+                    req.signal.throwIfAborted();
                     failedAttemptCount += 1;
                     if (aiRuntime.routingMode === 'manual') {
                         throw new Error('OCR_MANUAL_PROVIDER_FAILED');

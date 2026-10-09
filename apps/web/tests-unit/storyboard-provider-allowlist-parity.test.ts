@@ -7,10 +7,10 @@ import {
 
 const appRoot = join(import.meta.dir, '..');
 const migration = readFileSync(
-  join(appRoot, '../../backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql'), 'utf8',
+  join(appRoot, '../../backend/supabase/applied-receipts/storyboard-20261003/20261003000811_storyboard_historical_restore.sql'), 'utf8',
 ).replace(/\r\n/g, '\n');
 
-describe('storyboard provider allowlist parity', () => {
+describe('historical storyboard provider receipt parity (not the active Gemini worker)', () => {
   test('the external-AI-off SQL gate admits every loopback provider the client advertises', () => {
     const start = migration.indexOf("providers,externalAI}')::boolean");
     const end = migration.indexOf("'external_ai_disabled'");
@@ -26,4 +26,3 @@ describe('storyboard provider allowlist parity', () => {
       .toBeLessThan(migration.indexOf("'external_ai_disabled'"));
   });
 });
-

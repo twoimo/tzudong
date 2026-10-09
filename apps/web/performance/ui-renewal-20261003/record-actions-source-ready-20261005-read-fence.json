@@ -1,0 +1,158 @@
+{
+  "sourceReady": true,
+  "scope": "guarded record UI read invalidation and legacy endpoint retirement",
+  "changedThisRevision": [
+    {
+      "path": "apps/web/app/admin/evaluations/page.tsx",
+      "sha256": "bb0f7ccc6f92b558bfdde37f980588a1cb4ef7d618501297dc188ff329252bd6"
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-client.ts",
+      "sha256": "54d7cbea087c0259c261a97293a37458c68125a2c86c810d9a252a04b8c881f3"
+    },
+    {
+      "path": "apps/web/lib/admin/use-record-action.tsx",
+      "sha256": "e34ca4f3ae7392f4fa697adcde4af6f72e2b40ab0e8a6f296dea6c2f5f4dfa48"
+    },
+    {
+      "path": "apps/web/app/api/admin/restaurant-requests/[requestId]/review/route.ts",
+      "sha256": "b8a7e07f4892916f4da078583540f10d506e46c97bbb56671d80560776679cb8"
+    },
+    {
+      "path": "apps/web/app/api/admin/restaurants/[restaurantId]/destructive-action/route.ts",
+      "sha256": "b8a7e07f4892916f4da078583540f10d506e46c97bbb56671d80560776679cb8"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
+      "sha256": "a21ac7649f039fa19fdede7e1fbea3ec3f18ba70ac9ca425ff948748204bbccd"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-evaluation-record-actions.test.ts",
+      "sha256": "f6a99e57eefbb1b88af564a9b8b932d7fd288ae76574d8b442ada4b25d894ae5"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-view-fence.test.ts",
+      "sha256": "200b682b70f1db1fd9490bb3ee01f16fcf1a3f6d917775a3ed1dbf4ab2bbed9b"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-retired-moderation-endpoints.test.ts",
+      "sha256": "4c140527e50551d41977d4df79b3f2e5e2e6e34d256162e100e213515749b4a6"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-mutation-request-security.test.ts",
+      "sha256": "b8396824e4b2ef3c3da8822f3098004bdea048c2bec658ea5b75de0e24aab558"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-restaurant-destructive-action.test.ts",
+      "sha256": "d7abb251a20f672fc16a5514583549d091f97a183558f1b1d86af63ee506acc6"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "sha256": "511ba2944c720b6b9444dd849baa98b3d8a55644b9170b96171764a87d23a2a7"
+    },
+    {
+      "path": "apps/web/tests-unit/api-security-source.test.ts",
+      "sha256": "b4d27a92b39a1fbb5770baae2ef8bd2f7f7ffa68fa99dd815f3adbd09309dc52"
+    },
+    {
+      "path": "apps/web/scripts/verify-admin-record-actions-browser.ts",
+      "sha256": "1ca05b89d07561e6ba199e2f72dd1cb26add86413cc6d0cdb1614238199f6d27"
+    }
+  ],
+  "rootReloadCallbackPreserved": true,
+  "rootReloadCallbackSha256": "963206cb0d3583ac8dd10f76fbba80c6a5e0e3b697576bb855c8531ad04ff536",
+  "fallbackStatusSixFilesPreserved": {
+    "app/api/admin/pipeline/route.ts": true,
+    "lib/admin/operations-view-model.ts": true,
+    "tests-unit/admin-pipeline-control.test.ts": true,
+    "tests-unit/admin-operations-view-model.test.ts": true,
+    "lib/admin/pipeline-flow-view-model.ts": true,
+    "tests-unit/pipeline-flow-view-model.test.ts": true
+  },
+  "checks": {
+    "targetedTests": {
+      "distinctTests": 40,
+      "assertions": 537,
+      "failed": 0,
+      "evidence": [
+        "/tmp/astra-record-revised-final-tests.log",
+        "/tmp/astra-record-revised-contract-tests.log",
+        "/tmp/astra-retired-source-test.log",
+        "/tmp/astra-retired-privacy-test.log"
+      ],
+      "aggregation": "37 tests before final mapping changes; replace the 19 client/page tests by their 20-test rerun, add two targeted source tests. No passing tests counted twice."
+    },
+    "eslint": {
+      "errors": 0,
+      "warnings": 0,
+      "evidence": "/tmp/astra-record-read-fence-eslint.log"
+    },
+    "typecheck": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3202,
+      "logicalInputNamesSha256": "aa6dbdf84663dc01660deef2e4f121cc391f1d6bed2d2e765cb01062c5a5d29c",
+      "nonLibraryContentSha256": "b4a6ac7e86cf73a41c8677b1d628ffdec9ca7481711ea888df3816fdc8493592",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    },
+    "browser": {
+      "evidence": "apps/web/performance/ui-renewal-20261003/record-actions-browser-20261005-read-fence-final.json",
+      "results": 13,
+      "widths": [
+        390,
+        834,
+        1423
+      ],
+      "sourceStable": true,
+      "overflow": 0,
+      "pageErrors": 0,
+      "unexpectedWrites": 0
+    }
+  },
+  "contractConsumed": {
+    "path": "apps/web/lib/admin/record-action-contract.ts",
+    "sha256": "80c0d8fd63b943e32803e171580dcab01537177c9239be7d55725f79bf043ca8",
+    "multipleCreatedIds": "1-25; match submitted changes plus additions in-session; recovery uses original persisted identity and GET only",
+    "unmanagedMedia": "reported separately from confirmed DB deletion"
+  },
+  "endpointAudit": {
+    "retired": [
+      "/api/admin/restaurant-requests/[requestId]/review",
+      "/api/admin/restaurants/[restaurantId]/destructive-action"
+    ],
+    "behavior": "requireAdmin, same-origin validation, no-store fixed 410 replacement endpoint; body never read or replayed; no privileged client/RPC",
+    "activeUICallers": 0,
+    "remainingCoordination": [
+      {
+        "path": "apps/web/components/admin/SubmissionListView.tsx:1998",
+        "finding": "Explanatory copy still names retired recommendation URL; no executable caller. Frozen file left untouched."
+      },
+      {
+        "path": "apps/web/components/admin/AdminReviewPanel.tsx",
+        "finding": "Home desktop review panel still has explicit disabled legacy guard on approve/reject/delete; it is not one of the retired HTTP endpoint callers. No legacy flag enabled."
+      },
+      {
+        "path": "backend/supabase/tests/admin-record-actions-contract.md",
+        "finding": "Guide action table still describes old create/merge shape at observation; consumed actual revised DTO, did not edit another owner document."
+      }
+    ]
+  },
+  "boundaries": {
+    "originalWorktreeEdits": 0,
+    "operatingWrites": 0,
+    "providerCalls": 0,
+    "commits": 0,
+    "serverDTOEdits": 0,
+    "sqlEdits": 0,
+    "ownedBrowserClosed": true,
+    "browserSession": "tzudong-record-actions-astra-20261005"
+  },
+  "limits": [
+    "Browser HTTP actions and current-row reads are synthetic. No hosted API/DB/Storage/promotion evidence.",
+    "Separate modal current-row readbacks and server migration acceptance remain separately owned.",
+    "Source-ready is local UI/client/endpoint retirement evidence, not a release receipt."
+  ]
+}

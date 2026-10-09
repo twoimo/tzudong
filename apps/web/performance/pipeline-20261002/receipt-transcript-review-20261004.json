@@ -1,0 +1,17 @@
+{
+  "scope": "stage08 semantic assets and recheck source transcript admission",
+  "python_tests_pass": 22,
+  "invalid_transcript_variants": 11,
+  "external_commands_for_invalid_transcripts": 0,
+  "paid_provider_calls": 0,
+  "source_file_mutations": 0,
+  "overlap_invocations": 2,
+  "work_executions_for_identical_inputs": 1,
+  "asset_changes_reprocessed": 2,
+  "source_sha256": {
+    "backend/bin/run_restaurant_review_automation.py": "765e0dbbd7a0f62fc5cc7e8640bafaf1df31966c51808331d7d1f034e0ff8fbe",
+    "backend/bin/tests/test_restaurant_review_automation.py": "a6758f2683f3d3bd22be2338107d818afadf9de486a3b4435e290c2044a3dc3e",
+    "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh": "c5cb2bed8e2929f5254e0bb18437788ebdb95028f0a3575b10410050e92f8fcd",
+    "backend/utils/tests/test_stage_execution.py": "730765cd11adbb507b050015cdb7552cd2bc8a4a4f5d5330a4f9c8497eba98ba"
+  }
+}

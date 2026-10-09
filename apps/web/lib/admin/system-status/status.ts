@@ -1,3 +1,4 @@
+import { getStoryboardRagWorkerConnection } from '@/lib/admin/storyboard/rag-worker-client';
 import {
   buildNaverDirectionsReadiness,
   buildProviderReadiness,
@@ -296,9 +297,8 @@ const NIGHTLY_REGRESSION_STATUS_SNIPPET = [
 
 const GEMINI_KEY_CHECK_SNIPPET = [
   '# Gemini 서버 키 점검 (택1)',
-  'GEMINI_API_KEY="${GEMINI_API_KEY:-<GEMINI_KEY>}"',
-  '# 또는 STORYBOARD_AGENT_GEMINI_API_KEY / GOOGLE_API_KEY',
-  '[ -n "$GEMINI_API_KEY" ] || echo "Gemini key missing"',
+  '# Gemini RAG 서버에서는 GEMINI_CREDITS_API_KEY / STORYBOARD_GEMINI_API_KEY / GEMINI_API_KEY를 사용합니다.',
+  '# 승인된 worker 환경을 확인하세요. inbound STORYBOARD_RAG_WORKER_TOKEN과 재사용하지 않습니다.',
 ].join('\n');
 
 const OPENAI_KEY_CHECK_SNIPPET = [
@@ -323,19 +323,14 @@ const NANO_BANANA_KEY_CHECK_SNIPPET = [
 ].join('\n');
 
 const STORYBOARD_HEALTH_CHECK_SNIPPET = [
-  '# 스토리보드 에이전트 헬스체크',
-  'STORYBOARD_AGENT_API_URL="${STORYBOARD_AGENT_API_URL:-https://your-storyboard-host/api}"',
-  'curl -fsS "${STORYBOARD_AGENT_API_URL%/}/health"',
-].join('\n');
-
-const BGE_EMBEDDING_HEALTH_CHECK_SNIPPET = [
-  '# BGE 임베딩 서버 헬스체크',
-  'STORYBOARD_BGE_EMBEDDING_URL="${STORYBOARD_BGE_EMBEDDING_URL:-https://your-bge-host/v1/embeddings}"',
-  'STORYBOARD_BGE_EMBEDDING_TOKEN="${STORYBOARD_BGE_EMBEDDING_TOKEN:-<BGE_TOKEN>}"',
-  'curl -fsS -X POST "${STORYBOARD_BGE_EMBEDDING_URL%/}" \\',
-  '  -H "Content-Type: application/json" \\',
-  '  -H "Authorization: Bearer ${STORYBOARD_BGE_EMBEDDING_TOKEN}" \\',
-  "  -d '{\"inputs\":[\"health check\"]}'",
+  '# Gemini RAG 워커: 독립 capability와 승인된 URL 설정 여부만 확인합니다.',
+  '# 실제 키 값은 출력하지 않으며 이 명령은 provider/API 호출을 하지 않습니다.',
+  "python3 - <<'PY'",
+  'import os',
+  'keys = ("STORYBOARD_RAG_WORKER_URL", "STORYBOARD_RAG_WORKER_TOKEN")',
+  'print("RAG connection configured" if all(os.environ.get(key, "").strip() for key in keys) else "RAG connection missing")',
+  'PY',
+  '# Admin 시스템 상태는 Authorization header로 /health와 /models?load=false를 확인합니다.',
 ].join('\n');
 
 export function resolveAdminSystemKeyFlags(
@@ -346,9 +341,10 @@ export function resolveAdminSystemKeyFlags(
     supabaseServiceRoleKey: hasNonEmptyValue(env.SUPABASE_SERVICE_ROLE_KEY),
     geminiServerKey: Boolean(
       pickFirstEnvValue(env, [
+        'GEMINI_CREDITS_API_KEY',
+        'STORYBOARD_GEMINI_API_KEY',
         'GEMINI_API_KEY',
         'GEMINI_OCR_YEON',
-        'STORYBOARD_AGENT_GEMINI_API_KEY',
         'GOOGLE_API_KEY',
         'NEXT_PUBLIC_GOOGLE_API_KEY',
       ]),
@@ -1292,10 +1288,10 @@ export function buildAdminOpsChecklist(
   if (status.storyboardAgent.enabled && !status.storyboardAgent.configured) {
     checklist.push({
       id: 'storyboard-url-missing',
-      title: '스토리보드 에이전트 미설정',
+      title: 'Gemini RAG 워커 미설정',
       severity: 'high',
       category: 'integration',
-      action: '스토리보드 에이전트 URL(STORYBOARD_AGENT_API_URL)을 설정하세요.',
+      action: '승인된 Gemini RAG 워커 URL(STORYBOARD_RAG_WORKER_URL)과 독립 서버 capability(STORYBOARD_RAG_WORKER_TOKEN)를 확인하세요. 미설정이면 차단됩니다.',
       command: STORYBOARD_HEALTH_CHECK_SNIPPET,
       commandSnippet: STORYBOARD_HEALTH_CHECK_SNIPPET,
       source: 'storyboard-agent',
@@ -1303,37 +1299,13 @@ export function buildAdminOpsChecklist(
   } else if (status.storyboardAgent.enabled && status.storyboardAgent.configured && !status.storyboardAgent.reachable) {
     checklist.push({
       id: 'storyboard-health-failed',
-      title: '스토리보드 에이전트 미연결',
+      title: 'Gemini RAG 워커 준비 확인 필요',
       severity: 'high',
       category: 'integration',
-      action: '스토리보드 에이전트 /health 응답을 확인하세요.',
+      action: '독립 capability로 /health 연결과 /models?load=false의 Gemini 설정 준비 응답을 확인하세요. 이 준비 확인은 유료 호출이나 quota 검증이 아닙니다.',
       command: STORYBOARD_HEALTH_CHECK_SNIPPET,
       commandSnippet: STORYBOARD_HEALTH_CHECK_SNIPPET,
       source: 'storyboard-agent',
-    });
-  }
-
-  if (status.bgeEmbedding.enabled && !status.bgeEmbedding.configured) {
-    checklist.push({
-      id: 'bge-url-missing',
-      title: 'BGE 임베딩 미설정',
-      severity: 'high',
-      category: 'integration',
-      action: 'BGE 임베딩 URL(STORYBOARD_BGE_EMBEDDING_URL)을 설정하세요.',
-      command: BGE_EMBEDDING_HEALTH_CHECK_SNIPPET,
-      commandSnippet: BGE_EMBEDDING_HEALTH_CHECK_SNIPPET,
-      source: 'bge-embedding',
-    });
-  } else if (status.bgeEmbedding.enabled && status.bgeEmbedding.configured && !status.bgeEmbedding.reachable) {
-    checklist.push({
-      id: 'bge-health-failed',
-      title: 'BGE 임베딩 미연결',
-      severity: 'high',
-      category: 'integration',
-      action: 'BGE 임베딩 서버를 실행하고 네트워크 접근을 확인하세요.',
-      command: BGE_EMBEDDING_HEALTH_CHECK_SNIPPET,
-      commandSnippet: BGE_EMBEDDING_HEALTH_CHECK_SNIPPET,
-      source: 'bge-embedding',
     });
   }
 
@@ -1485,7 +1457,7 @@ export function buildAdminOpsChecklist(
       severity: 'medium',
       category: 'provider-key',
       action:
-        'Gemini 서버 키가 없습니다. `GEMINI_API_KEY` 또는 `STORYBOARD_AGENT_GEMINI_API_KEY`(또는 `GOOGLE_API_KEY`)를 설정하거나, 설정 패널에서 브라우저 키로 추가하세요.',
+        'Gemini 서버 설정을 확인하세요. RAG 워커의 승인된 GEMINI_CREDITS_API_KEY / STORYBOARD_GEMINI_API_KEY / GEMINI_API_KEY는 worker-only egress 키이며, 독립 STORYBOARD_RAG_WORKER_TOKEN이나 브라우저 키로 대체할 수 없습니다.',
       command: GEMINI_KEY_CHECK_SNIPPET,
       commandSnippet: GEMINI_KEY_CHECK_SNIPPET,
       source: 'provider-key',
@@ -1594,19 +1566,14 @@ export async function getAdminSystemStatus(
   const keys = resolveAdminSystemKeyFlags(env);
   const runtime = await import('@/lib/admin/system-status/runtime');
 
-  const storyboardEnabled = toBooleanFlag(env.STORYBOARD_AGENT_ENABLED, true);
-  const storyboardEndpoint = sanitizeEndpointForDisplay(env.STORYBOARD_AGENT_API_URL);
-  const storyboardHealthEndpoint = resolveHealthEndpoint(env.STORYBOARD_AGENT_API_URL, '/health');
+  const storyboardEnabled = toBooleanFlag(env.STORYBOARD_RAG_WORKER_ENABLED, true);
+  let storyboardConnection: ReturnType<typeof getStoryboardRagWorkerConnection> | undefined;
+  try { storyboardConnection = getStoryboardRagWorkerConnection(env); } catch { /* Missing/unsafe connection stays fail closed. */ }
   const storyboardAgent = makeIntegrationStatus(
-    asOf,
-    storyboardEnabled,
-    Boolean(storyboardEndpoint && storyboardHealthEndpoint),
-    storyboardEndpoint,
+    asOf, storyboardEnabled, Boolean(storyboardConnection), storyboardConnection?.url,
   );
-
-  const bgeEnabled = toBooleanFlag(env.STORYBOARD_BGE_ENABLED, false);
-  const bgeEndpoint = sanitizeEndpointForDisplay(env.STORYBOARD_BGE_EMBEDDING_URL);
-  const bgeEmbedding = makeIntegrationStatus(asOf, bgeEnabled, Boolean(bgeEndpoint), bgeEndpoint);
+  // Response field retained for existing consumers; retired BGE producer is not probed or required.
+  const bgeEmbedding = { ...makeIntegrationStatus(asOf, false, false, undefined), detail: 'retired_producer' };
 
   const frameCaptionSource = runtime.resolveFrameCaptionDataSource(env);
   const frameCaptionRemotePath = runtime.resolveFrameCaptionGdrivePath(env);
@@ -1625,38 +1592,30 @@ export async function getAdminSystemStatus(
   const timeoutRaw = Number(env.INSIGHT_SYSTEM_STATUS_TIMEOUT_MS || String(DEFAULT_TIMEOUT_MS));
   const timeoutMs = Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? timeoutRaw : DEFAULT_TIMEOUT_MS;
 
-  if (storyboardAgent.enabled && storyboardAgent.configured && storyboardHealthEndpoint) {
-    const result = await probeReachability(storyboardHealthEndpoint, { method: 'GET' }, timeoutMs, false);
+  if (storyboardAgent.enabled && storyboardConnection) {
+    const init = { method: 'GET', headers: storyboardConnection.headers, redirect: 'error' as const };
+    const result = await probeReachability(`${storyboardConnection.url}/health`, init, timeoutMs, false);
     storyboardAgent.reachable = result.reachable;
     if (result.detail) storyboardAgent.detail = result.detail;
+    if (result.reachable) {
+      const timeout = withTimeoutSignal(timeoutMs);
+      try {
+        const response = await fetch(`${storyboardConnection.url}/models?load=false`, {
+          ...init, signal: timeout.signal, cache: 'no-store',
+        });
+        const value: unknown = response.ok ? await response.json() : null;
+        const readiness = value as { schemaVersion?: unknown; ready?: unknown; providers?: { id?: unknown; ready?: unknown }[] } | null;
+        storyboardAgent.reachable = Boolean(readiness?.schemaVersion === 1 && readiness.ready === true
+          && Array.isArray(readiness.providers) && ['gemini-embedding-001', 'gemini-3.8-flash']
+            .every((id) => readiness.providers!.some((provider) => provider && provider.id === id && provider.ready === true)));
+        storyboardAgent.detail = storyboardAgent.reachable ? 'configuration_ready_not_provider_verified' : 'worker_configuration_not_ready';
+      } catch {
+        storyboardAgent.reachable = false;
+        storyboardAgent.detail = timeout.signal.aborted ? 'TIMEOUT' : 'worker_readiness_failed';
+      } finally { timeout.clear(); }
+    }
   } else if (storyboardAgent.enabled && !storyboardAgent.configured) {
     storyboardAgent.detail = 'not_configured';
-  }
-
-  if (bgeEmbedding.enabled && bgeEmbedding.configured && bgeEndpoint) {
-    const token = pickFirstEnvValue(env, ['STORYBOARD_BGE_EMBEDDING_TOKEN']);
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    const result = await probeReachability(
-      bgeEndpoint,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ inputs: ['health check'] }),
-      },
-      timeoutMs,
-      true,
-    );
-
-    bgeEmbedding.reachable = result.reachable;
-    if (result.detail) bgeEmbedding.detail = result.detail;
-  } else if (bgeEmbedding.enabled && !bgeEmbedding.configured) {
-    bgeEmbedding.detail = 'not_configured';
   }
 
   const runDailyScriptPath = runtime.resolveRunDailyScriptPath(env);

@@ -121,15 +121,15 @@ class ReviewMediaCatalogIntegrationTests(unittest.TestCase):
         self.assertNotIn("FROM privacy_retention.g014_public_rpc_allowlist", readback)
         self.assertIn("SET LOCAL ROLE privacy_workflow_owner;\n  INSERT INTO privacy_retention.g014_public_rpc_allowlist", sql)
 
-    def test_ledger_applies_integration_normally_and_retains_three_overlap_proofs(self):
+    def test_ledger_applies_integration_normally_and_retains_current_overlap_proofs(self):
         manifest = local_migrate.verify_manifest()
         files = manifest["source"]["files"]
-        self.assertEqual(len(files), 104)
-        self.assertEqual(files[-1]["path"], MIGRATION.relative_to(ROOT).as_posix())
-        self.assertEqual(local_migrate._expected_terminal_status(files[-1]), "applied")
-        sql = local_migrate._execution_body(files[-1])
+        self.assertEqual(len(files), 130)
+        integration = next(row for row in files if row["path"] == MIGRATION.relative_to(ROOT).as_posix())
+        self.assertEqual(local_migrate._expected_terminal_status(integration), "applied")
+        sql = local_migrate._execution_body(integration)
         self.assertEqual(sql, MIGRATION.read_bytes())
-        self.assertEqual(len(local_migrate._load_replay_contract().supported_sources()), 3)
+        self.assertEqual(len(local_migrate._load_replay_contract().supported_sources()), 5)
 
     def test_rejects_every_function_owner_body_role_and_identity_drift(self):
         for signature in (row[0] for row in local_migrate.REVIEW_MEDIA_FUNCTIONS):

@@ -62,29 +62,37 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id
 NEXT_NAVER_CLIENT_SECRET=your_naver_client_secret
 
-# Receipt OCR (Gemini-only)
-GEMINI_API_KEY=your_gemini_api_key
-# Optional: comma-separated model failover list. If unset, GEMINI_OCR_DEFAULT_MODEL or gemini-3.6-flash is used.
-GEMINI_OCR_MODEL=gemini-3.6-flash
+# Gemini server-only credentials: real values belong in the approved private runtime/vault.
+# Funded key stays blank here; a nonempty placeholder would mask the general key.
+# OCR: GEMINI_CREDITS_API_KEY exclusively when present, otherwise GEMINI_OCR_API_KEY → GEMINI_API_KEY.
+# Storyboard/RAG: GEMINI_CREDITS_API_KEY → STORYBOARD_GEMINI_API_KEY → GEMINI_API_KEY.
+GEMINI_CREDITS_API_KEY=
+GEMINI_OCR_API_KEY=
+STORYBOARD_GEMINI_API_KEY=
+GEMINI_API_KEY=
+# Receipt OCR (Gemini-only): preserve the current model and thinking baseline.
 GEMINI_OCR_DEFAULT_MODEL=gemini-3.6-flash
-# Optional: LOW, MEDIUM, or HIGH. Defaults to MEDIUM; overrides GEMINI_THINKING_LEVEL for receipt OCR only.
 GEMINI_OCR_THINKING_LEVEL=MEDIUM
+# Optional explicit model list; preserve existing operator choices.
+# GEMINI_OCR_MODEL=gemini-3.6-flash
 
-# Storyboard Agent (옵션)
-# Local command bridge: backend/storyboard-agent를 Next.js API에서 직접 실행한다.
-# apps/web 기준 상대 경로 또는 절대 경로를 직접 설정한다. 셸 메타문자/인자는 허용하지 않는다.
-# 기본값은 LangGraph command bridge이며, 로컬 환경에서 Python/runtime 준비가 안 되면 fail-closed fallback으로 내려간다.
-# 아래 값은 LangGraph 대신 legacy Codex bridge를 강제로 쓰고 싶을 때만 명시적으로 override 한다.
-STORYBOARD_AGENT_COMMAND=../../backend/storyboard-agent/scripts/run-storyboard-agent.py
-# Optional: apps/web 기준 상대 경로 또는 절대 경로. 비우면 repo 루트 backend/storyboard-agent를 자동 탐지.
-STORYBOARD_AGENT_ROOT=
-# Optional: 기본값은 Windows에서 python, macOS/Linux에서 python3.
-STORYBOARD_AGENT_PYTHON=
-# STORYBOARD_AGENT_RUNTIME=codex_cli_oauth
-STORYBOARD_AGENT_CODEX_MODEL=gpt-5.5
-STORYBOARD_AGENT_CODEX_EFFORT=low
-# milliseconds; command bridge timeout.
-STORYBOARD_AGENT_TIMEOUT_MS=120000
+# Storyboard: explicit Gemini outbound worker, no provider/model fallback.
+# Exact code allowlist (not env overrides): gemini-3.8-flash text;
+# gemini-3.1-flash-image (Nano Banana 2), gemini-3-pro-image (Nano Banana Pro) images.
+# Legacy STORYBOARD_AGENT_COMMAND/Codex/MLX/Ollama producers are retired and refuse execution.
+# See `bun run storyboard:gemini-worker -- --help` for origin/private token-file arguments.
+# --env-file must be an absolute private operator file. Preserve existing token and project limits.
+
+# Gemini RAG: configure the existing operator-owned worker URL; unset fails closed.
+# Run backend/storyboard-agent/scripts/run_rag_worker.py with its pinned runtime and
+# requirements-rag-worker.txt. Supply server-only Gemini credentials to that process too.
+STORYBOARD_RAG_WORKER_URL=
+# /embed: gemini-embedding-001, 1024 dimensions, retrieval task, L2 normalization.
+# Fingerprint: gemini-embedding-001:1024:retrieval:l2:v1; existing vectors stay isolated.
+# /rerank: embedding_cosine in that space; /caption: gemini-3.8-flash.
+# Preserve crawler-shared GEMINI_BUDGET_PROJECT, GEMINI_BUDGET_PATH (or
+# TZUDONG_PROVIDER_STATE_DIR), GEMINI_REQUESTS_PER_MINUTE and GEMINI_MAX_INFLIGHT.
+# Keep existing approved values; pacing defaults are not verified provider quotas.
 
 # YouTube Thumbnail Agent (옵션)
 # 채팅으로 들어온 캔버스 수정/초기화/생성 brief 작업은 기본적으로 로컬 Codex CLI OAuth 세션의 gpt-5.5 low(고속)가 처리한다.
@@ -96,15 +104,8 @@ THUMBNAIL_AGENT_CODEX_MODEL=gpt-5.5
 THUMBNAIL_AGENT_CODEX_EFFORT=low
 THUMBNAIL_AGENT_TIMEOUT_MS=120000
 
-# Remote service bridge: 별도 HTTP 서버를 쓸 때만 활성화한다.
-STORYBOARD_AGENT_REMOTE_ENABLED=false
-STORYBOARD_AGENT_API_URL=http://localhost:8001
-STORYBOARD_AGENT_CHAT_PATH=/chat
-STORYBOARD_AGENT_MAX_RETRIES=3
-STORYBOARD_ORCHESTRATOR_MAX_RETRIES=3
 STORYBOARD_WEB_SEARCH_ENABLED=false
 STORYBOARD_WEB_SEARCH_URL=https://api.tavily.com/search
-STORYBOARD_BGE_ENABLED=false
 ```
 
 ### 4. 실행

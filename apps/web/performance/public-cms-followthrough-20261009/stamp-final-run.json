@@ -1,0 +1,169 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+      "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "performance/public-cms-followthrough-20261009/public-ui.config.mjs",
+      "--grep",
+      "stamp list and search"
+    ],
+    "configFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui.config.mjs",
+    "rootDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/stamp-final-run-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "public-cms-readonly.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/stamp-final-run.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "public-cms-readonly.spec.ts",
+      "file": "public-cms-readonly.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "stamp list and search failures stay distinct from empty success at tablet",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 18286,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:04:14.937Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "sanitized-read-states",
+                      "contentType": "application/json",
+                      "body": "W3sic2VhcmNoIjpmYWxzZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6ZmFsc2UsIm91dGFnZSI6dHJ1ZX0seyJzZWFyY2giOmZhbHNlLCJvdXRhZ2UiOmZhbHNlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfV0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-110afd81b1fe8afe26ac",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 108,
+          "column": 3
+        },
+        {
+          "title": "stamp list and search failures stay distinct from empty success at mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 18607,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:04:35.202Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "sanitized-read-states",
+                      "contentType": "application/json",
+                      "body": "W3sic2VhcmNoIjpmYWxzZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6ZmFsc2UsIm91dGFnZSI6dHJ1ZX0seyJzZWFyY2giOmZhbHNlLCJvdXRhZ2UiOmZhbHNlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfSx7InNlYXJjaCI6dHJ1ZSwib3V0YWdlIjp0cnVlfV0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-dc68d0a80b42dee6f98b",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 108,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-08T23:04:14.603Z",
+    "duration": 39373.252,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -17,7 +17,10 @@ from backend.supabase.scripts import local_replay_contract
 def fixture_replay_proofs():
     """Pinned offline fixture values, not evidence of database execution."""
     proofs = {}
+    active_sources = {item['path'] for item in local_migrate.build_manifest()['source']['files']}
     for path in local_replay_contract.supported_sources():
+        if path not in active_sources:
+            continue  # Archived historical contracts are not active ledger rows.
         receipt = copy.deepcopy(local_replay_contract._CONTRACTS[path]["receipt"])
         proofs[path] = {
             **local_replay_contract.plan(path),
@@ -1083,12 +1086,11 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_104_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 104)
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 104)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 104)
-        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 104)
-
+    def test_publication_uses_the_current_130_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 130)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 130)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 130)
+        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 130)
     def test_publication_rejects_review_media_catalog_counts_even_with_matching_total(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

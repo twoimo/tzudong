@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-09",
+  "baseHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "scope": "Authorized local provider/automatic-review and integrated metadata-thumbnail fixes; RAG auth remains owned by a different agent.",
+  "threads": {
+    "PRRT_kwDOQGRyNc6o1c8X": {
+      "status": "addressed-local",
+      "fix": "Remove post-completion general tick; retain one admission tick, scoped claim, complete/fail and uncertain-result readback.",
+      "test": "100 unseen candidates, batch 50 and one recheck leaves 49 queued/50 unseen; no second tick."
+    },
+    "PRRT_kwDOQGRyNc6qTx8x": {
+      "status": "addressed-local",
+      "fix": "Disabled analysis preserves known attribution when source description is unchanged even after recipe/checkpoint change. Changed source without analyzer remains incomplete, with old metadata and no new checkpoint.",
+      "test": "Missing/changed receipts preserve known attribution; changed-description retries do not certify stale/null attribution."
+    },
+    "PRRT_kwDOQGRyNc6qTx83": {
+      "status": "addressed-local",
+      "fix": "Thumbnail save returns true only after verified download plus atomic durable save. Backfill/new version failures do not certify completion. Existing artifact readback rejects malformed images, directories and symlinks.",
+      "test": "Download, image validation and atomic link failures remain pending; next successful bounded fixture save completes same-day restart without metadata replacement."
+    },
+    "PRRT_kwDOQGRyNc6qTx9B": {
+      "status": "addressed-local",
+      "fix": "Kernel birth identity distinguishes PID reuse. Keep original four-column leases compatible; side table records birth identity. Reap known mismatches/dead owners and positively newer legacy births; retain ambiguous/unavailable ownership fail closed.",
+      "test": "Reused PID with changed birth is reaped; live/ambiguous/unknown owners retain permits; missing/changed requester identity admits no lease; native Mac birth verified; Linux stat parsing exercised offline."
+    }
+  },
+  "checks": {
+    "reviewAndReadBudget": {
+      "passed": 41,
+      "failed": 0,
+      "runtime": "existing project .venv Python 3.14",
+      "log": "provider-fix-python-project-runtime.log"
+    },
+    "metadataAndThumbnail": {
+      "passed": 19,
+      "failed": 0,
+      "requests": "2.34.2",
+      "PyYAML": "6.0.3",
+      "log": "provider-fix-meta-project-runtime.log"
+    },
+    "node24NativeBudgetBridge": {
+      "passed": true,
+      "runtime": "v24.19.0",
+      "syntheticOperations": 4,
+      "maxConcurrentCallbacks": 1,
+      "providerCalls": 0,
+      "log": "provider-fix-node24-budget.log"
+    },
+    "wrapperSecurity": {
+      "passed": 0,
+      "skipped": 26,
+      "reason": "Existing suite is Linux-only (/proc and /usr/bin/python3); current host is macOS.",
+      "log": "provider-fix-wrapper-security.log"
+    },
+    "diffCheck": {
+      "passed": true
+    }
+  },
+  "prerequisites": {
+    "failedInitialMetadataAttempts": "Default and bundled Python lack requests; no packages installed. Existing primary project venv supplies exact manifest versions.",
+    "earlierNodeSdkRunner": "Backend @google/genai missing to Node ESM; native Node24 budget bridge has no SDK dependency and was verified separately."
+  },
+  "preservation": {
+    "providerModelsOrLimitsChanged": false,
+    "operatorSecretsReadOrWritten": false,
+    "paidCalls": 0,
+    "queueOrHostedDatabaseWrites": 0,
+    "deployments": 0,
+    "commentsOrResolutions": 0,
+    "commitsOrPushes": 0,
+    "dependencyPinsChanged": false,
+    "operationalBudgetDatabaseModified": false
+  },
+  "limitations": [
+    "No real PID reuse was forced; regression supplies changed kernel identity for a live numeric PID. Native current process identity and CLI budget interoperability were exercised on macOS.",
+    "Linux process birth parser is tested with synthetic proc content; Linux-only wrapper suite skipped on this host.",
+    "Legacy rows without known birth identity remain reserved when timestamps/identity are inconclusive; fail-closed behavior is intentional.",
+    "Unsupported/unreadable requester birth identity fails closed before admitting any new provider operation.",
+    "Local fixes and tests do not assert hosted adoption or review resolution."
+  ],
+  "sourceHashes": {
+    "backend/bin/run_restaurant_review_automation.py": "5790ef350dae4aaf012681e3a94423cd1490eb4c3837fa9c8901c56d07d19b1a",
+    "backend/bin/tests/test_restaurant_review_automation.py": "a6b2c5cbcf3e5822a44ee4835989b80e754422d4a12dd39d5bcebb6051473762",
+    "backend/restaurant-crawling/scripts/02-collect-meta.py": "d266c947bc04d3a23f1edff94df9e662e7632bf2067d2d6b5e4f3435c7bb1197",
+    "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py": "afad5eb25251531a6599b1b61be08c925a49b833d5a02725d239c43af39a260f",
+    "backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py": "eac5203bf254f46558e68208c51fa77dd369befabf39faabd14fac3ca979f282",
+    "backend/utils/provider_budget.py": "e4d8e3b282913535bc8b3ea0999705c485c89ea4480c763e026cefc8f0dc4e8e",
+    "backend/utils/tests/test_pipeline_performance.py": "20fd9743a2dfc0e95ecc67cf6326c03046c6a89c024256c10b990fc73f5d8775"
+  },
+  "officialProcessContract": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/xnu/main/bsd/sys/proc_info.h",
+    "used": "proc_bsdinfo owner PID and microsecond process start fields; PROC_PIDTBSDINFO query."
+  }
+}

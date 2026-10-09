@@ -1,0 +1,190 @@
+{
+  "schema": "tzudong-caption-title-plan/v1",
+  "sharedVaultWrites": 0,
+  "providerCalls": 0,
+  "privatePlanPath": "/Users/twoimo/.codex/runtime-cache/tzudong-caption-title-20261009-1791510040932/plan.json",
+  "targets": [
+    {
+      "videoId": "F93TnnxCNvY",
+      "name": "YT-tzuyang-Video-F93TnnxCNvY",
+      "id": "261006-1dn0-hdeh43wq",
+      "beforeHash": "sha256:1ceee3ad88524a6753cfcdc02fb97ca52011202925073a7c246970e02d9fa560",
+      "beforeBodySha256": "6e846a7498ad561c71bf08e9979ab3b90f00c8e7529a2a1a10422d54734be319",
+      "targetBodySha256": "109035c62ab1bcdeb6e632c4c17284df44c514010ed21e235d111ceb2a6302fb",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/F93TnnxCNvY/caption-review.json",
+          "sha256": "8655d8288e0744c52e43f3f83560c42bde3ff49a6f81a17fc4ec22933962a1d2",
+          "bytes": 7528
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "3Z-ngM3DVi0",
+      "name": "YT-tzuyang-Video-3Z-ngM3DVi0",
+      "id": "261006-1dn0-bhr7lw23",
+      "beforeHash": "sha256:7a66c69dd08c6868b9ceebf2dbd2eb41182b39c53187aac0cb6ae5b83f2741a4",
+      "beforeBodySha256": "efd016d28950ed41d7e9674804701012defb89d788c3bd8f8557b26fd75d7e78",
+      "targetBodySha256": "2599f5f7a67cf37f6e2e5c0225b098cf8f6214254be2525a9603541be60f3fe5",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/3Z-ngM3DVi0/caption-review.json",
+          "sha256": "b7fdfe2538c6800a7167f4147586f98458bbe9feae6712f7b9c1c6887d8b2120",
+          "bytes": 15286
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "BTyT60UWiLc",
+      "name": "YT-tzuyang-Video-BTyT60UWiLc",
+      "id": "261006-1dn0-q20wgonz",
+      "beforeHash": "sha256:9df48a2a185562fe6604d25b301a5c88c0dda78924bc6b5947bbd63ee577af11",
+      "beforeBodySha256": "c5f042d3b1a6c6e91a2eb2cf0a1d656017bf68acb3b944777a88c4a9af5833f0",
+      "targetBodySha256": "9caca3e4f27e9bddd9594410b9267d4c6f47df54c4244b11c572968095a430d9",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/BTyT60UWiLc/caption-review.json",
+          "sha256": "fda2dabeb3c51a5f1e2ec4630de8418013a2920645fb9349260d645ae1501aab",
+          "bytes": 7249
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "-C4280KT3S4",
+      "name": "YT-tzuyang-Video--C4280KT3S4",
+      "id": "261006-1gn2-vuz3x3nu",
+      "beforeHash": "sha256:d908cc2e366dea36d6c0041389338a835b664cb53213b82e4f77c4e8093dffd7",
+      "beforeBodySha256": "ec259c17b950561d4697819a56aba9312cc237492e7dd7401987fd7b8a5f63f7",
+      "targetBodySha256": "1c1d75ed16d8227e4ef43342e7fc5a6e004a38aef554f7f2383bfedba9f34e74",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/-C4280KT3S4/caption-review.json",
+          "sha256": "aed9f6f111863bcb6e1895dfd893c8d3766642fc16d6ff472cd43a8f24be76a5",
+          "bytes": 10919
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "Tsy8xRjMpB0",
+      "name": "YT-tzuyang-Video-Tsy8xRjMpB0",
+      "id": "261006-1gn2-s5yq4t2q",
+      "beforeHash": "sha256:1455fd3e65e6e40e805bce5e39e2084552ff7ddc5603590d8ddae8576a4296b3",
+      "beforeBodySha256": "51c4ff469fa4e4c2ed3b85358341ae8e2bebc90614a673e32e8d8f2a345c2e70",
+      "targetBodySha256": "4e04b566441a7494eff1a560f5de0d1e286b79c7907a8053aa227e73737bc4c5",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/Tsy8xRjMpB0/caption-review.json",
+          "sha256": "169c1b7f42b06595f8105d5e2acc8b481cbf0ae3b75e47a1eaeecb4776c7ff18",
+          "bytes": 39235
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "xRf_bhPFZrY",
+      "name": "YT-tzuyang-Video-xRf_bhPFZrY",
+      "id": "261006-1gn2-3lve41rq",
+      "beforeHash": "sha256:4880d1e28a25b34098478bb5bdb30b4653bf7808339dacfa7868892d808e1be4",
+      "beforeBodySha256": "30792d7a25e39847893111c330e5b6147391739260b6473bfb4941df8cb19fde",
+      "targetBodySha256": "77ea417c4cf7288371f9c1f1e8b3f1f54c0f640179fd232815f9577c73962515",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/xRf_bhPFZrY/caption-review.json",
+          "sha256": "a03c2e29f2225880e6e1d9a8c6aa3250c82d5fdbc0f16e6b40df4ab35aa413e3",
+          "bytes": 9291
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "zkOBLQUSEr0",
+      "name": "YT-tzuyang-Video-zkOBLQUSEr0",
+      "id": "261006-1i3c-jib191x8",
+      "beforeHash": "sha256:7c1e8c45821e821b5d3497ddba84117fdd01b59376faf5c4e73d8fd8ff297218",
+      "beforeBodySha256": "bb3e12d589d9e8adbd910cf38c3ddb66dd8f58f48ae5327513283460d32548b4",
+      "targetBodySha256": "64c0f8b12d8a25320d254206babc1f83e5d3f3878c188af1748bca68b46f4f45",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/zkOBLQUSEr0/caption-review.json",
+          "sha256": "21acf8662fec10ff84a7beeced0ea083484fb030072fa8c1c76dbdff53d36c6a",
+          "bytes": 51355
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "DNGGl1-jFcU",
+      "name": "YT-tzuyang-Video-DNGGl1-jFcU",
+      "id": "261006-1i3c-k0l3q5eb",
+      "beforeHash": "sha256:3bbaf252a8c490a090b6092ecdff7dac94637457eb6d0e822df6d34e421a14aa",
+      "beforeBodySha256": "1b155fd4df983e8fde593e775e5c5793214b236cffeb3f2b4e9b3f392ae2fa5b",
+      "targetBodySha256": "c52e21bbb11a333478a47b706b30c043459fdd29e0aa8433818fdb932e1f0b5f",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/DNGGl1-jFcU/caption-review.json",
+          "sha256": "bb85a33e648e9514c007cf06e5c3b38844649abf713f3623e07a61bc36bfc197",
+          "bytes": 38018
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    },
+    {
+      "videoId": "Ck5UrobZuKA",
+      "name": "YT-tzuyang-Video-Ck5UrobZuKA",
+      "id": "261006-1i3c-axw2mngb",
+      "beforeHash": "sha256:551417d082e9b5d6aee4e2c8b85a8e0967514ad01583c8bb48c3a0ed241bd288",
+      "beforeBodySha256": "759ae33cc21a7ae79691abf6c2b037c36de8def2f9a3d9e500dfe1e47b030116",
+      "targetBodySha256": "c3a4f64a3feabd1d686ba4a5eced1acb423818d633c2bfbf57417ba8da58b9a7",
+      "sourceFiles": [
+        {
+          "path": "source/analysis/Ck5UrobZuKA/caption-review.json",
+          "sha256": "1ff26606e96cce5ef8539ece3cbd55561a050e16634ffd5ab5fafdb19b3f073c",
+          "bytes": 10391
+        },
+        {
+          "path": "source/corpus/video-index.json",
+          "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+          "bytes": 261864
+        }
+      ]
+    }
+  ],
+  "privatePlanSha256": "4aba5bb9c4c257d49b1c37f2a323cdc44b71e52ef91434dbc7f90d99a156f4cb",
+  "privatePlanBytes": 86787
+}

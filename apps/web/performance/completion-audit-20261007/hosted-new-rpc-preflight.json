@@ -1,0 +1,284 @@
+{
+  "kind": "hosted-new-rpc-readonly-preflight",
+  "objectiveComplete": false,
+  "sourceCommit": "685ad8648e94423cc20d1f880bb14365baff0e9f",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "transport": "Supabase connector execute_sql, explicit BEGIN READ ONLY and ROLLBACK",
+  "tlsVerification": "not attested by this connector receipt",
+  "state": {
+    "ledger": {
+      "count": 79,
+      "sha256": "d58cbb8cb65a5bf33725f9cd1b59fdb32b1d71105824438663802c91eb9fdb2b",
+      "versions": [
+        "20251219",
+        "20260118",
+        "20260425",
+        "20260506065538",
+        "20260506085634",
+        "20260509000100",
+        "20260509000200",
+        "20260523093000",
+        "20260525143908",
+        "20260526083932",
+        "20260531084217",
+        "20260531084516",
+        "20260627080000",
+        "20260627153000",
+        "20260627154500",
+        "20260702000100",
+        "20260704000100",
+        "20260704000200",
+        "20260707000100",
+        "20260707000200",
+        "20260707000300",
+        "20260707000400",
+        "20260707000500",
+        "20260707000600",
+        "20260711000100",
+        "20260712000100",
+        "20260712000200",
+        "20260712000300",
+        "20260712000400",
+        "20260712000500",
+        "20260712000600",
+        "20260713000100",
+        "20260713000200",
+        "20260713000300",
+        "20260713000450",
+        "20260713002000",
+        "20260713002100",
+        "20260713002200",
+        "20260713002300",
+        "20260713002400",
+        "20260713002500",
+        "20260713002600",
+        "20260713002700",
+        "20260801000100",
+        "20260801000200",
+        "20260804000100",
+        "20260804000200",
+        "20260804000300",
+        "20260804000400",
+        "20260804000500",
+        "20260903174413",
+        "20260906064252",
+        "20260920171524",
+        "20261001130038",
+        "20261001155606",
+        "20261002235102",
+        "20261003000711",
+        "20261003000811",
+        "20261003000812",
+        "20261003065736",
+        "20261003081915",
+        "20261003095444",
+        "20261003113923",
+        "20261003171449",
+        "20261003172126",
+        "20261003182338",
+        "20261003193717",
+        "20261003205335",
+        "20261003212017",
+        "20261003215116",
+        "20261003220841",
+        "20261004003503",
+        "20261004010334",
+        "20261004023841",
+        "20261004045404",
+        "20261004115554",
+        "20261004120000",
+        "20261004123034",
+        "20261004172622"
+      ]
+    },
+    "policy": {
+      "enabled": false,
+      "version": 1,
+      "batchSize": 50,
+      "lastRunAt": null,
+      "dailyLimit": 50
+    },
+    "readOnly": "on",
+    "functions": [
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "present": true,
+        "signature": "privacy_retention.assert_g014_catalog_contract()",
+        "bodySha256": "8e9101ecdbb506e25a9ace2a40f7de9cc0dcf3f06d80cc1a75fe07a55effbeab",
+        "anonExecute": false,
+        "metadataSha256": "66c400b827030f567d08bde99d2612910c6e2050f92878161d1dc3ebb48eeb8e",
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "present": true,
+        "signature": "privacy_retention.assert_g014_definer_contract()",
+        "bodySha256": "a5fff8ca63e34d41fc7c56e5a646023d44645750a7abf9ae0c0efc35818aa964",
+        "anonExecute": false,
+        "metadataSha256": "eca52c2c4ce66160964fbf7b18a8585dde0ac50e5aeee0317526c3ac4702c6b0",
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "present": true,
+        "signature": "privacy_retention.assert_g014_public_rpc_allowlist()",
+        "bodySha256": "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+        "anonExecute": false,
+        "metadataSha256": "50fbc85c1e524e3c7877c52f6745b6826821c03c0b3cc107121ee408be38df15",
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": null,
+        "owner": null,
+        "config": null,
+        "definer": null,
+        "present": false,
+        "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+        "bodySha256": null,
+        "anonExecute": null,
+        "metadataSha256": null,
+        "serviceExecute": null,
+        "authenticatedExecute": null
+      },
+      {
+        "acl": null,
+        "owner": null,
+        "config": null,
+        "definer": null,
+        "present": false,
+        "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+        "bodySha256": null,
+        "anonExecute": null,
+        "metadataSha256": null,
+        "serviceExecute": null,
+        "authenticatedExecute": null
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner",
+          "authenticated=X/privacy_workflow_owner",
+          "service_role=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "present": true,
+        "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+        "anonExecute": false,
+        "metadataSha256": "b9c57ed89905add980e4849def55f65a509c034cfcc618b0785068ea041fe420",
+        "serviceExecute": true,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner",
+          "authenticated=X/privacy_workflow_owner",
+          "service_role=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "present": true,
+        "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+        "anonExecute": false,
+        "metadataSha256": "c5a3689054b9982f789b35e0a29eb58e760d151b257ba0634d0aa2825525c0bd",
+        "serviceExecute": true,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner",
+          "authenticated=X/privacy_workflow_owner",
+          "service_role=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "present": true,
+        "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+        "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+        "anonExecute": false,
+        "metadataSha256": "3c9ecf4bc5abfac478cb26a0e9bb93ddc3cc60fe64adaa58375b9c8c3ea40b6e",
+        "serviceExecute": true,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\"",
+          "lock_timeout=2s"
+        ],
+        "definer": false,
+        "present": true,
+        "signature": "public.restaurant_review_automation_tick(uuid)",
+        "bodySha256": "658473cae9137b04ddd810cb6ccf688b9ae998446880fa164e912eb8a1fbef6d",
+        "anonExecute": false,
+        "metadataSha256": "bae4d1c99603dba4c296bd071bd1efca25e2543a48c8cbf4e9eb6412e5c95f16",
+        "serviceExecute": true,
+        "authenticatedExecute": false
+      }
+    ],
+    "observedAt": "2026-10-07T08:04:33.039031+00:00",
+    "currentUser": "postgres",
+    "queueCounts": null,
+    "sessionUser": "postgres",
+    "serverVersion": "17.6",
+    "assertionNames": [
+      "assert_g014_catalog_contract",
+      "assert_g014_catalog_manifest",
+      "assert_g014_catalog_security_baseline",
+      "assert_g014_cross_schema_contract",
+      "assert_g014_definer_contract",
+      "assert_g014_invoker_contract",
+      "assert_g014_public_rpc_allowlist",
+      "assert_g014_workflow_owner_contract"
+    ],
+    "ownerMembership": {
+      "set": false,
+      "usage": false
+    },
+    "restaurantCount": 1659,
+    "membershipSha256": "9a9931c104bdd2bdc332887f1db5a395778bcde665ba4defa2eb6f51bafa8b9d",
+    "restaurantRowsNewlineSha256": "32a58ac590418a889708c0fc97539fe7ca5b20a97f0ba43c7b5226340acc8458"
+  },
+  "limitations": [
+    "Read-only preflight does not prove migration application or runtime correctness.",
+    "Actual current new record/raw-warning RPCs are absent. No hosted DDL/DML was performed."
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "database_read": {
+    "n_pairs": 7,
+    "before_p50": 117.51120793633163,
+    "after_p50": 16.86879200860858,
+    "before_p75": 120.83181249909103,
+    "after_p75": 17.171146580949426,
+    "absolute_p75_delta": -103.6606659181416,
+    "improvement_p75_percent": 85.78921707304639,
+    "improvement_p75_95ci": [
+      84.91866616085736,
+      87.2261695837651
+    ]
+  },
+  "index_write_cost": {
+    "n_pairs": 7,
+    "before_p50": 1.107832882553339,
+    "after_p50": 18.10558303259313,
+    "before_p75": 1.328166457824409,
+    "after_p75": 18.48277053795755,
+    "absolute_p75_delta": 17.15460408013314,
+    "improvement_p75_percent": -1291.600460098434,
+    "improvement_p75_95ci": [
+      -1604.0438359296745,
+      -1178.077449480718
+    ]
+  },
+  "warning_wall": {
+    "n_pairs": 7,
+    "before_p50": 99.69741699999997,
+    "after_p50": 41.813416000000075,
+    "before_p75": 101.80702049999994,
+    "after_p75": 44.24599999999998,
+    "absolute_p75_delta": -57.561020499999955,
+    "improvement_p75_percent": 56.53934298175438,
+    "improvement_p75_95ci": [
+      54.61039628149954,
+      59.716053017665864
+    ]
+  },
+  "warning_cpu": {
+    "n_pairs": 7,
+    "before_p50": 102.675,
+    "after_p50": 43.83,
+    "before_p75": 119.62899999999999,
+    "after_p75": 48.805,
+    "absolute_p75_delta": -70.82399999999998,
+    "improvement_p75_percent": 59.20303605313092,
+    "improvement_p75_95ci": [
+      53.56219644732076,
+      60.61333568271589
+    ]
+  },
+  "semantics": {
+    "source_rows": 1329,
+    "queries": 115,
+    "failures": 0
+  },
+  "bytes": {
+    "catalog": 4249507,
+    "page": 196525
+  },
+  "distance_calls": {
+    "before": 41768,
+    "after": 1110
+  },
+  "limits": "Local socket PG17.6 + Python JSON decode, synthetic Bun warning replay. No hosted API latency, pricing or full pipeline claim."
+}

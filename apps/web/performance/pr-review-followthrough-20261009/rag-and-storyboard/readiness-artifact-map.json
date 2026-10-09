@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "checkout": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong",
+  "sourcesAndTests": [
+    {
+      "path": "apps/web/lib/admin/system-status/status.ts",
+      "sha256": "04e466ab4c423bf6b2a6f2054511a7f98cc793920f08301a28c42327e6f13f67"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-system-status.test.ts",
+      "sha256": "0ed4657ca313ab9da7cbd3883d9932386acb2ca61ecc12c85ab8c31b879908b9"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/rag-worker-client.ts",
+      "sha256": "13a25b844d86e195e10b7d688b19cd1809a26def14ed7c9eacfb19341d9a9a4e"
+    },
+    {
+      "path": "backend/storyboard-agent/README.md",
+      "sha256": "83df18369dc8ef5061195fddc27b92f52d7f2d2ee8c544bd3b862e31b844d511"
+    },
+    {
+      "path": "apps/web/.env.example",
+      "sha256": "5139666f81cfbc8a3f95f1f98c7a818d11ee6e52b5369a1c5bf646c4dd598b23"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/readiness-summary.md",
+      "sha256": "e4ea1bbc123ef9a51f96702a50709d3d969ce0d002d79f9dc4c3ba0b3943cf43"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/readiness-tests.log",
+      "sha256": "f8c35e1a4d15a1bc15c2b12559c7371979a9d3094ac7ef322183ec9a73666d26"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/readiness-eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/readiness-typecheck-native.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

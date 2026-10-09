@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "checkout": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong",
+  "head": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "reviewIds": [
+    "PRRT_kwDOQGRyNc6qmBxR",
+    "PRRT_kwDOQGRyNc6p2B3h",
+    "PRRT_kwDOQGRyNc6qTx9K"
+  ],
+  "sourcesAndTests": [
+    {
+      "path": "backend/storyboard-agent/src/rag_worker.py",
+      "beforeSha256": "1b275ad17101bfc76af39bb05443f0e08a9b0028b19eae030fbabe7bfdb8b973",
+      "sha256": "dc704b7a7e595c30e4e46bd8dba183b932143ca9c6f3c3b52984fc9c7be2f6a4"
+    },
+    {
+      "path": "backend/storyboard-agent/scripts/run_rag_worker.py",
+      "beforeSha256": "7bc692cf14aa3cd94cbf7841f48ce5f4dcbc6ebb4328fbfddd957c1e41f1d2e9",
+      "sha256": "2b5b5745e189800c58d03bc07312bfbb86e3f49b769736b49efbc23fa59b5be7"
+    },
+    {
+      "path": "backend/storyboard-agent/README.md",
+      "beforeSha256": "849838a420e196a83ac4f874c154a315bf982d43447146eaebe95fcc432e6c6d",
+      "sha256": "bef8bd5713e34a6c06c0f0582e92da947cfb91e2fe10533ec42ad7252bcedb6e"
+    },
+    {
+      "path": "backend/storyboard-agent/tests/test_rag_worker_boundary.py",
+      "beforeSha256": null,
+      "sha256": "f1578e25cadf466b6b48a577bb660432850017416f0a228d102cf1601a7882a3"
+    },
+    {
+      "path": "backend/storyboard-agent/tests/test_rag_worker_observability.py",
+      "beforeSha256": "beabc5f5e349a5a93b1fcd4a81bb51a9b6b6edd848317b16e8e7660190efbd6b",
+      "sha256": "9617f4d5361649fc5de1068ffed01cf4d6413e7694d259562b3caddcdc0235af"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/rag-worker-client.ts",
+      "beforeSha256": "bf946e4fabe9584737576ff6cdb0617b2f15434b4766ea7a2ab3a069de3711e4",
+      "sha256": "71e12fb37cfe138eecbe6e361694d7b217fa61ebb1e9161c973826a2f6aaa6c4"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/production-store.ts",
+      "beforeSha256": "8595c32824937899d22311b208594b83e46463ad7fe81c134f76235b18c14638",
+      "sha256": "a2c74604f9668f3354d2fd9c2e69ba87e72ab3cc4bd2f177ab9f361c78406db9"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/production-model-catalog.ts",
+      "beforeSha256": null,
+      "sha256": "db1667d375c8407defc289634ea38491cac06759fa9f15312d7a65e10a3dded8"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/rag-candidate-admission.ts",
+      "beforeSha256": null,
+      "sha256": "abc76f8fd4fad8c596603ffe7591afcb98856e6da057fc06f6ae0d9af577d4a3"
+    },
+    {
+      "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "beforeSha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53",
+      "sha256": "15365d873b9a1814ff2572610370e2c48095ebb54381fb903aac901ebf4a01db"
+    },
+    {
+      "path": "apps/web/app/api/admin/storyboard/rag/search/route.ts",
+      "beforeSha256": "c76676be558e9a578f457c13b29c4373a5365175b9931003b7524b97248c9b9d",
+      "sha256": "6967dc46f4ea849d43dcbc9678130b5057e26fff9e462ee0aa8208c441f2785c"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-gemini-rag.test.ts",
+      "beforeSha256": "3ac231426ca34ca8b62d931e7621aa5c6e7f9dce62f22a6b2e9d80c08228dea0",
+      "sha256": "b1c4684af8c8c1f9b56a7ce1f0528d62f33dec05e5b6e3ebc879ddac02c7ead1"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-rag-admission.test.ts",
+      "beforeSha256": null,
+      "sha256": "7fe75d97e3df4391258d5430c801e9b9b061fd0dd83f874e549724c8d843826c"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-production-catalog.test.ts",
+      "beforeSha256": null,
+      "sha256": "6cc4aeafdce021efefa5da57ca032bee3eaca9a1b9c2d9b53f18dfe829a7a835"
+    },
+    {
+      "path": "apps/web/.env.example",
+      "beforeSha256": "e5a3a386f0c07ca5ebab1fecdcc0288f0b0217bfd62d956515b98a1fc38fc1a7",
+      "sha256": "ef35e27fe2504326045f60b6d0ef31a8248fe3b52fcd30892bb6b6d285d5dfdc"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/python-tests.log",
+      "sha256": "a8b533637e8d8abdab20ce6ada846f56ead1a53b8a0e332e77c1c8fa3dff9de5"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/route-ui-contracts.log",
+      "sha256": "821a327e65bbec195d3b118962d676fb7384e49c33e03cedcbc5ac3046fefdda"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/typecheck-compat.log",
+      "sha256": "bc123ed9cae4adca8ef69995de1576b5fe9c0d0cfec133e3aeda14cb04901a51"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/typecheck-native.log",
+      "sha256": "bc123ed9cae4adca8ef69995de1576b5fe9c0d0cfec133e3aeda14cb04901a51"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/typecheck.log",
+      "sha256": "733d50076cfd39159e1f77e3733b31c059671f61ce5d665f7d3883a013a20407"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/web-tests.log",
+      "sha256": "4ee20eb79e27ff98ca4955132827b76b86f8171abfdecfeb9001760319b553e8"
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/summary.md",
+      "sha256": "d4b0946b1f88aa1045ac0e0919fa4ca05ea703715cc127ae827a2ebc1f2a6476"
+    }
+  ]
+}

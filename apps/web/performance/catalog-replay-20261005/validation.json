@@ -1,0 +1,139 @@
+{
+  "kind": "local-canonical-output-validation",
+  "validCandidate": true,
+  "artifactCount": 55,
+  "metadataSourceCommit": "7c7e1eedec5853da0ab3e5d6e39dc49f4bc09579",
+  "endHead": "7c7e1eedec5853da0ab3e5d6e39dc49f4bc09579",
+  "metadataSha256": "070136374b8fe3976e12cdaa44053406c6a1d8946430c742ac9d675f324f6e68",
+  "sha256sumsSha256": "7a07275f2e88b4790737a3a935d975dd4eeb41f544a6a9071686986d48472e8a",
+  "catalogRowCount": 1917,
+  "previousEvidencePath": "/Users/twoimo/.codex/runtime-cache/g014-catalog-final-compose-20261004",
+  "catalogJsonlUnchanged": true,
+  "catalogTuplesUnchanged": true,
+  "metadataDifferences": {
+    "source_sha": {
+      "previous": "fd1fbcaaef92786c07f48ee6066aea284dff6041",
+      "current": "7c7e1eedec5853da0ab3e5d6e39dc49f4bc09579"
+    },
+    "migration_chain_sha256": {
+      "previous": "5d1c4c3098cae51e50a5816d6f5f5a185cd9e942e86b16069ada980fe736d7c6",
+      "current": "1a56104b51193f9d07fb61599bf70b4804a3097952d7e1db1ae83009d06c727e"
+    },
+    "initialization_inputs_sha256": {
+      "previous": "cea6883e8a6938726327cd42ab73cddb29f4b891e88401e701c8bfd117c362c9",
+      "current": "fe123a7cd68e5a6602053c799dd4769fbf7236a273742af21508f271d676c289"
+    }
+  },
+  "rawSqlPrivacyScan": {
+    "files": 12,
+    "bytes": 710989,
+    "patterns": [
+      "email",
+      "jwt",
+      "uri_password",
+      "private_key",
+      "korean_mobile",
+      "rrn"
+    ],
+    "hits": {
+      "00000000000001-auth-schema.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "G026_RECONSTRUCTION_REPAIRS.v4.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "G026_RECONSTRUCTION_TRANSITION.v4.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "admin-management-group-overlap-verification.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "admin-user-ids-overlap-verification.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "advisor-prerequisites.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "advisor-replay.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "catalog-manifest-tuples.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "g014-owner-final-pg15-verification.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "g014-owner-pg15-verification.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "g016-identity-pg15-verification.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      },
+      "postgres-image-00000000000001-auth-schema.sql": {
+        "email": 0,
+        "jwt": 0,
+        "uri_password": 0,
+        "private_key": 0,
+        "korean_mobile": 0,
+        "rrn": 0
+      }
+    },
+    "limitations": "Pattern scan and source-only catalog export review; no hosted user data was read."
+  },
+  "dualCleanReplayPerformed": false
+}

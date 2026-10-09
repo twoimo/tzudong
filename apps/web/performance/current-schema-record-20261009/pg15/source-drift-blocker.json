@@ -1,0 +1,27 @@
+{
+  "schema": "tzudong-current-schema-canonical-pg15-source-drift-blocker-v1",
+  "sourceHead": "df3b784b5438113bcdb8b29ab0a7224e67c2f8c9",
+  "fixedCode": "registration_replay_source_drift",
+  "blockingFile": "backend/supabase/scripts/transform_registration_replay.py",
+  "blockingLines": [
+    8,
+    28
+  ],
+  "expectedSourceSha256": "1529ad96ebbc2c8e173d5c51fae9bef8051ce632c829eda20f0ae173a77c8caa",
+  "actualSourceSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "generatorCallLines": [
+    1390,
+    1395
+  ],
+  "canonicalRunA": "failed",
+  "canonicalRunB": "not-executed-dependent-on-run-a",
+  "canonicalComparison": "not-executed-dependent-on-two-successful-replays",
+  "attemptElapsedSeconds": [
+    131.985,
+    128.245
+  ],
+  "generatorOwnedDbContainersAfterCleanup": 0,
+  "sourceModified": false,
+  "hostedOperationExecuted": false,
+  "nextDependency": "Update the hash-bound PG15 adapter and its meaningful verification for the new guarded SQL under root ownership, then commit a clean candidate and execute two unchanged canonical generator runs."
+}
