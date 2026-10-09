@@ -1,0 +1,39 @@
+{
+  "historicalGitCommit": "21655753d25f233e815da3900765f21d82dd34d2",
+  "frozenMap": "apps/web/performance/user-readiness-20261009/artifact-map-readiness-integrated-v1.json",
+  "reason": "Preserve original historical harnesses while correcting the runnable title matcher. No raw results or original source bytes altered.",
+  "recovery": [
+    {
+      "originalPath": "apps/web/performance/user-readiness-20261009/live-public-readiness-v1.mjs",
+      "preservedPath": "docs/evidence/user-readiness-historical-browser-source-v1/live-public-readiness-v1.mjs.source.txt",
+      "sha256": "292d2fd610219ef0cfdf468b712c2ffdf8bd2dddd6a90a4d7a050b9231d8893e",
+      "bytes": 3301
+    },
+    {
+      "originalPath": "apps/web/performance/user-readiness-20261009/live-public-readiness-v2.mjs",
+      "preservedPath": "docs/evidence/user-readiness-historical-browser-source-v1/live-public-readiness-v2.mjs.source.txt",
+      "sha256": "2c99f61ae6e8bd0840acc3139bcf418f33bebe11ac8c805f1b3ebd208fee5d1f",
+      "bytes": 3825
+    },
+    {
+      "originalPath": "apps/web/performance/user-readiness-20261009/live-public-readiness-v3.mjs",
+      "preservedPath": "docs/evidence/user-readiness-historical-browser-source-v1/live-public-readiness-v3.mjs.source.txt",
+      "sha256": "7eedf7e0910371531b78acc74ac9a016aca6d7294ce0c328d1bed303d5749022",
+      "bytes": 4046
+    },
+    {
+      "originalPath": "apps/web/performance/user-readiness-20261009/live-public-readiness-v4.mjs",
+      "preservedPath": "docs/evidence/user-readiness-historical-browser-source-v1/live-public-readiness-v4.mjs.source.txt",
+      "sha256": "177f8af21ac95f7bc915b31d0ced62355bc8a6ea79d870347f6747ca3b7b7e2e",
+      "bytes": 4283
+    },
+    {
+      "originalPath": "docs/evidence/verify-user-readiness-integrated-map-v1.py",
+      "preservedPath": "docs/evidence/user-readiness-historical-browser-source-v1/verify-map-v1.py.source.txt",
+      "sha256": "e92ee7a5204758ead9f024f2f681751d758d9b60e9511edb491a7442b588a626",
+      "bytes": 1516
+    }
+  ],
+  "currentHarness": "apps/web/performance/user-readiness-20261009/live-public-readiness-v5.mjs",
+  "historicalVerification": "Checkout historicalGitCommit and run its original independent verifier; current byte recovery may also use the recorded preservedPath hashes."
+}

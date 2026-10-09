@@ -518,6 +518,23 @@
       "vcsTracked": true
     },
     {
+      "path": "docs/evidence",
+      "depth": 2,
+      "ownership": "검증·릴리스 근거, 독립 해시와 원본 소스 스냅샷",
+      "allowedContents": [
+        "최소화한 검증 영수증과 재현 보고서",
+        "별도 artifact-map 해시 기록",
+        "실행되지 않는 원본 소스 스냅샷"
+      ],
+      "forbiddenContents": [
+        "시크릿 값과 개인정보",
+        "서비스 런타임 구현",
+        "외부 서비스 변경 실행"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "docs/build-ship",
       "depth": 2,
       "ownership": "구현·빌드·배포 절차 문서",
