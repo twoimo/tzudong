@@ -1,0 +1,33 @@
+{
+  "remoteCommit": "08cdf5f23f466f83ae0e3a5ec3182833f17cf4fa",
+  "mismatches": [
+    {
+      "path": "production-build-v1.log",
+      "beforeBytes": 5619,
+      "gitBytes": 5616,
+      "onlyCrLfNormalization": true,
+      "lfsPointer": false,
+      "localSha256": "897f309c04e2a96741023bce15dc1a7ebe25237b14bd7f2141e910122bafae80",
+      "gitSha256": "be818e70eb459fc3525d2470d1ab44ec52ad14a1c4360d00312b4baef65529aa"
+    },
+    {
+      "path": "production-build-v2.log",
+      "beforeBytes": 6969,
+      "gitBytes": 6966,
+      "onlyCrLfNormalization": true,
+      "lfsPointer": false,
+      "localSha256": "7b16300e9574612e5ed7fec8d0f734178f9a9e39b4373c0b5f2665bf562f800f",
+      "gitSha256": "0b74faa053d068523dc00b805442dbadde731f36d79d015d995953171ffedc02"
+    },
+    {
+      "path": "production-security-build-v3.log",
+      "beforeBytes": 5636,
+      "gitBytes": 5633,
+      "onlyCrLfNormalization": true,
+      "lfsPointer": false,
+      "localSha256": "2e8657531f93ac6c38faba5b7cca46228dabac80ebd365501d16f051c1652dc0",
+      "gitSha256": "8f1753c8b23cdd09048defb56c4d0572e93cfce1be099e9809d003eca06c91e8"
+    }
+  ],
+  "rawLocalArtifactsUnchanged": true
+}

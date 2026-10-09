@@ -10,8 +10,3 @@
 backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql whitespace=-blank-at-eof
 backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql whitespace=-blank-at-eof
 backend/supabase/scripts/g037_readonly_role_readback_v3.sql whitespace=-blank-at-eof
-
-# These retained build logs contain original CRLF bytes bound to an artifact map.
-apps/web/performance/user-readiness-20261009/production-build-v1.log -text
-apps/web/performance/user-readiness-20261009/production-build-v2.log -text
-apps/web/performance/user-readiness-20261009/production-security-build-v3.log -text
