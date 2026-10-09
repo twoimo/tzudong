@@ -42,6 +42,16 @@ const executableRecord = Object.freeze({
     }),
   }),
 });
+const heldRecord = Object.freeze({
+  ...record,
+  manifest: Object.freeze({
+    ...record.manifest,
+    launchPolicy: Object.freeze({
+      ...record.manifest.launchPolicy,
+      state: 'held',
+    }),
+  }),
+});
 const fixedNow = new Date('2026-10-09T09:00:00.000Z');
 const revision = '71da8656c45981e927821e935a09e00820e0bbd8';
 const databaseUrl = 'postgresql://postgres.aqlcofblfxdrjhhdmarw:private-password@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres';
@@ -279,7 +289,7 @@ test('dedicated manifest pins the exact five-source chain, full vectors, toolcha
   expect(manifest.launchPolicy).toEqual({
     code: 'SUCCESSOR_LAUNCH_HELD',
     reason: 'protected-release-and-fresh-admission-required',
-    state: 'held',
+    state: 'ready',
   });
   expect(manifest.protectedSource).toEqual({
     ref: 'refs/heads/main',
@@ -300,9 +310,10 @@ test('production manifest loader either binds the exact current toolchain or fai
   }
 });
 
-test('production manifest launch hold rejects before checkout, transport or journal creation', () => {
+test('production ready manifest still rejects corrupt fence custody before checkout, transport or journal creation', () => {
   const document = admission(record);
   const files = custodyFiles(document);
+  writeFileSync(join(files.directory, 'writer-fence-dashboard.json'), '{}\n');
   let gitFactsCalls = 0;
   let transportCalls = 0;
   expect(() => runAdminRecordSuccessor({
@@ -314,11 +325,30 @@ test('production manifest launch hold rejects before checkout, transport or jour
       gitFactsCalls += 1;
       return { clean: true, detached: true, revision };
     },
-  })).toThrow('SUCCESSOR_LAUNCH_HELD');
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
   expect(gitFactsCalls).toBe(0);
   expect(transportCalls).toBe(0);
   expect(() => readFileSync(files.journalPath)).toThrow();
 
+});
+
+test('in-memory held manifest rejects before checkout, transport or journal creation', () => {
+  const files = custodyFiles();
+  let gitFactsCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminRecordSuccessor({
+    ...files,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies(() => { transportCalls += 1; return ''; }, heldRecord),
+    gitFactsImpl: () => {
+      gitFactsCalls += 1;
+      return { clean: true, detached: true, revision };
+    },
+  })).toThrow('SUCCESSOR_LAUNCH_HELD');
+  expect(gitFactsCalls).toBe(0);
+  expect(transportCalls).toBe(0);
+  expect(() => readFileSync(files.journalPath)).toThrow();
 });
 
 test('fresh admission binds exact revision, rehearsal, rollback, external fences and all five schema/ledger stages', () => {

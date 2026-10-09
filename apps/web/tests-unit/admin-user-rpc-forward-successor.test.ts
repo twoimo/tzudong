@@ -37,6 +37,13 @@ const readyRecord = Object.freeze({
     launchPolicy: Object.freeze({ ...baseRecord.manifest.launchPolicy, state: 'ready' }),
   }),
 });
+const heldRecord = Object.freeze({
+  ...baseRecord,
+  manifest: Object.freeze({
+    ...baseRecord.manifest,
+    launchPolicy: Object.freeze({ ...baseRecord.manifest.launchPolicy, state: 'held' }),
+  }),
+});
 const protectedBinding = protectedSourceReadbackBinding(readyRecord.manifest, revision);
 
 const priorState = Object.freeze({
@@ -121,9 +128,9 @@ function dependencies(runPsqlImpl: (...args: any[]) => string) {
   };
 }
 
-test('dedicated held manifest pins the post-five chain and exact forward source/vector', () => {
+test('dedicated ready manifest pins the post-five chain and exact forward source/vector', () => {
   expect(baseRecord.manifest.launchPolicy).toEqual({
-    state: 'held',
+    state: 'ready',
     code: 'FORWARD_LAUNCH_HELD',
     reason: 'fresh-protected-source-and-operating-readback-required',
   });
@@ -136,7 +143,7 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
   expect(baseRecord.manifest.operatingTransition).toEqual({ beforeFive: 80, afterFive: 85, afterForward: 86 });
   expect(baseRecord.manifest.fiveStage).toMatchObject({
     entries: 5,
-    sha256: '02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26',
+    sha256: '73358536001faa066d65ff7275e0e977e3324b87f0d637f5fb3c5de8f634dc8f',
     sourceRoot: '15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3',
   });
   expect(baseRecord.fiveManifest.migrations.map((migration: any) => migration.id)).toEqual([
@@ -176,7 +183,37 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
   ]);
 });
 
-test('production manifest launch hold rejects before admission, checkout or transport access', () => {
+test('production ready manifest still rejects corrupt operating custody before checkout or transport access', () => {
+  const files = privateAdmissionFiles();
+  writeFileSync(files.receiptPath, '{}\n');
+  let gitCalls = 0;
+  let protectedReadbackCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminUserRpcForward({
+    admissionPath: files.admissionPath,
+    environment: {},
+  }, {
+    now: () => fixedNow,
+    gitFactsImpl: () => {
+      gitCalls += 1;
+      return { clean: true, detached: true, revision };
+    },
+    loadManifestImpl: () => baseRecord,
+    protectedMainReadbackImpl: () => {
+      protectedReadbackCalls += 1;
+      return protectedBinding.readback;
+    },
+    runPsqlImpl: () => {
+      transportCalls += 1;
+      return '';
+    },
+  })).toThrow('FORWARD_ADMISSION_INVALID');
+  expect(gitCalls).toBe(0);
+  expect(protectedReadbackCalls).toBe(0);
+  expect(transportCalls).toBe(0);
+});
+
+test('in-memory held manifest rejects before admission, checkout or transport access', () => {
   let gitCalls = 0;
   let protectedReadbackCalls = 0;
   let transportCalls = 0;
@@ -188,7 +225,7 @@ test('production manifest launch hold rejects before admission, checkout or tran
       gitCalls += 1;
       return { clean: true, detached: true, revision };
     },
-    loadManifestImpl: () => baseRecord,
+    loadManifestImpl: () => heldRecord,
     protectedMainReadbackImpl: () => {
       protectedReadbackCalls += 1;
       return protectedBinding.readback;

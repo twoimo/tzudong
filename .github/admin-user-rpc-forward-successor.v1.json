@@ -9,7 +9,7 @@
   "advisoryLockKey": "7311754282260165",
   "stateRootAlgorithm": "admin-user-rpc-forward-state/v1",
   "launchPolicy": {
-    "state": "held",
+    "state": "ready",
     "code": "FORWARD_LAUNCH_HELD",
     "reason": "fresh-protected-source-and-operating-readback-required"
   },
@@ -25,7 +25,7 @@
   },
   "fiveStage": {
     "path": ".github/admin-record-sql-successor.v1.json",
-    "sha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26",
+    "sha256": "73358536001faa066d65ff7275e0e977e3324b87f0d637f5fb3c5de8f634dc8f",
     "sourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3",
     "entries": 5
   },

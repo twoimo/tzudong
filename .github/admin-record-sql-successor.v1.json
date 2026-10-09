@@ -15,7 +15,7 @@
   "stateRootAlgorithm": "admin-record-successor-state/v1",
   "sourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3",
   "launchPolicy": {
-    "state": "held",
+    "state": "ready",
     "code": "SUCCESSOR_LAUNCH_HELD",
     "reason": "protected-release-and-fresh-admission-required"
   },
