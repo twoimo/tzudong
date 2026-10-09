@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "siteUrl": "https://www.tzudong.app",
+  "siteUrlPreserved": true,
+  "beforeCount": 5,
+  "afterCount": 6,
+  "addedUrl": "https://tzudong-git-develop-twoimos-projects.vercel.app/auth/callback?next=%2Fadmin%3Fmodule%3Dusers",
+  "addedUrlPresent": true,
+  "existingUrls": [
+    "https://www.tzudong.app/**",
+    "https://www.tzudong.app/auth/callback",
+    "https://tzudong.app/**",
+    "http://localhost:8080/**",
+    "http://localhost:8080/auth/callback"
+  ],
+  "readbackAfterReload": true,
+  "settingsWrites": 1,
+  "oauthAdminReturnObserved": true,
+  "usersListRead": "fixed unavailable error",
+  "cmsReadChecks": [
+    {
+      "menu": "맛집 관리",
+      "headers": [
+        "맛집 관리"
+      ],
+      "fixedErrorPresent": false
+    },
+    {
+      "menu": "제보 관리",
+      "headers": [
+        "제보 관리"
+      ],
+      "fixedErrorPresent": false
+    },
+    {
+      "menu": "리뷰 관리",
+      "headers": [
+        "리뷰 관리"
+      ],
+      "fixedErrorPresent": false
+    },
+    {
+      "menu": "배너 관리",
+      "headers": [
+        "배너 관리",
+        "배너 목록",
+        "배너 상세"
+      ],
+      "fixedErrorPresent": false
+    }
+  ],
+  "writeFlowTests": 0,
+  "existingUrlsPreserved": true
+}

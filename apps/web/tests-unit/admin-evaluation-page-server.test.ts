@@ -7,6 +7,8 @@ const query={searchQuery:'',evalFilters:{},deepLinkFilter:null};
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const row=(n:number)=>({id:id(n),origin_name:'fixture',approved_name:'fixture',name:'fixture',status:'pending',created_at:'2026-01-01T00:00:00Z',youtube_link:'https://youtu.be/abcdefghijk',naver_name:null,google_name:null,phone:null,road_address:null,jibun_address:null,updated_by_admin_id:null,lat:null,lng:null});
 const stats={total:201,pending:201,approved:0,hold:0,db_conflict:0,ready_for_approval:0,unconfirmed_map:0,missing:0,not_selected:0,deleted:0};
+const missingRaw={data:null,error:{code:'PGRST202',message:'Could not find the function public.admin_evaluation_raw_warning_groups(after_cursor, batch_size, expected_revision, page_ids) in the schema cache'}};
+const missingGrouped={data:null,error:{code:'PGRST202',message:'Could not find the function public.admin_evaluation_warning_groups(expected_revision, page_ids) in the schema cache'}};
 function fixture(related=Array.from({length:201},(_,i)=>row(i))) {
   let revision='1';let finishRevision:string|null=null;let bad:unknown=null;let loads=0;const ranges:number[][]=[];
   let rawReply:unknown=null;let warningReply:unknown=null;let relatedReply:unknown=null;let warningThrow=false;
@@ -29,7 +31,8 @@ function fixture(related=Array.from({length:201},(_,i)=>row(i))) {
     }
     if(name==='admin_evaluation_warning_groups'){if(warningThrow)throw new Error('network_failure');return warningReply??{data:{revision,groups:[{id:id(0),sameVideo:{count:200,candidates:[1,2,3].map(n=>({id:id(n),name:'fixture',status:'pending',address:null,adminTouched:false,rule:'exact_identity',confidence:1}))},deleted:{count:0,samples:[]}}]},error:null};}
     if(name!=='admin_evaluation_page')throw new Error('unexpected_catalog_read');
-    loads++;return {data:bad??{records:[related[0]],stats,filteredTotal:201,revision,hasMore:true,afterId:id(0)},error:null};
+    const pageStats={...stats,total:related.length,pending:related.filter(item=>item.status==='pending').length,deleted:related.filter(item=>item.status==='deleted').length};
+    loads++;return {data:bad??{records:[related[0]],stats:pageStats,filteredTotal:related.length,revision,hasMore:true,afterId:id(0)},error:null};
   });
   const client={rpc,from:()=>{
     const builder={select:(cols:string)=>{expect(cols).not.toBe('*');return builder;},in:()=>builder,order:()=>builder,
@@ -130,16 +133,59 @@ describe('DB-backed bounded evaluation pages',()=>{
     await expect(cache.read(f.client,'tenant',query,1,pages[0].nextCursor)).rejects.toThrow('EVALUATION_CURSOR_STALE');
     await cache.read(f.client,'other-tenant',query,1,null);expect(f.loads()).toBe(4);
   });
-  test('old database compatibility is revision scoped and never sticks after RPC availability changes',async()=>{
+  test('missing raw RPC uses five bounded cold-cache calls, no row stream, and never sticks after availability changes',async()=>{
     const f=fixture();const cache=new DatabaseEvaluationPageCache();
-    const missing={data:null,error:{code:'PGRST202',message:'Could not find the function public.admin_evaluation_raw_warning_groups(after_cursor, batch_size, expected_revision, page_ids) in the schema cache'}};
-    f.setRaw(missing);const legacy=await cache.read(f.client,'legacy',query,1,null);
-    expect(legacy.warningReadPath).toBe('WARNING_STREAM_RAW_UNAVAILABLE');
+    f.setRaw(missingRaw);const legacy=await cache.read(f.client,'legacy',query,1,null);
+    expect(legacy.warningReadPath).toBe('WARNING_RPC');expect(f.ranges).toEqual([]);
+    expect(f.rpc.mock.calls.map(call=>call[0])).toEqual(['admin_evaluation_revision','admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_warning_groups','admin_evaluation_revision']);
     await cache.read(f.client,'legacy',query,1,null);expect(f.loads()).toBe(1);
     f.setRevision('2');f.setRaw(null);const prepared=await cache.read(f.client,'legacy',query,1,null);
     expect(prepared.warningReadPath).toBe('WARNING_RAW_GROUPS');expect(prepared.warnings).toEqual(legacy.warnings);expect(f.loads()).toBe(2);
-    f.setRevision('3');f.setRaw(missing);f.setRelated({data:null,error:{code:'42501',message:'permission denied'}});
+    f.setRevision('3');f.setRaw(missingRaw);f.setWarning({data:null,error:{code:'P0001',message:'EVALUATION_WARNING_CAPACITY_EXCEEDED'}});
     await expect(cache.read(f.client,'legacy',query,1,null)).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');
+    expect(f.ranges).toEqual([]);
+  });
+  test('double-missing compatibility preserves all 1,659 related rows within fourteen cold-cache DB calls',async()=>{
+    const related=Array.from({length:1659},(_,index)=>row(index));const f=fixture(related);const cache=new DatabaseEvaluationPageCache();
+    f.setRaw(missingRaw);f.setWarning(missingGrouped);
+    const page=await cache.read(f.client,'operational-1659',query,1,null);
+    expect(page.warningReadPath).toBe('WARNING_STREAM_RPC_UNAVAILABLE');expect(page.warnings[id(0)].sameVideo.count).toBe(1658);
+    expect(f.ranges).toEqual(Array.from({length:9},(_,batch)=>[batch*200,batch*200+199]));
+    expect(f.rpc.mock.calls.map(call=>call[0])).toEqual(['admin_evaluation_revision','admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_warning_groups','admin_evaluation_revision']);
+    expect(f.rpc.mock.calls.length+f.ranges.length).toBe(14);
+  });
+  test('double-missing stream admits exactly 2,000 rows with a sentinel and rejects 2,001 without partial warnings',async()=>{
+    const exact=fixture(Array.from({length:2000},(_,index)=>row(index)));exact.setRaw(missingRaw);exact.setWarning(missingGrouped);
+    const page=await new DatabaseEvaluationPageCache().read(exact.client,'exact-2000',query,1,null);
+    expect(page.warnings[id(0)].sameVideo.count).toBe(1999);expect(exact.ranges).toHaveLength(11);expect(exact.ranges.at(-1)).toEqual([2000,2000]);
+    expect(exact.rpc.mock.calls.length+exact.ranges.length).toBe(16);
+    const over=fixture(Array.from({length:2001},(_,index)=>row(index)));over.setRaw(missingRaw);over.setWarning(missingGrouped);
+    await expect(new DatabaseEvaluationPageCache().read(over.client,'over-2000',query,1,null)).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');
+    expect(over.ranges).toHaveLength(11);expect(over.ranges.at(-1)).toEqual([2000,2000]);
+    expect(over.rpc.mock.calls.length+over.ranges.length).toBe(15);
+  });
+  test('transitional capacity does not shrink explicit stream or admitted Unicode compatibility',async()=>{
+    const related=Array.from({length:2001},(_,index)=>row(index));
+    const explicit=fixture(related);
+    const baseline=await readDatabaseEvaluationPage(explicit.client,query,1,null,undefined,'stream');
+    expect(baseline.warnings[id(0)].sameVideo.count).toBe(2000);
+    const unicode=fixture(related);unicode.setWarning({data:null,error:{code:'P0001',message:'EVALUATION_WARNING_UNICODE_UNSUPPORTED'}});
+    const page=await readDatabaseEvaluationPage(unicode.client,query,1,null,undefined,'rpc');
+    expect(page.warningReadPath).toBe('WARNING_STREAM_UNICODE');expect(page.warnings).toEqual(baseline.warnings);
+    expect(explicit.ranges.at(-1)).toEqual([2000,2199]);expect(unicode.ranges.at(-1)).toEqual([2000,2199]);
+  });
+  test('double-missing compatibility never hides runtime, permission, timeout or inexact schema errors',async()=>{
+    for(const warning of [
+      {data:null,error:{code:'P0001',message:'EVALUATION_WARNING_UNICODE_UNSUPPORTED'}},
+      {data:null,error:{code:'42501',message:'permission denied'}},
+      {data:null,error:{code:'PGRST202',message:'Could not find another warning function'}},
+      {data:{},error:{code:'PGRST202',message:missingGrouped.error.message}},
+    ]){
+      const f=fixture();f.setRaw(missingRaw);f.setWarning(warning);
+      await expect(readDatabaseEvaluationPage(f.client,query,1,null)).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');expect(f.ranges).toEqual([]);
+    }
+    const timeout=fixture();timeout.setRaw(missingRaw);timeout.throwWarning();
+    await expect(readDatabaseEvaluationPage(timeout.client,query,1,null)).rejects.toThrow('network_failure');expect(timeout.ranges).toEqual([]);
   });
   test('never caches a failed or inconsistent load',async()=>{
     const cache=new DatabaseEvaluationPageCache();const f=fixture();f.setFinish('2');
@@ -172,6 +218,9 @@ describe('raw warning server transport', () => {
         calls.push({ name, args });
         if (name === 'admin_evaluation_revision') return { data: finalRevision, error: null };
         if (name === 'admin_evaluation_raw_warning_groups') { const value = replies[requests++]; if (value instanceof Error) throw value; return value; }
+        if (name === 'admin_evaluation_warning_groups') return { data: { revision:'1', groups:[{ id:id(0),
+          sameVideo:{ count:297, candidates:[1,2,3].map(n=>({ id:id(n),name:'a\u0897',status:'pending',address:null,adminTouched:false,rule:'exact_identity',confidence:1 })) },
+          deleted:{ count:2, samples:[298,299].map(n=>({ id:id(n),origin_name:'a\u0897',candidate_name:'a\u0897' })) } }] }, error:null };
         if (name !== 'admin_evaluation_page') throw new Error('unexpected_rpc');
         return { data: { records: [rows[0]], revision: '1', hasMore: false, filteredTotal: 300, stats: { total: 300, pending: 298, approved: 0, hold: 0, db_conflict: 0, ready_for_approval: 0, unconfirmed_map: 0, missing: 0, not_selected: 0, deleted: 2 } }, error: null };
       },
@@ -193,8 +242,8 @@ describe('raw warning server transport', () => {
   test('default preserves all Unicode/deleted warnings when the old database has no raw RPC', async () => {
     const legacy=fixture([missing]);const actual=await readDatabaseEvaluationPage(legacy.client,query,1,null);
     const expected=await readDatabaseEvaluationPage(fixture().client,query,1,null,undefined,'stream');
-    expect(actual.warnings).toEqual(expected.warnings);expect(actual.warningReadPath).toBe('WARNING_STREAM_RAW_UNAVAILABLE');expect(legacy.streams()).toBe(2);
-    expect(legacy.calls.map(call=>call.name)).toEqual(['admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_revision']);
+    expect(actual.warnings).toEqual(expected.warnings);expect(actual.warningReadPath).toBe('WARNING_RPC');expect(legacy.streams()).toBe(0);
+    expect(legacy.calls.map(call=>call.name)).toEqual(['admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_warning_groups','admin_evaluation_revision']);
     const stale=fixture([missing]);stale.setFinal('2');await expect(readDatabaseEvaluationPage(stale.client,query,1,null)).rejects.toThrow('EVALUATION_CURSOR_STALE');
     const explicit=fixture([missing]);await expect(readDatabaseEvaluationPage(explicit.client,query,1,null,undefined,'raw')).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');expect(explicit.streams()).toBe(0);
   });

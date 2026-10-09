@@ -1,0 +1,7 @@
+{
+  "baselineRevision": "dd9fcfd291843c59ced8d3da55fcc04e09e82b2c",
+  "baselineOriginalSha256": "04933165d80cd1cac653a6b1d1d31c7ffffc18a858365790485772789b4d0620",
+  "baselineRelocatedSha256": "0549f7d77ddb5bf1d11ccd86b9e0f914139202fa3d932fd4de189fc7735c1584",
+  "relocation": "relative import paths only",
+  "candidateSha256": "25f1ed021b7eb5a66e2f6abdbbd14e5c43cc7c3cc83d284f2eea912a196ce600"
+}
