@@ -11,7 +11,7 @@ import {
   realpathSync,
   writeSync,
 } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -36,6 +36,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const PROJECT_REF = 'aqlcofblfxdrjhhdmarw';
 const PURPOSE = 'admin-record-current-state-five-stage';
 const ADMISSION_MAX_AGE_MS = 15 * 60 * 1000;
+const PRIVATE_RECEIPT_FILES = Object.freeze({
+  protectedMain: 'protected-main-receipt.json',
+  rehearsal: 'rehearsal-receipt.json',
+  rollback: 'rollback-readback-receipt.json',
+  source: 'source-receipt.json',
+});
 const FIXED_CONTROLLER_CODES = new Set([
   'MIGRATION_BUNDLE_OUTCOME_UNCONFIRMED',
   'MIGRATION_BUNDLE_READBACK_INVALID',
@@ -161,6 +167,7 @@ export function loadSuccessorManifest({
     'legacyReleaseManifest',
     'migrations',
     'projectRef',
+    'protectedSource',
     'purpose',
     'requiredWriterFences',
     'schemaVersion',
@@ -180,6 +187,12 @@ export function loadSuccessorManifest({
     || manifest.stateRootAlgorithm !== 'admin-record-successor-state/v1'
     || !Array.isArray(manifest.migrations)
     || manifest.migrations.length !== 5) fail('SUCCESSOR_MANIFEST_INVALID');
+  exactKeys(manifest.protectedSource, ['ref', 'remote', 'repositoryUrl'], 'SUCCESSOR_MANIFEST_INVALID');
+  if (manifest.protectedSource.remote !== 'origin'
+    || manifest.protectedSource.ref !== 'refs/heads/main'
+    || manifest.protectedSource.repositoryUrl !== 'https://github.com/twoimo/tzudong.git') {
+    fail('SUCCESSOR_MANIFEST_INVALID');
+  }
   assertHex(manifest.sourceRoot, 'SUCCESSOR_MANIFEST_INVALID');
   exactKeys(manifest.launchPolicy, ['code', 'reason', 'state'], 'SUCCESSOR_MANIFEST_INVALID');
   if (!['held', 'ready'].includes(manifest.launchPolicy.state)
@@ -357,7 +370,151 @@ function validateStageState(stage, index, manifest, suffixRoot, priorCount, pref
   if (index === 0 && stage.state.ledgerRoot !== prefixRoot) fail('SUCCESSOR_ADMISSION_INVALID');
 }
 
-export function validateSuccessorAdmission(admission, manifestRecord, { now = new Date() } = {}) {
+function canonicalReceiptBytes(value) {
+  return Buffer.from(`${JSON.stringify(canonical(value))}\n`);
+}
+
+function readPrivateCanonicalReceipt(directory, fileName, expectedSha256) {
+  if (typeof directory !== 'string' || !isAbsolute(directory) || typeof fileName !== 'string') {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+  let bytes;
+  let receiptPath;
+  let receiptDirectory;
+  try {
+    const directoryStatus = lstatSync(directory);
+    if (!directoryStatus.isDirectory()
+      || directoryStatus.isSymbolicLink()
+      || (process.platform !== 'win32' && (directoryStatus.mode & 0o077) !== 0)) {
+      fail('SUCCESSOR_ADMISSION_INVALID');
+    }
+    receiptDirectory = realpathSync(directory);
+    receiptPath = assertPrivateAdmissionPath(join(directory, fileName));
+    bytes = readFileSync(receiptPath);
+  } catch {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+  if (dirname(realpathSync(receiptPath)) !== receiptDirectory) fail('SUCCESSOR_ADMISSION_INVALID');
+  if (sha256(bytes) !== expectedSha256) fail('SUCCESSOR_ADMISSION_INVALID');
+  const receipt = parseJsonObject(bytes, 'SUCCESSOR_ADMISSION_INVALID');
+  if (!bytes.equals(canonicalReceiptBytes(receipt))) fail('SUCCESSOR_ADMISSION_INVALID');
+  return receipt;
+}
+
+function assertReceiptWindow(receipt, admission, createdAt, expiresAt, nowMs) {
+  if (receipt.expiresAt !== admission.expiresAt) fail('SUCCESSOR_ADMISSION_INVALID');
+  const observedAt = Date.parse(receipt.observedAt);
+  if (!Number.isFinite(observedAt)
+    || observedAt < createdAt
+    || observedAt > nowMs + 30_000
+    || Date.parse(receipt.expiresAt) !== expiresAt) fail('SUCCESSOR_ADMISSION_INVALID');
+}
+
+function validatePrivateReceipts(admission, manifestRecord, {
+  createdAt,
+  expiresAt,
+  nowMs,
+  receiptDirectory,
+}) {
+  const { manifest, manifestSha256 } = manifestRecord;
+  const common = receipt => receipt.schemaVersion === 1
+    && receipt.id === manifest.id
+    && receipt.projectRef === manifest.projectRef
+    && receipt.purpose === manifest.purpose
+    && receipt.manifestSha256 === manifestSha256
+    && receipt.sourceRevision === admission.sourceRevision;
+
+  const source = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.source,
+    admission.sourceReceiptSha256,
+  );
+  exactKeys(source, [
+    'expiresAt', 'id', 'kind', 'manifestSha256', 'observedAt', 'projectRef', 'purpose',
+    'schemaVersion', 'sourceRevision', 'sourceRoot',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (!common(source)
+    || source.kind !== 'successor-source-receipt'
+    || source.sourceRoot !== manifest.sourceRoot) fail('SUCCESSOR_ADMISSION_INVALID');
+  assertReceiptWindow(source, admission, createdAt, expiresAt, nowMs);
+
+  const protectedMain = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.protectedMain,
+    admission.protectedMainReceiptSha256,
+  );
+  exactKeys(protectedMain, [
+    'expiresAt', 'id', 'kind', 'manifestSha256', 'observedAt', 'projectRef', 'purpose',
+    'ref', 'remote', 'repositoryUrl', 'revision', 'schemaVersion', 'sourceRevision',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (!common(protectedMain)
+    || protectedMain.kind !== 'protected-main-readback-receipt'
+    || protectedMain.remote !== manifest.protectedSource.remote
+    || protectedMain.ref !== manifest.protectedSource.ref
+    || protectedMain.repositoryUrl !== manifest.protectedSource.repositoryUrl
+    || protectedMain.revision !== admission.sourceRevision) fail('SUCCESSOR_ADMISSION_INVALID');
+  assertReceiptWindow(protectedMain, admission, createdAt, expiresAt, nowMs);
+
+  const rehearsal = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.rehearsal,
+    admission.rehearsalReceiptSha256,
+  );
+  exactKeys(rehearsal, [
+    'expiresAt', 'id', 'kind', 'manifestSha256', 'observedAt', 'passed', 'projectRef',
+    'purpose', 'schemaVersion', 'serverVersionNum', 'sourceRevision', 'sourceRoot',
+    'stageStatesSha256', 'suffixRoot',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (!common(rehearsal)
+    || rehearsal.kind !== 'successor-rehearsal-receipt'
+    || rehearsal.passed !== true
+    || !Number.isSafeInteger(rehearsal.serverVersionNum)
+    || Math.floor(rehearsal.serverVersionNum / 10_000) !== manifest.serverMajor
+    || rehearsal.sourceRoot !== manifest.sourceRoot
+    || rehearsal.suffixRoot !== fiveMigrationBundleSuffixRoot(manifest.migrations)
+    || rehearsal.stageStatesSha256 !== sha256(JSON.stringify(canonical(admission.stageStates)))) {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+  assertReceiptWindow(rehearsal, admission, createdAt, expiresAt, nowMs);
+
+  const rollback = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.rollback,
+    admission.rollback.readbackSha256,
+  );
+  exactKeys(rollback, [
+    'deploymentSha', 'deploymentUrl', 'expiresAt', 'id', 'kind', 'manifestSha256',
+    'observedAt', 'projectRef', 'purpose', 'schemaVersion', 'sourceRevision', 'state',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (!common(rollback)
+    || rollback.kind !== 'rollback-readback-receipt'
+    || rollback.deploymentSha !== admission.rollback.deploymentSha
+    || rollback.deploymentUrl !== admission.rollback.deploymentUrl
+    || rollback.state !== admission.rollback.state) fail('SUCCESSOR_ADMISSION_INVALID');
+  assertReceiptWindow(rollback, admission, createdAt, expiresAt, nowMs);
+
+  for (const key of Object.keys(manifest.requiredWriterFences).sort()) {
+    const fence = readPrivateCanonicalReceipt(
+      receiptDirectory,
+      `writer-fence-${key}.json`,
+      admission.writerFences[key].evidenceSha256,
+    );
+    exactKeys(fence, [
+      'expiresAt', 'fence', 'id', 'kind', 'manifestSha256', 'observedAt', 'projectRef',
+      'purpose', 'schemaVersion', 'sourceRevision', 'state',
+    ], 'SUCCESSOR_ADMISSION_INVALID');
+    if (!common(fence)
+      || fence.kind !== 'writer-fence-readback-receipt'
+      || fence.fence !== key
+      || fence.state !== manifest.requiredWriterFences[key]) fail('SUCCESSOR_ADMISSION_INVALID');
+    assertReceiptWindow(fence, admission, createdAt, expiresAt, nowMs);
+  }
+}
+
+export function validateSuccessorAdmission(admission, manifestRecord, {
+  now = new Date(),
+  receiptDirectory,
+} = {}) {
   const { manifest, manifestSha256 } = manifestRecord;
   exactKeys(admission, [
     'attemptId',
@@ -390,9 +547,20 @@ export function validateSuccessorAdmission(admission, manifestRecord, { now = ne
     assertHex(admission[field], 'SUCCESSOR_ADMISSION_INVALID');
   }
   assertHex(admission.journalPathSha256, 'SUCCESSOR_ADMISSION_INVALID');
-  exactKeys(admission.rollback, ['deploymentSha', 'readbackSha256'], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(admission.rollback, ['deploymentSha', 'deploymentUrl', 'readbackSha256', 'state'], 'SUCCESSOR_ADMISSION_INVALID');
   if (!REVISION.test(admission.rollback.deploymentSha)) fail('SUCCESSOR_ADMISSION_INVALID');
   assertHex(admission.rollback.readbackSha256, 'SUCCESSOR_ADMISSION_INVALID');
+  let rollbackUrl;
+  try { rollbackUrl = new URL(admission.rollback.deploymentUrl); } catch { fail('SUCCESSOR_ADMISSION_INVALID'); }
+  if (rollbackUrl.protocol !== 'https:'
+    || !rollbackUrl.hostname.endsWith('.vercel.app')
+    || rollbackUrl.pathname !== '/'
+    || rollbackUrl.port
+    || rollbackUrl.username
+    || rollbackUrl.password
+    || rollbackUrl.search
+    || rollbackUrl.hash
+    || admission.rollback.state !== 'ready') fail('SUCCESSOR_ADMISSION_INVALID');
 
   const createdAt = Date.parse(admission.createdAt);
   const expiresAt = Date.parse(admission.expiresAt);
@@ -429,6 +597,12 @@ export function validateSuccessorAdmission(admission, manifestRecord, { now = ne
   ));
   const ledgerRoots = admission.stageStates.map(stage => stage.state.ledgerRoot);
   if (new Set(ledgerRoots).size !== ledgerRoots.length) fail('SUCCESSOR_ADMISSION_INVALID');
+  validatePrivateReceipts(admission, manifestRecord, {
+    createdAt,
+    expiresAt,
+    nowMs,
+    receiptDirectory,
+  });
   return Object.freeze({ createdAt, expiresAt, prefixRoot, priorCount, suffixRoot });
 }
 
@@ -520,27 +694,67 @@ function appendJournal(descriptor, entry) {
   }
 }
 
-function gitCommand(args) {
-  const result = spawnSync('/usr/bin/git', args, { cwd: REPOSITORY_ROOT, encoding: 'utf8' });
+function gitCommand(args, repositoryRoot = REPOSITORY_ROOT) {
+  const result = spawnSync('/usr/bin/git', args, { cwd: repositoryRoot, encoding: 'utf8' });
   if (result.error || result.status !== 0) fail('SUCCESSOR_CHECKOUT_INVALID');
   return result.stdout.trim();
 }
 
-export function currentSuccessorGitFacts() {
-  const revision = gitCommand(['rev-parse', 'HEAD']);
-  const dirty = gitCommand(['status', '--porcelain=v1']);
+export function currentSuccessorGitFacts({ repositoryRoot = REPOSITORY_ROOT } = {}) {
+  const revision = gitCommand(['rev-parse', 'HEAD'], repositoryRoot);
+  const dirty = gitCommand(['status', '--porcelain=v1'], repositoryRoot);
   const symbolic = spawnSync('/usr/bin/git', ['symbolic-ref', '-q', '--short', 'HEAD'], {
-    cwd: REPOSITORY_ROOT,
+    cwd: repositoryRoot,
     encoding: 'utf8',
   });
   if (symbolic.error || ![0, 1].includes(symbolic.status)) fail('SUCCESSOR_CHECKOUT_INVALID');
   return { revision, clean: dirty === '', detached: symbolic.status === 1 };
 }
 
+export function protectedSourceReadbackBinding(manifest, revision) {
+  if (!manifest?.protectedSource || !REVISION.test(revision ?? '')) fail('SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(manifest.protectedSource, ['ref', 'remote', 'repositoryUrl'], 'SUCCESSOR_ADMISSION_INVALID');
+  return Object.freeze({
+    projectRef: manifest.projectRef,
+    ref: manifest.protectedSource.ref,
+    remote: manifest.protectedSource.remote,
+    repositoryUrl: manifest.protectedSource.repositoryUrl,
+    revision,
+    schemaVersion: 1,
+  });
+}
+
+export function currentProtectedMainReadback(manifest, { repositoryRoot = REPOSITORY_ROOT } = {}) {
+  if (!manifest?.protectedSource) fail('SUCCESSOR_CHECKOUT_INVALID');
+  const run = args => {
+    const result = spawnSync('/usr/bin/git', args, { cwd: repositoryRoot, encoding: 'utf8' });
+    if (result.error || result.status !== 0) fail('SUCCESSOR_CHECKOUT_INVALID');
+    return result.stdout.trim();
+  };
+  const repositoryUrl = run(['remote', 'get-url', manifest.protectedSource.remote]);
+  if (repositoryUrl !== manifest.protectedSource.repositoryUrl) fail('SUCCESSOR_CHECKOUT_INVALID');
+  const output = run([
+    'ls-remote',
+    '--exit-code',
+    '--refs',
+    manifest.protectedSource.remote,
+    manifest.protectedSource.ref,
+  ]);
+  const rows = output.split(/\r?\n/).filter(Boolean);
+  const match = rows.length === 1 ? /^([0-9a-f]{40})\t(.+)$/.exec(rows[0]) : null;
+  if (!match || match[2] !== manifest.protectedSource.ref) fail('SUCCESSOR_CHECKOUT_INVALID');
+  return protectedSourceReadbackBinding(manifest, match[1]);
+}
+
 function assertCheckout(admission, facts) {
   if (!facts || facts.revision !== admission.sourceRevision || facts.clean !== true || facts.detached !== true) {
     fail('SUCCESSOR_CHECKOUT_INVALID');
   }
+}
+
+function assertProtectedSourceReadback(admission, manifest, observed) {
+  const expected = protectedSourceReadbackBinding(manifest, admission.sourceRevision);
+  if (!equal(observed, expected)) fail('SUCCESSOR_CHECKOUT_INVALID');
 }
 
 export function assertSuccessorDatabaseTarget(databaseUrl, manifest) {
@@ -615,15 +829,24 @@ export function runAdminRecordSuccessor({
   now = () => new Date(),
   gitFactsImpl = currentSuccessorGitFacts,
   loadManifestImpl = loadSuccessorManifest,
+  protectedMainReadbackImpl = currentProtectedMainReadback,
   runPsqlImpl,
 } = {}) {
   const manifestRecord = loadManifestImpl();
+  assertLaunchReady(manifestRecord.manifest);
   const admissionFile = assertPrivateAdmissionPath(admissionPath);
   const admissionBytes = readFileSync(admissionFile);
   const admission = parseJsonObject(admissionBytes, 'SUCCESSOR_ADMISSION_INVALID');
-  validateSuccessorAdmission(admission, manifestRecord, { now: now() });
-  assertLaunchReady(manifestRecord.manifest);
+  validateSuccessorAdmission(admission, manifestRecord, {
+    now: now(),
+    receiptDirectory: dirname(admissionFile),
+  });
   assertCheckout(admission, gitFactsImpl());
+  assertProtectedSourceReadback(
+    admission,
+    manifestRecord.manifest,
+    protectedMainReadbackImpl(manifestRecord.manifest),
+  );
   const journalFile = assertJournalPath(journalPath);
   if (sha256(Buffer.from(journalFile)) !== admission.journalPathSha256) fail('SUCCESSOR_JOURNAL_BINDING_MISMATCH');
   const plan = compileSuccessorPlan(manifestRecord, admission);

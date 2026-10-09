@@ -25,8 +25,8 @@
   },
   "fiveStage": {
     "path": ".github/admin-record-sql-successor.v1.json",
-    "sha256": "a7ed53ed124576039e1d49ae62f46626e9747c2c2a0d4711e93c4fc5f1b24140",
-    "sourceRoot": "fecccabd16de11d37e54d28517331ba8fcd7fa177859844d8490af7a221cc732",
+    "sha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26",
+    "sourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3",
     "entries": 5
   },
   "acceptedSource": {
@@ -40,9 +40,9 @@
     "name": "admin_user_management_rpc_forward",
     "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
     "bytes": 40392,
-    "sha256": "b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26",
+    "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae",
     "statementCount": 2,
-    "statementVectorSha256": "949cbb0862da3e62c190cdeafd23051198178440584b9ebf3f96cec1f062d9c6"
+    "statementVectorSha256": "b8eb5902bb5996cffa5cca2f564c1c1c29593dd0a345f2ffbcaca2f86e3f7a3a"
   },
   "runner": {
     "module": "apps/web/scripts/admin-record-sql-successor.mjs",
@@ -51,7 +51,7 @@
   "toolchain": [
     {
       "path": "apps/web/scripts/admin-record-sql-successor.mjs",
-      "sha256": "18975e2a80eae230bb461f3d77fab4eb2e3f4846dc8c1a3c1def83e363207b35"
+      "sha256": "fae1ccd492c1fb9a7ed7165c6f120915cc1cb87c48f5cf24a45cb224ea7b726b"
     },
     {
       "path": "apps/web/scripts/apply-supabase-migration.mjs",

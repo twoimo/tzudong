@@ -32,6 +32,8 @@ class AdminRecordPrivateCleanupSourceContract(unittest.TestCase):
         self.assertIn("pipeline_control.admin_record_storage_snapshot(job.bucket,job.object_name)", source)
         self.assertIn("'review-media:' || media.bucket || ':' || media.object_name", source)
         self.assertIn("ADMIN_PRIVATE_CLEANUP_ACTION_SOURCE_DRIFT", source)
+        self.assertIn("ORDER BY id LIMIT 25", source)
+        self.assertIn("ADMIN_PRIVATE_CLEANUP_ACTION_PAGE_DRIFT", source)
         self.assertEqual(
             source.count("to_jsonb(p) - ARRAY['prosrc', 'proargdefaults']"), 4
         )
@@ -355,6 +357,97 @@ class AdminRecordPrivateCleanupPostgreSQL(unittest.TestCase):
                 (duplicate["operationId"], duplicate_path),
             ),
             2,
+        )
+
+    def test_twenty_six_jobs_are_stably_completed_in_two_bounded_pages(self):
+        from psycopg2.extras import Json
+
+        restaurant = self.insert()
+        review_id = str(uuid.uuid4())
+        owner_id = str(uuid.uuid4())
+        base = f"{owner_id}/reviews/{review_id}"
+        verification = f"{base}/verification/proof.jpg"
+        food_photos = [f"{base}/food/food-{index:02d}.webp" for index in range(24)]
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO public.reviews"
+                "(id,user_id,restaurant_id,title,content,visited_at,verification_photo,food_photos) "
+                "VALUES(%s,%s,%s,'fixture','synthetic review content',now(),%s,%s)",
+                (review_id, owner_id, restaurant["id"], verification, food_photos),
+            )
+            cursor.executemany(
+                "INSERT INTO storage.objects(bucket_id,name,metadata) VALUES(%s,%s,%s)",
+                [
+                    ("review-photos", path, Json({"etag": f"food-{index:02d}"}))
+                    for index, path in enumerate(food_photos)
+                ] + [("review-verifications", verification, Json({"etag": "private-v1"}))],
+            )
+
+        payload = {"reason": "privacy cleanup"}
+        preview = self.preview("review.delete", payload=payload, ids=[review_id])
+        self.apply(preview, payload)
+        first = self.call("cleanup_read", op=preview["operationId"])["jobs"]
+        first_again = self.call("cleanup_read", op=preview["operationId"])["jobs"]
+        self.assertEqual(first_again, first)
+        self.assertEqual(len(first), 25)
+
+        seen_ids = []
+        deleted_objects = []
+        for job in first:
+            claimed = self.call(
+                "cleanup_claim", op=preview["operationId"], payload={"jobId": job["id"]}
+            )
+            self.assertTrue(claimed["claimed"])
+            with self.conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM storage.objects WHERE bucket_id=%s AND name=%s RETURNING name",
+                    (job["bucket"], job["objectName"]),
+                )
+                if cursor.fetchone() is not None:
+                    deleted_objects.append(f'{job["bucket"]}:{job["objectName"]}')
+            self.call(
+                "cleanup_absent", op=preview["operationId"], payload={"jobId": job["id"]}
+            )
+            seen_ids.append(job["id"])
+
+        second = self.call("cleanup_read", op=preview["operationId"])["jobs"]
+        self.assertEqual(len(second), 1)
+        self.assertNotIn(second[0]["id"], seen_ids)
+        job = second[0]
+        self.assertTrue(
+            self.call(
+                "cleanup_claim", op=preview["operationId"], payload={"jobId": job["id"]}
+            )["claimed"]
+        )
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM storage.objects WHERE bucket_id=%s AND name=%s RETURNING name",
+                (job["bucket"], job["objectName"]),
+            )
+            if cursor.fetchone() is not None:
+                deleted_objects.append(f'{job["bucket"]}:{job["objectName"]}')
+        self.call(
+            "cleanup_absent", op=preview["operationId"], payload={"jobId": job["id"]}
+        )
+        seen_ids.append(job["id"])
+
+        self.assertEqual(len(seen_ids), 26)
+        self.assertEqual(len(set(seen_ids)), 26)
+        self.assertEqual(len(deleted_objects), 25)
+        self.assertEqual(len(set(deleted_objects)), 25)
+        self.assertEqual(
+            self.call("cleanup_read", op=preview["operationId"])["jobs"], []
+        )
+        self.assertFalse(
+            self.call("readback", op=preview["operationId"])["mediaCleanupPending"]
+        )
+        self.assertEqual(
+            self.scalar(
+                "SELECT count(*) FROM pipeline_control.admin_record_media_cleanup "
+                "WHERE operation_id=%s AND state='done'",
+                (preview["operationId"],),
+            ),
+            26,
         )
 
     def test_admin_mutation_and_service_role_boundary_are_preserved(self):

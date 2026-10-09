@@ -1,4 +1,5 @@
 import { afterAll, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -9,7 +10,10 @@ import {
   buildSuccessorStateQuery,
   compileSuccessorPlan,
   createSuccessorPsqlRunner,
+  currentProtectedMainReadback,
+  currentSuccessorGitFacts,
   loadSuccessorManifest,
+  protectedSourceReadbackBinding,
   runAdminRecordSuccessor,
   validateSuccessorAdmission,
 } from '../scripts/admin-record-sql-successor.mjs';
@@ -44,7 +48,13 @@ const databaseUrl = 'postgresql://postgres.aqlcofblfxdrjhhdmarw:private-password
 const roots = ['1', '2', '3', '4', '5', '6'];
 const schemas = ['a', 'b', 'c', 'd', 'e', 'f'];
 const directories: string[] = [];
-const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
+const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+const canonical = (value: any): any => Array.isArray(value)
+  ? value.map(canonical)
+  : value && typeof value === 'object'
+    ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+    : value;
+const canonicalBytes = (value: any) => Buffer.from(`${JSON.stringify(canonical(value))}\n`);
 
 afterAll(() => {
   for (const directory of directories) rmSync(directory, { force: true, recursive: true });
@@ -90,7 +100,12 @@ function admission(manifestRecord = executableRecord) {
     protectedMainReceiptSha256: 'b'.repeat(64),
     purpose: manifest.purpose,
     rehearsalReceiptSha256: 'c'.repeat(64),
-    rollback: { deploymentSha: 'd'.repeat(40), readbackSha256: 'd'.repeat(64) },
+    rollback: {
+      deploymentSha: 'd'.repeat(40),
+      deploymentUrl: 'https://tzudong-rollback-fixture.vercel.app/',
+      readbackSha256: 'd'.repeat(64),
+      state: 'ready',
+    },
     schemaVersion: 1,
     sourceReceiptSha256: 'e'.repeat(64),
     sourceRevision: revision,
@@ -107,16 +122,130 @@ function custodyFiles(document = admission()) {
   const admissionPath = join(directory, 'admission.json');
   const journalPath = join(directory, 'attempt.jsonl');
   document.journalPathSha256 = sha256(journalPath);
+  const common = {
+    schemaVersion: 1,
+    id: document.id,
+    projectRef: document.projectRef,
+    purpose: document.purpose,
+    manifestSha256: document.manifestSha256,
+    sourceRevision: document.sourceRevision,
+    observedAt: document.createdAt,
+    expiresAt: document.expiresAt,
+  };
+  const receipts: Record<string, any> = {
+    'source-receipt.json': {
+      ...common,
+      kind: 'successor-source-receipt',
+      sourceRoot: document.sourceRoot,
+    },
+    'protected-main-receipt.json': {
+      ...common,
+      kind: 'protected-main-readback-receipt',
+      ref: record.manifest.protectedSource.ref,
+      remote: record.manifest.protectedSource.remote,
+      repositoryUrl: record.manifest.protectedSource.repositoryUrl,
+      revision: document.sourceRevision,
+    },
+    'rehearsal-receipt.json': {
+      ...common,
+      kind: 'successor-rehearsal-receipt',
+      passed: true,
+      serverVersionNum: 170006,
+      sourceRoot: document.sourceRoot,
+      stageStatesSha256: sha256(JSON.stringify(canonical(document.stageStates))),
+      suffixRoot: fiveMigrationBundleSuffixRoot(record.manifest.migrations),
+    },
+    'rollback-readback-receipt.json': {
+      ...common,
+      kind: 'rollback-readback-receipt',
+      deploymentSha: document.rollback.deploymentSha,
+      deploymentUrl: document.rollback.deploymentUrl,
+      state: document.rollback.state,
+    },
+  };
+  document.sourceReceiptSha256 = sha256(canonicalBytes(receipts['source-receipt.json']));
+  document.protectedMainReceiptSha256 = sha256(canonicalBytes(receipts['protected-main-receipt.json']));
+  document.rehearsalReceiptSha256 = sha256(canonicalBytes(receipts['rehearsal-receipt.json']));
+  document.rollback.readbackSha256 = sha256(canonicalBytes(receipts['rollback-readback-receipt.json']));
+  for (const [key, state] of Object.entries(record.manifest.requiredWriterFences)) {
+    const name = `writer-fence-${key}.json`;
+    receipts[name] = {
+      ...common,
+      fence: key,
+      kind: 'writer-fence-readback-receipt',
+      state,
+    };
+    document.writerFences[key].evidenceSha256 = sha256(canonicalBytes(receipts[name]));
+  }
+  for (const [name, receipt] of Object.entries(receipts)) {
+    const path = join(directory, name);
+    writeFileSync(path, canonicalBytes(receipt), { mode: 0o600 });
+    chmodSync(path, 0o600);
+  }
   writeFileSync(admissionPath, `${JSON.stringify(document)}\n`, { mode: 0o600 });
   chmodSync(admissionPath, 0o600);
-  return { admissionPath, journalPath };
+  return { admissionPath, directory, document, journalPath, receipts };
 }
 
 const dependencies = (runPsqlImpl: (...args: any[]) => string, manifestRecord = executableRecord) => ({
   gitFactsImpl: () => ({ clean: true, detached: true, revision }),
   loadManifestImpl: () => manifestRecord,
   now: () => fixedNow,
+  protectedMainReadbackImpl: (manifest: any) => protectedSourceReadbackBinding(manifest, revision),
   runPsqlImpl,
+});
+
+test('protected main readback resolves the actual remote ref instead of trusting local HEAD', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'tzudong-admin-successor-git-'));
+  directories.push(directory);
+  const remote = join(directory, 'remote.git');
+  const checkout = join(directory, 'checkout');
+  const git = (cwd: string, args: string[]) => {
+    const result = spawnSync('/usr/bin/git', args, { cwd, encoding: 'utf8' });
+    expect(result.status).toBe(0);
+    return result.stdout.trim();
+  };
+  git(directory, ['init', '--bare', remote]);
+  git(directory, ['init', checkout]);
+  git(checkout, ['config', 'user.name', 'Fixture']);
+  git(checkout, ['config', 'user.email', 'fixture@example.invalid']);
+  writeFileSync(join(checkout, 'fixture.txt'), 'remote-main\n');
+  git(checkout, ['add', 'fixture.txt']);
+  git(checkout, ['commit', '-m', 'fixture']);
+  git(checkout, ['branch', '-M', 'main']);
+  git(checkout, ['remote', 'add', 'origin', remote]);
+  git(checkout, ['push', '-u', 'origin', 'main']);
+  const remoteRevision = git(checkout, ['rev-parse', 'HEAD']);
+  writeFileSync(join(checkout, 'fixture.txt'), 'local-only\n');
+  git(checkout, ['add', 'fixture.txt']);
+  git(checkout, ['commit', '-m', 'local only']);
+  const localRevision = git(checkout, ['rev-parse', 'HEAD']);
+  expect(localRevision).not.toBe(remoteRevision);
+  expect(currentSuccessorGitFacts({ repositoryRoot: checkout })).toEqual({
+    clean: true,
+    detached: false,
+    revision: localRevision,
+  });
+  git(checkout, ['checkout', '--detach']);
+  expect(currentSuccessorGitFacts({ repositoryRoot: checkout })).toEqual({
+    clean: true,
+    detached: true,
+    revision: localRevision,
+  });
+  writeFileSync(join(checkout, 'untracked.txt'), 'dirty\n');
+  expect(currentSuccessorGitFacts({ repositoryRoot: checkout }).clean).toBe(false);
+
+  const manifest = {
+    projectRef: record.manifest.projectRef,
+    protectedSource: { ref: 'refs/heads/main', remote: 'origin', repositoryUrl: remote },
+  };
+  expect(currentProtectedMainReadback(manifest, { repositoryRoot: checkout })).toEqual(
+    protectedSourceReadbackBinding(manifest, remoteRevision),
+  );
+  expect(() => currentProtectedMainReadback({
+    ...manifest,
+    protectedSource: { ...manifest.protectedSource, repositoryUrl: `${remote}-wrong` },
+  }, { repositoryRoot: checkout })).toThrow('SUCCESSOR_CHECKOUT_INVALID');
 });
 
 test('dedicated manifest pins the exact five-source chain, full vectors, toolchain and untouched legacy manifest', () => {
@@ -132,15 +261,15 @@ test('dedicated manifest pins the exact five-source chain, full vectors, toolcha
     ['20261004192657', 'admin_evaluation_raw_warning_groups', '66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a', 10, '082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8'],
     ['20261004194715', 'admin_evaluation_raw_warning_invoker_contract', 'e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020', 4, 'f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1'],
     ['20261009022915', 'restaurant_review_manual_preview_eligibility', '8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3', 4, 'ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958'],
-    ['20261009091342', 'admin_record_private_verification_cleanup', '03c8ebabaaf7255e1c5ab5dedf59a95782b78dbc960668870ea80fc8780ab3af', 13, '147414379f4eebdc1274257419629107a80be59ec3203a064f29c82472760003'],
+    ['20261009091342', 'admin_record_private_verification_cleanup', 'b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da', 13, 'c7b5ae6c7c64b00a31658bbf42165dd9e25ac41f794a1149c62d47f39cf33f4d'],
   ]);
   expect(manifest.migrations.every((migration: any) => migration.originalStatementVector.length === migration.statementCount)).toBe(true);
   manifest.migrations.forEach((migration: any, index: number) => {
     expect(record.materials[index].bytes.byteLength).toBe(migration.bytes);
     expect(sha256(record.materials[index].bytes)).toBe(migration.sha256);
   });
-  expect(manifest.sourceRoot).toBe('fecccabd16de11d37e54d28517331ba8fcd7fa177859844d8490af7a221cc732');
-  expect(fiveMigrationBundleSuffixRoot(manifest.migrations)).toBe('d900875b7e1b1723a0813c3bd8af78252f86ccc69a731f9ba336a5afa98e3b8d');
+  expect(manifest.sourceRoot).toBe('15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3');
+  expect(fiveMigrationBundleSuffixRoot(manifest.migrations)).toBe('81595e4e24fa962a349a51247099d1d25f483c06370ffc99523cb2c52cfb708c');
   expect(manifest.legacyReleaseManifest).toEqual({
     entries: 3,
     path: '.github/supabase-migration-release-manifest.v1.json',
@@ -151,6 +280,11 @@ test('dedicated manifest pins the exact five-source chain, full vectors, toolcha
     code: 'SUCCESSOR_LAUNCH_HELD',
     reason: 'protected-release-and-fresh-admission-required',
     state: 'held',
+  });
+  expect(manifest.protectedSource).toEqual({
+    ref: 'refs/heads/main',
+    remote: 'origin',
+    repositoryUrl: 'https://github.com/twoimo/tzudong.git',
   });
 });
 
@@ -188,25 +322,110 @@ test('production manifest launch hold rejects before checkout, transport or jour
 });
 
 test('fresh admission binds exact revision, rehearsal, rollback, external fences and all five schema/ledger stages', () => {
-  const document = admission();
-  expect(() => validateSuccessorAdmission(document, record, { now: fixedNow })).not.toThrow();
+  const files = custodyFiles();
+  const document = files.document;
+  expect(() => validateSuccessorAdmission(document, record, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).not.toThrow();
   const stale = structuredClone(document);
   stale.expiresAt = '2026-10-09T08:59:59.000Z';
-  expect(() => validateSuccessorAdmission(stale, record, { now: fixedNow })).toThrow('SUCCESSOR_ADMISSION_EXPIRED');
+  expect(() => validateSuccessorAdmission(stale, record, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_EXPIRED');
   const partial = structuredClone(document);
   partial.stageStates[2].bundle.targetCount = 1;
-  expect(() => validateSuccessorAdmission(partial, record, { now: fixedNow })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  expect(() => validateSuccessorAdmission(partial, record, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
   const reusedRoot = structuredClone(document);
   reusedRoot.stageStates[3].state.ledgerRoot = reusedRoot.stageStates[2].state.ledgerRoot;
-  expect(() => validateSuccessorAdmission(reusedRoot, record, { now: fixedNow })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  expect(() => validateSuccessorAdmission(reusedRoot, record, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
   const weakFence = structuredClone(document);
   weakFence.writerFences.directSql.state = 'unknown';
-  expect(() => validateSuccessorAdmission(weakFence, record, { now: fixedNow })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  expect(() => validateSuccessorAdmission(weakFence, record, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+});
+
+test('private canonical receipt bytes bind project, source, stage state, rollback and each writer fence', () => {
+  expect(() => validateSuccessorAdmission(admission(), record, { now: fixedNow })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+
+  {
+    const files = custodyFiles();
+    writeFileSync(join(files.directory, 'source-receipt.json'), '{}\n', { mode: 0o600 });
+    expect(() => validateSuccessorAdmission(files.document, record, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  }
+  {
+    const files = custodyFiles();
+    const wrongProject = { ...files.receipts['source-receipt.json'], projectRef: 'wrong-project' };
+    const bytes = canonicalBytes(wrongProject);
+    writeFileSync(join(files.directory, 'source-receipt.json'), bytes, { mode: 0o600 });
+    files.document.sourceReceiptSha256 = sha256(bytes);
+    expect(() => validateSuccessorAdmission(files.document, record, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  }
+  {
+    const files = custodyFiles();
+    const name = 'protected-main-receipt.json';
+    const wrongRevision = { ...files.receipts[name], revision: '0'.repeat(40) };
+    const bytes = canonicalBytes(wrongRevision);
+    writeFileSync(join(files.directory, name), bytes, { mode: 0o600 });
+    files.document.protectedMainReceiptSha256 = sha256(bytes);
+    expect(() => validateSuccessorAdmission(files.document, record, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  }
+  {
+    const files = custodyFiles();
+    files.document.stageStates[2].state.schemaRoot = '9'.repeat(64);
+    expect(() => validateSuccessorAdmission(files.document, record, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  }
+  {
+    const files = custodyFiles();
+    const name = 'writer-fence-directSql.json';
+    const weakFence = { ...files.receipts[name], state: 'unknown' };
+    const bytes = canonicalBytes(weakFence);
+    writeFileSync(join(files.directory, name), bytes, { mode: 0o600 });
+    files.document.writerFences.directSql.evidenceSha256 = sha256(bytes);
+    expect(() => validateSuccessorAdmission(files.document, record, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  }
+  {
+    const files = custodyFiles();
+    const name = 'rollback-readback-receipt.json';
+    const wrongState = { ...files.receipts[name], state: 'unknown' };
+    const bytes = canonicalBytes(wrongState);
+    writeFileSync(join(files.directory, name), bytes, { mode: 0o600 });
+    files.document.rollback.readbackSha256 = sha256(bytes);
+    expect(() => validateSuccessorAdmission(files.document, record, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  }
 });
 
 test('compiled plan checks catalog and ledger roots at every stage under an advisory and ledger-locked outer transaction', () => {
-  const document = admission();
-  validateSuccessorAdmission(document, record, { now: fixedNow });
+  const files = custodyFiles();
+  const document = files.document;
+  validateSuccessorAdmission(document, record, { now: fixedNow, receiptDirectory: files.directory });
   const plan = compileSuccessorPlan(record, document);
   expect(plan.plans).toHaveLength(5);
   expect(plan.sql).toContain("SET LOCAL idle_in_transaction_session_timeout='30s'");
@@ -264,6 +483,16 @@ test('source mismatch, journal collision and fresh preflight mismatch all stop b
     expect(() => runAdminRecordSuccessor({ ...files, environment: { SUPABASE_DB_URL: databaseUrl } }, {
       ...dependencies(() => { calls += 1; return ''; }),
       gitFactsImpl: () => ({ clean: true, detached: true, revision: '0'.repeat(40) }),
+    })).toThrow('SUCCESSOR_CHECKOUT_INVALID');
+    expect(calls).toBe(0);
+    expect(() => readFileSync(files.journalPath)).toThrow();
+  }
+  {
+    const files = custodyFiles();
+    let calls = 0;
+    expect(() => runAdminRecordSuccessor({ ...files, environment: { SUPABASE_DB_URL: databaseUrl } }, {
+      ...dependencies(() => { calls += 1; return ''; }),
+      protectedMainReadbackImpl: (manifest: any) => protectedSourceReadbackBinding(manifest, '0'.repeat(40)),
     })).toThrow('SUCCESSOR_CHECKOUT_INVALID');
     expect(calls).toBe(0);
     expect(() => readFileSync(files.journalPath)).toThrow();

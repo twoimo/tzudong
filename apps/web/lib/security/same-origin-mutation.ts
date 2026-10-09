@@ -1,8 +1,7 @@
-import { getTrustedAuthCallbackOrigin } from '@/lib/auth/callback-origin';
+import { getTrustedVercelPreviewOrigins } from '@/lib/auth/callback-origin';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-const INVALID_PREVIEW_ORIGIN = 'https://invalid-preview-origin.invalid';
 const INTERNAL_CAPABILITY_ROUTES = new Map([
   ['/api/internal/account-deletion', 'x-account-deletion-worker-capability'],
   ['/api/internal/privacy-retention', 'x-privacy-retention-capability'],
@@ -28,27 +27,24 @@ function parseCanonicalOrigin(value: string, production: boolean) {
   }
 }
 
-function getVercelPreviewOrigin(env: NodeJS.ProcessEnv) {
-  if (env.VERCEL_ENV !== 'preview' || !env.VERCEL_URL?.trim()) return null;
+function getVercelPreviewOrigin(request: Request, env: NodeJS.ProcessEnv) {
+  if (env.VERCEL_ENV !== 'preview') return null;
 
-  // Reuse the callback origin's Vercel host validation while replacing its
-  // intentional production fallback with a sentinel that CSRF can fail closed on.
-  const previewOrigin = getTrustedAuthCallbackOrigin('', {
-    NODE_ENV: env.NODE_ENV,
-    NEXT_PUBLIC_SITE_URL: INVALID_PREVIEW_ORIGIN,
+  const requestOrigin = parseCanonicalOrigin(new URL(request.url).origin, true);
+  if (!requestOrigin) return null;
+  const trustedOrigins = getTrustedVercelPreviewOrigins({
     VERCEL_ENV: env.VERCEL_ENV,
     VERCEL_URL: env.VERCEL_URL,
+    VERCEL_BRANCH_URL: env.VERCEL_BRANCH_URL,
   });
-  if (previewOrigin === INVALID_PREVIEW_ORIGIN) return null;
-
-  return parseCanonicalOrigin(previewOrigin, true);
+  return trustedOrigins.includes(requestOrigin) ? requestOrigin : null;
 }
 
 function expectedOrigin(request: Request, env: NodeJS.ProcessEnv) {
   const production = env.NODE_ENV === 'production';
   const configured = env.NEXT_PUBLIC_SITE_URL?.trim();
   if (env.VERCEL_ENV === 'preview') {
-    return getVercelPreviewOrigin(env);
+    return getVercelPreviewOrigin(request, env);
   }
   if (!production) {
     const requestOrigin = parseCanonicalOrigin(new URL(request.url).origin, false);

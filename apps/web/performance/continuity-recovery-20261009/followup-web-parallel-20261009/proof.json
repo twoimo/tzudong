@@ -1,0 +1,57 @@
+{
+  "recordedAt": "2026-10-09T12:08:18.617128+00:00",
+  "parallelRun": true,
+  "models": [
+    {
+      "scope": "cleanup",
+      "model": "chatgpt-web/gpt-6-sol",
+      "effort": "high",
+      "completed": true,
+      "toolCalls": 0,
+      "reviewMethod": "text-only frozen public source; no executed integration evidence",
+      "usageEmittedByBridge": {
+        "input_tokens": 37928,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 983,
+        "reasoning_output_tokens": 0
+      },
+      "threadId": "01a1208b-41b6-7cd2-81f6-723091721683",
+      "rawEventsSha256": "563eda390fc76dce32d9611a7bfd328acfeb071cc53e6d0eff00f8d3ffad0163"
+    },
+    {
+      "scope": "evidence",
+      "model": "chatgpt-web/gpt-5.6-sol",
+      "effort": "high",
+      "completed": true,
+      "toolCalls": 0,
+      "reviewMethod": "text-only frozen public source; no executed integration evidence",
+      "usageEmittedByBridge": {
+        "input_tokens": 38719,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 989,
+        "reasoning_output_tokens": 0
+      },
+      "threadId": "01a1208b-41c3-7f41-a823-febb97376480",
+      "rawEventsSha256": "208ba3f2dd391b5bbd13ac95c5462769b60485514389305e99cbc4249400d098"
+    }
+  ],
+  "operatingDbWrites": 0,
+  "storageDeletes": 0,
+  "newGeminiProviderCalls": 0,
+  "quotaOrCostSavingsClaim": false,
+  "currentPreviewReadback": {
+    "url": "https://tzudong-fi9s0ycyh-twoimos-projects.vercel.app/admin?module=users",
+    "loginRequired": false,
+    "userLoadFailure": true,
+    "tableRows": 0,
+    "sourceRevision": "614b249175c35636a7062bf05cb01ebad538b10d"
+  },
+  "candidateDeploymentReadback": {
+    "id": "dpl_8wQPzQGJDNiwWpPy5JZmn8Xf9tXB",
+    "sourceRevision": "4908c5c4a3db30c1d86965c1ac144471f8872858",
+    "state": "CANCELED",
+    "reason": "existing ignored-build policy permits develop previews only"
+  }
+}

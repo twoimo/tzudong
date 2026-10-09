@@ -59,6 +59,41 @@ class SegmentExecutionTests(unittest.TestCase):
     def predecessor_engine(self):
         return SimpleNamespace(_processing=lambda clip: ({"type": "static"}, None), build_prompt=lambda prompt: prompt)
 
+    def predecessor_readback_engine(self, start, end):
+        engine = self.predecessor_engine()
+        requests, provider = [], {"status": "completed", "failure": False, "invalidAnalysis": False}
+
+        class Response:
+            status = 200
+
+            def __init__(self, value):
+                self.value = m.adapter.canonical(value)
+
+            def read(self):
+                return self.value
+
+        def response():
+            analysis = self.answer(start, end)
+            if provider["invalidAnalysis"]:
+                analysis["summary"][0]["evidence"][0]["startSeconds"] = "00:01"
+            return {"id": f"v1_fixture_{start}", "model": self.config.model, "status": provider["status"],
+                    "steps": [{"type": "model_output", "content": [
+                        {"type": "text", "text": json.dumps(analysis)}]}],
+                    "usage": {"total_input_tokens": 100, "total_output_tokens": 10,
+                              "total_thought_tokens": 2, "total_tokens": 112}}
+
+        def transport(method, url, key, *, data=None, headers=None, timeout=None):
+            requests.append((method, url, data))
+            if provider["failure"]:
+                raise TimeoutError("private fake transport timeout")
+            raw = engine.urlopen(None).read()
+            self.assertEqual(raw, m.adapter.canonical(response()))
+            return 200, {}, raw
+
+        engine._call = transport
+        engine.urlopen = lambda request, **kwargs: Response(response())
+        return engine, requests, provider
+
     def materialize_wire_schema_predecessor(self):
         engine = self.predecessor_engine()
         config_identity = m.wire_schema_predecessor_config(self.config)
@@ -96,6 +131,40 @@ class SegmentExecutionTests(unittest.TestCase):
         active_evidence.unlink()
         shutil.rmtree(active_segment_directory)
         return engine, old_receipt, old_evidence, segment_pairs
+
+    def materialize_unresolved_wire_schema_predecessor(self, row):
+        self.scenario = "invalid"
+        self.execute(rows=[row])
+        engine = self.predecessor_engine()
+        config_identity = m.wire_schema_predecessor_config(self.config)
+        span = m.segment_rows(row, self.config)[0]
+        contract = m.wire_schema_predecessor_segment_contract(span, self.config, engine)
+
+        active_segment_directory, active_segment_receipt, _ = m.paths(self.state, span, self.config)
+        active_observation = active_segment_receipt.with_name(
+            active_segment_receipt.name.replace(".receipt.json", ".observation.json"))
+        observation = m.checked_document(active_observation)
+        observation["requestSha256"] = contract["requestSha256"]
+        receipt = m.checked_document(active_segment_receipt)
+        receipt["identity"] = contract["receiptIdentity"]
+        receipt["observationSha256"] = m.digest(observation)
+        _, predecessor_segment_receipt, predecessor_segment_evidence = m._exact_paths(
+            self.state, span, self.config, config_identity)
+        predecessor_observation = predecessor_segment_receipt.with_name(
+            predecessor_segment_receipt.name.replace(".receipt.json", ".observation.json"))
+        m.atomic_document(predecessor_observation, observation)
+        m.atomic_document(predecessor_segment_receipt, receipt)
+
+        _, active_root_receipt, _ = m.paths(self.state, row, self.config)
+        root = m.checked_document(active_root_receipt)
+        root["identity"] = m.identity(row, self.config, config_identity=config_identity)
+        _, predecessor_root_receipt, predecessor_root_evidence = m._exact_paths(
+            self.state, row, self.config, config_identity)
+        m.atomic_document(predecessor_root_receipt, root)
+        active_root_receipt.unlink()
+        shutil.rmtree(active_segment_directory)
+        return (engine, contract, predecessor_root_receipt, predecessor_root_evidence,
+                predecessor_segment_receipt, predecessor_segment_evidence, predecessor_observation)
 
     def video_snapshot(self):
         root = self.state / "videos" / self.row["videoId"]
@@ -169,8 +238,10 @@ class SegmentExecutionTests(unittest.TestCase):
             second = m.execute([self.row], self.info, self.state, restarted, self.limits, batch_id="predecessor-restart-2")
             duplicate = m.execute([self.row, self.row], self.info, self.state, restarted, self.limits,
                                   batch_id="predecessor-duplicate-queue")
+            readback = m.readback([self.row], self.state, restarted)
         self.assertEqual((first["attempted"], first["reused"], second["attempted"], second["reused"],
                           duplicate["attempted"], duplicate["reused"]), (0, 1, 0, 1, 0, 2))
+        self.assertEqual(readback, {"phase": "readback", "recovered": 0, "unresolved": 0, "readbackCalls": 0})
         self.assertEqual(len(self.calls), calls)
         self.assertEqual(self.video_snapshot(), before)
 
@@ -213,6 +284,18 @@ class SegmentExecutionTests(unittest.TestCase):
             m.atomic_document(root_receipt, root_record)
             self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
 
+    def test_predecessor_local_readback_finishes_interrupted_root_receipt_without_provider(self):
+        self.execute()
+        engine, root_receipt_path, _, _ = self.materialize_wire_schema_predecessor()
+        receipt = m.checked_document(root_receipt_path)
+        receipt.update(state="segmented", code="SEGMENTS_PENDING")
+        m.atomic_document(root_receipt_path, receipt)
+        with patch.object(m, "verify_checkout"), patch.object(m.adapter, "load_engine", return_value=engine), \
+                patch.object(m.adapter, "invoke", side_effect=AssertionError("local repair must not call provider")):
+            result = m.readback([self.row], self.state, self.config)
+        self.assertEqual(result, {"phase": "readback", "recovered": 1, "unresolved": 0, "readbackCalls": 0})
+        self.assertEqual(m.checked_document(root_receipt_path)["state"], "succeeded")
+
     def test_wire_schema_predecessor_drift_and_rejection_never_become_new(self):
         self.execute()
         engine, root_receipt, _, segment_pairs = self.materialize_wire_schema_predecessor()
@@ -239,6 +322,195 @@ class SegmentExecutionTests(unittest.TestCase):
         self.assertEqual(len(self.calls), calls)
         self.assertEqual(self.video_snapshot(), rejected_before)
         self.assertNotEqual(rejected_before, before)
+
+    def test_provider_readback_recovers_unresolved_wire_schema_predecessor_without_post(self):
+        row = {**self.row, "durationSeconds": 30}
+        (engine, contract, root_receipt, root_evidence, segment_receipt, segment_evidence,
+         observation_path) = self.materialize_unresolved_wire_schema_predecessor(row)
+        engine, requests, _ = self.predecessor_readback_engine(0, 30)
+
+        before = self.video_snapshot()
+        with patch.object(m.adapter, "invoke", side_effect=AssertionError("local readback cannot call provider")):
+            local = m.readback([row], self.state, self.config)
+        self.assertEqual(local, {"phase": "readback", "recovered": 0, "unresolved": 1, "readbackCalls": 0})
+        self.assertEqual(self.video_snapshot(), before)
+
+        with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), \
+                patch.object(m, "verify_checkout"), patch.object(m.adapter, "load_engine", return_value=engine), \
+                patch.object(m, "project_budget", return_value=self.budget):
+            recovered = m.readback([row], self.state, self.config, provider=True, max_calls=1)
+
+        self.assertEqual(recovered, {"phase": "readback", "recovered": 1, "unresolved": 0, "readbackCalls": 1})
+        self.assertEqual(requests, [("GET", m.adapter.API + "/interactions/v1_fixture_0?include_input=false", None)])
+        self.assertTrue(root_evidence.is_file())
+        self.assertTrue(segment_evidence.is_file())
+        self.assertEqual(m.checked_document(root_receipt)["state"], "succeeded")
+        self.assertEqual(m.checked_document(segment_receipt)["state"], "succeeded")
+        self.assertEqual(m.checked_document(observation_path)["requestSha256"], contract["requestSha256"])
+        self.assertEqual(m.checked_document(segment_evidence)["identity"], contract["receiptIdentity"])
+        with patch.object(m, "verify_checkout"), patch.object(m.adapter, "load_engine", return_value=engine):
+            self.assertEqual(m.cached_state(self.state, row, self.config), "reusable")
+        self.assertFalse(m.paths(self.state, row, self.config)[1].exists())
+
+    def test_predecessor_failed_get_keeps_receipt_bound_for_bounded_restart(self):
+        root = self.state
+        for mode, expected_outcome in (("nonterminal", "http_success"), ("timeout", "transport_uncertain"),
+                                       ("validation", "http_success")):
+            with self.subTest(mode=mode):
+                self.state = root / mode
+                row = {**self.row, "durationSeconds": 30}
+                (_, contract, root_receipt, _, segment_receipt, _, observation_path) = \
+                    self.materialize_unresolved_wire_schema_predecessor(row)
+                engine, requests, provider = self.predecessor_readback_engine(0, 30)
+                provider["status"] = "in_progress" if mode == "nonterminal" else "completed"
+                provider["failure"] = mode == "timeout"
+                provider["invalidAnalysis"] = mode == "validation"
+                with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), \
+                        patch.object(m, "verify_checkout"), \
+                        patch.object(m.adapter, "load_engine", return_value=engine), \
+                        patch.object(m, "project_budget", return_value=self.budget):
+                    first = m.readback([row], self.state, self.config, provider=True, max_calls=1)
+                self.assertEqual(first, {"phase": "readback", "recovered": 0,
+                                         "unresolved": 1, "readbackCalls": 1})
+                receipt = m.checked_document(segment_receipt)
+                observation = m.checked_document(observation_path)
+                self.assertEqual(receipt["observationSha256"], m.digest(observation))
+                self.assertEqual(receipt["readbackCallsAttempted"], 1)
+                self.assertEqual(observation["requestSha256"], contract["requestSha256"])
+                self.assertEqual(observation["responseId"], "v1_fixture_0")
+                self.assertEqual(observation["httpOutcome"], expected_outcome)
+                self.assertEqual(observation["usage"]["totalTokens"], 112)
+                self.assertEqual(m.checked_document(root_receipt)["state"], "segmented")
+
+                provider.update(status="completed", failure=False, invalidAnalysis=False)
+                with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), \
+                        patch.object(m, "verify_checkout"), \
+                        patch.object(m.adapter, "load_engine", return_value=engine), \
+                        patch.object(m, "project_budget", return_value=self.budget):
+                    second = m.readback([row], self.state, self.config, provider=True, max_calls=1)
+                self.assertEqual(second, {"phase": "readback", "recovered": 1,
+                                          "unresolved": 0, "readbackCalls": 1})
+                self.assertEqual(requests, [
+                    ("GET", m.adapter.API + "/interactions/v1_fixture_0?include_input=false", None),
+                    ("GET", m.adapter.API + "/interactions/v1_fixture_0?include_input=false", None),
+                ])
+                self.assertEqual(m.checked_document(segment_receipt)["readbackCallsAttempted"], 2)
+        self.state = root
+
+    def test_predecessor_write_ahead_recovers_only_exact_interrupted_observation(self):
+        root = self.state
+        for tampered in (False, True):
+            with self.subTest(tampered=tampered):
+                self.state = root / ("tampered" if tampered else "exact")
+                row = {**self.row, "durationSeconds": 30}
+                (_, _, _, _, segment_receipt, _, observation_path) = \
+                    self.materialize_unresolved_wire_schema_predecessor(row)
+                engine, requests, _ = self.predecessor_readback_engine(0, 30)
+                binding_path = m._predecessor_readback_binding_path(segment_receipt)
+                original_atomic = m.atomic_document
+
+                def interrupted(path, payload):
+                    if path == segment_receipt and binding_path.exists():
+                        observed = m.checked_document(observation_path)
+                        if observed["httpOutcome"] == "http_success":
+                            raise KeyboardInterrupt()
+                    return original_atomic(path, payload)
+
+                with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), \
+                        patch.object(m, "verify_checkout"), \
+                        patch.object(m.adapter, "load_engine", return_value=engine), \
+                        patch.object(m, "project_budget", return_value=self.budget), \
+                        patch.object(m, "atomic_document", side_effect=interrupted):
+                    interrupted_result = m.readback(
+                        [row], self.state, self.config, provider=True, max_calls=1)
+                self.assertEqual(interrupted_result, {"phase": "readback", "recovered": 0,
+                                                      "unresolved": 1, "readbackCalls": 1})
+
+                binding = m.checked_document(binding_path)
+                receipt = m.checked_document(segment_receipt)
+                observation = m.checked_document(observation_path)
+                self.assertEqual(binding["previousObservationSha256"], receipt["observationSha256"])
+                self.assertEqual(binding["nextObservationSha256"], m.digest(observation))
+                self.assertNotEqual(receipt["observationSha256"], m.digest(observation))
+                self.assertEqual(requests, [
+                    ("GET", m.adapter.API + "/interactions/v1_fixture_0?include_input=false", None)])
+
+                if tampered:
+                    observation["operation"] = "generate"
+                    m.atomic_document(observation_path, observation)
+                    with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), \
+                            patch.object(m, "verify_checkout"), \
+                            patch.object(m.adapter, "load_engine", return_value=engine), \
+                            patch.object(m.adapter, "invoke", side_effect=AssertionError("tampered WAL must not call provider")):
+                        result = m.readback([row], self.state, self.config, provider=True, max_calls=1)
+                    self.assertEqual(result, {"phase": "readback", "recovered": 0,
+                                              "unresolved": 1, "readbackCalls": 0})
+                    self.assertTrue(binding_path.exists())
+                else:
+                    with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), \
+                            patch.object(m, "verify_checkout"), \
+                            patch.object(m.adapter, "load_engine", return_value=engine), \
+                            patch.object(m, "project_budget", return_value=self.budget):
+                        result = m.readback([row], self.state, self.config, provider=True, max_calls=1)
+                    self.assertEqual(result, {"phase": "readback", "recovered": 1,
+                                              "unresolved": 0, "readbackCalls": 1})
+                    self.assertEqual(requests, [
+                        ("GET", m.adapter.API + "/interactions/v1_fixture_0?include_input=false", None),
+                        ("GET", m.adapter.API + "/interactions/v1_fixture_0?include_input=false", None),
+                    ])
+                    self.assertFalse(binding_path.exists())
+        self.state = root
+
+    def test_provider_readback_rejects_unbound_predecessor_observation_without_call(self):
+        row = {**self.row, "durationSeconds": 30}
+        engine, _, _, _, segment_receipt, _, observation_path = self.materialize_unresolved_wire_schema_predecessor(row)
+        observation = m.checked_document(observation_path)
+        observation["requestSha256"] = "0" * 64
+        m.atomic_document(observation_path, observation)
+        receipt = m.checked_document(segment_receipt)
+        receipt["observationSha256"] = m.digest(observation)
+        m.atomic_document(segment_receipt, receipt)
+        with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), patch.object(m, "verify_checkout"), \
+                patch.object(m.adapter, "load_engine", return_value=engine), \
+                patch.object(m.adapter, "invoke", side_effect=AssertionError("unbound response must not call provider")):
+            result = m.readback([row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual(result, {"phase": "readback", "recovered": 0, "unresolved": 1, "readbackCalls": 0})
+
+    def test_predecessor_readback_preserves_completed_segment_and_only_gets_unresolved_id(self):
+        self.execute()
+        engine, root_receipt_path, root_evidence_path, segment_pairs = self.materialize_wire_schema_predecessor()
+        root_receipt = m.checked_document(root_receipt_path)
+        for key in ("usage", "evidenceSha256", "callsAttempted", "reservedInputTokens",
+                    "reservedOutputTokens", "segmentCount", "callAccounting"):
+            root_receipt.pop(key, None)
+        root_receipt.update(state="segmented", code="SEGMENTS_PENDING")
+        m.atomic_document(root_receipt_path, root_receipt)
+        root_evidence_path.unlink()
+
+        first_receipt, first_evidence = segment_pairs[0]
+        first_snapshot = (first_receipt.read_bytes(), first_evidence.read_bytes(),
+                          first_receipt.with_name(first_receipt.name.replace(
+                              ".receipt.json", ".observation.json")).read_bytes())
+        second_receipt, second_evidence = segment_pairs[1]
+        second_evidence.unlink()
+        receipt = m.checked_document(second_receipt)
+        receipt.update(state="uncertain", code="WATCH_RESPONSE_NOT_COMPLETED", evidenceSha256=None)
+        m.atomic_document(second_receipt, receipt)
+        engine, requests, _ = self.predecessor_readback_engine(30, 60)
+
+        with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), patch.object(m, "verify_checkout"), \
+                patch.object(m.adapter, "load_engine", return_value=engine), \
+                patch.object(m, "project_budget", return_value=self.budget):
+            result = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual(result, {"phase": "readback", "recovered": 1, "unresolved": 0, "readbackCalls": 1})
+        self.assertEqual(requests, [
+            ("GET", m.adapter.API + "/interactions/v1_fixture_30?include_input=false", None)])
+        self.assertEqual(first_snapshot, (
+            first_receipt.read_bytes(), first_evidence.read_bytes(),
+            first_receipt.with_name(first_receipt.name.replace(
+                ".receipt.json", ".observation.json")).read_bytes()))
+        self.assertTrue(second_evidence.is_file())
+        self.assertTrue(root_evidence_path.is_file())
 
     def test_longest_inventory_video_has_bounded_gapless_full_coverage(self):
         row = {**self.row, "durationSeconds": 17653}

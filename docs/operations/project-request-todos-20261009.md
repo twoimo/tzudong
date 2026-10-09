@@ -679,3 +679,19 @@ PR #3150의 미해결 리뷰 9개를 실제 실패 벡터와 대조했다. SQL l
 Gemini의 최소 flat structured control은 model match·schema validation·videoId 일치로 완료됐다. 입력82·출력19·thinking855·total956 tokens, 7.802805초다. 복잡한 schema의 400과 구조화 출력 전체 경로 실패를 구분한 대조군이며 전체 DTO·영상 품질·비용 개선은 입증하지 않는다. 전체 strict validator를 유지하는 작은 wire schema와 성공 cache predecessor 연속성 보완은 별도 구현·검증 중이다.
 
 증빙: `continuity-recovery-20261009/actual-bundle-replay/`, `sql-bundle-implementation/shared-helper-final-pg17.6/`, `pr-resume/review-disposition-71da8656/`, `operating-readonly-snapshot.json`, `gemini-schema/flat-schema-control-20261009/`. 전체 목표와 운영 반영 체크는 열린 상태다.
+
+## Web 모델 병렬 검토 후속
+
+- [x] `chatgpt-web/gpt-6-sol` High와 `chatgpt-web/gpt-5.6-sol` High의 추가 검토 2개를 동시에 실행했다. 두 턴 모두 완료했고 도구 호출은 0회다. 공개 소스의 고정 사본만 검토했으며 실제 테스트·운영 실행으로 해석하지 않는다.
+- [x] 정량 검토에서 19개 subprocess의 3,283 pass·11 skip·0 fail·90,166 assertions 합계, parser p50 +0.459ms/+1.13%, Gemini 253 tokens 합계가 일치했다. Parser 95% 구간은 0을 포함하며 속도·비용 개선을 주장하지 않는다.
+- [x] 미디어 정리의 소유권 후보는 기존 M1의 소유자·리뷰 경로와 참조·fingerprint 방어를 확인했다. 서비스에도 target review UUID 대조를 추가했다. 실제 26건 상한 오류와 개별 조회 오류에 따른 뒤 작업 중단은 수정했다.
+- [ ] 새 CI의 Catalog `generate` 및 `orchestration-readiness` 실패를 수정한 소스로 다시 확인한다. `4908c5c4a3db30c1d86965c1ac144471f8872858`의 플랫폼 4개 CI·CodeQL·audit 통과를 전체 CI 통과로 확대하지 않는다.
+- [ ] 변경된 Preview alias·private cleanup·predecessor 응답 GET 복구·canonical admission을 관련 테스트와 보호 승격 이후 실제 서비스에서 확인한다.
+
+기존 관리자 로그인은 유지됐으나 사용자 관리 목록은 여전히 오류 상태다. 후보 배포 `dpl_8wQPzQGJDNiwWpPy5JZmn8Xf9tXB`는 기존 develop 전용 Preview 규칙으로 취소됐고, 실제 화면은 이전 `614b249175c35636a7062bf05cb01ebad538b10d`다. 운영 SQL·Storage 삭제·새 Gemini 공급자 호출은 이번 검토에서 0회다. 증빙: `continuity-recovery-20261009/followup-web-parallel-20261009/`.
+
+최종 로컬 통합에서 auth/cleanup 64개·SQL admission 23개가 통과했다. M5의 26개 작업은 25+1 두 페이지로 완료했으며 누락·중복 삭제 0건이다. 정확 PostgreSQL17.6 전체 schema의 원자 적용·terminal/preimage 롤백·RPC 권한·ledger 3+5+1=9 검증이 통과했다. 이는 합성 격리 환경이고 운영80→85→86 적용은 아직 수행하지 않았다.
+
+M5는 13,185 bytes/SHA256 `b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da`, vector13/SHA256 `c7b5ae6c7c64b00a31658bbf42165dd9e25ac41f794a1149c62d47f39cf33f4d`다. 후속 SQL은 새 M5 함수 preimage를 반영한 `2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae`다. 이전 raw proof는 유지했고 새 증빙은 `five-plus-admin-user-rpc-forward-m5-pagination-amendment-20261009/`에 분리했다.
+
+Five-stage 11개 private receipt와 forward prior-state receipt의 실제 canonical bytes·해시·project/revision/state·freshness를 확인하고 실제 origin/main과 clean detached checkout을 비교하도록 보완했다. 기본 launch는 held다. 별도로 넓은 publication/runtime 81개 묶음에서 failure2/error37의 기존 frozen closure·count drift가 관측돼 원시 로그와 기준선 대조를 남긴다. 이 결과를 통과로 표시하거나 frozen 조건을 완화하지 않는다.

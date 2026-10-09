@@ -11,7 +11,7 @@ MIGRATIONS = ROOT / "backend/supabase/migrations"
 ACCEPTED = MIGRATIONS / "20260906053936_admin_management_group_catalog_slice.sql"
 FORWARD = MIGRATIONS / "20261009101645_admin_user_management_rpc_forward.sql"
 ACCEPTED_SHA256 = "4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00"
-FORWARD_SHA256 = "b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26"
+FORWARD_SHA256 = "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae"
 
 NAMES = (
     "read_admin_user_management_metadata",
@@ -30,7 +30,7 @@ POST_FIVE_BODY_HASHES = (
     "5fe3230899d7669896f562b5a7afa5e088761b3ecc26f531c13cf0953a569413",
     "2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1",
     "7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304",
-    "ab9c11c438e482bcdd1373ec3bb43a2abf579f535aad919a18a452930ec1912c",
+    "a18fad1f748d736371a9ab549a1ca483a5b2f321674fabe71b2411b7e58b3fc9",
     "b792a1646aac690fa2b2b1714978c762408c7a467c3fa8079a51763c956319e1",
 )
 

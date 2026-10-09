@@ -32,7 +32,7 @@ class AdminUserManagementRpcForwardReplayTest(unittest.TestCase):
         sql = replay.verification_sql(FORWARD.read_bytes(), ACCEPTED.read_bytes())
         text = sql.decode('utf-8')
         self.assertEqual(hashlib.sha256(sql).hexdigest(),
-                         '1f59707fd6b1d8743fa2b69140728265f1d5ff76fb1fb5e495b64b8cc7a3daa7')
+                         'd40a19e1a3564a6a22b92d857e6aece7968a097311cf37a8a7782d917266dbb7')
         self.assertTrue(text.startswith('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;'))
         self.assertTrue(text.endswith('ROLLBACK;\n'))
         self.assertIn("current_setting('server_version_num')::int/10000<>15", text)
@@ -91,6 +91,15 @@ class AdminUserManagementRpcForwardReplayTest(unittest.TestCase):
         self.assertIn('.required_operating_server_version_num == 170006', case)
         self.assertIn('.required_operating_ledger_count == 85', case)
         self.assertNotIn('<"$migration"', case)
+
+        artifact_manifest = generator.rsplit(
+            '  cd -- "$staging_dir"\n', 1
+        )[1].split('    LC_ALL=C sort >artifact-manifest.txt', 1)[0]
+        for artifact in (
+            'admin-user-rpc-forward-overlap-verification.sql',
+            'admin-user-rpc-forward-overlap-receipt.json',
+        ):
+            self.assertEqual(artifact_manifest.count(artifact), 1)
 
 
 if __name__ == '__main__':

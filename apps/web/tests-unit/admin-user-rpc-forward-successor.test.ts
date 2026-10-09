@@ -22,6 +22,13 @@ const revision = 'a'.repeat(40);
 const fixedNow = new Date('2030-01-01T00:05:00.000Z');
 const databaseUrl = 'postgresql://postgres.aqlcofblfxdrjhhdmarw:private-password@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres';
 const directories: string[] = [];
+const canonical = (value: any): any => Array.isArray(value)
+  ? value.map(canonical)
+  : value && typeof value === 'object'
+    ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+    : value;
+const canonicalBytes = (value: any) => Buffer.from(`${JSON.stringify(canonical(value))}\n`);
+const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 
 const readyRecord = Object.freeze({
   ...baseRecord,
@@ -73,14 +80,35 @@ function admission(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function privateAdmission(document = admission()) {
+function privateAdmissionFiles(document = admission()) {
   const directory = mkdtempSync(join(tmpdir(), 'tzudong-admin-user-rpc-forward-'));
   directories.push(directory);
   chmodSync(directory, 0o700);
   const admissionPath = join(directory, 'admission.json');
+  const receipt = {
+    schemaVersion: 1,
+    id: document.id,
+    kind: 'forward-operating-readback-receipt',
+    projectRef: document.projectRef,
+    purpose: document.purpose,
+    manifestSha256: document.manifestSha256,
+    sourceRevision: document.sourceRevision,
+    observedAt: document.createdAt,
+    expiresAt: document.expiresAt,
+    priorState: document.priorState,
+  };
+  const receiptBytes = canonicalBytes(receipt);
+  document.operatingReadbackSha256 = digest(receiptBytes);
+  const receiptPath = join(directory, 'operating-readback-receipt.json');
+  writeFileSync(receiptPath, receiptBytes, { mode: 0o600 });
+  chmodSync(receiptPath, 0o600);
   writeFileSync(admissionPath, `${JSON.stringify(document)}\n`, { mode: 0o600 });
   chmodSync(admissionPath, 0o600);
-  return admissionPath;
+  return { admissionPath, directory, document, receipt, receiptPath };
+}
+
+function privateAdmission(document = admission()) {
+  return privateAdmissionFiles(document).admissionPath;
 }
 
 function dependencies(runPsqlImpl: (...args: any[]) => string) {
@@ -108,8 +136,8 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
   expect(baseRecord.manifest.operatingTransition).toEqual({ beforeFive: 80, afterFive: 85, afterForward: 86 });
   expect(baseRecord.manifest.fiveStage).toMatchObject({
     entries: 5,
-    sha256: 'a7ed53ed124576039e1d49ae62f46626e9747c2c2a0d4711e93c4fc5f1b24140',
-    sourceRoot: 'fecccabd16de11d37e54d28517331ba8fcd7fa177859844d8490af7a221cc732',
+    sha256: '02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26',
+    sourceRoot: '15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3',
   });
   expect(baseRecord.fiveManifest.migrations.map((migration: any) => migration.id)).toEqual([
     'admin_record_guarded_actions',
@@ -119,9 +147,9 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
     'admin_record_private_verification_cleanup',
   ]);
   expect(baseRecord.manifest.migration).toMatchObject({
-    sha256: 'b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26',
+    sha256: '2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae',
     statementCount: 2,
-    statementVectorSha256: '949cbb0862da3e62c190cdeafd23051198178440584b9ebf3f96cec1f062d9c6',
+    statementVectorSha256: 'b8eb5902bb5996cffa5cca2f564c1c1c29593dd0a345f2ffbcaca2f86e3f7a3a',
   });
   expect(baseRecord.originalVector).toHaveLength(2);
   expect(baseRecord.manifest.runner).toEqual({
@@ -131,7 +159,7 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
   expect(baseRecord.manifest.toolchain).toEqual([
     {
       path: 'apps/web/scripts/admin-record-sql-successor.mjs',
-      sha256: '18975e2a80eae230bb461f3d77fab4eb2e3f4846dc8c1a3c1def83e363207b35',
+      sha256: 'fae1ccd492c1fb9a7ed7165c6f120915cc1cb87c48f5cf24a45cb224ea7b726b',
     },
     {
       path: 'apps/web/scripts/apply-supabase-migration.mjs',
@@ -176,8 +204,12 @@ test('production manifest launch hold rejects before admission, checkout or tran
 });
 
 test('fresh admission and compiled plan bind exact 85 preimage, shared lock and one 85 to 86 ledger insert', () => {
-  const document = admission();
-  expect(() => validateForwardAdmission(document, readyRecord, { now: fixedNow })).not.toThrow();
+  const files = privateAdmissionFiles();
+  const document = files.document;
+  expect(() => validateForwardAdmission(document, readyRecord, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).not.toThrow();
   const plan = compileForwardPlan(readyRecord, document);
   expect(plan.envelope.sourceSha256).toBe(readyRecord.manifest.migration.sha256);
   expect(plan.envelope.vectorSha256).toBe(readyRecord.manifest.migration.statementVectorSha256);
@@ -205,7 +237,58 @@ test('wrong version, count, five-stage state, target state and protected revisio
   for (const [label, mutate] of mutations) {
     const document = structuredClone(admission());
     mutate(document);
-    expect(() => validateForwardAdmission(document, readyRecord, { now: fixedNow }), label).toThrow('FORWARD_ADMISSION_INVALID');
+    const files = privateAdmissionFiles(document);
+    expect(() => validateForwardAdmission(files.document, readyRecord, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    }), label).toThrow('FORWARD_ADMISSION_INVALID');
+  }
+});
+
+test('operating readback hash requires canonical private bytes bound to project, source and prior state', () => {
+  expect(() => validateForwardAdmission(admission(), readyRecord, { now: fixedNow })).toThrow('FORWARD_ADMISSION_INVALID');
+  {
+    const files = privateAdmissionFiles();
+    writeFileSync(files.receiptPath, '{}\n', { mode: 0o600 });
+    expect(() => validateForwardAdmission(files.document, readyRecord, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('FORWARD_ADMISSION_INVALID');
+  }
+  {
+    const files = privateAdmissionFiles();
+    const receipt = { ...files.receipt, projectRef: 'wrong-project' };
+    const bytes = canonicalBytes(receipt);
+    writeFileSync(files.receiptPath, bytes, { mode: 0o600 });
+    files.document.operatingReadbackSha256 = digest(bytes);
+    expect(() => validateForwardAdmission(files.document, readyRecord, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('FORWARD_ADMISSION_INVALID');
+  }
+  {
+    const files = privateAdmissionFiles();
+    const receipt = { ...files.receipt, sourceRevision: 'b'.repeat(40) };
+    const bytes = canonicalBytes(receipt);
+    writeFileSync(files.receiptPath, bytes, { mode: 0o600 });
+    files.document.operatingReadbackSha256 = digest(bytes);
+    expect(() => validateForwardAdmission(files.document, readyRecord, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('FORWARD_ADMISSION_INVALID');
+  }
+  {
+    const files = privateAdmissionFiles();
+    const prior = structuredClone(files.receipt.priorState);
+    prior.prior.ledgerRoot = '9'.repeat(64);
+    const receipt = { ...files.receipt, priorState: prior };
+    const bytes = canonicalBytes(receipt);
+    writeFileSync(files.receiptPath, bytes, { mode: 0o600 });
+    files.document.operatingReadbackSha256 = digest(bytes);
+    expect(() => validateForwardAdmission(files.document, readyRecord, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('FORWARD_ADMISSION_INVALID');
   }
 });
 

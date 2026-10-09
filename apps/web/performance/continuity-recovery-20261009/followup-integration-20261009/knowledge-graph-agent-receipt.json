@@ -1,0 +1,14 @@
+{
+  "reportedBy": "/root/predecessor_readback_fix",
+  "sourceHashesVerifiedByRoot": {
+    "backend/knowledge_graph/longform_analysis.py": "cb2770cebccd626b14d58a7623d4fb436aeb5bfc2276698d2b557893e4dc281d",
+    "backend/knowledge_graph/tests/test_longform_segments.py": "41239cb03d9fd642ef6fe790209f928ba61ee73b269884be60ab133a3fc78093"
+  },
+  "run": 119,
+  "pass": 111,
+  "skip": 8,
+  "failure": 0,
+  "realProviderCalls": 0,
+  "transport": "fake provider",
+  "rootReexecution": false
+}

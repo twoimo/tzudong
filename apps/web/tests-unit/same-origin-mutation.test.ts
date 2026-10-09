@@ -10,10 +10,12 @@ const productionEnv = {
 } as NodeJS.ProcessEnv;
 
 const previewOrigin = 'https://tzudong-fi9s0ycyh-twoimos-projects.vercel.app';
+const previewBranchOrigin = 'https://tzudong-git-fix-preview-twoimos-projects.vercel.app';
 const previewEnv = {
   ...productionEnv,
   VERCEL_ENV: 'preview',
   VERCEL_URL: 'Tzudong-Fi9S0Ycyh-Twoimos-Projects.vercel.app',
+  VERCEL_BRANCH_URL: 'Tzudong-Git-Fix-Preview-Twoimos-Projects.vercel.app',
 } as NodeJS.ProcessEnv;
 
 function mutation(headers: HeadersInit = {}, url = 'https://www.tzudong.app/api/admin/example') {
@@ -35,12 +37,14 @@ describe('same-origin mutation authorization', () => {
     expect(isTrustedSameOriginMutation(new Request('https://www.tzudong.app/api/admin/example'), productionEnv)).toBe(true);
   });
 
-  test('allows only the exact server-validated Vercel preview origin', () => {
-    expect(isTrustedSameOriginMutation(mutation({
-      cookie: 'sb-preview-auth-token=value',
-      origin: previewOrigin,
-      'sec-fetch-site': 'same-origin',
-    }, `${previewOrigin}/api/admin/profile-summaries`), previewEnv)).toBe(true);
+  test('allows cookie POSTs on either exact server-validated Vercel preview origin', () => {
+    for (const origin of [previewOrigin, previewBranchOrigin]) {
+      expect(isTrustedSameOriginMutation(mutation({
+        cookie: 'sb-preview-auth-token=value',
+        origin,
+        'sec-fetch-site': 'same-origin',
+      }, `${origin}/api/admin/profile-summaries`), previewEnv), origin).toBe(true);
+    }
 
     for (const origin of [
       'https://www.tzudong.app',
@@ -55,19 +59,31 @@ describe('same-origin mutation authorization', () => {
         'sec-fetch-site': 'same-origin',
       }, `${previewOrigin}/api/admin/profile-summaries`), previewEnv), origin).toBe(false);
     }
+
+    for (const [requestOrigin, headerOrigin] of [
+      [previewOrigin, previewBranchOrigin],
+      [previewBranchOrigin, previewOrigin],
+      ['https://another-preview.vercel.app', 'https://another-preview.vercel.app'],
+    ]) {
+      expect(isTrustedSameOriginMutation(mutation({
+        cookie: 'sb-preview-auth-token=value',
+        origin: headerOrigin,
+        host: new URL(headerOrigin).host,
+        'x-forwarded-host': new URL(headerOrigin).host,
+        'sec-fetch-site': 'same-origin',
+      }, `${requestOrigin}/api/admin/profile-summaries`), previewEnv), `${requestOrigin} <- ${headerOrigin}`)
+        .toBe(false);
+    }
   });
 
-  test('fails closed when preview platform metadata is missing or malformed', () => {
-    for (const VERCEL_URL of [
-      undefined,
-      '',
-      'preview.vercel.app/auth/callback',
-      'preview.vercel.app?next=https://attacker.example',
-      'preview.vercel.app#attacker',
-      'preview.vercel.app:443',
-      'preview.vercel.app@attacker.example',
-      'preview.vercel.app.attacker.example',
-      'preview..vercel.app',
+  test('fails closed when no exact preview platform alias is available', () => {
+    for (const [VERCEL_URL, VERCEL_BRANCH_URL] of [
+      [undefined, undefined],
+      ['', ''],
+      ['preview.vercel.app/auth/callback', 'preview.vercel.app?next=https://attacker.example'],
+      ['preview.vercel.app#attacker', 'preview.vercel.app:443'],
+      ['preview.vercel.app@attacker.example', 'preview.vercel.app.attacker.example'],
+      ['preview..vercel.app', '-preview.vercel.app'],
     ]) {
       expect(isTrustedSameOriginMutation(mutation({
         cookie: 'sb-preview-auth-token=value',
@@ -76,8 +92,19 @@ describe('same-origin mutation authorization', () => {
       }, `${previewOrigin}/api/admin/profile-summaries`), {
         ...previewEnv,
         VERCEL_URL,
-      } as NodeJS.ProcessEnv), VERCEL_URL ?? 'missing').toBe(false);
+        VERCEL_BRANCH_URL,
+      } as NodeJS.ProcessEnv), `${VERCEL_URL ?? 'missing'} / ${VERCEL_BRANCH_URL ?? 'missing'}`)
+        .toBe(false);
     }
+
+    expect(isTrustedSameOriginMutation(mutation({
+      cookie: 'sb-preview-auth-token=value',
+      origin: previewBranchOrigin,
+      'sec-fetch-site': 'same-origin',
+    }, `${previewBranchOrigin}/api/admin/profile-summaries`), {
+      ...previewEnv,
+      VERCEL_URL: undefined,
+    } as NodeJS.ProcessEnv)).toBe(true);
   });
 
   test('keeps a configured loopback origin exact for local mutation servers', () => {

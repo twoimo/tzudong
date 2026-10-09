@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -31,6 +31,7 @@ const PROJECT_REF = 'aqlcofblfxdrjhhdmarw';
 const HEX = /^[0-9a-f]{64}$/;
 const REVISION = /^[0-9a-f]{40}$/;
 const MAX_ADMISSION_AGE_MS = 15 * 60 * 1000;
+const OPERATING_READBACK_RECEIPT = 'operating-readback-receipt.json';
 const FIVE_IDS = [
   'admin_record_guarded_actions',
   'admin_evaluation_raw_warning_groups',
@@ -468,7 +469,66 @@ export function expectedForwardTerminal(priorState) {
   } });
 }
 
-export function validateForwardAdmission(admission, record, { now = new Date() } = {}) {
+function canonicalReceiptBytes(value) {
+  return Buffer.from(`${JSON.stringify(canonical(value))}\n`);
+}
+
+function validateOperatingReadbackReceipt(admission, record, {
+  createdAt,
+  expiresAt,
+  nowMs,
+  receiptDirectory,
+}) {
+  if (typeof receiptDirectory !== 'string' || !isAbsolute(receiptDirectory)) {
+    fail('FORWARD_ADMISSION_INVALID');
+  }
+  const receiptPath = join(receiptDirectory, OPERATING_READBACK_RECEIPT);
+  let status;
+  let bytes;
+  try {
+    const directoryStatus = lstatSync(receiptDirectory);
+    if (!directoryStatus.isDirectory()
+      || directoryStatus.isSymbolicLink()
+      || (process.platform !== 'win32' && (directoryStatus.mode & 0o077) !== 0)) {
+      fail('FORWARD_ADMISSION_INVALID');
+    }
+    status = lstatSync(receiptPath);
+    bytes = readFileSync(receiptPath);
+  } catch {
+    fail('FORWARD_ADMISSION_INVALID');
+  }
+  if (!status.isFile()
+    || status.isSymbolicLink()
+    || (process.platform !== 'win32' && (status.mode & 0o077) !== 0)) {
+    fail('FORWARD_ADMISSION_INVALID');
+  }
+  if (sha256(bytes) !== admission.operatingReadbackSha256) fail('FORWARD_ADMISSION_INVALID');
+  const receipt = parseObject(bytes, 'FORWARD_ADMISSION_INVALID');
+  if (!bytes.equals(canonicalReceiptBytes(receipt))) fail('FORWARD_ADMISSION_INVALID');
+  exactKeys(receipt, [
+    'expiresAt', 'id', 'kind', 'manifestSha256', 'observedAt', 'priorState',
+    'projectRef', 'purpose', 'schemaVersion', 'sourceRevision',
+  ], 'FORWARD_ADMISSION_INVALID');
+  const observedAt = Date.parse(receipt.observedAt);
+  if (receipt.schemaVersion !== 1
+    || receipt.kind !== 'forward-operating-readback-receipt'
+    || receipt.id !== record.manifest.id
+    || receipt.projectRef !== record.manifest.projectRef
+    || receipt.purpose !== record.manifest.purpose
+    || receipt.manifestSha256 !== record.manifestSha256
+    || receipt.sourceRevision !== admission.sourceRevision
+    || receipt.expiresAt !== admission.expiresAt
+    || !equal(receipt.priorState, admission.priorState)
+    || !Number.isFinite(observedAt)
+    || observedAt < createdAt
+    || observedAt > nowMs + 30_000
+    || Date.parse(receipt.expiresAt) !== expiresAt) fail('FORWARD_ADMISSION_INVALID');
+}
+
+export function validateForwardAdmission(admission, record, {
+  now = new Date(),
+  receiptDirectory,
+} = {}) {
   const { manifest, manifestSha256 } = record;
   exactKeys(admission, [
     'createdAt', 'expiresAt', 'id', 'manifestSha256', 'operatingReadbackSha256',
@@ -496,6 +556,12 @@ export function validateForwardAdmission(admission, record, { now = new Date() }
     || createdAt > nowMs + 30_000
     || nowMs > expiresAt) fail('FORWARD_ADMISSION_EXPIRED');
   validatePriorState(admission.priorState, manifest);
+  validateOperatingReadbackReceipt(admission, record, {
+    createdAt,
+    expiresAt,
+    nowMs,
+    receiptDirectory,
+  });
   return Object.freeze({ createdAt, expiresAt });
 }
 
@@ -642,7 +708,10 @@ export function runAdminUserRpcForward({
   const record = loadManifestImpl();
   assertForwardLaunchReady(record.manifest);
   const admission = loadPrivateAdmission(admissionPath);
-  validateForwardAdmission(admission, record, { now: now() });
+  validateForwardAdmission(admission, record, {
+    now: now(),
+    receiptDirectory: dirname(resolve(admissionPath)),
+  });
   assertCheckout(admission, gitFactsImpl());
   assertProtectedSourceReadback(
     admission,

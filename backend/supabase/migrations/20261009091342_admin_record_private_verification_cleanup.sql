@@ -200,6 +200,19 @@ BEGIN
     RAISE EXCEPTION 'ADMIN_PRIVATE_CLEANUP_ACTION_PREPARE_INSERT_DRIFT'; END IF;
   patched := replace(patched, old_text, new_text);
 
+  old_text := $old$  IF p_phase='cleanup_read' THEN
+   RETURN jsonb_build_object('jobs',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'bucket',bucket,'objectName',object_name,'state',state) ORDER BY id)
+     FROM pipeline_control.admin_record_media_cleanup WHERE operation_id=op.id AND state<>'done'),'[]'::jsonb));
+  END IF;$old$;
+  new_text := $new$  IF p_phase='cleanup_read' THEN
+   RETURN jsonb_build_object('jobs',coalesce((SELECT jsonb_agg(jsonb_build_object('id',page.id,'bucket',page.bucket,'objectName',page.object_name,'state',page.state) ORDER BY page.id)
+     FROM (SELECT id,bucket,object_name,state FROM pipeline_control.admin_record_media_cleanup
+       WHERE operation_id=op.id AND state<>'done' ORDER BY id LIMIT 25) page),'[]'::jsonb));
+  END IF;$new$;
+  IF (length(patched)-length(replace(patched,old_text,'')))/length(old_text) <> 1 THEN
+    RAISE EXCEPTION 'ADMIN_PRIVATE_CLEANUP_ACTION_PAGE_DRIFT'; END IF;
+  patched := replace(patched, old_text, new_text);
+
   EXECUTE replace(definition, source, patched);
   IF (SELECT to_jsonb(p) - ARRAY['prosrc', 'proargdefaults']
         FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM metadata

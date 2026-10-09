@@ -7,7 +7,7 @@ from pathlib import Path
 import admin_management_group_plan as accepted
 
 
-SOURCE_SHA = 'b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26'
+SOURCE_SHA = '2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae'
 
 
 def sha(value: bytes) -> str:

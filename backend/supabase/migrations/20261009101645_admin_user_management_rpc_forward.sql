@@ -65,7 +65,7 @@ BEGIN
      ('pipeline_control.lock_restaurant_review_catalog_revision()','5fe3230899d7669896f562b5a7afa5e088761b3ecc26f531c13cf0953a569413',ARRAY['search_path=""','lock_timeout=2s']::text[],true),
      ('pipeline_control.restaurant_review_manual_preview(uuid,text)','2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1',ARRAY['search_path=""']::text[],false),
      ('public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)','7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304',ARRAY['search_path=""']::text[],false),
-     ('public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)','ab9c11c438e482bcdd1373ec3bb43a2abf579f535aad919a18a452930ec1912c',ARRAY['search_path=""']::text[],false),
+     ('public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)','a18fad1f748d736371a9ab549a1ca483a5b2f321674fabe71b2411b7e58b3fc9',ARRAY['search_path=""']::text[],false),
      ('public.restaurant_review_automation_manual(uuid,text,text,text,uuid)','b792a1646aac690fa2b2b1714978c762408c7a467c3fa8079a51763c956319e1',ARRAY['search_path=""','lock_timeout=2s']::text[],false)
    ) expected(signature,body_sha,config,security_definer)
    WHERE NOT EXISTS(

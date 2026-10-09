@@ -56,18 +56,18 @@ _CONTRACTS = {'backend/supabase/migrations/20260906040116_admin_user_ids_catalog
 _CONTRACTS['backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql'] = {
     'source': 'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql',
     'bindings': {
-        'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql': 'b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26',
+        'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql': '2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae',
         'backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql': '4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00',
         'backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql': 'b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf',
         'backend/supabase/scripts/admin_management_group_plan.py': 'c640778e56ed2e2399fe5c26b35e8fe96a2ee3a02418eb371ac634a5199a5bf9',
         'backend/supabase/scripts/advisor_successor_plan.py': 'cb5d84b85d09b8c89a1d88abdd142551930b33445bfda178b30f982015d83813',
         'backend/supabase/scripts/g037_supabase_statement_vector.mjs': '398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd',
-        'backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py': 'ce83b548f2488be4e64f6f859e1a03466624303cb7aaf62dc866c75905cf9f76',
+        'backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py': 'edf65e557363d16f7c3fcf1359fe880999e275924fcf57d46abd2edb956d9c53',
     },
     'disposition': 'verified-existing',
     'receipt': {
         'schema': 'admin-user-rpc-forward-source-replay-v1',
-        'source_sha256': 'b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26',
+        'source_sha256': '2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae',
         'accepted_source_sha256': '4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00',
         'predecessor_sha256': 'b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf',
         'disposition': 'already-present-contract-verified',
@@ -76,7 +76,7 @@ _CONTRACTS['backend/supabase/migrations/20261009101645_admin_user_management_rpc
         'required_operating_server_version_num': 170006,
         'required_operating_ledger_count': 85,
     },
-    'sql_sha256': '1f59707fd6b1d8743fa2b69140728265f1d5ff76fb1fb5e495b64b8cc7a3daa7',
+    'sql_sha256': 'd40a19e1a3564a6a22b92d857e6aece7968a097311cf37a8a7782d917266dbb7',
 }
 
 
