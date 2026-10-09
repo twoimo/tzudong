@@ -1,0 +1,52 @@
+{
+  "all": 1659,
+  "reviews": 1437,
+  "activeRows": 769,
+  "activeNonempty": 747,
+  "patternHintsOnly": {
+    "timestamp_bracket": 1,
+    "raw_markdown": 9,
+    "first_person": 92,
+    "unsupported_evidence_claim": 38,
+    "no_paragraph": 8,
+    "parser_artifact": 0,
+    "very_short": 9
+  },
+  "maxChars": 898,
+  "metadataKeyShapes": [
+    {
+      "keys": [
+        "ads_info",
+        "commentCount",
+        "duration",
+        "is_shorts",
+        "likeCount",
+        "publishedAt",
+        "title",
+        "viewCount"
+      ],
+      "count": 1308
+    },
+    {
+      "keys": [
+        "ads_info",
+        "duration",
+        "is_shorts",
+        "publishedAt",
+        "title"
+      ],
+      "count": 121
+    },
+    {
+      "keys": [
+        "ads_info",
+        "duration",
+        "is_shorts",
+        "publishedAt",
+        "title",
+        "video_id"
+      ],
+      "count": 8
+    }
+  ]
+}

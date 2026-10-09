@@ -1,0 +1,15 @@
+{
+  "observedAtUtc": "2026-10-09T12:27:39.458237+00:00",
+  "checks": 7,
+  "pass": 7,
+  "fail": 0,
+  "skip": 0,
+  "python": "3.14.8",
+  "sourceHashes": {
+    "census_admission_v1.py": "5b7dbc6645c422c10f451a777c9cfdcd5171d0d4109d92eeac862f27428eb24e",
+    "test_census_admission_v1.py": "3c52f675c1b617f5362b529364f0398a1aceb12a6ebf1e55981dd28dc21c9858"
+  },
+  "command": "python3 -B -m unittest test_census_admission_v1 -v",
+  "evidenceKind": "local correctness; not hosted or semantic factual certification",
+  "operatingWrites": 0
+}

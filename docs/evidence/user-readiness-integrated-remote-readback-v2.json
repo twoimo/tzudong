@@ -1,0 +1,10 @@
+{
+  "observedAtUtc": "2026-10-09T12:11:14.638452+00:00",
+  "remoteRef": "origin/codex/user-readiness-20261009",
+  "remoteHead": "f8e522a506608bdc1f3e630c74082eadd2808c1e",
+  "checkedBlobs": 483,
+  "mismatches": [],
+  "status": "passed",
+  "performanceAdmission": 0,
+  "operatingWrites": 0
+}

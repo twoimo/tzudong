@@ -1,0 +1,17 @@
+{
+  "causeObserved": "index6 MAX_TOKENS",
+  "originalModel": "gemini-3.8-flash",
+  "thinkingLevelUnchanged": "HIGH",
+  "beforeMaxOutputTokens": 32768,
+  "afterMaxOutputTokens": 65536,
+  "observedFailedOutputTokens": 32752,
+  "beforeThoughtTokens": 31457,
+  "beforeCandidateTokens": 1295,
+  "acceptanceUnchanged": "STOP and exactly every input key; source hash/prompt/model/High bound",
+  "partialResponseRetained": true,
+  "priorUnknownResponseRetryDenied": true,
+  "completed128Reused": true,
+  "sourceSnapshotUnchanged": true,
+  "operatingWrites": 0,
+  "capacityPurchaseOrProviderSwitch": false
+}

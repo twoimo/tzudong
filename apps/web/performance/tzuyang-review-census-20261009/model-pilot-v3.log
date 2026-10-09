@@ -1,0 +1,2 @@
+{"batch":0,"rows":8,"completed":8,"total":1659,"actualModelVersion":"gemini-3.8-flash","thinkingLevel":"HIGH","statusCounts":{"ok":4,"fix":2,"needs_source":2}}
+{"modelCalls":1,"reusedBatches":0,"elapsedMs":243264,"operatingWrites":0}

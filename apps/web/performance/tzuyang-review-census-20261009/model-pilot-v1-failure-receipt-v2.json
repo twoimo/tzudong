@@ -1,0 +1,14 @@
+{
+  "model": "gemini-3.8-flash",
+  "thinkingLevel": "HIGH",
+  "attemptedRows": 24,
+  "completedRows": 0,
+  "failureCode": "AUDIT_FINISH_UNCONFIRMED",
+  "actualResponseMetadataNotRetained": true,
+  "causeNotProven": true,
+  "rawLog": "model-pilot-v1.log",
+  "maximumAutomaticSDKRetryAttemptsDefault": 5,
+  "actualHttpAttemptsNotObserved": true,
+  "repeatedUnchanged": false,
+  "receiptV1SerializationFailed": true
+}

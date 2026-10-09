@@ -1,0 +1,25 @@
+{
+  "sourceSnapshotSha256": "b8f06e7c5867b5ac2d8dfe5283e1ffdcf2a103a34f2e1d29333169fe4c5d38d8",
+  "records": 1659,
+  "initialCompletedRows": 8,
+  "remainingBatchSize": 24,
+  "remainingBatchCount": 69,
+  "model": "gemini-3.8-flash",
+  "thinkingLevel": "HIGH",
+  "maxOutputTokens": 32768,
+  "automaticRetryAttempts": 1,
+  "concurrency": 1,
+  "checkpointReuse": "exact input/model/prompt binding",
+  "providerTransport": "generateContentStream",
+  "operatingWrites": 0,
+  "pilotBeforeBulk": {
+    "seconds": 243.264,
+    "promptTokens": 1599,
+    "candidateTokens": 497,
+    "thoughtTokens": 31455,
+    "totalTokens": 33551
+  },
+  "futureQuotaSavingsMeasured": false,
+  "inclusion": "Every stable row, including deleted, duplicate and empty values. General user reviews excluded.",
+  "applyRule": "A model recommendation alone never edits a row or restores deleted state."
+}

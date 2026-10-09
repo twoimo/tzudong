@@ -1,0 +1,11 @@
+{"batch":7,"rows":24,"completed":176,"total":1659,"actualModelVersion":"gemini-3.8-flash","thinkingLevel":"HIGH","statusCounts":{"needs_source":4,"ok":19,"fix":1}}
+{"batch":8,"rows":24,"completed":200,"total":1659,"actualModelVersion":"gemini-3.8-flash","thinkingLevel":"HIGH","statusCounts":{"needs_source":4,"ok":19,"fix":1}}
+{"batch":9,"rows":24,"completed":224,"total":1659,"actualModelVersion":"gemini-3.8-flash","thinkingLevel":"HIGH","statusCounts":{"ok":18,"needs_source":5,"fix":1}}
+file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/performance/tzuyang-review-census-20261009/audit-gemini-v6.mjs:50
+ catch(error){writeFileSync(new URL('./model-failed-v6-'+label+'-v1.json',import.meta.url),JSON.stringify({index,inputSha256,promptSha256:hash(prompt),model:'gemini-3.8-flash',thinkingLevel:'HIGH',httpStatus:typeof error?.status==='number'?error.status:null,providerMessagePersisted:false,errorClass:['AbortError','TimeoutError','TypeError','SyntaxError','ApiError','Error'].includes(error?.name)?error.name:'Other'})+'\n',{flag:'wx'});throw Error('GEMINI_BATCH_UNCONFIRMED');}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                          ^
+
+Error: GEMINI_BATCH_UNCONFIRMED
+    at file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/performance/tzuyang-review-census-20261009/audit-gemini-v6.mjs:50:443
+
+Node.js v24.21.0

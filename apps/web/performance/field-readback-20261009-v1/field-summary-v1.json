@@ -1,0 +1,565 @@
+{
+  "snapshotSha256": "0f5dc078f79b2cc3adc89790303f43d90af0f20cc5a33fb45c9ea31380cff020",
+  "observedAtUtc": "2026-10-09T12:29:40.737Z",
+  "histogramRows": 140,
+  "metricInstances": 182,
+  "cohorts": [
+    {
+      "releaseSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 3,
+      "observedDays": 2,
+      "firstDay": "2026-10-02",
+      "lastDay": "2026-10-03",
+      "descriptiveP50Interval": {
+        "lower": 0.0,
+        "upperExclusive": 0.01
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "metricInstances": 2,
+      "observedDays": 2,
+      "firstDay": "2026-10-02",
+      "lastDay": "2026-10-03",
+      "descriptiveP50Interval": {
+        "lower": 64,
+        "upperExclusive": 80
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 5,
+      "observedDays": 2,
+      "firstDay": "2026-10-02",
+      "lastDay": "2026-10-03",
+      "descriptiveP50Interval": {
+        "lower": 2600,
+        "upperExclusive": 2700
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-03",
+      "lastDay": "2026-10-03",
+      "descriptiveP50Interval": {
+        "lower": 0.12,
+        "upperExclusive": 0.13
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "INP",
+      "navigation": "navigate",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-03",
+      "lastDay": "2026-10-03",
+      "descriptiveP50Interval": {
+        "lower": 2736,
+        "upperExclusive": 2752
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "1ab5b7520357d56261a5961d8b10cdd235e12a99",
+      "device": "mobile",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-03",
+      "lastDay": "2026-10-03",
+      "descriptiveP50Interval": {
+        "lower": 6000,
+        "upperExclusive": 6100
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-01",
+      "lastDay": "2026-10-01",
+      "descriptiveP50Interval": {
+        "lower": 0.0,
+        "upperExclusive": 0.01
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "2b94cc6a652def29d3a886b3c6e15aff9b8adf98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-01",
+      "lastDay": "2026-10-01",
+      "descriptiveP50Interval": {
+        "lower": 12000,
+        "upperExclusive": null
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "back-forward",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-06",
+      "lastDay": "2026-10-06",
+      "descriptiveP50Interval": {
+        "lower": 0.01,
+        "upperExclusive": 0.02
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 38,
+      "observedDays": 4,
+      "firstDay": "2026-10-05",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 0.0,
+        "upperExclusive": 0.01
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "reload",
+      "metricInstances": 2,
+      "observedDays": 2,
+      "firstDay": "2026-10-07",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 0.0,
+        "upperExclusive": 0.01
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "back-forward",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-06",
+      "lastDay": "2026-10-06",
+      "descriptiveP50Interval": {
+        "lower": 80,
+        "upperExclusive": 96
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "metricInstances": 30,
+      "observedDays": 4,
+      "firstDay": "2026-10-05",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 64,
+        "upperExclusive": 80
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "reload",
+      "metricInstances": 2,
+      "observedDays": 2,
+      "firstDay": "2026-10-07",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 32,
+        "upperExclusive": 48
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "back-forward",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-06",
+      "lastDay": "2026-10-06",
+      "descriptiveP50Interval": {
+        "lower": 3300,
+        "upperExclusive": 3400
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 37,
+      "observedDays": 4,
+      "firstDay": "2026-10-05",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 4400,
+        "upperExclusive": 4500
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "reload",
+      "metricInstances": 2,
+      "observedDays": 2,
+      "firstDay": "2026-10-07",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 900,
+        "upperExclusive": 1000
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "mobile",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 8,
+      "observedDays": 4,
+      "firstDay": "2026-10-05",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 0.0,
+        "upperExclusive": 0.01
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "mobile",
+      "metric": "INP",
+      "navigation": "navigate",
+      "metricInstances": 9,
+      "observedDays": 4,
+      "firstDay": "2026-10-05",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 96,
+        "upperExclusive": 112
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "device": "mobile",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 9,
+      "observedDays": 4,
+      "firstDay": "2026-10-05",
+      "lastDay": "2026-10-08",
+      "descriptiveP50Interval": {
+        "lower": 5100,
+        "upperExclusive": 5200
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 3,
+      "observedDays": 1,
+      "firstDay": "2026-10-04",
+      "lastDay": "2026-10-04",
+      "descriptiveP50Interval": {
+        "lower": 0.0,
+        "upperExclusive": 0.01
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "metricInstances": 1,
+      "observedDays": 1,
+      "firstDay": "2026-10-04",
+      "lastDay": "2026-10-04",
+      "descriptiveP50Interval": {
+        "lower": 112,
+        "upperExclusive": 128
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 3,
+      "observedDays": 1,
+      "firstDay": "2026-10-04",
+      "lastDay": "2026-10-04",
+      "descriptiveP50Interval": {
+        "lower": 2700,
+        "upperExclusive": 2800
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+      "device": "desktop",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 5,
+      "observedDays": 2,
+      "firstDay": "2026-10-08",
+      "lastDay": "2026-10-09",
+      "descriptiveP50Interval": {
+        "lower": 0.02,
+        "upperExclusive": 0.03
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+      "device": "desktop",
+      "metric": "INP",
+      "navigation": "navigate",
+      "metricInstances": 4,
+      "observedDays": 2,
+      "firstDay": "2026-10-08",
+      "lastDay": "2026-10-09",
+      "descriptiveP50Interval": {
+        "lower": 80,
+        "upperExclusive": 96
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+      "device": "desktop",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 5,
+      "observedDays": 2,
+      "firstDay": "2026-10-08",
+      "lastDay": "2026-10-09",
+      "descriptiveP50Interval": {
+        "lower": 3100,
+        "upperExclusive": 3200
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+      "device": "mobile",
+      "metric": "CLS",
+      "navigation": "navigate",
+      "metricInstances": 2,
+      "observedDays": 2,
+      "firstDay": "2026-10-08",
+      "lastDay": "2026-10-09",
+      "descriptiveP50Interval": {
+        "lower": 0.06,
+        "upperExclusive": 0.07
+      },
+      "unit": "unitless",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+      "device": "mobile",
+      "metric": "INP",
+      "navigation": "navigate",
+      "metricInstances": 2,
+      "observedDays": 2,
+      "firstDay": "2026-10-08",
+      "lastDay": "2026-10-09",
+      "descriptiveP50Interval": {
+        "lower": 80,
+        "upperExclusive": 96
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    },
+    {
+      "releaseSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+      "device": "mobile",
+      "metric": "LCP",
+      "navigation": "navigate",
+      "metricInstances": 2,
+      "observedDays": 2,
+      "firstDay": "2026-10-08",
+      "lastDay": "2026-10-09",
+      "descriptiveP50Interval": {
+        "lower": 6200,
+        "upperExclusive": 6300
+      },
+      "unit": "ms",
+      "p95": null,
+      "confidenceInterval": null,
+      "independentUsers": null,
+      "performanceImprovementProven": false
+    }
+  ],
+  "sampleUnit": "anonymous client metric instance; not unique user",
+  "histogramMedianMethod": "nearest-rank ceil(n*0.5), returned as bucket bounds",
+  "p95AndCIUnavailableReason": "few days per release, unknown user independence and reporter denominator",
+  "beforeAfterImprovement": null,
+  "candidatePerformanceAdmission": 0,
+  "operatingWrites": 0
+}
