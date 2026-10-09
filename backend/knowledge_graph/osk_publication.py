@@ -370,6 +370,70 @@ def capacity_totals(baseline, additions, *, sharded=False):
             "admitted": all(limits[key] is None or upper[key] <= limits[key] for key in upper)}
 
 
+def publication_targets(bundle, engine, desired, previous, ledger, *, sharded=False):
+    """Shared read-only preflight for publication and completed-batch admission."""
+    targets = []
+    # Preflight every existing title before the first mutation; a collision
+    # in another scope or a human edit must not lead to partial overwrites.
+    for spec in desired:
+        name = spec["name"]
+        current = engine.read(name)
+        prior = previous["nodes"].get(name) if previous else None
+        if prior and prior.get("state") == "complete" and (current is None or current["hash"] != prior.get("hash")):
+            fail("OSK_NODE_CHANGED_SINCE_PUBLICATION")
+        target = target_for(spec, bundle["source"], current, owned=bool(prior))
+        operation = ledger["nodes"].get(name)
+        if operation and operation.get("targetSha256") != signature(target):
+            # A completed v1 publication can gain the explicit contextual
+            # links. Never reinterpret an unresolved write as this migration.
+            legacy = target_for(spec, bundle["source"], current, owned=bool(prior), include_links=False)
+            legacy_current = {"name": name, "body": current["body"], "summary": current["meta"]["summary"], "parent": spec["parent"]} if current else None
+            if operation.get("state") != "complete" or (operation.get("targetSha256") != signature(legacy)
+                    and (not sharded or legacy_current is None or operation.get("targetSha256") != signature(legacy_current))):
+                fail("PUBLICATION_TARGET_CHANGED")
+        if operation and operation.get("state") == "running" and not matches(current, target):
+            observed = current["hash"] if current else None
+            if observed != operation.get("beforeHash"):
+                fail("OSK_WRITE_READBACK_REQUIRED")
+        targets.append((target, current))
+    return targets
+
+
+def verified_publication_complete(bundle, engine, state, hub, *, sharded=False):
+    """Exclude only an exact completed checkpoint with current scoped readback.
+
+    Uses point reads, not capacity/export scans of the whole scope per video.
+    Incomplete checkpoints remain work; preflight of selected work is unchanged.
+    """
+    state = state.resolve()
+    if state == engine.vault or engine.vault in state.parents:
+        fail("PUBLICATION_STATE_INSIDE_VAULT")
+    path = state / (bundle["row"]["videoId"] + ".json")
+    if not path.exists():
+        return False
+    previous = checkpoint.load(path)
+    binding = {"vaultSha256": analysis.digest(str(engine.vault)), "scope": SPACE,
+               "videoId": bundle["row"]["videoId"]}
+    if previous.get("binding") != binding:
+        fail("PUBLICATION_STATE_SCOPE_MISMATCH")
+    if previous.get("state") != "complete" or previous.get("source") != bundle["source"]:
+        return False
+    desired = specs(bundle, paged=sharded)
+    targets = publication_targets(bundle, engine, desired, previous, previous, sharded=sharded)
+    # Missing, extra or unresolved entries cannot serve as completion proof.
+    if set(previous["nodes"]) != {target["name"] for target, _ in targets}:
+        return False
+    for target, current in targets:
+        operation = previous["nodes"][target["name"]]
+        if (operation.get("state") != "complete" or operation.get("hash") != current["hash"]
+                or operation.get("targetSha256") != signature(target) or not matches(current, target)):
+            return False
+        root_link = target.get("rootLink", False) if sharded else projection._metadata(target["body"])["kind"] == "video"
+        if root_link and f"[[{target['name']}]]" not in hub["body"]:
+            return False
+    return True
+
+
 def publish(bundle, engine, state, *, execute=False, max_nodes=5000, sharded=False):
     state = state.resolve()
     if state == engine.vault or engine.vault in state.parents:
@@ -395,30 +459,7 @@ def publish(bundle, engine, state, *, execute=False, max_nodes=5000, sharded=Fal
             if set(previous["nodes"]) - {item["name"] for item in desired}:
                 fail("PUBLICATION_SHAPE_CHANGE_REQUIRES_REVIEW")
         ledger = previous if same_source else {"binding": binding, "source": bundle["source"], "state": "running", "nodes": {}}
-        targets = []
-        # Preflight every existing title before the first mutation; a collision
-        # in another scope or a human edit must not lead to partial overwrites.
-        for spec in desired:
-            name = spec["name"]
-            current = engine.read(name)
-            prior = previous["nodes"].get(name) if previous else None
-            if prior and prior.get("state") == "complete" and (current is None or current["hash"] != prior.get("hash")):
-                fail("OSK_NODE_CHANGED_SINCE_PUBLICATION")
-            target = target_for(spec, bundle["source"], current, owned=bool(prior))
-            operation = ledger["nodes"].get(name)
-            if operation and operation.get("targetSha256") != signature(target):
-                # A completed v1 publication can gain the explicit contextual
-                # links. Never reinterpret an unresolved write as this migration.
-                legacy = target_for(spec, bundle["source"], current, owned=bool(prior), include_links=False)
-                legacy_current = {"name": name, "body": current["body"], "summary": current["meta"]["summary"], "parent": spec["parent"]} if current else None
-                if operation.get("state") != "complete" or (operation.get("targetSha256") != signature(legacy)
-                        and (not sharded or legacy_current is None or operation.get("targetSha256") != signature(legacy_current))):
-                    fail("PUBLICATION_TARGET_CHANGED")
-            if operation and operation.get("state") == "running" and not matches(current, target):
-                observed = current["hash"] if current else None
-                if observed != operation.get("beforeHash"):
-                    fail("OSK_WRITE_READBACK_REQUIRED")
-            targets.append((target, current))
+        targets = publication_targets(bundle, engine, desired, previous, ledger, sharded=sharded)
         bounds = capacity(engine, targets, sharded=sharded)
         result = {"videoId": video, "phase": "publication" if execute else "plan", "nodes": len(targets),
                   "created": 0, "updated": 0, "moved": 0, "mutations": 0, "reused": 0, "hubUpdated": False,
@@ -529,21 +570,30 @@ def main(argv=None):
             fail("PUBLICATION_VIDEO_LIMIT")
         rows, _ = analysis.load_inventory(args.inventory)
         config = analysis.load_model_evidence(args.model_evidence, args.model, analysis.DEFAULT_CHECKOUT, args.timeout)
-        bundles, skipped = [], 0
+        engine = Engine(args.vault, args.engine)
+        engine.overview()
+        hub = engine.read("tzudong")
+        if hub is None or (projection._metadata(hub["body"]) or {}).get("kind") != "hub":
+            fail("OSK_SCOPE_UNAVAILABLE")
+        bundles, skipped, published = [], 0, 0
         for row in rows:
+            if len(bundles) >= args.max_videos:
+                break
             if analysis.cached_state(args.analysis_state, row, config) != "reusable":
                 skipped += 1
                 continue
-            if len(bundles) < args.max_videos:
-                bundles.append(completed_bundle(args.analysis_state, row, config))
-        engine = Engine(args.vault, args.engine)
+            bundle = completed_bundle(args.analysis_state, row, config)
+            if verified_publication_complete(bundle, engine, args.state_dir, hub, sharded=args.format == "sharded"):
+                published += 1
+                continue
+            bundles.append(bundle)
         plans = [publish(bundle, engine, args.state_dir, max_nodes=args.max_nodes, sharded=args.format == "sharded") for bundle in bundles]
         bounds = None
         if plans:
             bounds = capacity_totals(plans[0]["capacity"]["baseline"], {
                 key: sum(plan["capacity"]["additionsUpper"][key] for plan in plans)
                 for key in plans[0]["capacity"]["baseline"]}, sharded=args.format == "sharded")
-        print(json.dumps({"phase": "plan", "videos": len(bundles), "skippedNotComplete": skipped,
+        print(json.dumps({"phase": "plan", "videos": len(bundles), "skippedNotComplete": skipped, "skippedPublicationComplete": published,
                           "nodes": sum(plan["nodes"] for plan in plans), "providerCalls": 0,
                           "capacity": bounds, "unprocessedAnalysisNodeUpper": None}), flush=True)
         if args.execute:

@@ -84,8 +84,12 @@ def validate_metadata(snapshot):
 def validate_nodes(nodes):
     seen = set()
     for node in nodes:
-        if not isinstance(node, dict) or set(node) != {"id", "label", "kind", "summary", "evidence"}:
+        if not isinstance(node, dict) or set(node) - {"id", "label", "kind", "summary", "evidence", "displayTitle", "displayStage"} or not {"id", "label", "kind", "summary", "evidence"} <= set(node):
             fail()
+        if 'displayTitle' in node or 'displayStage' in node:
+            title = node.get('displayTitle')
+            if node.get('kind') != 'video' or not isinstance(title, str) or not title.strip() or len(title) > 512 or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in title) or node.get('displayStage') != 'caption-first-pass':
+                fail()
         if not identifier(node["id"]) or node["id"] in seen or node["kind"] not in projection.KINDS:
             fail()
         if not isinstance(node["label"], str) or not node["label"].strip() or len(node["label"]) > 512:

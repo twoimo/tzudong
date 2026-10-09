@@ -570,6 +570,16 @@ def process_one(
                         # Settled provider/DB work stays successful. Purge is
                         # recoverable local cleanup, never a reason to replay it.
                         print("operation=media_cache_cleanup_deferred")
+                elif result in {"Failed", "Cancelled", "Paused"}:
+                    try: media_completed(result)
+                    except (OSError, ValueError, AdapterGraphError):
+                        print("operation=media_cache_cleanup_deferred")
+    except OSError:
+        store.finish_failed(run.id, "worker_io_failed")
+        write_run_manifest("Failed", manifest_path, events=collected, run=run,
+                           execution_mode=execution_mode, data_sink=data_sink,
+                           store=store, job_id_scope=job_id_scope)
+        return "Failed"
     except (KafkaPublishError, AdapterGraphError, ProfileError) as exc:
         store.finish_failed(run.id, exc.code)
         write_run_manifest(

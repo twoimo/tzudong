@@ -107,13 +107,72 @@ class ReadBudgetTests(unittest.TestCase):
     def test_project_budget_releases_capacity_and_prunes_dead_processes(self):
         with tempfile.TemporaryDirectory() as directory:
             budget = ProjectBudget(Path(directory) / 'budget.sqlite', 'project', rpm=100000, concurrency=1)
-            lease = budget.acquire(999999999)
-            self.assertTrue(lease)
+            # Old-format dead leases must still be reaped without admitting a
+            # provider operation for a nonexistent process.
+            with budget.connect() as db:
+                db.execute('INSERT INTO leases VALUES(?,?,?,?)', ('project','dead-fixture',999999999,time.time()))
             with budget.lease():
                 with budget.connect() as db:
                     self.assertEqual(1, db.execute('SELECT count(*) FROM leases').fetchone()[0])
             with budget.connect() as db:
                 self.assertEqual(0, db.execute('SELECT count(*) FROM leases').fetchone()[0])
+
+    def test_reused_live_pid_reaps_only_the_old_birth_and_preserves_limit(self):
+        from backend.utils import provider_budget as module
+        with tempfile.TemporaryDirectory() as directory:
+            budget = ProjectBudget(Path(directory)/'budget.sqlite', 'project', rpm=100000, concurrency=1)
+            with budget.connect() as db:
+                db.execute('INSERT INTO leases VALUES(?,?,?,?)', ('project','stale',os.getpid(),100))
+                db.execute('INSERT INTO lease_births VALUES(?,?)', ('stale','previous-birth'))
+            with patch.object(module,'process_birth',return_value=('new-birth',200.0,0.0)):
+                lease=budget.acquire(os.getpid(),timeout=.1)
+                with budget.connect() as db:
+                    self.assertEqual(db.execute('SELECT id FROM leases').fetchall(),[(lease,)])
+                    self.assertEqual(db.execute('SELECT birth FROM lease_births').fetchall(),[('new-birth',)])
+                with self.assertRaises(TimeoutError):budget.acquire(os.getpid(),timeout=.01)
+                budget.release(lease)
+            with budget.connect() as db:self.assertEqual(db.execute('SELECT count(*) FROM lease_births').fetchone()[0],0)
+
+    def test_legacy_reused_pid_is_reaped_but_live_and_unknown_owners_stay_reserved(self):
+        from backend.utils import provider_budget as module
+        with tempfile.TemporaryDirectory() as directory:
+            budget=ProjectBudget(Path(directory)/'budget.sqlite','project',rpm=100000,concurrency=1)
+            with budget.connect() as db:db.execute('INSERT INTO leases VALUES(?,?,?,?)',('project','legacy',os.getpid(),100))
+            with patch.object(module,'process_birth',return_value=('current',200.0,1.0)):
+                lease=budget.acquire(os.getpid(),timeout=.1)
+                budget.release(lease)
+            for birth in [('same-live',50.0,1.0),None,('ambiguous',100.5,1.0)]:
+                with self.subTest(birth=birth),budget.connect() as db:
+                    db.execute('INSERT INTO leases VALUES(?,?,?,?)',('project','legacy',7,100))
+                    def identity(pid):return ('current',200.0,0.0) if pid==os.getpid() else birth
+                    with patch.object(module,'process_birth',side_effect=identity),patch.object(budget,'alive',return_value=True):
+                        with self.assertRaises(TimeoutError):budget.acquire(os.getpid(),timeout=.01)
+                    self.assertEqual(db.execute('SELECT id FROM leases').fetchall(),[('legacy',)])
+                    db.execute('DELETE FROM leases')
+                    db.execute('DELETE FROM lease_births')
+
+    def test_missing_or_changed_requester_birth_never_admits_a_lease(self):
+        from backend.utils import provider_budget as module
+        with tempfile.TemporaryDirectory() as directory:
+            budget=ProjectBudget(Path(directory)/'budget.sqlite','project',rpm=100000,concurrency=1)
+            with patch.object(module,'process_birth',return_value=None):
+                with self.assertRaisesRegex(ValueError,'identity_unavailable'):budget.acquire(os.getpid())
+            with patch.object(module,'process_birth',side_effect=[('original',50.0,0.0),('replacement',60.0,0.0)]):
+                with self.assertRaisesRegex(ValueError,'identity_changed'):budget.acquire(os.getpid())
+            with budget.connect() as db:self.assertEqual(db.execute('SELECT count(*) FROM leases').fetchone()[0],0)
+
+    def test_native_birth_is_stable_and_linux_parenthesized_names_do_not_shift_ticks(self):
+        from backend.utils import provider_budget as module
+        first=module.process_birth(os.getpid())
+        self.assertIsNotNone(first)
+        self.assertEqual(first[0],module.process_birth(os.getpid())[0])
+        self.assertLessEqual(first[1],time.time()+first[2])
+        fields=['S',*(['0']*18),'500']
+        files={'/proc/17/stat':'17 (fixture ) with spaces) '+' '.join(fields),
+               '/proc/sys/kernel/random/boot_id':'fixture-boot', '/proc/stat':'cpu 0\nbtime 100\n'}
+        def read(path):return files[str(path)]
+        with patch.object(module.sys,'platform','linux'),patch.object(Path,'read_text',read),patch.object(module.os,'sysconf',return_value=100):
+            self.assertEqual(module.process_birth(17),('linux:fixture-boot:500',105.0,1.0))
 
     def test_pacer_does_not_delay_first_or_unneeded_requests(self):
         now = [1.0]

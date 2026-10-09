@@ -245,13 +245,18 @@ class AdminRecordRegistration(unittest.TestCase):
   self.cursor.execute('SELECT to_jsonb(m) FROM pg_auth_members m ORDER BY roleid,member,grantor');return self.cursor.fetchall()
  def test_registration_exact_source_acl_and_atomic_rollback(self):
   before=self.state();members=self.memberships()
+  legacy_before=[]
+  for signature in self.legacy:
+   self.cursor.execute("SELECT to_jsonb(p),(SELECT jsonb_agg(to_jsonb(a) ORDER BY grantee) FROM privacy_retention.g014_public_rpc_allowlist a WHERE a.source_signature=%s) FROM pg_proc p WHERE oid=to_regprocedure(%s)",(signature,signature));legacy_before.append(self.cursor.fetchone())
   self.cursor.execute(self.registration.replace('COMMIT;','ROLLBACK;'))
   self.assertEqual(self.state(),before);self.assertEqual(self.memberships(),members)
   self.cursor.execute(self.registration);after=self.state()
   self.assertEqual([dict(x,prosrc='') for _,x in before],[dict(x,prosrc='') for _,x in after]);self.assertEqual(self.memberships(),members)
   self.install_loop();self.check();self.cursor.execute('SELECT privacy_retention.assert_g014_public_rpc_allowlist()')
   for legacy in self.legacy:
-   self.cursor.execute("SELECT has_function_privilege('authenticated',to_regprocedure(%s),'EXECUTE'),has_function_privilege('service_role',to_regprocedure(%s),'EXECUTE')",(legacy,legacy));self.assertEqual(self.cursor.fetchone(),(False,True))
+   self.cursor.execute("SELECT has_function_privilege('authenticated',to_regprocedure(%s),'EXECUTE'),has_function_privilege('service_role',to_regprocedure(%s),'EXECUTE')",(legacy,legacy));self.assertEqual(self.cursor.fetchone(),(True,True))
+  for index,signature in enumerate(self.legacy):
+   self.cursor.execute("SELECT to_jsonb(p),(SELECT jsonb_agg(to_jsonb(a) ORDER BY grantee) FROM privacy_retention.g014_public_rpc_allowlist a WHERE a.source_signature=%s) FROM pg_proc p WHERE oid=to_regprocedure(%s)",(signature,signature));self.assertEqual(self.cursor.fetchone(),legacy_before[index])
   self.cursor.execute("SELECT count(*) FROM pg_proc WHERE pronamespace=pg_my_temp_schema() AND proname='admin_record_registration'");self.assertEqual(self.cursor.fetchone()[0],0)
   for suffix in ['SECURITY DEFINER',"SET search_path=public",'OWNER TO privacy_workflow_owner']:
    self.cursor.execute('BEGIN; ALTER FUNCTION '+self.signature+' '+suffix)

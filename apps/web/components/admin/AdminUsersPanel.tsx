@@ -293,6 +293,7 @@ export default function AdminUsersPanel({
   const [mutationResult, setMutationResult] = useState<AdminUserMutationResult | null>(null);
   const [pendingReadback, setPendingReadback] = useState<PendingAdminUserReadback | null>(null);
   const pendingReadbackRef = useRef<PendingAdminUserReadback | null>(null);
+  const usersReadGeneration = useRef(0);
   const updatePendingReadback = useCallback((pending: PendingAdminUserReadback | null) => {
     pendingReadbackRef.current = pending;
     setPendingReadback(pending);
@@ -325,15 +326,31 @@ export default function AdminUsersPanel({
     }), [users, userFilter, sortOrder]);
 
   const loadUsers = useCallback(async (signal?: AbortSignal) => {
+    const generation = ++usersReadGeneration.current;
+    const pendingAtReadStart = pendingReadbackRef.current;
+    let readbackUsers: ManagedUser[] | null = null;
     setIsLoading(true);
     setErrorMessage("");
 
     try {
+      if (pendingAtReadStart) {
+        const exact = await fetch(`/api/admin/users?${new URLSearchParams({ user_id: pendingAtReadStart.targetUserId })}`, { signal, cache: "no-store", headers: { Accept: "application/json" } });
+        const payload = await exact.json().catch(() => null) as AdminUsersResponse | null;
+        if (!exact.ok || !payload || !Array.isArray(payload.users) || payload.users.length !== 1 || payload.users[0].id !== pendingAtReadStart.targetUserId) throw new Error("user_readback_unavailable");
+        if (generation !== usersReadGeneration.current || signal?.aborted) return null;
+        readbackUsers = payload.users;
+        if (pendingReadbackRef.current === pendingAtReadStart && matchesPendingUserReadback(readbackUsers, pendingAtReadStart)) {
+          updatePendingReadback(null);
+          setMutationResult({ action: pendingAtReadStart.action, targetUserId: pendingAtReadStart.targetUserId, status: "success", message: `적용 완료: ${pendingAtReadStart.message}${pendingAtReadStart.auditText} 상태를 다시 확인했습니다.` });
+          toast({ title: "상태 재확인 완료", description: "요청한 사용자 상태를 확인했습니다." });
+        }
+      }
       const params = new URLSearchParams({ perPage: "120" });
       if (searchQuery.trim()) params.set("search", searchQuery.trim());
 
       const response = await fetch(`/api/admin/users?${params.toString()}`, {
         signal,
+        cache: "no-store",
         headers: { Accept: "application/json" },
       });
       const payload = await response.json().catch(() => null) as AdminUsersResponse | { error?: string } | null;
@@ -345,36 +362,28 @@ export default function AdminUsersPanel({
       if (!payload || !("users" in payload) || !Array.isArray(payload.users)) {
         throw new Error("사용자 목록 응답을 확인하지 못했습니다.");
       }
+      if (generation !== usersReadGeneration.current || signal?.aborted) return null;
       const nextUsers = payload.users;
       const nextSummary = "summary" in (payload ?? {}) ? (payload as AdminUsersResponse).summary : DEFAULT_SUMMARY;
       setUsers(nextUsers);
       setSummary(nextSummary);
-      const pending = pendingReadbackRef.current;
-      if (pending && matchesPendingUserReadback(nextUsers, pending)) {
-        updatePendingReadback(null);
-        setMutationResult({
-          action: pending.action,
-          targetUserId: pending.targetUserId,
-          status: "success",
-          message: `적용 완료: ${pending.message}${pending.auditText} 상태를 다시 확인했습니다.`,
-        });
-      }
       setSelectedUserId((current) => {
         if (current && nextUsers.some((candidate) => candidate.id === current)) return current;
         return null;
       });
-      return nextUsers;
+      return readbackUsers ?? nextUsers;
     } catch (error) {
+      if (generation !== usersReadGeneration.current) return null;
       if ((error as Error).name !== "AbortError") {
         setErrorMessage("사용자 목록을 불러오지 못했습니다. 다시 시도해 주세요.");
       }
-      return null;
+      return readbackUsers;
     } finally {
-      if (!signal?.aborted) {
+      if (generation === usersReadGeneration.current && !signal?.aborted) {
         setIsLoading(false);
       }
     }
-  }, [searchQuery, updatePendingReadback]);
+  }, [searchQuery, updatePendingReadback, toast]);
 
   useEffect(() => {
     const controller = new AbortController();

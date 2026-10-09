@@ -1,0 +1,79 @@
+from pathlib import Path
+import subprocess,json,re,hashlib,uuid,time
+repo=Path(__file__).resolve().parents[4];out=Path(__file__).resolve().parent
+plan=json.loads((out/'resource-plan.json').read_text());reconstruction=json.loads((out/'pristine-reconstruction.json').read_text());source=reconstruction['database']
+docker=['/opt/homebrew/bin/docker','--context','colima-tzudong-catalog-20261007'];cid=(out/'owned-container-id.txt').read_text().strip()
+c=json.loads(subprocess.check_output(docker+['inspect',cid],text=True))[0]
+assert c['Name']=='/'+plan['name'] and c['Config']['Labels'].get('tzudong.phased-run')==plan['name'] and c['HostConfig']['NetworkMode']=='none' and not c['HostConfig']['PortBindings']
+def lit(s):return "'"+str(s).replace("'","''")+"'"
+def digest(s):return hashlib.sha256(s.encode()).hexdigest()
+class SqlFailure(Exception):
+ def __init__(self,r):
+  self.state=(re.search(r'ERROR:\s+([A-Z0-9]{5})',r.stderr) or re.search(r'ERROR:\s+([A-Z0-9]{5})',r.stdout))
+  self.state=self.state.group(1) if self.state else None
+  self.kind='PRIVATE_HELPER_EXECUTE_DENIED' if 'permission denied for function' in r.stderr else 'CURRENT_COLUMN_MISSING' if self.state=='42703' else 'SOURCE_SQL_FAILURE'
+  super().__init__(self.kind)
+def run(db,sql,user='supabase_admin'):
+ r=subprocess.run(docker+['exec','-i','-e','PGPASSWORD=fixture-only',cid,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-h','127.0.0.1','-U',user,'-d',db],input=sql,capture_output=True,text=True,timeout=60)
+ if r.returncode:raise SqlFailure(r)
+ return r.stdout
+def query(db,sql):return json.loads([v for v in run(db,'BEGIN READ ONLY;'+sql+'ROLLBACK;').splitlines() if v.startswith('{')][-1])
+def schema(db):
+ r=subprocess.run(docker+['exec','-e','PGPASSWORD=fixture-only',cid,'pg_dump','-h','127.0.0.1','-U','supabase_admin','-d',db,'--schema-only','--no-comments','--no-publications','--no-subscriptions','--restrict-key=TZUDONGPHASEDRECORD20261009'],capture_output=True,text=True,timeout=60)
+ if r.returncode:raise SqlFailure(r)
+ return digest(r.stdout)
+sigs=['public.approve_submission_item(uuid,uuid,jsonb)','public.approve_edit_submission_item(uuid,uuid,jsonb)','public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)']
+assertions='SELECT privacy_retention.assert_g014_workflow_owner_contract();SELECT privacy_retention.assert_g014_public_rpc_allowlist();SELECT privacy_retention.assert_g014_definer_contract();SELECT privacy_retention.assert_g014_catalog_contract();'
+state_sql="SELECT jsonb_build_object('recordPresent',to_regprocedure('public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)') IS NOT NULL,'members',(SELECT encode(sha256(convert_to(jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor)::text,'UTF8')),'hex') FROM pg_auth_members m),'manifest',(SELECT encode(sha256(convert_to(jsonb_agg(to_jsonb(m) ORDER BY manifest_kind,manifest_key)::text,'UTF8')),'hex') FROM privacy_retention.g014_catalog_contract_manifest m),'roles',(SELECT encode(sha256(convert_to(jsonb_agg(to_jsonb(r) ORDER BY oid)::text,'UTF8')),'hex') FROM pg_roles r),'legacy',(SELECT jsonb_agg(jsonb_build_object('signature',s,'metadata',encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex'),'body',encode(sha256(convert_to(prosrc,'UTF8')),'hex'),'auth',has_function_privilege('authenticated',p.oid,'EXECUTE'),'service',has_function_privilege('service_role',p.oid,'EXECUTE'),'allowlist',(SELECT jsonb_agg(to_jsonb(a) ORDER BY grantee) FROM privacy_retention.g014_public_rpc_allowlist a WHERE a.source_signature=s)) ORDER BY s) FROM unnest(ARRAY["+','.join(lit(v) for v in sigs)+"]) s JOIN pg_proc p ON p.oid=to_regprocedure(s)),'legacyOwnerAdminHelperExecute',has_function_privilege('privacy_workflow_owner','public.is_user_admin(uuid)'::regprocedure,'EXECUTE'),'restaurants',(SELECT count(*) FROM public.restaurants),'users',(SELECT count(*) FROM auth.users));"
+ids={k:str(uuid.UUID(int=i)) for i,k in enumerate(['actor','author','target','source','newSubmission','editSubmission','newItem','editItem','holdOp','editOp'],101)}
+L=lambda k:lit(ids[k]);video='https://www.youtube.com/watch?v=ABCDEFGHIJK'
+seed='BEGIN;SET LOCAL statement_timeout=\'20s\';SET LOCAL row_security=on;\n'
+seed+="INSERT INTO auth.users(id,aud,role,email,raw_user_meta_data,created_at,updated_at) VALUES("+L('actor')+",'authenticated','authenticated','phase-admin@example.invalid','{\"nickname\":\"phase_admin\"}',now(),now()),("+L('author')+",'authenticated','authenticated','phase-author@example.invalid','{\"nickname\":\"phase_author\"}',now(),now());\n"
+seed+="INSERT INTO public.user_roles(user_id,role) VALUES("+L('actor')+",'admin');INSERT INTO public.user_account_status(user_id,account_status,disabled_at) VALUES("+L('actor')+",'active',NULL),("+L('author')+",'active',NULL);\n"
+for key,name,address in [('target','Phase Target','synthetic alpha avenue'),('source','Phase Source','synthetic beta avenue')]:
+ seed+="INSERT INTO public.restaurants(id,approved_name,origin_name,source_type,status,created_by,lat,lng,jibun_address,road_address,categories,youtube_link,tzuyang_review,youtube_meta,evaluation_results,geocoding_success,trace_id,created_at,updated_at) VALUES("+','.join([L(key),lit(name),lit(name),"'crawler'","'pending'",L('author'),'37.5','127',lit(address),lit(address),"ARRAY['한식']",lit(video),"'synthetic public review'","'{\"title\":\"synthetic video\",\"operator_marker\":\"preserve\"}'::jsonb","'{\"fixture_evidence\":true}'::jsonb",'true',L(key),"'2026-10-09T00:00:00Z'","'2026-10-09T00:00:00Z'"])+");\n"
+for sk,ik,kind,target in [('newSubmission','newItem','new','NULL'),('editSubmission','editItem','edit',L('target'))]:
+ seed+="INSERT INTO public.restaurant_submissions(id,user_id,submission_type,restaurant_name,restaurant_address,restaurant_categories) VALUES("+L(sk)+','+L('author')+','+lit(kind)+",'Phase Submitted','synthetic avenue',ARRAY['한식']);INSERT INTO public.restaurant_submission_items(id,submission_id,youtube_link,tzuyang_review,target_restaurant_id) VALUES("+L(ik)+','+L(sk)+','+lit(video)+",'synthetic public review',"+target+");\n"
+seed+="SELECT set_config('fixture.target_updated_at',(SELECT updated_at::text FROM public.restaurants WHERE id="+L('target')+"),true);\n"
+payload={'name':'Phase Submitted','approved_name':'Phase Submitted','phone':None,'categories':['한식'],'tzuyang_review':'synthetic public review','youtube_link':video,'jibun_address':'synthetic avenue','road_address':'synthetic avenue','address_elements':{},'lat':37.5,'lng':127,'youtube_meta':{'title':'synthetic video','duration':42,'is_shorts':False,'is_ads':False,'what_ads':None}}
+def legacy(db,kind):
+ claims=json.dumps({'role':'authenticated','sub':ids['actor']},separators=(',',':'))
+ args= L('newItem')+','+L('actor')+','+lit(json.dumps(payload))+'::jsonb' if kind=='approve_submission_item' else L('editItem')+','+L('actor')+','+lit(json.dumps(payload))+'::jsonb' if kind=='approve_edit_submission_item' else ','.join([L('target'),L('source'),L('actor'),"current_setting('fixture.target_updated_at')::timestamptz",lit(video),"'{\"title\":\"synthetic video\"}'::jsonb","'synthetic merged public review'","'한식'"])
+ sql=seed+"SET LOCAL ROLE authenticated;SELECT set_config('request.jwt.claims',"+lit(claims)+",true);SELECT set_config('request.jwt.claim.role','',true);SELECT jsonb_build_object('sqlCompleted',true,'success',success,'classification',CASE WHEN lower(coalesce(message,'')) LIKE '%permission denied for function%' THEN 'PRIVATE_HELPER_EXECUTE_DENIED' WHEN lower(coalesce(message,'')) LIKE '%column%does not exist%' THEN 'CURRENT_COLUMN_MISSING' WHEN success THEN 'SUCCESS' ELSE 'SOURCE_RETURNED_FAILURE' END) FROM public."+kind+'('+args+');ROLLBACK;'
+ try:return {'rpc':kind,**json.loads([v for v in run(db,sql).splitlines() if v.startswith('{')][-1])}
+ except SqlFailure as e:return {'rpc':kind,'sqlCompleted':False,'success':False,'classification':e.kind,'sqlState':e.state}
+def guarded(db):
+ claims=lit(json.dumps({'role':'service_role'},separators=(',',':')))
+ sql=seed+"SET LOCAL ROLE service_role;SELECT set_config('request.jwt.claims',"+claims+",true);SELECT set_config('request.jwt.claim.role','',true);DO $test$ DECLARE p jsonb;a jsonb;r jsonb; BEGIN p:=public.admin_record_action("+L('actor')+",'preview',"+L('holdOp')+",'restaurant.hold',ARRAY["+L('target')+"],'{}',NULL);a:=public.admin_record_action("+L('actor')+",'apply',"+L('holdOp')+",'restaurant.hold',ARRAY["+L('target')+"],'{}',p->>'previewHash');r:=public.admin_record_action("+L('actor')+",'readback',"+L('holdOp')+");IF a->>'state'<>'applied' OR r IS DISTINCT FROM a OR (SELECT status FROM public.restaurants WHERE id="+L('target')+")<>'hold' THEN RAISE EXCEPTION 'PHASE_GUARDED_HOLD_FAILED';END IF;p:=public.admin_record_action("+L('actor')+",'preview',"+L('editOp')+",'restaurant.edit',ARRAY["+L('target')+"],'{\"changes\":{\"phone\":\"02-1234-5678\"}}',NULL);a:=public.admin_record_action("+L('actor')+",'apply',"+L('editOp')+",'restaurant.edit',ARRAY["+L('target')+"],'{\"changes\":{\"phone\":\"02-1234-5678\"}}',p->>'previewHash');r:=public.admin_record_action("+L('actor')+",'readback',"+L('editOp')+");IF a->>'state'<>'applied' OR r IS DISTINCT FROM a OR (SELECT phone FROM public.restaurants WHERE id="+L('target')+")<>'02-1234-5678' THEN RAISE EXCEPTION 'PHASE_GUARDED_EDIT_FAILED';END IF;END $test$;SELECT jsonb_build_object('flows',2,'auditRows',(SELECT count(*) FROM pipeline_control.admin_record_audit),'modernClaimsOnly',current_setting('request.jwt.claim.role',true)='','externalCalls',0);ROLLBACK;"
+ return json.loads([v for v in run(db,sql).splitlines() if v.startswith('{')][-1])
+namebase='tzudong_phase_'+uuid.uuid4().hex[:8];a=namebase+'_before';b=namebase+'_after';created=[];result={'kind':'same-pristine-pg17-additive-legacy-comparison','status':'unconfirmed','sourceHead':subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),'operatingWrites':False,'userRowsCopied':0,'extraOwnerOrLegacyHelperGrants':False,'sourceDatabase':source,'containerId':cid,'databaseA':a,'databaseB':b}
+try:
+ pristine=query(source,state_sql);assert not pristine['recordPresent'] and pristine['restaurants']==0 and pristine['users']==0
+ result['pristineSchemaSha256']=schema(source);result['pristineState']=pristine
+ for db in [a,b]:
+  run('postgres','CREATE DATABASE '+db+' TEMPLATE '+source+' OWNER postgres;');created.append(db)
+  assert query(db,state_sql)==pristine and schema(db)==result['pristineSchemaSha256']
+  run(db,'BEGIN READ ONLY;'+assertions+'ROLLBACK;')
+ before=[legacy(a,k.split('.')[1].split('(')[0]) for k in sigs];result['beforeLegacy']=before
+ proposed=(repo/'apps/web/performance/operating-rollout-followthrough-20261009/phased-proposal/M1-additive.proposal.sql.txt').read_text();assert digest(proposed)=='9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551'
+ result['proposedM1Sha256']=digest(proposed)
+ wrapped=re.sub(r'^BEGIN;$','',proposed,count=1,flags=re.M);wrapped=re.sub(r'^COMMIT;$','',wrapped,count=1,flags=re.M)
+ run(b,'BEGIN;'+wrapped+'ROLLBACK;','postgres');assert query(b,state_sql)==pristine and schema(b)==result['pristineSchemaSha256'];result['migrationRollbackExact']=True
+ run(b,proposed,'postgres');run(b,'BEGIN READ ONLY;'+assertions+'ROLLBACK;');after=query(b,state_sql)
+ assert after['legacy']==pristine['legacy'] and all(after[k]==pristine[k] for k in ['members','roles','manifest','legacyOwnerAdminHelperExecute'])
+ result['afterState']=after;result['legacyAclAllowlistFullMetadataPreserved']=True;result['g014BeforeAfterPassed']=4
+ aftercalls=[legacy(b,k.split('.')[1].split('(')[0]) for k in sigs];result['afterLegacy']=aftercalls;result['legacyBehaviorSame']=before==aftercalls
+ result['guardedFlows']=guarded(b);assert result['guardedFlows']['auditRows']==2
+ rolled=query(b,state_sql);assert rolled==after;result['fixtureRollbackExact']=True
+ assert query(source,state_sql)==pristine and schema(source)==result['pristineSchemaSha256'];result['sourceTemplateUnchanged']=True
+ result['status']='passed';result['legacyUsable']=all(x['success'] for x in before)
+except Exception as e:
+ result['failure']={'kind':e.kind,'sqlState':e.state} if isinstance(e,SqlFailure) else {'kind':'LOCAL_ASSERTION_OR_HARNESS_FAILED','type':type(e).__name__}
+finally:
+ for db in created:
+  try:run('postgres','DROP DATABASE '+db+';')
+  except Exception:result['cleanupFailed']=True
+ result['ownedDisposableDatabasesDropped']=not result.get('cleanupFailed',False)
+ (out/'comparison.json').write_text(json.dumps(result,indent=2)+'\n')
+ print(json.dumps({k:v for k,v in result.items() if k not in ['pristineState','afterState']},indent=2))
+ if result['status']!='passed':raise SystemExit(1)

@@ -23,8 +23,8 @@ describe('admin paginated HTTP read contract',()=>{
     calls.length=0;
     const first=await GET(new Request('https://tzudong.app/api/admin/evaluations?view=page'));
     expect(first.status).toBe(200);expect(first.headers.get('cache-control')).toBe('private, no-store');
-    const body=await first.json();expect(body.records).toHaveLength(1);expect(body.warningReadPath).toBe('WARNING_STREAM');
-    expect(calls).toEqual(['admin_evaluation_revision','admin_evaluation_page','admin_evaluation_revision']);
+    const body=await first.json();expect(body.records).toHaveLength(1);expect(body.warningReadPath).toBe('WARNING_RAW_FLAT');
+    expect(calls).toEqual(['admin_evaluation_revision','admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_revision']);
     calls.length=0;const second=await GET(new Request('https://tzudong.app/api/admin/evaluations?view=page'));
     expect(second.status).toBe(200);expect(calls).toEqual(['admin_evaluation_revision']);
     revision='2';calls.length=0;expect((await GET(new Request('https://tzudong.app/api/admin/evaluations?view=page'))).status).toBe(200);

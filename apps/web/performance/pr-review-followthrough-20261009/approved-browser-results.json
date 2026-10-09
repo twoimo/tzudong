@@ -1,0 +1,168 @@
+{
+  "graph": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "typingRequests": 1,
+      "loadedSelectionRequests": 0,
+      "keyboardEnterEscape": true,
+      "selectionClearedBySearch": true,
+      "nodes": 30,
+      "requests": [
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "tablet",
+      "width": 834,
+      "height": 1112,
+      "typingRequests": 1,
+      "loadedSelectionRequests": 0,
+      "keyboardEnterEscape": true,
+      "selectionClearedBySearch": true,
+      "nodes": 30,
+      "requests": [
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "typingRequests": 1,
+      "loadedSelectionRequests": 0,
+      "keyboardEnterEscape": true,
+      "selectionClearedBySearch": true,
+      "nodes": 30,
+      "requests": [
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "firstPage": 100,
+    "lastPage": 1,
+    "loadedSelectionRequests": 0,
+    "pageTransitionRequests": 1,
+    "searchFromLaterPageRequests": 1,
+    "searchResetsCursorAndSelection": true
+  },
+  "pipeline": [
+    {
+      "state": "missing",
+      "label": "일부 미확인",
+      "githubControlsLocked": true
+    },
+    {
+      "state": "mismatch",
+      "label": "일부 미확인",
+      "githubControlsLocked": true
+    },
+    {
+      "state": "matching",
+      "label": "GitHub Actions",
+      "githubControlsLocked": true
+    }
+  ],
+  "users": {
+    "expectedExactRequest": true,
+    "listSearchPreserved": true,
+    "readbackOutsideFilter": true,
+    "failedReadbackLocks": true,
+    "recoveryRequestCount": 2
+  },
+  "refresh": {
+    "pendingTargetOutside100": true,
+    "exactReadback": true,
+    "listFilterPreserved": true,
+    "recoveryRequestCount": 2,
+    "syntheticWrites": 1
+  },
+  "pageErrors": [],
+  "externalBlocked": 0,
+  "blockedWrites": 0,
+  "syntheticWrites": 2,
+  "resumedFrom": "approved-browser-before-toast-fix.json"
+}

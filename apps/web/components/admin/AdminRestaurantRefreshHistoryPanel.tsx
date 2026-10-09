@@ -563,17 +563,14 @@ export function AdminRestaurantRefreshHistoryPanel({
     setError(null);
     try {
       const params = new URLSearchParams();
-      // The mutation can move a candidate outside the current status/search filter.
-      if (!pendingAtReadStart) {
-        if (statusFilter !== "all") params.set("status", statusFilter);
-        if (query.trim()) params.set("search", query.trim());
-      }
-      const response = await fetch(
-        `/api/admin/restaurant-refresh-history?${params.toString()}`,
-        {
-          cache: "no-store",
-        },
-      );
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (query.trim()) params.set("search", query.trim());
+      const [response, exactResponse] = await Promise.all([
+        fetch(`/api/admin/restaurant-refresh-history?${params.toString()}`, { cache: "no-store" }),
+        pendingAtReadStart ? fetch(`/api/admin/restaurant-refresh-history?${new URLSearchParams({ candidate_id: pendingAtReadStart.candidateId })}`, { cache: "no-store" }) : Promise.resolve(null),
+      ]);
+      const exactPayload = exactResponse ? await exactResponse.json().catch(() => null) : null;
+      if (pendingAtReadStart && (!exactResponse?.ok || !exactPayload || !Array.isArray(exactPayload.candidates) || exactPayload.candidates.length !== 1 || exactPayload.candidates[0].id !== pendingAtReadStart.candidateId)) throw new Error("refresh_readback_unavailable");
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload || !Array.isArray(payload.candidates) || !payload.summary) {
         throw new Error("refresh_history_unavailable");
@@ -581,9 +578,9 @@ export function AdminRestaurantRefreshHistoryPanel({
       if (generation !== readGeneration.current) return;
       const nextData = payload as RefreshHistoryResponse;
       setData(nextData);
-      setSelectedCandidate(current => current ? nextData.candidates.find(candidate => candidate.id === current.id) ?? current : null);
+      setSelectedCandidate(current => current ? (exactPayload?.candidates as RefreshCandidateRow[] | undefined)?.find(candidate => candidate.id === current.id) ?? nextData.candidates.find(candidate => candidate.id === current.id) ?? current : null);
       if (pendingAtReadStart && pendingReadbackRef.current === pendingAtReadStart) {
-        const readback = evaluateRefreshReadback(pendingAtReadStart, nextData.candidates);
+        const readback = evaluateRefreshReadback(pendingAtReadStart, exactPayload.candidates);
         if (readback === "conflict") setReadbackConflict(true);
         if (readback === "confirmed") {
           setReadbackConflict(false);
@@ -595,9 +592,7 @@ export function AdminRestaurantRefreshHistoryPanel({
           setDecisionMessage(pendingAtReadStart.expectedStatus === "applied"
             ? "최신 이력에서 적용된 상태를 확인했습니다. 재점검 결과는 적용 확인 상태를 확인하세요."
             : "최신 이력에서 요청한 결정 상태를 확인했습니다.");
-          setSearchInput("");
-          setQuery("");
-          setStatusFilter("all");
+
         }
       }
     } catch {

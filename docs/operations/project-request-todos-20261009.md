@@ -559,7 +559,7 @@ CPU 실제 후속: frozen source/동일 호스트/동일 local workload의 7쌍�
 - [x] 현재 공개 롱폼1,071편/337.81시간을 ID별 단계 장부로 기록한다. metadata611, caption612, 1차caption검토9, 재사용model보고서2이며 독립 전체 시각/음성 완료 증거는 각각0이다.
 - [x] OSK publication의 전체 engine exact pin을 공식v4.1.8 54개 runtime 파일과 대조해 수정한다. 실제 API를 사용하는 임시 vault 격리19개 테스트가 통과했고 공유 engine은 변경하지 않았다. v5 지원/실제 publication 완료로 계산하지 않는다.
 - [x] caption9개 typed projection·출처/hash/불확실성을 보존하는 adapter를 구현하고 실제 OSK9노드/CAS/readback과 최신 hub coverage를 갱신한다. 노드21→30, 관계79→88, candidate fixed reader의 누락됐던 영상 검색1건을 확인했다. 전체 영상 독립 검증 완료는0으로 유지했다. 관련 graph26개 검사 통과, adapter5개 격리 검사와 exclusive0600 원문 출력도 검증했다. 운영 viewer 배포는 남았다.
-- [ ] 사용자 제공12개 디자인 레퍼런스의 현재 탐색/채택 근거를 dense CMS의 실제 UI와 연결한다.
+- [x] 사용자 제공12개 디자인 레퍼런스의 현재 홈/선택 컴포넌트를 실제 탐색하고 dense CMS의 현재 구현12개와 대응 근거를 연결한다. 1440×900 유효 캡처20개/실패 캡처2개/증빙42개를 보존했으며 Tremor 표·필터와 shadcn 메뉴·대화상자를 주 기준으로 확인했다. 원본 모든 컴포넌트·과거 인과 증빙·전체 운영/모바일 접근성 완료를 뜻하지 않는다.
 - [ ] 배치로 소스·증빙을 PR에 반영하고 현재 commit의 필수 CI, 보호 승격·운영 SQL·배포·live readback을 이어간다.
 
 Sentry 조직/프로젝트/지역 질문은 아직 응답 대기다. 0488 삭제는 현재 유효 대체 수단 요구 때문에 미완료이며, 추가 카드·결제·서비스 해제는 수행하지 않는다. 이번 실행의 새 유료 모델 호출·운영 DB 쓰기·배포는0건이다.
@@ -567,3 +567,27 @@ Sentry 조직/프로젝트/지역 질문은 아직 응답 대기다. 0488 삭제
 후속 전체 웹 묶음은3,192 pass/9 skip/0 fail로 끝났다. 최초 실행은 share transport의 변경된 검사명을 참조하던 기존 owner assertion1개가 실패했고, 27개 page/HTTP transport inventory를 유지하도록 수정한 뒤 재실행했다. 이후 Hosted README/기존 source assertion의 focused7개 및 graph26개 검사가 통과했다. 이 결과는 로컬 소스/실제 로컬 그래프 저장 증빙이며 운영 배포·전체 롱폼 분석 완료가 아니다. 원문 노드/preimage와 복구본은 repository 밖 private0600으로 보관했다.
 
 실제 그래프 후속: `apps/web/performance/longform-followthrough-20261009/live-registration/`. 초기 읽기 감사와 미적용 adapter 계획의 이전 증빙은 각 관측 시점 그대로 보존했다.
+
+현재 레퍼런스 감사: `apps/web/performance/design-reference-followthrough-20261009/README.md`. 제품 소스를 추가 수정하지 않는 외부 화면·구조 비교이며, 모바일/접근성·실운영 완료 체크는 열린 상태다. 현재 그래프의30nodes/88edges 실제 materialization을 사용하는3폭 렌더/검색/선택, additive SQL의 legacy 전후 비교, 실제 ffmpeg 자원/출력 검증을 병행한다. 기존 비용/모델/freeze/운영 상태를 유지한다.
+
+그래프 제목 후속: 실제3폭 렌더에서 자막9개가 ID만 표시되는 문제를 확인해 원본 review/index 제목의18개 source binding을 검증했다. 별도 title receipt를 실제9개 노드에 CAS로 append하고 current canonical export/reader에서 제목 검색·선택을 확인했다. 기존 v1 영수증·본문·metadata·pending/unverified·분석0/1071과30nodes/88edges는 유지했다. root의 Python9개/web29개 검사도 통과했다. `apps/web/performance/graph-cms-followthrough-20261009/live-title-registration/`은 실제 로컬 쓰기/재조회이며, 합성 인증을 쓰는3폭 화면 증빙 및 운영 배포와 구분한다.
+
+미디어 후속: 실제9초 clip/7쌍/28관측에서48JPEG 출력 해시는 같았다. 다중process에서 기존 FFmpeg cap이8까지 늘어나는 문제를 확인해 공통 context OS lease를 구현·검증 중이다. 최초 입력 SHA 사전 durable 기록이 부족한 측정은 admission 보류이며 cold wall/CPU 악화·restart RSS 증가도 보존한다. 속도 개선으로 보고하지 않는다.
+
+SQL 후속: 같은 pristine PG17에서 기존3개 authenticated RPC는 전후 모두 private helper42501로 실패했다. additive proposal은 전체 legacy ACL/metadata/allowlist를 보존하고 신규 guarded2개 흐름·4종G014·exact rollback을 통과했다. 이 결과에 따라 아직 운영에 미적용된 M1만9a8d6e44…로 채택했다. 이전04d993 증빙은 보존하고 새 M1+M2+M3/PG15 source binding과 완전한 guarded 회귀를 재검증 중이다. 운영 SQL 적용/구버전 은퇴/freeze 해제는 수행하지 않았다.
+
+관리형 스킬 후속: installed/current upstream의 env-vars 오류는 제작자 정정·새 패키지 게시가 필요하다. 공식 경로13개 증빙과 비밀값 없는 공개 이슈 초안을 준비했으며 게시 승인은 pending이다. Codex 앱 UI read entry는 도구 안전 정책으로 거부되어 업데이트 버튼은 미확인이다. cache/권한/모델/pin을 바꾸거나 다른 제어 수단으로 우회하지 않았다.
+
+## PR 검토 후속 통합 — 현재 검증과 다음 운영 단계
+
+PR #3099의48개 review를 현재 source와 대조했다.43개는 source/test binding으로 확인했고3개는 현재 전제와 달라 반박 근거를 기록했다. Category/deferred2개는 실제PG17 실행 근거를 추가 확인 중이다. 원문은 실행 권한으로 취급하지 않았으며 아직 remote thread를 resolve하지 않았다.
+
+수정 범위는 계정별 작업 복구/확정 미실행과 불확실한 사진 정리 구분, exact-ID 사용자·최신화 재조회, Graph typing/loaded selection 및 byte-bound cursor, pipeline 상태 신뢰성, model ownership/RAG 인증·파일 범위·후보 admission, raw warning 기본 경로, batch health/cache/fingerprint/terminal cleanup, 중복 자동 tick·광고/썸네일 보존·process birth lease, publication batch 진전, M1 canonical metadata·trace·부모 reason 및 수동 preview/서비스 권한 잠금이다. 모델·사용 한도·운영 DB·freeze·원본 데이터는 바꾸지 않았다.
+
+통합 web3,223 pass/9 skip/0 fail과 전후1,330개 source hash 동일성을 확인했다. 이후 Graph의 불필요한 node query parameter1개를 제거해 실제92→92 page membership/edge cursor와19개 검사를 통과했고 final production build도50pages/CSS boundaries까지 통과했다. 전체 lint 통과, Node24/native/compat parity 진단0. 각 source/UI/SQL/Python/Node/실제 임시DB 검증은 source·환경·principal별로 구분한다.
+
+미적용 M1 SHA는b373b7ea…이며 새forward127은8acf6d14…이다. 실제PG17 service_role의 수동run/stop·queued/running cancel·worker readback·정책/데이터 경합·2초 lock timeout·actor/browser 거부·4종G014·exact rollback이 통과했다. 새private fixed-lock helper만 추가했고 role/table 권한·membership·공개API는 넓히지 않았다. 기존 owner-principal만 통과하던42501 공백과 이전 증빙은 보존했다. CanonicalPG15는 source batch commit/clean checkout으로 재생해야 한다.
+
+재생 측정7쌍의 warning request6→1(-5회,-83.33%), JSON539,007→25,241bytes(-513,766,-95.32%) 및 전체 경고 hash 동등성을 확인했다. 결정적인 동일fixture 요청/byte 집계로 운영 지연·금액·일반 정확도나 신뢰구간을 추정하지 않는다. 실제FFmpeg 참여2process의 shared cap8→4와48JPEG 동등성·parent exit/cancel·busy probe는 확인했지만 과거cold wall/CPU 악화와 입력 preimage 공백으로 성능admission을 열지 않았다.
+
+전체 목표는 열린 상태다. 다음은 source/증빙 batch commit → clean canonical replay → 검증된review resolve·필수CI → 보호된develop→data→main 및 운영SQL/환경/worker/배포·실제readback이다. G037 active와 외부 publisher/Sentry/Card/Storage 및 전체롱폼 독립검증의 기존 제약은 그대로 유지한다.

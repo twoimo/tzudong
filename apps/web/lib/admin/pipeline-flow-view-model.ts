@@ -112,6 +112,10 @@ export function pipelineJobsForDisplay(snapshot: PipelineStatusView | undefined,
   });
 }
 
+export function pipelineDisplayIsReliable(snapshot: PipelineStatusView | undefined, manifest: PipelineManifestView | undefined): boolean {
+  return Boolean(snapshot && !snapshot.partial && pipelineJobsForDisplay(snapshot, manifest).every(job => job.status !== 'Unknown'));
+}
+
 export function canControlPipelineJob(source: PipelineStatusView['source'] | undefined, job: PipelineJobView, action: 'pause' | 'resume' | 'cancel') {
   const statuses = action === 'pause' ? ['Queued', 'Fetching', 'Inserting'] : action === 'resume' ? ['Paused'] : ['Queued', 'Fetching', 'Inserting', 'Paused'];
   return source === 'job_api' && job.profile !== 'unknown' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(job.id) && statuses.includes(job.status);

@@ -1,0 +1,41 @@
+-- Match manual Preview candidates and daily accounting to the applied tick.
+-- Exact prior body; preserve limits, policy/stop/CAS, owner, ACL and all metadata.
+BEGIN;
+DO $manual_preview_parity$
+DECLARE target oid:='pipeline_control.restaurant_review_manual_preview(uuid,text)'::regprocedure;
+ source text; before_meta jsonb; after_meta jsonb;
+ old_sha constant text:='62720283cc47a766451a0e483e628e15175bf3038a7ccc0b26444f4bfc4dee52';
+ new_sha constant text:='2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1';
+ old_remaining constant text:=$old_remaining$  SELECT greatest(0,policy.daily_limit-coalesce(sum(approved),0)) INTO remaining FROM pipeline_control.restaurant_review_runs
+    WHERE started_at>=date_trunc('day',now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul';$old_remaining$;
+ new_remaining constant text:=$new_remaining$  SELECT greatest(0,policy.daily_limit-count(*)) INTO remaining FROM pipeline_control.restaurant_review_items
+    WHERE restaurant_review_items.decision='approve' AND state='applied'
+      AND finished_at>=date_trunc('day',now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul';$new_remaining$;
+ old_predicate constant text:=$old_predicate$      FROM public.restaurants candidate WHERE candidate.status='pending' AND NOT EXISTS (
+        SELECT 1 FROM pipeline_control.restaurant_review_items prior WHERE prior.restaurant_id=candidate.id
+          AND prior.fingerprint=pipeline_control.restaurant_review_fingerprint(to_jsonb(candidate)))$old_predicate$;
+ new_predicate constant text:=$new_predicate$      FROM public.restaurants candidate WHERE candidate.status='pending' AND (
+        NOT EXISTS(SELECT 1 FROM pipeline_control.restaurant_review_items prior WHERE prior.restaurant_id=candidate.id
+          AND (prior.fingerprint=pipeline_control.restaurant_review_fingerprint(to_jsonb(candidate)) OR prior.applied_fingerprint=pipeline_control.restaurant_review_fingerprint(to_jsonb(candidate))))
+        OR EXISTS(SELECT 1 FROM pipeline_control.restaurant_review_items prior JOIN pipeline_control.restaurant_review_runs r ON r.id=prior.run_id
+          WHERE prior.restaurant_id=candidate.id AND prior.applied_fingerprint=pipeline_control.restaurant_review_fingerprint(to_jsonb(candidate))
+            AND prior.state='succeeded' AND prior.reason='daily_limit' AND r.policy_version=policy.version))$new_predicate$;
+BEGIN
+ SELECT prosrc,to_jsonb(p)-'prosrc' INTO source,before_meta FROM pg_proc p WHERE oid=target;
+ IF NOT EXISTS(SELECT 1 FROM pg_proc p WHERE oid=target AND proowner='postgres'::regrole AND NOT prosecdef
+  AND prolang=(SELECT oid FROM pg_language WHERE lanname='plpgsql') AND prorettype='jsonb'::regtype
+  AND prokind='f' AND provolatile='s' AND proparallel='u' AND NOT proisstrict AND NOT proleakproof AND NOT proretset
+  AND proconfig=ARRAY['search_path=""']::text[] AND proacl=ARRAY['postgres=X/postgres','service_role=X/postgres']::aclitem[])
+ THEN RAISE EXCEPTION 'REVIEW_MANUAL_PREVIEW_METADATA_DRIFT'; END IF;
+ IF encode(sha256(convert_to(source,'UTF8')),'hex')=new_sha THEN RETURN; END IF;
+ IF encode(sha256(convert_to(source,'UTF8')),'hex')<>old_sha
+  OR (length(source)-length(replace(source,old_remaining,'')))<>length(old_remaining)
+  OR (length(source)-length(replace(source,old_predicate,'')))<>length(old_predicate)
+ THEN RAISE EXCEPTION 'REVIEW_MANUAL_PREVIEW_SOURCE_DRIFT'; END IF;
+ EXECUTE replace(pg_get_functiondef(target),source,replace(replace(source,old_remaining,new_remaining),old_predicate,new_predicate));
+ SELECT prosrc,to_jsonb(p)-'prosrc' INTO source,after_meta FROM pg_proc p WHERE oid=target;
+ IF after_meta IS DISTINCT FROM before_meta OR encode(sha256(convert_to(source,'UTF8')),'hex')<>new_sha
+ THEN RAISE EXCEPTION 'REVIEW_MANUAL_PREVIEW_READBACK_DRIFT'; END IF;
+END;
+$manual_preview_parity$;
+COMMIT;

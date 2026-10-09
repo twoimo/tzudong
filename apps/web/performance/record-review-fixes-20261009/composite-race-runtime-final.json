@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "schemaFixture": "actual composite video/name index",
+  "indexName": "idx_restaurants_active_video_identity",
+  "indexDefinitionSha256": "a232c3d4c3acbe86488bad14c021217b3c1c9858024e385a08f0fddbf62de1a7",
+  "actualUniqueRace": {
+    "fixedCode": "RECORD_ACTION_DUPLICATE",
+    "sqlState": "P0001",
+    "blockingObserved": true
+  },
+  "winnerApplied": true,
+  "boundedConflictNoPartialCommit": {
+    "created": 1,
+    "loserAudit": 0,
+    "loserState": "preview",
+    "winnerAudit": 1
+  },
+  "sourceMetadataPreserved": true,
+  "ownedDatabaseDropped": true
+}

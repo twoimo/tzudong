@@ -306,11 +306,25 @@ def get_image_hash(url: str) -> Optional[str]:
 def check_thumbnail_exists(
     channel_data_path: Path, video_id: str, recollect_id: int
 ) -> bool:
-    """해당 버전의 썸네일 파일 존재 여부 확인"""
+    """Only a bounded regular image can establish completed thumbnail readback."""
     thumb_dir = channel_data_path / "thumbnails"
-    # 확장자를 모르므로 glob 패턴 사용 (jpg, png, webp 등)
-    pattern = f"{video_id}-{recollect_id}.*"
-    return any(thumb_dir.glob(pattern))
+    if not _valid_thumbnail_target(video_id, recollect_id) or not _is_plain_directory(thumb_dir):
+        return False
+    for extension in ("jpg", "png", "webp"):
+        destination = thumb_dir / f"{video_id}-{recollect_id}.{extension}"
+        try:
+            info = destination.lstat()
+            if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= THUMBNAIL_MAX_BYTES:
+                continue
+            with destination.open("rb") as image:
+                opened = os.fstat(image.fileno())
+                if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+                    continue
+                if _thumbnail_extension_from_magic(image.read(THUMBNAIL_MAGIC_PREFIX_BYTES)) == extension:
+                    return True
+        except OSError:
+            continue
+    return False
 
 
 
@@ -662,14 +676,14 @@ def _valid_thumbnail_target(video_id: Any, recollect_id: Any) -> bool:
 
 def save_thumbnail_file(
     channel_data_path: Path, video_id: str, recollect_id: int, url: str
-):
+) -> bool:
     """버전 관리가 적용된 검증된 썸네일 이미지를 원자적으로 저장한다."""
     if not url or not _valid_thumbnail_target(video_id, recollect_id):
-        return
+        return False
 
     thumb_dir = _thumbnail_directory(channel_data_path)
     if not thumb_dir:
-        return
+        return False
 
     temporary_path = None
     thumbnail_file = None
@@ -687,15 +701,15 @@ def save_thumbnail_file(
             temporary_path = candidate
             thumbnail_file = os.fdopen(descriptor, "wb")
             if not stat.S_ISREG(os.fstat(thumbnail_file.fileno()).st_mode):
-                return
+                return False
             os.chmod(candidate, 0o600)
             break
         else:
-            return
+            return False
 
         thumbnail = download_verified_thumbnail(url, thumbnail_file.write)
         if not thumbnail:
-            return
+            return False
 
         thumbnail_file.flush()
         os.fsync(thumbnail_file.fileno())
@@ -704,16 +718,17 @@ def save_thumbnail_file(
 
         destination = thumb_dir / f"{video_id}-{recollect_id}.{thumbnail.extension}"
         if os.path.lexists(destination) or not _is_plain_directory(thumb_dir):
-            return
+            return False
 
         try:
             os.link(temporary_path, destination)
         except OSError:
-            return
+            return False
         os.unlink(temporary_path)
         temporary_path = None
+        return True
     except Exception:
-        return
+        return False
     finally:
         if thumbnail_file is not None:
             try:
@@ -901,9 +916,11 @@ def _collect_channel_meta(
                 # 수집 안 함. 하지만 썸네일 백필 체크
                 prev_id = previous_meta.get("recollect_id", 0)
                 if not check_thumbnail_exists(channel_path, vid, prev_id):
-                    save_thumbnail_file(
+                    if not save_thumbnail_file(
                         channel_path, vid, prev_id, current_meta.get("thumbnail_url")
-                    )
+                    ):
+                        # A failed backfill is still pending on this day's restart.
+                        continue
                 recipe_completed.add(vid)
                 continue
 
@@ -924,9 +941,10 @@ def _collect_channel_meta(
 
             # 6. 필요시 썸네일 저장
             if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
-                save_thumbnail_file(
+                if not check_thumbnail_exists(channel_path, vid, new_id) and not save_thumbnail_file(
                     channel_path, vid, new_id, current_meta.get("thumbnail_url")
-                )
+                ):
+                    continue
 
             # OpenAI 분석 (옵션)
             ad_keywords = ["협찬", "광고", "지원"]
@@ -934,9 +952,15 @@ def _collect_channel_meta(
             is_ads = any(keyword in description for keyword in ad_keywords)
 
             what_ads = None
+            prior_ads = previous_meta.get("ads_info", {}).get("what_ads") if previous_meta else None
+            if prior_ads and openai_client is None and previous_meta.get('description') != description:
+                # Without an analyzer, changed evidence cannot replace known attribution
+                # with either stale content or a fabricated null completion.
+                continue
             if is_ads:
-                # 이전 데이터 재사용 확인
-                if previous_meta and not recipe_changed and previous_meta.get('description') == description and previous_meta.get("ads_info", {}).get("what_ads"):
+                # Disabling analysis or upgrading the checkpoint must not erase an
+                # unchanged source's known attribution. Enabled recipe changes reanalyse.
+                if previous_meta and (not recipe_changed or openai_client is None) and previous_meta.get('description') == description and prior_ads:
                     what_ads = previous_meta["ads_info"]["what_ads"]
                 elif openai_client:
                     # 신규 분석

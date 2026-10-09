@@ -16,6 +16,7 @@ export type RecordActionClientState = {
 };
 const messages: Record<string, string> = {
   RECORD_ACTION_MAINTENANCE: '관리자 변경이 일시 중지되어 있습니다. 유지보수가 끝난 뒤 새로 검토하세요.',
+  RECORD_ACTION_MEDIA_NOT_ADMITTED: '사진 정리가 아직 허용되지 않았습니다. 설정 확인 후 기존 작업 결과를 조회하세요.',
   RECORD_ACTION_PENDING: '이전 작업의 결과를 먼저 확인하세요.',
   RECORD_ACTION_FORBIDDEN: '관리자 권한을 확인한 뒤 다시 시도하세요.',
   RECORD_ACTION_NOT_FOUND: '대상 또는 작업을 찾지 못했습니다. 목록을 새로 조회하세요.',
@@ -38,7 +39,7 @@ const messages: Record<string, string> = {
   RECORD_ACTION_MEDIA_PATH_INVALID: '리뷰 삭제는 확인됐지만 사진 정리를 확인하지 못했습니다.',
 };
 export class RecordActionClientError extends Error {
-  constructor(public readonly code: string) { super(messages[code] ?? '결과를 확인하지 못했습니다. 기존 작업의 결과를 조회하세요.'); }
+  constructor(public readonly code: string, public readonly cleanupNotStarted = false) { super(messages[code] ?? '결과를 확인하지 못했습니다. 기존 작업의 결과를 조회하세요.'); }
 }
 export const isRecordActionCancelled = (error: unknown) => error instanceof RecordActionClientError && error.code === 'CANCELLED';
 export function recordActionErrorMessage(error: unknown) {
@@ -53,12 +54,13 @@ export function recordActionMediaNotice(receipt: RecordActionReceipt): string {
   ].filter(Boolean).join(' ');
 }
 const empty: RecordActionClientState = { phase: 'idle', request: null, receipt: null, message: '', nextAction: null };
-const pendingKey = 'admin:record-action-pending:v1';
+const legacyPendingKey = 'admin:record-action-pending:v1';
 type Identity = Pick<RecordActionRequest, 'operationId' | 'action' | 'targetIds' | 'previewHash'>;
 const sameIds = (left: string[], right: string[]) => left.length === right.length && [...left].sort().every((id, index) => id === [...right].sort()[index]);
 
 /** One immutable preview and at most one apply POST. Uncertainty can only issue GETs. */
 export function createRecordActionClient(options: {
+  actor?: string | null;
   fetch?: typeof fetch;
   uuid?: () => string;
   now?: () => number;
@@ -70,9 +72,18 @@ export function createRecordActionClient(options: {
   const transport = options.fetch ?? fetch;
   const now = options.now ?? Date.now;
   let onRecovered = options.onRecovered;
+  let actor = options.actor;
+  const scopedKey = () => actor ? `admin:record-action-pending:v2:${actor}` : legacyPendingKey;
+  let pendingKey = scopedKey();
+  let notified = false;
+  const persist = () => {
+    if (!identity) return;
+    options.storage?.setItem(pendingKey, JSON.stringify({ operationId: identity.operationId, action: identity.action,
+      targetIds: identity.targetIds, previewHash: identity.previewHash, cleanupAttempt, cleanupDeferred }));
+  };
   let state = empty;
   let identity: Identity | null = null;
-  let epoch = 0, appliedAttempt = false, cleanupAttempt = false;
+  let epoch = 0, appliedAttempt = false, cleanupAttempt = false, cleanupDeferred = false;
   let resolve: ((receipt: RecordActionReceipt) => void) | null = null;
   let reject: ((error: RecordActionClientError) => void) | null = null;
   const listeners = new Set<() => void>();
@@ -111,27 +122,62 @@ export function createRecordActionClient(options: {
       ...(method === 'POST' ? { body: JSON.stringify(cleanup ? { operationId: identity!.operationId } : body) } : {}) });
     if (response.status === 401 || response.status === 403) throw new RecordActionClientError('RECORD_ACTION_FORBIDDEN');
     const value: unknown = await response.json();
+    if (cleanup && value && typeof value === 'object' && 'success' in value && value.success === false && 'code' in value
+      && ((response.status === 423 && value.code === 'RECORD_ACTION_MAINTENANCE')
+        || (response.status === 503 && value.code === 'RECORD_ACTION_MEDIA_NOT_ADMITTED'))) throw new RecordActionClientError(value.code as string, true);
     if (response.ok && value && typeof value === 'object' && 'success' in value && value.success === true && 'receipt' in value && matches(value.receipt)) return value.receipt;
     if (!response.ok && response.status < 500 && value && typeof value === 'object' && 'code' in value && typeof value.code === 'string' && Object.hasOwn(messages, value.code)) throw new RecordActionClientError(value.code);
     throw new RecordActionClientError('RECORD_ACTION_UNCERTAIN');
   }
-  async function complete(receipt: RecordActionReceipt) {
-    // Deletion/audit are already confirmed. Media cleanup is separate and never changes that result.
-    if (receipt.action === 'review.delete' && receipt.mediaCleanupPending && !cleanupAttempt) {
-      cleanupAttempt = true;
+  async function complete(receipt: RecordActionReceipt, resumeCleanup: boolean) {
+    const token = epoch;
+    // Persist before transport: an uncertain Storage response may only be followed by GET.
+    if (receipt.action === 'review.delete' && receipt.mediaCleanupPending && !cleanupAttempt && (!cleanupDeferred || resumeCleanup)) {
       try {
-        const cleaned = await request('POST', undefined, true);
-        if (cleaned.state === 'applied') receipt = cleaned;
-      } catch { /* GET below observes an uncertain cleanup; no retry. */ }
-      try { const checked = await request('GET'); if (checked.state === 'applied') receipt = checked; } catch { receipt = { ...receipt, mediaCleanupPending: true }; }
+        // Other modals may have recovered the same identity before our GET completed.
+        const saved = options.storage?.getItem(pendingKey);
+        if (options.storage && !saved) throw Error('PENDING_CHANGED');
+        if (saved) {
+          const pending: unknown = JSON.parse(saved);
+          if (!pending || typeof pending !== 'object' || !('operationId' in pending) || pending.operationId !== identity?.operationId) throw Error('PENDING_CHANGED');
+          if ('cleanupAttempt' in pending && pending.cleanupAttempt === true) cleanupAttempt = true;
+        }
+        if (!cleanupAttempt) {
+          cleanupAttempt = true; cleanupDeferred = false;
+          persist();
+          const cleaned = await request('POST', undefined, true);
+          if (epoch !== token) return;
+          if (cleaned.state === 'applied') receipt = cleaned;
+        }
+      } catch (error) {
+        if (epoch !== token) return;
+        cleanupAttempt = true;
+        // These exact endpoint responses prove admission stopped before any cleanup work.
+        if (error instanceof RecordActionClientError && error.cleanupNotStarted) {
+          cleanupAttempt = false; cleanupDeferred = true;
+          try { persist(); } catch { cleanupAttempt = true; }
+        }
+        // All other failures (including 403/timeouts/lost ACK) remain GET-only.
+      }
+      if (epoch !== token) return;
+      try { const checked = await request('GET'); if (checked.state === 'applied') receipt = checked; }
+      catch { receipt = { ...receipt, mediaCleanupPending: true }; }
     }
-    options.storage?.removeItem(pendingKey);
+    if (epoch !== token) return;
     const finish = resolve; resolve = null; reject = null;
-    publish({ ...empty }); identity = null;
-    options.onApplied?.(receipt);
-    if (finish) finish(receipt); else onRecovered?.(receipt);
+    if (receipt.mediaCleanupPending) {
+      publish({ phase: 'uncertain', request: null, receipt, message: cleanupDeferred ? '삭제는 확인됐지만 사진 정리는 시작되지 않았습니다. 유지보수·설정 확인 후 기존 작업 결과를 조회하면 정리를 재개합니다.' : '삭제는 확인됐지만 사진 정리가 아직 완료되지 않았습니다. 기존 작업 결과를 조회하세요.' });
+    } else {
+      options.storage?.removeItem(pendingKey);
+      publish({ ...empty }); identity = null;
+    }
+    if (!notified) {
+      notified = true;
+      options.onApplied?.(receipt);
+      if (finish) finish(receipt); else onRecovered?.(receipt);
+    }
   }
-  async function readback() {
+  async function readback(resumeCleanup = true) {
     if (!identity || state.phase === 'checking' || state.phase === 'applying' || state.phase === 'previewing') return;
     const token = epoch;
     publish({ phase: 'checking', message: '' });
@@ -139,7 +185,7 @@ export function createRecordActionClient(options: {
       const receipt = await request('GET');
       if (epoch !== token) return;
       publish({ receipt });
-      if (receipt.state === 'applied') await complete(receipt);
+      if (receipt.state === 'applied') await complete(receipt, resumeCleanup);
       else if (!appliedAttempt && state.request) publish({ phase: 'confirming' });
       else { options.onInvalidate?.(); uncertain(); }
     } catch (error) {
@@ -151,9 +197,11 @@ export function createRecordActionClient(options: {
     }
   }
   async function recover() {
-    if (state.phase !== 'idle' || !options.storage) return;
+    if (state.phase !== 'idle' || !options.storage || actor === null) return;
     try {
-      const saved = options.storage.getItem(pendingKey);
+      pendingKey = scopedKey();
+      let saved = options.storage.getItem(pendingKey);
+      if (!saved && actor) { saved = options.storage.getItem(legacyPendingKey); if (saved) pendingKey = legacyPendingKey; }
       if (!saved) return;
       appliedAttempt = true;
       options.onInvalidate?.();
@@ -161,10 +209,11 @@ export function createRecordActionClient(options: {
       const parsed: unknown = JSON.parse(saved);
       if (!parsed || typeof parsed !== 'object' || !('operationId' in parsed) || !('action' in parsed) || !('targetIds' in parsed) || !('previewHash' in parsed)) throw Error('INVALID_PENDING_IDENTITY');
       // Only the original identity is persisted; recovery never reconstructs an apply payload.
-      const candidate = { ...parsed, state: 'preview', auditId: null, expiresAt: new Date(now()).toISOString(), readback: [], mediaCleanupPending: false };
-      if (!isRecordActionReceipt(candidate)) throw Error('INVALID_PENDING_IDENTITY');
-      identity = candidate; cleanupAttempt = true;
-      await readback();
+      const candidate = { operationId: parsed.operationId, action: parsed.action, targetIds: parsed.targetIds, previewHash: parsed.previewHash, state: 'preview', auditId: null, expiresAt: new Date(now()).toISOString(), readback: [], mediaCleanupPending: false };
+      if (Object.keys(parsed).some(key => !['operationId', 'action', 'targetIds', 'previewHash', 'cleanupAttempt', 'cleanupDeferred'].includes(key)) || ('cleanupAttempt' in parsed && typeof parsed.cleanupAttempt !== 'boolean') || ('cleanupDeferred' in parsed && typeof parsed.cleanupDeferred !== 'boolean') || !isRecordActionReceipt(candidate)) throw Error('INVALID_PENDING_IDENTITY');
+      identity = candidate; cleanupAttempt = pendingKey === legacyPendingKey || !('cleanupAttempt' in parsed) || parsed.cleanupAttempt !== false;
+      cleanupDeferred = 'cleanupDeferred' in parsed && parsed.cleanupDeferred === true;
+      await readback(false);
     } catch {
       appliedAttempt = true; options.onInvalidate?.(); uncertain();
       if (!identity) publish({ message: '이전 작업 정보를 읽지 못했습니다. 다시 적용하지 말고 관리자에게 확인을 요청하세요.' });
@@ -172,19 +221,29 @@ export function createRecordActionClient(options: {
   }
   return {
     getSnapshot: () => state,
+    setActor(next: string | null) {
+      if (next === actor) return;
+      ++epoch;
+      reject?.(new RecordActionClientError('CANCELLED')); resolve = null; reject = null;
+      actor = next; pendingKey = scopedKey(); identity = null;
+      appliedAttempt = false; cleanupAttempt = false; cleanupDeferred = false; notified = false;
+      publish({ ...empty });
+    },
     canCancel: () => !appliedAttempt || state.phase === 'failed',
     setOnRecovered: (callback: (receipt: RecordActionReceipt) => void) => { onRecovered = callback; },
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     run(input: RecordActionInput): Promise<RecordActionReceipt> {
+      if (actor === null) return Promise.reject(new RecordActionClientError('RECORD_ACTION_FORBIDDEN'));
       if (state.phase !== 'idle') return Promise.reject(new RecordActionClientError('RECORD_ACTION_PREVIEW_REQUIRED'));
       try {
-        if (options.storage?.getItem(pendingKey)) { void recover(); return Promise.reject(new RecordActionClientError('RECORD_ACTION_PENDING')); }
+        pendingKey = scopedKey();
+        if (options.storage?.getItem(pendingKey) || (actor && options.storage?.getItem(legacyPendingKey))) { void recover(); return Promise.reject(new RecordActionClientError('RECORD_ACTION_PENDING')); }
       } catch { return Promise.reject(new RecordActionClientError('RECORD_ACTION_UNCERTAIN')); }
       const parsed = parseRecordActionRequest({ ...input, phase: 'preview', operationId: (options.uuid ?? (() => crypto.randomUUID()))() });
       if (!parsed) return Promise.reject(new RecordActionClientError('RECORD_ACTION_INVALID_PAYLOAD'));
       // Parsing also copies/normalizes nested fields. Caller edits cannot change the reviewed payload.
       const original = structuredClone(parsed), token = ++epoch;
-      identity = original; appliedAttempt = false; cleanupAttempt = false;
+      identity = original; appliedAttempt = false; cleanupAttempt = false; cleanupDeferred = false; notified = false;
       const result = new Promise<RecordActionReceipt>((yes, no) => { resolve = yes; reject = no; });
       publish({ phase: 'previewing', request: original, receipt: null, message: '' });
       void (async () => {
@@ -192,34 +251,37 @@ export function createRecordActionClient(options: {
           const receipt = await request('POST', original);
           if (token !== epoch) return;
           identity = { ...original, previewHash: receipt.previewHash };
-          if (receipt.state !== 'preview') { publish({ phase: 'uncertain' }); await readback(); return; }
+          if (receipt.state !== 'preview') { publish({ phase: 'uncertain' }); await readback(false); return; }
           publish({ phase: 'confirming', receipt });
         } catch (error) {
           if (token !== epoch) return;
           if (error instanceof RecordActionClientError && error.code !== 'RECORD_ACTION_UNCERTAIN') fail(error.code);
-          else { publish({ phase: 'uncertain' }); await readback(); }
+          else { publish({ phase: 'uncertain' }); await readback(false); }
         }
       })();
       return result;
     },
     async apply(confirmation: string) {
-      if (state.phase !== 'confirming' || !state.request || !state.receipt || confirmation !== RECORD_ACTION_CONFIRMATION || appliedAttempt) return;
+      if (actor === null || state.phase !== 'confirming' || !state.request || !state.receipt || confirmation !== RECORD_ACTION_CONFIRMATION || appliedAttempt) return;
       if (Date.parse(state.receipt.expiresAt) <= now()) { fail('RECORD_ACTION_PREVIEW_EXPIRED'); return; }
       const body = { ...state.request, phase: 'apply' as const, previewHash: state.receipt.previewHash, confirmation: RECORD_ACTION_CONFIRMATION };
       identity = { ...body };
+      const token = epoch;
       try {
-        if (options.storage?.getItem(pendingKey)) { fail('RECORD_ACTION_PENDING'); return; }
-        options.storage?.setItem(pendingKey, JSON.stringify({ operationId: body.operationId, action: body.action, targetIds: body.targetIds, previewHash: body.previewHash })); }
+        if (options.storage?.getItem(pendingKey) || (actor && options.storage?.getItem(legacyPendingKey))) { fail('RECORD_ACTION_PENDING'); return; }
+        persist(); }
       catch { fail('RECORD_ACTION_UNCERTAIN'); return; }
       appliedAttempt = true; options.onInvalidate?.(); publish({ phase: 'applying', message: '' });
       try {
         const receipt = await request('POST', body);
+        if (token !== epoch) return;
         if (receipt.state !== 'applied') throw new RecordActionClientError('RECORD_ACTION_UNCERTAIN');
-        publish({ receipt, phase: 'uncertain' }); await readback();
+        publish({ receipt, phase: 'uncertain' }); await readback(false);
       } catch (error) {
+        if (token !== epoch) return;
         if (error instanceof RecordActionClientError && error.code !== 'RECORD_ACTION_UNCERTAIN') {
           options.storage?.removeItem(pendingKey); fail(error.code);
-        } else { publish({ phase: 'uncertain' }); await readback(); }
+        } else { publish({ phase: 'uncertain' }); await readback(false); }
       }
     },
     cancel() {

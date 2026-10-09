@@ -4,7 +4,7 @@ export type KnowledgeEvidence = {
   videoId: string; startSeconds: number; endSeconds: number | null;
   url: string; status: 'verified' | 'unverified';
 };
-export type KnowledgeNode = { id: string; label: string; kind: KnowledgeKind; summary: string; evidence: KnowledgeEvidence[] };
+export type KnowledgeNode = { id: string; label: string; kind: KnowledgeKind; summary: string; evidence: KnowledgeEvidence[]; displayTitle?: string; displayStage?: 'caption-first-pass' };
 export type KnowledgeEdge = { id: string; source: string; target: string; relation: 'references' | 'derived-from' };
 export type KnowledgeCoverage = {
   inventoryCount: number | null; eligibleCount: number | null; analyzedCount: number;
@@ -58,6 +58,10 @@ export function isKnowledgeNode(value: unknown): value is KnowledgeNode {
   if (!object(value) || !identifier(value.id) || typeof value.label !== 'string' || !value.label.trim() || Array.from(value.label).length > 512
     || !KNOWLEDGE_KINDS.includes(value.kind as KnowledgeKind) || typeof value.summary !== 'string' || Array.from(value.summary).length > 4000
     || !Array.isArray(value.evidence) || value.evidence.length > 64) return false;
+  if ('displayTitle' in value || 'displayStage' in value) {
+    if (value.kind !== 'video' || typeof value.displayTitle !== 'string' || !value.displayTitle.trim() || Array.from(value.displayTitle).length > 512
+      || /[\u0000-\u001f\u007f-\u009f]/.test(value.displayTitle) || value.displayStage !== 'caption-first-pass') return false;
+  }
   return value.evidence.every(item => {
     if (!object(item) || typeof item.videoId !== 'string' || !/^[a-zA-Z0-9_-]{11}$/.test(item.videoId)
       || typeof item.startSeconds !== 'number' || !Number.isFinite(item.startSeconds) || item.startSeconds < 0 || item.startSeconds > 1_000_000_000

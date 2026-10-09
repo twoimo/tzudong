@@ -5,7 +5,7 @@ import hashlib
 from pathlib import Path
 
 SOURCES = {
-    '20261004190259_admin_record_guarded_actions.sql': '04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294',
+    '20261004190259_admin_record_guarded_actions.sql': 'b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95',
     '20261004194715_admin_evaluation_raw_warning_invoker_contract.sql': 'e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020',
 }
 GUARD_START = b" IF NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) THEN\n"

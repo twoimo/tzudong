@@ -1,0 +1,34 @@
+[
+  {
+    "index": 5,
+    "name": "Loadmore",
+    "url": "https://loadmo.re/",
+    "actualUrl": "https://loadmo.re/",
+    "title": "loadmo.re — Mobile Web Design Archive by Kim Boutin",
+    "screenshot": "05-reference.png"
+  },
+  {
+    "index": 6,
+    "name": "Beautiful UI",
+    "url": "https://beautifului.dev/",
+    "actualUrl": "https://www.beautifului.dev/",
+    "title": "Beautiful UI — Crafted primitives for AI-native interfaces",
+    "screenshot": "06-reference.png"
+  },
+  {
+    "index": 7,
+    "name": "BeUI",
+    "url": "https://beui.dev/",
+    "actualUrl": "https://beui.dev/",
+    "title": "Animated Components for React and Next.js · beUI",
+    "screenshot": "07-reference.png"
+  },
+  {
+    "index": 8,
+    "name": "Rare UI",
+    "url": "https://rareui.com/",
+    "actualUrl": "https://www.rareui.com/",
+    "title": "Rare UI — Rare Animated React Components",
+    "screenshot": "08-reference.png"
+  }
+]

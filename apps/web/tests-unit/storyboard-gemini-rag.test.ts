@@ -3,19 +3,21 @@ import { NextRequest } from 'next/server';
 import { embedStoryboardRagTexts, rerankStoryboardRagCandidates, STORYBOARD_RAG_EMBEDDING_FINGERPRINT as fingerprint } from '../lib/admin/storyboard/rag-worker-client';
 
 const originalFetch = globalThis.fetch;
+const originalToken = process.env.STORYBOARD_RAG_WORKER_TOKEN;
 const originalUrl = process.env.STORYBOARD_RAG_WORKER_URL;
 const requests: { path: string; body: any }[] = [];
 const inserts: any[] = [];
 const rpcArgs: any[] = [];
 const filters: string[] = [];
 const originalLegacy = { id: 'legacy-id', title: '국수', content: '보존된 편집 결과 국수', metadata: { edited: true } };
+let denseRows: any[] = [];
 let badFingerprint = false;
 let failEmbed = false;
 let failLegacy = false;
 mock.module('@/lib/admin/storyboard/rag-actions-auth', () => ({ authenticateStoryboardRagAction: async () => ({ ok: true, userId: 'owner' }) }));
 mock.module('@/lib/security/same-origin-mutation', () => ({ isTrustedSameOriginMutation: () => true }));
 mock.module('@/lib/supabase/service-role', () => ({ createSupabaseServiceRoleClient: () => ({
-  rpc: async (_name: string, args: any) => { rpcArgs.push(args); return { data: [], error: null }; },
+  rpc: async (_name: string, args: any) => { rpcArgs.push(args); return { data: denseRows, error: null }; },
   from: () => ({
     upsert: (rows: any[]) => { inserts.push(...rows); return { select: async () => ({ data: [{ id: 'new-id' }], error: null }) }; },
     select: (columns: string) => { expect(columns).not.toContain('embedding');
@@ -32,9 +34,13 @@ const search = await import('../app/api/admin/storyboard/rag/search/route');
 function request(body: unknown) { return new NextRequest('http://localhost/api/admin/storyboard/rag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
 beforeEach(() => {
   requests.length = inserts.length = rpcArgs.length = filters.length = 0;
+  denseRows = [];
   badFingerprint = failEmbed = failLegacy = false;
+  process.env.STORYBOARD_RAG_WORKER_TOKEN = 'boundary-test-capability-00000000000000000000000';
   process.env.STORYBOARD_RAG_WORKER_URL = 'http://127.0.0.1:1234';
   globalThis.fetch = mock(async (url: any, options: any) => {
+    expect(options.headers.Authorization).toBe(`Bearer ${process.env.STORYBOARD_RAG_WORKER_TOKEN}`);
+    expect(options.redirect).toBe('error');
     const path = new URL(String(url)).pathname; const body = JSON.parse(options.body); requests.push({ path, body });
     if (failEmbed && path === '/embed') return new Response('private diagnostic', { status: 503 });
     return Response.json(path === '/embed' ? { schemaVersion: 1, provider: 'gemini-api', model: 'gemini-embedding-001', dimensions: 1024,
@@ -43,9 +49,42 @@ beforeEach(() => {
           results: body.candidates.slice(0, body.topK).map((item: any) => ({ ...item, rerankScore: 1 })) });
   }) as any;
 });
-afterAll(() => { mock.restore(); globalThis.fetch = originalFetch; if (originalUrl === undefined) delete process.env.STORYBOARD_RAG_WORKER_URL; else process.env.STORYBOARD_RAG_WORKER_URL = originalUrl; });
+afterAll(() => { if (originalToken === undefined) delete process.env.STORYBOARD_RAG_WORKER_TOKEN; else process.env.STORYBOARD_RAG_WORKER_TOKEN = originalToken; mock.restore(); globalThis.fetch = originalFetch; if (originalUrl === undefined) delete process.env.STORYBOARD_RAG_WORKER_URL; else process.env.STORYBOARD_RAG_WORKER_URL = originalUrl; });
 
 describe('Gemini RAG isolation and existing data preservation without paid calls', () => {
+  test('missing/reused inbound capability and unsafe remote URLs fail before transport', async () => {
+    delete process.env.STORYBOARD_RAG_WORKER_TOKEN;
+    await expect(embedStoryboardRagTexts(['query'])).rejects.toThrow('capability_missing');
+    process.env.STORYBOARD_RAG_WORKER_TOKEN = 'boundary-test-capability-00000000000000000000000';
+    const saved = process.env.GEMINI_API_KEY;
+    try {
+      process.env.GEMINI_API_KEY = process.env.STORYBOARD_RAG_WORKER_TOKEN;
+      await expect(embedStoryboardRagTexts(['query'])).rejects.toThrow('capability_missing');
+    } finally { if (saved === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = saved; }
+    for (const url of ['http://remote.invalid', 'https://user:pass@remote.invalid', 'https://remote.invalid?query=secret',
+      'https://remote.invalid/path', 'ftp://127.0.0.1', 'https://remote.invalid#fragment']) {
+      process.env.STORYBOARD_RAG_WORKER_URL = url;
+      await expect(embedStoryboardRagTexts(['query'])).rejects.toThrow('transport_invalid');
+    }
+    expect(requests).toHaveLength(0);
+  });
+  test('remote HTTPS accepts the independent capability and loopback HTTP remains supported', async () => {
+    process.env.STORYBOARD_RAG_WORKER_URL = 'https://operator-owned-worker.invalid';
+    await embedStoryboardRagTexts(['query']);
+    expect(requests).toHaveLength(1);
+  });
+  test('route admits an exact legacy document ahead of a full dense pool while keeping fixed fingerprint', async () => {
+    denseRows = Array.from({ length: 50 }, (_, i) => ({ id: `dense-${i}`, title: '다른 메뉴', content: '국수 관련 일부',
+      metadata: { storyboardEmbeddingFingerprint: fingerprint }, dense_score: 1, sparse_score: null, weighted_score: 1 }));
+    const response = await search.POST(request({ query: '국수', candidateCount: 50 }));
+    expect(response.status).toBe(200);
+    const candidates = requests.find((entry) => entry.path === '/rerank')!.body.candidates;
+    expect(candidates).toHaveLength(50);
+    expect(candidates[0].id).toBe(originalLegacy.id);
+    expect(candidates[0].denseScore).toBeNull();
+    expect(candidates.some((entry: any) => entry.id.startsWith('dense-'))).toBe(true);
+    expect(rpcArgs[0].p_metadata_filter.storyboardEmbeddingFingerprint).toBe(fingerprint);
+  });
   test('rejects old fingerprints even at matching dimensions without a second call', async () => {
     badFingerprint = true;
     await expect(embedStoryboardRagTexts(['국수'])).rejects.toThrow('embed_contract_invalid');

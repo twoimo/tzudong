@@ -12,6 +12,10 @@ import json
 import math
 import base64
 import mimetypes
+import hmac
+import ipaddress
+import re
+import stat
 import sqlite3
 from contextlib import contextmanager
 import os
@@ -33,7 +37,7 @@ from utils.provider_budget import ProjectBudget, budget_path, positive_int
 from utils.request_budget import retry_after_seconds
 
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
@@ -295,6 +299,27 @@ app = FastAPI(
         "frame captioning stay outside Vercel/Next.js."
     ),
 )
+
+
+@app.middleware("http")
+async def worker_capability(request: Request, call_next):
+    # Independent inbound capability. Never accept the outbound paid-provider key.
+    token = os.environ.get("STORYBOARD_RAG_WORKER_TOKEN", "").strip()
+    outbound = [os.environ.get(name, "").strip() for name in
+                ("GEMINI_CREDITS_API_KEY", "STORYBOARD_GEMINI_API_KEY", "GEMINI_API_KEY")]
+    if not re.fullmatch(r"[A-Za-z0-9_-]{43,128}", token) or token in outbound:
+        return JSONResponse(status_code=503, content={"error": "required_worker_capability_missing"})
+    authorization = request.headers.getlist("authorization")
+    if len(authorization) != 1 or not hmac.compare_digest(authorization[0].encode("utf-8"), f"Bearer {token}".encode("ascii")):
+        return JSONResponse(status_code=401, content={"error": "worker_unauthorized"})
+    try:
+        loopback = request.client is not None and ipaddress.ip_address(request.client.host).is_loopback
+    except ValueError:
+        loopback = False
+    # Launcher disables proxy headers: client/transport cannot be forged by headers.
+    if not loopback and request.url.scheme != "https":
+        return JSONResponse(status_code=403, content={"error": "worker_transport_required"})
+    return await call_next(request)
 
 
 @app.exception_handler(RequestValidationError)
@@ -679,18 +704,56 @@ def _rerank(request: RerankRequest) -> RerankResponse:
         sorted(scored, key=lambda item: item[1], reverse=True)[:request.topK]])
 
 
+def _read_approved_frame(raw_path: str, remaining: int) -> tuple[bytes, str]:
+    """Read only the operator-approved artifact tree, without following any symlink.
+
+    Open every directory relative to a held descriptor, including the configured
+    root, so swapping a parent after validation cannot redirect the read.
+    """
+    root = Path(os.environ.get("STORYBOARD_RAG_FRAME_ROOT", ""))
+    frame = Path(raw_path)
+    if root == Path("/") or not root.is_absolute() or not frame.is_absolute() or ".." in root.parts or ".." in frame.parts:
+        raise RagWorkerError("required_gemini_frame_invalid")
+    try:
+        relative = frame.relative_to(root)
+        if not relative.parts or remaining <= 0:
+            raise ValueError()
+        descriptor = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            for component in (*root.parts[1:], *relative.parts[:-1]):
+                child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
+                os.close(descriptor)
+                descriptor = child
+            fd = os.open(relative.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=descriptor)
+            try:
+                info = os.fstat(fd)
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not 0 < info.st_size <= remaining:
+                    raise ValueError()
+                with os.fdopen(fd, "rb", closefd=False) as source:
+                    data = source.read(remaining + 1)
+                if len(data) != info.st_size or len(data) > remaining:
+                    raise ValueError()
+            finally:
+                os.close(fd)
+        finally:
+            os.close(descriptor)
+        mime = mimetypes.guess_type(frame.name)[0]
+        valid_type = (mime == "image/png" and data.startswith(b"\x89PNG\r\n\x1a\n")) or (
+            mime == "image/jpeg" and data.startswith(b"\xff\xd8\xff")) or (
+            mime == "image/webp" and len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP")
+        if not valid_type:
+            raise ValueError()
+        return data, mime
+    except (OSError, ValueError):
+        raise RagWorkerError("required_gemini_frame_invalid") from None
+
+
 def _caption_frames(request: CaptionRequest) -> CaptionResponse:
     parts: list[dict[str, Any]] = [{"text": request.prompt[:2000]}]
     total = 0
     for raw_path in request.framePaths:
-        frame = Path(raw_path).expanduser()
-        mime = mimetypes.guess_type(frame.name)[0]
-        if not frame.is_file() or mime not in ("image/png", "image/jpeg", "image/webp"):
-            raise RagWorkerError("required_gemini_frame_invalid")
-        total += frame.stat().st_size
-        if total > 8 * 1024 * 1024:
-            raise RagWorkerError("required_gemini_frame_invalid")
-        data = frame.read_bytes()
+        data, mime = _read_approved_frame(raw_path, 8 * 1024 * 1024 - total)
+        total += len(data)
         parts.append({"inlineData": {"mimeType": mime, "data": base64.b64encode(data).decode("ascii")}})
     response = _gemini_call(CAPTION_MODEL_ID, "generateContent", {
         "contents": [{"role": "user", "parts": parts}], "generationConfig": {"maxOutputTokens": 512}})

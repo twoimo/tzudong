@@ -37,6 +37,20 @@ test('batch admission validates receipts instead of trusting legacy completion o
         const staged=fs.mkdtempSync(path.join(directory,'.staged-'));fs.writeFileSync(path.join(staged,'frame_1.jpg'),'verified frame');
         await publishFrames(directory,staged,'jpg',actual);fs.rmSync(staged,{recursive:true});
         assert.equal(await shouldCollect(channel,videoId,params),false);
+        const shared=makeTempDir('heatmap-persistent-reuse-');
+        const priorShared=process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;
+        try {
+            fs.copyFileSync(video,path.join(shared,videoId+'.mp4'));fs.unlinkSync(video);
+            process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR=shared;
+            assert.equal(await shouldCollect(channel,videoId,params),false);
+            fs.rmSync(cacheDir,{recursive:true});assert.equal(await shouldCollect(channel,videoId,params),false);fs.mkdirSync(cacheDir);
+            fs.writeFileSync(path.join(shared,videoId+'.mp4'),'changed source');
+            assert.equal(await shouldCollect(channel,videoId,params),true);
+            fs.writeFileSync(video,'synthetic media');
+        } finally {
+            if(priorShared===undefined)delete process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;else process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR=priorShared;
+            fs.rmSync(shared,{recursive:true,force:true});
+        }
         fs.writeFileSync(path.join(directory,'frame_1.jpg'),'corrupt frame');assert.equal(await shouldCollect(channel,videoId,params),true);
         fs.writeFileSync(path.join(directory,'frame_1.jpg'),'verified frame');assert.equal(await shouldCollect(channel,videoId,params),false);
         fs.writeFileSync(video,'different media');assert.equal(await shouldCollect(channel,videoId,params),true);
@@ -709,4 +723,26 @@ test('processBatch succeeds when the only failures are unavailable videos', asyn
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
     fs.rmSync(channelDir, { recursive: true, force: true });
+});
+
+
+test('shared cache repairs rejected own destination but preserves configured user bytes', async () => {
+    for(const owned of [true,false]) {
+        const cache=makeTempDir('heatmap-cache-repair-'),shared=makeTempDir('heatmap-shared-repair-'),output=makeTempDir('heatmap-repair-output-'),frames=makeTempDir('heatmap-repair-frames-');
+        const name='Abc123Def45.mp4';fs.writeFileSync(path.join(cache,name),'rejected bytes');fs.writeFileSync(path.join(cache,'unrelated.mp4'),'sentinel');fs.writeFileSync(path.join(shared,name),'valid bytes');
+        if(owned)fs.writeFileSync(path.join(cache,'.owner.json'),JSON.stringify({schemaVersion:1,runId:path.basename(cache)}));
+        const previous=process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;const previousOwner=process.env.PIPELINE_OWNED_VIDEO_CACHE_RUN_ID;
+        try {
+            const {downloadVideo}=await loadModule({VIDEO_CACHE_DIR:cache,FRAMES_ROOT_DIR:frames,GDRIVE_REMOTE_PATH:undefined});process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR=shared;if(owned)process.env.PIPELINE_OWNED_VIDEO_CACHE_RUN_ID=path.basename(cache);else delete process.env.PIPELINE_OWNED_VIDEO_CACHE_RUN_ID;
+            const result=await downloadVideo('Abc123Def45',output,'360p',{validateMediaPath:async p=>fs.readFileSync(p,'utf8')==='valid bytes'});
+            assert.equal(fs.readFileSync(result,'utf8'),'valid bytes');assert.equal(fs.readFileSync(path.join(shared,name),'utf8'),'valid bytes');assert.equal(fs.readFileSync(path.join(cache,'unrelated.mp4'),'utf8'),'sentinel');
+            if(owned){assert.equal(result,path.join(cache,name));const history=fs.readdirSync(path.join(cache,'.rejected-history'));assert.equal(history.length,1);assert.equal(fs.readFileSync(path.join(cache,'.rejected-history',history[0]),'utf8'),'rejected bytes');}
+            else{assert.equal(result,path.join(shared,name));assert.equal(fs.readFileSync(path.join(cache,name),'utf8'),'rejected bytes');}
+            assert.equal(fs.readdirSync(cache).filter(x=>x.startsWith('.shared-repair-')).length,0);
+        } finally {
+            if(previous===undefined)delete process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;else process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR=previous;
+            if(previousOwner===undefined)delete process.env.PIPELINE_OWNED_VIDEO_CACHE_RUN_ID;else process.env.PIPELINE_OWNED_VIDEO_CACHE_RUN_ID=previousOwner;
+            for(const p of [cache,shared,output,frames])fs.rmSync(p,{recursive:true,force:true});
+        }
+    }
 });

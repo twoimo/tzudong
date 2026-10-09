@@ -1,0 +1,33 @@
+{
+  "exitCode": 0,
+  "stdoutSha256": "9233861157aef904091761a4acc7d462d264d245ab6ac9357a7794a068ba4fbd",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "fixtureOnly": true,
+  "dependencySource": "existing pinned original backend node_modules read-only symlink; no install",
+  "baselineGitReadOnly": true,
+  "ownedSourceHashes": {
+    "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js": "5c1bca0a0b28d778fd9eefcc69f72c83c88515a33e04ba10ad305ae25ae9c11a",
+    "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh": "b9d8337cc0b508a84592c4922ada84555268e257cfc91eef7aba28479da52206",
+    "backend/restaurant-evaluation/scripts/12-transform.py": "ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4",
+    "backend/package.json": "f15c080d1bcccd8eaf3c86dd03d9ad39bafe2992048dc1e129fd0a2e17f95201",
+    "backend/restaurant-evaluation/scripts/parse_laaj_evaluation.py": "e7ee9245b6848c265e68c99e6793f81666d21d10e4ce81b4a229d6b101007e16",
+    "backend/restaurant-evaluation/scripts/gemini_api_request.mjs": "b8e39c21c89ccbc2c973e5adf21274b6a4e2880e0713a1a28a72d7e0391ad46e",
+    "backend/restaurant-evaluation/prompts/evaluation_prompt.txt": "cfb8224aec2a74677f9a2bfd3d3504de053d85ef047340f440d546f578c1ad59",
+    "backend/bin/stage_cache.py": "d61abf5bac45001a2380bf6cff1e9795da965eb865a6810418e60a99015a3ad2",
+    "backend/bin/run_parallel_laaj.py": "9cd34ab9e6a2407a114c3393bd3250636bc60a0a9b91f5a09dd94084664afdab",
+    "backend/utils/stage_cache.py": "10ed8686fe3be87e0d447ff6163eee08303a9b1537e541b81123ccb4ac50322b",
+    "backend/utils/jsonl_utils.py": "c6038dba73205181cbf446e9be2be0a3c4342e41da8826787898f4d13915a96d",
+    "backend/utils/provider_budget.py": "e4d8e3b282913535bc8b3ea0999705c485c89ea4480c763e026cefc8f0dc4e8e",
+    "backend/utils/provider-budget.mjs": "f78f11fd08e63a643ed3aaaf17468542552edb14b2e95eee428bf50fc4050958",
+    "backend/utils/gemini-client.mjs": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+    "backend/utils/resource-budget.mjs": "44405bcc6c1ed4b8ea7a99cce4dbcf4b9dae556df22d3bb36cc1c76deedf08f7",
+    "backend/utils/frame-receipt.mjs": "da6e4dbdc70e813bce3eda04fec6f6b91dc19a1494453d6805bf0b4da70357e2",
+    "backend/utils/frame_lock_server.py": "863623b523bfeb751357de3929d33d1dc119f6f3a695cf32eec3d8388b0c76bf",
+    "backend/utils/privacy-log.mjs": "393f853a76ac90a98027f9b5e4c57c3c0b2de3ce8a2b7772b33132aff481625f",
+    "backend/utils/media_lease_exec.py": "21f85ed83fe458698bbe0abb9845ff2610055a1080a69b0b13a214b91b0d5bd2",
+    "backend/utils/tests/frame-receipt.test.mjs": "5680e0f94906338312fd5663ab86c10f193e3a1f6a76a0f640bc019600eb9e50",
+    "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js": "711b62bcbc68eb1611cff5838e25f6696c145895158f6bd15687db65be815783",
+    "backend/restaurant-crawling/scripts/split_video_chunks.mjs": "a3b3bcb3e69811e79fee4ee8021c4de41d98cc9005e068a36af87b80c3a635ce",
+    "backend/restaurant-crawling/scripts/tests/test_split_video_chunks_timeout.mjs": "6a3407f1b685d9b5ac57ca914092477cb808f83949e96f08c793091f960dce1a"
+  }
+}

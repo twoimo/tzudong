@@ -1,0 +1,10 @@
+{
+  "pairs": 7,
+  "observations": 28,
+  "allOutputsEqual": true,
+  "originalMediaUnchanged": true,
+  "isolatedWorkDirectoryRemoved": true,
+  "providerCalls": 0,
+  "downloads": 0,
+  "fullPipelinePerformanceVerified": false
+}

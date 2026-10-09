@@ -49,3 +49,32 @@ test('a standalone network limit bounds work without MAX_JOBS', async () => {
     assert.equal(networkConcurrency(4, { PIPELINE_NETWORK_JOBS: '100' }), 4);
     assert.equal(networkConcurrency(4, {}), 4);
 });
+
+test('shared media invocation binds one four-slot context without altering local limits', async () => {
+    const {sharedMediaInvocation, sharedMediaLimit} = await import('../resource-budget.mjs');
+    const env = {PIPELINE_MEDIA_RESOURCE_DIR:'/owned/fixture/context', RUN_DAILY_PYTHON:'/owned/python3'};
+    const value=sharedMediaInvocation('/owned/ffmpeg',['-frames:v','1'],env);
+    assert.equal(sharedMediaLimit,4);
+    assert.equal(value.file,'/owned/python3');
+    assert.deepEqual(value.args.slice(1),['/owned/fixture/context','--parent',String(process.pid),'--','/owned/ffmpeg','-frames:v','1']);
+    assert.throws(()=>sharedMediaInvocation('ffmpeg',[],{PIPELINE_MEDIA_RESOURCE_DIR:'relative'}),/MEDIA_SHARED_CONTEXT_INVALID/);
+});
+
+test('two project worktrees resolve one default context without creating runtime state', async () => {
+    const fs=await import('node:fs');const os=await import('node:os');const path=await import('node:path');const {pathToFileURL}=await import('node:url');
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'tzudong-media-context-'));
+    try {
+        const common=path.join(root,'common-git');fs.mkdirSync(common);
+        const contexts=[];
+        for(const name of ['a','b']) {
+            const checkout=path.join(root,name),metadata=path.join(common,'worktrees',name);
+            fs.mkdirSync(path.join(checkout,'backend/utils'),{recursive:true});fs.mkdirSync(metadata,{recursive:true});
+            fs.writeFileSync(path.join(checkout,'.git'),`gitdir: ${metadata}\n`);fs.writeFileSync(path.join(metadata,'commondir'),'../..\n');
+            const target=path.join(checkout,'backend/utils/resource-budget.mjs');fs.copyFileSync(new URL('../resource-budget.mjs',import.meta.url),target);
+            const {sharedMediaInvocation}=await import(pathToFileURL(target).href);
+            contexts.push(sharedMediaInvocation('ffmpeg',[],{}).args[1]);
+        }
+        assert.equal(contexts[0],contexts[1]);assert.equal(contexts[0],path.join(fs.realpathSync(common),'tzudong-media-leases-v1'));
+        assert.equal(fs.existsSync(contexts[0]),false);
+    }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

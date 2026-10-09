@@ -6,6 +6,7 @@ import { RECORD_ACTION_CONFIRMATION, type RecordActionReceipt } from './record-a
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
 
 const labels: Record<string, string> = {
   restaurant: '맛집', submission: '제보', item: '영상 항목', review: '리뷰', recommendation: '추천',
@@ -28,7 +29,10 @@ function ProposedValue({ value }: { value: unknown }) {
 }
 
 export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => void, options: { recover?: boolean } = {}) {
+  const { user, isAdmin } = useAuth();
+  const [binding, setBinding] = useState<string | null>(null);
   const [client] = useState(() => createRecordActionClient({
+    actor: null,
     onInvalidate: () => window.dispatchEvent(new Event(RECORD_VIEWS_INVALIDATED_EVENT)),
     onApplied: () => window.dispatchEvent(new Event(RECORD_ACTION_APPLIED_EVENT)),
     storage: {
@@ -40,7 +44,20 @@ export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => v
   useEffect(() => { client.setOnRecovered(onRecovered); }, [client, onRecovered]);
   const state = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
   const [confirmation, setConfirmation] = useState('');
-  useEffect(() => { if (options.recover) void client.recover(); }, [client, options.recover]);
+  useEffect(() => {
+    let current = true;
+    client.setActor(null); setBinding(null);
+    if (user?.id && isAdmin) {
+      // Domain-separated opaque binding; no email, session token or payload enters WebStorage.
+      void crypto.subtle.digest('SHA-256', new TextEncoder().encode(`admin-record-recovery:v2:${user.id}`)).then(bytes => {
+        if (!current) return;
+        const value = Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+        client.setActor(value); setBinding(value);
+      }).catch(() => { /* No usable binding means fail closed. */ });
+    }
+    return () => { current = false; client.setActor(null); };
+  }, [client, user?.id, isAdmin]);
+  useEffect(() => { if (binding && options.recover) void client.recover(); }, [client, binding, options.recover]);
   useEffect(() => { setConfirmation(''); }, [state.request?.operationId]);
   const parts = (state.request?.action ?? state.receipt?.action ?? '').split('.');
   const canCancel = client.canCancel() && !['checking', 'applying'].includes(state.phase);

@@ -1,0 +1,9 @@
+{
+  "status": "preexisting service-role manual mutation blocked",
+  "sqlState": "42501",
+  "object": "admin_evaluation_catalog_revision",
+  "m1SourceSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+  "operatingWrites": false,
+  "additionalGrants": false,
+  "limits": "Preview/tick eligibility migration and owner-principal CAS/stop checks do not fix the existing invoker catalog-row lock permission gap."
+}

@@ -324,7 +324,8 @@ def run_once(rpc, *, recheck_limit=0, crawling_root=None, evaluator=evaluate, re
             raise WorkerFailure('result_unconfirmed') from None
         if not isinstance(readback,dict) or readback.get('state') not in terminal:
             raise WorkerFailure('result_unconfirmed') from None
-    rpc('restaurant_review_automation_tick',{'request_id':str(uuid.uuid4())})
+    # Completion/readback reconciles this claimed item; another general tick
+    # would admit an unrelated second batch beyond this invocation's budget.
     return summary
 
 

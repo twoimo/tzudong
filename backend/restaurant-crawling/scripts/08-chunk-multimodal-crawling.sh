@@ -1040,8 +1040,15 @@ process_channel() {
             --asset "$SCRIPT_DIR/final_merge_chunk.mjs" --asset "$PROJECT_ROOT/utils/gemini-client.mjs"
             --asset "$PROJECT_ROOT/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/utils/provider_budget.py"
             --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"
+            --setting "${WEB_GEMINI_MODEL:-gemini-3.7-flash}" --setting "${FORCE_WEB_FALLBACK:-0}"
             --setting "$GEMINI_CHUNK_THINKING_LEVEL" --setting "$GEMINI_FINAL_MERGE_THINKING_LEVEL"
             --output "$crawling_file")
+        local visual_receipt_input="$full_data_path/visual-location/${video_id}.jsonl"
+        if [ -f "$visual_receipt_input" ]; then
+            cache_args+=(--asset "$visual_receipt_input" --setting "visual-location:present")
+        else
+            cache_args+=(--setting "visual-location:absent")
+        fi
         local force_args=()
         [ "$FORCE_MODE" = true ] && force_args+=(--force)
 

@@ -1,4 +1,4 @@
-import { mediaPool, boundedLimit, mapBounded, networkConcurrency } from '../../utils/resource-budget.mjs';
+import { mediaPool, boundedLimit, mapBounded, networkConcurrency, sharedMediaInvocation } from '../../utils/resource-budget.mjs';
 import { mediaInputHash, frameInputFingerprint, reusableFrames, withFrameWriter, publishFrames } from '../../utils/frame-receipt.mjs';
 /**
  * 유튜브 히트맵 기반 고화질 프레임 추출 및 자동 수집기
@@ -202,7 +202,10 @@ function mediaToolReportsVersion(result) {
 
 function probeMediaTool(file) {
     try {
-        return spawnSync(file, ['-version'], {
+        // Version probes are native media processes too; do not bypass the
+        // shared cap while another process already occupies all four slots.
+        const invocation = sharedMediaInvocation(file, ['-version'], process.env, { probe: true });
+        const result = spawnSync(invocation.file, invocation.args, {
             shell: false,
             windowsHide: true,
             encoding: 'utf8',
@@ -210,6 +213,9 @@ function probeMediaTool(file) {
             stdio: ['ignore', 'pipe', 'pipe'],
             env: getStageEnvironment(),
         });
+        const stderr = String(result.stderr || '');
+        return { ...result, resourceBusy: result.error?.code === 'ETIMEDOUT'
+            && stderr.includes('MEDIA_SHARED_LEASE_WAITING') && !stderr.includes('MEDIA_SHARED_LEASE_ACQUIRED') };
     } catch {
         return { status: 1, error: new Error('FRAME_PROCESS_START_FAILED'), stdout: '', stderr: '' };
     }
@@ -220,6 +226,8 @@ function isRunnableMediaTool(file) {
         return false;
     }
     const result = probeMediaTool(file);
+    if (result.resourceBusy) throw createOperationError('FRAME_MEDIA_RESOURCE_BUSY');
+    if (String(result.stderr || '').includes('MEDIA_SHARED_LEASE_UNAVAILABLE')) throw createOperationError('FRAME_MEDIA_LEASE_UNAVAILABLE');
     if (result.error && (result.error.code === 'ENOENT' || result.error.code === 'EACCES')) {
         return false;
     }
@@ -416,12 +424,13 @@ function runProcess(file, args, options = {}) {
     return new Promise((resolve, reject) => {
         let child;
         try {
-            child = spawn(file, args, {
+            const invocation = options.sharedMedia ? sharedMediaInvocation(file, args) : { file, args };
+            child = spawn(invocation.file, invocation.args, {
                 shell: false,
                 windowsHide: true,
                 detached: process.platform !== 'win32',
                 env,
-                stdio: ['ignore', 'pipe', 'pipe'],
+                stdio: [options.sharedMedia ? 'pipe' : 'ignore', 'pipe', 'pipe'],
             });
         } catch {
             reject(createOperationError('FRAME_PROCESS_START_FAILED'));
@@ -1092,9 +1101,17 @@ async function shouldCollect(channelName, videoId, params) {
     const framesDir = getFramesOutputDir(channelName, videoId, metaRecollectId);
     if (fs.existsSync(framesDir)) {
         try {
-            const cacheDirectory = requireExistingDirectory(VIDEO_CACHE_DIR);
-            const names = fs.readdirSync(cacheDirectory).filter(name => name.startsWith(videoId));
-            const video = await pickUsableLocalVideoCandidate(videoId, names, cacheDirectory, 'Cache', hasVideoStream);
+            let video = null;
+            if (fs.existsSync(VIDEO_CACHE_DIR)) {
+                const cacheDirectory = requireExistingDirectory(VIDEO_CACHE_DIR);
+                const names = fs.readdirSync(cacheDirectory).filter(name => name.startsWith(videoId));
+                video = await pickUsableLocalVideoCandidate(videoId, names, cacheDirectory, 'Cache', hasVideoStream);
+            }
+            const sharedRoot = process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;
+            if (!video && sharedRoot && fs.existsSync(sharedRoot)) {
+                const shared = requireExistingDirectory(sharedRoot);
+                video = await pickUsableLocalVideoCandidate(videoId, fs.readdirSync(shared).filter(name => name.startsWith(videoId)), shared, 'SharedCache', hasVideoStream);
+            }
             const heatmapPath = getHeatmapOutputPath(channelName, videoId);
             const heatmap = fs.existsSync(heatmapPath) ? JSON.parse(fs.readFileSync(heatmapPath,'utf8').trim().split('\n').pop()) : null;
             if (!video || !heatmap || heatmap.recollect_id !== metaRecollectId) return true;
@@ -1629,8 +1646,34 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
         const candidates = fs.readdirSync(sharedDirectory).filter(name => name.startsWith(videoId));
         const shared = await pickUsableLocalVideoCandidate(videoId, candidates, sharedDirectory, 'SharedCache', validateMediaPath);
         if (shared) {
-            copyDownloadedVideoToCache(shared, sharedDirectory, cacheDirectory);
-            return resolveContainedPath(cacheDirectory, path.basename(shared));
+            const destination = resolveContainedPath(cacheDirectory, path.basename(shared));
+            if (fs.existsSync(destination)) {
+                let owned = false;
+                try {
+                    const marker = resolveContainedPath(cacheDirectory, '.owner.json');
+                    assertExistingPathContained(cacheDirectory, marker);
+                    const owner = JSON.parse(fs.readFileSync(marker, 'utf8'));
+                    owned = owner.schemaVersion === 1 && owner.runId === path.basename(cacheDirectory) && owner.runId === process.env.PIPELINE_OWNED_VIDEO_CACHE_RUN_ID;
+                } catch { /* A configured user cache is never replaced. */ }
+                if (!owned) return shared;
+            }
+            const staged = fs.mkdtempSync(path.join(cacheDirectory, '.shared-repair-'));
+            try {
+                const replacement = path.join(staged, path.basename(shared));
+                const expectedHash = await mediaInputHash(shared);
+                fs.copyFileSync(shared, replacement);
+                if (!await validateMediaPath(replacement) || expectedHash !== await mediaInputHash(replacement) || expectedHash !== await mediaInputHash(shared)) throw createOperationError('FRAME_SHARED_CACHE_CHANGED');
+                if (fs.existsSync(destination)) {
+                    assertExistingPathContained(cacheDirectory, destination);
+                    const history = ensureContainedDirectory(cacheDirectory, '.rejected-history');
+                    const preserved = resolveContainedPath(history, `${path.basename(shared)}.${await mediaInputHash(destination)}`);
+                    if (!fs.existsSync(preserved)) fs.copyFileSync(destination, preserved, fs.constants.COPYFILE_EXCL);
+                }
+                assertPathContainmentBeforeMutation(cacheDirectory, destination);
+                fs.renameSync(replacement, destination);
+                if (!await validateMediaPath(destination) || expectedHash !== await mediaInputHash(destination)) throw createOperationError('FRAME_SHARED_CACHE_READBACK_FAILED');
+                return destination;
+            } finally { removeContainedDirectory(cacheDirectory, staged); }
         }
     }
 
@@ -1729,6 +1772,7 @@ async function frameSourceContext(videoPath) {
         mediaInputHash(__filename),
         mediaInputHash(fileURLToPath(new URL('../../utils/frame-receipt.mjs', import.meta.url))),
         mediaInputHash(fileURLToPath(new URL('../../utils/resource-budget.mjs', import.meta.url))),
+        mediaInputHash(fileURLToPath(new URL('../../utils/media_lease_exec.py', import.meta.url))),
         mediaInputHash(fileURLToPath(new URL('../../utils/frame_lock_server.py', import.meta.url))),
     ]));
 
@@ -1799,7 +1843,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                     '-frame_pts', '1',
                     outputPattern,
                 ],
-                { timeoutMs: FFMPEG_TIMEOUT_MS }
+                { timeoutMs: FFMPEG_TIMEOUT_MS, sharedMedia: true }
             );
 
             // 파일명 정리: frame_1.ext -> 정확한 시간(초).ext 로 변경
@@ -1965,7 +2009,9 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
             // The segment extractor validates source/configuration and outputs.
 
             videoPath = await acquireVideo(videoId, tempDir, currentQuality);
-            if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR)) {
+            const sharedCacheRoot = process.env.PIPELINE_SHARED_VIDEO_CACHE_DIR;
+            const sharedCacheHit = sharedCacheRoot && videoPath && videoPath.startsWith(path.resolve(sharedCacheRoot) + path.sep);
+            if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR) && !sharedCacheHit) {
                 downloadPerformed = true;
             }
 

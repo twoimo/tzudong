@@ -1,3 +1,4 @@
+import { admitStoryboardRagCandidates } from '@/lib/admin/storyboard/rag-candidate-admission';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -172,10 +173,8 @@ export async function POST(request: NextRequest) {
       id: row.id, content: `${row.title}\n\n${row.content}`, metadata: row.metadata ?? {},
       denseScore: null, sparseScore: null, weightedScore: null,
       lexicalMatches: tokens.filter((token) => `${row.title} ${row.content}`.toLowerCase().includes(token)).length,
-    })).filter((row) => row.lexicalMatches > 0)
-      .sort((a, b) => b.lexicalMatches - a.lexicalMatches || a.id.localeCompare(b.id))
-      .slice(0, parsed.data.candidateCount);
-    const candidates = (data ?? []).map((row) => ({
+    })).filter((row) => row.lexicalMatches > 0);
+    const denseCandidates = (data ?? []).map((row) => ({
       id: row.id,
       content: `${row.title}\n\n${row.content}`,
       metadata: row.metadata ?? {},
@@ -184,9 +183,7 @@ export async function POST(request: NextRequest) {
       weightedScore: row.weighted_score,
     }));
 
-    const ids = new Set(candidates.map((row) => row.id));
-    candidates.push(...legacyCandidates.filter((row) => !ids.has(row.id)));
-    candidates.splice(50);
+    const candidates = admitStoryboardRagCandidates(parsed.data.query, tokens, denseCandidates, legacyCandidates);
     if (candidates.length === 0) {
       const payload = { results: [], traceId, trace: [{ step: 'supabase_hybrid_rpc', status: 'passed', detail: 'no candidates' }] };
       return NextResponse.json(

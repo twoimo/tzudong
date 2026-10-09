@@ -1,3 +1,5 @@
+if (typeof window !== 'undefined') throw new Error('Storyboard RAG capability is server-only.');
+
 type RagWorkerEmbedItem = {
   dense: number[];
   sparse: Record<string, number>;
@@ -49,22 +51,41 @@ export class StoryboardRagWorkerError extends Error {
   }
 }
 
-function getStoryboardRagWorkerUrl() {
-  const raw = process.env.STORYBOARD_RAG_WORKER_URL?.trim();
+function getStoryboardRagWorkerUrl(env: NodeJS.ProcessEnv) {
+  const raw = env.STORYBOARD_RAG_WORKER_URL?.trim();
   if (!raw) {
     throw new StoryboardRagWorkerError('required_storyboard_rag_worker_url_missing', 503);
   }
-  return raw.replace(/\/+$/, '');
+  let url: URL;
+  try { url = new URL(raw); } catch { throw new StoryboardRagWorkerError('required_worker_transport_invalid'); }
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (url.username || url.password || url.search || url.hash || url.pathname !== '/'
+      || (url.protocol !== 'https:' && !(loopback && url.protocol === 'http:'))) {
+    throw new StoryboardRagWorkerError('required_worker_transport_invalid');
+  }
+  return url.origin;
+}
+
+export function getStoryboardRagWorkerConnection(env: NodeJS.ProcessEnv = process.env) {
+  const token = env.STORYBOARD_RAG_WORKER_TOKEN?.trim() ?? '';
+  const outbound = ['GEMINI_CREDITS_API_KEY', 'STORYBOARD_GEMINI_API_KEY', 'GEMINI_API_KEY']
+    .map((name) => env[name]?.trim()).filter(Boolean);
+  if (!/^[A-Za-z0-9_-]{43,128}$/.test(token) || outbound.includes(token)) {
+    throw new StoryboardRagWorkerError('required_worker_capability_missing');
+  }
+  return { url: getStoryboardRagWorkerUrl(env), headers: { Authorization: `Bearer ${token}` } };
 }
 
 async function callStoryboardRagWorker<T>(path: string, body: unknown): Promise<T> {
+  const connection = getStoryboardRagWorkerConnection();
   const controller = new AbortController();
   const timeoutMs = Math.max(1000, Number(process.env.STORYBOARD_RAG_WORKER_TIMEOUT_MS) || 120_000);
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${getStoryboardRagWorkerUrl()}${path}`, {
+    const response = await fetch(`${connection.url}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...connection.headers },
+      redirect: 'error',
       body: JSON.stringify(body),
       signal: controller.signal,
       cache: 'no-store',

@@ -14,9 +14,9 @@ type RelatedQuery=PromiseLike<Result>&{
   select(columns:string):RelatedQuery;in(column:string,values:string[]):RelatedQuery;
   order(column:string,options:{ascending:boolean}):RelatedQuery;range(from:number,to:number):RelatedQuery;
 };
-type WarningMode='stream'|'rpc'|'raw';
-type WarningReadPath='WARNING_STREAM'|'WARNING_RPC'|'WARNING_STREAM_RUNTIME'|'WARNING_STREAM_UNICODE'|'WARNING_STREAM_CAPACITY'|'WARNING_RAW_FLAT'|'WARNING_RAW_GROUPS'|'WARNING_STREAM_RAW_CAPACITY';
-const warningMode=():WarningMode=>process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='rpc'?'rpc':process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='raw'?'raw':'stream';
+type WarningMode='auto'|'stream'|'rpc'|'raw';
+type WarningReadPath='WARNING_STREAM'|'WARNING_RPC'|'WARNING_STREAM_RUNTIME'|'WARNING_STREAM_UNICODE'|'WARNING_STREAM_CAPACITY'|'WARNING_RAW_FLAT'|'WARNING_RAW_GROUPS'|'WARNING_STREAM_RAW_CAPACITY'|'WARNING_STREAM_RAW_UNAVAILABLE';
+const warningMode=():WarningMode=>process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='stream'?'stream':process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='rpc'?'rpc':process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='raw'?'raw':'auto';
 export interface EvaluationPageClient {
   rpc(name:string,args?:Record<string,unknown>):PromiseLike<Result>;
   from(name:'admin_evaluation_related_rows'):RelatedQuery;
@@ -29,7 +29,14 @@ export function supportsEvaluationWarningRuntime(versions:Readonly<Record<string
   return versions.unicode==='17.0'&&Boolean(versions.icu?.startsWith('78.'))&&locale==='en-US';
 }
 export function selectEvaluationWarningReadPath(mode:WarningMode,runtimeSupported=supportsEvaluationWarningRuntime()):WarningReadPath {
-  return mode==='raw'?'WARNING_RAW_GROUPS':mode==='stream'?'WARNING_STREAM':runtimeSupported?'WARNING_RPC':'WARNING_STREAM_RUNTIME';
+  return mode==='auto'||mode==='raw'?'WARNING_RAW_GROUPS':mode==='stream'?'WARNING_STREAM':runtimeSupported?'WARNING_RPC':'WARNING_STREAM_RUNTIME';
+}
+
+// A schema-cache miss must name this exact function and argument set.
+// Neither a code alone nor another unavailable function permits fallback.
+function isMissingRawWarningRpc(result:Result) {
+  return result.data===null&&result.error?.code==='PGRST202'
+    &&result.error.message==='Could not find the function public.admin_evaluation_raw_warning_groups(after_cursor, batch_size, expected_revision, page_ids) in the schema cache';
 }
 
 async function readStreamWarnings(client:EvaluationPageClient,records:ReturnType<typeof withAdminEvaluationDisplayName>[]) {
@@ -55,10 +62,9 @@ function validateStats(value:unknown) {
 }
 
 export async function readDatabaseEvaluationPage(client:EvaluationPageClient,query:EvaluationQuery,limit:number,cursor:string|null,expectedRevision?:string,mode:WarningMode=warningMode()) {
-  // Raw transport remains opt-in pending the adaptive codec admission evidence.
-  // All warning decisions stay in JS; the default is the compatibility stream.
-  // The old normalized SQL adapter still needs explicit `rpc` opt-in and its
-  // original runtime admission. Explicit `stream` is the compatibility switch.
+  // Default to bounded raw transport with unchanged JS warning semantics.
+  // Only exact first-request absence permits automatic compatibility. Explicit
+  // raw stays fail-closed; stream/rpc preserve their existing admission.
   let warningReadPath=selectEvaluationWarningReadPath(mode);
   if(!Number.isInteger(limit)||limit<1||limit>200)throw new Error('EVALUATION_QUERY_INVALID');
   const key=createHash('sha256').update(JSON.stringify(query)).digest('hex');
@@ -97,6 +103,9 @@ export async function readDatabaseEvaluationPage(client:EvaluationPageClient,que
         page_ids:full.map(({record})=>record.id),expected_revision:page.revision,after_cursor:afterCursor,batch_size:1000,
       });
       if(block.error){
+        if(mode==='auto'&&request===0&&isMissingRawWarningRpc(block)){
+          warningReadPath='WARNING_STREAM_RAW_UNAVAILABLE';break;
+        }
         if(block.data===null&&block.error.code==='P0001'&&block.error.message==='EVALUATION_CURSOR_STALE')throw new Error('EVALUATION_CURSOR_STALE');
         if(block.data===null&&block.error.code==='P0001'&&block.error.message==='EVALUATION_WARNING_RAW_CAPACITY_EXCEEDED'){
           warningReadPath='WARNING_STREAM_RAW_CAPACITY';break;

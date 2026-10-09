@@ -9,10 +9,11 @@ const row=(n:number)=>({id:id(n),origin_name:'fixture',approved_name:'fixture',n
 const stats={total:201,pending:201,approved:0,hold:0,db_conflict:0,ready_for_approval:0,unconfirmed_map:0,missing:0,not_selected:0,deleted:0};
 function fixture(related=Array.from({length:201},(_,i)=>row(i))) {
   let revision='1';let finishRevision:string|null=null;let bad:unknown=null;let loads=0;const ranges:number[][]=[];
-  let warningReply:unknown=null;let relatedReply:unknown=null;let warningThrow=false;
+  let rawReply:unknown=null;let warningReply:unknown=null;let relatedReply:unknown=null;let warningThrow=false;
   const rpc=mock(async(name:string,args?:Record<string,unknown>)=>{
     if(name==='admin_evaluation_revision')return {data:finishRevision??revision,error:null};
     if(name==='admin_evaluation_raw_warning_groups'){
+      if(rawReply)return rawReply;
       const groups=new Map<string,{attrs:Record<string,unknown>;count:number;firstOrder:number;selfIds:string[];samples:{id:string;sourceOrder:number}[]}>();
       for(const [index,item] of related.entries()){
         const source=item as Record<string,unknown>;const attrs:Record<string,unknown>={};
@@ -35,7 +36,7 @@ function fixture(related=Array.from({length:201},(_,i)=>row(i))) {
       range:(from:number,to:number)=>{ranges.push([from,to]);return {then:(resolve:(value:unknown)=>unknown)=>Promise.resolve(relatedReply??{data:related.slice(from,to+1),error:null}).then(resolve)};}};
     return builder;
   }} as unknown as EvaluationPageClient;
-  return {client,rpc,ranges,setWarning:(value:unknown)=>{warningReply=value;},setRelated:(value:unknown)=>{relatedReply=value;},throwWarning:()=>{warningThrow=true;},loads:()=>loads,setRevision:(r:string)=>{revision=r;},setFinish:(r:string)=>{finishRevision=r;},setBad:(r:unknown)=>{bad=r;}};
+  return {client,rpc,ranges,setRaw:(value:unknown)=>{rawReply=value;},setWarning:(value:unknown)=>{warningReply=value;},setRelated:(value:unknown)=>{relatedReply=value;},throwWarning:()=>{warningThrow=true;},loads:()=>loads,setRevision:(r:string)=>{revision=r;},setFinish:(r:string)=>{finishRevision=r;},setBad:(r:unknown)=>{bad=r;}};
 }
 
 describe('DB-backed bounded evaluation pages',()=>{
@@ -47,6 +48,7 @@ describe('DB-backed bounded evaluation pages',()=>{
     expect(selectEvaluationWarningReadPath('stream',false)).toBe('WARNING_STREAM');
     expect(selectEvaluationWarningReadPath('rpc',false)).toBe('WARNING_STREAM_RUNTIME');
     expect(selectEvaluationWarningReadPath('raw',false)).toBe('WARNING_RAW_GROUPS');
+    expect(selectEvaluationWarningReadPath('auto',false)).toBe('WARNING_RAW_GROUPS');
   });
   test('reads only the page and bounded database warning aggregates across the page boundary',async()=>{
     const f=fixture();const page=await readDatabaseEvaluationPage(f.client,query,1,null,undefined,'rpc');
@@ -64,15 +66,16 @@ describe('DB-backed bounded evaluation pages',()=>{
     expect(page.warnings[id(0)].sameVideo.count).toBe(200);
     expect(f.rpc.mock.calls.map(call=>call[0])).toEqual(['admin_evaluation_page','admin_evaluation_revision']);
   });
-  test('defaults to the compatibility stream until adaptive admission is approved',async()=>{
+  test('defaults to bounded raw groups without the runtime normalization gate',async()=>{
     const f=fixture();const page=await readDatabaseEvaluationPage(f.client,query,1,null);
-    expect(page.warningReadPath).toBe('WARNING_STREAM');expect(f.ranges).toEqual([[0,199],[200,399]]);
+    expect(page.warningReadPath).toBe('WARNING_RAW_GROUPS');expect(f.ranges).toEqual([]);
+    const baseline=await readDatabaseEvaluationPage(fixture().client,query,1,null,undefined,'stream');expect(page.warnings).toEqual(baseline.warnings);
     expect(page.warnings[id(0)].sameVideo.count).toBe(200);
-    expect(f.rpc.mock.calls.map(call=>call[0])).toEqual(['admin_evaluation_page','admin_evaluation_revision']);
+    expect(f.rpc.mock.calls.map(call=>call[0])).toEqual(['admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_revision']);
   });
   test('only exact SQL Unicode/capacity admission failures use the complete existing stream',async()=>{
     const related=Array.from({length:201},(_,i)=>({...row(i),approved_name:'a\u0897',origin_name:'a\u0897',status:i>=199?'deleted':'pending'}));
-    const baseline=fixture(related);const expected=await readDatabaseEvaluationPage(baseline.client,query,1,null);
+    const baseline=fixture(related);const expected=await readDatabaseEvaluationPage(baseline.client,query,1,null,undefined,'stream');
     expect(expected.warnings[id(0)].sameVideo.count).toBe(198);
     expect(expected.warnings[id(0)].identity.some(warning=>warning.rule==='deleted_same_video_identity')).toBe(true);
     for(const [message,path] of [['EVALUATION_WARNING_UNICODE_UNSUPPORTED','WARNING_STREAM_UNICODE'],['EVALUATION_WARNING_CAPACITY_EXCEEDED','WARNING_STREAM_CAPACITY']]){
@@ -127,6 +130,17 @@ describe('DB-backed bounded evaluation pages',()=>{
     await expect(cache.read(f.client,'tenant',query,1,pages[0].nextCursor)).rejects.toThrow('EVALUATION_CURSOR_STALE');
     await cache.read(f.client,'other-tenant',query,1,null);expect(f.loads()).toBe(4);
   });
+  test('old database compatibility is revision scoped and never sticks after RPC availability changes',async()=>{
+    const f=fixture();const cache=new DatabaseEvaluationPageCache();
+    const missing={data:null,error:{code:'PGRST202',message:'Could not find the function public.admin_evaluation_raw_warning_groups(after_cursor, batch_size, expected_revision, page_ids) in the schema cache'}};
+    f.setRaw(missing);const legacy=await cache.read(f.client,'legacy',query,1,null);
+    expect(legacy.warningReadPath).toBe('WARNING_STREAM_RAW_UNAVAILABLE');
+    await cache.read(f.client,'legacy',query,1,null);expect(f.loads()).toBe(1);
+    f.setRevision('2');f.setRaw(null);const prepared=await cache.read(f.client,'legacy',query,1,null);
+    expect(prepared.warningReadPath).toBe('WARNING_RAW_GROUPS');expect(prepared.warnings).toEqual(legacy.warnings);expect(f.loads()).toBe(2);
+    f.setRevision('3');f.setRaw(missing);f.setRelated({data:null,error:{code:'42501',message:'permission denied'}});
+    await expect(cache.read(f.client,'legacy',query,1,null)).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');
+  });
   test('never caches a failed or inconsistent load',async()=>{
     const cache=new DatabaseEvaluationPageCache();const f=fixture();f.setFinish('2');
     await expect(cache.read(f.client,'tenant',query,1,null)).rejects.toThrow('EVALUATION_CURSOR_STALE');
@@ -175,13 +189,38 @@ describe('raw warning server transport', () => {
     expect(f.calls[1]).toEqual({ name: 'admin_evaluation_raw_warning_groups', args: { page_ids: [id(0)], expected_revision: '1', after_cursor: null, batch_size: 1000 } });
   });
 
+  const missing = { data:null,error:{code:'PGRST202',message:'Could not find the function public.admin_evaluation_raw_warning_groups(after_cursor, batch_size, expected_revision, page_ids) in the schema cache'} };
+  test('default preserves all Unicode/deleted warnings when the old database has no raw RPC', async () => {
+    const legacy=fixture([missing]);const actual=await readDatabaseEvaluationPage(legacy.client,query,1,null);
+    const expected=await readDatabaseEvaluationPage(fixture().client,query,1,null,undefined,'stream');
+    expect(actual.warnings).toEqual(expected.warnings);expect(actual.warningReadPath).toBe('WARNING_STREAM_RAW_UNAVAILABLE');expect(legacy.streams()).toBe(2);
+    expect(legacy.calls.map(call=>call.name)).toEqual(['admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_revision']);
+    const stale=fixture([missing]);stale.setFinal('2');await expect(readDatabaseEvaluationPage(stale.client,query,1,null)).rejects.toThrow('EVALUATION_CURSOR_STALE');
+    const explicit=fixture([missing]);await expect(readDatabaseEvaluationPage(explicit.client,query,1,null,undefined,'raw')).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');expect(explicit.streams()).toBe(0);
+  });
+  test('automatic raw never disguises errors or disappearance after a partial batch', async () => {
+    const first={data:{...data,tuples:data.tuples.slice(0,150),hasMore:true,cursor:cursor(150)},error:null};
+    for(const replies of [[first,missing],[new Error('timeout')],
+      [{...missing,error:{...missing.error,code:'42501'}}],[{...missing,error:{...missing.error,code:'57014'}}],
+      [{...missing,error:{...missing.error,message:missing.error.message.replace('raw_warning_groups','warning_groups')}}],
+      [{...missing,data:{}}],[{data:null,error:{code:'PGRST202',message:'function unavailable'}}],
+      [{data:{...data,padding:'x'.repeat(2097152)},error:null}]]){
+      const f=fixture(replies);await expect(readDatabaseEvaluationPage(f.client,query,1,null)).rejects.toThrow();expect(f.streams()).toBe(0);
+    }
+  });
+  test('default full warning output equals stream on the Unicode fixture', async () => {
+    const f=fixture();const actual=await readDatabaseEvaluationPage(f.client,query,1,null);
+    const expected=await readDatabaseEvaluationPage(fixture().client,query,1,null,undefined,'stream');
+    expect(actual.warnings).toEqual(expected.warnings);expect(actual.warningReadPath).toBe('WARNING_RAW_FLAT');expect(f.streams()).toBe(0);
+  });
+
   test('advances bound cursor and restarts complete stream only on exact capacity refusal after a partial batch', async () => {
     const first = { data: { ...data, tuples:data.tuples.slice(0,150), hasMore: true, cursor:cursor(150) }, error: null };
     const second = { data: { ...data, tuples:data.tuples.slice(150), rowOffset:150 }, error: null };
     const good = fixture([first, second]); const raw = await readDatabaseEvaluationPage(good.client, query, 1, null, undefined, 'raw');
     expect(good.calls[2].args?.after_cursor).toEqual(cursor(150));
     const fallback = fixture([first, { data: null, error: { code: 'P0001', message: 'EVALUATION_WARNING_RAW_CAPACITY_EXCEEDED' } }]);
-    const page = await readDatabaseEvaluationPage(fallback.client, query, 1, null, undefined, 'raw');
+    const page = await readDatabaseEvaluationPage(fallback.client, query, 1, null);
     expect(page.warnings).toEqual(raw.warnings); expect(page.warningReadPath).toBe('WARNING_STREAM_RAW_CAPACITY'); expect(fallback.streams()).toBe(2);
   });
 

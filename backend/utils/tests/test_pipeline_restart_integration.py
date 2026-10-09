@@ -501,7 +501,7 @@ complete(receipt,'fixture',[output])
             node=[event for event in events if event[0]=='node']
             oauth=[event for event in events if event[0]=='gemini']
             self.assertEqual(2,len(node))
-            self.assertEqual(4,len(oauth))  # one health probe and one evaluation per video
+            self.assertEqual(3,len(oauth))  # one successful batch health probe + two evaluations
             self.assertLessEqual(max(event[2] for event in node),min(event[1] for event in oauth))
             self.assertTrue(all(left[2]<=right[1] for left,right in zip(oauth,oauth[1:])))
             for output in (evaluation/'evaluation/laaj_results').glob('*.jsonl'):

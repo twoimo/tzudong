@@ -1,0 +1,65 @@
+{
+  "source": "actual-reader-staged-title-migration-fixture-current-30-nodes-88-edges-not-canonical-title-publication",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "initialNodes": 39,
+      "opaqueIdLabels": 0,
+      "captionStageLabels": 9,
+      "searchBySourcedTitle": true,
+      "selected": true,
+      "firstPassDetail": true,
+      "detailDescribesUnverified": true,
+      "listCount": 30,
+      "escape": true,
+      "emptySearch": true,
+      "overflow": {
+        "document": false,
+        "body": false
+      }
+    },
+    {
+      "name": "tablet",
+      "width": 834,
+      "height": 1112,
+      "initialNodes": 39,
+      "opaqueIdLabels": 0,
+      "captionStageLabels": 9,
+      "searchBySourcedTitle": true,
+      "selected": true,
+      "firstPassDetail": true,
+      "detailDescribesUnverified": true,
+      "listCount": 30,
+      "escape": true,
+      "emptySearch": true,
+      "overflow": {
+        "document": false,
+        "body": false
+      }
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "initialNodes": 39,
+      "opaqueIdLabels": 0,
+      "captionStageLabels": 9,
+      "searchBySourcedTitle": true,
+      "selected": true,
+      "firstPassDetail": true,
+      "detailDescribesUnverified": true,
+      "listCount": 30,
+      "escape": true,
+      "emptySearch": true,
+      "overflow": {
+        "document": false,
+        "body": false
+      }
+    }
+  ],
+  "pageErrors": [],
+  "externalBlocked": 0,
+  "mutationsBlocked": 0
+}

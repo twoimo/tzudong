@@ -69,13 +69,29 @@ class ReviewWorkerTests(unittest.TestCase):
             self.assertEqual(calls[1],('restaurant_review_automation_tick',{'request_id':request_id}))
             self.assertEqual(result['recheckAttempted'],bool(limit))
             self.assertEqual(len(generations),limit)
-            self.assertEqual(len(calls),2 if limit==0 else 5)
+            self.assertEqual(len(calls),2 if limit==0 else 4)
             if limit:
                 self.assertEqual(calls[2][1]['action'],'claim')
                 self.assertEqual(calls[3][1]['action'],'complete')
                 self.assertEqual(calls[2][1]['token'],calls[3][1]['token'])
-                self.assertEqual(calls[4][0],'restaurant_review_automation_tick')
-                self.assertNotEqual(calls[4][1]['request_id'],request_id)
+                self.assertEqual(sum(name=='restaurant_review_automation_tick' for name,_ in calls),1)
+
+    def test_one_recheck_does_not_admit_another_batch_of_unseen_candidates(self):
+        pending=list(range(100));queued=[];ticks=[];completed=[]
+        def rpc(name,body):
+            if name=='restaurant_review_automation_status':return self.judgment_status()
+            if name=='restaurant_review_automation_tick':
+                ticks.append(body['request_id']);queued.extend(pending[:50]);del pending[:50]
+                return {'scanned':50,'recheck':50}
+            if body['action']=='claim':return {'id':queued.pop(0),'restaurant':{}}
+            if body['action']=='complete':
+                completed.append(body['item_id']);return {'state':'applied'}
+            self.fail('unexpected RPC')
+        worker.run_once(rpc,recheck_limit=1,evaluator=lambda *a,**k:{})
+        self.assertEqual(len(ticks),1)
+        self.assertEqual(len(completed),1)
+        self.assertEqual(len(queued),49)
+        self.assertEqual(len(pending),50)
 
     def test_cli_engine_admission_failure_exposes_only_fixed_code(self):
         import contextlib,io
@@ -233,7 +249,7 @@ class ReviewWorkerTests(unittest.TestCase):
                 generations.append(kwargs['decision_context']);return {'evaluation_results':{}}
             worker.run_once(rpc,recheck_limit=1,evaluator=evaluate)
             self.assertEqual(generations,[{'inputSha256':'a'*64}])
-            self.assertEqual([c.get('action') for c in calls],[None,None,'claim','complete','read',None])
+            self.assertEqual([c.get('action') for c in calls],[None,None,'claim','complete','read'])
 
     def test_uncertain_provider_is_failed_once_without_retry(self):
         calls=[]

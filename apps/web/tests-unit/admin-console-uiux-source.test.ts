@@ -8544,7 +8544,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const loadUsers = useCallback(async (signal?: AbortSignal)",
     );
     expect(usersSource).toContain("return () => controller.abort();");
-    expect(usersSource).toContain("if (!signal?.aborted)");
+    expect(usersSource).toContain("if (generation === usersReadGeneration.current && !signal?.aborted)");
+    expect(usersSource).toContain("const generation = ++usersReadGeneration.current;");
+    expect(usersSource).toContain("generation !== usersReadGeneration.current || signal?.aborted");
     expect(evaluationsSource).toContain(
       'embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5"',
     );

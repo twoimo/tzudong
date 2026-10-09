@@ -1,0 +1,24 @@
+-- NOT ADOPTED. Forward migration proposal, not operating authorization.
+-- Producer mutual-backup identity audit and independent PG15 preimage binding required first.
+BEGIN;
+DO $index_convergence$
+DECLARE candidate oid:=to_regclass('public.idx_restaurants_active_candidate_identity');
+ composite oid:=to_regclass('public.idx_restaurants_active_video_identity');
+BEGIN
+ IF composite IS NULL OR NOT EXISTS(SELECT 1 FROM pg_index WHERE indexrelid=composite
+  AND indrelid='public.restaurants'::regclass AND indisunique AND indisvalid AND indisready AND NOT indisprimary AND NOT indisexclusion)
+  OR encode(sha256(convert_to(pg_get_indexdef(composite),'UTF8')),'hex')<>'a232c3d4c3acbe86488bad14c021217b3c1c9858024e385a08f0fddbf62de1a7'
+ THEN RAISE EXCEPTION 'RECORD_INDEX_COMPOSITE_PREIMAGE_DRIFT'; END IF;
+ IF candidate IS NULL THEN RETURN; END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_index WHERE indexrelid=candidate AND indrelid='public.restaurants'::regclass
+  AND indisunique AND indisvalid AND indisready AND NOT indisprimary AND NOT indisexclusion)
+  OR encode(sha256(convert_to(pg_get_indexdef(candidate),'UTF8')),'hex')<>'01e59e40d168138e9b13433abfc3b407097833ed3236f1f95a312e78de09218d'
+  OR EXISTS(SELECT 1 FROM pg_constraint WHERE conindid=candidate)
+ THEN RAISE EXCEPTION 'RECORD_INDEX_CANDIDATE_PREIMAGE_DRIFT'; END IF;
+ DROP INDEX public.idx_restaurants_active_candidate_identity;
+ IF to_regclass('public.idx_restaurants_active_candidate_identity') IS NOT NULL
+  OR encode(sha256(convert_to(pg_get_indexdef(composite),'UTF8')),'hex')<>'a232c3d4c3acbe86488bad14c021217b3c1c9858024e385a08f0fddbf62de1a7'
+ THEN RAISE EXCEPTION 'RECORD_INDEX_CONVERGENCE_READBACK_DRIFT'; END IF;
+END;
+$index_convergence$;
+COMMIT;

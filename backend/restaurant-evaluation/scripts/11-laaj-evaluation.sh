@@ -548,6 +548,9 @@ fi
 
 rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
 
+    if [ -n "${LAAJ_HEALTH_SUCCESS_FILE:-}" ]; then
+        printf 'passed\n' > "$LAAJ_HEALTH_SUCCESS_FILE" && chmod 600 "$LAAJ_HEALTH_SUCCESS_FILE" || return 1
+    fi
     HEALTH_CHECK_DONE=true
 }
 

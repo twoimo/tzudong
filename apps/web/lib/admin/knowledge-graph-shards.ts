@@ -90,7 +90,7 @@ async function* leafDescriptors(manifest: KnowledgeShardManifest, kind: 'nodes' 
 }
 
 function isStrictNode(value: unknown): value is KnowledgeNode {
-  return isKnowledgeNode(value) && value.evidence.length <= 16 && keys(value as unknown as Record<string, unknown>, ['id', 'label', 'kind', 'summary', 'evidence'])
+  return isKnowledgeNode(value) && value.evidence.length <= 16 && keys(value as unknown as Record<string, unknown>, ['id', 'label', 'kind', 'summary', 'evidence', ...(value.displayTitle === undefined ? [] : ['displayTitle', 'displayStage'])])
     && value.evidence.every(item => keys(item as unknown as Record<string, unknown>, ['videoId', 'startSeconds', 'endSeconds', 'url', 'status']));
 }
 function isStrictEdge(value: unknown): value is KnowledgeEdge {
@@ -168,7 +168,7 @@ export async function queryShardedKnowledgeGraph(input: unknown, params: URLSear
         const node = item as KnowledgeNode;
         nodeIds.add(node.id);
         if (node.id === selectedId) selected = node;
-        if ((!kind || node.kind === kind) && (!search || `${node.label} ${node.summary}`.normalize('NFKC').toLowerCase().includes(search))) {
+        if ((!kind || node.kind === kind) && (!search || `${node.displayTitle ?? ''} ${node.label} ${node.summary}`.normalize('NFKC').toLowerCase().includes(search))) {
           if (filteredTotal >= offset && candidates.length < limit) candidates.push(node);
           filteredTotal++;
         }

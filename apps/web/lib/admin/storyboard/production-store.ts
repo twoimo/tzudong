@@ -260,7 +260,7 @@ export class StoryboardProductionStore {
   async list(ownerId: string) {
     const result = decode(listSchema, await this.admin(ownerId, 'list'));
     return { ...result, workers: result.workers.map((worker) => ({ ...worker, models: worker.models.map((model) => ({
-      id: model.id, capabilities: model.capabilities, loaded: model.loaded,
+      id: model.id, owned_by: model.owned_by, capabilities: model.capabilities, loaded: model.loaded,
       bytes_on_disk: model.bytes_on_disk, bytes_resident: model.bytes_resident,
     })) })) };
   }

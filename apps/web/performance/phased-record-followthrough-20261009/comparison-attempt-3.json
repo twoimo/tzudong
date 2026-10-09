@@ -1,0 +1,242 @@
+{
+  "kind": "same-pristine-pg17-additive-legacy-comparison",
+  "status": "unconfirmed",
+  "sourceHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "operatingWrites": false,
+  "userRowsCopied": 0,
+  "extraOwnerOrLegacyHelperGrants": false,
+  "sourceDatabase": "tzudong_fresh_pg17_f2a58d859df5",
+  "containerId": "a8f7b55c9470d31367a1042b85c884f9b8b442ad88cbf6c91400fa624bb11899",
+  "databaseA": "tzudong_phase_5603593a_before",
+  "databaseB": "tzudong_phase_5603593a_after",
+  "pristineSchemaSha256": "f849fcbd372bc4060a1142f11fbd4d29050a10c78f013b31e51115bd3ef12d46",
+  "pristineState": {
+    "roles": "f36c8c6136534d26c85802bbc0238a566dccf9d3ed3240df1eca3af553b29433",
+    "users": 0,
+    "legacy": [
+      {
+        "auth": true,
+        "body": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+        "service": true,
+        "metadata": "24b9b4d04117950155196cb460efab3dca946dae551e9bb78d1a400cffa9fadb",
+        "allowlist": [
+          {
+            "grantee": "authenticated",
+            "function_name": "approve_edit_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          },
+          {
+            "grantee": "service_role",
+            "function_name": "approve_edit_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          }
+        ],
+        "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)"
+      },
+      {
+        "auth": true,
+        "body": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+        "service": true,
+        "metadata": "c50fcb8110c3e447b583167454468d55aebb2e23f2c1d94321297b1a18da4652",
+        "allowlist": [
+          {
+            "grantee": "authenticated",
+            "function_name": "approve_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          },
+          {
+            "grantee": "service_role",
+            "function_name": "approve_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          }
+        ],
+        "signature": "public.approve_submission_item(uuid,uuid,jsonb)"
+      },
+      {
+        "auth": true,
+        "body": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+        "service": true,
+        "metadata": "c5cd0301dc326428635e2673e5042de2ceb646384643028a7b3f51d818c8af52",
+        "allowlist": [
+          {
+            "grantee": "authenticated",
+            "function_name": "merge_restaurant_records_for_admin_review",
+            "function_schema": "public",
+            "source_signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "identity_arguments": "2950 2950 2950 1184 25 3802 25 25"
+          },
+          {
+            "grantee": "service_role",
+            "function_name": "merge_restaurant_records_for_admin_review",
+            "function_schema": "public",
+            "source_signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "identity_arguments": "2950 2950 2950 1184 25 3802 25 25"
+          }
+        ],
+        "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)"
+      }
+    ],
+    "members": "114df90c3371b32ed304caf7677be3df50de7ce269438203fa28150d4828a82a",
+    "manifest": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+    "restaurants": 0,
+    "recordPresent": false,
+    "legacyOwnerAdminHelperExecute": false
+  },
+  "beforeLegacy": [
+    {
+      "rpc": "approve_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "approve_edit_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "merge_restaurant_records_for_admin_review",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    }
+  ],
+  "proposedM1Sha256": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+  "migrationRollbackExact": true,
+  "afterState": {
+    "roles": "f36c8c6136534d26c85802bbc0238a566dccf9d3ed3240df1eca3af553b29433",
+    "users": 0,
+    "legacy": [
+      {
+        "auth": true,
+        "body": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+        "service": true,
+        "metadata": "24b9b4d04117950155196cb460efab3dca946dae551e9bb78d1a400cffa9fadb",
+        "allowlist": [
+          {
+            "grantee": "authenticated",
+            "function_name": "approve_edit_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          },
+          {
+            "grantee": "service_role",
+            "function_name": "approve_edit_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          }
+        ],
+        "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)"
+      },
+      {
+        "auth": true,
+        "body": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+        "service": true,
+        "metadata": "c50fcb8110c3e447b583167454468d55aebb2e23f2c1d94321297b1a18da4652",
+        "allowlist": [
+          {
+            "grantee": "authenticated",
+            "function_name": "approve_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          },
+          {
+            "grantee": "service_role",
+            "function_name": "approve_submission_item",
+            "function_schema": "public",
+            "source_signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "identity_arguments": "2950 2950 3802"
+          }
+        ],
+        "signature": "public.approve_submission_item(uuid,uuid,jsonb)"
+      },
+      {
+        "auth": true,
+        "body": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+        "service": true,
+        "metadata": "c5cd0301dc326428635e2673e5042de2ceb646384643028a7b3f51d818c8af52",
+        "allowlist": [
+          {
+            "grantee": "authenticated",
+            "function_name": "merge_restaurant_records_for_admin_review",
+            "function_schema": "public",
+            "source_signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "identity_arguments": "2950 2950 2950 1184 25 3802 25 25"
+          },
+          {
+            "grantee": "service_role",
+            "function_name": "merge_restaurant_records_for_admin_review",
+            "function_schema": "public",
+            "source_signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "identity_arguments": "2950 2950 2950 1184 25 3802 25 25"
+          }
+        ],
+        "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)"
+      }
+    ],
+    "members": "114df90c3371b32ed304caf7677be3df50de7ce269438203fa28150d4828a82a",
+    "manifest": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+    "restaurants": 0,
+    "recordPresent": true,
+    "legacyOwnerAdminHelperExecute": false
+  },
+  "legacyAclAllowlistFullMetadataPreserved": true,
+  "g014BeforeAfterPassed": 4,
+  "afterLegacy": [
+    {
+      "rpc": "approve_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "approve_edit_submission_item",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    },
+    {
+      "rpc": "merge_restaurant_records_for_admin_review",
+      "sqlCompleted": false,
+      "success": false,
+      "classification": "PRIVATE_HELPER_EXECUTE_DENIED",
+      "sqlState": "42501",
+      "fixedCode": null,
+      "deniedHelper": "is_user_admin"
+    }
+  ],
+  "legacyBehaviorSame": true,
+  "failure": {
+    "kind": "SOURCE_SQL_FAILURE",
+    "sqlState": "P0001",
+    "fixedCode": "RECORD_ACTION_INVALID_PAYLOAD"
+  },
+  "ownedDisposableDatabasesDropped": true
+}

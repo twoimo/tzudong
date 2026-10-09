@@ -5,6 +5,8 @@ is a skip, not a pass. Failure injection wraps the real APIs; it does not replac
 the OSK parser, writer, CAS, routing or projection implementation.
 """
 import copy
+from contextlib import redirect_stdout, redirect_stderr
+import io
 from dataclasses import replace
 import hashlib
 import json
@@ -35,6 +37,10 @@ class PublicationTests(unittest.TestCase):
                                     env=env, capture_output=True, text=True, timeout=45)
             self.assertEqual(result.returncode, 0, result.stderr[-3000:])
             self.assertEqual(json.loads(result.stdout), {"case": case, "ok": True})
+
+    def test_stable_batch_advances_and_recovers_with_exact_completion_readback(self):
+        self.run_case("batch_progress")
+        self.run_case("batch_resume")
 
     def test_real_engine_idempotency_links_and_unverified_projection(self):
         self.run_case("idempotency")
@@ -132,8 +138,8 @@ def hub_fixture(vault, title="tzudong", scope="tzudong", identity="261004-0001-0
     return path
 
 
-def fixture_bundle(root):
-    row = {"videoId": "ABCDEFGHIJK", "durationSeconds": 60, "contentSha256": None,
+def fixture_bundle(root, video="ABCDEFGHIJK"):
+    row = {"videoId": video, "durationSeconds": 60, "contentSha256": None,
            "membership": {"sourceUrl": "https://www.youtube.com/@tzuyang/videos",
                           "observedAt": "2026-10-04T00:00:00Z", "evidenceSha256": "a" * 64}}
     config = a.AnalysisConfig("gemini-3.8-flash", 1000, 100, "b" * 64, root / "no-watch-install", 30, protocol=1)
@@ -262,7 +268,103 @@ def fixture_case(case, root, engine_path):
         check.assertEqual(result.returncode, 0, result.stderr[-1000:])
         return json.loads(result.stdout)
 
-    if case == "idempotency":
+    if case in {"batch_progress", "batch_resume"}:
+        second, second_row, _, _, _ = fixture_bundle(root, "LMNOPQRSTUV")
+        rows = [row, second_row]
+        (root / "inventory.json").write_text(json.dumps({"schemaVersion": 1, "videos": [
+            {**item, "membership": {"videos": item["membership"]}} for item in rows]}))
+        args = ["--inventory", str(root / "inventory.json"), "--analysis-state", str(root / "analysis"),
+                "--model", config.model, "--model-evidence", str(root / "model.json"),
+                "--vault", str(vault), "--engine", str(engine_path), "--state-dir", str(state),
+                "--max-videos", "1", "--execute"]
+
+        def invoke(*extra, expected=0):
+            out, err = io.StringIO(), io.StringIO()
+            # Only the synthetic model-proof adapter is replaced. Inventory,
+            # saved analyses, checkpoints, selection and pinned OSK APIs run.
+            with patch.object(a, "load_model_evidence", return_value=config), \
+                    redirect_stdout(out), redirect_stderr(err):
+                code = p.main(args + list(extra))
+            check.assertEqual(code, expected, err.getvalue())
+            results = [json.loads(line) for line in out.getvalue().splitlines()]
+            check.assertTrue(all(item["providerCalls"] == 0 for item in results))
+            return results, err.getvalue()
+
+        if case == "batch_resume":
+            first, _ = invoke("--format", "sharded", "--max-nodes", "2")
+            check.assertFalse(first[1]["publicationComplete"])
+            check.assertEqual(first[1]["videoId"], row["videoId"])
+            # Same source, partially created real nodes: finish the first video
+            # under the original cap before a later invocation advances.
+            for _ in range(20):
+                resumed, _ = invoke("--format", "sharded", "--max-nodes", "2")
+                check.assertEqual(resumed[1]["videoId"], row["videoId"])
+                check.assertLessEqual(resumed[1]["mutations"], 2)
+                if resumed[1]["publicationComplete"]:
+                    break
+            check.assertTrue(resumed[1]["publicationComplete"])
+            advanced, _ = invoke("--format", "sharded", "--max-nodes", "2")
+            check.assertEqual(advanced[1]["videoId"], second_row["videoId"])
+            check.assertEqual(advanced[0]["skippedPublicationComplete"], 1)
+            return
+
+        first, _ = invoke()
+        check.assertEqual(first[0]["videos"], 1)
+        check.assertEqual(first[1]["videoId"], row["videoId"])
+        before = snapshot()
+        with patch.object(p, "capacity", wraps=p.capacity) as scans:
+            next_batch, _ = invoke()
+        # One capacity scan for plan, one for execute; no full-scope export for
+        # the completed first video while deciding whether it consumes the cap.
+        check.assertEqual(scans.call_count, 2)
+        check.assertEqual(next_batch[0]["skippedPublicationComplete"], 1)
+        check.assertEqual(next_batch[0]["videos"], 1)
+        check.assertEqual(next_batch[1]["videoId"], second_row["videoId"])
+        for name, digest in before.items():
+            if name != p.SPACE + "/tzudong.md":
+                check.assertEqual(snapshot()[name], digest)
+        stable = snapshot()
+        with patch.object(p, "capacity", side_effect=AssertionError("completed batch export")):
+            done, _ = invoke()
+        check.assertEqual((done[0]["videos"], done[0]["skippedPublicationComplete"]), (0, 2))
+        check.assertEqual(snapshot(), stable)
+
+        path = state / (row["videoId"] + ".json")
+        ledger = a.checked_document(path)
+        # Incomplete readback recovery takes the slot even if nodes already exist.
+        a.atomic_document(path, {**ledger, "state": "running"})
+        resumed, _ = invoke()
+        check.assertEqual(resumed[1]["videoId"], row["videoId"])
+        check.assertEqual(resumed[1]["created"], 0)
+        check.assertTrue(resumed[1]["publicationComplete"])
+        # Source/config changes are work, not an old completion cache hit.
+        evidence, receipt = a.checked_document(ep), a.checked_document(rp)
+        evidence["analysis"]["claims"][0]["text"] = "새로운 공개 관찰"
+        a.atomic_document(ep, evidence)
+        a.atomic_document(rp, {**receipt, "evidenceSha256": a.digest(evidence)})
+        changed, _ = invoke()
+        check.assertEqual(changed[1]["videoId"], row["videoId"])
+        check.assertGreater(changed[1]["updated"], 0)
+        check.assertTrue(changed[1]["publicationComplete"])
+        ledger = a.checked_document(path)
+        stable = snapshot()
+        # Corrupt envelope and foreign binding fail before any subsequent work.
+        path.write_text('{"sha256":"bad","payload":{}}')
+        _, error = invoke(expected=2)
+        check.assertEqual(json.loads(error), {"error": "RECEIPT_CORRUPT"})
+        check.assertEqual(snapshot(), stable)
+        a.atomic_document(path, {**ledger, "binding": {**ledger["binding"], "scope": "00_Scope/foreign"}})
+        _, error = invoke(expected=2)
+        check.assertIn("PUBLICATION_STATE_SCOPE_MISMATCH", error)
+        a.atomic_document(path, ledger)
+        node = engine.read(p.specs(bundle)[0]["name"])
+        node_path = vault / node["path"]
+        node_path.write_text(node_path.read_text() + "\nHuman edit remains.\n")
+        edited = snapshot()
+        _, error = invoke(expected=2)
+        check.assertIn("OSK_NODE_CHANGED_SINCE_PUBLICATION", error)
+        check.assertEqual(snapshot(), edited)
+    elif case == "idempotency":
         before = snapshot()
         plan = p.publish(bundle, engine, state)
         check.assertEqual(snapshot(), before)
@@ -430,6 +532,7 @@ def fixture_case(case, root, engine_path):
             check.assertEqual(publish(sharded=True)["reused"], len(planned))
     elif case in {"sharded_migration", "sharded_pin"}:
         publish()
+        check.assertFalse(p.verified_publication_complete(bundle, engine, state, engine.read("tzudong"), sharded=True))
         old = {spec["name"]: engine.read(spec["name"]) for spec in p.specs(bundle)}
         hub_before = engine.read("tzudong")["body"]
         if case == "sharded_pin":
@@ -469,6 +572,7 @@ def fixture_case(case, root, engine_path):
         with patch.object(p, "target_for", side_effect=old_target):
             publish()
         before = engine.read(p.specs(bundle)[0]["name"])["body"]
+        check.assertFalse(p.verified_publication_complete(bundle, engine, state, engine.read("tzudong")))
         check.assertGreater(publish()["updated"], 0)
         check.assertIn(before.split(p.SOURCE_HEADING)[0].strip(), engine.read(p.specs(bundle)[0]["name"])["body"])
         check.assertEqual(publish()["reused"], 5)

@@ -1,0 +1,15 @@
+{
+  "wallMs": 409.6519590821117,
+  "cpuMs": 554.879,
+  "peakTreeRssMiB": 102.625,
+  "sampledPeakFfmpeg": 0,
+  "resourceSamples": 6,
+  "exitCode": 0,
+  "diagnosticSha256": "6b96ad59dd91c6c6d5f122efb6aa6e340be4bd7995f19411e773ca5366d5c6a7",
+  "result": {
+    "rejected": true,
+    "failureCachePreserved": true,
+    "successOwnCleanup": true,
+    "otherCachePreserved": true
+  }
+}

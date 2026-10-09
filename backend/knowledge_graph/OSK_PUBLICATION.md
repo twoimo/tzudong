@@ -16,6 +16,15 @@
 입력/config SHA, 정확한 모델과 **원래 모델 증빙 SHA**가 모두 맞아야 한다.
 불확실하거나 부분적인 분석은 반영하지 않으며 유료 분석을 재요청하지 않는다.
 
+`--max-videos`는 이번 호출에서 처리할 publication 작업 수를 제한한다. 같은 inventory로
+반복 실행할 때 이미 완료된 영상은 분석 source/config, vault·scope binding, checkpoint,
+현재 노드 hash·본문·summary·parent·경로와 root 링크를 확인한 뒤 제한 적용 전에 제외한다.
+`skippedPublicationComplete`는 이렇게 검증한 제외 수다. 미완료 checkpoint, 변경 입력,
+문맥 링크나 sharded 계층 이행은 작업으로 남는다. 사람 수정과 손상 checkpoint는 기존
+fail-closed 검사로 중단한다. 완료 여부 판정에는 영상별 노드 point read를 사용하며 전체
+scope export·용량 계산은 선택한 작업에서만 수행한다. cap에 도달하면 inventory 검색도
+멈추므로 `skippedNotComplete`는 해당 호출에서 검사한 범위의 미완료 분석 수다.
+
 pilot 제목과 `Tzudong graph metadata` schema를 유지한다. 기존 노드는 근거·주장·
 고정 watch commit이 일치할 때 본문을 보존하고 publication 출처와 누락된 문맥 연결만 덧붙인다.
 식당 내부 claims는 `TZ-Claim-{videoId}-R{restaurant}-{claim}`으로 추가한다.

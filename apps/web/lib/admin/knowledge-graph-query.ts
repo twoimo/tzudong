@@ -21,7 +21,7 @@ export function queryKnowledgeGraph(snapshot: KnowledgeSnapshot, params: URLSear
   }
   const search = q.normalize('NFKC').toLowerCase().trim();
   const filtered = snapshot.nodes.filter(node => (!kind || node.kind === kind)
-    && (!search || `${node.label} ${node.summary}`.normalize('NFKC').toLowerCase().includes(search)));
+    && (!search || `${node.displayTitle ?? ''} ${node.label} ${node.summary}`.normalize('NFKC').toLowerCase().includes(search)));
   const nodes = filtered.slice(offset, offset + limit), ids = new Set(nodes.map(node => node.id));
   const edges = snapshot.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target));
   return { revision: snapshot.revision, generatedAt: snapshot.generatedAt, coverage: snapshot.coverage, nodes, edges,

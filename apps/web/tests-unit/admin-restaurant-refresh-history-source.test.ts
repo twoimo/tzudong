@@ -127,7 +127,7 @@ describe("admin restaurant refresh history source contracts", () => {
 
     expect(routeSource).toContain("import { requireAdmin }");
     expect(routeSource).toContain("createSupabaseServiceRoleClient");
-    expect(routeSource).toContain("if (!auth.ok) return auth.response");
+    expect(routeSource).toContain('if (!auth.ok) { auth.response.headers.set("Cache-Control", "no-store"); return auth.response; }');
     expect(routeSource).toContain('action === "record_candidate"');
     expect(routeSource).toContain('action === "decide_candidate"');
     expect(routeSource).toContain("body.apply === true");
@@ -221,6 +221,7 @@ return (options) => {
   let query = "";
   let statusFilter = "all";
   let reloads = 0;
+  let exactRows = null;
   let focusCount = 0;
   let readRows = data.candidates;
   let readError = false;
@@ -246,10 +247,11 @@ return (options) => {
   const setDecisionMessage = value => { decisionMessage = value; };
   const setIsSavingDecision = value => { isSavingDecision = value; };
   const fetch = async (url, init) => {
-    if (init.method !== "POST") {
+    if (init?.method !== "POST") {
       reloads += 1;
       readUrls.push(url);
-      const payload = JSON.parse(JSON.stringify({ candidates: readRows, summary: {} }));
+      const exact = new URL(url, "http://fixture.test").searchParams.has("candidate_id");
+      const payload = JSON.parse(JSON.stringify({ candidates: exact ? exactRows ?? readRows : readRows, summary: {} }));
       const wait = nextReadWait;
       nextReadWait = null;
       if (wait) await wait;
@@ -263,10 +265,11 @@ return (options) => {
   return {
     requestSelection, applySelection, submitDecision, loadHistory, canSave,
     setReadRows: rows => { readRows = rows; },
+    setExactRows: rows => { exactRows = rows; },
     setReadError: value => { readError = value; },
     setFilters: (status, search) => { statusFilter = status; query = search; },
     deferNextRead: () => { let release; nextReadWait = new Promise(resolve => { release = resolve; }); return release; },
-    state: () => ({ selectedCandidate, decision, applyApprovedChange, operatorNotes, pendingSelection, pendingReadback, readbackConflict, decisionMessage, isSavingDecision, writes, reloads, readUrls, focusCount })
+    state: () => ({ selectedCandidate, decision, applyApprovedChange, operatorNotes, pendingSelection, pendingReadback, readbackConflict, decisionMessage, isSavingDecision, writes, reloads, readUrls, focusCount, query, statusFilter })
   };
 };`))() as (options: HarnessOptions) => {
   requestSelection: (candidate: TestCandidate | null) => void;
@@ -274,11 +277,12 @@ return (options) => {
   submitDecision: () => Promise<void>;
   loadHistory: () => Promise<void>;
   setReadRows: (rows: TestCandidate[]) => void;
+  setExactRows: (rows: TestCandidate[]) => void;
   setReadError: (value: boolean) => void;
   setFilters: (status: string, query: string) => void;
   deferNextRead: () => () => void;
   canSave: boolean;
-  state: () => { selectedCandidate: TestCandidate | null; decision: string; applyApprovedChange: boolean; operatorNotes: string; pendingSelection: { candidate: TestCandidate | null } | null; pendingReadback: { expectedStatus: string } | null; readbackConflict: boolean; decisionMessage: string | null; isSavingDecision: boolean; writes: Record<string, unknown>[]; reloads: number; readUrls: string[]; focusCount: number };
+  state: () => { selectedCandidate: TestCandidate | null; decision: string; applyApprovedChange: boolean; operatorNotes: string; pendingSelection: { candidate: TestCandidate | null } | null; pendingReadback: { expectedStatus: string } | null; readbackConflict: boolean; decisionMessage: string | null; isSavingDecision: boolean; writes: Record<string, unknown>[]; reloads: number; readUrls: string[]; focusCount: number; query: string; statusFilter: string };
 };
 
 describe("refresh history CMS behavior", () => {
@@ -430,7 +434,7 @@ describe("refresh uncertain mutation readback", () => {
       if (expected === "applied") actual.readback_state.status = "failed";
       harness.setReadRows([actual]);
       await harness.loadHistory();
-      expect(harness.state().readUrls).toEqual(["/api/admin/restaurant-refresh-history?"]);
+      expect(harness.state().readUrls).toEqual(["/api/admin/restaurant-refresh-history?status=needs_review&search=old+restaurant+name", "/api/admin/restaurant-refresh-history?candidate_id=synthetic-candidate"]);
       expect(harness.state().pendingReadback).toBeNull();
       expect(harness.state().selectedCandidate?.readback_state.status).toBe(actual.readback_state.status);
       expect(harness.state().writes).toHaveLength(1);
@@ -447,4 +451,15 @@ describe("refresh uncertain mutation readback", () => {
     await harness.loadHistory();
     expect(harness.state().pendingReadback).not.toBeNull();
   });
+});
+
+test("pending candidate outside newest100 is read exactly without changing the list filter", async () => {
+ const harness=createHarness({networkFailure:true});
+ await harness.submitDecision();harness.setFilters("needs_review","old name");
+ harness.setReadRows(Array.from({length:100},(_,i)=>({...candidate(),id:`newer-${i}`})));
+ harness.setExactRows([decidedCandidate("approved")]);
+ await harness.loadHistory();
+ expect(harness.state().pendingReadback).toBeNull();expect(harness.state().selectedCandidate?.candidate_status).toBe("approved");
+ expect(harness.state().readUrls).toEqual(["/api/admin/restaurant-refresh-history?status=needs_review&search=old+name","/api/admin/restaurant-refresh-history?candidate_id=synthetic-candidate"]);
+ expect(harness.state().query).toBe("old name");expect(harness.state().statusFilter).toBe("needs_review");expect(harness.state().writes).toHaveLength(1);
 });

@@ -12,7 +12,7 @@ function render(phase: RecordActionClientState['phase'], nextAction: RecordActio
   const state: RecordActionClientState = { phase, nextAction, request, receipt: null, message: 'bounded fixture' };
   const client = { subscribe: () => () => {}, getSnapshot: () => state, canCancel: () => phase === 'failed', cancel: () => { cancelled++; }, run: () => {}, apply: () => {}, readback: () => {}, recover: () => {}, setOnRecovered: () => {} };
   const wrapper = ({ children }: { children?: React.ReactNode }) => React.createElement('div', null, children);
-  const deps = { React, RECORD_ACTION_CONFIRMATION, RECORD_VIEWS_INVALIDATED_EVENT: 'invalidated', RECORD_ACTION_APPLIED_EVENT: 'applied',
+  const deps = { useAuth: () => ({ user: null, isAdmin: false }), React, RECORD_ACTION_CONFIRMATION, RECORD_VIEWS_INVALIDATED_EVENT: 'invalidated', RECORD_ACTION_APPLIED_EVENT: 'applied',
     useState: (value: unknown) => [typeof value === 'function' ? value() : value, () => {}], useEffect: () => {},
     useSyncExternalStore: (_subscribe: unknown, get: () => unknown) => get(), createRecordActionClient: () => client,
     Dialog: wrapper, DialogContent: wrapper, DialogHeader: wrapper, DialogTitle: wrapper, DialogDescription: wrapper, DialogFooter: wrapper, Input: wrapper,

@@ -27,6 +27,8 @@ import { STORYBOARD_GEMINI_TEXT_MODEL, STORYBOARD_GEMINI_IMAGE_MODELS, STORYBOAR
 import { ADMIN_STORYBOARD_PROJECT_QUERY } from "@/lib/admin/admin-module-routing";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
+import { storyboardModelsFor } from "@/lib/admin/storyboard/production-model-catalog";
+
 const API = "/api/admin/storyboard/production";
 const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
@@ -58,7 +60,7 @@ const catalogSchema = z.object({
   workers: z.array(z.object({
     id: z.string(), online: z.boolean(), lastHeartbeat: z.string().nullable(),
     models: z.array(z.object({
-      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(), owned_by: z.enum(["gemini-api", "mlx"]).optional(),
+      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(), owned_by: z.enum(["gemini-api", "mlx-serve"]).optional(),
       bytes_on_disk: z.number().nonnegative(), bytes_resident: z.number().nonnegative(),
     })),
   })),
@@ -306,16 +308,8 @@ export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLega
       title: project.document?.title ?? project.request.prompt.slice(0, 120), createdAt: project.createdAt, updatedAt: project.updatedAt };
     setCatalog((previous) => ({ ...previous, projects: [item, ...previous.projects.filter((entry) => entry.id !== item.id)] }));
   }, []);
-  const modelsFor = (capability: "chat" | "image") => {
-    const models = new Map<string, Model>();
-    for (const worker of catalog.workers.filter(worker => worker.online)) for (const model of worker.models) {
-      if (model.owned_by === 'gemini-api' && model.capabilities.includes(capability)
-        && isAllowedStoryboardGeminiModel(model.id, capability === 'chat' ? 'text' : 'image')) models.set(model.id, model);
-    }
-    return [...models.values()];
-  };
-  const textModels = modelsFor("chat");
-  const imageModels = modelsFor("image");
+  const textModels = storyboardModelsFor(catalog.workers, "chat");
+  const imageModels = storyboardModelsFor(catalog.workers, "image");
   const selectedModelsAvailable = textModels.some(model => model.id === textProvider.model)
     && imageModels.some(model => model.id === imageProvider.model);
 

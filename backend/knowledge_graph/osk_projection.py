@@ -354,6 +354,14 @@ def project_vault(vault: Path, engine: Path | None = None, *, generated_at: str 
             as_of = _iso(coverage.get("asOf"))
         projected = {"id": node.id, "label": metadata.get("displayLabel", path.stem), "kind": kind,
                      "summary": node.meta["summary"], "evidence": evidence}
+        if kind == 'video':
+            from backend.knowledge_graph.caption_title_enrichment import title_fields
+            try:
+                title = title_fields(node.body, metadata['videoId'])
+            except Exception:
+                _fail('OSK_METADATA_INVALID')
+            if title is not None:
+                projected.update(title)
         nodes.append(projected)
         by_path[path.resolve()] = (projected, tuple(node.references()))
     if not root_seen:

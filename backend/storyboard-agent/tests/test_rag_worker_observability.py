@@ -266,7 +266,7 @@ class RagWorkerObservabilityTest(unittest.TestCase):
         self.assertFalse(rag_worker._GEMINI_CALL_LOCK.locked())
         with sqlite3.connect(os.environ["GEMINI_BUDGET_PATH"]) as db:
             self.assertEqual(db.execute("select count(*) from leases").fetchone()[0], 0)
-            self.assertEqual({row[0] for row in db.execute("select name from sqlite_master where type='table'")}, {"leases", "pacing"})
+            self.assertEqual({row[0] for row in db.execute("select name from sqlite_master where type='table'")}, {"leases", "pacing", "lease_births"})
 
     def test_shared_budget_uses_existing_environment_limits(self) -> None:
         with mock.patch.dict(os.environ, {"GEMINI_BUDGET_PROJECT": "existing-project", "GEMINI_REQUESTS_PER_MINUTE": "7", "GEMINI_MAX_INFLIGHT": "2"}):

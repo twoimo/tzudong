@@ -171,7 +171,7 @@ END $$;
 -- Compose only permitted domain fields. Omission preserves the saved value; JSON null is an explicit clear.
 CREATE FUNCTION pipeline_control.admin_record_compose(row_value jsonb, changes jsonb) RETURNS jsonb
 LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
-DECLARE k text;
+DECLARE k text; meta jsonb; ads jsonb; incoming_meta jsonb;
 BEGIN
  IF jsonb_typeof(changes) IS DISTINCT FROM 'object' OR EXISTS(SELECT 1 FROM jsonb_object_keys(changes) x WHERE x<>ALL(ARRAY[
   'approved_name','phone','categories','youtube_link','tzuyang_review','road_address','jibun_address','english_address','address_elements','lat','lng','geocoding_success','youtube_meta']))
@@ -198,7 +198,35 @@ BEGIN
  END IF;
  IF changes ? 'youtube_meta' THEN
   IF EXISTS(SELECT 1 FROM jsonb_object_keys(changes->'youtube_meta') meta_key WHERE meta_key<>ALL(ARRAY['title','published_at','duration','is_shorts','is_ads','what_ads'])) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
-  changes:=changes||jsonb_build_object('youtube_meta',coalesce(nullif(row_value->'youtube_meta','null'::jsonb),'{}'::jsonb)||(changes->'youtube_meta'));
+  incoming_meta:=changes->'youtube_meta';
+  FOREACH k IN ARRAY ARRAY['title','published_at'] LOOP
+   IF incoming_meta ? k AND (jsonb_typeof(incoming_meta->k)<>'string' OR length(incoming_meta->>k)>4000) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+  END LOOP;
+  IF incoming_meta ? 'duration' THEN
+   IF jsonb_typeof(incoming_meta->'duration')<>'number' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+   IF (incoming_meta->>'duration')::numeric<0 THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+  END IF;
+  IF (incoming_meta ? 'is_shorts' AND jsonb_typeof(incoming_meta->'is_shorts')<>'boolean')
+   OR (incoming_meta ? 'is_ads' AND jsonb_typeof(incoming_meta->'is_ads')<>'boolean') THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+  IF incoming_meta ? 'what_ads' AND incoming_meta->'what_ads'<>'null'::jsonb THEN
+   IF jsonb_typeof(incoming_meta->'what_ads')<>'array' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+   IF jsonb_array_length(incoming_meta->'what_ads')>20 OR EXISTS(SELECT 1 FROM jsonb_array_elements(incoming_meta->'what_ads') x WHERE jsonb_typeof(x)<>'string' OR length(x#>>'{}')>4000) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;
+  END IF;
+  meta:=CASE WHEN jsonb_typeof(row_value->'youtube_meta')='object' THEN row_value->'youtube_meta' ELSE '{}'::jsonb END;
+  ads:=CASE WHEN jsonb_typeof(meta->'ads_info')='object' THEN meta->'ads_info' ELSE '{}'::jsonb END;
+  FOREACH k IN ARRAY ARRAY['title','duration','is_shorts'] LOOP
+   IF incoming_meta ? k THEN meta:=meta||jsonb_build_object(k,incoming_meta->k); END IF;
+  END LOOP;
+  IF incoming_meta ? 'published_at' THEN meta:=meta||jsonb_build_object('publishedAt',incoming_meta->'published_at'); END IF;
+  IF incoming_meta ? 'is_ads' THEN ads:=ads||jsonb_build_object('is_ads',incoming_meta->'is_ads'); END IF;
+  IF incoming_meta ? 'what_ads' THEN
+   -- Canonical consumers use nullable advertising text. A single wrapped text
+   -- round-trips exactly; ordered names retain their text in a readable list.
+   ads:=ads||jsonb_build_object('what_ads',CASE WHEN incoming_meta->'what_ads'='null'::jsonb THEN NULL::text ELSE
+    (SELECT string_agg(value,', ' ORDER BY ordinal) FROM jsonb_array_elements_text(incoming_meta->'what_ads') WITH ORDINALITY a(value,ordinal)) END);
+  END IF;
+  IF incoming_meta ? 'is_ads' OR incoming_meta ? 'what_ads' OR meta ? 'ads_info' THEN meta:=meta||jsonb_build_object('ads_info',ads); END IF;
+  changes:=changes||jsonb_build_object('youtube_meta',meta);
  END IF;
  RETURN row_value||changes;
 END $$;
@@ -242,9 +270,10 @@ BEGIN
  PERFORM pipeline_control.admin_record_validate_restaurant(changes,'{}'::uuid[]);
  IF nullif(btrim(changes->>'tzuyang_review'),'') IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_EVIDENCE_REQUIRED'; END IF;
  INSERT INTO public.restaurants(id,approved_name,source_type,status,trace_id,youtube_link,lat,lng,jibun_address,categories,geocoding_success,updated_by_admin_id)
- VALUES(created,changes->>'approved_name','admin','pending',encode(sha256(convert_to(coalesce(changes->>'youtube_link','')||'|'||coalesce(changes->>'approved_name','')||'|'||coalesce(changes->>'tzuyang_review',''),'UTF8')),'hex'),changes->>'youtube_link',(changes->>'lat')::numeric,(changes->>'lng')::numeric,
+ VALUES(created,changes->>'approved_name','admin','pending',encode(sha256(convert_to('admin-record:'||created::text,'UTF8')),'hex'),changes->>'youtube_link',(changes->>'lat')::numeric,(changes->>'lng')::numeric,
   changes->>'jibun_address',ARRAY(SELECT jsonb_array_elements_text(changes->'categories')),true,actor);
- PERFORM pipeline_control.admin_record_patch(created,changes,actor,true);
+ -- changes is already canonical and validated; do not parse it as the flat DTO twice.
+ PERFORM pipeline_control.admin_record_write(created,changes,actor,true);
  RETURN created;
 END $$;
 
@@ -266,7 +295,7 @@ LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
 <<work>>
 DECLARE op pipeline_control.admin_record_operations; ids uuid[]; fingerprint jsonb; after_state jsonb; digest text;
  receipt jsonb; audit uuid; row_value jsonb; changed jsonb; item jsonb; target uuid; created uuid; source_id uuid;
- classification text; photo text; job pipeline_control.admin_record_media_cleanup; expected_count integer; pending_count integer; final_rows jsonb; final_row jsonb; key_name text; related_ids uuid[];
+ classification text; conflict_constraint text; photo text; job pipeline_control.admin_record_media_cleanup; expected_count integer; pending_count integer; final_rows jsonb; final_row jsonb; key_name text; related_ids uuid[];
 BEGIN
  PERFORM pipeline_control.admin_record_assert_operator(p_actor);
  IF current_user NOT IN ('service_role','postgres') OR p_operation_id IS NULL THEN RAISE EXCEPTION 'RECORD_ACTION_FORBIDDEN'; END IF;
@@ -482,7 +511,8 @@ BEGIN
      IF row_value->>'submission_type'='edit' THEN
       PERFORM pipeline_control.admin_record_write(source_id,final_row||jsonb_build_object('geocoding_success',true),p_actor,false);
      ELSE
-      source_id:=pipeline_control.admin_record_create(final_row||jsonb_build_object('geocoding_success',true),p_actor);
+      -- Create parses a DTO; final_row already contains canonical metadata.
+      source_id:=pipeline_control.admin_record_create((item->'changes')||jsonb_build_object('geocoding_success',true,'youtube_link',final_row->>'youtube_link'),p_actor);
       UPDATE public.restaurants SET source_type='user_submission_new',created_by=(row_value->>'user_id')::uuid WHERE id=source_id;
      END IF;
      UPDATE public.restaurant_submission_items SET item_status='approved',target_restaurant_id=source_id,rejection_reason=NULL
@@ -503,7 +533,8 @@ BEGIN
     WHEN EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='pending') THEN 'pending'
     WHEN NOT EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='approved') THEN 'rejected'
     WHEN EXISTS(SELECT 1 FROM public.restaurant_submission_items WHERE submission_id=target AND item_status='rejected') THEN 'partially_approved' ELSE 'approved' END)::public.submission_status,
-    resolved_by_admin_id=p_actor,reviewed_at=clock_timestamp(),admin_notes=coalesce(p_payload->>'note',admin_notes),updated_at=clock_timestamp() WHERE id=target;
+    resolved_by_admin_id=p_actor,reviewed_at=clock_timestamp(),admin_notes=coalesce(p_payload->>'note',admin_notes),
+    rejection_reason=CASE WHEN p_action IN ('submission.reject','submission.delete') THEN p_payload->>'reason' ELSE rejection_reason END,updated_at=clock_timestamp() WHERE id=target;
   END IF;
  ELSIF p_action LIKE 'review.%' THEN
   SELECT to_jsonb(r) INTO row_value FROM public.reviews r WHERE id=target;
@@ -552,6 +583,14 @@ BEGIN
   'mediaCleanupUnmanaged',op.cleanup_blocked,'mediaCleanupPending',EXISTS(SELECT 1 FROM pipeline_control.admin_record_media_cleanup WHERE operation_id=op.id AND state<>'done'));
  UPDATE pipeline_control.admin_record_operations SET state='applied',receipt=work.receipt WHERE id=op.id;
  RETURN receipt;
+EXCEPTION WHEN unique_violation THEN
+ GET STACKED DIAGNOSTICS conflict_constraint=CONSTRAINT_NAME;
+ -- Only reviewed restaurant identity constraints become a definite conflict.
+ -- Other 23505 failures retain their original error and never claim success.
+ IF conflict_constraint=ANY(ARRAY['idx_restaurants_active_candidate_identity','idx_restaurants_active_video_identity','restaurants_trace_id_key','restaurants_duplicate_duplicate_trace_id_key']) THEN
+  RAISE EXCEPTION 'RECORD_ACTION_DUPLICATE' USING ERRCODE='P0001';
+ END IF;
+ RAISE;
 END $$;
 
 REVOKE ALL ON FUNCTION pipeline_control.admin_record_create(jsonb,uuid),pipeline_control.admin_record_readback(jsonb),pipeline_control.admin_record_hash(jsonb),pipeline_control.admin_record_snapshot(text,uuid[]),
@@ -601,22 +640,20 @@ BEGIN
   END LOOP;
   INSERT INTO privacy_retention.g014_public_rpc_allowlist(function_schema,function_name,identity_arguments,grantee,source_signature)
    SELECT n.nspname,p.proname,p.proargtypes::text,'service_role',signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.oid=to_regprocedure(signature);
-  -- Retire the three browser-admin RPC entrances now covered by this server contract.
-  -- Preserve service ACLs for legacy compatibility; the atomic path does not call them.
+  -- Additive phase: preserve the three exact legacy browser-admin entrances.
+  -- Authenticated retirement follows only a separately reviewed consumer cutover.
   FOREACH signature IN ARRAY ARRAY[
    'public.approve_submission_item(uuid,uuid,jsonb)',
    'public.approve_edit_submission_item(uuid,uuid,jsonb)',
    'public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)'] LOOP
    target:=to_regprocedure(signature);
-   SELECT to_jsonb(p)-'proacl' INTO metadata FROM pg_proc p WHERE oid=target AND proowner='privacy_workflow_owner'::regrole
+   SELECT to_jsonb(p) INTO metadata FROM pg_proc p WHERE oid=target AND proowner='privacy_workflow_owner'::regrole
     AND prosecdef AND proconfig=ARRAY['search_path=""']::text[];
    IF metadata IS NULL OR NOT has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
     OR (SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=signature AND grantee='authenticated')<>1
     THEN RAISE EXCEPTION 'RECORD_ACTION_LEGACY_RPC_DRIFT'; END IF;
-   EXECUTE 'REVOKE EXECUTE ON FUNCTION '||signature||' FROM authenticated';
-   DELETE FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=signature AND grantee='authenticated';
-   IF (SELECT to_jsonb(p)-'proacl' FROM pg_proc p WHERE oid=target) IS DISTINCT FROM metadata
-    OR has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
+   IF (SELECT to_jsonb(p) FROM pg_proc p WHERE oid=target) IS DISTINCT FROM metadata
+    OR NOT has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
     THEN RAISE EXCEPTION 'RECORD_ACTION_LEGACY_RPC_DRIFT'; END IF;
   END LOOP;
   -- No owner/ACL/lookup-path changes to either assertion. Their actual bodies remain authoritative.

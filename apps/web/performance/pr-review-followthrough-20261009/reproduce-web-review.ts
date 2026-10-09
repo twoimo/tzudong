@@ -1,0 +1,10 @@
+import { buildAdminPendingCountsResponse } from '../../lib/admin/pending-counts';
+import { buildOperationsViewModel, parseOperationsSnapshot } from '../../lib/admin/operations-view-model';
+import { parsePipelineStatus, pipelineJobsForDisplay } from '../../lib/admin/pipeline-flow-view-model';
+import { writeFileSync } from 'node:fs';
+const pending=buildAdminPendingCountsResponse({restaurantSubmissions:2,restaurantRecommendationRequests:0,reviews:4,recommendationRequestsLifecycleReady:true,asOf:'2026-10-09T00:00:00Z'});
+const total=buildOperationsViewModel({pending:parseOperationsSnapshot('pending',pending)}).summaries.find(row=>row.id==='pending')?.value;
+if(total!==6)throw Error('zero_count_repro_failed');
+const snapshot=parsePipelineStatus({source:'github_actions',jobs:[{id:'77',status:'Fetching',target:'tzuyang',profile:'lite_gha'}],failures:[],targets:[],githubRun:{id:'77',status:'in_progress',conclusion:null}})!;
+const jobs=pipelineJobsForDisplay(snapshot,undefined);
+writeFileSync('performance/pr-review-followthrough-20261009/web-reproduction.json',JSON.stringify({pendingZeroCase:{counts:[2,0,4],total,commentPremiseReproduced:false},pipelineMissingManifest:{snapshotPartial:snapshot.partial,displayJobStatus:jobs[0]?.status,currentDashboardReliable:!snapshot.partial,commentPremiseReproduced:snapshot.partial===false&&jobs[0]?.status==='Unknown'}},null,2)+'\n');

@@ -101,10 +101,14 @@ function buildManagedUser(user: User, metadata: AdminUserManagementMetadataRow |
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+    if (!auth.ok) { auth.response.headers.set('Cache-Control', 'no-store'); return auth.response; }
 
-    const supabase = createSupabaseServiceRoleClient();
     const searchParams = request.nextUrl.searchParams;
+    const exactUserId = searchParams.get('user_id');
+    if (exactUserId !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(exactUserId)) {
+      return NextResponse.json({ code: 'ADMIN_USER_ID_INVALID' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+    }
+    const supabase = createSupabaseServiceRoleClient();
     const search = normalizeSearch(searchParams.get('search'));
     const page = Math.max(Number(searchParams.get('page') ?? '1') || 1, 1);
     const requestedPerPage = Number(searchParams.get('perPage') ?? String(DEFAULT_PER_PAGE)) || DEFAULT_PER_PAGE;
@@ -113,7 +117,15 @@ export async function GET(request: NextRequest) {
     const userPages = [];
     let listedTotal = 0;
 
-    if (search) {
+    if (exactUserId !== null) {
+      const { data, error } = await supabase.auth.admin.getUserById(exactUserId);
+      if (error || !data.user) {
+        if (error?.status === 404 || !error) return NextResponse.json({ code: 'ADMIN_USER_NOT_FOUND' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+        throw error;
+      }
+      if (data.user.id.toLowerCase() !== exactUserId.toLowerCase()) throw new Error('ADMIN_USER_READBACK_INVALID');
+      userPages.push(data.user); listedTotal = 1;
+    } else if (search) {
       for (let searchPage = 1; searchPage <= 5; searchPage += 1) {
         const { data, error } = await supabase.auth.admin.listUsers({ page: searchPage, perPage: MAX_PER_PAGE });
         if (error) throw error;
@@ -135,7 +147,7 @@ export async function GET(request: NextRequest) {
     const users = authUsers
       .map((user) => buildManagedUser(user, metadataMap.get(user.id)))
       .filter((user) => {
-        if (!search) return true;
+        if (exactUserId !== null || !search) return true;
         return [user.email, user.nickname, user.username, user.id]
           .join(' ')
           .toLowerCase()
@@ -147,7 +159,7 @@ export async function GET(request: NextRequest) {
         users,
         page,
         perPage,
-        total: search ? users.length : listedTotal,
+        total: exactUserId !== null || search ? users.length : listedTotal,
         summary: {
           loadedUsers: users.length,
           adminUsers: users.filter((user) => user.isAdmin).length,

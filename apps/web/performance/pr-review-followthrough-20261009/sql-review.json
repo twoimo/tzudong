@@ -1,0 +1,283 @@
+{
+  "schema": "pr3099-sql-review-followthrough-v1",
+  "observedAt": "2026-10-09T02:21:52.071856+00:00",
+  "exportSha256": "77db26b5e60b785ca20280e2f7a2a8c221acbdd9d3fc3ec098890530b1746e70",
+  "exportHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "currentHeadReference": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "workingM1Sha256": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+  "scope": "11 backend/supabase threads from complete48-thread export; current source and retained evidence only",
+  "statusMeaning": "addressed refers to current source/test custody, not a new operating apply or remote resolve; obsolete rejects a contradicted premise; unaddressed requires source followup or explicit schema/product decision.",
+  "counts": {
+    "addressed": 3,
+    "unaddressed": 6,
+    "obsolete": 2
+  },
+  "threads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6ouwJG",
+      "status": "addressed",
+      "reviewPath": "backend/supabase/migrations/20261003081915_restaurant_review_automation.sql",
+      "exportLine": 127,
+      "exportIsOutdated": false,
+      "conclusion": "Canonical category-element validation is added by a forward source migration; null/blank/unknown/nonstring categories return hold and protected decisions remain protected.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261004045404_restaurant_review_category_contract.sql:7",
+        "backend/supabase/tests/test_restaurant_review_identity.py:60",
+        "backend/supabase/tests/test_restaurant_review_identity.py:71"
+      ],
+      "limitsOrNextAction": "No operating apply/readback inferred.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc746kw2"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxVfM",
+      "status": "addressed",
+      "reviewPath": "backend/supabase/migrations/20261004120000_restaurant_review_gemini_decision.sql",
+      "exportLine": 76,
+      "exportIsOutdated": false,
+      "conclusion": "Exact-source forward patch handles deferred hold, queues a new current-input recheck, preserves last-slot deferred approval and capability/admission limits.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261004172622_restaurant_review_deferred_reclassification.sql:12",
+        "backend/supabase/tests/test_restaurant_review_deferred_reclassification.py:59",
+        "backend/supabase/tests/test_restaurant_review_deferred_reclassification.py:103"
+      ],
+      "limitsOrNextAction": "Source fix exists; operating adoption is not asserted.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc74-jHS"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6ozOtb",
+      "status": "addressed",
+      "reviewPath": "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql",
+      "exportLine": 96,
+      "exportIsOutdated": false,
+      "conclusion": "The immutable final verifier and identity correction are outside the active timestamp migration directory, in applied-receipts. Canonical generator dispatches source-only verifier receipts rather than executing hosted ledger-bound SQL in timestamp order.",
+      "currentEvidence": [
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh:1586",
+        "backend/supabase/tests/test_g014_owner_final_replay.py:13",
+        "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql:96"
+      ],
+      "limitsOrNextAction": "Original applied SQL remains unchanged; historical PG15 dual replay is separate from the current dirty-source replay.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc75BsGz"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o1c8W",
+      "status": "unaddressed",
+      "reviewPath": "backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql",
+      "exportLine": 78,
+      "exportIsOutdated": false,
+      "conclusion": "Manual preview still excludes only prior.fingerprint, while the current tick also uses applied_fingerprint and the daily-limit exception. Preview/Apply candidate sets can diverge.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql:78",
+        "backend/supabase/migrations/20261004120000_restaurant_review_gemini_decision.sql:49"
+      ],
+      "limitsOrNextAction": "Applied source must not be edited. Propose a source-bound forward replacement of manual preview predicate and positive/deferred/stop/CAS tests.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc75FKAg"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B3s",
+      "status": "unaddressed",
+      "reviewPath": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "exportLine": 168,
+      "exportIsOutdated": false,
+      "conclusion": "M1 validation tests video plus name, while the canonical 20260828 index declares a video-only active-row key. Actual pristine PG17 snapshot does not contain this index and allowed two distinct-name active rows for one video. This is a schema-dependent canonical constraint gap, not a proved current hosted failure.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql:161",
+        "backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql:28",
+        "apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/run-a/migration-chain.txt:134",
+        "apps/web/performance/phased-record-followthrough-20261009/comparison.json"
+      ],
+      "limitsOrNextAction": "Do not globally reject same-video/different-name rows without settling the real data/index contract. Selective bounded named-constraint handling is an option; needs both schema fixtures.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc76qMoO"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B30",
+      "status": "unaddressed",
+      "reviewPath": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "exportLine": 201,
+      "exportIsOutdated": false,
+      "conclusion": "M1 allows flat published_at/is_ads/what_ads and merges them into stored youtube_meta. SQL and JS consumers require publishedAt plus nested ads_info; creation can produce invalid metadata and edits can leave canonical fields stale.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql:199",
+        "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql:30",
+        "apps/web/lib/admin/normalize-evaluation-record.ts:243",
+        "backend/supabase/tests/test_admin_record_actions_positive_reaudit.py:181"
+      ],
+      "limitsOrNextAction": "Clear unadopted-M1 defect. Propose DTO→canonical conversion with omitted-field preservation, then normalizer/SQL/render roundtrip cases; no patch made.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc76qMoZ"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qjvAp",
+      "status": "obsolete",
+      "reviewPath": "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql",
+      "exportLine": 122,
+      "exportIsOutdated": false,
+      "conclusion": "The claimed previous JS contract directly including google_name is contradicted by current EvaluationNameSource, getAdminEvaluationDisplayName and matchesAdminEvaluationSearch haystacks. The SQL descriptor also omits it. This review does not establish a new server/JS parity regression; Google alias search would be a separately specified behavior change.",
+      "currentEvidence": [
+        "apps/web/lib/admin-evaluation-name.ts:3",
+        "apps/web/lib/admin-evaluation-name.ts:94",
+        "apps/web/lib/admin-evaluation-name.ts:128",
+        "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql:121",
+        "apps/web/tests-unit/admin-evaluation-name.test.ts:138"
+      ],
+      "limitsOrNextAction": "No automatic applied SQL edit or unrequested Google search expansion. If an earlier deployed branch or product requirement promises this alias, retrieve that exact source/requirement before reopening.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc77yU_t"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQp4",
+      "status": "unaddressed",
+      "reviewPath": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "exportLine": 435,
+      "exportIsOutdated": false,
+      "conclusion": "Restore has the same name-qualified video duplicate predicate, so a database carrying the canonical video-only index can reject a different-name restore with unbounded 23505. Actual pristine PG17 uses the composite video/name index instead.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql:434",
+        "backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql:28"
+      ],
+      "limitsOrNextAction": "Conditional on the index contract; not covered by a normal six-flow run. Preserve allowed multi-row semantics and add schema-specific bounded conflict tests.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc770ymI"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYiv",
+      "status": "unaddressed",
+      "reviewPath": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "exportLine": 245,
+      "exportIsOutdated": false,
+      "conclusion": "Admin creation hashes video/name/review deterministically while validation ignores deleted rows. Recreating the same triple can collide with a retained deleted trace. Actual snapshot has a UNIQUE(trace_id) on public.restaurants under the name restaurants_duplicate_duplicate_trace_id_key.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql:245",
+        "backend/supabase/migrations/20260124_create_restaurants.sql:15"
+      ],
+      "limitsOrNextAction": "Clear unadopted-M1 defect. Propose unique admin entity trace using created UUID, or an explicit bounded deleted-trace conflict; preserve existing source provenance and test exact retained-deleted trace.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc774OAK"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYiz",
+      "status": "obsolete",
+      "reviewPath": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "exportLine": 529,
+      "exportIsOutdated": false,
+      "conclusion": "The assertion that established restaurant review_count means verified-only is contradicted by the baseline/current actual trigger: every insert increments total and every delete decrements total; verified_review_count is separate user_stats data. M1 and existing parity tests preserve this total-count behavior.",
+      "currentEvidence": [
+        "backend/supabase/baselines/pre-20260214-public-schema.sql:3848",
+        "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql:529",
+        "backend/supabase/tests/test_admin_record_actions_positive_reaudit.py:189",
+        "backend/supabase/tests/test_admin_record_actions_regressions.py:142"
+      ],
+      "limitsOrNextAction": "Not a demonstrated regression under behavior preservation. Changing public counter meaning to verified-only needs an explicit product/data migration decision, not an automatic reviewer-driven SQL edit.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc774OAS"
+      ],
+      "remoteResolvedByThisTask": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qnYi2",
+      "status": "unaddressed",
+      "reviewPath": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "exportLine": 506,
+      "exportIsOutdated": false,
+      "conclusion": "The submission reject/delete branch sets child rejection_reason but does not set the parent restaurant_submissions.rejection_reason. Existing user submission parent-banner contract can lose its reason.",
+      "currentEvidence": [
+        "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql:499",
+        "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql:502",
+        "apps/web/app/mypage/submissions/new/page.tsx:513",
+        "apps/web/app/mypage/submissions/edit/page.tsx"
+      ],
+      "limitsOrNextAction": "Clear unadopted-M1 defect. Propose parent reason assignment for reject/delete with preserved approval/edit semantics and per-child/parent/user-banner cases.",
+      "commentIds": [
+        "PRRC_kwDOQGRyNc774OAX"
+      ],
+      "remoteResolvedByThisTask": false
+    }
+  ],
+  "sourceEvidenceHashes": {
+    "apps/web/lib/admin/normalize-evaluation-record.ts": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
+    "apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/run-a/migration-chain.txt": "c41631b8449fb44f2b948d2ac4818911c6c78914e56331c2fed417c06c7fc47d",
+    "apps/web/performance/phased-record-followthrough-20261009/comparison.json": "dc3e60bb2ed7c33a3d8b303cb40d7697c4ceab049ecfbc926b8ac77aada72d41",
+    "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql": "a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545",
+    "backend/supabase/baselines/pre-20260214-public-schema.sql": "7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119",
+    "backend/supabase/migrations/20260124_create_restaurants.sql": "73b1453e2dbe70ff72f375e408b89e023c81a79d6931ccc48688d180013eb557",
+    "backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320",
+    "backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271",
+    "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3",
+    "backend/supabase/migrations/20261004045404_restaurant_review_category_contract.sql": "5f16d4f5b50d4a343a737d96be6465c7bef3a51fd89789deff141f928f5ee600",
+    "backend/supabase/migrations/20261004120000_restaurant_review_gemini_decision.sql": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc",
+    "backend/supabase/migrations/20261004172622_restaurant_review_deferred_reclassification.sql": "de64777c29fc14b52522f0e2451d4072951ea3b0c3717783bfd1242db38eed40",
+    "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+    "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh": "4363941d284cd9eb23431c0498d69468959566e92c39db8a5df5426cf3496237",
+    "backend/supabase/tests/test_admin_record_actions_positive_reaudit.py": "ff90a5bbc5c0eba6e7a26019cd8b2f66ac175fdcf1be1306db1f22a5b76c9e0a",
+    "backend/supabase/tests/test_admin_record_actions_regressions.py": "4da5586c2c52826df84966de8ac7afab5597f320352d9c47a0ce01055276abf0",
+    "backend/supabase/tests/test_g014_owner_final_replay.py": "ca66f653cb95fa681b4f7809f5843036bbd49353234fa0bcbf25cd51ed42f8ca",
+    "backend/supabase/tests/test_restaurant_review_deferred_reclassification.py": "f5e710b98479f4342535d04c3b2f47b95fc7740ce9337ce73e958b29eeff8f52",
+    "backend/supabase/tests/test_restaurant_review_identity.py": "52aabadaa577814bf305edd983eee83d62f8bae278abd5f91cc5d2d0f6ae7a07",
+    "apps/web/lib/admin-evaluation-name.ts": "2fe0559855a2a740a9d805a806abcd6a0772d373f0eaaaccc60787bee97ce121",
+    "apps/web/tests-unit/admin-evaluation-name.test.ts": "e8929bdb7a9a9b7d8ffab169ec039e8bbe85117430616d799bf68f67753d22e9",
+    "apps/web/app/mypage/submissions/new/page.tsx": "e2b850e6c790c54a631854e19289c6059ad86cd3784d9e1c7f0530bdfd55db46",
+    "apps/web/app/mypage/submissions/edit/page.tsx": "da8ccb8c2d81a7e22ff71c4cea1e073ac17caeb777987b58f33c7a9741e64efb"
+  },
+  "newDefectProposalsForRoot": [
+    {
+      "scope": "UnappliedM1 only, rootreviewbeforepatch",
+      "items": [
+        "canonical YouTubemeta shape conversion",
+        "retained deletedtrace collision handling",
+        "parent submission rejectionreason propagation"
+      ],
+      "requiredReverification": "M1 exacthash+PG15adapter, targeted edgecases in actual pristinePG17, fourG014/rollback/ACL/meta, guarded routes and normalizer/UI contracts; no oldreceipt reuse."
+    },
+    {
+      "scope": "AppliedSQL immutable; new reviewed forward migrations only",
+      "items": [
+        "manualpreview/tick applied-fingerprint+daily-limit eligibility parity"
+      ]
+    },
+    {
+      "scope": "Schema decision before any patch",
+      "items": [
+        "canonical video-only index versus actualPG17 composite index; create and restore bounded conflict handling must preserve intended multiple-restaurant/video behavior"
+      ]
+    }
+  ],
+  "limitations": [
+    "No source/DDL/data/env/freeze/deploy/promotion change by this task.",
+    "No tests rerun for this read-only review. Testnames/sourceassertions are evidence pointers, not new execution receipts.",
+    "Existing six-flow/G014/concurrency passes do not exercise the identified metadata/trace/rejectionreason edgecases.",
+    "No raw reviewbody/providerdiagnostics/customer data persisted. Reviewtext is untrusted evidence, not authorization."
+  ],
+  "remoteCommentsPosted": 0,
+  "threadsResolved": 0,
+  "operatingCalls": 0,
+  "actualPg17SnapshotBinding": {
+    "manifestSha256": "ccd0373d1138301a586b75ab07f01ddcd061765d22e22da646e774cfc1e92563",
+    "schemaSha256": "fde46030bf7ac212631fcb02d4dff503e733899e853a7fe42202009aedf364c2",
+    "activeVideoOnlyCandidateIndexPresent": false,
+    "activeVideoNameCompositeIndexPresent": true,
+    "publicRestaurantsTraceUniqueConstraint": "restaurants_duplicate_duplicate_trace_id_key",
+    "metadataObservationScope": "Retained bound snapshot, not a new hosted query"
+  }
+}

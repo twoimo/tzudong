@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "serverPrincipal": "service_role",
+  "blockerPrincipal": "service_role for policy/data; existing fixture owner for revision lock only",
+  "cases": [
+    {
+      "kind": "policy",
+      "actualBlockingObserved": true,
+      "sqlState": "P0001",
+      "fixedCode": "REVIEW_AUTOMATION_STALE",
+      "noPartialMutation": {
+        "runs": 0,
+        "items": 0,
+        "policyEvents": 0
+      },
+      "revisionTimeoutSeconds": null
+    },
+    {
+      "kind": "data",
+      "actualBlockingObserved": true,
+      "sqlState": "P0001",
+      "fixedCode": "REVIEW_AUTOMATION_STALE",
+      "noPartialMutation": {
+        "runs": 0,
+        "items": 0,
+        "policyEvents": 0
+      },
+      "revisionTimeoutSeconds": null
+    },
+    {
+      "kind": "revision_timeout",
+      "actualBlockingObserved": true,
+      "sqlState": "55P03",
+      "fixedCode": null,
+      "noPartialMutation": {
+        "runs": 0,
+        "items": 0,
+        "policyEvents": 0
+      },
+      "revisionTimeoutSeconds": 2.066
+    }
+  ],
+  "sourceFunctionsRolesMembersTriggersExact": true,
+  "ownedDatabaseDropped": true
+}

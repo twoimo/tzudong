@@ -12,7 +12,7 @@ from backend.pipeline_control.graph import AdapterGraphError
 @contextmanager
 def owned_media_cache(run_id: str, *, enabled: bool, root: Path | None = None):
     if not enabled or os.environ.get('VIDEO_CACHE_DIR'):
-        yield lambda: None
+        yield lambda outcome=None: None
         return
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', run_id):
         raise AdapterGraphError('media_cache_run_invalid')
@@ -22,7 +22,7 @@ def owned_media_cache(run_id: str, *, enabled: bool, root: Path | None = None):
     if root is None:
         for env_path in [backend / '.env', backend / '.env.local']:
             if env_path.is_file() and any(re.match(r'\s*(?:export\s+)?VIDEO_CACHE_DIR\s*=\s*.+', line) for line in env_path.read_text().splitlines()):
-                yield lambda: None
+                yield lambda outcome=None: None
                 return
     base = root or backend / 'restaurant-crawling' / 'temp' / 'run-cache'
     cache = base / run_id
@@ -41,12 +41,16 @@ def owned_media_cache(run_id: str, *, enabled: bool, root: Path | None = None):
     else:
         atomic_write(owner,json.dumps({"runId":run_id,"schemaVersion":1}).encode())
     previous = os.environ.get('PIPELINE_SHARED_VIDEO_CACHE_DIR')
+    previous_owner = os.environ.get('PIPELINE_OWNED_VIDEO_CACHE_RUN_ID')
+    os.environ['PIPELINE_OWNED_VIDEO_CACHE_RUN_ID'] = run_id
     os.environ['VIDEO_CACHE_DIR'] = str(cache.resolve())
     os.environ['PIPELINE_SHARED_VIDEO_CACHE_DIR'] = str(backend / 'restaurant-crawling' / 'data' / 'video_cache')
 
-    def completed():
+    def completed(outcome="Succeeded"):
         # This directory belongs to exactly one run, which the store locks.
-        # Failed/cancelled runs retain files for a resume of the same run ID.
+        # Only Paused may resume; terminal owned caches are no longer reusable.
+        if outcome == "Paused": return
+        if outcome not in {"Succeeded", "Failed", "Cancelled"}: raise AdapterGraphError("media_cache_outcome_invalid")
         if cache.is_symlink() or cache.resolve().parent != base.resolve():
             raise AdapterGraphError('media_cache_path_invalid')
         if json.loads(owner.read_bytes()) != {"runId":run_id,"schemaVersion":1}:
@@ -55,8 +59,14 @@ def owned_media_cache(run_id: str, *, enabled: bool, root: Path | None = None):
 
     try:
         yield completed
+    except BaseException:
+        try: completed("Failed")
+        except (OSError, ValueError, AdapterGraphError): pass
+        raise
     finally:
         os.environ.pop('VIDEO_CACHE_DIR', None)
+        if previous_owner is None: os.environ.pop('PIPELINE_OWNED_VIDEO_CACHE_RUN_ID', None)
+        else: os.environ['PIPELINE_OWNED_VIDEO_CACHE_RUN_ID'] = previous_owner
         if previous is None:
             os.environ.pop('PIPELINE_SHARED_VIDEO_CACHE_DIR', None)
         else:

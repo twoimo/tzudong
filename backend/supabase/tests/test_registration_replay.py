@@ -1,4 +1,4 @@
-"""Exact custody; functional SQL and registration postconditions are unchanged."""
+"""Exact custody; PG15 preserves additive legacy ACLs and all registration guards."""
 import unittest
 from pathlib import Path
 from backend.supabase.scripts import transform_registration_replay as replay
@@ -21,6 +21,16 @@ class RegistrationReplayTests(unittest.TestCase):
                     self.assertIn(invariant, result)
                 self.assertNotIn(b'NOT inherit_option AND NOT set_option', result)
                 self.assertIn(b'REGISTRATION_REPLAY_PG15_REQUIRED', result)
+
+    def test_additive_legacy_contract_survives_the_pg15_window(self):
+        name = '20261004190259_admin_record_guarded_actions.sql'
+        source = (ROOT/'backend/supabase/migrations'/name).read_bytes()
+        result = replay.transform(source, name)
+        start = source.index(b'  -- Additive phase:')
+        end = source.index(b'  -- No owner/ACL/lookup-path changes', start)
+        self.assertIn(source[start:end], result)
+        self.assertNotIn(b"EXECUTE 'REVOKE EXECUTE ON FUNCTION '", source[start:end])
+        self.assertNotIn(b'DELETE FROM privacy_retention.g014_public_rpc_allowlist', source[start:end])
 
     def test_unknown_changed_and_transformed_sources_are_rejected(self):
         for name in replay.SOURCES:

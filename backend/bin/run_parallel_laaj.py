@@ -10,6 +10,7 @@ import signal
 import subprocess
 import sys
 import threading
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from backend.utils.jsonl_utils import load_last_jsonl_record
@@ -81,9 +82,10 @@ def run_video(video, args, *, fallback=False):
     receipt = args.evaluation_path / 'evaluation' / 'laaj_results' / '.receipts' / (video + '.json')
     output = receipt.parent.parent / (video + '.jsonl')
     env = {**os.environ, 'LAAJ_CHILD': 'sequential' if fallback else '1',
-           'LAAJ_SKIP_HEALTH_CHECK': '0' if fallback else '1'}
+           'LAAJ_SKIP_HEALTH_CHECK': ('1' if getattr(FALLBACK_LOCK_STATE,'health_passed',False) else '0') if fallback else '1'}
     if fallback:
         env.update({'GEMINI_MAX_INFLIGHT': '1', 'USE_OAUTH': 'true'})
+        if getattr(FALLBACK_LOCK_STATE,'health_file',None): env['LAAJ_HEALTH_SUCCESS_FILE']=str(FALLBACK_LOCK_STATE.health_file)
     command = [os.environ.get('LAAJ_BASH', 'bash'), str(args.script), '--channel', args.channel,
                '--crawling-path', str(args.crawling_path), '--evaluation-path', str(args.evaluation_path), '--video-id', video]
     selection = args.evaluation_path / 'evaluation/selection/.receipts' / (video + '.json')
@@ -172,11 +174,22 @@ def run_jobs(ids, args, runner=run_video):
         with stage_lock(fallback_receipt) as descriptor:
             FALLBACK_LOCK_STATE.descriptor=descriptor
             try:
-                for video in deferred:
-                    code, counts = runner(video, args, fallback=True)
-                    failures += code != 0
-                    for key, value in counts.items(): usage[key] = usage.get(key, 0) + value
-            finally: FALLBACK_LOCK_STATE.descriptor=None
+                with tempfile.TemporaryDirectory(prefix='tzudong-fallback-health-') as temp:
+                    FALLBACK_LOCK_STATE.health_file = Path(temp) / 'passed'
+                    FALLBACK_LOCK_STATE.health_passed = False
+                    for index, video in enumerate(deferred):
+                        code, counts = runner(video, args, fallback=True)
+                        if FALLBACK_LOCK_STATE.health_file.is_file():
+                            FALLBACK_LOCK_STATE.health_passed = FALLBACK_LOCK_STATE.health_file.read_bytes() == b'passed\n'
+                        failures += code != 0
+                        for key, value in counts.items(): usage[key] = usage.get(key, 0) + value
+                        if code != 0 and not FALLBACK_LOCK_STATE.health_passed:
+                            failures += len(deferred) - index - 1
+                            break
+            finally:
+                FALLBACK_LOCK_STATE.descriptor=None
+                FALLBACK_LOCK_STATE.health_file=None
+                FALLBACK_LOCK_STATE.health_passed=False
     return {'operation':'parallel_laaj_complete','items':len(ids),'failures':failures,'jobs':args.jobs,
             'fallbackItems':len(deferred),'peakPendingJobs':peak_pending,'knownTokenUsage':usage}
 

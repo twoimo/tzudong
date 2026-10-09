@@ -168,11 +168,64 @@ function expectNoSecretLeak(payload: AdminSystemStatusResponse, secrets: string[
 }
 
 describe('admin system status helper', () => {
-    test('reports storyboard/BGE readiness and key availability from env', async () => {
+    test('retired producer URL/key cannot satisfy active RAG setup or trigger old probes', async () => {
+        const originalFetch = global.fetch;
+        const seen: string[] = [];
+        global.fetch = async (input) => { seen.push(String(input)); return new Response(null, { status: 503 }); };
+        try {
+            const { getAdminSystemStatus, resolveAdminSystemKeyFlags } = await loadSystemStatusHelper();
+            const env = { NODE_ENV: 'test', STORYBOARD_AGENT_ENABLED: 'true', STORYBOARD_AGENT_API_URL: 'https://retired-producer.invalid',
+                STORYBOARD_AGENT_GEMINI_API_KEY: 'retired-fixture-key', STORYBOARD_BGE_ENABLED: 'true',
+                STORYBOARD_BGE_EMBEDDING_URL: 'https://retired-bge.invalid' };
+            const payload = await getAdminSystemStatus(env);
+            expect(payload.storyboardAgent.configured).toBe(false);
+            expect(payload.bgeEmbedding.enabled).toBe(false);
+            expect(seen).toEqual([]);
+            const setup = findChecklistItem(payload, 'storyboard-url-missing')!;
+            expect(setup.action).toContain('STORYBOARD_RAG_WORKER_TOKEN');
+            expect(setup.commandSnippet).not.toContain('STORYBOARD_AGENT_API_URL');
+            expect(payload.checklist.some((item) => item.id.startsWith('bge-'))).toBe(false);
+            expect(resolveAdminSystemKeyFlags(env).geminiServerKey).toBe(false);
+            expect(resolveAdminSystemKeyFlags({ GEMINI_CREDITS_API_KEY: 'approved-egress-fixture' }).geminiServerKey).toBe(true);
+            expect(resolveAdminSystemKeyFlags({ STORYBOARD_GEMINI_API_KEY: 'approved-egress-fixture' }).geminiServerKey).toBe(true);
+        } finally { global.fetch = originalFetch; }
+    });
+
+    test('health and models use independent capability; config false is not a ready provider claim', async () => {
+        const originalFetch = global.fetch;
+        const requests: string[] = [];
+        const token = 'readiness-fixture-capability-00000000000000000';
+        global.fetch = async (input, init) => {
+            requests.push(String(input));
+            expect(new Headers(init?.headers).get('Authorization')).toBe(`Bearer ${token}`);
+            expect(init?.redirect).toBe('error');
+            return String(input).includes('/models?load=false')
+                ? Response.json({ schemaVersion: 1, ready: false, providers: [] }) : Response.json({ ok: true });
+        };
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const env = { NODE_ENV: 'test', STORYBOARD_RAG_WORKER_URL: 'https://active-rag.invalid', STORYBOARD_RAG_WORKER_TOKEN: token };
+            const payload = await getAdminSystemStatus(env);
+            expect(requests).toEqual(['https://active-rag.invalid/health', 'https://active-rag.invalid/models?load=false']);
+            expect(payload.storyboardAgent.configured).toBe(true);
+            expect(payload.storyboardAgent.reachable).toBe(false);
+            expect(payload.storyboardAgent.detail).toBe('worker_configuration_not_ready');
+            expect(JSON.stringify(payload)).not.toContain(token);
+            for (const connection of [{ ...env, STORYBOARD_RAG_WORKER_TOKEN: '' },
+                { ...env, GEMINI_CREDITS_API_KEY: token }, { ...env, STORYBOARD_RAG_WORKER_URL: 'http://remote-rag.invalid' }]) {
+                requests.length = 0;
+                expect((await getAdminSystemStatus(connection)).storyboardAgent.configured).toBe(false);
+                expect(requests).toEqual([]);
+            }
+        } finally { global.fetch = originalFetch; }
+    });
+
+    test('reports Gemini RAG readiness and keeps retired BGE disabled', async () => {
         const runDailyScriptPath = detectRunDailyScriptPath();
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'true',
-            STORYBOARD_AGENT_API_URL: 'https://storyboard.internal/api',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_TOKEN: 'readiness-fixture-capability-00000000000000000',
+            STORYBOARD_RAG_WORKER_URL: 'https://storyboard.internal',
             STORYBOARD_BGE_ENABLED: 'true',
             STORYBOARD_BGE_EMBEDDING_URL: 'https://bge.internal/v1/embeddings',
             STORYBOARD_BGE_EMBEDDING_TOKEN: 'bge-secret-token',
@@ -192,6 +245,13 @@ describe('admin system status helper', () => {
             const endpoint = String(input);
             seen.push(`${init?.method ?? 'GET'} ${endpoint}`);
 
+            if (endpoint.includes('/models?load=false')) {
+                expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer readiness-fixture-capability-00000000000000000');
+                expect(init?.redirect).toBe('error');
+                return Response.json({ schemaVersion: 1, ready: true, providers: [
+                    { id: 'gemini-embedding-001', ready: true }, { id: 'gemini-3.8-flash', ready: true },
+                ] });
+            }
             if (endpoint.includes('/health')) {
                 return new Response(JSON.stringify({ ok: true }), {
                     status: 204,
@@ -225,10 +285,10 @@ describe('admin system status helper', () => {
             expect(payload.storyboardAgent.enabled).toBe(true);
             expect(payload.storyboardAgent.configured).toBe(true);
             expect(payload.storyboardAgent.reachable).toBe(true);
-            expect(payload.storyboardAgent.endpoint).toBe('https://storyboard.internal/api');
-            expect(payload.bgeEmbedding.enabled).toBe(true);
-            expect(payload.bgeEmbedding.configured).toBe(true);
-            expect(payload.bgeEmbedding.reachable).toBe(true);
+            expect(payload.storyboardAgent.endpoint).toBe('https://storyboard.internal');
+            expect(payload.bgeEmbedding.enabled).toBe(false);
+            expect(payload.bgeEmbedding.configured).toBe(false);
+            expect(payload.bgeEmbedding.reachable).toBe(false);
             expect(payload.keys.geminiServerKey).toBe(true);
             expect(payload.keys.openaiServerKey).toBe(true);
             expect(payload.keys.anthropicServerKey).toBe(false);
@@ -294,16 +354,17 @@ describe('admin system status helper', () => {
                 expect(findChecklistItem(payload, 'run-daily-script-missing')?.severity).toBe('high');
             }
             expect(seen.some((entry) => entry.startsWith('GET https://storyboard.internal/health'))).toBe(true);
-            expect(seen.some((entry) => entry.startsWith('POST https://bge.internal/v1/embeddings'))).toBe(true);
+            expect(seen.some((entry) => entry.includes('bge.internal'))).toBe(false);
+            expect(seen.some((entry) => entry.includes('/models?load=false'))).toBe(true);
         } finally {
             global.fetch = originalFetch;
             restoreEnv();
         }
     });
 
-    test('adds command snippets for missing run_daily/storyboard/BGE checks', async () => {
+    test('uses active RAG setup commands and omits retired producer setup', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
             STORYBOARD_BGE_ENABLED: 'true',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
@@ -315,11 +376,10 @@ describe('admin system status helper', () => {
 
             expectChecklistHasCommand(payload, 'run-daily-script-missing', 'pipeline_control.worker');
             expectChecklistHasCommand(payload, 'run-daily-script-missing', 'crontab');
-            expectChecklistHasCommand(payload, 'storyboard-url-missing', 'STORYBOARD_AGENT_API_URL');
+            expectChecklistHasCommand(payload, 'storyboard-url-missing', 'STORYBOARD_RAG_WORKER_URL');
             expectChecklistHasCommand(payload, 'storyboard-url-missing', 'health');
-            expectChecklistHasCommand(payload, 'storyboard-url-missing', 'curl');
-            expectChecklistHasCommand(payload, 'bge-url-missing', 'STORYBOARD_BGE_EMBEDDING_URL');
-            expectChecklistHasCommand(payload, 'bge-url-missing', 'POST');
+            expectChecklistHasCommand(payload, 'storyboard-url-missing', 'STORYBOARD_RAG_WORKER_TOKEN');
+            expect(findChecklistItem(payload, 'bge-url-missing')).toBeUndefined();
             expect(JSON.stringify(payload)).not.toContain('bge-secret-token');
         } finally {
             restoreEnv();
@@ -329,8 +389,9 @@ describe('admin system status helper', () => {
     test('redacts endpoint credentials and query fragments while checking system status', async () => {
         const runDailyScriptPath = detectRunDailyScriptPath();
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'true',
-            STORYBOARD_AGENT_API_URL: 'https://storyboard-user:storyboard-token@example.com/api/v1/health?token=leak-token',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_TOKEN: 'readiness-fixture-capability-00000000000000000',
+            STORYBOARD_RAG_WORKER_URL: 'https://storyboard-user:storyboard-token@example.com/api/v1/health?token=leak-token',
             STORYBOARD_BGE_ENABLED: 'true',
             STORYBOARD_BGE_EMBEDDING_URL: 'https://bge-user:embed-token@example.com/v1/embeddings?token=embed-leak',
             STORYBOARD_BGE_EMBEDDING_TOKEN: 'bge-secret-token',
@@ -368,12 +429,9 @@ describe('admin system status helper', () => {
             const { getAdminSystemStatus } = await loadSystemStatusHelper();
             const payload = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
 
-            expect(payload.storyboardAgent.endpoint).toBe('https://example.com/api/v1/health');
-            expect(payload.bgeEmbedding.endpoint).toBe('https://example.com/v1/embeddings');
-            expect(payload.storyboardAgent.endpoint).not.toContain('storyboard-user');
-            expect(payload.storyboardAgent.endpoint).not.toContain('storyboard-token');
-            expect(payload.bgeEmbedding.endpoint).not.toContain('bge-user');
-            expect(payload.bgeEmbedding.endpoint).not.toContain('embed-token');
+            expect(payload.storyboardAgent.endpoint).toBeUndefined();
+            expect(payload.storyboardAgent.configured).toBe(false);
+            expect(payload.bgeEmbedding.endpoint).toBeUndefined();
             expect(JSON.stringify(payload)).not.toContain('leak-token');
             expect(JSON.stringify(payload)).not.toContain('embed-leak');
         } finally {
@@ -385,8 +443,9 @@ describe('admin system status helper', () => {
     test('omits raw provider token values when they are configured', async () => {
         const runDailyScriptPath = detectRunDailyScriptPath();
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'true',
-            STORYBOARD_AGENT_API_URL: 'https://storyboard.internal/api',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_TOKEN: 'readiness-fixture-capability-00000000000000000',
+            STORYBOARD_RAG_WORKER_URL: 'https://storyboard.internal',
             STORYBOARD_BGE_ENABLED: 'true',
             STORYBOARD_BGE_EMBEDDING_URL: 'https://bge.internal/v1/embeddings',
             STORYBOARD_BGE_EMBEDDING_TOKEN: 'bge-super-secret-token',
@@ -435,11 +494,12 @@ describe('admin system status helper', () => {
         }
     });
 
-    test('marks storyboard and bge integration issues with source metadata', async () => {
+    test('marks active RAG issues and omits retired BGE checks', async () => {
         const runDailyScriptPath = detectRunDailyScriptPath();
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'true',
-            STORYBOARD_AGENT_API_URL: 'https://storyboard.internal/api',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_TOKEN: 'readiness-fixture-capability-00000000000000000',
+            STORYBOARD_RAG_WORKER_URL: 'https://storyboard.internal',
             STORYBOARD_BGE_ENABLED: 'true',
             STORYBOARD_BGE_EMBEDDING_URL: 'https://bge.internal/v1/embeddings',
             STORYBOARD_BGE_EMBEDDING_TOKEN: 'bge-secret-token',
@@ -468,7 +528,7 @@ describe('admin system status helper', () => {
             const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
 
             expect(payload.storyboardAgent.configured).toBe(true);
-            expect(payload.bgeEmbedding.configured).toBe(true);
+            expect(payload.bgeEmbedding.configured).toBe(false);
             expect(payload.storyboardAgent.reachable).toBe(false);
             expect(payload.bgeEmbedding.reachable).toBe(false);
 
@@ -478,11 +538,8 @@ describe('admin system status helper', () => {
             expect(storyboardHealthItem?.source).toBe('storyboard-agent');
             expect(storyboardHealthItem?.severity).toBe('high');
             expect(storyboardHealthItem?.category).toBe('integration');
-            expectChecklistHasCommand(payload, 'storyboard-health-failed', 'STORYBOARD_AGENT_API_URL');
-            expect(bgeHealthItem?.source).toBe('bge-embedding');
-            expect(bgeHealthItem?.severity).toBe('high');
-            expect(bgeHealthItem?.category).toBe('integration');
-            expectChecklistHasCommand(payload, 'bge-health-failed', 'STORYBOARD_BGE_EMBEDDING_URL');
+            expectChecklistHasCommand(payload, 'storyboard-health-failed', 'STORYBOARD_RAG_WORKER_URL');
+            expect(bgeHealthItem).toBeUndefined();
         } finally {
             global.fetch = originalFetch;
             restoreEnv();
@@ -493,7 +550,7 @@ describe('admin system status helper', () => {
         const localFrameCaptionDir = withTempDir('tzudong-frame-caption-');
         const runDailyScriptPath = detectRunDailyScriptPath();
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_FRAME_CAPTION_BASE_PATH: localFrameCaptionDir.dir,
             INSIGHT_GDRIVE_FRAME_CAPTION_PATH: 'https://fc-user:fc-token@example.com/peak/frame-captions?token=frame-leak',
@@ -528,7 +585,7 @@ describe('admin system status helper', () => {
         const missingRoot = withTempDir('tzudong-missing-frame-caption-');
         const missingPath = path.join(missingRoot.dir, 'does-not-exist-frame-caption');
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_FRAME_CAPTION_BASE_PATH: missingPath,
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
@@ -574,7 +631,7 @@ describe('admin system status helper', () => {
         process.chdir(tempRoot.dir);
 
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -602,7 +659,7 @@ describe('admin system status helper', () => {
         const restoreEnv = withEnv({
             NEXT_NAVER_CLIENT_ID: undefined,
             NEXT_NAVER_CLIENT_SECRET: undefined,
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -623,7 +680,7 @@ describe('admin system status helper', () => {
         const restoreConfiguredEnv = withEnv({
             NEXT_NAVER_CLIENT_ID: 'naver-client-id-secretish',
             NEXT_NAVER_CLIENT_SECRET: 'naver-client-secret-value',
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -743,7 +800,7 @@ describe('admin system status helper', () => {
         }));
         const missingManifestPath = path.join(tempDir.dir, 'missing-current-summary.json');
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
@@ -768,7 +825,7 @@ describe('admin system status helper', () => {
 
             restoreEnv();
             withEnv({
-                STORYBOARD_AGENT_ENABLED: 'false',
+                STORYBOARD_RAG_WORKER_ENABLED: 'false',
                 STORYBOARD_BGE_ENABLED: 'false',
                 INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
                 INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
@@ -800,7 +857,7 @@ describe('admin system status helper', () => {
 
             restoreEnv();
             withEnv({
-                STORYBOARD_AGENT_ENABLED: 'false',
+                STORYBOARD_RAG_WORKER_ENABLED: 'false',
                 STORYBOARD_BGE_ENABLED: 'false',
                 INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
                 INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
@@ -821,7 +878,7 @@ describe('admin system status helper', () => {
 
             restoreEnv();
             withEnv({
-                STORYBOARD_AGENT_ENABLED: 'false',
+                STORYBOARD_RAG_WORKER_ENABLED: 'false',
                 STORYBOARD_BGE_ENABLED: 'false',
                 INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
                 INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
@@ -852,8 +909,9 @@ describe('admin system status API route', () => {
     test('requires admin authorization before checks', async () => {
         const restoreEnv = withEnv({
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
-            STORYBOARD_AGENT_ENABLED: 'true',
-            STORYBOARD_AGENT_API_URL: 'https://storyboard.internal/api',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_TOKEN: 'readiness-fixture-capability-00000000000000000',
+            STORYBOARD_RAG_WORKER_URL: 'https://storyboard.internal',
             STORYBOARD_BGE_ENABLED: 'true',
             STORYBOARD_BGE_EMBEDDING_URL: 'https://bge.internal/v1/embeddings',
         });
@@ -875,8 +933,9 @@ describe('admin system status API route', () => {
     test('returns system status payload with no-store and hides secrets', async () => {
         const restoreEnv = withEnv({
             RUN_DAILY_SCRIPT_PATH: 'backend/run_daily_missing.sh',
-            STORYBOARD_AGENT_ENABLED: 'true',
-            STORYBOARD_AGENT_API_URL: 'https://storyboard.internal/api',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_TOKEN: 'readiness-fixture-capability-00000000000000000',
+            STORYBOARD_RAG_WORKER_URL: 'https://storyboard.internal',
             STORYBOARD_BGE_ENABLED: 'true',
             STORYBOARD_BGE_EMBEDDING_URL: 'https://bge.internal/v1/embeddings',
             STORYBOARD_BGE_EMBEDDING_TOKEN: 'bge-secret-token',
@@ -894,6 +953,11 @@ describe('admin system status API route', () => {
         global.fetch = async (input: RequestInfo | URL): Promise<Response> => {
             const endpoint = String(input);
 
+            if (endpoint.includes('/models?load=false')) {
+                return Response.json({ schemaVersion: 1, ready: true, providers: [
+                    { id: 'gemini-embedding-001', ready: true }, { id: 'gemini-3.8-flash', ready: true },
+                ] });
+            }
             if (endpoint.includes('/health')) {
                 return new Response(null, { status: 204 });
             }
@@ -917,9 +981,9 @@ describe('admin system status API route', () => {
 
             const payload = (await response.json()) as AdminSystemStatusResponse;
             expect(payload.storyboardAgent.enabled).toBe(true);
-            expect(payload.bgeEmbedding.enabled).toBe(true);
+            expect(payload.bgeEmbedding.enabled).toBe(false);
             expect(payload.storyboardAgent.configured).toBe(true);
-            expect(payload.bgeEmbedding.configured).toBe(true);
+            expect(payload.bgeEmbedding.configured).toBe(false);
             expect(payload.keys.geminiServerKey).toBe(true);
             expect(payload.keys.openaiServerKey).toBe(false);
             expect(payload.keys.anthropicServerKey).toBe(false);
@@ -961,8 +1025,9 @@ describe('admin system status API route', () => {
 
     test('returns no server-key checklist when provider keys are configured', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'true',
-            STORYBOARD_AGENT_API_URL: 'https://storyboard.internal/api',
+            STORYBOARD_RAG_WORKER_ENABLED: 'true',
+            STORYBOARD_RAG_WORKER_TOKEN: 'readiness-fixture-capability-00000000000000000',
+            STORYBOARD_RAG_WORKER_URL: 'https://storyboard.internal',
             STORYBOARD_BGE_ENABLED: 'true',
             STORYBOARD_BGE_EMBEDDING_URL: 'https://bge.internal/v1/embeddings',
             OPENAI_API_KEY: 'openai-server-key-secret',
@@ -1026,7 +1091,7 @@ describe('admin system status API route', () => {
     test('returns frame caption status payload via API route without exposing credential fragments', async () => {
         const tempFrameCaptionDir = withTempDir('tzudong-route-frame-caption-');
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_FRAME_CAPTION_BASE_PATH: tempFrameCaptionDir.dir,
             INSIGHT_GDRIVE_FRAME_CAPTION_PATH: 'https://fc-user:fc-token@example.com/peak',
@@ -1111,7 +1176,7 @@ describe('admin system status API route', () => {
         }));
 
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: runDailyScriptPath ?? '',
@@ -1173,7 +1238,7 @@ describe('admin system status API route', () => {
         ].join('\n'));
         const missingManifestPath = path.join(tempDir.dir, 'current-summary.json');
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: scriptPath,
@@ -1212,7 +1277,7 @@ describe('admin system status API route', () => {
 
     test('uses opt-in read-only GitHub and Supabase status probes without leaking tokens', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -1282,7 +1347,7 @@ describe('admin system status API route', () => {
 
     test('keeps daily GitHub responses bounded, strict, and fixed-code only', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -1331,7 +1396,7 @@ describe('admin system status API route', () => {
 
     test('uses credential-free GitHub reads only in strict local runtime after a rejected token', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -1389,7 +1454,7 @@ describe('admin system status API route', () => {
 
     test('allows public workflow status without a token only in strict local runtime', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -1430,7 +1495,7 @@ describe('admin system status API route', () => {
 
     test('keeps partial Supabase counts unreachable and returns fixed failure codes', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -1466,7 +1531,7 @@ describe('admin system status API route', () => {
 
     test('reports bounded local canonical and hosted fallback nightly history without leaking tokens', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -1578,7 +1643,7 @@ describe('admin system status API route', () => {
 
     test('fails closed on malformed or unreachable nightly history without returning provider bodies', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
@@ -1625,7 +1690,7 @@ describe('admin system status API route', () => {
 
     test('fails closed on malformed run rows and oversized nightly provider responses', async () => {
         const restoreEnv = withEnv({
-            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_RAG_WORKER_ENABLED: 'false',
             STORYBOARD_BGE_ENABLED: 'false',
             INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
             RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, PIPELINE_FLOW_DOCUMENT, PIPELINE_FLOW_EDGES, PIPELINE_FLOW_STAGES } from '../lib/admin/pipeline-flow-view-model';
+import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, pipelineDisplayIsReliable, PIPELINE_FLOW_DOCUMENT, PIPELINE_FLOW_EDGES, PIPELINE_FLOW_STAGES } from '../lib/admin/pipeline-flow-view-model';
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput } from '../lib/admin/pipeline-action-preview';
 import { assertPipelineGuardedBody, buildPipelinePreviewHash, PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION } from '../lib/admin/pipeline-control';
 import { parseOperationsSnapshot } from '../lib/admin/operations-view-model';
@@ -187,4 +187,13 @@ describe('pipeline preview and confirmation', () => {
     expect(() => pipelineApplyBody(p, PIPELINE_CONTROL_CONFIRMATION_TEXT, '', now)).toThrow();
     expect(() => pipelineApplyBody(p, PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION, now + 60_000)).toThrow();
   });
+});
+
+test('display reliability follows GitHub manifest admission while preserving job_api control truth', () => {
+ const snapshot=parsePipelineStatus(status({source:'github_actions',jobs:[{...job,id:'77'}]}));
+ expect(snapshot.partial).toBe(false);
+ for(const record of [undefined,{...manifest(),github:{id:'78',status:'completed',conclusion:'success'}},{...manifest(),github:{id:'77',status:'future',conclusion:null}}]) expect(pipelineDisplayIsReliable(snapshot,record)).toBe(false);
+ expect(pipelineDisplayIsReliable(snapshot,{...manifest(),github:{id:'77',status:'in_progress',conclusion:null}})).toBe(true);
+ expect(pipelineDisplayIsReliable(parsePipelineStatus(status()),undefined)).toBe(true);
+ expect(pipelineDisplayIsReliable(parsePipelineStatus(status({targets:[{id:'tzuyang',status:'future'}]})),undefined)).toBe(false);
 });

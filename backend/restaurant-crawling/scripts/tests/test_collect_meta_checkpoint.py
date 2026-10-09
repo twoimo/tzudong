@@ -4,7 +4,8 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from test_collect_meta_thumbnail_security import collect_meta
+from contextlib import nullcontext
+from test_collect_meta_thumbnail_security import collect_meta, FixtureResponse, JPEG_FIXTURE, VALID_URL
 
 VID = 'abcDEF_1234'
 ROW = {'youtube_link': f'https://www.youtube.com/watch?v={VID}', 'title': 'fixture', 'description': '',
@@ -43,6 +44,68 @@ class MetadataCheckpointTests(unittest.TestCase):
              patch.object(collect_meta,'get_schedule_frequency',return_value=None),patch.object(collect_meta,'save_thumbnail_file'), \
              patch.object(collect_meta,'analyze_ad_content',side_effect=failed):
             collect_meta.collect_channel_meta('fixture',None,object(),Logger())
+        self.assertEqual(self.file.read_bytes(),before)
+        self.assertNotIn(VID,collect_meta.load_checked_cache(self.channel))
+
+    def test_missing_or_changed_recipe_without_analyzer_preserves_prior_ad_attribution(self):
+        row={**ROW,'description':'광고 fixture','ads_info':{'is_ads':True,'what_ads':['known sponsor']}}
+        for checkpoint in [None,{}, {'recipe':'old-recipe'}]:
+            with self.subTest(checkpoint=checkpoint):
+                self.file.write_text(json.dumps(row)+'\n')
+                collect_meta.save_checked_cache(self.channel,{} if checkpoint is None else {VID:checkpoint})
+                with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:dict(row)}), \
+                     patch.object(collect_meta,'detect_changes',return_value=[]),patch.object(collect_meta,'get_schedule_frequency',return_value=None), \
+                     patch.object(collect_meta,'analyze_ad_content',side_effect=AssertionError('disabled provider invoked')):
+                    self.run_collection()
+                saved=collect_meta.get_latest_meta(self.channel,VID)
+                self.assertEqual(saved['ads_info']['what_ads'],['known sponsor'])
+                self.assertEqual(collect_meta.load_checked_cache(self.channel)[VID]['outputHash'],collect_meta.canonical_digest(saved))
+
+    def test_changed_ad_evidence_without_analyzer_does_not_certify_null_or_stale_attribution(self):
+        row={**ROW,'description':'광고 original','ads_info':{'is_ads':True,'what_ads':['known sponsor']}}
+        self.file.write_text(json.dumps(row)+'\n');before=self.file.read_bytes()
+        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:{**row,'description':'광고 changed'}}), \
+             patch.object(collect_meta,'get_schedule_frequency',return_value=None), \
+             patch.object(collect_meta,'analyze_ad_content',side_effect=AssertionError('disabled provider invoked')):
+            self.run_collection();self.run_collection()
+        self.assertEqual(self.file.read_bytes(),before)
+        self.assertNotIn(VID,collect_meta.load_checked_cache(self.channel))
+
+    def test_failed_thumbnail_backfill_stays_pending_until_a_verified_save_on_restart(self):
+        row={**ROW,'thumbnail_url':VALID_URL}
+        recipe=collect_meta.canonical_digest({'code':collect_meta.METADATA_RECIPE_HASH,
+            'adModel':collect_meta.get_api_config().get('openai',{}).get('model','gpt-4o-mini'),'adsAnalysisEnabled':False})
+        for failure in ['download','validation','link']:
+            with self.subTest(failure=failure):
+                self.file.write_text(json.dumps(row)+'\n');before=self.file.read_bytes()
+                collect_meta.save_checked_cache(self.channel,{VID:collect_meta.checkpoint('2000-01-01',recipe,row)})
+                destination=self.channel/'thumbnails'/f'{VID}-6.jpg';destination.unlink(missing_ok=True)
+                response=FixtureResponse(status_code=503) if failure=='download' else FixtureResponse(chunks=[b'invalid']) if failure=='validation' else FixtureResponse(chunks=[JPEG_FIXTURE])
+                with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:dict(row)}) as supplier, \
+                     patch.object(collect_meta,'detect_changes',return_value=[]),patch.object(collect_meta,'get_schedule_frequency',return_value=None):
+                    with patch.object(collect_meta.requests,'get',return_value=response), \
+                         patch.object(collect_meta.os,'link',side_effect=OSError('synthetic link failure')) if failure=='link' else nullcontext():
+                        self.run_collection()
+                    self.assertFalse(destination.exists())
+                    self.assertEqual(self.file.read_bytes(),before)
+                    self.assertEqual(collect_meta.load_checked_cache(self.channel)[VID],collect_meta.checkpoint('2000-01-01',recipe,row))
+                    with patch.object(collect_meta.requests,'get',return_value=FixtureResponse(chunks=[JPEG_FIXTURE])):
+                        self.run_collection()
+                    self.assertEqual(supplier.call_count,2)
+                    self.assertEqual(destination.read_bytes(),JPEG_FIXTURE)
+                    self.assertEqual(self.file.read_bytes(),before)
+                    saved=collect_meta.get_latest_meta(self.channel,VID)
+                    self.assertTrue(collect_meta.verified_today(collect_meta.load_checked_cache(self.channel)[VID],collect_meta.datetime.now(collect_meta.KST).date().isoformat(),recipe,saved))
+                with patch.object(collect_meta,'get_video_meta_batch') as supplier:
+                    self.run_collection();supplier.assert_not_called()
+
+    def test_new_thumbnail_failure_does_not_publish_a_metadata_row_or_checkpoint(self):
+        row={**ROW,'thumbnail_url':VALID_URL,'thumbnail_hash':'changed'}
+        before=self.file.read_bytes()
+        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:row}), \
+             patch.object(collect_meta,'detect_changes',return_value=['thumbnail_changed']), \
+             patch.object(collect_meta.requests,'get',return_value=FixtureResponse(status_code=503)):
+            self.run_collection()
         self.assertEqual(self.file.read_bytes(),before)
         self.assertNotIn(VID,collect_meta.load_checked_cache(self.channel))
 

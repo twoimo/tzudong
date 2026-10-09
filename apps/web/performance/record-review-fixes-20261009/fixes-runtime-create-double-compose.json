@@ -1,0 +1,12 @@
+{
+  "status": "unconfirmed",
+  "operatingWrites": false,
+  "extraHelperGrants": false,
+  "cases": [
+    "canonical_metadata_omissions_clear_order_and_invalid_types"
+  ],
+  "failure": {
+    "state": "P0001",
+    "fixedCode": "RECORD_ACTION_INVALID_PAYLOAD"
+  }
+}
