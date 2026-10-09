@@ -1,0 +1,302 @@
+{
+  "schemaVersion": 1,
+  "kind": "five-plus-admin-user-rpc-forward-m5-pagination-amendment-artifact-map",
+  "status": "passed",
+  "sourceHead": "4908c5c4a3db30c1d86965c1ac144471f8872858",
+  "terminalNonce": "07ebdd0ef2064061893000f2",
+  "postgres": {
+    "nativeAdmission": {
+      "version": "17.6",
+      "versionNum": 170006,
+      "fullSchemaEligible": false
+    },
+    "fullSchemaReplay": {
+      "version": "17.6",
+      "versionNum": 170006,
+      "imageDigest": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+      "imageSource": "local-cache-only",
+      "pullPolicy": "never",
+      "network": "none",
+      "publishedPorts": 0
+    }
+  },
+  "fiveStage": {
+    "path": ".github/admin-record-sql-successor.v1.json",
+    "sha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26",
+    "sourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3",
+    "entries": 5
+  },
+  "forwardManifest": {
+    "path": ".github/admin-user-rpc-forward-successor.v1.json",
+    "sha256": "12cb67ed7e30acc7238370f0ad054bbef3d235b85982545e2ba028a7570d3f99",
+    "fiveStageSha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26",
+    "fiveStageSourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3"
+  },
+  "sources": [
+    {
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "bytes": 60166,
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "role": "five-stage",
+      "statementCount": 39,
+      "statementVectorSha256": "5038d14ce704d494889562f04d33cacae7bd7a117bf4cd2341752bd3b40f12af"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "bytes": 13706,
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+      "role": "five-stage",
+      "statementCount": 10,
+      "statementVectorSha256": "082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "bytes": 5957,
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+      "role": "five-stage",
+      "statementCount": 4,
+      "statementVectorSha256": "f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "bytes": 7769,
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "role": "five-stage",
+      "statementCount": 4,
+      "statementVectorSha256": "ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 13185,
+      "sha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da",
+      "role": "five-stage-pagination-amendment",
+      "statementCount": 13,
+      "statementVectorSha256": "c7b5ae6c7c64b00a31658bbf42165dd9e25ac41f794a1149c62d47f39cf33f4d"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "bytes": 40392,
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae",
+      "role": "dependent-forward",
+      "statementCount": 2,
+      "statementVectorSha256": "b8eb5902bb5996cffa5cca2f564c1c1c29593dd0a345f2ffbcaca2f86e3f7a3a"
+    },
+    {
+      "path": ".github/admin-record-sql-successor.v1.json",
+      "bytes": 107260,
+      "sha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26",
+      "role": "five-stage-held-manifest"
+    },
+    {
+      "path": ".github/admin-user-rpc-forward-successor.v1.json",
+      "bytes": 2511,
+      "sha256": "12cb67ed7e30acc7238370f0ad054bbef3d235b85982545e2ba028a7570d3f99",
+      "role": "forward-held-manifest"
+    },
+    {
+      "path": "backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py",
+      "bytes": 2750,
+      "sha256": "edf65e557363d16f7c3fcf1359fe880999e275924fcf57d46abd2edb956d9c53",
+      "role": "pg15-read-only-forward-verifier",
+      "generatedSqlSha256": "d40a19e1a3564a6a22b92d857e6aece7968a097311cf37a8a7782d917266dbb7"
+    },
+    {
+      "path": "backend/supabase/scripts/local_replay_contract.py",
+      "bytes": 18023,
+      "sha256": "e6e44d085ac93232121ca0b5bad44270ac591c9a802cbd93b829601a572779cf",
+      "role": "supported-source-replay-classification"
+    },
+    {
+      "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "bytes": 121024,
+      "sha256": "724840e9934ede460266b9637e8ff0b309b363778ba7d40e83e111c83f2cd9f6",
+      "role": "pinned-pg15-generator-integration"
+    },
+    {
+      "path": "backend/supabase/tests/test_admin_user_management_rpc_forward.py",
+      "bytes": 4779,
+      "sha256": "4953b8ade841ee846ab783f764ccba4835d4f13c52146812d5eeaa57eae8ebde",
+      "role": "forward-source-contract-tests"
+    },
+    {
+      "path": "backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py",
+      "bytes": 5201,
+      "sha256": "34eb946c5cc2195242649ff8ff614c117353339b3ea902bdb01f5c9c518d450b",
+      "role": "source-replay-tests"
+    },
+    {
+      "path": "backend/supabase/tests/test_compare_g024_clean_replays.py",
+      "bytes": 18517,
+      "sha256": "bd3703ea3fe7c9f8563aeffe212ba70eace99c29c60140a52689b308c9a4bd44",
+      "role": "dual-replay-comparator-tests"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-user-rpc-forward-successor.test.ts",
+      "bytes": 20226,
+      "sha256": "bfefe995bd9d33dc2f80a84b8402f87263dce86802ba3074030bccdce602f8ee",
+      "role": "forward-planner-tests"
+    }
+  ],
+  "artifacts": {
+    "README.md": {
+      "bytes": 6598,
+      "sha256": "eb6795aae19aea9242ae594af249e3aacbe81bb66d63964216b091b70777f67d"
+    },
+    "attempt-1/native-admission.json": {
+      "bytes": 1075,
+      "sha256": "2370cf4e0b78074bf24a0a541788f9cbf8c540bba1ec83f765829baf6d4c3f3d"
+    },
+    "attempt-1/ownership-receipt.json": {
+      "bytes": 1307,
+      "sha256": "5400958c3b770dce00a1237fcf1591a5d676960bdc939b264aac013ceafa723f"
+    },
+    "attempt-1/pristine-reconstruction.json": {
+      "bytes": 4265,
+      "sha256": "a789dab687033e622c73b1144eb840a9a19f8e6bbbdb8e286b6718072f6275b3"
+    },
+    "attempt-1/proof.json": {
+      "bytes": 11213,
+      "sha256": "179e6ed1b9768a6e2c0d936443996d2f01c080a8b20a76fe39d317cc6c5946b7"
+    },
+    "attempt-1/role-bootstrap.json": {
+      "bytes": 542,
+      "sha256": "151c2c0d3250ba0730c1a4ef35bc1236356efcdf21b504c8fffb99ca397d7fbf"
+    },
+    "attempt-2/native-admission.json": {
+      "bytes": 1075,
+      "sha256": "e2f085c0c7bbd977a1e8cc25cf9e79378710e1baa8aa45d084b2088cdfc50dc2"
+    },
+    "attempt-2/ownership-receipt.json": {
+      "bytes": 1307,
+      "sha256": "00c1b8ed46de37b81183be9f53c0792e4a389fe69546bbb598f8f3099c34389e"
+    },
+    "attempt-2/pristine-reconstruction.json": {
+      "bytes": 4265,
+      "sha256": "fff222af7dcd08817bb49ad6aa765865853d40008628f0c5730ac49d341fb5b6"
+    },
+    "attempt-2/proof.json": {
+      "bytes": 12208,
+      "sha256": "5a0a97c0a14985afa9ddb063334463834ce38a8bb90d17e3fbc728f2e4423919"
+    },
+    "attempt-2/role-bootstrap.json": {
+      "bytes": 542,
+      "sha256": "099f26097a72877f64dca43610f8c5cbdaaa7ace5bb91c468c609a892a87a3ae"
+    },
+    "attempt-3/native-admission.json": {
+      "bytes": 1075,
+      "sha256": "3cbfed93eb32e50e214b3ad5a8a084ddb15ddb20d3d2357e1f6839ebcad6ec70"
+    },
+    "attempt-3/ownership-receipt.json": {
+      "bytes": 1307,
+      "sha256": "db7d9e157650bc79662ebfa5b85e486a6a95ecd136272605a2816deb3c01d2a4"
+    },
+    "attempt-3/pristine-reconstruction.json": {
+      "bytes": 4265,
+      "sha256": "e5373f6dbc5ee9b807e8a2beaf037c0a785170f2f71afbde8fc3c931d4fdfa71"
+    },
+    "attempt-3/proof.json": {
+      "bytes": 12157,
+      "sha256": "0f08179bd8cf4ffb606b446dc542cabd275d99e24ed3794abf2c7e1060101523"
+    },
+    "attempt-3/role-bootstrap.json": {
+      "bytes": 542,
+      "sha256": "5c9025fae91501e2978e7948533b82b520621fb9e494cc5f01976ed8d5d7c2e6"
+    },
+    "attempt-4/native-admission.json": {
+      "bytes": 1075,
+      "sha256": "f7f89153430e92783c26b7f0a1bbb75cd0781ecd15b417b02af21cd7876181a4"
+    },
+    "attempt-4/ownership-receipt.json": {
+      "bytes": 1307,
+      "sha256": "dbe88533f20be13d4ecd825dd09823f50a2201ad6e60634504804965b0c484fe"
+    },
+    "attempt-4/pristine-reconstruction.json": {
+      "bytes": 4265,
+      "sha256": "10d76a26e969eaa2a723ab5307781454ac78fdf1f27e62f62141ed9e04a04160"
+    },
+    "attempt-4/proof.json": {
+      "bytes": 11882,
+      "sha256": "a46710c2c8695d3561baa277b131f3713947c335146c4e6f4cea3254ef334e89"
+    },
+    "attempt-4/role-bootstrap.json": {
+      "bytes": 542,
+      "sha256": "f31e2380e9b863600f768fe1024544cfef2fb4ffafbb9594195c0449da960e09"
+    },
+    "native-admission.json": {
+      "bytes": 1075,
+      "sha256": "9f730346bd04a182e73b2bcb9f175742f5520ae4fc7e9f95481cfc9b20cfa305"
+    },
+    "orchestrate.mjs": {
+      "bytes": 13327,
+      "sha256": "ef1fffc244ff117937bdd91a32080a8c8082cf98b3ec384bb504bdff20052b1c"
+    },
+    "ownership-receipt.json": {
+      "bytes": 1504,
+      "sha256": "3d87ffd711366f709cb0a6d5f7d5234d07146eb515a97b126f5a620a3ee6dfd6"
+    },
+    "pristine-reconstruction.json": {
+      "bytes": 4265,
+      "sha256": "d0e322c3da1b888c4189f894d203388b8766b7eb60630ab820408fe1442adc34"
+    },
+    "proof.json": {
+      "bytes": 15951,
+      "sha256": "0c8e2cb0530ac09910bdcec0cd1e0b923dcc130800d5879ea8134aa1d45197b7"
+    },
+    "replay.mjs": {
+      "bytes": 40793,
+      "sha256": "77bd972d184e9ca940bf8411523f23a60b288e0268969561bc78e075e3ebae81"
+    },
+    "role-bootstrap.json": {
+      "bytes": 542,
+      "sha256": "43283c96d9ba45d9022265704b64111df794f03222058e2c987b4f7eea01f8c6"
+    },
+    "rpc-contract-fixture.sql": {
+      "bytes": 7574,
+      "sha256": "5fbafce0fbe4c32ca3124c24dff717fe55d1fed08f10129c77249b1bc6560641"
+    }
+  },
+  "transport": "psql --single-transaction --file=-",
+  "runtime": {
+    "postFiveLedgerCount": 8,
+    "finalLedgerCount": 9,
+    "prefixCount": 3,
+    "prefixPreserved": true,
+    "terminalMismatchRollbackExact": true,
+    "terminalMismatchReconciliation": "not_applied",
+    "preimageDriftRollbackExact": true,
+    "forwardCommitted": true,
+    "g014AssertionsPassed": 4,
+    "metadataBound": 200,
+    "auditStored": 52,
+    "auditReturned": 50,
+    "positiveAppendCount": 52,
+    "rpcFixtureRollbackExact": true,
+    "cleanupFirstPageCount": 25,
+    "cleanupSecondPageCount": 1,
+    "cleanupDistinctJobs": 26,
+    "cleanupCompletedJobs": 26,
+    "cleanupSyntheticObjectsDeleted": 25,
+    "cleanupFinalPageCount": 0,
+    "cleanupFinalPending": false,
+    "externalStorageCalls": 0
+  },
+  "attempts": {
+    "attempt-1": "old forward preimage rejected after M5 body hash change",
+    "attempt-2": "synthetic Storage bucket precondition missing",
+    "attempt-3": "frozen Storage direct-delete guard enforced",
+    "attempt-4": "visible set_config output invalidated harness deletion counter"
+  },
+  "scope": {
+    "hostedWrites": false,
+    "operatingWrites": false,
+    "userRowsCopied": 0,
+    "hostedLedgerRowsCopied": 0,
+    "externalStorageCalls": 0
+  },
+  "cleanup": {
+    "nativeClusterRemoved": true,
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  }
+}

@@ -1,0 +1,242 @@
+{
+  "kind": "sentry-release-session-before-after",
+  "environment": "isolated Node24 real SDK11 memory transport; one release-bearing synthetic error per process",
+  "pairs": [
+    [
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "baseline",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 2,
+        "itemTypes": [
+          "session",
+          "event"
+        ],
+        "events": 1,
+        "sessions": 1,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      },
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "candidate",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 1,
+        "itemTypes": [
+          "event"
+        ],
+        "events": 1,
+        "sessions": 0,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      }
+    ],
+    [
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "baseline",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 2,
+        "itemTypes": [
+          "session",
+          "event"
+        ],
+        "events": 1,
+        "sessions": 1,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      },
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "candidate",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 1,
+        "itemTypes": [
+          "event"
+        ],
+        "events": 1,
+        "sessions": 0,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      }
+    ],
+    [
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "baseline",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 2,
+        "itemTypes": [
+          "session",
+          "event"
+        ],
+        "events": 1,
+        "sessions": 1,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      },
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "candidate",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 1,
+        "itemTypes": [
+          "event"
+        ],
+        "events": 1,
+        "sessions": 0,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      }
+    ],
+    [
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "baseline",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 2,
+        "itemTypes": [
+          "session",
+          "event"
+        ],
+        "events": 1,
+        "sessions": 1,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      },
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "candidate",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 1,
+        "itemTypes": [
+          "event"
+        ],
+        "events": 1,
+        "sessions": 0,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      }
+    ],
+    [
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "baseline",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 2,
+        "itemTypes": [
+          "session",
+          "event"
+        ],
+        "events": 1,
+        "sessions": 1,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      },
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "candidate",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 1,
+        "itemTypes": [
+          "event"
+        ],
+        "events": 1,
+        "sessions": 0,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      }
+    ],
+    [
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "baseline",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 2,
+        "itemTypes": [
+          "session",
+          "event"
+        ],
+        "events": 1,
+        "sessions": 1,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      },
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "candidate",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 1,
+        "itemTypes": [
+          "event"
+        ],
+        "events": 1,
+        "sessions": 0,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      }
+    ],
+    [
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "baseline",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 2,
+        "itemTypes": [
+          "session",
+          "event"
+        ],
+        "events": 1,
+        "sessions": 1,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      },
+      {
+        "kind": "sentry-node-release-session-fixture",
+        "mode": "candidate",
+        "node": "v24.21.0",
+        "sdk": "11.4.0",
+        "envelopes": 1,
+        "itemTypes": [
+          "event"
+        ],
+        "events": 1,
+        "sessions": 0,
+        "attachments": 0,
+        "sensitiveValuesPresent": false,
+        "realNetworkCalls": 0
+      }
+    ]
+  ],
+  "samples": 7,
+  "passed": true,
+  "performanceClaim": false,
+  "confidenceInterval": null,
+  "sourceSha256": "114d04635c8d6a81c210fb33a16b4dbc6e701f1efbb619ba482509a607d212f4"
+}

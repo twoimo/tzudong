@@ -1,0 +1,59 @@
+{
+  "kind": "actual-five-bundle-replay-artifact-map",
+  "status": "passed",
+  "sourceHead": "8571b65b5e8079d2f238389aaf68f41740aa170e",
+  "terminalNonce": "18ff575f76eb514be3f43b1a",
+  "artifacts": {
+    "README.md": "24980198dda0797f23f163f4095f23080d8e123985b92082f15bc8582748fe96",
+    "attempt-1/native-admission.json": "e688805c63143b26160d4e4475696ca7628beccfb43becebd38c9b9b4fbe6c34",
+    "attempt-1/ownership-receipt.json": "38043431d954a60b4b15c43863f90efe2bfcdf8bf0b3947be5043fcc0e55fd90",
+    "attempt-2/native-admission.json": "4fe7da7e99f1b92dd39df8e8411f5c59aeb8676c92c6fbf7676502442c0576a8",
+    "attempt-2/ownership-receipt.json": "b9a0982fc7a5c0d47b31e7369a861334d885263eb0e24ea76e945b08b9a10e66",
+    "attempt-2/pristine-reconstruction.json": "bd608a3d6ee90f643242d7b5b7b963a5a77e0c7300cd1084fe675b78cb6cf1a5",
+    "attempt-2/proof.json": "3414e458a14b427f8d1c1b86a1afa2710f00f20236f7c08ed70dda1ac8d8dd21",
+    "attempt-2/role-bootstrap.json": "cdefd1932ac26adf1c10ad374536d6bede48cd63a469530218a9195d33f5b849",
+    "native-admission.json": "9847dd1e17d1c6cc13161c2554cec51cf71214146402443538cfe7c3bbef0d99",
+    "orchestrate.mjs": "b3e3bd1d34c0732466c285946b3eb5172c745fe8049d7f14857e8e6b0be3b7a5",
+    "ownership-receipt.json": "5c3818de492c9e298db9182c6768604e600057a756603b388de9c87a8670693e",
+    "pristine-reconstruction.json": "788677015380d5f40d04b845e29a5b91b42c3ed1d3501ffb961b70fa1d30c834",
+    "private-verification-fixture.sql": "55bb06c4d51d3791439fc901922f3239db62083714715a268aa7e5965f609cd9",
+    "proof.json": "65f80bebfb67c41cf18138a69478bf06d8743cbb3ed705f97133fb75eaf6af98",
+    "replay.mjs": "58203bc9d3f73648f2a71dc52fff2c1d743a6035874001e0502d125d64b1c2a7",
+    "role-bootstrap.json": "bb250d83efcecc134a2b9a73a9106a9e30fe7ba4e449833b159281d1e28c6d8f"
+  },
+  "sourceBindings": {
+    "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+    "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+    "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+    "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+    "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065"
+  },
+  "orderedSourceBytesSha256": "1ddf5066a3d34177cb75ed9e29ec1ce7c11ed8b44ff08b5bbe81f3fd741f2faf",
+  "helperBindings": {
+    "apps/web/scripts/apply-supabase-migration.mjs": "b86ebb0e1194c4b164f57467475e09afa3ef03655968732bd0d6c57e37789a0e",
+    "apps/web/scripts/supabase-migration-bundle.mjs": "fdc6c175fe77cc11b6252c6d9b326061d67639c6e7fff728e94e70a85f25c5b6",
+    "apps/web/scripts/supabase-migration-transaction.mjs": "82e35949f693e54c0629fd2f98935b4c4b5b79227c66d6bc6dccb0584b5493f0",
+    "backend/supabase/scripts/g037_supabase_statement_vector.mjs": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+  },
+  "scope": {
+    "engine": "PostgreSQL 17.6",
+    "serverVersionNum": 170006,
+    "fullSchemaSnapshot": true,
+    "actualMigrationCount": 5,
+    "transactionMode": "single-outer-transaction",
+    "prefixLedgerRows": 3,
+    "targetLedgerRows": 5,
+    "finalLedgerRows": 8,
+    "hostedWrites": false,
+    "operatingWrites": false,
+    "hostedLedgerRowsCopied": 0,
+    "fixturePrefix": "local-synthetic-only"
+  },
+  "cleanup": {
+    "replayDatabasesDropped": true,
+    "nativeClusterRemoved": true,
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "path": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "bytes": 10934,
+      "sha256": "6b18008ae960dc96178f26a83383a81103afb0b4b62571c0804809a93e336d43"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle.test.ts",
+      "bytes": 11994,
+      "sha256": "04b89d4c7ae38f3235b01cab44036bc34536f33a3bf40cb0bac19f4c4ac0d77f"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts",
+      "bytes": 10302,
+      "sha256": "c4e454b00c8b51083fa9280f854af254a897114da5656243095d0e4942136b31"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/regression-test-output.txt",
+      "bytes": 2222,
+      "sha256": "b59812026518a86974d622a5db32e585a081a1b96aaab5d52e8ce3dfd83eb808"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/pg17-test-output.txt",
+      "bytes": 288,
+      "sha256": "671591d667dc2e70564595ea09354e5e3969f394d161d04948335d42069fce26"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/proof.json",
+      "bytes": 4436,
+      "sha256": "5c875ddb71ea94544b40029275adcd81446ad8de3129a88230c36b381d22b160"
+    }
+  ]
+}

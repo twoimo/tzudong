@@ -1,0 +1,11 @@
+
+Running 3 tests using 1 worker
+
+(node:54747) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/3] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at desktop
+[2/3] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at tablet
+[3/3] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at mobile
+  3 passed (9.9s)

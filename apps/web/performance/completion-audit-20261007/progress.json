@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "freshDevelop": "5df2808c083c910b0b87ae7a2c4a24c5cbfbf166",
+  "integrationMerge": "262f49a2a4f57f0bb3173d0c17746710dac99584",
+  "rootSourceSnapshotsPreserved": true,
+  "webUnit": {
+    "groups": 18,
+    "tests": 3154,
+    "failures": 0,
+    "skip": 9,
+    "passed": 3145
+  },
+  "typeParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 3120,
+    "logicalInputNamesSha256": "6f0263fbd4d7e7b63f264dc7f601f891289f17dfbb84b86bb3c7bb0086c76778",
+    "nonLibraryContentSha256": "a7a3526d55049aabc81c056f3aa523cffde5340839f808d2fcb8fd939e8c43e7",
+    "standardLibraryContentSha256": {
+      "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  },
+  "creationCaller": {
+    "tests": 3,
+    "realBrowserAfterCurrentChange": false
+  },
+  "mediaReplay": {
+    "pairs": 7,
+    "observations": 28,
+    "sourceCorpusFiles": 5223,
+    "externalProviderCalls": 0,
+    "productionSpeedupAdmitted": false,
+    "report": "apps/web/performance/pipeline-media-20261007/REPORT.md"
+  },
+  "storage": {
+    "sixPhysicalCasesPassed": true,
+    "partialS3DeleteFailed": true,
+    "cleanupAdmissionEnabled": false,
+    "actualHostedCompatibilityProven": false,
+    "unappliedSqlSha256": "1529ad96ebbc2c8e173d5c51fae9bef8051ce632c829eda20f0ae173a77c8caa"
+  },
+  "billingReadback": {
+    "displayedGcpCredits": "KRW9.47man-rounded",
+    "prepaidBalanceKrw": 10000,
+    "displayedUsageKrw": 394.95,
+    "displayedCreditsOffsetKrw": 394.95,
+    "displayedNetKrw": 0,
+    "automaticReloadEnabled": false,
+    "requestedMethodDeletionCompleted": false,
+    "replacementRequired": true,
+    "existingAlternativeInvalid": true,
+    "additionalChargesExecuted": 0,
+    "individualOptimizationCostSavingsAttribution": false
+  },
+  "modelPolicy": {
+    "routineAstraTasksInterrupted": 4,
+    "genuinelyComplexTasksKept": 2,
+    "ongoingGeneralAstraWork": false
+  },
+  "goalComplete": false,
+  "operatingWritesThisTurn": 0,
+  "deploymentCompleted": false
+}

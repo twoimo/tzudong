@@ -1,0 +1,58 @@
+{
+  "observations": [
+    {
+      "stage": "desktop-closed",
+      "state": {
+        "width": 1440,
+        "desktopMedia": true,
+        "rowDialog": null,
+        "inspectorCount": 0,
+        "drawerCount": 0,
+        "focusedTag": "BUTTON"
+      }
+    },
+    {
+      "stage": "immediate-resize",
+      "state": {
+        "width": 390,
+        "desktopMedia": false,
+        "rowDialog": "dialog",
+        "inspectorCount": 0,
+        "drawerCount": 0,
+        "focusedTag": "BUTTON"
+      }
+    },
+    {
+      "stage": "immediate-mobile-enter",
+      "state": {
+        "width": 390,
+        "desktopMedia": false,
+        "rowDialog": "dialog",
+        "inspectorCount": 1,
+        "drawerCount": 1,
+        "focusedTag": "ASIDE"
+      }
+    },
+    {
+      "stage": "original-mobile-drawer",
+      "passed": true
+    },
+    {
+      "stage": "settled-mobile-state",
+      "state": {
+        "width": 390,
+        "desktopMedia": false,
+        "rowDialog": "dialog",
+        "inspectorCount": 1,
+        "drawerCount": 1,
+        "focusedTag": "ASIDE"
+      }
+    },
+    {
+      "stage": "responsive-ready-mobile-enter-escape-focus",
+      "passed": true
+    }
+  ],
+  "pageErrorCount": 0,
+  "blockedMutationCount": 0
+}

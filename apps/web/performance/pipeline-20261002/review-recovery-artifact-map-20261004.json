@@ -1,0 +1,109 @@
+{
+  "kind": "review-recovery-functional-artifact-map",
+  "operationalChanges": false,
+  "performanceClaim": false,
+  "artifacts": [
+    {
+      "path": "apps/web/performance/sentry-20261004/node-release-session-20261004.json",
+      "sha256": "c092da9ff2c00ed2c451b301348a9c1579a90fd83dffda01a5ffb916885a8551"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-request-id-20261004.json",
+      "sha256": "c3d93c9fa904f667a0dc1f235489c81416c440622f135de1d6d022d04bfb14f2"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-original-20261004.json",
+      "sha256": "660eca5746ba9cad03533bb4d7ccf35bf6da0417786ca1f585ff32606bb43ae7"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-receipt-20261004.json",
+      "sha256": "bce7b756a72cb210bee60a767182ab4654430a76932a3a201635707e3015a0f1"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-390-20261004.png",
+      "sha256": "0346c335951bd5c72a2b6ee428ce6fe6340705ea37952455a5b5f1cedf56976a"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-834-20261004.png",
+      "sha256": "89d2e0f1fa0a0979ad78aa4b86478622a65d55821ca96196de1d92a6e7edc498"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-1440-20261004.png",
+      "sha256": "bea199580b2ee1c507fbd931fddb300bf3b4991fb3da94fe44662e6321de5a84"
+    }
+  ],
+  "sources": [
+    {
+      "path": "apps/web/lib/monitoring/sentry-privacy.ts",
+      "sha256": "114d04635c8d6a81c210fb33a16b4dbc6e701f1efbb619ba482509a607d212f4"
+    },
+    {
+      "path": "apps/web/lib/monitoring/sentry-admin.ts",
+      "sha256": "c5988d3781dfa1617674fc5d9fbdc4b7e527968f6165037fb4815f4c6576054b"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/production-store.ts",
+      "sha256": "8595c32824937899d22311b208594b83e46463ad7fe81c134f76235b18c14638"
+    },
+    {
+      "path": "apps/web/components/admin/RestaurantReviewAutomation.tsx",
+      "sha256": "3905095c7b29ec7362b376962cf66aeed6a6df15fb8567378f0fc99127fbb000"
+    },
+    {
+      "path": "apps/web/scripts/verify-review-automation-request-id-browser.ts",
+      "sha256": "c0d2f9b5cfef6b6150b0fec59b5cdcdf061ea7ed5c08385105c2d83518381442"
+    },
+    {
+      "path": "apps/web/scripts/verify-sentry-node-session.ts",
+      "sha256": "7fe94ede385c6ed19244e7eab489a041813789f1c7845fa61d35f7d33de15b0c"
+    },
+    {
+      "path": "backend/bin/run_parallel_laaj.py",
+      "sha256": "132618d55cdfc9e880d2540c0403ad9a1b713650eafcbea4ff9db99ec2522744"
+    },
+    {
+      "path": "backend/utils/stage_cache.py",
+      "sha256": "f1fda8ef6c5dd63c6a20a4edf4549ad8e04d4a4f1c40ed15304c563c528dc18b"
+    },
+    {
+      "path": "backend/utils/provider-budget.mjs",
+      "sha256": "f78f11fd08e63a643ed3aaaf17468542552edb14b2e95eee428bf50fc4050958"
+    },
+    {
+      "path": "backend/bin/run_restaurant_review_automation.py",
+      "sha256": "314d273f8d10550f3523ee3cef7daea1cf56b0647fe88f127cd28519e375b3f1"
+    },
+    {
+      "path": "backend/bin/run_hosted_new_video_pipeline.py",
+      "sha256": "75736dfe4c0a2331dd54139e7629548112265bc1d425fd17cbc2eee0568cc64e"
+    },
+    {
+      "path": "backend/pipeline_control/worker.py",
+      "sha256": "319d742b675e5c07a035ab812e725f1bb9afb1cb04067d1075cbf4ca48198a79"
+    },
+    {
+      "path": "backend/restaurant-evaluation/scripts/10-rule-evaluation.py",
+      "sha256": "8d373baaad75dd487b5175d520873c20ba16e4510d5f1a74d1867b1062b1a32e"
+    },
+    {
+      "path": "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
+      "sha256": "307dadf79efa01066d612072dac9f028ba70e9ce2fd802b0952df8855424e46c"
+    },
+    {
+      "path": "backend/supabase/scripts/materialize_migration_workspace.py",
+      "sha256": "d954ce17a25d5756c909059e66c53ced701fec78bcc46cafb38d2a490f46d3de"
+    },
+    {
+      "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "sha256": "eceebacd5de1b30cb5d29678d3ac95cb26a9d49c9a556a3cac5cb44af46294d8"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004023841_storyboard_claim_capability_order.sql",
+      "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+    },
+    {
+      "path": "backend/bin/verify_storyboard_gemini_migration.py",
+      "sha256": "01a3274e753e9748f75b20c4b23a2bbd09a5f2f186abd1b1c3c28f9f9cb25abe"
+    }
+  ]
+}

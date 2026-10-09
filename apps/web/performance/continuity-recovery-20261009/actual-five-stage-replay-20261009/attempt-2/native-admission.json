@@ -1,0 +1,46 @@
+{
+  "kind": "owned-native-pg17-admission",
+  "status": "passed",
+  "binaryRoot": "/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6/installed/bin",
+  "expectedVersion": "17.6",
+  "socket": "/tmp/tzudong-actual-five-ac82b1ad46ad43910262b680-native/socket",
+  "port": 56649,
+  "networkListeners": 0,
+  "requiredExtensions": [
+    "btree_gin",
+    "fuzzystrmatch",
+    "hypopg",
+    "index_advisor",
+    "pg_stat_statements",
+    "pg_trgm",
+    "pgcrypto",
+    "plpgsql",
+    "supabase_vault",
+    "uuid-ossp",
+    "vector"
+  ],
+  "cleanup": {
+    "stopped": true,
+    "removed": true
+  },
+  "serverVersion": "17.6",
+  "serverVersionNum": 170006,
+  "availableRequiredExtensions": [
+    "plpgsql"
+  ],
+  "missingRequiredExtensions": [
+    "btree_gin",
+    "fuzzystrmatch",
+    "hypopg",
+    "index_advisor",
+    "pg_stat_statements",
+    "pg_trgm",
+    "pgcrypto",
+    "supabase_vault",
+    "uuid-ossp",
+    "vector"
+  ],
+  "fullSchemaEligible": false,
+  "fallback": "cached-same-major-image",
+  "completedAt": "2026-10-09T09:50:37.441Z"
+}

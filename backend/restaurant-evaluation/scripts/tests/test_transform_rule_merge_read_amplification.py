@@ -80,14 +80,14 @@ class TransformRuleMergeReadAmplificationTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            original_open = builtins.open
+            original_read = transform_mod.load_last_jsonl_record
             rule_opens = 0
 
-            def counting_open(file, *args, **kwargs):
+            def counting_read(file):
                 nonlocal rule_opens
                 if Path(file) == rule_file:
                     rule_opens += 1
-                return original_open(file, *args, **kwargs)
+                return original_read(file)
 
             previous_argv = sys.argv
             sys.argv = [
@@ -99,11 +99,11 @@ class TransformRuleMergeReadAmplificationTests(unittest.TestCase):
                 "--evaluation-path",
                 str(evaluation),
             ]
-            builtins.open = counting_open
+            transform_mod.load_last_jsonl_record = counting_read
             try:
                 transform_mod.main()
             finally:
-                builtins.open = original_open
+                transform_mod.load_last_jsonl_record = original_read
                 sys.argv = previous_argv
 
             output = evaluation / "evaluation" / "transforms.jsonl"
@@ -119,7 +119,7 @@ class TransformRuleMergeReadAmplificationTests(unittest.TestCase):
 
         # 40 laaj lines used to reopen and reparse the same rule file 40 times.
         self.assertEqual(1, rule_opens)
-        # The per-line merge still runs, so the merged restaurants reach the output.
+        # The latest payload is merged once and reaches the output unchanged.
         self.assertEqual(1, len(rows))
         self.assertEqual("정원분식", rows[0]["origin_name"])
         self.assertEqual(True, rows[0]["evaluation_results"]["category_validity_TF"]["eval_value"])

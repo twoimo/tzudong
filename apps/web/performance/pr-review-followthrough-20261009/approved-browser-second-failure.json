@@ -1,0 +1,145 @@
+{
+  "graph": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "typingRequests": 1,
+      "loadedSelectionRequests": 0,
+      "keyboardEnterEscape": true,
+      "selectionClearedBySearch": true,
+      "nodes": 30,
+      "requests": [
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "tablet",
+      "width": 834,
+      "height": 1112,
+      "typingRequests": 1,
+      "loadedSelectionRequests": 0,
+      "keyboardEnterEscape": true,
+      "selectionClearedBySearch": true,
+      "nodes": 30,
+      "requests": [
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "typingRequests": 1,
+      "loadedSelectionRequests": 0,
+      "keyboardEnterEscape": true,
+      "selectionClearedBySearch": true,
+      "nodes": 30,
+      "requests": [
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": true,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        },
+        {
+          "qPresent": false,
+          "cursorPresent": false,
+          "selectedPresent": false,
+          "method": "GET"
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "firstPage": 100,
+    "lastPage": 1,
+    "loadedSelectionRequests": 0,
+    "pageTransitionRequests": 1,
+    "searchFromLaterPageRequests": 1,
+    "searchResetsCursorAndSelection": true
+  },
+  "pipeline": [],
+  "users": {},
+  "refresh": {},
+  "pageErrors": [],
+  "externalBlocked": 0,
+  "blockedWrites": 0,
+  "syntheticWrites": 0,
+  "failure": {
+    "phase": "pipeline-missing",
+    "code": "TimeoutError",
+    "message": "locator.click: Timeout 30000ms exceeded.",
+    "detail": "locator.click: Timeout 30000ms exceeded. | \u001b[2m  - waiting for locator('[data-admin-pipeline-dashboard]').getByRole('button', { name: '실행 제어' })\u001b[22m"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "immutable-operational-sql-receipts",
+  "databaseMutations": false,
+  "hostedExecutionPerformedByArchive": false,
+  "freshReplay": "separate-read-only-catalog-verification",
+  "readback": {
+    "path": "apps/web/performance/rollout-preflight/hosted-owner-final-readback-20261004-v2.json",
+    "sha256": "1bb5eed0ff56f8d9aa7b6a3f571a3ad8ad13845e1c6d27daf56f279a68f87c87",
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "observedAt": "2026-10-04T13:16:22.871399+00:00",
+    "ledgerCount": 78
+  },
+  "receipts": [
+    {
+      "version": "20261004115554",
+      "name": "g014_pg17_owner_final_verifier",
+      "originalPath": "backend/supabase/migrations/20261004115554_g014_pg17_owner_final_verifier.sql",
+      "archivePath": "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql",
+      "sourceSha256": "a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545",
+      "byteLength": 12710,
+      "actualStatementSha256": "6fb6476eb8d5bea2c440831d4a9ab1e5be372f11165c21c1a4a0a4eec0590751",
+      "actualStatementsArraySha256": "b376f880e488f5fa734128154b701c02dafe8d223664467b002417428138dd7e",
+      "statementCount": 1,
+      "automaticFreshReplay": false
+    },
+    {
+      "version": "20261004123034",
+      "name": "g016_onboarding_allowlist_identity_correction",
+      "originalPath": "backend/supabase/migrations/20261004123034_g016_onboarding_allowlist_identity_correction.sql",
+      "archivePath": "backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql",
+      "sourceSha256": "b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f",
+      "byteLength": 17668,
+      "actualStatementSha256": "3d1d4e045f1a034e092f2b4cb19a95a165efad59e413af1353bf98c4f8e37ae0",
+      "actualStatementsArraySha256": "f18f3ab22b084963c08818fc4f15cf70c4c8f469fd91a0a07fa1565b0058b467",
+      "statementCount": 1,
+      "automaticFreshReplay": false
+    }
+  ]
+}

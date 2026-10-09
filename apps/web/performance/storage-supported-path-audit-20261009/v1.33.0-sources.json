@@ -1,0 +1,44 @@
+[
+  {
+    "path": "src/http/routes/object/deleteObject.ts",
+    "url": "https://raw.githubusercontent.com/supabase/storage/v1.33.0/src/http/routes/object/deleteObject.ts",
+    "bytes": 1483,
+    "sha256": "5ddfb414270b50cc19709fe90b3c099643613f9af7c2eaa11ce1a82a336e94d3",
+    "savedPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/storage-single-delete-20261009/v1.33.0-src-http-routes-object-deleteObject.ts"
+  },
+  {
+    "path": "src/http/routes/object/deleteObjects.ts",
+    "url": "https://raw.githubusercontent.com/supabase/storage/v1.33.0/src/http/routes/object/deleteObjects.ts",
+    "bytes": 1943,
+    "sha256": "54f4876d4ce84c6d998ef12183c55a26be13aceb18e33b56e1e63834a404f66b",
+    "savedPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/storage-single-delete-20261009/v1.33.0-src-http-routes-object-deleteObjects.ts"
+  },
+  {
+    "path": "src/http/routes/object/index.ts",
+    "url": "https://raw.githubusercontent.com/supabase/storage/v1.33.0/src/http/routes/object/index.ts",
+    "bytes": 1822,
+    "sha256": "bcf485956da5b8dbc55b63f0b051a1bba6fc4ba2a84c8f8c5ffff7435e922755",
+    "savedPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/storage-single-delete-20261009/v1.33.0-src-http-routes-object-index.ts"
+  },
+  {
+    "path": "src/http/routes/s3/commands/delete-object.ts",
+    "url": "https://raw.githubusercontent.com/supabase/storage/v1.33.0/src/http/routes/s3/commands/delete-object.ts",
+    "bytes": 2661,
+    "sha256": "c2d006c337ea1d69f0892ff3dc8adf089cda30b01fe0d5be9df9046c3a541e3d",
+    "savedPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/storage-single-delete-20261009/v1.33.0-src-http-routes-s3-commands-delete-object.ts"
+  },
+  {
+    "path": "src/storage/object.ts",
+    "url": "https://raw.githubusercontent.com/supabase/storage/v1.33.0/src/storage/object.ts",
+    "bytes": 24097,
+    "sha256": "f24b46630e38bc7a075a6b68c14ec7b52948a337dafd5935f89356023e959682",
+    "savedPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/storage-single-delete-20261009/v1.33.0-src-storage-object.ts"
+  },
+  {
+    "path": "src/storage/backend/s3/adapter.ts",
+    "url": "https://raw.githubusercontent.com/supabase/storage/v1.33.0/src/storage/backend/s3/adapter.ts",
+    "bytes": 16018,
+    "sha256": "f3f3194c52212ba4ae966ca399e5b855d9d54f4479ca12ba06898e92b30f92cc",
+    "savedPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/storage-single-delete-20261009/v1.33.0-src-storage-backend-s3-adapter.ts"
+  }
+]

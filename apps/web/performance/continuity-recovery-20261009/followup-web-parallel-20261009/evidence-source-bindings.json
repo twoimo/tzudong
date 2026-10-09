@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-10-09T12:02:27.647379+00:00",
+  "source": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-delivery-checks-20261009/web-unit-summary.json",
+      "bytes": 2783,
+      "sha256": "0cad8d225e0081d42ae95cb7eed640556e7bc42d8ec25212ffe922f42a2d8240"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/five-plus-admin-user-rpc-forward-final-20261009/proof.json",
+      "bytes": 14648,
+      "sha256": "f585710ef57899e7de5dbaebd1c5117104a74a7e331bd24bdfd289939f701881"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/wire-schema-acceptance-20261009/proof.json",
+      "bytes": 740,
+      "sha256": "825f10a4b413ee2653dad7f7bbab8b64bd12d37f2f34d05493578d9dc08209f2"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-delivery-audit-20261009/findings.md",
+      "bytes": 2750,
+      "sha256": "32c2a74412b152c71a4e1d78708c647333cfa7441298018a00ab36585d67a513"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-parser-fix/README.md",
+      "bytes": 2238,
+      "sha256": "f12d97853026b59a8d202cf15e5013b6c61ae3b4b7edc2db01426c77f91e3708"
+    }
+  ],
+  "promptSha256": "8bbfd1aabdcf65fb32ecdd23724e645c7c06ae5506e9e939ee5c44ba52fa9e46"
+}

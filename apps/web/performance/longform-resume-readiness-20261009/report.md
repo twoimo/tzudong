@@ -1,0 +1,17 @@
+# Read-only longform resume readiness — 2026-10-09
+
+The public caption collector is paused for rate-limit, not a recorded user stop. The last bounded attempt had limit 3/concurrency 1, started the same O_hj9Ge-Fdk, paused on the first request, and returned 75. SIGINT/SIGTERM follows a different interrupted/130 path. No matching collector or longform process was observed. Pending remains 459; existing authoritative catalog 1070 and newest public snapshot 1071 are distinct.
+
+This is a YouTube/yt-dlp caption pause, not proof that Gemini billing caused the collector stop. No caption retry was sent because this task is read-only. The complete collector CLI is saved in readiness.json and is not executed.
+
+The claude-video route is backend/knowledge_graph/longform_analysis.py → claude_video_adapter.py → pinned watch helper. There is no backend/claude-video directory. Installed commit 03ceb42f7fa2c4439aca01752118044baabffb8f matches admission, and its Gemini helper bytes match publisher stable v0.3.2. Upstream default is 3.7 Flash; this pipeline's explicit admitted model is 3.8 Flash and was preserved.
+
+One existing-credential non-generative model GET returned 200 for models/gemini-3.8-flash, input 1048576/output 65536 and advertised countTokens. No raw credential/provider diagnostics were saved. No countTokens, Interactions or generation call was sent. Current official direct API docs establish countTokens support but did not establish a separate zero-price guarantee, so countTokens billing remains unverified. Metadata success is not generation quota/funded-balance proof.
+
+Existing pilot/root-two batch reservations are exhausted. Current protocol2 uses up to 900 seconds per static segment and reserves count+create operations and one full input window per segment. A new 980-second video is two segments: maxCalls 4, input reservation 2097152 and output reservation 131072. At current published Standard 3.8 prices the generation-only model-window price bound is $2.064384; that is neither observed cost nor credit availability. Source admission enforces max videos/calls/input tokens and exact batch identity, not a USD cap, bill balance or live TPM guarantee. Existing task authorization remains intact; no new user approval is requested in this readiness report.
+
+The offline original 1069-video inventory plan remains 2 reusable/1 readback-required/1066 new, with 2003 remaining static segments. This is an old exact plan binding, not the latest 1071-video denominator. Do not reset spent legacy reservations, silently change model/project/limits, or resend the invalid legacy response without exact repair/readback provenance. Recorded model project concurrency/pacing intent was 1/1; no current environment values were copied. Future launch must preserve its approved runtime settings.
+
+Only this evidence directory was written. Queue/checkpoint/job/catalog/log/batch hashes were rechecked unchanged. No collector/analysis process was resumed and no key, profile, quota, pause, memory, vault or shared operator setting was changed.
+
+Official sources: [claude-video v0.3.2](https://github.com/bradautomates/claude-video/releases/tag/v0.3.2), [Gemini 3.8 model](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash), [video](https://ai.google.dev/gemini-api/docs/video-understanding), [countTokens](https://ai.google.dev/api/tokens), [Models](https://ai.google.dev/api/models), [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits), [pricing](https://ai.google.dev/gemini-api/docs/pricing).

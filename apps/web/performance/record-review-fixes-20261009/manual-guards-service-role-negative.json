@@ -1,0 +1,8 @@
+{
+  "status": "unconfirmed",
+  "operatingWrites": false,
+  "failure": {
+    "state": "42501",
+    "fixedCode": null
+  }
+}

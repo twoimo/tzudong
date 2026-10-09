@@ -1,0 +1,31 @@
+{
+  "observedAtUtc": "2026-10-09T00:34:34.636714+00:00",
+  "kind": "independent public metadata-only readonly export",
+  "results": [
+    {
+      "tab": "videos",
+      "status": "exported",
+      "count": 1053,
+      "playlistCount": 1053,
+      "rawResponseSha256": "8163e4a3dcfc0fa98a4c2ce4d7e9b322c1b2fbc91f2990a6ae3f726a77d5c649"
+    },
+    {
+      "tab": "shorts",
+      "status": "exported",
+      "count": 81,
+      "playlistCount": 81,
+      "rawResponseSha256": "5df075fbd44d8135a9d3621f1936e0a6e54a98663828f24907c7a7f5ba3131d9"
+    },
+    {
+      "tab": "streams",
+      "status": "exported",
+      "count": 18,
+      "playlistCount": 18,
+      "rawResponseSha256": "37dd3e3ca74e91d26f58c534bd414a30ec68207835a834a69b59f502cc9fe9de"
+    }
+  ],
+  "canonicalCollectorResume": false,
+  "paidModelCalls": 0,
+  "profileChanges": 0,
+  "automaticRetries": 0
+}

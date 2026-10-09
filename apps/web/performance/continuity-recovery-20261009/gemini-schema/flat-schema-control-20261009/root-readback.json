@@ -1,0 +1,103 @@
+{
+  "readbackAt": "2026-10-09T07:55:15Z",
+  "classification": "completed",
+  "terminal": {
+    "responseReached": true,
+    "evidenceRole": "sanitized_success_result",
+    "httpStatusRecordedInSanitizedProof": false,
+    "activeWriterObserved": false,
+    "basis": "The hash-bound sanitized success proof records validated DTO booleans, model match, usage, and elapsed time."
+  },
+  "control": {
+    "model": "gemini-3.8-flash",
+    "modelMatch": true,
+    "schemaValidation": true,
+    "expectedVideoId": true,
+    "usage": {
+      "inputTokens": 82,
+      "outputTokens": 19,
+      "thinkingTokens": 855,
+      "cachedTokens": 0,
+      "toolTokens": 0,
+      "totalTokens": 956,
+      "totalMatchesParts": true
+    },
+    "elapsedSeconds": 7.802805
+  },
+  "admission": {
+    "admission": "admitted",
+    "executionAuthorized": true,
+    "onlyResponseFormatSchemaChanged": true,
+    "previousPayloadReconstructedMatch": true,
+    "providerPostMaximum": 1,
+    "retries": 0,
+    "readbacks": 0,
+    "requestsPerMinuteMaximum": 1,
+    "concurrencyMaximum": 1,
+    "maxOutputTokens": 65536,
+    "rawBodyPersisted": false,
+    "headersPersisted": false,
+    "keyPersisted": false,
+    "responseIdPersisted": false,
+    "successCacheWrite": false,
+    "queueWrite": false,
+    "productionSourceWrite": false
+  },
+  "integrity": {
+    "flatSchemaControl": {
+      "rootAdmissionSha256": "bd9fe29becf7936ed014b24ffc4034d1f9962a7f83448dea610e55ab0d4799b9",
+      "proofSha256": "27c7cb096dca3b4c1aff08cbbe6ddf70e6e5a3f08cbb35f816c52df3371ae901",
+      "artifactMapSha256": "5286db8a26109cf09b01e9955c127e9dc95004ea1f1d61a593b497bdaf1a4ed2",
+      "artifactEntriesVerified": 2,
+      "allArtifactEntriesMatch": true
+    },
+    "acceptanceProbe": {
+      "rootAdmissionSha256": "62edb4187607b027aeddcac84b7b9ba8da59c22795ad3f3172a3d3bf2759d10c",
+      "proofSha256": "6cb0a6984519a0aaf37619cbf31aa521be93147dac36feba3bfb6cc4b0579489",
+      "artifactMapSha256": "b75e25117c0d9eaa3e622a14296d0c8a8a834bfa7d04dc1bc35f6fa17c34adb1",
+      "artifactEntriesVerified": 4,
+      "allArtifactEntriesMatch": true
+    },
+    "diagnosticProbe": {
+      "rootAdmissionSha256": "e08a89fb55d833a2ba227b6eeab353c1a80d257be23165eaf6b3d20efe16c236",
+      "proofSha256": "8e217ba80c4a2ee5b70088a37aef3795369c70aaf2044451a350b23d41398803",
+      "artifactMapSha256": "99294753d9645340da6ef9c5b41a9db76e1d7c05681a92ffb752e5f2c3729e28",
+      "artifactEntriesVerified": 4,
+      "allArtifactEntriesMatch": true
+    }
+  },
+  "comparison": {
+    "acceptanceProbe": {
+      "terminal": true,
+      "httpStatus": 400,
+      "category": "invalid_request",
+      "modelMatch": null,
+      "usage": null,
+      "dtoBoolean": null
+    },
+    "diagnosticProbe": {
+      "terminal": true,
+      "providerPostAttempted": true,
+      "httpStatus": 400,
+      "officialCode": "invalid_request",
+      "category": "unknown",
+      "schemaPath": null,
+      "schemaKeyword": null
+    }
+  },
+  "uncertainties": [
+    "The sanitized flat-schema proof does not retain an HTTP status field, so the exact status code is unverified even though the terminal success receipt is complete.",
+    "The cause of the prior full and factored schema rejection remains unresolved."
+  ],
+  "actionsDuringReadback": {
+    "providerCalls": 0,
+    "reruns": 0,
+    "keyLookups": 0,
+    "productionSourceChanges": 0,
+    "cacheChanges": 0,
+    "existingExecutionReceiptChanges": 0,
+    "rootReadbackCreated": true,
+    "queueChanges": 0,
+    "artifactMapChanges": 0
+  }
+}

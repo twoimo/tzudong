@@ -1,0 +1,364 @@
+{
+  "observedAtUtc": "2026-10-09T01:01:00.932690+00:00",
+  "code": "CAPTION_ADAPTER_PREPARED",
+  "targets": [
+    {
+      "name": "YT-tzuyang-Video-F93TnnxCNvY",
+      "id": "261006-1dn0-hdeh43wq",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-F93TnnxCNvY.md",
+      "beforeHash": "sha256:5c9c26e0c215f0c005dd65064a6779cec5dec4410f311295d7ebeacbb0b018f5",
+      "beforeBodySha256": "c69c0ddeaefd0c186f763052386d9da0e7678995e195e35dfc0d539f3f509146",
+      "targetBodySha256": "6e846a7498ad561c71bf08e9979ab3b90f00c8e7529a2a1a10422d54734be319",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/F93TnnxCNvY/caption-review.json",
+          "sha256": "8655d8288e0744c52e43f3f83560c42bde3ff49a6f81a17fc4ec22933962a1d2",
+          "bytes": 7528
+        },
+        {
+          "path": "source/analysis/F93TnnxCNvY/transcript.ko-orig.txt",
+          "sha256": "456e9be077f915864cc0c61de6f85895d6d5bc4a34c630fc2f064c1a9587bf8d",
+          "bytes": 17946
+        },
+        {
+          "path": "source/analysis/F93TnnxCNvY/transcript.ko.txt",
+          "sha256": "cc4997726d172d823d411d94664aede5a79aa855b803c172930044f33dec3ec5",
+          "bytes": 11431
+        },
+        {
+          "path": "source/corpus/subs/F93TnnxCNvY.ko-orig.vtt",
+          "sha256": "8d57b6d7da3ba7ee2b50bd7fddf3e106dd2be6cedf39a07e61c47c1488afff46",
+          "bytes": 65821
+        },
+        {
+          "path": "source/corpus/subs/F93TnnxCNvY.ko.vtt",
+          "sha256": "b3bc9ad57937307f2ac43ba6a1551015fb09ba18e41a23ad2b18dd8b33c36c7b",
+          "bytes": 16137
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video-3Z-ngM3DVi0",
+      "id": "261006-1dn0-bhr7lw23",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-3Z-ngM3DVi0.md",
+      "beforeHash": "sha256:ca06a93bb576a01f9ebc8b9d1cba779790262df6e8dcac1ac38caee36c76fa6f",
+      "beforeBodySha256": "22187c37e395be720ce223e72f9a235b24014d6c2fcedafc44c65f6dda5b3c7b",
+      "targetBodySha256": "efd016d28950ed41d7e9674804701012defb89d788c3bd8f8557b26fd75d7e78",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/3Z-ngM3DVi0/caption-review.json",
+          "sha256": "b7fdfe2538c6800a7167f4147586f98458bbe9feae6712f7b9c1c6887d8b2120",
+          "bytes": 15286
+        },
+        {
+          "path": "source/analysis/3Z-ngM3DVi0/transcript.ko-orig.txt",
+          "sha256": "e0b594f7fd3abd547f999c0237163c53a4d808e133a5d7851c9ef69f95219341",
+          "bytes": 19052
+        },
+        {
+          "path": "source/analysis/3Z-ngM3DVi0/transcript.ko.txt",
+          "sha256": "1c704cba7037904c42558a415654a49b401e7fa6d0b5a41be63b3c4453fe9e33",
+          "bytes": 13409
+        },
+        {
+          "path": "source/corpus/subs/3Z-ngM3DVi0.ko-orig.vtt",
+          "sha256": "dc58c0754768435d2914865185a1c0201fc2be2fc2cbf95a42db65ceeeb15a56",
+          "bytes": 73910
+        },
+        {
+          "path": "source/corpus/subs/3Z-ngM3DVi0.ko.vtt",
+          "sha256": "ffccad00c82fda42cde5c7b22c85a878aef3409e9ed3de61c3a447cce7ef3835",
+          "bytes": 19150
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video-BTyT60UWiLc",
+      "id": "261006-1dn0-q20wgonz",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-BTyT60UWiLc.md",
+      "beforeHash": "sha256:cfb3043f78554d5b6cd98c8cf823116b25984ead4945f4cbf739abc90f8f2196",
+      "beforeBodySha256": "1b19576b31bf676ad887078c84beb1ab902d4f2f4d12c0cf01f18b9831cd7bf6",
+      "targetBodySha256": "c5f042d3b1a6c6e91a2eb2cf0a1d656017bf68acb3b944777a88c4a9af5833f0",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/BTyT60UWiLc/caption-review.json",
+          "sha256": "fda2dabeb3c51a5f1e2ec4630de8418013a2920645fb9349260d645ae1501aab",
+          "bytes": 7249
+        },
+        {
+          "path": "source/analysis/BTyT60UWiLc/transcript.ko-orig.txt",
+          "sha256": "b9ad0ca497af419432da9d550c56718bf84c152f4deab74ce732b94af93f8ef3",
+          "bytes": 20416
+        },
+        {
+          "path": "source/analysis/BTyT60UWiLc/transcript.ko.txt",
+          "sha256": "86a0e8c5fdccebbd326a03409baf990df617dd4f5ad0bd410ff51e4b9235c946",
+          "bytes": 12642
+        },
+        {
+          "path": "source/corpus/subs/BTyT60UWiLc.ko-orig.vtt",
+          "sha256": "867aaaee13aaa0ee1c504b46de3ed3c6349ac608222516eaf7f6e28d8cb54892",
+          "bytes": 78339
+        },
+        {
+          "path": "source/corpus/subs/BTyT60UWiLc.ko.vtt",
+          "sha256": "b10267807f6383e51af817d0d205112b47af9877e65c7f3e2fde6c769e6aa80e",
+          "bytes": 18843
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video--C4280KT3S4",
+      "id": "261006-1gn2-vuz3x3nu",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video--C4280KT3S4.md",
+      "beforeHash": "sha256:289ba553ab69ce97d153dbfa01649a5f68a9cffe0ddbd98716b3bb4072c8a5c6",
+      "beforeBodySha256": "9fd674f1fd82c1392d6057f03bf67b90fa663b6dac75ae0cf9c2963842d1296a",
+      "targetBodySha256": "ec259c17b950561d4697819a56aba9312cc237492e7dd7401987fd7b8a5f63f7",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/-C4280KT3S4/caption-review.json",
+          "sha256": "aed9f6f111863bcb6e1895dfd893c8d3766642fc16d6ff472cd43a8f24be76a5",
+          "bytes": 10919
+        },
+        {
+          "path": "source/analysis/-C4280KT3S4/transcript.ko-orig.txt",
+          "sha256": "ba7b6d33a6dd5318d5523c307476d132d17a4586c869586ba04cf4f73cfc9737",
+          "bytes": 23995
+        },
+        {
+          "path": "source/analysis/-C4280KT3S4/transcript.ko.txt",
+          "sha256": "ede35e37254c5515f5b21e8d487939662fd1bea5d31442ae5326119cd91d0ed7",
+          "bytes": 17520
+        },
+        {
+          "path": "source/corpus/subs/-C4280KT3S4.ko-orig.vtt",
+          "sha256": "b36e0b1ebe7e6f70b09a8ff2eaf5da8ecaccb863feb3a84577e9828ab5e529ab",
+          "bytes": 94134
+        },
+        {
+          "path": "source/corpus/subs/-C4280KT3S4.ko.vtt",
+          "sha256": "4a56c965c6b2b081378c9fb7f48985d969c631efe2a5ef9446289a7c6b546e73",
+          "bytes": 25929
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video-Tsy8xRjMpB0",
+      "id": "261006-1gn2-s5yq4t2q",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-Tsy8xRjMpB0.md",
+      "beforeHash": "sha256:e30a8fa1a9c74c85d18bcfbd1866406b14dbc6093f34e43b582e24c448079933",
+      "beforeBodySha256": "3b0b81c8661e2337436ce9d00c3ad39303a26c89fc0071c706dbe9bdaf66a0a1",
+      "targetBodySha256": "51c4ff469fa4e4c2ed3b85358341ae8e2bebc90614a673e32e8d8f2a345c2e70",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/Tsy8xRjMpB0/caption-review.json",
+          "sha256": "169c1b7f42b06595f8105d5e2acc8b481cbf0ae3b75e47a1eaeecb4776c7ff18",
+          "bytes": 39235
+        },
+        {
+          "path": "source/analysis/Tsy8xRjMpB0/transcript.ko-orig.txt",
+          "sha256": "4420cc3d9485cece3d767006c56e17be0b17632609609f0e7004201a3ab3fd7d",
+          "bytes": 21396
+        },
+        {
+          "path": "source/analysis/Tsy8xRjMpB0/transcript.ko.txt",
+          "sha256": "517db3377a039f5bea3e7f543528998b42a425453e9a4a9490d48591f4485878",
+          "bytes": 17404
+        },
+        {
+          "path": "source/corpus/subs/Tsy8xRjMpB0.ko-orig.vtt",
+          "sha256": "4769f3420268fe8f3f498074c66866cb9e4f5b4d5340e6ddd9efa20b0c912343",
+          "bytes": 87460
+        },
+        {
+          "path": "source/corpus/subs/Tsy8xRjMpB0.ko.vtt",
+          "sha256": "3bc19d889f77b455ce12f5b11bc4d969133a957a02d0a0be92936cb6cad01f18",
+          "bytes": 24867
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video-xRf_bhPFZrY",
+      "id": "261006-1gn2-3lve41rq",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-xRf_bhPFZrY.md",
+      "beforeHash": "sha256:c342b36a8c0b77fc0f74981da222692475d28de0c4185a2d0129e2ed3828ca91",
+      "beforeBodySha256": "8cb2726563255508c3529666cbe5f9139fb079aed86aab0624007baa3ce23d9b",
+      "targetBodySha256": "30792d7a25e39847893111c330e5b6147391739260b6473bfb4941df8cb19fde",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/xRf_bhPFZrY/caption-review.json",
+          "sha256": "a03c2e29f2225880e6e1d9a8c6aa3250c82d5fdbc0f16e6b40df4ab35aa413e3",
+          "bytes": 9291
+        },
+        {
+          "path": "source/analysis/xRf_bhPFZrY/transcript.ko-orig.txt",
+          "sha256": "1783041fe3745110aaabef7c999d57d554fa8cdf11f72a3bde7ee88dce2f5b02",
+          "bytes": 14903
+        },
+        {
+          "path": "source/analysis/xRf_bhPFZrY/transcript.ko.txt",
+          "sha256": "e1769c86aabf2711f34b084a6f286542a96f4b4babb42798d1f74132ac6c4eb6",
+          "bytes": 11288
+        },
+        {
+          "path": "source/corpus/subs/xRf_bhPFZrY.ko-orig.vtt",
+          "sha256": "6270df9b264ed7465f95edd08ef5732325c473abcca140522c15698aae0427e2",
+          "bytes": 62009
+        },
+        {
+          "path": "source/corpus/subs/xRf_bhPFZrY.ko.vtt",
+          "sha256": "7907cc25e816538c88ddfb2c92c885ca5b4638b5483e799234095c409650380a",
+          "bytes": 17329
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video-zkOBLQUSEr0",
+      "id": "261006-1i3c-jib191x8",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-zkOBLQUSEr0.md",
+      "beforeHash": "sha256:7c6c5d6f0e978a8777a064ed17b3e4f8185fe4a91320c9dff6f070f36826a42b",
+      "beforeBodySha256": "975df707aec905083bf6e27d07db759760e23d30c46797b13a6a864455e63fbe",
+      "targetBodySha256": "bb3e12d589d9e8adbd910cf38c3ddb66dd8f58f48ae5327513283460d32548b4",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/zkOBLQUSEr0/caption-review.json",
+          "sha256": "21acf8662fec10ff84a7beeced0ea083484fb030072fa8c1c76dbdff53d36c6a",
+          "bytes": 51355
+        },
+        {
+          "path": "source/analysis/zkOBLQUSEr0/transcript.ko-orig.txt",
+          "sha256": "c1320100bda93d467abc355886961ad97d0461ae53f978ec50fe7132357b977f",
+          "bytes": 28872
+        },
+        {
+          "path": "source/analysis/zkOBLQUSEr0/transcript.ko.txt",
+          "sha256": "ecda669004b7b57ff9b60509df0c80093b798fd7eaea27381cfc6e304cdf540d",
+          "bytes": 21703
+        },
+        {
+          "path": "source/corpus/subs/zkOBLQUSEr0.ko-orig.vtt",
+          "sha256": "e40693c43c62b19e562c815ba6e89f8dc37b39752892dfd74127253e7c95d852",
+          "bytes": 112695
+        },
+        {
+          "path": "source/corpus/subs/zkOBLQUSEr0.ko.vtt",
+          "sha256": "30abdd18ff0a4ae2ebe1431b09f96f36c376fa13be8c387c9105216e7eb9b1cf",
+          "bytes": 31166
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video-DNGGl1-jFcU",
+      "id": "261006-1i3c-k0l3q5eb",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-DNGGl1-jFcU.md",
+      "beforeHash": "sha256:a1ba54415e697f9dd8ca1fede11a2b35c8d0a9fd42193b5d82d45f2d77abd2ac",
+      "beforeBodySha256": "32ef4179d5a5fb4adef7803b93bf252932cfdfca89a83e5a19eec99b8441d866",
+      "targetBodySha256": "1b155fd4df983e8fde593e775e5c5793214b236cffeb3f2b4e9b3f392ae2fa5b",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/DNGGl1-jFcU/caption-review.json",
+          "sha256": "bb85a33e648e9514c007cf06e5c3b38844649abf713f3623e07a61bc36bfc197",
+          "bytes": 38018
+        },
+        {
+          "path": "source/analysis/DNGGl1-jFcU/transcript.ko-orig.txt",
+          "sha256": "e9ee1bcbd9f9bf40184ca830ada1846ee6d17ff1890b71f349ae3df6fb13682a",
+          "bytes": 29772
+        },
+        {
+          "path": "source/analysis/DNGGl1-jFcU/transcript.ko.txt",
+          "sha256": "76826d2f9195bff59912c5c02bfd5e73efbc48e31809a9c463a152f52c074e25",
+          "bytes": 21567
+        },
+        {
+          "path": "source/corpus/subs/DNGGl1-jFcU.ko-orig.vtt",
+          "sha256": "dffa2d370642a79284914e82ab58f74f9ff7a1ee07735129267bd5f03cb880d7",
+          "bytes": 116210
+        },
+        {
+          "path": "source/corpus/subs/DNGGl1-jFcU.ko.vtt",
+          "sha256": "3b50c4ad8b302906ea6454990b67f83f0fbe7bf26583fd116edf3c7ae3d9634f",
+          "bytes": 31057
+        }
+      ]
+    },
+    {
+      "name": "YT-tzuyang-Video-Ck5UrobZuKA",
+      "id": "261006-1i3c-axw2mngb",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-Ck5UrobZuKA.md",
+      "beforeHash": "sha256:2c9484c96a796c8332c2071aa091500a33e5e7819dbdcef446586d96b05ca20b",
+      "beforeBodySha256": "d1766ed6beb3013cf197abbf802d4088d327ca82b462f215770097632290cd89",
+      "targetBodySha256": "759ae33cc21a7ae79691abf6c2b037c36de8def2f9a3d9e500dfe1e47b030116",
+      "sourceBindings": [
+        {
+          "path": "source/analysis/Ck5UrobZuKA/caption-review.json",
+          "sha256": "1ff26606e96cce5ef8539ece3cbd55561a050e16634ffd5ab5fafdb19b3f073c",
+          "bytes": 10391
+        },
+        {
+          "path": "source/analysis/Ck5UrobZuKA/transcript.ko-orig.txt",
+          "sha256": "bd0e3eb0ee08c07befd84243d6c38dc688410898a7a48a63748ad5816dee359f",
+          "bytes": 29116
+        },
+        {
+          "path": "source/analysis/Ck5UrobZuKA/transcript.ko.txt",
+          "sha256": "c576c713f746961d7ed301cdc837e175172cfc8ffae86ec6123057ccfc8bfe5a",
+          "bytes": 19541
+        },
+        {
+          "path": "source/corpus/subs/Ck5UrobZuKA.ko-orig.vtt",
+          "sha256": "e8bfdcfc039dfe6f975ed421218962bf594a59ad7571b356ee5b67a739cf5630",
+          "bytes": 109664
+        },
+        {
+          "path": "source/corpus/subs/Ck5UrobZuKA.ko.vtt",
+          "sha256": "cf2175ae299319af0d3ada4582507532de97d7750a6973896608bde2f3aa564d",
+          "bytes": 28850
+        }
+      ]
+    }
+  ],
+  "coverageRevision": {
+    "schema": "caption-membership-revision/v1",
+    "eligibleCount": 1071,
+    "inputs": [
+      {
+        "tab": "streams",
+        "sha256": "619512bd137e62318ad443d9357efbfd6829c9bbe0acc4374fa473c812e5bfc5",
+        "entryCount": 18
+      },
+      {
+        "tab": "videos",
+        "sha256": "0bfc95e7dbcd45f02205ca4bd61b69145fb7196ab52052178a8c01006bfe7cbb",
+        "entryCount": 1053
+      }
+    ],
+    "revision": "b7e45f13e0a856eace4819789894398c32827a8056f850acdb10250bbdb82c71"
+  },
+  "frozenModelConfigUsed": false,
+  "sourceBindingsVerified": 45,
+  "actualApiTests": {
+    "count": 4,
+    "seconds": 2.775,
+    "exitCode": 0,
+    "result": "OK",
+    "isolatedOnly": true
+  },
+  "fixedPreparationFailures": [
+    "macOS temp /var versus resolved /private/var root mismatch; fixed root normalization",
+    "lock path used as context manager; fixed existing file_lock reuse",
+    "fixture assumed body leading whitespace; fixed exact original body SHA assertion"
+  ],
+  "sharedVaultWrites": 0,
+  "canonicalExportReplaced": false,
+  "providerCalls": 0,
+  "queueResumed": false,
+  "independentCompletionAdded": false,
+  "finalActualApiTests": {
+    "count": 4,
+    "seconds": 3.616,
+    "exitCode": 0,
+    "result": "OK",
+    "isolatedOnly": true
+  }
+}

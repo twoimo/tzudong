@@ -1,0 +1,16 @@
+{
+  "endpoint": "models/gemini-3.8-flash",
+  "method": "GET",
+  "generationCalls": 0,
+  "countTokensCalls": 0,
+  "httpStatus": 200,
+  "name": "models/gemini-3.8-flash",
+  "inputTokenLimit": 1048576,
+  "outputTokenLimit": 65536,
+  "supportedGenerationMethods": [
+    "generateContent",
+    "countTokens",
+    "createCachedContent",
+    "batchGenerateContent"
+  ]
+}

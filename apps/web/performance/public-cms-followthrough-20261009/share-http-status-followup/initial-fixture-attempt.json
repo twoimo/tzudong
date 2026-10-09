@@ -1,0 +1,10 @@
+{
+  "stoppedOwnedProcesses": [
+    11617,
+    11635,
+    11655,
+    11710,
+    12185
+  ],
+  "reason": "Separate dev/production output directories before comparison; initial shared-cache attempt not admitted."
+}

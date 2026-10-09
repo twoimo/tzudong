@@ -1,0 +1,16 @@
+
+Running 8 tests using 1 worker
+
+(node:89330) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/8] tests/share-read-fallback.spec.ts:10:3 › bounded share fallback and home recovery invalid-code at desktop
+[2/8] tests/share-read-fallback.spec.ts:10:3 › bounded share fallback and home recovery Zz00Qq at desktop
+[3/8] tests/share-read-fallback.spec.ts:10:3 › bounded share fallback and home recovery invalid-code at tablet
+[4/8] tests/share-read-fallback.spec.ts:10:3 › bounded share fallback and home recovery Zz00Qq at tablet
+[5/8] tests/share-read-fallback.spec.ts:10:3 › bounded share fallback and home recovery invalid-code at mobile
+[6/8] tests/share-read-fallback.spec.ts:10:3 › bounded share fallback and home recovery Zz00Qq at mobile
+[7/8] tests/share-read-fallback.spec.ts:29:2 › compact stamp failure retains recovery at tablet
+[8/8] tests/share-read-fallback.spec.ts:29:2 › compact stamp failure retains recovery at mobile
+  8 passed (15.3s)

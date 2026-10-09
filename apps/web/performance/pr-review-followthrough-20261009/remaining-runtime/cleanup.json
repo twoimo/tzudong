@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "ownContainerAndVolumeRemoved": true,
+  "labelsVerifiedBeforeCleanup": true,
+  "parentContainerIdUnchangedAndRunning": true,
+  "otherResourcesChanged": false
+}

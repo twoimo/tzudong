@@ -1,0 +1,130 @@
+{
+  "measuredAt": "2026-10-09T03:57:21.805Z",
+  "runtime": "v24.21.0",
+  "environment": "Three actual Bun fixture gateways and Node HTTP sentinels on loopback. No Next, provider, hosted DB or production traffic.",
+  "checks": [
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: fixed destination /admin?module=pipeline",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: stripped auth and proxy headers /admin?module=pipeline",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: fixed destination /_next/static/example.js?x=1",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: stripped auth and proxy headers /_next/static/example.js?x=1",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: fixed destination /%2f%2fexample.test/path",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: stripped auth and proxy headers /%2f%2fexample.test/path",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: fixed destination /%5cexample.test/path",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: stripped auth and proxy headers /%5cexample.test/path",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: rejected authority absolute",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: rejected authority authority",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: rejected authority path",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: rejected targets caused zero upstream requests",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: rebinding/cross-origin request rejected",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: rebinding/cross-origin request rejected",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: mutation cannot reach upstream",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: API mutation remains disabled",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: redirect not followed and cookie not copied",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: synthetic API preserved",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: HMR preserved without auth forwarding",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: invalid target forms rejected",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: upgrade path, method, protocol and origin constrained",
+    "graph-cms-followthrough-20261009/fixture-gateway.mjs: port outside allowlist rejected",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: fixed destination /admin?module=pipeline",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: stripped auth and proxy headers /admin?module=pipeline",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: fixed destination /_next/static/example.js?x=1",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: stripped auth and proxy headers /_next/static/example.js?x=1",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: fixed destination /%2f%2fexample.test/path",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: stripped auth and proxy headers /%2f%2fexample.test/path",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: fixed destination /%5cexample.test/path",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: stripped auth and proxy headers /%5cexample.test/path",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: rejected authority absolute",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: rejected authority authority",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: rejected authority path",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: rejected targets caused zero upstream requests",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: rebinding/cross-origin request rejected",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: rebinding/cross-origin request rejected",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: mutation cannot reach upstream",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: API mutation remains disabled",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: redirect not followed and cookie not copied",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: synthetic API preserved",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: HMR preserved without auth forwarding",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: invalid target forms rejected",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: upgrade path, method, protocol and origin constrained",
+    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: port outside allowlist rejected",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: fixed destination /admin?module=pipeline",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: stripped auth and proxy headers /admin?module=pipeline",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: fixed destination /_next/static/example.js?x=1",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: stripped auth and proxy headers /_next/static/example.js?x=1",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: fixed destination /%2f%2fexample.test/path",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: stripped auth and proxy headers /%2f%2fexample.test/path",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: fixed destination /%5cexample.test/path",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: stripped auth and proxy headers /%5cexample.test/path",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: rejected authority absolute",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: rejected authority authority",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: rejected authority path",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: rejected targets caused zero upstream requests",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: rebinding/cross-origin request rejected",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: rebinding/cross-origin request rejected",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: mutation cannot reach upstream",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: API mutation remains disabled",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: redirect not followed and cookie not copied",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: synthetic API preserved",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: HMR preserved without auth forwarding",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: invalid target forms rejected",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: upgrade path, method, protocol and origin constrained",
+    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: port outside allowlist rejected",
+    "external trap received zero requests"
+  ],
+  "total": 67,
+  "passed": 67,
+  "trapCalls": 0,
+  "cleanup": [
+    {
+      "fixture": "graph-cms-followthrough-20261009/fixture-gateway.mjs",
+      "childExited": true,
+      "upstreamClosed": true
+    },
+    {
+      "fixture": "graph-cms-followthrough-20261009/title-fixture-gateway.mjs",
+      "childExited": true,
+      "upstreamClosed": true
+    },
+    {
+      "fixture": "pr-review-followthrough-20261009/approved-fixture-gateway.mjs",
+      "childExited": true,
+      "upstreamClosed": true
+    }
+  ],
+  "sources": [
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/loopback-transport.mjs",
+      "sha256": "2a6409c33cb7e3708451ca2d8ec5075cbe03a1107afd4c56a3ce9d5585b29382",
+      "bytes": 3575
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/verify-transport.mjs",
+      "sha256": "f55a4ee96ea1f41a6e32e5831d03e14512e7037a421885e539260eb010ad9965",
+      "bytes": 9248
+    },
+    {
+      "path": "apps/web/performance/graph-cms-followthrough-20261009/fixture-gateway.mjs",
+      "sha256": "88c481fd10b6962fb402d9cdaa655b1bed5df4ee001dd0c7cef261045e22fd0b",
+      "bytes": 22866
+    },
+    {
+      "path": "apps/web/performance/graph-cms-followthrough-20261009/title-fixture-gateway.mjs",
+      "sha256": "bc280cfeaffe03b147308d9cbfef73d5366ab6e1c5d0fd71f4a7f635328f9209",
+      "bytes": 22904
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/approved-fixture-gateway.mjs",
+      "sha256": "13a80dfec983748eaa49768c4079608333c49a8cbf279663ff28c10572629312",
+      "bytes": 23263
+    }
+  ],
+  "fullGoalComplete": false,
+  "lint": {
+    "runtime": "Node 24.21.0",
+    "files": 5,
+    "exitCode": 0
+  },
+  "independentReview": {
+    "result": "Fixed string prefix already kept HTTP destination on loopback. Added bounded invalid-target handling, origin/Host enforcement, header allowlist, and fixed HTTP options to remove URL authority ambiguity. No demonstrated historical external SSRF exploit."
+  }
+}

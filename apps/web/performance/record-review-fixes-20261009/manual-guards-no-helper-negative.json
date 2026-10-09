@@ -1,0 +1,10 @@
+{
+  "status": "unconfirmed",
+  "operatingWrites": false,
+  "failure": {
+    "state": "42501",
+    "fixedCode": null,
+    "deniedHelper": null,
+    "classification": "SOURCE_SQL_FAILURE"
+  }
+}

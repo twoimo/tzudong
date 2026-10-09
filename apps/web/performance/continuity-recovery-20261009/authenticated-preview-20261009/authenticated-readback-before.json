@@ -1,0 +1,44 @@
+{
+  "observedAt": "2026-10-09T09:20:27.902094+00:00",
+  "deploymentSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "url": "https://tzudong-76i12vmwe-twoimos-projects.vercel.app/admin",
+  "authenticatedAdminUiObserved": true,
+  "existingLoginReused": true,
+  "selectedExistingTabFound": false,
+  "ownedVerificationTabCreated": true,
+  "cookiesTokensRead": false,
+  "dataWrites": false,
+  "beforeConfiguration": {
+    "httpStatusByPath": {
+      "/api/admin/youtube-channel": 200,
+      "/api/dashboard/summary": 200,
+      "/api/admin/youtube-kpis": 200,
+      "/api/admin/preferences/sidebar-order": 500,
+      "/api/admin/preferences/dashboard-widget-order": 500,
+      "/api/admin/pending-counts": 500,
+      "/api/admin/banners": 500,
+      "/api/admin/evaluations": 500,
+      "/api/admin/evaluations/automation": 503,
+      "/api/admin/profile-summaries": 403,
+      "/api/admin/ocr-receipts": 500,
+      "/api/admin/users": 500,
+      "/api/admin/pipeline": 502,
+      "/api/admin/knowledge-graph": 200,
+      "/api/admin/sentry": 200
+    },
+    "loadedGraph": {
+      "nodes": 30,
+      "edges": 88,
+      "fullAnalysis": 0,
+      "longformTargets": 1071
+    },
+    "missingServerVariable": "SUPABASE_SERVICE_ROLE_KEY",
+    "sentryConnectionConfigured": false
+  },
+  "limits": [
+    "Read-only navigation window with retries and polling; not independent error-rate samples",
+    "CMS loading intermediates were preserved but are not final page success",
+    "No save, approval, generation, Sentry ingestion or operating pipeline proof",
+    "Server variable metadata is confirmed but redeploy/runtime readback remains required"
+  ]
+}

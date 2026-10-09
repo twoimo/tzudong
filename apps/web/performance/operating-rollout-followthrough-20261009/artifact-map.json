@@ -1,0 +1,18 @@
+{
+  "catalog-readback-before-or-after.sql": "2374683e2d9450eaee3127d836d33a1c903c12598b27a0ebc838a48b4f19cd8d",
+  "current-env-metadata.json": "7953e9ca2e9caa2535cb2d1c1fef7f4b8106be94755d1a413a7d722ccdd616c4",
+  "current-github-hold-flags.json": "3f20c240fd4b417c307530df093c09f7191d94ebeb0a314418b95addd1071a13",
+  "current-production-alias-readback.json": "ff7a3ca5e8389f29443d1e5edf5060465e314b17176e65f03b4c2d7f3ca5eb0e",
+  "hold-source-verification.json": "d7f701c8aa423e42b4014cd732c15a73a05ab1c740aa897ee326d6c36378ab34",
+  "phased-proposal/M1-additive.patch": "d1c355432b79d5e7d35747f1f7f9de1d9ebb513e19547fae63703c840c940dea",
+  "phased-proposal/M1-additive.proposal.sql.txt": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+  "phased-proposal/auth-retirement.proposal.sql.txt": "90e74357b91255a1487c6852fd29fa60f3e75a4392feb7524a6dbf56d3186a73",
+  "phased-proposal/design-and-revalidation.json": "d9751b88448c79ea75d3c5419bd8e5a094c958455931b0229b65144e0e701d8d",
+  "phased-proposal/proposal-source-binding.json": "1e87f7da637c06e827cd9459fd564889946504551daf6d8f09f2725f1d3211b8",
+  "phased-proposal/release-manifest-entries.proposal.json": "9f3123fcb5cffef75a15767addb932d811b17a5d4206ee7a2125959687a60747",
+  "post-apply-state-readback.sql": "d0768abd34a98384950452efb06f53ad0a523541f4a56e5c9d770810999d2ac2",
+  "production-ready-deployment-locator.json": "bd89840531a42fdcd7943b5e9f61a3727db3ca7208cb8b18bd60207308c0352b",
+  "protected-branch-readback.json": "6e4e630290137c35bc8edc7ce4c1503247eeb4edf6842549d00ca7c2796c17c8",
+  "rollout-and-rollback-audit.json": "3ccd1f1f2bf0aeac7355101625c2bfc8a923cc24770d8cabefda451eac3688ce",
+  "root-operating-readonly-baseline.json": "0181852e1167f96519ca3be0ad1f8aaa04b66259b3e2d928c234ebf492ffe554"
+}

@@ -1,0 +1,23 @@
+{
+  "targets": [
+    "overview",
+    "routes",
+    "restaurants",
+    "restaurant-refresh-history",
+    "submissions",
+    "reviews",
+    "storyboard",
+    "banners",
+    "users",
+    "insights",
+    "audit",
+    "youtube-thumbnail-generator",
+    "llm",
+    "pipeline",
+    "knowledge-graph",
+    "sentry"
+  ],
+  "sidebarTargets": 15,
+  "legacyAliasTargets": 1,
+  "allSidebarIdsAssertedAtRuntime": true
+}

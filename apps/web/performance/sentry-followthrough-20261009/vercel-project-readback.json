@@ -1,0 +1,16 @@
+{
+  "command": [
+    "vercel",
+    "project",
+    "inspect",
+    "tzudong",
+    "--scope",
+    "twoimos-projects",
+    "--non-interactive"
+  ],
+  "exitCode": 0,
+  "exactProjectIdMatched": true,
+  "expectedProjectName": "tzudong",
+  "expectedTeam": "twoimos-projects",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+}

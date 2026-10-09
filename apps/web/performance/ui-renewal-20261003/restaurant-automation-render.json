@@ -1,0 +1,41 @@
+{
+  "kind": "synthetic-browser-render",
+  "productionMutation": false,
+  "fixtureOnly": true,
+  "flow": [
+    "preview",
+    "confirm start",
+    "run",
+    "run history",
+    "detail"
+  ],
+  "viewports": {
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "buttonHeightsBefore": [
+        36,
+        36,
+        36,
+        36
+      ],
+      "buttonHeightsAfter": [
+        44,
+        44,
+        44,
+        44
+      ],
+      "refreshWidthBefore": 40,
+      "refreshWidthAfter": 44
+    },
+    "tablet": {
+      "width": 834,
+      "height": 1194,
+      "documentWidth": 834
+    }
+  },
+  "consoleErrorCountAtRunReadback": 0,
+  "consoleCountScope": "captured owned tab log at synthetic run; not a 100-sample or production claim",
+  "automaticProductionApprovalVerified": false
+}

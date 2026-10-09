@@ -1,0 +1,261 @@
+{
+  "kind": "readonly-metadata-reader-replay",
+  "baseline": "e6c7c97cc6fb9c4ac2e45297e22c2541bd5ad0d4",
+  "dataset": {
+    "files": 1127,
+    "bytes": 16937422,
+    "sha256": "82a044517b123354902ca4273dbbb025eb2b75d945e451dca2f359c59c3cb793"
+  },
+  "sourcePreserved": true,
+  "actualProviderCalls": 0,
+  "pairs": [
+    {
+      "baseline": {
+        "wallMs": 68.95791599527001,
+        "cpuMs": 64.70500000000001,
+        "peakRssMiB": 33.609375,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 52.72395885549486,
+        "cpuMs": 49.475,
+        "peakRssMiB": 32.125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "candidate": {
+        "wallMs": 82.2973339818418,
+        "cpuMs": 74.039,
+        "peakRssMiB": 32.375,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "baseline": {
+        "wallMs": 70.05199999548495,
+        "cpuMs": 67.342,
+        "peakRssMiB": 33.125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "baseline": {
+        "wallMs": 74.60104208439589,
+        "cpuMs": 68.06,
+        "peakRssMiB": 32.84375,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 53.59699996188283,
+        "cpuMs": 51.06600000000001,
+        "peakRssMiB": 32.21875,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "candidate": {
+        "wallMs": 46.09008296392858,
+        "cpuMs": 44.388,
+        "peakRssMiB": 32.484375,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "baseline": {
+        "wallMs": 62.68116598948836,
+        "cpuMs": 60.004,
+        "peakRssMiB": 33.40625,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "baseline": {
+        "wallMs": 56.05149990878999,
+        "cpuMs": 54.952,
+        "peakRssMiB": 32.84375,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 53.29658417031169,
+        "cpuMs": 49.548,
+        "peakRssMiB": 32.15625,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "candidate": {
+        "wallMs": 41.8007499538362,
+        "cpuMs": 40.989000000000004,
+        "peakRssMiB": 31.953125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "baseline": {
+        "wallMs": 59.03204111382365,
+        "cpuMs": 57.30199999999999,
+        "peakRssMiB": 32.828125,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    },
+    {
+      "baseline": {
+        "wallMs": 78.60166695900261,
+        "cpuMs": 72.989,
+        "peakRssMiB": 33.390625,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      },
+      "candidate": {
+        "wallMs": 44.624665984883904,
+        "cpuMs": 43.181,
+        "peakRssMiB": 32.0625,
+        "records": 1127,
+        "outputSha256": "5978d3f929b0b5b0ce275fd8cbf3d25f730dd6c41cfeb4c7948e643eb02ebec5"
+      }
+    }
+  ],
+  "summary": {
+    "wallMs": {
+      "p50": {
+        "before": 68.95791599527001,
+        "after": 52.72395885549486,
+        "absoluteChange": -16.233957139775157,
+        "changePercent": -23.541832587992772,
+        "change95CI": [
+          -38.2179099967705,
+          -9.715837086596824
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 13.238877290859818,
+        "exploratoryRelativeNoiseBudgetPercent": 19.19848809202399
+      },
+      "p75": {
+        "before": 74.60104208439589,
+        "after": 53.59699996188283,
+        "absoluteChange": -21.004042122513056,
+        "changePercent": -28.1551591447627,
+        "change95CI": [
+          -32.9225945258962,
+          17.480348865337323
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 13.238877290859818,
+        "exploratoryRelativeNoiseBudgetPercent": 17.74623640763989
+      },
+      "p95": {
+        "before": 78.60166695900261,
+        "after": 82.2973339818418,
+        "absoluteChange": 3.6956670228391886,
+        "changePercent": 4.701766725592207,
+        "change95CI": [
+          -32.1940790414657,
+          17.480348865337323
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 13.238877290859818,
+        "exploratoryRelativeNoiseBudgetPercent": 16.842998123392228
+      }
+    },
+    "cpuMs": {
+      "p50": {
+        "before": 64.70500000000001,
+        "after": 49.475,
+        "absoluteChange": -15.230000000000011,
+        "changePercent": -23.53759369445948,
+        "change95CI": [
+          -36.554510725830156,
+          -13.531813898293239
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 4.133999999999979,
+        "exploratoryRelativeNoiseBudgetPercent": 6.388996213584697
+      },
+      "p75": {
+        "before": 68.06,
+        "after": 51.06600000000001,
+        "absoluteChange": -16.993999999999993,
+        "changePercent": -24.969144872171604,
+        "change95CI": [
+          -32.21581334173643,
+          9.944759585399904
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 4.133999999999979,
+        "exploratoryRelativeNoiseBudgetPercent": 6.074052306788097
+      },
+      "p95": {
+        "before": 72.989,
+        "after": 74.039,
+        "absoluteChange": 1.0499999999999972,
+        "changePercent": 1.4385729356478332,
+        "change95CI": [
+          -32.11579827097234,
+          9.944759585399904
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 4.133999999999979,
+        "exploratoryRelativeNoiseBudgetPercent": 5.663867158064885
+      }
+    },
+    "peakRssMiB": {
+      "p50": {
+        "before": 33.125,
+        "after": 32.15625,
+        "absoluteChange": -0.96875,
+        "changePercent": -2.9245283018867925,
+        "change95CI": [
+          -3.97753860552176,
+          -1.9029495718363463
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 0.5625,
+        "exploratoryRelativeNoiseBudgetPercent": 1.6981132075471699
+      },
+      "p75": {
+        "before": 33.40625,
+        "after": 32.375,
+        "absoluteChange": -1.03125,
+        "changePercent": -3.086997193638915,
+        "change95CI": [
+          -4.323570432357044,
+          -2.093244529019981
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 0.5625,
+        "exploratoryRelativeNoiseBudgetPercent": 1.683816651075772
+      },
+      "p95": {
+        "before": 33.609375,
+        "after": 32.484375,
+        "absoluteChange": -1.125,
+        "changePercent": -3.3472803347280333,
+        "change95CI": [
+          -4.137610413761041,
+          -2.7595884003741813
+        ],
+        "samplePairs": 7,
+        "exploratoryAbsoluteNoiseBudget": 0.5625,
+        "exploratoryRelativeNoiseBudgetPercent": 1.6736401673640167
+      }
+    }
+  },
+  "confidenceMethod": "10000 paired percentile bootstrap; seed 20261003",
+  "environment": {
+    "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+    "platform": "darwin"
+  },
+  "limitations": [
+    "Reader comparison includes new integrity checks; not a whole collector timing.",
+    "Date-only baseline cache skips reads without validating outputs; that shortcut is not treated as a valid equivalent baseline.",
+    "No network or provider cost comparison."
+  ],
+  "noiseBudgetNote": "Exploratory 3*MAD of paired differences, not preregistered; no formal admission/scorer claim."
+}

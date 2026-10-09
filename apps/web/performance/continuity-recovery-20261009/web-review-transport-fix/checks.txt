@@ -1,0 +1,26 @@
+LOCAL ISOLATED EVIDENCE ONLY
+
+Targeted runner and target-admission unit checks
+  bun test apps/web/tests-unit/admin-record-sql-successor.test.ts apps/web/tests-unit/supabase-migration-apply-source.test.ts
+  result: 21 pass, 0 fail, 201 expectations
+
+Actual runner transport proof
+  TZUDONG_SUCCESSOR_RUNNER_PG17_URL=<owned-unix-socket-uri> TZUDONG_SUCCESSOR_RUNNER_PSQL=<postgresql-17.6-psql> bun test apps/web/tests-unit/admin-record-sql-successor-runner-pg17.test.ts
+  result: 1 pass, 0 fail, 7 expectations
+  server: PostgreSQL 17.6 / server_version_num 170006
+  network: listen_addresses empty; Unix socket only
+
+Targeted lint
+  node scripts/run-web-tool.mjs eslint scripts/admin-record-sql-successor.mjs scripts/apply-supabase-migration.mjs tests-unit/admin-record-sql-successor.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/admin-record-sql-successor-runner-pg17.test.ts --max-warnings=0
+  result: pass, 0 warnings
+
+TypeScript compiler parity
+  npm run typecheck:parity
+  result: pass, 0 diagnostics, 3134 logical inputs
+
+Whitespace/error check
+  git diff --check -- <owned source and test paths>
+  result: pass
+
+No hosted database, provider, deployment, browser session, credential, personal row, raw OCR, cookie, header, or session data was used or persisted.
+

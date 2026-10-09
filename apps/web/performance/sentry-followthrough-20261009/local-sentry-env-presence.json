@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "processEnvPresence": {
+    "NEXT_PUBLIC_SENTRY_DSN": false,
+    "SENTRY_DSN": false,
+    "SENTRY_ORG": false,
+    "SENTRY_PROJECT": false,
+    "SENTRY_PROJECT_ID": false,
+    "SENTRY_URL": false,
+    "SENTRY_ISSUES_READ_TOKEN": false,
+    "SENTRY_AUTH_TOKEN": false
+  },
+  "sourceFilesUnmodified": true
+}

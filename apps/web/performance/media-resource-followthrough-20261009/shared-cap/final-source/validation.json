@@ -1,0 +1,10 @@
+{
+  "preflightPersistedBeforeMeasurement": true,
+  "inputAndFrozenSourcesUnchanged": true,
+  "aggregateCandidatePeak": 4,
+  "outputsEquivalent": true,
+  "restartFfmpegCalls": 0,
+  "workDirectoryRemoved": true,
+  "providerCalls": 0,
+  "speedupClaim": false
+}

@@ -1,0 +1,227 @@
+{
+  "schema": "tzudong-operating-rollout-readonly-audit-v1",
+  "observedAt": "2026-10-09T00:40:44.625239+00:00",
+  "candidateHead": "7eb05f0a236c090b8d383a48677deb2ee4e62566",
+  "productionSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "productionAlias": "www.tzudong.app",
+  "productionDeploymentId": "dpl_HXG5n1x3k4E2PBA4Vf4pEvXcqfye",
+  "productionDeploymentUrl": "tzudong-niao9yn3r-twoimos-projects.vercel.app",
+  "productionIdentityProof": "Fresh alias URL matched exact READY production list git SHA; project id/team rechecked. Project latestDeployment was a canceled preview and was not used as production proof.",
+  "envMetadata": {
+    "production": 24,
+    "all": 36,
+    "valuesReadOrPersisted": false,
+    "buildTimeFlagValuesNotProvedByCurrentMetadata": true
+  },
+  "sqlOrder": [
+    "20261004190259_admin_record_guarded_actions.sql",
+    "20261004192657_admin_evaluation_raw_warning_groups.sql",
+    "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql"
+  ],
+  "sqlSha256": {
+    "20261004190259_admin_record_guarded_actions.sql": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+    "20261004192657_admin_evaluation_raw_warning_groups.sql": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+    "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+  },
+  "oldConsumerSourceSha256": {
+    "apps/web/lib/admin-review-merge.ts": "224ffc5271a5eb7a23c34b3b3ea66bb4f2ffe24f026e83bd315e852f33e33d3b",
+    "apps/web/app/admin/evaluations/page.tsx": "7590ee82cefe6a48e666aa7b9f42d6369a12a9b0bee53b58ce5e7aeafbb7b05b",
+    "apps/web/components/admin/DbConflictResolutionPanel.tsx": "1cba486807bd28f72c19bb30b10d7af185994943ba59fcb89c3a47b21f9a72ba",
+    "apps/web/components/admin/MissingRestaurantForm.tsx": "69fceff3a0ca99e6286b664735b2a2d183e47f0428ee3e3ee33caebff3471ee7",
+    "apps/web/lib/admin/guarded-mutation-contract.ts": "c8bdba8045b01ad8d29655eba29d8d8f5e0ba2a807a96fe5f3900d36a6e27684",
+    "apps/web/lib/admin/storyboard/rag-worker-client.ts": "3de7ba1f9b3bba85b8b6cce47c6c020e08c4638adbcf4cbf2c043caa3bddfb54"
+  },
+  "retiredRpcConsumers": [
+    {
+      "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+      "oldConsumer": "apps/web/app/admin/evaluations/page.tsx:3161",
+      "authPath": "Direct PostgREST POST with browser session bearer + anon key",
+      "existingGuard": "assertLegacyBrowserAdminMutationEnabled at3082; public env flag is build-time, defaultdisabled",
+      "afterFirstSql": "authenticated EXECUTE=false and auth allowlist row removed; service_role EXECUTE preserved",
+      "newPath": "guarded /api/admin/record-actions service-only admin_record_action"
+    },
+    {
+      "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+      "oldConsumer": "apps/web/app/admin/evaluations/page.tsx:3145",
+      "authPath": "Same browser authenticated transport",
+      "afterFirstSql": "same retirement as new submission",
+      "newPath": "guarded record action"
+    },
+    {
+      "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+      "oldConsumers": [
+        "apps/web/components/admin/DbConflictResolutionPanel.tsx:75",
+        "apps/web/components/admin/MissingRestaurantForm.tsx:307",
+        "apps/web/lib/admin-review-merge.ts:49"
+      ],
+      "authPath": "Browser supabase.rpc; requireAdminUserId only checks user exists, no legacy mutation flag in these two components",
+      "afterFirstSql": "Both old merge flows fail RPC authorization. Preserving service_role grant does not redirect their existing browser requests."
+    }
+  ],
+  "compatibilityMatrix": [
+    {
+      "frontend": "f319",
+      "db": "pre-three-SQL",
+      "state": "Baseline functionality only; approval guard may be disabled, two browser merge callers remain; raw RAG demands BAAI."
+    },
+    {
+      "frontend": "candidate",
+      "db": "pre-three-SQL",
+      "state": "Default warning stream continues if old read prerequisites are present; guarded mutations fail closed with RECORD_ACTION_UNCERTAIN503 when RPC absent. Raw warning mode must not be enabled."
+    },
+    {
+      "frontend": "f319",
+      "db": "post-three-SQL",
+      "state": "Not complete admin compatibility: three browser RPC entry ACLs retired; two merge screens break independently of legacyflag. New table/storage fences remain active."
+    },
+    {
+      "frontend": "candidate",
+      "db": "post-three-SQL",
+      "state": "Intended guarded server path; actual authenticated frontend→service_role→modern JWT claims→operator-role/account-active checks require readback and authorized live synthetic action before unhold. Cleanup admission remains closed until actual Storage proof matches."
+    }
+  ],
+  "migrationSemantics": {
+    "one": "Atomic table/RLS/helper/RPC/fence registration plus legacy authenticated ACL retirement; no ordinary business action executed by DDL itself. Not safe to blindly retry because CREATE objects are not idempotent.",
+    "two": "Atomic helper repair and derived index update, catalogrevision+1, source-order index and service-only raw RPC. It changes derived index/revision, not restaurant rows.",
+    "three": "Exact hash-bound G014 definer/catalog registration; accepts known record extension, registers raw RPC service-only, preserves assertion metadata/owner/config and role membership; temporary helper dropped.",
+    "orderRequired": "one→two→three; raw registration before record registration changes the exact preimage and is not a safe reorder.",
+    "atomicity": "Each source file has its own BEGIN/COMMIT. Concatenating under an outer BEGIN does not create a 3-file atomic release. Hold traffic through intermediate state; G014 may reject the unregistered raw function after two until three commits."
+  },
+  "currentSupportedControls": [
+    {
+      "name": "G037_WRITE_FREEZE",
+      "observed": "active",
+      "scope": "GitHub scheduled producer/publication and specific migration workflow gates; does not guard admin HTTP/PostgREST or every existing process. Do not clear or invent an exception to bypass release."
+    },
+    {
+      "name": "NEXT_PUBLIC_ADMIN_LEGACY_BROWSER_MUTATIONS",
+      "observed": "Absent from currentproductionmetadata; actual f319 bundled value not read",
+      "scope": "Build-time browser guard defaultdisabled; not runtimeglobalhold, not present in old merge helper/components, not a block for already-loaded clients."
+    },
+    {
+      "name": "restaurant review stop",
+      "source": "/api/admin/evaluations/automation preview-stop→typedconfirmation/version/previewHash→stop",
+      "scope": "Existing policy.enabled=false under reviewed CAS; not executed here. Future stop must preserve queues/history and await/read actual in-flight state."
+    },
+    {
+      "name": "job_api pause",
+      "source": "/v1/runs/{id}/pause; heavy_local/lite_gha validated IDs and cooperative checkpoint",
+      "scope": "Known control-plane job_api runs only. Currentproductionmetadata has no PIPELINE_CONTROL_API_URL; source defaults localhost8091 and hosted connectivity is unverified. Pause acknowledgment alone is not proof that descendants drained."
+    },
+    {
+      "name": "PIPELINE_HOSTED_APPLY_ENABLED",
+      "source": "backend/utils/supabase_rest.py:44",
+      "observed": "False in source",
+      "scope": "One hosted publication boundary, not all Supabase writers. Keep unchanged."
+    },
+    {
+      "name": "media cleanup admission",
+      "observed": "Bundled statusfailed, old SQL1529 SHA; four productionadmission envnames absent",
+      "scope": "Physical cleanup remains failclosed. Must match current04d993 SQL, actualdeployed Storage/catalog/image/endpoint and complete8-case proof before admission; preserve pending/inflight jobs/fences."
+    }
+  ],
+  "releasePreparationGaps": [
+    {
+      "gap": "Prepared SQL3 not in existing .github/supabase-migration-release-manifest.v1.json",
+      "impact": "Current reviewed apply workflow only permits restaurant_refresh_history and two G016 entries. No reviewed current apply lane exists for these three files."
+    },
+    {
+      "gap": "G037 active",
+      "impact": "Workflow allows only its two explicit G016exceptions under active freeze. Respect existing exit protocol; no variable change or exception invented."
+    },
+    {
+      "gap": "No global record mutation runtimehold",
+      "impact": "record-actions POST and media-cleanup POST do not inspect a shared hold. Existing controls do not guarantee quiescence or a deployment/schema switch."
+    },
+    {
+      "gap": "Post-commit f319rollback not Geminionly/db compatible",
+      "impact": "Requires BAAI bge-m3 + bge-reranker-v2-m3 worker contracts and retired browser ACLs; setting a Gemini worker URL does not satisfy model/provider validation."
+    }
+  ],
+  "proposedSourceDesignNotImplemented": {
+    "paths": [
+      "apps/web/lib/admin/record-action-admission.ts (new)",
+      "apps/web/app/api/admin/record-actions/route.ts",
+      "apps/web/app/api/admin/record-actions/media-cleanup/route.ts",
+      "related route/client fixed-code tests"
+    ],
+    "design": "If an enforced maintenance switch is chosen, one server-only fail-closed admission check blocks every record-mutating POST (including preview, which writes operations) and physical cleanup claim/delete before transport; requireAdmin precedes it. Keep authenticated GET operation recovery available, preserve queued jobs and retirement fences. Add one bounded maintenance code/client state. Exact env name and activation authority must be reviewed; no flag is currently implemented or set.",
+    "oldBrowserLimit": "A newserverhold cannot intercept f319 direct Supabase calls or cached JS; coordinate named operator maintenance and ACL retirement/new-source reload. Do not claim the source proposal is an active hold."
+  },
+  "rolloutPlan": [
+    {
+      "step": 1,
+      "action": "Keep G037active and existingprocesses/queues untouched now. Before an authorized rollout, choose maintenance/runtimehold, namedoperator window, supported run-specific pause/reviewstop scope and in-flight readbacks."
+    },
+    {
+      "step": 2,
+      "action": "Finish reviewed source/apply/rollback preparation and protected develop→data→main. Bind exact SQL bytes, target project, version and prior catalog snapshot; provide a reviewed apply path compatible with actual freeze protocol. No forcepush/ungatedDDL. If the proposed enforced runtimehold is selected, its maintenance deployment must precede SQL application: newfrontend+olddB keeps stream reads and disables mutating POSTs while pending RPCs are absent. Exact rollout direction remains an operator decision; no maintenance deployment exists yet."
+    },
+    {
+      "step": 3,
+      "action": "After explicit executionauthorization, reread PG17 version/source hashes/ACLs/membership/immutablemanifest/ledger and business-state aggregate. Historical ledger80 and isolated17.6 are locators, not current facts."
+    },
+    {
+      "step": 4,
+      "action": "Under established maintenance and authenticated-consumer quiescence, apply one→two→three using the reviewed source-bound executor, accounting for each transaction/actual ledger receipt. Keep raw warning optin off and cleanup inadmitted. On uncertain response, inspect actual catalog/ledger first rather than retry."
+    },
+    {
+      "step": 5,
+      "action": "Run catalog readback/allfourG014checks, rolemanifest preservation, expectedlegacyAuth=false/service=true, newRPCserviceonly, fences/index/revision. Promote the reviewed new production source under branch protection and reread aliasSHA/actualconfiguration/authenticated route behavior before unhold."
+    },
+    {
+      "step": 6,
+      "action": "Release only the explicitly verified feature/runtime scope; actual provider/RAG and physical cleanup remain separately held when their evidence is missing."
+    }
+  ],
+  "policySafeRollback": {
+    "preferred": "Forward repair from the approved Gemini-only candidate, retaining guarded APIs/new SQL/fences/operation audit; deploy through protected path after relevant checks. Keep holds while recovering uncertain operation IDs by GET rather than replaying POST.",
+    "namedOldDeploymentReference": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+    "oldDeploymentNotAutomaticallyApprovedTarget": true,
+    "rawF319Risks": [
+      "Required BAAI/bge-m3 dense/sparse 1024 + BAAI/bge-reranker-v2-m3, not Gemini-only",
+      "Three retired browser RPC entries after DB apply",
+      "Old build env/cron config is reused by InstantRollback; current project env changes are not pulled into that old build",
+      "Frontendrollback leaves external DB/schema/audit/queued cleanup effects in place"
+    ],
+    "database": "Keep applied migrations immutable; no downDDL/dropping operation/audit/fence tables or regranting authenticated legacy RPCs merely to make old UI work. Correct committed catalog problems with source-bound forward migration and G014 readback.",
+    "data": "Stored before_fingerprints are hashes, not a full undo image. Already-applied business edits need a separately authorized, source-truth/CAS-bound compensating guarded action; physical Storage deletion is not restored by frontend rollback or receipt. Verified backup/restore evidence would be separate.",
+    "quarantineFallback": "If oldfrontendmustservepublicreads urgently, first prepare/review enforceable disabled paths for oldadminmutations and BAAIRAG; do not turn on BAAI or undo ACL retirement as an implicit fallback. No such compatibility deployment is prepared/verified yet."
+  },
+  "dbFreshness": {
+    "hostedQueriesExecutedByThisAudit": 0,
+    "historicalReadback": "current-schema-record operating-readonly-preflight2026-10-08 ledger80/guardedabsent/parallelreviewapplied0",
+    "requiredPreState": "CurrentPGmajor17; session/currentpostgres exactexecutor; acceptedG014bodypreimages+anchor uniqueness; workflowownernologin/nobypassrls; non-superuserpostgresadmin=true inherit=false set=false before temporarygrant; legacyRPCownerprivacy_workflow_owner/definer/search_pathempty/auth+serviceEXECUTE; freshrecordobjects/rawRPC absent. Stop on any drift.",
+    "readbackTemplatesExecuted": false,
+    "newLedgerCount": "Only canonical actual apply receipts may establish +3; do not manufacture ledger entries or assume counts without executor binding."
+  },
+  "operationsPerformed": {
+    "ddl": 0,
+    "dataWrites": 0,
+    "envWrites": 0,
+    "deployOrPromotion": 0,
+    "remoteMessages": 0,
+    "paidCalls": 0,
+    "userProcessesChanged": 0,
+    "rootSourceEdited": 0
+  },
+  "officialSources": [
+    "https://supabase.com/docs/guides/database/functions",
+    "https://supabase.com/changelog/postgres-15-19-17-11-breaking-changes",
+    "https://vercel.com/docs/instant-rollback"
+  ],
+  "prReadback": {
+    "number": 3099,
+    "url": "https://github.com/twoimo/tzudong/pull/3099",
+    "base": "develop",
+    "head": "8358f5e749362c99ab44127fd6e70335919d1404",
+    "state": "OPEN",
+    "mergeStateAtRead": "BLOCKED"
+  },
+  "rollbackEnvironmentCaveat": "InstantRollback uses the old build/environment/cron snapshot; current metadata24/36 does not prove old publicflag value, credential validity, modelworker access or currentprovider readiness.",
+  "readbackSqlValidation": {
+    "execution": "not-executed",
+    "localParser": "pglast unavailable; no package installed",
+    "review": "Statements restricted to BEGIN/SET LOCAL/SELECT/ROLLBACK; no DDL/DML or admin_record_action invocation. Existing authorized reader permissions remain to be verified, not broadened."
+  }
+}

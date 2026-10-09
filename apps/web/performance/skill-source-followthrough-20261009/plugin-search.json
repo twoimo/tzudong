@@ -1,0 +1,45 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"plugins\":[{\"id\":\"plugin_asdk_app_69d3e5ee6a708191baa733f7b8931995\",\"name\":\"supabase\",\"display_name\":\"Supabase\",\"description\":\"Manage Supabase projects directly through ChatGPT. Execute SQL queries on PostgreSQL databases, design and modify table schemas, deploy serverless edge functions, and configure user authentication. Access real-time logs for debugging, create and apply database migrations, and manage development branches through natural language.\",\"scope\":\"GLOBAL\",\"status\":\"ENABLED\",\"installation_policy\":\"AVAILABLE\",\"installed\":true},{\"id\":\"plugin_connector_690a90ec05c881918afb6a55dc9bbaa1\",\"name\":\"vercel\",\"display_name\":\"Vercel\",\"description\":\"Build and deploy web apps and AI agents on Vercel.\",\"scope\":\"GLOBAL\",\"status\":\"ENABLED\",\"installation_policy\":\"AVAILABLE\",\"installed\":true}]}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "plugins": [
+        {
+          "id": "plugin_asdk_app_69d3e5ee6a708191baa733f7b8931995",
+          "name": "supabase",
+          "display_name": "Supabase",
+          "description": "Manage Supabase projects directly through ChatGPT. Execute SQL queries on PostgreSQL databases, design and modify table schemas, deploy serverless edge functions, and configure user authentication. Access real-time logs for debugging, create and apply database migrations, and manage development branches through natural language.",
+          "scope": "GLOBAL",
+          "status": "ENABLED",
+          "installation_policy": "AVAILABLE",
+          "installed": true
+        },
+        {
+          "id": "plugin_connector_690a90ec05c881918afb6a55dc9bbaa1",
+          "name": "vercel",
+          "display_name": "Vercel",
+          "description": "Build and deploy web apps and AI agents on Vercel.",
+          "scope": "GLOBAL",
+          "status": "ENABLED",
+          "installation_policy": "AVAILABLE",
+          "installed": true
+        }
+      ]
+    },
+    "isError": false
+  },
+  "isError": false
+}

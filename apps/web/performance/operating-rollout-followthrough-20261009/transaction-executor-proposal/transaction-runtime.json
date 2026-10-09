@@ -1,0 +1,148 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "sourceEdits": false,
+  "newRolesOrGrants": false,
+  "fixtureLedger": "fixture_executor.journal only; never operating schema_migrations",
+  "cases": [
+    {
+      "case": "legacy_external_terminal_mismatch",
+      "execution": {
+        "exitCode": 0,
+        "sqlState": null,
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": true,
+        "journalPresent": false
+      },
+      "nodeEqualityWouldFailAfterCommit": true
+    },
+    {
+      "case": "legacy_internal_commit_then_ddl_error",
+      "execution": {
+        "exitCode": 3,
+        "sqlState": "42P01",
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": true,
+        "journalPresent": false
+      }
+    },
+    {
+      "case": "atomic_terminal_failure_rolls_back_ddl_and_journal",
+      "execution": {
+        "exitCode": 3,
+        "sqlState": "P0001",
+        "fixedCode": "FIXTURE_TERMINAL_MISMATCH",
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": false,
+        "journalPresent": false
+      }
+    },
+    {
+      "case": "atomic_ddl_failure_rolls_back_ddl_and_journal",
+      "execution": {
+        "exitCode": 3,
+        "sqlState": "42P01",
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": false,
+        "journalPresent": false
+      }
+    },
+    {
+      "case": "atomic_journal_failure_rolls_back_ddl_and_journal",
+      "execution": {
+        "exitCode": 3,
+        "sqlState": "23502",
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": false,
+        "journalPresent": false
+      }
+    },
+    {
+      "case": "atomic_success",
+      "execution": {
+        "exitCode": 0,
+        "sqlState": null,
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": true,
+        "journalPresent": true
+      }
+    },
+    {
+      "case": "commit_response_discarded_fresh_connection_reconciles",
+      "execution": {
+        "exitCode": 0,
+        "sqlState": null,
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": true
+      },
+      "readback": {
+        "tablePresent": true,
+        "journalPresent": true
+      },
+      "automaticResend": false
+    },
+    {
+      "case": "nonzero_exit_after_commit_is_committed_not_rollback",
+      "execution": {
+        "exitCode": 3,
+        "sqlState": "42P01",
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": true,
+        "journalPresent": true
+      }
+    },
+    {
+      "case": "unadmitted_midcommit_breaks_atomicity",
+      "execution": {
+        "exitCode": 3,
+        "sqlState": "P0001",
+        "fixedCode": "FIXTURE_TERMINAL_MISMATCH",
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": true,
+        "journalPresent": false
+      },
+      "requiredMitigation": "reject all top-level intermediate transaction controls before connection"
+    },
+    {
+      "case": "duplicate_version_no_ddl_or_receipt_overwrite",
+      "execution": {
+        "exitCode": 3,
+        "sqlState": "23505",
+        "fixedCode": null,
+        "responseIntentionallyDiscarded": false
+      },
+      "readback": {
+        "tablePresent": false,
+        "journalPresent": false
+      }
+    }
+  ],
+  "ownerAdmission": {
+    "realLedgerExists": true,
+    "postgresSuperuser": false,
+    "postgresLedgerInsert": true
+  },
+  "ownedDisposableDatabaseDropped": true
+}

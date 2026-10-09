@@ -1,0 +1,54 @@
+{
+  "schema": "record-runtime-hold-source-verification-v1",
+  "observedAt": "2026-10-09T00:57:35.067660+00:00",
+  "headReference": "9ae2d740e5250fd96c6de1c1c3941db1435ff5e0",
+  "ownedSources": {
+    "apps/web/lib/admin/record-action-admission.ts": "9b45ac5ed1ccd061efb58722375931939da076eb3648f45f7374b7471170c6e0",
+    "apps/web/app/api/admin/record-actions/route.ts": "6989185386d879ed0acd0c650c4d16e35959baf8da44385b0db67e8ab2444959",
+    "apps/web/app/api/admin/record-actions/media-cleanup/route.ts": "ba022470cfdb7226795d71042b2d95c979187f5c4c0c44ebac3794115e744d3d",
+    "apps/web/lib/admin/record-action-client.ts": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587",
+    "apps/web/tests-unit/admin-record-actions.test.ts": "454a8dd1b9faab0a1f6e8192647bcf7a85f7d80b0321a1ed300468505911cf26",
+    "apps/web/tests-unit/admin-record-action-client.test.ts": "238ebdb36bc51367e95453fa73b39d23d3893631a74e8da880902992dbcff562"
+  },
+  "runtimeContract": {
+    "key": "ADMIN_RECORD_MUTATIONS_HOLD",
+    "allowOnly": "cleared",
+    "missingOrOtherValue": "held",
+    "response": {
+      "status": 423,
+      "code": "RECORD_ACTION_MAINTENANCE",
+      "cacheControl": "no-store"
+    },
+    "order": "requireAdmin→same-origin→hold→body parsing/media proof→service-role client/RPC/Storage",
+    "postCoverage": [
+      "record preview (writes operation record)",
+      "record apply",
+      "media-cleanup resume/claim/delete"
+    ],
+    "getRecovery": "Existing authenticated operation GET/readback unchanged",
+    "stopAndUserSemantics": "Existing user APIs, automatic-review policy stop, queues and worker controls were not edited"
+  },
+  "limitations": [
+    "New POST admission only: already executing SQL transactions/Storage work are not revoked or cancelled.",
+    "f319 direct browser Supabase RPCs and cached old JS do not execute this guard.",
+    "Automatic workers, user routes and other external writers are outside its scope.",
+    "The helper reads process.env each call without caching. Only changing the actual instance environment affects that instance; changing Vercel project env metadata does not update existing instances or old build/source.",
+    "A source commit is not a deployment or an active production hold. Deployment/instance replacement and in-flight drain need separate readback."
+  ],
+  "checks": {
+    "relatedBunTests": 37,
+    "assertions": 267,
+    "targetedEslintExitCode": 0,
+    "nativeCompatParity": {
+      "status": "passed",
+      "diagnostics": 0
+    },
+    "diffWhitespace": "passed"
+  },
+  "operatingWrites": 0,
+  "envValuesChanged": false,
+  "sqlMigrationsChanged": false,
+  "githubFreezeChanged": false,
+  "deployed": false,
+  "sourceCommittedByThisHelper": false
+}

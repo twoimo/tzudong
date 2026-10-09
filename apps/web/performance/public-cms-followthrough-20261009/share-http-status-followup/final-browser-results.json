@@ -1,0 +1,582 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+      "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "performance/public-cms-followthrough-20261009/share-http-status-followup/browser.config.mjs"
+    ],
+    "configFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/share-http-status-followup/browser.config.mjs",
+    "rootDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "shortUrlHttpFixture": true,
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "shortUrlHttpFixture": true,
+          "actualWorkers": 1
+        },
+        "id": "fixture-development",
+        "name": "fixture-development",
+        "testDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "share-http-status.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "shortUrlHttpFixture": true,
+          "actualWorkers": 1
+        },
+        "id": "fixture-production",
+        "name": "fixture-production",
+        "testDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "share-http-status.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "share-http-status.spec.ts",
+      "file": "share-http-status.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "HTTP status and bounded recovery for invalid-code",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-development",
+              "projectName": "fixture-development",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3862,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:30:58.347Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-76c8b07ea52d924083ca",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "HTTP status and bounded recovery for MISSNG",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-development",
+              "projectName": "fixture-development",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 307,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:04.305Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-5a24c3ed8238575c5c94",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "HTTP status and bounded recovery for FAIL00",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-development",
+              "projectName": "fixture-development",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 340,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:04.619Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-a8f091866e22357918e5",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "HTTP status and bounded recovery for CTRL00",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-development",
+              "projectName": "fixture-development",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 331,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:04.965Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-6092a3cf3e81e6c3c02e",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "valid review and unsafe target retain HTTP307 with no response-body success substitution",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-development",
+              "projectName": "fixture-development",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 17,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:05.302Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-5bae959c5cea4ef56dfb",
+          "file": "share-http-status.spec.ts",
+          "line": 23,
+          "column": 1
+        },
+        {
+          "title": "standalone CSS system light supports small viewport and visible focus",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-development",
+              "projectName": "fixture-development",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 225,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:05.323Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-1c6d6b28a0af0d8a9825",
+          "file": "share-http-status.spec.ts",
+          "line": 28,
+          "column": 2
+        },
+        {
+          "title": "standalone CSS system dark supports small viewport and visible focus",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-development",
+              "projectName": "fixture-development",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 206,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:05.554Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-6a7bcc0672e9d4f2558a",
+          "file": "share-http-status.spec.ts",
+          "line": 28,
+          "column": 2
+        },
+        {
+          "title": "HTTP status and bounded recovery for invalid-code",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-production",
+              "projectName": "fixture-production",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 515,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:06.120Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-5aaf07d7959539c78ed0",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "HTTP status and bounded recovery for MISSNG",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-production",
+              "projectName": "fixture-production",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 411,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:06.983Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-0a0569fa6df97a7425df",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "HTTP status and bounded recovery for FAIL00",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-production",
+              "projectName": "fixture-production",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 366,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:07.402Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-d48ec7c0049e6b70daf6",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "HTTP status and bounded recovery for CTRL00",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-production",
+              "projectName": "fixture-production",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 420,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:07.775Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-5cb7c55aa9c22910683e",
+          "file": "share-http-status.spec.ts",
+          "line": 7,
+          "column": 2
+        },
+        {
+          "title": "valid review and unsafe target retain HTTP307 with no response-body success substitution",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-production",
+              "projectName": "fixture-production",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 13,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:08.201Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-b45086742170a7429d82",
+          "file": "share-http-status.spec.ts",
+          "line": 23,
+          "column": 1
+        },
+        {
+          "title": "standalone CSS system light supports small viewport and visible focus",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-production",
+              "projectName": "fixture-production",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 240,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:08.219Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-c743962422b3ecc29b47",
+          "file": "share-http-status.spec.ts",
+          "line": 28,
+          "column": 2
+        },
+        {
+          "title": "standalone CSS system dark supports small viewport and visible focus",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "fixture-production",
+              "projectName": "fixture-production",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 267,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T00:31:08.466Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "43b5833f5390a7ecdb53-a02687c5d4c0bb8e0364",
+          "file": "share-http-status.spec.ts",
+          "line": 28,
+          "column": 2
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-09T00:30:58.039Z",
+    "duration": 10817.941,
+    "expected": 14,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

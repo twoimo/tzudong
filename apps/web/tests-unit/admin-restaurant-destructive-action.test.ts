@@ -87,43 +87,19 @@ describe('admin restaurant destructive action contract', () => {
     }).ok).toBe(false);
   });
 
-  test('keeps the restaurant destructive route server gated, audited, and read back', () => {
+  test('retires the non-idempotent HTTP endpoint without a body parser or mutation adapter', () => {
     const routeSource = source('app/api/admin/restaurants/[restaurantId]/destructive-action/route.ts');
-
-    expect(routeSource).toContain("export const runtime = 'nodejs'");
-    expect(routeSource.indexOf('await requireAdmin()')).toBeGreaterThan(-1);
-    expect(routeSource.indexOf('await requireAdmin()')).toBeLessThan(routeSource.indexOf('createSupabaseServiceRoleClient()'));
-    expect(routeSource).toContain('validateRestaurantDestructiveActionRequest');
-    expect(routeSource).toContain('randomUUID()');
-    expect(routeSource).toContain('correlationId');
-    expect(routeSource).toContain("rpc(\n      'apply_restaurant_admin_destructive_action'");
-    expect(routeSource).toContain(".from('restaurants')");
-    expect(routeSource).toContain("status === 'deleted'");
-    expect(routeSource).toContain(".from('restaurant_admin_destructive_audit_events')");
-    expect(routeSource).toContain("'Cache-Control': 'no-store'");
-    expect(routeSource).not.toContain('rpcError.message');
-    expect(routeSource).not.toContain('readbackError.message');
-    expect(routeSource).not.toContain('auditError.message');
+    expect(routeSource).toContain('await requireAdmin()');
+    expect(routeSource).toContain('RECORD_ACTION_ENDPOINT_RETIRED');
+    expect(routeSource).not.toMatch(/createSupabaseServiceRoleClient|randomUUID|\.rpc\(|request\.json|readBoundedJsonRequest/);
   });
 
-  test('moves primary delete in the modal off browser Supabase mutation', () => {
+  test('primary modal deletion uses the same guarded action contract as the page', () => {
     const modalSource = source('components/admin/AdminRestaurantModal.tsx');
-    const deleteHandler = modalSource.slice(
-      modalSource.indexOf('const handleDelete = async () =>'),
-      modalSource.indexOf('const adminRestaurantTitle ='),
-    );
-
-    expect(deleteHandler).toContain('/api/admin/restaurants/');
-    expect(deleteHandler).toContain('destructive-action');
-    expect(deleteHandler).toContain('soft_delete_restaurant');
-    expect(deleteHandler).toContain('targetRestaurantIds: [restaurant.id]');
-    expect(deleteHandler).toContain('reason: deleteReason');
-    expect(deleteHandler).toContain('confirmation: deleteConfirmation');
-    expect(deleteHandler).toContain('expectedRestaurantName: restaurant.name');
-    expect(deleteHandler).toContain('감사 ID:');
-    expect(deleteHandler).not.toContain('assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant")');
-    expect(deleteHandler).not.toContain('.from("restaurants")');
-    expect(deleteHandler).not.toContain("status: 'deleted'");
+    const deleteHandler = modalSource.slice(modalSource.indexOf('const handleDelete = async () =>'), modalSource.indexOf('const adminRestaurantTitle ='));
+    expect(deleteHandler).toContain("recordActions.run({ action: 'restaurant.delete', targetIds: [restaurant.id], payload: { reason: deleteReason.trim() } })");
+    expect(deleteHandler).toContain('refreshAfterAction');
+    expect(deleteHandler).not.toMatch(/destructive-action|assertLegacyBrowserAdminMutationEnabled|\.from\(/);
   });
 
   test('adds a domain-specific service-role-only restaurant destructive audit migration', () => {

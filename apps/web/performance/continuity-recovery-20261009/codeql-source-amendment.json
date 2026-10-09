@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-10-09T07:30:34.022426+00:00",
+  "predecessorHead": "c483542c480225af6830e10d1c29365f2b010989",
+  "alert": {
+    "number": 88,
+    "rule": "js/redos",
+    "originalLine": 68,
+    "source": "apps/web/scripts/supabase-migration-transaction.mjs"
+  },
+  "change": "Make quoted-literal masking alternatives disjoint for backslashes",
+  "verification": {
+    "bunFiles": 2,
+    "bunPass": 19,
+    "bunFail": 0,
+    "assertions": 128,
+    "lintFiles": 2,
+    "lintExitCode": 0,
+    "diffCheckExitCode": 0,
+    "longEscapedLiteralBytes": 30000,
+    "outsideMutationKeywordsDenied": [
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ]
+  },
+  "sourceBindings": [
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "87c7bb8d6ed772bd3056d2e0f638f28ffd0f354b38e5d7e88ddffdc1841e6946"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-transaction.test.ts",
+      "sha256": "3c765e4bbf55770546f9b2788e962de0d140ee38bc083e621d4d0941ae2455a6"
+    }
+  ],
+  "codeqlFreshHeadVerified": false,
+  "operatingWrites": false,
+  "performanceImprovementClaim": false
+}

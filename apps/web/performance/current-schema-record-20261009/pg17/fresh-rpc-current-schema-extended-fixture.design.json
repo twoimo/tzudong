@@ -1,0 +1,280 @@
+{
+  "schema": "current-schema-submission-extended-fixture-design/v1",
+  "preparedAt": "2026-10-08T22:07:06.388576+00:00",
+  "fixturePath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/pg17-refresh-20261009/fresh-rpc-current-schema-extended-fixture.sql",
+  "fixtureSha256": "0ca7f8bb49e3972fe430178ed66473a7e8c72a83f22bde1fc1fe64680a384276",
+  "firstMigrationSourceSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "actionBodySha256": "5140ad2948b1890b1bbdf212bb89385b34ebad90fe9db60177ac91e7f760b892",
+  "database": "tzudong_fresh_pg17_61d148a598b0",
+  "container": "tzudong-record-runtime-v3-20261009",
+  "network": "none",
+  "ports": 0,
+  "ownerLabel": "01a0f860-10d0-71b0-bb2a-95c2b52e025e",
+  "cases": [
+    "new_provenance_trace",
+    "edit_pending_preservation",
+    "edit_hold_preservation",
+    "edit_approved_preservation",
+    "null_decision_rejected",
+    "missing_decision_rejected",
+    "unknown_decision_rejected",
+    "incomplete_pending_set_rejected",
+    "duplicate_item_rejected",
+    "foreign_item_rejected",
+    "edit_missing_target_rejected",
+    "edit_deleted_target_rejected",
+    "new_existing_target_rejected",
+    "all_reject_aggregate",
+    "mixed_decisions_aggregate",
+    "approve_then_failure_atomic_rollback",
+    "reject_then_failure_atomic_rollback",
+    "restaurant_cas_preserves_later_admin",
+    "item_cas_preserves_later_source",
+    "historical_approved_item_preserved",
+    "same_uuid_changed_payload_rejected",
+    "unknown_type_rejected",
+    "actor_disabled_rejected",
+    "actor_disabled_at_rejected",
+    "actor_missing_status_rejected",
+    "actor_non_admin_rejected",
+    "actor_null_actor_rejected"
+  ],
+  "expectedCaseCount": 27,
+  "claims": "SET ROLE service_role; modern request.jwt.claims; legacy role GUC remains empty",
+  "originalSourceChanges": false,
+  "legacyOwnerGrantsRequired": false,
+  "transaction": "BEGIN/ROLLBACK; nested exceptions roll back failed actions without discarding later synthetic admin changes",
+  "unknownTypeBoundary": "Existing unsupported enum label exercises handler; otherwise enum rejection is recorded separately and handler branch remains unreachable.",
+  "traceOracle": "Independent original coalesce(video)||pipe||coalesce(name)||pipe||coalesce(review) SHA256 hex, Unicode and delimiter in valid review.",
+  "testStatus": "passed",
+  "limits": [
+    "No source functions, roles, ACL, RLS or triggers modified.",
+    "No provider or operating writes.",
+    "Single-session CAS does not attest concurrent transactions.",
+    "Schema/runtime fixture does not prove deployment or UI behavior."
+  ],
+  "relatedUnittestChange": {
+    "path": "backend/supabase/tests/test_restaurant_review_identity.py",
+    "change": "Nullable disabled_at timestamptz on minimal user_account_status fixture",
+    "runtimeStatus": "Python AST valid; standalone opt-in PG unittest not executed"
+  },
+  "lastExecution": {
+    "status": "passed",
+    "psqlExitCode": 0,
+    "caseCount": 27,
+    "cases": [
+      {
+        "name": "actor_disabled_at_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "actor_disabled_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "actor_missing_status_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "actor_non_admin_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "actor_null_actor_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "all_reject_aggregate",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "approve_then_failure_atomic_rollback",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "duplicate_item_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "edit_approved_preservation",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "edit_deleted_target_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "edit_hold_preservation",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "edit_missing_target_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "edit_pending_preservation",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "foreign_item_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "historical_approved_item_preserved",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "incomplete_pending_set_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "item_cas_preserves_later_source",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "missing_decision_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "mixed_decisions_aggregate",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "new_existing_target_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "new_provenance_trace",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "null_decision_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "reject_then_failure_atomic_rollback",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "restaurant_cas_preserves_later_admin",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "same_uuid_changed_payload_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "unknown_decision_rejected",
+        "scope": "guarded_runtime"
+      },
+      {
+        "name": "unknown_type_rejected",
+        "scope": "schema_enum_rejection_runtime_branch_unreachable"
+      }
+    ],
+    "rollbackStatementCompleted": true,
+    "beforeFixtureCounts": {
+      "items": 0,
+      "users": 0,
+      "audits": 0,
+      "restaurants": 0,
+      "submissions": 0
+    },
+    "afterFixtureCounts": {
+      "items": 0,
+      "users": 0,
+      "audits": 0,
+      "restaurants": 0,
+      "submissions": 0
+    },
+    "rollbackRowsExact": true
+  },
+  "initialExecutionAttempt": {
+    "status": "container_id_replaced_before_connection",
+    "databaseWrites": 0
+  },
+  "executionHistory": [
+    {
+      "status": "failed",
+      "fixedCode": null,
+      "sqlState": "42804",
+      "inputLine": null,
+      "errorClass": "other",
+      "containerId": "3d9355c5eabdb16233114dbabbb2422ed11610173970800207f07d0953760107",
+      "transaction": "connection closed; rollback readback required"
+    },
+    {
+      "status": "failed",
+      "fixedCode": null,
+      "sqlState": "42601",
+      "errorClass": "syntax",
+      "diagnosticFieldMatches": [],
+      "beforeFixtureCounts": {
+        "items": 0,
+        "users": 0,
+        "audits": 0,
+        "restaurants": 0,
+        "submissions": 0
+      },
+      "afterFixtureCounts": {
+        "items": 0,
+        "users": 0,
+        "audits": 0,
+        "restaurants": 0,
+        "submissions": 0
+      },
+      "rollbackRowsExact": true
+    },
+    {
+      "status": "failed",
+      "fixedCode": null,
+      "sqlState": "42702",
+      "errorClass": "other",
+      "syntaxToken": null,
+      "statementLine": "2",
+      "beforeFixtureCounts": {
+        "items": 0,
+        "users": 0,
+        "audits": 0,
+        "restaurants": 0,
+        "submissions": 0
+      },
+      "afterFixtureCounts": {
+        "items": 0,
+        "users": 0,
+        "audits": 0,
+        "restaurants": 0,
+        "submissions": 0
+      },
+      "rollbackRowsExact": true
+    }
+  ],
+  "containerId": "3d9355c5eabdb16233114dbabbb2422ed11610173970800207f07d0953760107",
+  "actorFixtures": "Three admin actors with disabled/missing status plus active non-admin and NULL actor; no last-admin fence disabled or bypassed.",
+  "fixtureRepairHistory": [
+    {
+      "sqlState": "42804",
+      "scope": "fixture_seed",
+      "diagnosis": "UNION NULL inferred text for disabled_at; explicit timestamptz cast added",
+      "productSourceChanged": false
+    },
+    {
+      "sqlState": "42601",
+      "scope": "fixture_plpgsql",
+      "diagnosis": "CASE in IF arithmetic condition required parentheses",
+      "productSourceChanged": false
+    },
+    {
+      "sqlState": "42702",
+      "scope": "fixture_actor_check",
+      "diagnosis": "PLpgSQL operation_id variable conflicted with admin_record_audit.operation_id; renamed variable denied_op_uuid",
+      "productSourceChanged": false
+    }
+  ],
+  "passedRuntimeCases": 26,
+  "passedSchemaBoundaryCases": 1,
+  "unreachableBranches": [
+    "Unknown submission_type cannot reach handler with actual new/edit enum; enum rejection is labeled separately."
+  ],
+  "rootSourceCommit": "df3b784b5438113bcdb8b29ab0a7224e67c2f8c9"
+}

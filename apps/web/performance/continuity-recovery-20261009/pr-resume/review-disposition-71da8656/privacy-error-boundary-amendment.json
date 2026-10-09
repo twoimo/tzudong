@@ -1,0 +1,88 @@
+{
+  "status": "passed",
+  "observedAt": "2026-10-09T08:23:16Z",
+  "anchoredHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "currentHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "contract": {
+    "export": "boundedMigrationError(error)",
+    "result": "fresh Error with identical fixed message and code",
+    "compilerGuardCodes": [
+      "MIGRATION_LEDGER_UNAVAILABLE",
+      "MIGRATION_LEDGER_CONTRACT_INSUFFICIENT",
+      "MIGRATION_ALREADY_APPLIED",
+      "MIGRATION_LEDGER_CONFLICT",
+      "MIGRATION_PRIOR_STATE_MISMATCH",
+      "MIGRATION_TERMINAL_READBACK_FAILED",
+      "MIGRATION_LEDGER_READBACK_FAILED"
+    ],
+    "transport": "MIGRATION_PSQL_FAILED or MIGRATION_PSQL_FAILED_<five-character-SQLSTATE>",
+    "genericCommittedReconciliation": "MIGRATION_OUTCOME_UNCONFIRMED",
+    "notAppliedReconciliation": "bounded original category only",
+    "omitted": [
+      "message detail",
+      "cause",
+      "marker",
+      "classifier suffix",
+      "unknown fixedSqlCode",
+      "arbitrary properties"
+    ],
+    "throwingGetters": "MIGRATION_PSQL_FAILED"
+  },
+  "regressions": {
+    "actualValues": [
+      "marker and cause",
+      "malformed JSON code with cause",
+      "unknown fixedSqlCode with SQLSTATE classifier suffix",
+      "throwing fixedSqlCode and code getters"
+    ],
+    "unit": {
+      "pass": 25,
+      "fail": 0,
+      "assertions": 169
+    }
+  },
+  "portableVerification": {
+    "status": "passed",
+    "receipt": "portable-source-verifier-privacy-amendment-result.json",
+    "node": "v24.19.0",
+    "bun": "1.4.0",
+    "python": "Python 3.14.8",
+    "manifestMigrations": 3,
+    "immutableInputsMatchAnchoredHead": true
+  },
+  "isolatedPostgres17": {
+    "status": "passed",
+    "serverVersion": "17.11 (Homebrew)",
+    "network": "unix-socket-only",
+    "cases": [
+      "terminal_query_not_run_on_preimage",
+      "prior_query_not_run_on_existing_ledger",
+      "reconciliation_skips_missing_terminal_table",
+      "select_insert_cannot_reach_exclusive_lock",
+      "ambiguous_ack_no_resend_fail_closed",
+      "exit0_invalid_stdout_reconciles"
+    ],
+    "cleanup": {
+      "stopped": true,
+      "removed": true
+    },
+    "operatingDatabaseWrites": false
+  },
+  "sourceHashes": {
+    "apps/web/scripts/apply-supabase-migration.mjs": "5d35096b97b5a541cd5d940c6d800e607f55c31500d70874dfe1639e065aa733",
+    "apps/web/scripts/supabase-migration-transaction.mjs": "ba054d1c2c9c8eb2d19a110c4b58be999f52521880cbf66aef02ce963b97bbb5",
+    "apps/web/tests-unit/supabase-migration-apply-source.test.ts": "76c8e15f6f3b61572e77d641fc62b8a2a11996f76bad48f9931e20e8b08bdb46",
+    "apps/web/tests-unit/supabase-migration-transaction.test.ts": "d3a717b9eeb05fe363ac2cbbf8f60bb289991c25cabbe2fcb81d53ffae7d51bd",
+    "portable-source-verifier.mjs": "4348199b81841a2a980e216b3228545a8b89b87d5424fa1aecef60f718ef6fc1",
+    "verify-isolated-pg17.mjs": "04907bf8699f58006a6fe124a0cebc3604f38266647401793542f999ac68fcf4"
+  },
+  "evidencePreservation": {
+    "historicalRuntimeReceiptsPromoted": false,
+    "historicalSqlEvidenceModified": false,
+    "previousPrResumeRawResultsOverwritten": false
+  },
+  "limitations": [
+    "This amendment proves current source, targeted unit behavior, portable source binding, and isolated local PostgreSQL behavior only.",
+    "It does not prove hosted Supabase state, deployment, protected promotion, or production behavior."
+  ]
+}

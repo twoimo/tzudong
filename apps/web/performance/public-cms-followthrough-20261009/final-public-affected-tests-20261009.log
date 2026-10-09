@@ -1,0 +1,87 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/supabase-entrypoint-source.test.ts:
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > only the frozen allowlist of files constructs a Supabase client [0.14ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > each canonical entrypoint constructs exactly its expected primitive from the expected SDK package [0.11ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > canonical entrypoints share one Supabase URL config so Local and Hosted use the same entrypoints [0.06ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > the privileged Storage client keeps only .storage and stays server-only [0.02ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > general server code routes Local_Database access through an entrypoint, not the SDK [0.02ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > no first-party source opens a direct Postgres connection that bypasses Supabase [19.03ms]
+
+tests-unit/public-surface-design-contract.test.ts:
+(pass) public surface design contract > page and share transport inventory preserves all 27 surfaces [3.05ms]
+(pass) public surface design contract > loading files use the three-way taxonomy and do not treat null loaders as missing [3.07ms]
+(pass) public surface design contract > error files stay at root plus feed, global-map, and mypage [2.19ms]
+(pass) public surface design contract > AppRuntimeLayout families are exactly the eleven segment layouts [2.53ms]
+(pass) public surface design contract > pins all five CSS owner-to-importer mappings and forbids a sixth Tailwind entry [22.13ms]
+(pass) public surface design contract > freezes each Tailwind owner path and not @source scope [0.94ms]
+(pass) public surface design contract > records dual 404 contexts and keeps not-found a server module [0.22ms]
+(pass) public surface design contract > imports the shared light-mode token partial with per-owner cascade context [0.27ms]
+(pass) public surface design contract > horizontal allowlist enumerates data-horizontal-scroll-owner values only [44.45ms]
+(pass) public surface design contract > family chrome stays Korean-first and legal pages stay chrome-less [0.46ms]
+
+tests-unit/eslint-generated-dist-dir.test.ts:
+(pass) excludes generated custom distDir files while enforcing authored runner rules [1083.44ms]
+
+tests-unit/browser-title-source.test.ts:
+(pass) browser title source contracts > normalizes every approved static route title explicitly [0.68ms]
+(pass) browser title source contracts > keeps route title policy explicit without a root metadata template [0.10ms]
+(pass) browser title source contracts > wires dynamic titles through the shared hook and safe state labels [0.96ms]
+(pass) browser title source contracts > centralizes real document.title assignments in the hook [38.64ms]
+
+tests-unit/short-url-read.test.ts:
+(pass) bounded short URL read outcomes > accepts allocator codes and rejects malformed codes before lookup [0.09ms]
+(pass) bounded short URL read outcomes > separates missing rows from provider failures and invalid shapes [0.09ms]
+(pass) bounded short URL read outcomes > redirects only allowed targets and retains the safe home fallback [0.05ms]
+(pass) bounded short URL read outcomes > never passes provider diagnostics to the target validator or result [0.03ms]
+
+tests-unit/short-url-page-runtime.test.ts:
+(pass) short URL HTTP status and recovery contract > invalid code is HTTP404 without a data client and includes recovery/noindex [0.26ms]
+(pass) short URL HTTP status and recovery contract > missing row is HTTP404 with a bounded read [0.10ms]
+(pass) short URL HTTP status and recovery contract > provider error, thrown read and malformed data are HTTP503 without diagnostics [0.25ms]
+(pass) short URL HTTP status and recovery contract > safe same-origin review target is HTTP307 and an unsafe target redirects home [0.30ms]
+(pass) short URL HTTP status and recovery contract > control characters cannot produce malformed Location headers [0.04ms]
+
+tests-unit/web-quality-performance-source.test.ts:
+(pass) Tailwind v4 source contracts > parses exact source directives and compiles all production entries with retained utilities [371.99ms]
+(pass) route CSS boundary verifier fixtures > inventories shared and exclusive home, general, admin, and deferred assets [6.05ms]
+(pass) route CSS boundary verifier fixtures > rejects malformed, decoy, negated-media, and budget-bypass CSS [14.39ms]
+(pass) route CSS ceiling boundaries > enforces exact and one-over raw and transfer ceilings for every route [1508.39ms]
+(pass) web quality performance source contracts > map marker HTML keeps image markers with WebP delivery and PNG fallback [0.19ms]
+(pass) web quality performance source contracts > global map exposes bounded Google failure exploration fallback [0.26ms]
+(pass) web quality performance source contracts > map marker WebP assets are present and at least 75% smaller than PNG fallbacks [1.16ms]
+(pass) web quality performance source contracts > popup ad banners load immediately for first-screen exposure while distant media has no src [0.28ms]
+(pass) web quality performance source contracts > home filter count queries run before dropdown open so triggers do not show stale zero counts [0.21ms]
+(pass) web quality performance source contracts > home map runtime renders directly while supporting queries stay intent-gated [11.95ms]
+(pass) web quality performance source contracts > mobile toast dark tokens and G007 announcement width stay explicit [0.20ms]
+(pass) web quality performance source contracts > naver marker click centering avoids slow duplicate recenter loops [0.20ms]
+(pass) web quality performance source contracts > device location floating action does not show expanding circle animations [0.77ms]
+(pass) web quality performance source contracts > profile/stamp/map regressions stay fixed while preserving deferred map loading [1.66ms]
+(pass) web quality performance source contracts > review like heart keeps the previous feed-style mobile and desktop overlay layout [0.78ms]
+(pass) web quality performance source contracts > auth-gated review actions open UI prompts without uncaught LOGIN_REQUIRED throws [0.33ms]
+(pass) web quality performance source contracts > overlay and review icon buttons expose stable accessible names [1.19ms]
+(pass) web quality performance source contracts > desktop direct feature routes hand off to the home left panel and suppress popup blockers [1.68ms]
+(pass) web quality performance source contracts > direct utility routes render clear fallback states instead of blank or invalid panel configs [0.76ms]
+(pass) web quality performance source contracts > admin utility APIs stay behind admin auth and short URLs cannot become open redirects [0.70ms]
+(pass) web quality performance source contracts > feed direct route defers heavy modals and detail panels until interaction [1.03ms]
+(pass) web quality performance source contracts > /mypage avoids client-side redirect work and defers desktop-only sidebar cost [3.23ms]
+(pass) web quality performance source contracts > page-level loaders keep route fallbacks single-owner while map fallbacks stay embedded [13.99ms]
+(pass) web quality performance source contracts > route loading boundaries keep skeleton ownership single-pass [6.11ms]
+(pass) web quality performance source contracts > intent-loaded mobile modal shells do not render desktop dialog on the first client paint [1.36ms]
+(pass) web quality performance source contracts > auth user state lookups have Supabase index migration coverage [0.37ms]
+(pass) web quality performance source contracts > user-facing Supabase reads avoid wide fanout and redundant stamp fetches [0.63ms]
+(pass) web quality performance source contracts > admin review queue avoids fetching approved review history [0.20ms]
+(pass) web quality performance source contracts > Supabase reads use explicit response shapes instead of broad selects [31.06ms]
+(pass) web quality performance source contracts > global chrome assets stay small and cacheable without changing page UI [292.36ms]
+(pass) web quality performance source contracts > restaurant search controls keep accessible names and keyboard-safe rows [0.45ms]
+(pass) web quality performance source contracts > mobile leaderboard rows keep stats visible inside narrow viewports [0.13ms]
+(pass) web quality performance source contracts > direct mobile routes use a self-hosted Korean font before fallback stacks [0.21ms]
+
+tests-unit/preferred-scroll-behavior.test.ts:
+(pass) programmatic scroll motion preference > remains immediate outside the browser [0.08ms]
+(pass) programmatic scroll motion preference > reduces motion and responds to preference changes between actions [0.10ms]
+
+ 65 pass
+ 0 fail
+ 2630 expect() calls
+Ran 65 tests across 8 files. [3.75s]

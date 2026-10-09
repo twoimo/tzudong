@@ -1,0 +1,2 @@
+components/admin/pipeline/AdminPipelineDashboard.tsx(108,36): error TS18048: 'snapshot' is possibly 'undefined'.
+components/admin/pipeline/AdminPipelineDashboard.tsx(108,68): error TS18048: 'snapshot' is possibly 'undefined'.

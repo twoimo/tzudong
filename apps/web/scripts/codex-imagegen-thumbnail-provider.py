@@ -51,7 +51,7 @@ def _script_dir() -> Path:
 
 
 def _default_storyboard_provider_script() -> Path:
-    return _script_dir() / "codex-imagegen-storyboard-provider.py"
+    return _script_dir() / "codex-imagegen-provider-core.py"
 
 
 def _read_prompt(path: Path) -> str:

@@ -1,0 +1,88 @@
+{
+  "scope": "tzudong",
+  "session_scope": "tzudong",
+  "engine_stale": false,
+  "open_cases": [],
+  "broken": [],
+  "records": [
+    {
+      "name": "tzudong",
+      "path": "00_Scope/tzudong/tzudong.md",
+      "id": "261004-15ps-zgfwptkf",
+      "hash": "sha256:0561dfdd7547f0542b6db2961ebfb3d3ed9e5c156c90418e4a4f88e56c9ad7e1",
+      "meta": {
+        "id": "261004-15ps-zgfwptkf",
+        "created": "2026-10-04 15:01 (KST)",
+        "updated": "2026-10-06 19:29 (KST)",
+        "author": "agent",
+        "drafter": "gpt-6",
+        "summary": "쯔양 롱폼 영상과 맛집 분석의 근거 지식 그래프"
+      },
+      "typedMetadata": true
+    },
+    {
+      "name": "TZ-Video-QWtvZ6NfNJ8",
+      "path": "00_Scope/tzudong/TZ-Video-QWtvZ6NfNJ8.md",
+      "id": "261004-19ug-dj9hlkvr",
+      "hash": "sha256:2fc6eb883ffaf460af4ef29d915f5d2a3acd7809c56cf052b364ef02acd2b374",
+      "meta": {
+        "id": "261004-19ug-dj9hlkvr",
+        "created": "2026-10-04 16:30 (KST)",
+        "updated": "2026-10-05 06:10 (KST)",
+        "author": "agent",
+        "drafter": "gpt-6",
+        "summary": "claude-video로 처리한 모델 관찰; 독립 검증 대기"
+      },
+      "typedMetadata": true
+    },
+    {
+      "name": "TZ-Video--8wi-fVqTwk",
+      "path": "00_Scope/tzudong/TZ-Video--8wi-fVqTwk.md",
+      "id": "261005-0h69-tln0pl4m",
+      "hash": "sha256:b7708debf1339600dd19bbe737dbdc56d98a231158f0b556ff22173b585e3669",
+      "meta": {
+        "id": "261005-0h69-tln0pl4m",
+        "created": "2026-10-05 06:10 (KST)",
+        "updated": "2026-10-05 06:10 (KST)",
+        "author": "agent",
+        "drafter": "gpt-6",
+        "summary": "영상 · -8wi-fVqTwk"
+      },
+      "typedMetadata": true
+    },
+    {
+      "name": "YT-tzuyang-Video-Ck5UrobZuKA",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-Ck5UrobZuKA.md",
+      "id": "261006-1i3c-axw2mngb",
+      "hash": "sha256:2c9484c96a796c8332c2071aa091500a33e5e7819dbdcef446586d96b05ca20b",
+      "meta": {
+        "id": "261006-1i3c-axw2mngb",
+        "created": "2026-10-06 19:28 (KST)",
+        "updated": "2026-10-06 19:28 (KST)",
+        "author": "agent",
+        "drafter": "aside",
+        "summary": "인천냉면3곳2자막 첫검토·6후보.사과첨가 부정문상반/업력·재료·감각설명을 유보,시각0.",
+        "derived-from": "[[https://www.youtube.com/watch?v=Ck5UrobZuKA]]"
+      },
+      "typedMetadata": false
+    },
+    {
+      "name": "YT-tzuyang-Video-F93TnnxCNvY",
+      "path": "00_Scope/tzudong/YT-tzuyang-Video-F93TnnxCNvY.md",
+      "id": "261006-1dn0-hdeh43wq",
+      "hash": "sha256:5c9c26e0c215f0c005dd65064a6779cec5dec4410f311295d7ebeacbb0b018f5",
+      "meta": {
+        "id": "261006-1dn0-hdeh43wq",
+        "created": "2026-10-06 17:52 (KST)",
+        "updated": "2026-10-06 18:12 (KST)",
+        "author": "agent",
+        "drafter": "aside",
+        "summary": "돈가스 도전의 자막2트랙 대조·6프레임 검토. 25분 조건·13분49초는 영상 표기.",
+        "derived-from": "[[https://www.youtube.com/watch?v=F93TnnxCNvY]]"
+      },
+      "typedMetadata": false
+    }
+  ],
+  "globalSearchUsed": false,
+  "bodyPersisted": false
+}

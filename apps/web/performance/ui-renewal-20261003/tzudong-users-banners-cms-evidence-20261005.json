@@ -1,0 +1,105 @@
+{
+  "status": "sourceReady",
+  "baseHead": "498a91e0",
+  "sourceHashes": {
+    "apps/web/components/admin/AdminUsersPanel.tsx": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974",
+    "apps/web/app/admin/banners/page.tsx": "178a3029d5d6761c68adbd55e22545286efd26b32460d2454646cc2e1cdea647",
+    "apps/web/tests-unit/admin-users-mutation-scope.test.ts": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8",
+    "apps/web/tests-unit/admin-user-management-source.test.ts": "fb8382ea07dd7f3f1a650b858a74e9c1d839ea108b37e5258907b37da43ee41a",
+    "apps/web/tests-unit/ad-banner-url-security.test.ts": "c378dd14f338b837d469194b78e0182c5cbf2c3537b175bc935110be9fe4b1c8"
+  },
+  "verification": {
+    "bun": {
+      "tests": 26,
+      "failed": 0,
+      "files": 4,
+      "assertions": 361
+    },
+    "eslint": {
+      "files": 5,
+      "errors": 0
+    },
+    "diffCheck": "passed",
+    "typecheck": "parent final combined check"
+  },
+  "render": [
+    {
+      "module": "users",
+      "width": 390,
+      "documentOverflow": 0,
+      "inspector": "390px drawer",
+      "screenshot": "/tmp/tzudong-cms-users-390.png"
+    },
+    {
+      "module": "users",
+      "width": 834,
+      "documentOverflow": 0,
+      "inspector": "640px drawer",
+      "screenshot": "/tmp/tzudong-cms-users-834.png"
+    },
+    {
+      "module": "users",
+      "width": 1423,
+      "documentOverflow": 0,
+      "inspector": "360px inline",
+      "screenshot": "/tmp/tzudong-cms-users-1423.png"
+    },
+    {
+      "module": "banners",
+      "width": 390,
+      "documentOverflow": 0,
+      "inspector": "390px drawer",
+      "screenshot": "/tmp/tzudong-cms-banners-390.png"
+    },
+    {
+      "module": "banners",
+      "width": 834,
+      "documentOverflow": 0,
+      "inspector": "640px drawer",
+      "screenshot": "/tmp/tzudong-cms-banners-834.png"
+    },
+    {
+      "module": "banners",
+      "width": 1423,
+      "documentOverflow": 0,
+      "inspector": "360px inline",
+      "screenshot": "/tmp/tzudong-cms-banners-1423.png"
+    }
+  ],
+  "additionalRender": {
+    "width": 1200,
+    "drawerWidth": 640,
+    "innerInspectorWidth": 639,
+    "documentOverflow": 0
+  },
+  "behavior": [
+    "user profile/access tabs: ArrowRight focuses and activates matching panel; inactive panel hidden",
+    "users and banners: dirty Escape close keeps edited value and opens discard confirmation",
+    "confirmed discard closes drawer and restores focus to search",
+    "drawer focus remains inside after keyboard navigation",
+    "users and banners: empty filtered state renders with zero rows",
+    "user list failure retains previous 3 synthetic rows; retry restores list",
+    "users browser-only mocked write: old state read twice keeps pending lock; third expected readback unlocks; 1 write intercepted; 0 actual writes",
+    "banner extracted production handlers: uncertain save/delete remains locked across new/edit/discard/close/delete; expected row/deletion required before unlock",
+    "banner extracted production close handler: dirty close requires discard; no write issued"
+  ],
+  "runtimeBuffers": {
+    "uncaughtErrors": 0,
+    "consoleErrors": 0,
+    "consoleWarnings": 0
+  },
+  "sharedClassesUsed": [
+    "admin-cms-toolbar",
+    "admin-cms-table",
+    "admin-cms-row-selected",
+    "admin-cms-inspector",
+    "admin-cms-table-container",
+    "admin-cms-footer"
+  ],
+  "notes": [
+    "Uses parent shared CSS. No child component or common header modification.",
+    "Parent-owned admin-console-uiux-source.test.ts still asserts users old content spacing at line 8631 and banner old two-column grid at line 8694; needs common integration update.",
+    "All browser evidence is fixture 18794 with fake Supabase 18793; no hosted/DB/provider writes or commits.",
+    "Owned agent-browser session tzudong-users-banners-astra closed."
+  ]
+}

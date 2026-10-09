@@ -1,0 +1,43 @@
+EE
+======================================================================
+ERROR: test_collect_meta_checkpoint (unittest.loader._FailedTest.test_collect_meta_checkpoint)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_collect_meta_checkpoint
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 433, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 374, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py", line 7, in <module>
+    from test_collect_meta_thumbnail_security import collect_meta, FixtureResponse, JPEG_FIXTURE, VALID_URL
+  File "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py", line 38, in <module>
+    SPEC.loader.exec_module(collect_meta)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/restaurant-crawling/scripts/02-collect-meta.py", line 24, in <module>
+    import requests
+ModuleNotFoundError: No module named 'requests'
+
+
+======================================================================
+ERROR: test_collect_meta_thumbnail_security (unittest.loader._FailedTest.test_collect_meta_thumbnail_security)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_collect_meta_thumbnail_security
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 433, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 374, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py", line 38, in <module>
+    SPEC.loader.exec_module(collect_meta)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/restaurant-crawling/scripts/02-collect-meta.py", line 24, in <module>
+    import requests
+ModuleNotFoundError: No module named 'requests'
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.000s
+
+FAILED (errors=2)

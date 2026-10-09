@@ -1,0 +1,36 @@
+{
+  "sourceHead": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+  "purpose": "Preserve pre-fix authored fixtures and historical artifact-map bytes. Historical maps resolve gateway files to these frozen originals; fresh runs bind amended gateway hashes.",
+  "files": [
+    {
+      "source": "apps/web/performance/graph-cms-followthrough-20261009/fixture-gateway.mjs",
+      "frozen": "apps/web/performance/fixture-transport-security-20261009/originals/fixture-gateway.mjs.txt",
+      "sha256": "8bf12b85fc6e0df9549c0c4d3d25ccd405fb68841996bc3c01566e6c12714b03",
+      "bytes": 23359
+    },
+    {
+      "source": "apps/web/performance/graph-cms-followthrough-20261009/title-fixture-gateway.mjs",
+      "frozen": "apps/web/performance/fixture-transport-security-20261009/originals/title-fixture-gateway.mjs.txt",
+      "sha256": "ee4995124f01a207cd080ace249c9da0548754b355c49b31ad15de0c4de05b33",
+      "bytes": 23397
+    },
+    {
+      "source": "apps/web/performance/pr-review-followthrough-20261009/approved-fixture-gateway.mjs",
+      "frozen": "apps/web/performance/fixture-transport-security-20261009/originals/approved-fixture-gateway.mjs.txt",
+      "sha256": "e760d6bb2f5471c6f0e1ec9a50cf428bb119b1fd4e3149eca7d99ca4980e4965",
+      "bytes": 23756
+    },
+    {
+      "source": "apps/web/performance/graph-cms-followthrough-20261009/artifact-map.json",
+      "frozen": "apps/web/performance/fixture-transport-security-20261009/originals/artifact-map.json.txt",
+      "sha256": "6d6f49d5c4a752ceb9e227fabec7348997bc2f880bdde0f1e082771ab07b26af",
+      "bytes": 7556
+    },
+    {
+      "source": "apps/web/performance/pr-review-followthrough-20261009/web-artifact-map.json",
+      "frozen": "apps/web/performance/fixture-transport-security-20261009/originals/web-artifact-map.json.txt",
+      "sha256": "cb62091141340f3f9d53fa54958e4a8a0ec25d29a5b5e5b239fd4795b9b8b70d",
+      "bytes": 10028
+    }
+  ]
+}

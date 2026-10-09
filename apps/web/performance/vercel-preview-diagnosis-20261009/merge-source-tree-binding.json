@@ -1,0 +1,13 @@
+{
+  "candidate": {
+    "sha": "56819502aaa6993d847efb8b78a5bcd6a4ecdaf2",
+    "tree": "f4c18d5f74a722947eeb063ec1e304602e588beb",
+    "queryExit": 0
+  },
+  "merge": {
+    "sha": "614b249175c35636a7062bf05cb01ebad538b10d",
+    "tree": "f4c18d5f74a722947eeb063ec1e304602e588beb",
+    "queryExit": 0
+  },
+  "sameTree": true
+}

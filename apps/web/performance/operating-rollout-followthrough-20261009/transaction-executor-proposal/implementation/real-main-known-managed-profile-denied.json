@@ -1,0 +1,11 @@
+{
+  "status": "unconfirmed",
+  "operatingWrites": false,
+  "actualCliMain": true,
+  "approvedManifestUnchanged": true,
+  "failure": {
+    "exit": 1,
+    "fixedCode": "MIGRATION_LEDGER_CONTRACT_INSUFFICIENT"
+  },
+  "ownedDbDropped": true
+}

@@ -1,0 +1,186 @@
+{
+  "cold": {
+    "wallMs": {
+      "pairs": 7,
+      "baselineMean": 3223.279725793483,
+      "candidateMean": 2658.7216309271753,
+      "absoluteReductionMean": 564.5580948663077,
+      "relativeReductionMeanPercent": 16.257778134547163,
+      "pairedT95CiAbsoluteReduction": [
+        126.4250262527263,
+        1002.691163479889
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        317.4197737327112,
+        939.9380709842911
+      ],
+      "pairedDifferenceStddev": 473.73637110441837,
+      "baselineCvPercent": 18.292968446057227,
+      "candidateCvPercent": 9.678932152184455
+    },
+    "cpuMs": {
+      "pairs": 7,
+      "baselineMean": 3648.6305714285713,
+      "candidateMean": 3268.916857142857,
+      "absoluteReductionMean": 379.7137142857142,
+      "relativeReductionMeanPercent": 10.383428605525484,
+      "pairedT95CiAbsoluteReduction": [
+        273.8905628685472,
+        485.53686570288124
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        301.3225714285714,
+        456.96699999999976
+      ],
+      "pairedDifferenceStddev": 114.42248787529223,
+      "baselineCvPercent": 5.205876407105257,
+      "candidateCvPercent": 5.723695423908228
+    },
+    "peakTreeRssMiB": {
+      "pairs": 7,
+      "baselineMean": 255.49107142857142,
+      "candidateMean": 246.08035714285714,
+      "absoluteReductionMean": 9.410714285714286,
+      "relativeReductionMeanPercent": -2.8671833525098145,
+      "pairedT95CiAbsoluteReduction": [
+        -84.0817031679047,
+        102.90313173933329
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -63.84375,
+        75.88169642857143
+      ],
+      "pairedDifferenceStddev": 101.08974132084927,
+      "baselineCvPercent": 21.419310123788684,
+      "candidateCvPercent": 26.125405347775242
+    },
+    "ffmpegCalls": {
+      "pairs": 7,
+      "baselineMean": 12,
+      "candidateMean": 12,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": 0.0,
+      "pairedT95CiAbsoluteReduction": [
+        0.0,
+        0.0
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": 0.0,
+      "baselineCvPercent": 0.0,
+      "candidateCvPercent": 0.0
+    },
+    "evaluationReplayCalls": {
+      "pairs": 7,
+      "baselineMean": 3,
+      "candidateMean": 3,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": 0.0,
+      "pairedT95CiAbsoluteReduction": [
+        0.0,
+        0.0
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": 0.0,
+      "baselineCvPercent": 0.0,
+      "candidateCvPercent": 0.0
+    }
+  },
+  "restart": {
+    "wallMs": {
+      "pairs": 7,
+      "baselineMean": 666.422422476379,
+      "candidateMean": 540.0645119537201,
+      "absoluteReductionMean": 126.35791052265891,
+      "relativeReductionMeanPercent": 17.190995760606874,
+      "pairedT95CiAbsoluteReduction": [
+        13.938283070773124,
+        238.7775379745447
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        42.23399965225586,
+        207.88730923751635
+      ],
+      "pairedDifferenceStddev": 121.55500272666737,
+      "baselineCvPercent": 18.826189245493143,
+      "candidateCvPercent": 15.666295135895908
+    },
+    "cpuMs": {
+      "pairs": 7,
+      "baselineMean": 477.0795714285714,
+      "candidateMean": 419.0395714285714,
+      "absoluteReductionMean": 58.04000000000001,
+      "relativeReductionMeanPercent": 11.832604106485903,
+      "pairedT95CiAbsoluteReduction": [
+        24.500277356999803,
+        91.57972264300022
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        34.15957142857144,
+        83.10471428571428
+      ],
+      "pairedDifferenceStddev": 36.26520715047228,
+      "baselineCvPercent": 9.676454938399164,
+      "candidateCvPercent": 9.017383466614856
+    },
+    "peakTreeRssMiB": {
+      "pairs": 7,
+      "baselineMean": 54.66517857142857,
+      "candidateMean": 56.888392857142854,
+      "absoluteReductionMean": -2.2232142857142856,
+      "relativeReductionMeanPercent": -4.571001378831241,
+      "pairedT95CiAbsoluteReduction": [
+        -8.302202027313136,
+        3.855773455884565
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -6.645089285714286,
+        2.1517857142857144
+      ],
+      "pairedDifferenceStddev": 6.5729747398574085,
+      "baselineCvPercent": 8.469344521883183,
+      "candidateCvPercent": 9.7391930389012
+    },
+    "ffmpegCalls": {
+      "pairs": 7,
+      "baselineMean": 0,
+      "candidateMean": 0,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": null,
+      "pairedT95CiAbsoluteReduction": [
+        0.0,
+        0.0
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": 0.0,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "evaluationReplayCalls": {
+      "pairs": 7,
+      "baselineMean": 0,
+      "candidateMean": 0,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": null,
+      "pairedT95CiAbsoluteReduction": [
+        0.0,
+        0.0
+      ],
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": 0.0,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    }
+  }
+}

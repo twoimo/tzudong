@@ -1,0 +1,72 @@
+{
+  "evidence": "local-browser-with-synthetic-read-responses",
+  "hostedEvidence": false,
+  "modules": [
+    {
+      "module": "overview",
+      "shellAndHeaderVisible": false
+    },
+    {
+      "module": "restaurants",
+      "shellAndHeaderVisible": false
+    },
+    {
+      "module": "submissions",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "reviews",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "users",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "banners",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "insights",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "pipeline",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "knowledge-graph",
+      "shellAndHeaderVisible": false
+    },
+    {
+      "module": "sentry",
+      "shellAndHeaderVisible": false
+    },
+    {
+      "module": "youtube-thumbnail-generator",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "storyboard",
+      "shellAndHeaderVisible": false
+    },
+    {
+      "module": "routes",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "llm",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "audit",
+      "shellAndHeaderVisible": true
+    }
+  ],
+  "keyboard": {
+    "desktopEnterEscapeFocusReturn": true,
+    "mobileDrawerEscapeFocusReturn": true
+  },
+  "pageErrorCount": 0,
+  "blockedMutationCount": 0
+}

@@ -1,0 +1,12 @@
+{
+  "manualInvoker": true,
+  "serviceInsert": false,
+  "serviceSelect": true,
+  "serviceUpdate": false,
+  "manualBodySha256": "ec67787639924dbc0a6c6b3753995ba211dae8e4d49cef7e0639d36e2084d7eb",
+  "expectedLockPresent": true,
+  "status": "preexisting service-role mutation blocked",
+  "operatingWrites": false,
+  "additionalGrants": 0,
+  "limits": "Owner-principal CAS/stop passed; service-role manual apply is not proven usable. Preview eligibility replacement does not change this function or table ACL."
+}

@@ -1,0 +1,141 @@
+{
+  "schema": "storage-provider-patch-local-progress-v1",
+  "baseSourceCommit": "290ea25a079c3a51467a5e2dca67aef43927b40e",
+  "goalSha256": "f513aa9de2091fc64de2bd0b5e9b68edec1eff4b60b26561c7ba726d2ebdfa38",
+  "officialSource": {
+    "tag": "v1.80.1",
+    "commit": "ba73b08b9b94b1d53fb14c8b34970e7121d4f09b",
+    "sourceUrl": "https://github.com/supabase/storage/blob/ba73b08b9b94b1d53fb14c8b34970e7121d4f09b/src/storage/backend/s3/adapter.ts",
+    "sha256": "9b7c719444fdddfc0e92884f8b3354698c4f4fb648462d31b685cbb2a33747db"
+  },
+  "files": {
+    "backend/supabase/tests/record-storage-evidence/20261009-experimental-provider-patch-bootstrap.json": {
+      "bytes": 2684,
+      "sha256": "bbf93ec37c13f028c6debaca1ad4243eed1a2094cbe249e6c817ca17e8f6a9fb"
+    },
+    "backend/supabase/tests/record_storage_http_fixture.py": {
+      "bytes": 24640,
+      "sha256": "0a2e4b3916dc7941e902bc53bbfd08b0aa70f88128c124a1c5484047568cbcc9"
+    },
+    "backend/supabase/tests/record_storage_s3_patch.cjs": {
+      "bytes": 2328,
+      "sha256": "1daf7ea456ef487383c9537d4e6408a46ec224709ce5a18f9b4837f8afc3f5f5"
+    },
+    "backend/supabase/tests/test_record_storage_s3_patch.cjs": {
+      "bytes": 6613,
+      "sha256": "9af5cfef5f92ed3dad08352f3f9f093847e2e333f52ce48f91f936b8e599b0a2"
+    },
+    "backend/supabase/tests/storage-provider-patches/v1.33.0-reject-partial-delete.patch": {
+      "bytes": 507,
+      "sha256": "4e644ab8f60106d051d409f9205a5bfbf9e5c2618ad69d336d4afff8ced967f9"
+    },
+    "backend/supabase/tests/storage-provider-patches/v1.80.1-reject-partial-delete.patch": {
+      "bytes": 684,
+      "sha256": "029c639f3ac649fa43a73c11196936981d183ff0cbc6ef4a287b99db024cdd03"
+    },
+    "apps/web/tests-unit/admin-record-actions.test.ts": {
+      "bytes": 15691,
+      "sha256": "e1157d22a77b51be6780530aad17d50a7c2622a35da1ce165df0e135bc5cba50"
+    }
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "typescript": "6.0.2",
+    "storageBaseImage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177",
+    "databaseImage": "supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+    "s3Image": "cgr.dev/chainguard/minio@sha256:0d54f6c86e53138c6cfc242e21309a18941624d9034d9cdf598dbba61f69d872",
+    "providerModified": true,
+    "officialRelease": false,
+    "patchedBundleSha256": "50ecb8f6433b17e1d8ef3d053c828e0b8f873ab0400adf94ce46452673aaad58",
+    "admissionEligible": false,
+    "canonicalReplay": false,
+    "syntheticOnly": true
+  },
+  "verification": {
+    "physicalIntegration": {
+      "before": {
+        "passed": 7,
+        "failed": 1,
+        "total": 8,
+        "receipt": "backend/supabase/tests/record-storage-evidence/20261007-tus-fix-s3-partial.json"
+      },
+      "after": {
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "receipt": "backend/supabase/tests/record-storage-evidence/20261009-experimental-provider-patch-bootstrap.json"
+      },
+      "absolutePassRateChangePercentagePoints": 12.5,
+      "confidenceInterval": null,
+      "reason": "Fixed contract cases, one deterministic injected fault; not independent population samples"
+    },
+    "methodProtocolTests": {
+      "passed": 26,
+      "failed": 0,
+      "transport": "stubbed SDK responses with actual publisher method bodies",
+      "tapSha256": "b9b7f8c9992e7e210b9043dec42b7c68fb1957ee81b36e2cccde695a15381d68"
+    },
+    "admissionTests": {
+      "passed": 16,
+      "failed": 0,
+      "assertions": 90,
+      "logSha256": "b879c1825aa03b157bb50bb4c364d979204c3825adccabb5b8adbdb39d82955b"
+    },
+    "typeParity": {
+      "status": "passed",
+      "logSha256": "8aacaa6d3161af6c181d1bd06dd8d16a7a4938a42457d3d02577221d39db5118"
+    },
+    "targetedEslint": "passed"
+  },
+  "partialFault": {
+    "before": {
+      "storageHttpStatus": 200,
+      "metadataPresent": false,
+      "physicalObjects": 1,
+      "cleanupPending": false
+    },
+    "after": {
+      "case": "partial_s3_delete_never_reports_physical_success",
+      "storageStatus": 500,
+      "metadataPresent": true,
+      "physicalObjects": 1,
+      "cleanupPending": true,
+      "injectedPartialFailures": 1
+    }
+  },
+  "priorPreparationFailures": {
+    "receipts": [
+      "backend/supabase/tests/record-storage-evidence/20261009-experimental-provider-patch.json",
+      "backend/supabase/tests/record-storage-evidence/20261009-experimental-provider-patch-diagnostic.json"
+    ],
+    "testCasesExecuted": 0,
+    "cause": "Node preload also affected child startup; changed fixture to one-time patch bootstrap",
+    "methodTestInitialFailure": "TypeScript 6 module=None deprecation; switched test compilation to CommonJS"
+  },
+  "externalOperations": {
+    "hostedWrites": 0,
+    "modelCalls": 0,
+    "billingChanges": 0,
+    "deployment": false
+  },
+  "remaining": [
+    "Official or owned hosted provider runtime with independent image/source bindings",
+    "Actual hosted Storage version and physical/backend evidence",
+    "Multiple-object partial successes are not physically rolled back; explicit recovery still required",
+    "Real user happy paths, full G014/operating compatibility, protected deployment, full-goal requirements"
+  ],
+  "rawFiles": {
+    "apps/web/performance/completion-audit-20261007/storage-patch-method-raw-20261009.tap": {
+      "bytes": 4132,
+      "sha256": "b9b7f8c9992e7e210b9043dec42b7c68fb1957ee81b36e2cccde695a15381d68"
+    },
+    "apps/web/performance/completion-audit-20261007/storage-patch-admission-raw-20261009.log": {
+      "bytes": 1912,
+      "sha256": "b879c1825aa03b157bb50bb4c364d979204c3825adccabb5b8adbdb39d82955b"
+    },
+    "apps/web/performance/completion-audit-20261007/storage-patch-typecheck-raw-20261009.log": {
+      "bytes": 510,
+      "sha256": "8aacaa6d3161af6c181d1bd06dd8d16a7a4938a42457d3d02577221d39db5118"
+    }
+  }
+}

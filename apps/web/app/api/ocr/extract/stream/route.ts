@@ -220,8 +220,10 @@ export async function POST(req: Request) {
       send('progress', { message: 'AI 모델이 영수증을 분석하기 시작했어요.', stage: 'model_start', savings });
 
       for (const candidate of effectiveCandidates) {
+        if (req.signal.aborted) return;
         const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
         for (const credential of credentials) {
+        if (req.signal.aborted) return;
         try {
           const result = await runStreamingOcrCandidate({
             candidate: { ...candidate, apiKey: credential.apiKey },

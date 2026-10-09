@@ -83,7 +83,8 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         snapshot, bindings = self._migration_admission_fixture()
         self.assertEqual(len(snapshot["ledger"]), 101)
         self.assertEqual([row["status"] for row in snapshot["ledger"] if row["replayProof"]],
-                         ["verified-existing", "verified-existing", "legacy-contract-preserved"])
+                         ["verified-existing", "verified-existing", "legacy-contract-preserved",
+                          "verified-existing"])
         self.assertTrue(all(row["replayProof"] is None for row in snapshot["ledger"] if row["status"] == "applied"))
         self.scanner._validate_database_admission(snapshot, bindings, None)
 

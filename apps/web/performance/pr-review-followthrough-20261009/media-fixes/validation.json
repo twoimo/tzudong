@@ -1,0 +1,94 @@
+{
+  "observedAtUtc": "2026-10-09T02:46:54.461317+00:00",
+  "classificationScope": "working candidate source + offline tests; not deployed or resolved GitHub threads",
+  "addressedThreadIds": [
+    "PRRT_kwDOQGRyNc6pzgnD",
+    "PRRT_kwDOQGRyNc6pz8hv",
+    "PRRT_kwDOQGRyNc6pz8hy",
+    "PRRT_kwDOQGRyNc6p2B33",
+    "PRRT_kwDOQGRyNc6qlQpu",
+    "PRRT_kwDOQGRyNc6qlQqB",
+    "PRRT_kwDOQGRyNc6qlQqH"
+  ],
+  "thumbnailExcluded": "PRRT_kwDOQGRyNc6qTx83",
+  "sourceBindings": [
+    {
+      "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+      "sha256": "5c1bca0a0b28d778fd9eefcc69f72c83c88515a33e04ba10ad305ae25ae9c11a"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+      "sha256": "66b2263047b772adffde8d204a849d2eabee013df46212a8d3d3f81a4cda44c8"
+    },
+    {
+      "path": "backend/bin/run_parallel_laaj.py",
+      "sha256": "86069a2334aaec0a63b4f666ca6e83b4701dd123eb76f2638c9b048486d49710"
+    },
+    {
+      "path": "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
+      "sha256": "b9d8337cc0b508a84592c4922ada84555268e257cfc91eef7aba28479da52206"
+    },
+    {
+      "path": "backend/pipeline_control/media_cache.py",
+      "sha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926"
+    },
+    {
+      "path": "backend/pipeline_control/worker.py",
+      "sha256": "aa43c2d3158370078b9faa950c2c939657a6dd80280a785f11bd18f3d4479c8f"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js",
+      "sha256": "711b62bcbc68eb1611cff5838e25f6696c145895158f6bd15687db65be815783"
+    },
+    {
+      "path": "backend/utils/tests/test_pipeline_restart_integration.py",
+      "sha256": "b1a09f77677b885eecb1b87d41cc526a812764366f2b36097af13aa1e045c10e"
+    },
+    {
+      "path": "backend/utils/tests/test_media_review_followthrough.py",
+      "sha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1"
+    }
+  ],
+  "sourceSetSha256": "5779f3daf7ddb19a0e903d9e3714a95b28ba476b4e2f750ca6b0691d1247778d",
+  "frozenSharedCapBindingsUnchanged": [
+    {
+      "path": "backend/utils/resource-budget.mjs",
+      "sha256": "44405bcc6c1ed4b8ea7a99cce4dbcf4b9dae556df22d3bb36cc1c76deedf08f7"
+    },
+    {
+      "path": "backend/utils/media_lease_exec.py",
+      "sha256": "21f85ed83fe458698bbe0abb9845ff2610055a1080a69b0b13a214b91b0d5bd2"
+    },
+    {
+      "path": "backend/utils/tests/resource-budget.test.mjs",
+      "sha256": "82d5aaa6e5821bee3de96cb203271ef5a62668a865fd70d4c5ba37708b7bf466"
+    },
+    {
+      "path": "backend/utils/tests/test_media_shared_lease.py",
+      "sha256": "82fa0e18ae998b1e5fcd505a5cd9caee63918b568cd25ec7d0ea50f2dfe1c724"
+    },
+    {
+      "path": "backend/utils/MEDIA_RESOURCE_BUDGET.md",
+      "sha256": "fb99c4b2eecffc34f75569442b6d362036e19195582a8b6520a59cbb0dbf3cd0"
+    }
+  ],
+  "checks": {
+    "pythonTests": 49,
+    "nodeFrameChunkTests": 32,
+    "shellSyntaxChecks": 2,
+    "diffCheck": true
+  },
+  "behavior": [
+    "shared-source frame receipt reuse with empty/absent local cache; changed source rejected",
+    "active run-owned rejected cache archived then staged atomic rename+readback; configured user cache unchanged",
+    "web model/routing and visual bytes/absence fingerprint invalidation",
+    "successful fallback health once per batch; unsuccessful health aborts remaining batch; fresh batch rechecks",
+    "Paused retains own cache; Failed/Cancelled/Succeeded purge; user/shared caches untouched",
+    "actual setup mkdir/owner-write/env-read IO failures settle Failed with fixed code/manifest"
+  ],
+  "providerCalls": 0,
+  "downloads": 0,
+  "operatingWrites": 0,
+  "commentsResolved": false,
+  "commitPush": false
+}

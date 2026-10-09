@@ -1,0 +1,92 @@
+{
+  "capturedAt": "2026-10-09",
+  "candidateHead": "8571b65b5e8079d2f238389aaf68f41740aa170e",
+  "scope": "authenticated admin dashboard source fix and local verification",
+  "previewObservation": {
+    "deployment": "https://tzudong-76i12vmwe-twoimos-projects.vercel.app/admin",
+    "successfulRoutes": [
+      "/api/admin/youtube-channel",
+      "/api/dashboard/summary",
+      "/api/admin/youtube-kpis"
+    ],
+    "failedRoutes": {
+      "500": [
+        "/api/admin/preferences/sidebar-order",
+        "/api/admin/preferences/dashboard-widget-order",
+        "/api/admin/pending-counts",
+        "/api/admin/banners",
+        "/api/admin/evaluations"
+      ],
+      "503": [
+        "/api/admin/evaluations/automation"
+      ],
+      "403": [
+        "/api/admin/profile-summaries"
+      ]
+    }
+  },
+  "diagnosis": {
+    "confirmedCommonCause": "The Preview environment metadata contains NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY but no SUPABASE_SERVICE_ROLE_KEY. The affected privileged handlers authenticate with requireAdmin and then construct the server-only service-role client, which throws before the database query when that key is absent.",
+    "supportingEvidence": [
+      "apps/web/lib/supabase/service-role.ts requires SUPABASE_SERVICE_ROLE_KEY",
+      "authenticated Preview requests reach successful session-aware/admin routes",
+      "read-only schema inspection confirmed the tables and columns required by the listed 500 routes exist",
+      "the YouTube KPI route can return 200 through its live/public fallback after a service-role snapshot failure"
+    ],
+    "separateStatuses": "The 503 automation and 403 profile-summary responses remain separate route contracts and were not masked as successes."
+  },
+  "sourceChanges": [
+    {
+      "path": "apps/web/components/admin/AdminConsoleOverview.tsx",
+      "sha256": "7eca9f9feaf3228699fb69242924a11a6c97ecda0cbe0237a19ceb864afba883",
+      "result": "Distinguishes metric failures from supporting operations failures and reports the unavailable values precisely."
+    },
+    {
+      "path": "apps/web/app/admin/banners/page.tsx",
+      "sha256": "e1135a027486da998b689f2a86dd25ea292dd6500b5491acca6158a19714d972",
+      "result": "Displays 미확인 for banner totals and target counts when the list request failed instead of presenting false zeroes."
+    },
+    {
+      "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "sha256": "9590cb4ab309e3f98b1023697a8523afbb60def2091c66b9cc5c7a99294352cd",
+      "result": "Updates only existing affected source-contract assertions; no duplicate implementation-only test was added."
+    }
+  ],
+  "reactBestPracticesReview": {
+    "hooks": "Pass: hooks remain unconditional; the effect depends on the primitive error kind, and a ref suppresses repeat toasts without adding a render.",
+    "accessibility": "Pass: existing alert/toast semantics and icon aria-hidden attributes remain intact; 미확인 communicates an unknown value rather than a numeric result.",
+    "performance": "Pass: no new requests, effects, component boundaries, large dependencies, or repeated data transforms were introduced.",
+    "typescript": "Pass: the toast ref is explicitly typed as metrics | operations | null, and parity typecheck reports zero diagnostics."
+  },
+  "verification": [
+    {
+      "command": "bun test tests-unit/admin-console-uiux-source.test.ts",
+      "result": "passed",
+      "details": "44 passed, 0 failed, 4578 expect calls"
+    },
+    {
+      "command": "node scripts/run-web-tool.mjs eslint app/admin/banners/page.tsx components/admin/AdminConsoleOverview.tsx tests-unit/admin-console-uiux-source.test.ts --max-warnings=0",
+      "result": "passed",
+      "details": "exit 0, no warnings"
+    },
+    {
+      "command": "npm run typecheck:parity",
+      "result": "passed",
+      "details": "0 diagnostics; 3128 logical inputs; non-library content SHA-256 72fea4bc82b9195673bb2555bf46d9305f513af3103d71f02bba90bb946c17df"
+    },
+    {
+      "command": "git diff --check -- apps/web/components/admin/AdminConsoleOverview.tsx apps/web/app/admin/banners/page.tsx apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "result": "passed",
+      "details": "exit 0"
+    }
+  ],
+  "boundaries": {
+    "sourceOnly": true,
+    "vercelEnvironmentWrites": 0,
+    "databaseWrites": 0,
+    "deployments": 0,
+    "commits": 0,
+    "pushes": 0,
+    "remainingHostedAction": "Configure the existing SUPABASE_SERVICE_ROLE_KEY secret for the intended Preview scope, produce a new deployment, and repeat authenticated route/UI readback."
+  }
+}

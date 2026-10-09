@@ -1,0 +1,14 @@
+--- a/src/storage/backend/s3/adapter.ts
++++ b/src/storage/backend/s3/adapter.ts
+@@ -473,6 +473,11 @@
+       const batches = await this.deleteObjectBatches(bucket, prefixes)
+       const failure = batches.find(({ result }) => result.status === 'rejected')
+       if (failure?.result.status === 'rejected') throw failure.result.reason
++      if (batches.some(({ result }) => result.status === 'fulfilled' &&
++          result.value.Errors !== undefined &&
++          (!Array.isArray(result.value.Errors) || result.value.Errors.length > 0))) {
++        throw new Error('S3_DELETE_PARTIAL_FAILURE')
++      }
+     } catch (error) {
+       throw StorageBackendError.fromError(error)
+     }

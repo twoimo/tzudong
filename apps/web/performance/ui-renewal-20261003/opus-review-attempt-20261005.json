@@ -1,0 +1,55 @@
+{
+  "kind": "independent-model-attempt",
+  "intent": {
+    "at": "2026-10-04T20:53:12.550718+00:00",
+    "requestedModel": "google-antigravity/claude-opus-5-5",
+    "requestedEffort": "high",
+    "requestSha256": "dea1feb7254f5ce498b0747873ed96a86d74db0f16eadcbd879c2faeadf27e8c",
+    "fallbackConfigured": "none",
+    "routePreviewEligible": true,
+    "accountChange": false,
+    "capacityPurchase": false
+  },
+  "result": {
+    "at": "2026-10-04T20:53:15.807178+00:00",
+    "httpStatus": 429,
+    "requestedModel": "google-antigravity/claude-opus-5-5",
+    "requestedEffort": "high",
+    "completedReview": false,
+    "retryAttempted": false,
+    "diagnosticsStored": false
+  },
+  "sourceManifest": [
+    {
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "sha256": "12402ec314acab475a0be6e0678933665f8c9a69bb519630a3b6bd966905d6cd",
+      "bytes": 39093
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-contract.ts",
+      "sha256": "78eb5c8ddb2c7c53855f9e8a4350b7be337d15e79f47e9ef82bb177d190ba260",
+      "bytes": 6542
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-service.ts",
+      "sha256": "035d3d442d8b90d9a2180590387a7de02edbf6e05d3c6ca70ba7721f0e159a25",
+      "bytes": 6584
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-client.ts",
+      "sha256": "a6622c088dfd0b3e72937fb58b5bd96ac0fb5bc12a7455b782a74bd08b52b095",
+      "bytes": 13560
+    },
+    {
+      "path": "backend/supabase/tests/admin-record-actions-independent-audit.md",
+      "sha256": "857b40fe568ca1ac3eb24bc7660b3fea4957451c2ac482ab9f3e12ab3bea9f27",
+      "bytes": 13075
+    }
+  ],
+  "route": "responses -> ir -> google-antigravity/claude-opus-5-5",
+  "routePreviewEligible": true,
+  "fallbackConfigured": "none",
+  "actualCompletedReview": false,
+  "accountOrCapacityChanges": false,
+  "limitation": "HTTP429 is unavailable review evidence; requested high and model catalog support are not an executed high-review result."
+}

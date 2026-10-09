@@ -1,0 +1,37 @@
+{
+  "schema": "record-media-storage-compatibility-v1",
+  "status": "failed",
+  "storageImage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177",
+  "databaseImage": "supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+  "s3Image": "cgr.dev/chainguard/minio@sha256:0d54f6c86e53138c6cfc242e21309a18941624d9034d9cdf598dbba61f69d872",
+  "recordSqlSha256": "97af1726a2e2b399388fcb617266378237893bbe868c25ffa19ee748b2c4833f",
+  "recordSqlUnchanged": true,
+  "harnessSha256": "7e70fd342681d34906dcf59bb77a0e8255becbb3ec05545bcf9090a5d102621c",
+  "tests": [
+    {
+      "name": "resumable_upload_started_before_claim_cannot_replace_after_claim",
+      "passed": false,
+      "code": "COMPATIBILITY_ASSERTION_FAILED"
+    },
+    {
+      "name": "confirmed_delete_prevents_recreation_of_retired_path",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "case": "resumable_upload_started_before_claim_cannot_replace_after_claim",
+      "terminationStatus": 500,
+      "oldPhotoPreserved": true,
+      "physicalObjects": 2,
+      "infoObjects": 1,
+      "incompleteUploads": 1,
+      "incompleteBytes": 0
+    }
+  ],
+  "physicalBackend": "s3",
+  "syntheticOnly": true,
+  "hostedOperations": 0,
+  "canonicalReplay": false,
+  "completeCaseSet": false
+}

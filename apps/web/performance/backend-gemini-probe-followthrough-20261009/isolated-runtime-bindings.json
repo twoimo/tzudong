@@ -1,0 +1,60 @@
+{
+  "runtime": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/backend-probe-isolated-20261009",
+  "sourceFiles": [
+    {
+      "path": "backend/bin/probe_gemini_pipeline.mjs",
+      "sha256": "7589e9dd4068855dde641dd7a771aeaebcdd46f39d6e1d87bad8bf3ac54ba592",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/utils/tests/gemini-client.test.mjs",
+      "sha256": "d37442033b861e05a0314a45acfad3e595d1a1190269a916e098b071d82308a9",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/utils/gemini-client.mjs",
+      "sha256": "d40616c78160636207e2d1e7e92a3f5daa2305492410300e1ef4a356f47d7498",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/utils/provider-budget.mjs",
+      "sha256": "f78f11fd08e63a643ed3aaaf17468542552edb14b2e95eee428bf50fc4050958",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/utils/provider_budget.py",
+      "sha256": "f4bde2eb38e4de766a1b5b7ef8fe930a4123af1e69acd6402d284c0962fd0bf0",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/utils/privacy-log.mjs",
+      "sha256": "393f853a76ac90a98027f9b5e4c57c3c0b2de3ce8a2b7772b33132aff481625f",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs",
+      "sha256": "4e145f3770fca5bfb5b58b7df321d283f98321c1ef1dd62726eabbb549a742af",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/package.json",
+      "sha256": "f15c080d1bcccd8eaf3c86dd03d9ad39bafe2992048dc1e129fd0a2e17f95201",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/package-lock.json",
+      "sha256": "2684386251df7630702635a52b1e76dc6d6b224333227734a6aa1e4e5b712dbd",
+      "isolatedCopyMatches": true
+    }
+  ],
+  "dependencyVersions": {
+    "@google/genai": "2.24.0",
+    "@google/generative-ai": "0.24.1",
+    "dotenv": "18.0.3"
+  },
+  "dotenvTarballSha256": "f168be78bf83b24be30344e6adbea8e7a0d8708eeb55ef3f968e2f83eb4f0dbd",
+  "dotenvIntegrityMatchedProjectLock": true,
+  "packagePinsChanged": false,
+  "sharedInstallationChanged": false,
+  "network": "SDK global fetch mocked; synthetic keys only; package source acquired from official npm before testing"
+}

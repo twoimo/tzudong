@@ -202,9 +202,10 @@ Puppeteer로 maestra.ai / tubetranscript.com에서 자막을 수집합니다.
 
 ### 수집 조건
 ```javascript
-// meta.recollect_id > transcript.recollect_id
-// AND (신규 OR meta.recollect_vars에 "duration_changed" 포함)
-if (!latestTranscript || recollectVars.includes("duration_changed")) {
+// Identity and non-empty, finite start/text segments must be valid before reuse.
+// A valid legacy row may omit optional producer fields.
+if (!isValidTranscriptRecord(latestTranscript, videoId, channelName)
+    || (transcriptRecollectId < metaRecollectId && recollectVars.includes("duration_changed"))) {
     toCollect.push({ videoId, recollectVars, metaRecollectId });
 }
 ```
@@ -212,6 +213,12 @@ if (!latestTranscript || recollectVars.includes("duration_changed")) {
 ### 저장되는 경우
 1. 신규 영상 (transcript 파일 없음)
 2. duration_changed (영상 길이 변경)
+3. 손상되거나 비어 있는 최신 자막 기록 (기존 retry_num >= 3 스킵 정책 유지)
+
+URL 중복은 최초 등장 순서를 보존하며 제거합니다. 같은 채널의 수집 프로세스는
+OS 파일 잠금으로 직렬화하고 잠금 획득 후 캐시를 다시 확인합니다. 공유 실패
+대장의 갱신도 별도 잠금과 atomic rename을 사용합니다. 잘린 JSONL 끝부분은
+보존한 채 줄 경계를 복구하며, 빈 공급자 응답은 성공 기록으로 저장하지 않습니다.
 
 ### 저장되지 않는 경우
 1. 이미 수집됨 (recollect_id 동일)

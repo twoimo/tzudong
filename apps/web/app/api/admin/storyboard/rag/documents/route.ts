@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -17,6 +18,8 @@ import {
   StoryboardRagWorkerError,
   embedStoryboardRagTexts,
   serializePgVector,
+  STORYBOARD_RAG_EMBEDDING_FINGERPRINT,
+  STORYBOARD_RAG_FINGERPRINT_KEY,
 } from '@/lib/admin/storyboard/rag-worker-client';
 import type { StoryboardRagDocumentsClient } from '@/lib/admin/storyboard/rag-service-role-client';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
@@ -127,10 +130,12 @@ export async function POST(request: NextRequest) {
     );
     const rows = parsed.data.documents.map((document, index) => ({
       user_id: auth.userId,
-      external_id: document.externalId,
+      // Versioned key preserves prior document/vector/edit rows instead of overwriting them.
+      external_id: `gemini-rag:${createHash('sha256').update(`${STORYBOARD_RAG_EMBEDDING_FINGERPRINT}:${document.externalId}`).digest('hex')}`,
       title: document.title,
       content: document.content,
-      metadata: document.metadata,
+      metadata: { ...document.metadata, storyboardOriginalExternalId: document.externalId,
+        [STORYBOARD_RAG_FINGERPRINT_KEY]: STORYBOARD_RAG_EMBEDDING_FINGERPRINT },
       embedding: serializePgVector(embeddings.items[index].dense),
       sparse_lexical_weights: embeddings.items[index].sparse,
     }));

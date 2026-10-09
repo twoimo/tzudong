@@ -1,0 +1,98 @@
+{
+  "observedAt": "2026-10-09T07:34:34Z",
+  "pullRequest": {
+    "number": 3150,
+    "url": "https://github.com/twoimo/tzudong/pull/3150",
+    "baseRef": "develop",
+    "headRef": "codex/pipeline-continuity-20261009",
+    "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+    "headTreeSha": "17efa56ef815a7d1a4e25694846139a91733d92c",
+    "localHeadMatchesRemoteBranch": true,
+    "remoteBranchMatchesPullRequestHead": true,
+    "mergeStateStatus": "BLOCKED",
+    "merged": false
+  },
+  "requiredChecks": {
+    "release": {
+      "name": "Release",
+      "checkRunId": 113718843872,
+      "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-09T07:32:36Z",
+      "completedAt": "2026-10-09T07:33:59Z",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/37899614610/job/113718843872"
+    },
+    "promotionPath": {
+      "name": "Promotion Path",
+      "checkRunId": 113718836408,
+      "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-09T07:32:35Z",
+      "completedAt": "2026-10-09T07:32:45Z",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/37899612271/job/113718836408"
+    }
+  },
+  "codeql": {
+    "aggregate": {
+      "checkRunId": 113719077763,
+      "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+      "status": "completed",
+      "conclusion": "neutral",
+      "startedAt": "2026-10-09T07:33:19Z",
+      "completedAt": "2026-10-09T07:33:21Z",
+      "title": "4 configurations not found",
+      "missingConfigurations": [
+        "javascript-typescript",
+        "python",
+        "rust",
+        "swift"
+      ],
+      "url": "https://github.com/twoimo/tzudong/runs/113719077763",
+      "cleanResultClaimed": false
+    },
+    "alert88": {
+      "url": "https://github.com/twoimo/tzudong/security/code-scanning/88",
+      "resolutionVerified": false,
+      "reason": "The new javascript-typescript analysis was still in progress at the snapshot time; the alert API still returned only the prior c483542c480225af6830e10d1c29365f2b010989 instance.",
+      "currentAnalysis": {
+        "workflowRunId": 37899610863,
+        "jobId": 113718836248,
+        "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+        "status": "in_progress",
+        "url": "https://github.com/twoimo/tzudong/actions/runs/37899610863/job/113718836248"
+      },
+      "remainingAlertSource": {
+        "instanceCommitSha": "c483542c480225af6830e10d1c29365f2b010989",
+        "rule": "js/redos",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "startLine": 68,
+        "endLine": 68,
+        "message": "This part of the regular expression may cause exponential backtracking on strings starting with ''' and containing many repetitions of '\\\\&'."
+      }
+    }
+  },
+  "platformCi": {
+    "workflowRunId": 37899614651,
+    "status": "in_progress",
+    "pendingJobsAtSnapshot": [
+      "Install",
+      "Ubuntu npm",
+      "Ubuntu Bun",
+      "Windows npm",
+      "Windows Bun",
+      "Admin"
+    ],
+    "followUpPlan": "Do not poll unchanged state. Read the completed run once after a later state change if further verification is requested.",
+    "resultClaimed": false
+  },
+  "limits": {
+    "previousC483ResultsInherited": false,
+    "codeqlAlertResolvedClaimed": false,
+    "platformCiSuccessClaimed": false,
+    "mergePerformed": false,
+    "manifestModified": false,
+    "databaseOperationPerformed": false
+  }
+}

@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "status": "local_component_verified",
+  "rawArtifact": "apps/web/performance/pipeline-20261002/warning-raw-groups-frontier-20261005.json",
+  "rawSha256": "524403025ada031d49f1f079174cb1f6f40af9c30c78dcdf17273b6c2163746a",
+  "pairsPerCondition": 3,
+  "scope": "synthetic owned PostgreSQL Unix-socket and bounded Node NDJSON worker; not hosted HTTP, provider, full pipeline, or database peak RSS",
+  "quantileMethod": "linear interpolation; 3 samples do not establish population tail latency",
+  "ciMethod": "exact 27 paired bootstrap resamples; percentile 2.5/97.5 intervals of the ratio of sample medians; descriptive small-sample interval only",
+  "sourceBeforeAfterMatch": true,
+  "conditions": [
+    {
+      "name": "dense",
+      "rows": 50000,
+      "targets": 200,
+      "groups": 3,
+      "oracleDigest": "ce87051cb4585caa4fafebc696f80a7af7342f5823d75024546decdc7dd92350",
+      "inputBefore": {
+        "relatedRows": "46f94e82bfacfbb68de5f7039fbf1ebb101751a7a842d507fbdb017de3247edd",
+        "targets": "8d89a27adfff09de2230c28c2baf1fb30ecdd30b112c8137d3a4e30471171e13"
+      },
+      "inputAfter": {
+        "relatedRows": "46f94e82bfacfbb68de5f7039fbf1ebb101751a7a842d507fbdb017de3247edd",
+        "targets": "8d89a27adfff09de2230c28c2baf1fb30ecdd30b112c8137d3a4e30471171e13"
+      },
+      "inputBeforeAfterMatch": true,
+      "metrics": {
+        "endToEndMs": {
+          "stream": {
+            "p50": 49282.80262509361,
+            "p75": 49380.75779157225,
+            "p95": 49459.12192475516
+          },
+          "raw": {
+            "p50": 917.5812501925975,
+            "p75": 986.4093125797808,
+            "p95": 1041.4717624895275
+          },
+          "medianAbsoluteChange": -48365.22137490101,
+          "medianRelativeChangePercent": -98.13813094767994,
+          "pairedBootstrap95Percent": [
+            -98.16748297569102,
+            -97.86729017009473
+          ],
+          "regressedPairs": 0
+        },
+        "dbReadMs": {
+          "stream": {
+            "p50": 48928.231379482895,
+            "p75": 49020.44719399419,
+            "p95": 49094.21984560322
+          },
+          "raw": {
+            "p50": 804.6469578985125,
+            "p75": 868.3949789265171,
+            "p95": 919.3933957489207
+          },
+          "medianAbsoluteChange": -48123.58442158438,
+          "medianRelativeChangePercent": -98.35545464200874,
+          "pairedBootstrap95Percent": [
+            -98.37686901788068,
+            -98.10203124234357
+          ],
+          "regressedPairs": 0
+        },
+        "nodeWorkMs": {
+          "stream": {
+            "p50": 4180.4303819999695,
+            "p75": 4348.961630999977,
+            "p95": 4483.786630199984
+          },
+          "raw": {
+            "p50": 11.153750000000102,
+            "p75": 12.034541500000046,
+            "p95": 12.739174700000001
+          },
+          "medianAbsoluteChange": -4169.276631999969,
+          "medianRelativeChangePercent": -99.73319134680425,
+          "pairedBootstrap95Percent": [
+            -99.75887602588456,
+            -99.71410396556065
+          ],
+          "regressedPairs": 0
+        },
+        "nodeCpuMs": {
+          "stream": {
+            "p50": 4044.9289999999987,
+            "p75": 4151.484499999999,
+            "p95": 4236.728899999998
+          },
+          "raw": {
+            "p50": 13.043,
+            "p75": 13.754,
+            "p95": 14.322799999999999
+          },
+          "medianAbsoluteChange": -4031.8859999999986,
+          "medianRelativeChangePercent": -99.67754687412314,
+          "pairedBootstrap95Percent": [
+            -99.68966602164977,
+            -99.66028971075895
+          ],
+          "regressedPairs": 0
+        },
+        "maxRssKiB": {
+          "stream": {
+            "p50": 244928.0,
+            "p75": 245528.0,
+            "p95": 246008.0
+          },
+          "raw": {
+            "p50": 108880.0,
+            "p75": 109008.0,
+            "p95": 109110.4
+          },
+          "medianAbsoluteChange": -136048,
+          "medianRelativeChangePercent": -55.54611967598642,
+          "pairedBootstrap95Percent": [
+            -55.76285509978548,
+            -54.926319962994775
+          ],
+          "regressedPairs": 0
+        },
+        "requests": {
+          "stream": {
+            "p50": 251.0,
+            "p75": 251.0,
+            "p95": 251.0
+          },
+          "raw": {
+            "p50": 1.0,
+            "p75": 1.0,
+            "p95": 1.0
+          },
+          "medianAbsoluteChange": -250,
+          "medianRelativeChangePercent": -99.60159362549801,
+          "pairedBootstrap95Percent": [
+            -99.60159362549801,
+            -99.60159362549801
+          ],
+          "regressedPairs": 0
+        },
+        "bytes": {
+          "stream": {
+            "p50": 27400252.0,
+            "p75": 27400252.0,
+            "p95": 27400252.0
+          },
+          "raw": {
+            "p50": 17983.0,
+            "p75": 17983.0,
+            "p95": 17983.0
+          },
+          "medianAbsoluteChange": -27382269,
+          "medianRelativeChangePercent": -99.93436921675027,
+          "pairedBootstrap95Percent": [
+            -99.93436921675027,
+            -99.93436921675027
+          ],
+          "regressedPairs": 0
+        }
+      },
+      "coreExplain": {
+        "executionMs": 388.944,
+        "tempWrittenBlocks": 7040,
+        "blockSizeBytes": 8192
+      }
+    },
+    {
+      "name": "unique",
+      "rows": 50000,
+      "targets": 200,
+      "groups": 50000,
+      "oracleDigest": "e9b748edb57b3eac045cfcccfa1957fd082e3b1e45bd8835de6eac11f58b3ff0",
+      "inputBefore": {
+        "relatedRows": "6772da23cd45164fac81319a1e2468436423c15be8385534f053e8451e8ddfe8",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "inputAfter": {
+        "relatedRows": "6772da23cd45164fac81319a1e2468436423c15be8385534f053e8451e8ddfe8",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "inputBeforeAfterMatch": true,
+      "metrics": {
+        "endToEndMs": {
+          "stream": {
+            "p50": 49766.48666593246,
+            "p75": 49949.23154148273,
+            "p95": 50095.42744192295
+          },
+          "raw": {
+            "p50": 49560.242500156164,
+            "p75": 49604.929875116795,
+            "p95": 49640.6797750853
+          },
+          "medianAbsoluteChange": -206.24416577629745,
+          "medianRelativeChangePercent": -0.41442380122340694,
+          "pairedBootstrap95Percent": [
+            -1.140457563692987,
+            5.446547911693433
+          ],
+          "regressedPairs": 1
+        },
+        "dbReadMs": {
+          "stream": {
+            "p50": 49411.67640709318,
+            "p75": 49593.56214175932,
+            "p95": 49739.07072949223
+          },
+          "raw": {
+            "p50": 49077.674623113126,
+            "p75": 49111.85281176586,
+            "p95": 49139.19536268804
+          },
+          "medianAbsoluteChange": -334.00178398005664,
+          "medianRelativeChangePercent": -0.6759571993232516,
+          "pairedBootstrap95Percent": [
+            -1.4018422396613217,
+            5.104085771486222
+          ],
+          "regressedPairs": 1
+        },
+        "nodeWorkMs": {
+          "stream": {
+            "p50": 4838.108009999953,
+            "p75": 4958.774923499983,
+            "p95": 5055.308454300006
+          },
+          "raw": {
+            "p50": 6259.458667000005,
+            "p75": 6265.716500000004,
+            "p95": 6270.722766400003
+          },
+          "medianAbsoluteChange": 1421.3506570000527,
+          "medianRelativeChangePercent": 29.378233269332622,
+          "pairedBootstrap95Percent": [
+            23.23123027818599,
+            32.776255236154924
+          ],
+          "regressedPairs": 3
+        },
+        "nodeCpuMs": {
+          "stream": {
+            "p50": 4570.3859999999995,
+            "p75": 4632.255499999999,
+            "p95": 4681.7510999999995
+          },
+          "raw": {
+            "p50": 5965.3330000000005,
+            "p75": 5980.4795,
+            "p95": 5992.5967
+          },
+          "medianAbsoluteChange": 1394.947000000001,
+          "medianRelativeChangePercent": 30.521426417812435,
+          "pairedBootstrap95Percent": [
+            27.726168348733804,
+            36.43735994943811
+          ],
+          "regressedPairs": 3
+        },
+        "maxRssKiB": {
+          "stream": {
+            "p50": 242992.0,
+            "p75": 243432.0,
+            "p95": 243784.0
+          },
+          "raw": {
+            "p50": 252848.0,
+            "p75": 253808.0,
+            "p95": 254576.0
+          },
+          "medianAbsoluteChange": 9856,
+          "medianRelativeChangePercent": 4.056100612365832,
+          "pairedBootstrap95Percent": [
+            3.641254428552676,
+            4.880779870899743
+          ],
+          "regressedPairs": 3
+        },
+        "requests": {
+          "stream": {
+            "p50": 251.0,
+            "p75": 251.0,
+            "p95": 251.0
+          },
+          "raw": {
+            "p50": 50.0,
+            "p75": 50.0,
+            "p95": 50.0
+          },
+          "medianAbsoluteChange": -201,
+          "medianRelativeChangePercent": -80.0796812749004,
+          "pairedBootstrap95Percent": [
+            -80.0796812749004,
+            -80.0796812749004
+          ],
+          "regressedPairs": 0
+        },
+        "bytes": {
+          "stream": {
+            "p50": 27339142.0,
+            "p75": 27339142.0,
+            "p95": 27339142.0
+          },
+          "raw": {
+            "p50": 28721894.0,
+            "p75": 28721894.0,
+            "p95": 28721894.0
+          },
+          "medianAbsoluteChange": 1382752,
+          "medianRelativeChangePercent": 5.05777394184499,
+          "pairedBootstrap95Percent": [
+            5.05777394184499,
+            5.05777394184499
+          ],
+          "regressedPairs": 3
+        }
+      },
+      "coreExplain": {
+        "executionMs": 429.508,
+        "tempWrittenBlocks": 10466,
+        "blockSizeBytes": 8192
+      }
+    }
+  ],
+  "checks": {
+    "postgresUniqueTests": 11,
+    "webUnitTests": 25,
+    "typecheckParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3200,
+      "nonLibraryContentSha256": "46a53135b6ffde49650344e53ea9f9c662c6b88ae2adccc9e056e17f24d16a6d"
+    },
+    "targetedEslint": "passed",
+    "unicode17NormalizationSourceVectors": 20034
+  },
+  "adoption": {
+    "default": "WARNING_RAW_GROUPS",
+    "explicitCompatibility": "ADMIN_EVALUATION_WARNING_READ_PATH=stream",
+    "legacyOptIn": "ADMIN_EVALUATION_WARNING_READ_PATH=rpc",
+    "capacityFallback": "WARNING_STREAM_RAW_CAPACITY",
+    "postMeasurementDispatchFile": "apps/web/lib/admin/evaluation-page-server.ts",
+    "postMeasurementDispatchSha256": "feaeacd9f37eac1fcd6d1189db08b23977cca43ec287e6fb3efac1535ca8a08d",
+    "change": "Only default dispatch and its comment changed after component measurement; algorithm and SQL hashes still match measured source."
+  },
+  "finalSources": {
+    "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql": "1fbe3c33d3d66be76eeb016f773fc6951130b51704963e8ce376cc87e86b46ee",
+    "apps/web/lib/admin/evaluation-warning-raw-groups.ts": "a79a1a922fad44a906ebdad24efd12e788cf300568d22b0091635af527798dc8",
+    "apps/web/lib/admin/evaluation-page-server.ts": "feaeacd9f37eac1fcd6d1189db08b23977cca43ec287e6fb3efac1535ca8a08d",
+    "apps/web/lib/admin/evaluation-warning-stream.ts": "3a5495a38e262ce93e5ce36b942465a004506a1e378e4e0ed9bc9ced28929044",
+    "apps/web/lib/admin/normalize-evaluation-record.ts": "8f4d1402e50bf1e6146c592ef5ad1c1c44a5081a1507d818615fed3de456e12d",
+    "apps/web/lib/admin-evaluation-name.ts": "2fe0559855a2a740a9d805a806abcd6a0772d373f0eaaaccc60787bee97ce121",
+    "apps/web/lib/admin-same-video-duplicate-warning.ts": "7904013149561b7fc7662cb5d05e56213147b45148e86242c82064a5529cbcb1",
+    "apps/web/lib/admin-restaurant-identity-warning.ts": "32e8283f6d1b394ea3ba3c113f05a4325ac18f4cebfef2113f1547f574e2b4ba",
+    "apps/web/lib/dashboard/helpers.ts": "cb8fe6708a4496e9ba8f4954e27b124f60326c9dc5d66017dcfeb174a0947943",
+    "backend/supabase/tests/test_admin_evaluation_raw_warning_groups.py": "7b943cba716165a26620416f3aaf4f2d2a051f646e1d8c36a20432e1218aa852",
+    "backend/bin/benchmark_evaluation_raw_warning_groups.py": "04d5a5b267602718ceea9a5a13928e47cebd92bfcfbf6f481a2e47d6f4b151a5",
+    "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql": "e9d4df6ef57bbe6c62205e97d26ef14cddfe1efc68b4fd11b3b86e7e2fc6aeb8",
+    "backend/supabase/tests/test_raw_warning_invoker_contract.py": "077fb90a56090e87f4319cfa503e7d8269b1f17934813f00214acc2f45eaab49",
+    "apps/web/tests-unit/admin-evaluation-page-server.test.ts": "525a3520bd615f5d7d48743382da5cab63941851227ddee91fe5f22d96c3659d",
+    "apps/web/tests-unit/admin-evaluation-page-api.test.ts": "67b11760f794e8b13ed95792b69857699ba91128fb47b4bbc2eef9715a9474b7",
+    "apps/web/tests-unit/admin-evaluation-raw-warning-groups.test.ts": "bc1cbb112ee024a58040320e38ab6d64a36aa5c95fb4a05d732f8db48661fbd4"
+  },
+  "cacheState": "Each Node worker is fresh; PostgreSQL/OS caches were not flushed and oracle/EXPLAIN precede measurements. Not a cold-disk benchmark."
+}

@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-09T00:39:12.799057+00:00",
+  "activeRoute": "app/s/[code]/route.ts",
+  "activeHttpContract": {
+    "invalid": 404,
+    "missing": 404,
+    "unavailable": 503,
+    "safeRedirect": 307,
+    "unsafeTargetHome": 307,
+    "C0orDELTarget": 503
+  },
+  "intermediateDirectNoticeWas200": true,
+  "browser": {
+    "expected": 14,
+    "unexpected": 0,
+    "scope": "owned controlled dev/production fixtures; actual checkout invalid/missing GETs also HTTP404"
+  },
+  "originalNotFoundScope": "Full checkout development previously had one RSC development performance.measure TypeError; minimal exact-page-code fixtures do not reproduce it in dev or production. Do not infer whole-app production failure or absence from that minimal fixture.",
+  "themeScope": "Canonical light palette and brand logo/focus; CSS-only OS dark/reduced-motion. Does not read persisted application manual theme; system Korean font fallback.",
+  "fixtureAuthoredLint": "passed",
+  "sourceUnitCasesPassed": 30,
+  "typecheckParity": "passed after generated type refresh; no final full-app build performed by helper",
+  "rootFinalBuild": "root-owned, separate receipt",
+  "cleanup": {
+    "checkedAt": "2026-10-09T00:37:14.683543+00:00",
+    "ownedListeners": {
+      "20370": false,
+      "20371": false,
+      "58864": false,
+      "58885": false
+    },
+    "ownedHarnessProcessesRemaining": 0,
+    "preexistingDevPid57309Alive": true,
+    "preexistingDev19872Listening": true,
+    "removedOnlyVerifiedOwnedGeneratedPaths": [
+      "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/.next",
+      "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/.next-dev",
+      "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/.next-production",
+      "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/node_modules"
+    ],
+    "rebuildInputsRetained": {
+      "prepare-fixture.mjs": "38b45d7c60bd276b46e051ad9cd6b27e576353bae6fcace5f2c498a19207f4ad",
+      "run-fixture.mjs": "9d2250dba78245044b73678c54a3ba7bc1134ccd9807612ab372be226a68f760",
+      "fixture/package.json": "4ee716bb7272fb85ad6d1d2cfef0f8153579b22504e832a890991d8f02775847",
+      "fixture/next.config.mjs": "f36b281f0f77242a474bef111ce753a65477e0037100e53e4577c1291b5be354",
+      "fixture/app/not-found.jsx": "ec0149eeb1840002a74aea61ce2238db5f4994443d944c1c61c9cd14ba46ec1b",
+      "fixture/app/s/[code]/route.js": "a2bb481bcee80c3b0835c8f787e70b070c0afd99f78d4813257aa813b2707a2e",
+      "fixture/app/legacy/[code]/page.js": "8f0e8d984f83d6933b09bcb60f17e3b7b30b6e7b162b76a630fd572deab2c242",
+      "fixture/app/notice/[code]/page.js": "63d57b44498afae9cc1bf3e0e48c06c5c876770fd4363cb20518738fecee0810",
+      "fixture/public/styles/share-fallback.css": "b858341ee008e743b980cec05a741f0c5dfd91037b0e43f9c799c4b0095b2a42"
+    },
+    "sharedNodeModulesTargetStillExists": true,
+    "historicalRawModified": false
+  },
+  "operatingOrRemoteWrites": false
+}

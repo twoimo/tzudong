@@ -1,0 +1,62 @@
+{
+  "source": "actual-readLocalKnowledgeGraph-current-materialization-with-synthetic-admin-session",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "initialNodes": 30,
+      "captionLabelsVisibleWithoutTitle": 9,
+      "searchBySummary": true,
+      "selected": true,
+      "firstPassDetail": true,
+      "detailDescribesUnverified": false,
+      "listCount": 30,
+      "escape": true,
+      "emptySearch": true,
+      "overflow": {
+        "document": false,
+        "body": false
+      }
+    },
+    {
+      "name": "tablet",
+      "width": 834,
+      "height": 1112,
+      "initialNodes": 30,
+      "captionLabelsVisibleWithoutTitle": 9,
+      "searchBySummary": true,
+      "selected": true,
+      "firstPassDetail": true,
+      "detailDescribesUnverified": false,
+      "listCount": 30,
+      "escape": true,
+      "emptySearch": true,
+      "overflow": {
+        "document": false,
+        "body": false
+      }
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "initialNodes": 30,
+      "captionLabelsVisibleWithoutTitle": 9,
+      "searchBySummary": true,
+      "selected": true,
+      "firstPassDetail": true,
+      "detailDescribesUnverified": false,
+      "listCount": 30,
+      "escape": true,
+      "emptySearch": true,
+      "overflow": {
+        "document": false,
+        "body": false
+      }
+    }
+  ],
+  "pageErrors": [],
+  "externalBlocked": 0,
+  "mutationsBlocked": 0
+}

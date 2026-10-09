@@ -471,8 +471,8 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
 
     def test_manifest_contains_exactly_current_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 101)
-        self.assertEqual(len(manifest["source"]["files"]), 101)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 126)
+        self.assertEqual(len(manifest["source"]["files"]), 126)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
             "backend/supabase/migrations/20261008084856_public_profile_leaderboard_read_boundary.sql",

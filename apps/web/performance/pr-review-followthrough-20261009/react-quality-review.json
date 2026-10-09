@@ -1,0 +1,48 @@
+{
+  "scope": "Read-only condensed React quality review of six current changed TSX/hook sources and affected helper/callers. Default warning changes frozen. No source modifications.",
+  "skill": "vercel:react-best-practices condensed checklist; no expanded 70-rule manual or new performance benchmark",
+  "findings": [
+    {
+      "priority": 2,
+      "file": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+      "line": 39,
+      "title": "Remove selected node from page requests when it is absent from the query key",
+      "trigger": "Select a visible node on a byte-bound graph page, then navigate its next edge page. selected was removed from queryKey but queryFn still sends node=selected.",
+      "effect": "The server duplicates selected detail into its base payload, reduces byte-bound node page membership, and rejects the previous edge cursor because its node-page hash changed. A subsequent reload may also change node membership under the same query key.",
+      "reproduction": {
+        "fixture": "Existing synthetic_graph/build_graph_shards exporter, 200 nodes/1000 edges; legal 4000-emoji summary, 512-emoji label/displayTitle, 16 evidence entries per node; limit=100/edgeLimit=1",
+        "initialNodes": 92,
+        "requestWithNodeNodes": 91,
+        "nextEdgeCursorError": "knowledge_query_invalid",
+        "artifact": "react-quality-graph-reproduction.json"
+      },
+      "suggestion": "Remove node=selected from the paginated queryFn: current detail already reads the selected node from data.nodes. Keep selection outside the page query key to retain its intended zero-fetch selection behavior.",
+      "status": "Fixed with separately authorized one-line page query change",
+      "fixEvidence": "react-quality-graph-fix.json"
+    }
+  ],
+  "checks": {
+    "authDataShape": "Knowledge graph route requireAdmin/private no-store and schema guard inspected; user/refresh exact target guards and readback matching reviewed; pipeline parser and runtime reliability gating reviewed; storyboard Zod model ownership schema/helper allowlist parity reviewed. No new concrete auth/data-shape defect found.",
+    "hooksLateResponses": "Users generation and AbortSignal checks; refresh generation plus pending object identity; storyboard controller cleanup/projectId-keyed detail and polling; record-action actor epoch cancellation all reviewed. Source tests exercise wrong/missing targets, old exact response and abort guards, late preview/apply ACK, logout and account switch.",
+    "accountSeparation": "use-record-action opaque actor hash, effect cleanup, client.setActor epoch invalidation and original actor recovery tests reviewed. No new concrete defect found. This is source/unit evidence, not live logout/account-switch UI proof.",
+    "keyboardFocusMotion": "Graph Enter/Space handlers, focus-visible stroke, Radix Sheet/Dialog semantics, refresh detail/list focus restoration, storyboard edit focus and pipeline preview focus inspected. Existing unrelated refresh spinner reduced-motion gaps were not expanded into this change review; no changed-code blocker found. No new browser focus/reduced-motion claim.",
+    "dedupIndependentAwait": "Pipeline status/manifest React Query reads and refresh parallel; refresh filtered/exact reads Promise.all; graph search debounce and selection no-fetch intent inspected. Users exact read is awaited before independent list fetch; this is a potential latency waterfall, not a measured regression or correctness blocker, so no new optimization request.",
+    "bundle": "Admin shell uses dynamic module imports; changed imports are local model catalog/auth helper/types, icons remain established lucide imports. No new large third-party/static feature import identified; no bundle-size measurement claim."
+  },
+  "existingTests": {
+    "command": "bun test tests-unit/admin-users-mutation-scope.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-record-action-client.test.ts tests-unit/admin-record-action-follow-up.test.ts tests-unit/pipeline-flow-view-model.test.ts tests-unit/storyboard-production-catalog.test.ts tests-unit/admin-knowledge-graph-shards.test.ts",
+    "runtime": "Bun 1.4.0",
+    "result": "91 pass, 0 fail, 2262 assertions",
+    "artifact": "react-quality-existing-tests.txt"
+  },
+  "sourceSha256": {
+    "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx": "ac95a69229ef6f05d1cf1c8ae499a0d789dda1b950ce493dfa7d5953443ee09f",
+    "apps/web/components/admin/AdminUsersPanel.tsx": "bdc3eab4355b2cdcb8cb91e536e436e0a0325a1198dd3f57153ae49c4b31a54f",
+    "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx": "fca88da9967813e8856e6e93cd742ed597135a170b346f71431ec9a90a96a8d4",
+    "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx": "523582aeb764484cc08675a57716ba3b706a0ffb1216d933b838c66eb0e5cc2c",
+    "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx": "15365d873b9a1814ff2572610370e2c48095ebb54381fb903aac901ebf4a01db",
+    "apps/web/lib/admin/use-record-action.tsx": "c8aa512489c4d0a6a8bcc155d2f40f5940b8019c7738e11ff4c21edfc8fd1a86"
+  },
+  "limitations": "Current local source and existing tests only. No provider, operational DB, paid capacity, comments, commits, push, source edits or app runtime/browser verification.",
+  "postReviewFixSourceSha256": "c76fb4fbceeb37241324a43bae369ce358d82e803f308089aab4a653410e8a68"
+}

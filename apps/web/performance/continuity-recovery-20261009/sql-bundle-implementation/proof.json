@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-09T16:47:13+09:00",
+  "scope": "local source compiler and isolated PostgreSQL validation only",
+  "source": {
+    "module": "apps/web/scripts/supabase-migration-bundle.mjs",
+    "tests": [
+      "apps/web/tests-unit/supabase-migration-bundle.test.ts",
+      "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts"
+    ],
+    "existing_helper_reused": "apps/web/scripts/supabase-migration-transaction.mjs",
+    "existing_helper_modified_by_this_work": false
+  },
+  "contracts": {
+    "bundle_size": 4,
+    "outer_transaction": "caller must use the existing singleTransaction=true psql executor option",
+    "output_select_count": 1,
+    "final_output": "one exact JSON object",
+    "preconnect_denials": [
+      "order",
+      "identity",
+      "source SHA-256",
+      "statement vector",
+      "statement-vector SHA-256",
+      "suffix root"
+    ],
+    "transaction_prior_denials": [
+      "fresh prior count mismatch",
+      "prefix root mismatch",
+      "any target ledger row already present"
+    ],
+    "lost_ack": "one fresh read-only reconciliation; no resend",
+    "source_assertion_select": "original vector retained; top-level SELECT rows are consumed inside a generated DO block so only the final JSON SELECT is emitted",
+    "global_final_guard": "the exact finalReadback expected object is compared in a server-side DO guard after all four ledger inserts and before the final SELECT/outer commit"
+  },
+  "actual_source_compile": [
+    {
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "statement_vector_sha256": "5038d14ce704d494889562f04d33cacae7bd7a117bf4cd2341752bd3b40f12af"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+      "statement_vector_sha256": "082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+      "statement_vector_sha256": "f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "statement_vector_sha256": "ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958"
+    }
+  ],
+  "verification": {
+    "bundle_unit": {
+      "passed": 7,
+      "failed": 0,
+      "expectations": 96,
+      "raw": "regression-test-output.txt"
+    },
+    "helper_plus_bundle_regression": {
+      "passed": 18,
+      "failed": 0,
+      "expectations": 163,
+      "raw": "regression-test-output.txt"
+    },
+    "isolated_pg17": {
+      "version": "17.11",
+      "passed": 1,
+      "failed": 0,
+      "expectations": 31,
+      "partial_ledger_cases": 1,
+      "failure_stages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "success_target_ledger_rows": 4,
+      "raw": "pg17-test-output.txt",
+      "global_terminal_mismatch_cases": 1,
+      "prefix_root_source": "computed from the three preserved ledger rows",
+      "suffix_root_gate": "returned only when all four ledger version/name/statements rows match exactly",
+      "source_assertion_selects_per_success_bundle": 4
+    },
+    "targeted_eslint_exit": 0,
+    "source_whitespace_check_exit": 0
+  },
+  "official_sources": [
+    "https://supabase.com/docs/guides/deployment/database-migrations",
+    "https://supabase.com/docs/reference/cli/global-flags",
+    "https://www.postgresql.org/docs/17/explicit-locking.html",
+    "https://www.postgresql.org/docs/17/runtime-config-client.html"
+  ],
+  "excluded": [
+    "production database connection or write",
+    "environment or GitHub variable mutation",
+    "release manifest registration or approval pin mutation",
+    "workflow or CLI transport changes",
+    "protected branch promotion"
+  ],
+  "actual_source_compile_note": "The actual-source fixture proves identity/hash/vector compilation only. Its root literals are not used as preserved-data evidence; runtime roots are proved by the isolated PG17 query."
+}

@@ -1,0 +1,164 @@
+{
+  "kind": "pipeline-console-synthetic-browser",
+  "browserSession": "tzudong-pipeline-density-astra",
+  "observedAt": "2026-10-04T12:06:06.364Z",
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0",
+  "sourceStart": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "79884d8dd038bb196b088324e7095cffd60e6965a74b6b03cfc7b30f2b6b98fb"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "4d95e99c62bee331c9984d83be79982129bdab978fdd208fb1af210666d9798e"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "d2892622ab059d24cf12208ebc741b565ea77f227f62e1fa84cea9cc72cf577c"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "4ffbfe3e0ea1479c7639bf33cf271824088b9345e35295c98ac1db02f972694a"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "79884d8dd038bb196b088324e7095cffd60e6965a74b6b03cfc7b30f2b6b98fb"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "4d95e99c62bee331c9984d83be79982129bdab978fdd208fb1af210666d9798e"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "d2892622ab059d24cf12208ebc741b565ea77f227f62e1fa84cea9cc72cf577c"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "4ffbfe3e0ea1479c7639bf33cf271824088b9345e35295c98ac1db02f972694a"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceStable": true,
+  "cases": [
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "density": {
+        "panelHeight": 1314,
+        "panelWidth": 370,
+        "diagramHeight": 405,
+        "executionOffset": 1004,
+        "visibleTextCharacters": 757,
+        "explanationBlocks": 3,
+        "explanationCharacters": 146,
+        "visibleImplementationTerms": 7
+      },
+      "invisibleLabels": 0,
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "width": 834,
+      "colorScheme": "light",
+      "density": {
+        "panelHeight": 1248,
+        "panelWidth": 602,
+        "diagramHeight": 405,
+        "executionOffset": 980,
+        "visibleTextCharacters": 757,
+        "explanationBlocks": 3,
+        "explanationCharacters": 146,
+        "visibleImplementationTerms": 7
+      },
+      "invisibleLabels": 0,
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    },
+    {
+      "width": 1423,
+      "colorScheme": "light",
+      "density": {
+        "panelHeight": 1017,
+        "panelWidth": 1191,
+        "diagramHeight": 267,
+        "executionOffset": 749,
+        "visibleTextCharacters": 757,
+        "explanationBlocks": 3,
+        "explanationCharacters": 146,
+        "visibleImplementationTerms": 7
+      },
+      "invisibleLabels": 0,
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    }
+  ],
+  "mutationChecks": [],
+  "safety": {
+    "serverBoundPosts": 0,
+    "fixturePostsFulfilled": 0,
+    "otherPostsDenied": 0,
+    "externalDenied": 0,
+    "realProviderCalls": 0
+  },
+  "errors": {
+    "pageErrors": 0,
+    "consoleErrors": 3,
+    "consoleKinds": {
+      "synthetic-realtime-handshake": 3
+    },
+    "expectedHttpFailures": false
+  },
+  "limitations": [
+    "All pipeline and manifest bodies are synthetic browser fixtures.",
+    "No real API preview ticket, worker execution, provider output, DB write, deployment or production availability was tested."
+  ]
+}

@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-record-successor-admission-custody-amendment",
+  "status": "passed-held",
+  "observedAt": "2026-10-09T12:13:23.923968Z",
+  "contract": {
+    "canonicalJsonBytesRequired": true,
+    "exactByteSha256Required": true,
+    "commonBindings": [
+      "id",
+      "projectRef",
+      "purpose",
+      "manifestSha256",
+      "sourceRevision",
+      "observedAt",
+      "expiresAt"
+    ],
+    "sourceBindings": [
+      "sourceRoot"
+    ],
+    "protectedMainBindings": [
+      "remote",
+      "repositoryUrl",
+      "ref",
+      "revision"
+    ],
+    "rehearsalBindings": [
+      "passed",
+      "serverVersionNum",
+      "sourceRoot",
+      "suffixRoot",
+      "stageStatesSha256"
+    ],
+    "rollbackBindings": [
+      "deploymentSha",
+      "deploymentUrl",
+      "state"
+    ],
+    "writerFenceBindings": [
+      "fence",
+      "state"
+    ],
+    "extraOrMissingFieldsRejected": true,
+    "cleanDetachedCheckoutRequired": true,
+    "freshProtectedMainReadbackRequired": true,
+    "protectedReadbackBeforeJournalAndDatabaseTransport": true,
+    "fiveStagePrivateReceiptCount": 11,
+    "forwardPrivateReceiptCount": 1,
+    "forwardOperatingBindings": [
+      "id",
+      "projectRef",
+      "purpose",
+      "manifestSha256",
+      "sourceRevision",
+      "observedAt",
+      "expiresAt",
+      "priorState"
+    ]
+  },
+  "receiptFiles": [
+    "source-receipt.json",
+    "protected-main-receipt.json",
+    "rehearsal-receipt.json",
+    "rollback-readback-receipt.json",
+    "writer-fence-adminRecordMutationsHold.json",
+    "writer-fence-g037WriteFreeze.json",
+    "writer-fence-automaticReviewer.json",
+    "writer-fence-browserRpc.json",
+    "writer-fence-directSql.json",
+    "writer-fence-dashboard.json",
+    "writer-fence-providerIngress.json",
+    "operating-readback-receipt.json"
+  ],
+  "sources": {
+    "m5Migration": {
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 13185,
+      "sha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da"
+    },
+    "fiveStageManifest": {
+      "path": ".github/admin-record-sql-successor.v1.json",
+      "sha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26",
+      "sourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3"
+    },
+    "fiveStageController": {
+      "path": "apps/web/scripts/admin-record-sql-successor.mjs",
+      "sha256": "fae1ccd492c1fb9a7ed7165c6f120915cc1cb87c48f5cf24a45cb224ea7b726b"
+    },
+    "fiveStageTests": {
+      "path": "apps/web/tests-unit/admin-record-sql-successor.test.ts",
+      "sha256": "7eae905fc6cf93bd00df860df15eecea9ed82aa2b1b2fa1115ad9372049e42bf"
+    },
+    "forwardManifest": {
+      "path": ".github/admin-user-rpc-forward-successor.v1.json",
+      "sha256": "12cb67ed7e30acc7238370f0ad054bbef3d235b85982545e2ba028a7570d3f99"
+    },
+    "forwardController": {
+      "path": "apps/web/scripts/admin-user-rpc-forward-successor.mjs",
+      "sha256": "1011d52377453bf4aec84e6812550053f79cfe7d295e230ff3952359247b4821"
+    },
+    "forwardTests": {
+      "path": "apps/web/tests-unit/admin-user-rpc-forward-successor.test.ts",
+      "sha256": "bfefe995bd9d33dc2f80a84b8402f87263dce86802ba3074030bccdce602f8ee"
+    },
+    "forwardMigration": {
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "bytes": 40392,
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae"
+    },
+    "forwardReplayVerifier": {
+      "path": "backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py",
+      "sha256": "edf65e557363d16f7c3fcf1359fe880999e275924fcf57d46abd2edb956d9c53"
+    },
+    "localReplayContract": {
+      "path": "backend/supabase/scripts/local_replay_contract.py",
+      "sha256": "e6e44d085ac93232121ca0b5bad44270ac591c9a802cbd93b829601a572779cf"
+    }
+  },
+  "verification": {
+    "bun": {
+      "status": "passed",
+      "count": 23,
+      "assertions": 216,
+      "files": 2
+    },
+    "eslint": {
+      "status": "passed",
+      "files": 4
+    },
+    "fakePrivateReceiptFiles": {
+      "validSetAccepted": true,
+      "tamperedBytesRejected": true,
+      "wrongProjectWithRecomputedHashRejected": true,
+      "changedStageStateRejected": true,
+      "wrongFenceStateWithRecomputedHashRejected": true,
+      "wrongSourceWithRecomputedHashRejected": true,
+      "wrongRollbackStateWithRecomputedHashRejected": true
+    },
+    "disposableGitRemote": {
+      "actualRemoteRefRead": true,
+      "localOnlyCommitNotTrusted": true,
+      "attachedObserved": true,
+      "detachedCleanObserved": true,
+      "detachedDirtyObserved": true
+    },
+    "actualProtectedMainReadOnlyObservation": {
+      "remote": "origin",
+      "ref": "refs/heads/main",
+      "revision": "f31904e6dca2d9b608259cf150c5d0894db0928e"
+    },
+    "actualOperatingReceiptsValidated": false,
+    "actualOperatingLaunchAttempted": false,
+    "forwardOperatingReceipt": {
+      "validCanonicalBytesAccepted": true,
+      "missingOrTamperedBytesRejected": true,
+      "wrongProjectWithRecomputedHashRejected": true,
+      "wrongSourceWithRecomputedHashRejected": true,
+      "wrongPriorStateWithRecomputedHashRejected": true,
+      "liveReadonlyPreflightPreserved": true
+    },
+    "pythonTargeted": {
+      "status": "passed",
+      "count": 20,
+      "files": [
+        "backend/supabase/tests/test_local_replay_contract.py",
+        "backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py"
+      ]
+    },
+    "broaderLocalPublicationAudit": {
+      "status": "failed-existing-closure-drift",
+      "count": 81,
+      "failures": 2,
+      "errors": 37,
+      "causes": [
+        "receipt_ledger_state",
+        "expected migrationCount 126 observed 129",
+        "expected frozen candidates 48 observed 107"
+      ],
+      "sourceFixApplied": false
+    },
+    "broadAuditBaselineComparison": {
+      "modules": [
+        "backend.supabase.tests.test_local_replay_contract",
+        "backend.supabase.tests.test_local_publication_verifier",
+        "backend.supabase.tests.test_local_function_runtime_contract"
+      ],
+      "originalBroadRun": {
+        "count": 81,
+        "failures": 2,
+        "errors": 37
+      },
+      "representativeCases": [
+        {
+          "name": "backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_publication_uses_the_current_126_unit_manifest",
+          "candidate": "129 != 126",
+          "head4908": "129 != 126"
+        },
+        {
+          "name": "backend.supabase.tests.test_local_function_runtime_contract.LocalFunctionRuntimeContractTests.test_frozen_source_closure_candidate_receipt_is_exact",
+          "candidate": "107 != 48",
+          "head4908": "107 != 48"
+        },
+        {
+          "name": "backend.supabase.tests.test_local_publication_verifier.LocalPublicationVerifierTests.test_accepts_only_the_exact_healthy_sanitized_bundle",
+          "candidate": "receipt_ledger_state",
+          "head4908": "receipt_ledger_state"
+        }
+      ],
+      "candidate": {
+        "count": 3,
+        "failures": 2,
+        "errors": 1,
+        "log": "broad-audit-representative-current.log",
+        "logSha256": "c0e1933890fca80039477c9336508bd81f38d3826fbb223f5b5e946e35973068"
+      },
+      "baseline": {
+        "revision": "4908c5c4a3db30c1d86965c1ac144471f8872858",
+        "clean": true,
+        "detached": true,
+        "count": 3,
+        "failures": 2,
+        "errors": 1,
+        "log": "broad-audit-representative-head4908.log",
+        "logSha256": "b30fd71d30998dd68935eb364cd48d25edf8f8b2d5623f0c95c6b0f23386c931"
+      },
+      "classification": "pre-existing-frozen-closure-drift",
+      "frozenGateChanged": false
+    }
+  },
+  "launch": {
+    "state": "held",
+    "readyNow": false,
+    "reason": "tracked policy remains held; candidate checkout was attached and dirty and no fresh operating receipt set exists"
+  },
+  "frozenRuntimeProofs": {
+    "fivePlusForwardProofSha256": "f585710ef57899e7de5dbaebd1c5117104a74a7e331bd24bdfd289939f701881",
+    "fivePlusForwardArtifactMapSha256": "44683b4fdfedc2ef5406cfe2f28bd630022db014d8fe0a6ec844b1f25fb2a67a",
+    "forwardReachabilityProofSha256": "794258e59ea112727a4f90d47abbdf6d05ebc1ea29caa4bb36fe3f277fa2771a",
+    "forwardReachabilityArtifactMapSha256": "76e9dcafb5471e6846d245a29cb57faad141a5f89be9e6258af5df4863b186d8"
+  },
+  "scope": {
+    "hostedDatabaseReads": false,
+    "hostedDatabaseWrites": false,
+    "providerCalls": false,
+    "gitRemoteRead": true,
+    "gitPush": false,
+    "projectCommit": false,
+    "launchChangedToReady": false,
+    "environmentMutated": false,
+    "localPostgreSqlRuntimeBoundFromSeparateEvidence": true
+  },
+  "m5Vector": {
+    "parser": "g037-supabase-statement-vector-v1",
+    "upstreamVersion": "v2.109.1",
+    "upstreamCommit": "6d4c19870ed213ba7f682f117d0345c8a40bfa94",
+    "sourceBytes": 13185,
+    "sourceSha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da",
+    "statementCount": 13,
+    "statementVectorSha256": "c7b5ae6c7c64b00a31658bbf42165dd9e25ac41f794a1149c62d47f39cf33f4d",
+    "rawReceiptSha256": "1c4572f2af24040418543078b0a206e178cde7fb6b7937b889f3b8f4a7803dec",
+    "fiveStageSourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3"
+  },
+  "runtimeBoundary": {
+    "finalM5AndForwardPostgreSqlRuntimeVerified": true,
+    "serverVersion": "17.6",
+    "serverVersionNum": 170006,
+    "syntheticOnly": true,
+    "replayPassed": true,
+    "rollbackPassed": true,
+    "cleanupPagination26JobsPassed": true,
+    "operatingWrites": false,
+    "hostedWrites": false,
+    "proofPath": "apps/web/performance/continuity-recovery-20261009/five-plus-admin-user-rpc-forward-m5-pagination-amendment-20261009/proof.json",
+    "proofSha256": "0c8e2cb0530ac09910bdcec0cd1e0b923dcc130800d5879ea8134aa1d45197b7",
+    "artifactMapPath": "apps/web/performance/continuity-recovery-20261009/five-plus-admin-user-rpc-forward-m5-pagination-amendment-20261009/artifact-map.json",
+    "artifactMapSha256": "80c3712876f25d84ee6839ffb14aa9f271cb48080397dfa0a0448936c3c43e9c",
+    "frozenPriorRuntimeProofsModified": false
+  },
+  "forwardVector": {
+    "parser": "g037-supabase-statement-vector-v1",
+    "upstreamVersion": "v2.109.1",
+    "upstreamCommit": "6d4c19870ed213ba7f682f117d0345c8a40bfa94",
+    "sourceBytes": 40392,
+    "sourceSha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae",
+    "statementCount": 2,
+    "statementVectorSha256": "b8eb5902bb5996cffa5cca2f564c1c1c29593dd0a345f2ffbcaca2f86e3f7a3a",
+    "rawReceiptSha256": "bfb2d653bb6d4a93564b45e5702c038280473f564f2c1b5704fefa8d3287c5ee",
+    "forwardManifestSha256": "12cb67ed7e30acc7238370f0ad054bbef3d235b85982545e2ba028a7570d3f99"
+  }
+}

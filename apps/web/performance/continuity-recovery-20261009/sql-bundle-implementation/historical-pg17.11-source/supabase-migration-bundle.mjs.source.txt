@@ -1,0 +1,308 @@
+/** Pure four-migration bundle compilation and lost-ACK reconciliation. */
+import { createHash } from 'node:crypto';
+
+import {
+  atomicMigrationSql,
+  migrationEnvelope,
+  statementSpans,
+} from './supabase-migration-transaction.mjs';
+
+const BUNDLE_SIZE = 4;
+const HEX_SHA256 = /^[0-9a-f]{64}$/;
+const MIGRATION_ID = /^[a-z0-9_]{1,80}$/;
+
+const operationError = (code, cause) => {
+  const error = new Error(code, cause ? { cause } : undefined);
+  error.code = code;
+  return error;
+};
+const fail = (code, cause) => { throw operationError(code, cause); };
+const sha256 = value => createHash('sha256').update(value).digest('hex');
+
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
+  }
+  return value;
+}
+
+function equal(left, right) {
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
+
+function exactKeys(value, keys, code = 'MIGRATION_BUNDLE_INVALID') {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(code);
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) fail(code);
+}
+
+function readbackBinding(contract, expected) {
+  exactKeys(contract, ['query', 'expected']);
+  exactKeys(contract.expected?.bundle, [
+    'ledgerCount',
+    'prefixRoot',
+    'priorCount',
+    'suffixRoot',
+    'targetCount',
+  ]);
+  const binding = contract.expected.bundle;
+  if (binding.ledgerCount !== expected.ledgerCount
+    || binding.priorCount !== expected.priorCount
+    || binding.prefixRoot !== expected.prefixRoot
+    || binding.targetCount !== expected.targetCount
+    || binding.suffixRoot !== expected.suffixRoot) {
+    fail('MIGRATION_BUNDLE_READBACK_BINDING_MISMATCH');
+  }
+}
+
+function validatedReadbackParts(contract) {
+  // Use the existing compiler as the sole read-query admission authority. The
+  // generated validator SQL is discarded and cannot reach a database.
+  const plan = {
+    execution: '',
+    originalVector: ['SELECT 1'],
+    version: '99999999999999',
+    name: 'bundle_readback_validator',
+  };
+  const migration = { expectedPriorState: contract, terminalReadback: contract };
+  const sql = atomicMigrationSql(plan, migration);
+  const spans = statementSpans(sql);
+  const read = spans.at(-1);
+  if (!read || !/^SELECT\b/i.test(read.token)) fail('MIGRATION_BUNDLE_READBACK_INVALID');
+  const guards = spans.filter(span => span.token.includes('MIGRATION_TERMINAL_READBACK_FAILED'));
+  if (guards.length !== 1) fail('MIGRATION_BUNDLE_READBACK_INVALID');
+  return { query: read.token, guard: `${guards[0].token};` };
+}
+
+function stripRawTerminalReadback(sql) {
+  const spans = statementSpans(sql);
+  const read = spans.at(-1);
+  if (!read || !/^SELECT\b/i.test(read.token)) fail('MIGRATION_BUNDLE_STAGE_INVALID');
+  return sql.slice(0, read.start).trimEnd();
+}
+
+function leadingSql(token) {
+  let value = token.trim();
+  for (;;) {
+    if (value.startsWith('--')) {
+      const end = value.indexOf('\n');
+      value = end < 0 ? '' : value.slice(end + 1).trim();
+    } else if (value.startsWith('/*')) {
+      let depth = 1;
+      let index = 2;
+      while (depth && index < value.length) {
+        if (value.startsWith('/*', index)) { depth += 1; index += 2; }
+        else if (value.startsWith('*/', index)) { depth -= 1; index += 2; }
+        else index += 1;
+      }
+      if (depth) fail('MIGRATION_SQL_UNTERMINATED');
+      value = value.slice(index).trim();
+    } else {
+      return value;
+    }
+  }
+}
+
+function suppressAssertionSelectOutput(execution) {
+  const spans = statementSpans(execution);
+  let cursor = 0;
+  let compiled = '';
+  for (const span of spans) {
+    if (!/^SELECT\b/i.test(leadingSql(span.token))) continue;
+    const tag = `$bundle_assert_${sha256(span.token).slice(0, 20)}$`;
+    if (span.token.includes(tag)) fail('MIGRATION_SQL_DELIMITER_COLLISION');
+    compiled += execution.slice(cursor, span.start);
+    compiled += `DO ${tag}\nDECLARE assertion_row record;\nBEGIN\n FOR assertion_row IN\n${span.token}\n LOOP\n  NULL;\n END LOOP;\nEND;\n${tag};`;
+    cursor = span.end;
+  }
+  if (!cursor) return execution;
+  return compiled + execution.slice(cursor);
+}
+
+export function migrationBundleSuffixRoot(migrations) {
+  if (!Array.isArray(migrations) || migrations.length !== BUNDLE_SIZE) {
+    fail('MIGRATION_BUNDLE_SIZE_INVALID');
+  }
+  return sha256(JSON.stringify(migrations.map(migration => ({
+    id: migration.id,
+    path: migration.path,
+    sha256: migration.sha256,
+    statementVectorSha256: migration.statementVectorSha256,
+  }))));
+}
+
+function validateBundle(bundle, materials) {
+  exactKeys(bundle, [
+    'finalReadback',
+    'id',
+    'migrations',
+    'prefixRoot',
+    'priorCount',
+    'priorReadback',
+    'schemaVersion',
+    'suffixRoot',
+  ]);
+  if (bundle.schemaVersion !== 1
+    || !MIGRATION_ID.test(bundle.id)
+    || !Number.isSafeInteger(bundle.priorCount)
+    || bundle.priorCount < 0
+    || !HEX_SHA256.test(bundle.prefixRoot)
+    || !HEX_SHA256.test(bundle.suffixRoot)
+    || !Array.isArray(bundle.migrations)
+    || bundle.migrations.length !== BUNDLE_SIZE
+    || !Array.isArray(materials)
+    || materials.length !== BUNDLE_SIZE) {
+    fail('MIGRATION_BUNDLE_INVALID');
+  }
+
+  const ids = new Set();
+  const paths = new Set();
+  let previousVersion = '';
+  for (let index = 0; index < bundle.migrations.length; index += 1) {
+    const migration = bundle.migrations[index];
+    exactKeys(migration, [
+      'expectedPriorState',
+      'id',
+      'path',
+      'sha256',
+      'statementVectorSha256',
+      'terminalReadback',
+    ]);
+    const match = /^backend\/supabase\/migrations\/(\d{14})_[a-z0-9_]+\.sql$/.exec(migration.path);
+    if (!MIGRATION_ID.test(migration.id)
+      || !match
+      || !HEX_SHA256.test(migration.sha256)
+      || !HEX_SHA256.test(migration.statementVectorSha256)
+      || ids.has(migration.id)
+      || paths.has(migration.path)
+      || (previousVersion && match[1] <= previousVersion)) {
+      fail('MIGRATION_BUNDLE_ORDER_OR_IDENTITY_INVALID');
+    }
+    if (!materials[index]
+      || !Buffer.isBuffer(materials[index].bytes)
+      || !Array.isArray(materials[index].originalVector)
+      || materials[index].path !== migration.path) {
+      fail('MIGRATION_BUNDLE_MATERIAL_INVALID');
+    }
+    ids.add(migration.id);
+    paths.add(migration.path);
+    previousVersion = match[1];
+  }
+
+  if (migrationBundleSuffixRoot(bundle.migrations) !== bundle.suffixRoot) {
+    fail('MIGRATION_BUNDLE_SUFFIX_ROOT_MISMATCH');
+  }
+  if (!equal(bundle.priorReadback, bundle.migrations[0].expectedPriorState)
+    || bundle.priorReadback.query !== bundle.finalReadback.query) {
+    fail('MIGRATION_BUNDLE_READBACK_IDENTITY_MISMATCH');
+  }
+  readbackBinding(bundle.priorReadback, {
+    ledgerCount: bundle.priorCount,
+    priorCount: bundle.priorCount,
+    prefixRoot: bundle.prefixRoot,
+    targetCount: 0,
+    suffixRoot: null,
+  });
+  readbackBinding(bundle.finalReadback, {
+    ledgerCount: bundle.priorCount + BUNDLE_SIZE,
+    priorCount: bundle.priorCount,
+    prefixRoot: bundle.prefixRoot,
+    targetCount: BUNDLE_SIZE,
+    suffixRoot: bundle.suffixRoot,
+  });
+}
+
+export function compileMigrationBundle(bundle, materials) {
+  validateBundle(bundle, materials);
+  const plans = bundle.migrations.map((migration, index) => {
+    const material = materials[index];
+    const plan = migrationEnvelope(material.bytes, migration, material.originalVector);
+    if (plan.vectorSha256 !== migration.statementVectorSha256) {
+      fail('MIGRATION_BUNDLE_VECTOR_DIGEST_MISMATCH');
+    }
+    return { ...plan, execution: suppressAssertionSelectOutput(plan.execution) };
+  });
+
+  const stages = plans.map((plan, index) => stripRawTerminalReadback(
+    atomicMigrationSql(plan, bundle.migrations[index]),
+  ));
+  const finalReadback = validatedReadbackParts(bundle.finalReadback);
+  const sql = `${stages.join('\n')}\n${finalReadback.guard}\n${finalReadback.query};\n`;
+  const topLevel = statementSpans(sql);
+  if (topLevel.filter(span => /^SELECT\b/i.test(span.token)).length !== 1
+    || !/^SELECT\b/i.test(topLevel.at(-1)?.token ?? '')
+    || topLevel.some(span => /^(?:BEGIN|COMMIT|END|ROLLBACK|ABORT|START\s+TRANSACTION)\b/i.test(span.token))) {
+    fail('MIGRATION_BUNDLE_TRANSACTION_SHAPE_INVALID');
+  }
+
+  return Object.freeze({
+    id: bundle.id,
+    plans: Object.freeze(plans),
+    priorReadback: bundle.priorReadback,
+    finalReadback: bundle.finalReadback,
+    prefixRoot: bundle.prefixRoot,
+    suffixRoot: bundle.suffixRoot,
+    priorCount: bundle.priorCount,
+    sql,
+    transactionMode: 'single-outer-transaction',
+  });
+}
+
+export function bundleReconciliationSql(compiled) {
+  const { query } = validatedReadbackParts(compiled.finalReadback);
+  return `SET TRANSACTION READ ONLY; SET LOCAL statement_timeout='15s';\n${query};\n`;
+}
+
+export function bundleReconciliationOutcome(value, compiled) {
+  try {
+    if (equal(value, compiled.finalReadback.expected)) return 'committed';
+    if (equal(value, compiled.priorReadback.expected)) return 'not_applied';
+    return 'partial_conflict';
+  } catch {
+    return 'unknown';
+  }
+}
+
+function parseSingleJson(output) {
+  if (typeof output !== 'string' || !output.trim()) fail('MIGRATION_BUNDLE_READBACK_INVALID');
+  let value;
+  try { value = JSON.parse(output.trim()); } catch (cause) { fail('MIGRATION_BUNDLE_READBACK_INVALID', cause); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('MIGRATION_BUNDLE_READBACK_INVALID');
+  return value;
+}
+
+/**
+ * Transport-free executor adapter. runPsqlImpl has the existing reviewed
+ * (databaseUrl, sql, singleTransaction) signature; this module never reads
+ * credentials or creates a transport.
+ */
+export function executeMigrationBundle(databaseUrl, compiled, { runPsqlImpl } = {}) {
+  if (typeof databaseUrl !== 'string' || !databaseUrl || typeof runPsqlImpl !== 'function') {
+    fail('MIGRATION_BUNDLE_EXECUTOR_REQUIRED');
+  }
+  let applyError;
+  try {
+    const observed = parseSingleJson(runPsqlImpl(databaseUrl, compiled.sql, true));
+    if (!equal(observed, compiled.finalReadback.expected)) {
+      fail('MIGRATION_BUNDLE_TERMINAL_READBACK_FAILED');
+    }
+    return observed;
+  } catch (error) {
+    applyError = error;
+  }
+
+  let outcome = 'unknown';
+  try {
+    const observed = parseSingleJson(runPsqlImpl(databaseUrl, bundleReconciliationSql(compiled), true));
+    outcome = bundleReconciliationOutcome(observed, compiled);
+    if (outcome === 'committed') return compiled.finalReadback.expected;
+  } catch {
+    outcome = 'unknown';
+  }
+  if (outcome === 'not_applied') throw applyError;
+  fail(outcome === 'partial_conflict'
+    ? 'MIGRATION_BUNDLE_RECONCILIATION_CONFLICT'
+    : 'MIGRATION_BUNDLE_RECONCILIATION_UNKNOWN', applyError);
+}

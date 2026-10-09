@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-09",
+  "repositoryHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "referenceCount": 12,
+  "publicHomeAccess": 12,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "acceptedScreenshots": 20,
+  "retainedRejectedScreenshots": [
+    "screenshots/06-records-table.png",
+    "screenshots/06-diff-table.png"
+  ],
+  "referencesRemainingTabs": 0,
+  "ownedServerStarted": false,
+  "preservedDevPid": 57309,
+  "preservedDevPort": 19872,
+  "implementationHashMismatches": [],
+  "productSourceEdited": false,
+  "authenticatedOrPaidCoverage": false,
+  "fullResponsiveOrAccessibilityCoverage": false
+}

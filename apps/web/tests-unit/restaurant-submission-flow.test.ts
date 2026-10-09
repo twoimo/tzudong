@@ -242,9 +242,12 @@ describe('restaurant submission privacy boundaries', () => {
         expect(draftSource.indexOf('assertPrivacySafe(draft)')).toBeLessThan(
             draftSource.indexOf('transaction.store.put(normalizedDraft)'),
         );
-        expect(adminSource.indexOf("assertPrivacySafe(restaurantData, { locationClass: 'business' })")).toBeLessThan(
-            adminSource.indexOf('approve_submission_item'),
-        );
+        expect(adminSource).not.toContain('callSubmissionApprovalRpc');
+        expect(adminSource).toContain('recordActions.run(submissionApprovalInput(input))');
+        const recordService = source('lib/admin/record-action-service.ts');
+        const guardedAction = recordService.slice(recordService.indexOf('export async function runRecordAction'));
+        expect(guardedAction.indexOf('checkPayloadPrivacy(request.payload)')).toBeGreaterThan(-1);
+        expect(guardedAction.indexOf('checkPayloadPrivacy(request.payload)')).toBeLessThan(guardedAction.indexOf('await rpc('));
 
         for (const sourceText of [submitSource, deleteSource, draftSource, adminSource]) {
             expect(sourceText).not.toContain('console.');

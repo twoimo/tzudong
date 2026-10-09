@@ -1,0 +1,31 @@
+{
+  "kind": "hosted-g014-service-invoker-contract-readback",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "migration": {
+    "version": "20261003113923",
+    "name": "g014_service_invoker_contract",
+    "sha256": "527286d204fc8a5b07891763535fcb27ce6e28a0e2489c27796a63bc306b6f9c"
+  },
+  "expected": 21,
+  "matched": 21,
+  "aclDigest": "a6dbba506ec2d53001dffa6dc342abee",
+  "aclChangeCount": 0,
+  "assertionMetadataChanged": false,
+  "contractBodies": [
+    {
+      "name": "assert_g014_definer_contract",
+      "sha256": "065ace73391eac29c07ef05e3ca7ddd4e6caf41612b1f5898e19f8bea641b7a7",
+      "metadataHash": "c52ee3f1bc08afaebdd1d508e60e2483"
+    },
+    {
+      "name": "assert_g014_catalog_contract",
+      "sha256": "c7b4beb25cbdbad1c851e3fa2b33280e623bed55cbe21b52d75bb743114f6bd6",
+      "metadataHash": "432401c021654324e550ed496de97012"
+    }
+  ],
+  "scope": "21 enumerated service-only invokers; existing security modes, ownership and execute ACLs preserved",
+  "securityAdvisorCountBefore": 6,
+  "securityAdvisorCountAfter": 6,
+  "securityAdvisorCodesUnchanged": true,
+  "fullHostedG014Certification": false
+}

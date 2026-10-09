@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export const myPageListCardClass =
-  "overflow-hidden border-border/80 bg-card/95 shadow-sm transition-colors hover:bg-secondary/20";
+  "overflow-hidden border-border bg-card transition-colors hover:border-input";
 export const myPageResponsiveListClass =
   "grid gap-3 lg:grid-cols-2 2xl:grid-cols-3";
 // Cards that pair a 128px thumbnail with text need a wider track than the
@@ -57,7 +57,8 @@ export function MyPageSectionFrame({
       data-mypage-section-frame={dataSection ?? title}
     >
       <div
-        className="hidden rounded-3xl border border-border/80 bg-card/95 p-5 shadow-sm md:block"
+        className="hidden border-b border-border pb-4 md:block"
+        data-scroll-reveal="panel"
         data-mypage-section-hero="quiet"
         data-mypage-section-hero-surface="desktop"
       >
@@ -70,10 +71,10 @@ export function MyPageSectionFrame({
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-2xs font-semibold text-primary sm:text-xs">
+              <p className="text-xs font-medium text-muted-foreground">
                 {eyebrow}
               </p>
-              <h1 className="mt-0.5 truncate text-lg font-bold tracking-tight sm:mt-1 sm:text-2xl">
+              <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
                 {title}
               </h1>
               <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-muted-foreground sm:block">

@@ -59,7 +59,7 @@ const request = {
 };
 
 describe('admin storyboard caption provenance diagnostics', () => {
-  test('passes provider-aware caption diagnostics through graph retrieval without leaking local paths', async () => {
+  test('passes provider-aware caption diagnostics through graph retrieval without leaking local paths', async () =>{
     const command = createCommand({
       storyboard: { exportMarkdown: '# caption proof', operatorBrief: 'caption proof' },
       backendAgent: {
@@ -106,9 +106,9 @@ describe('admin storyboard caption provenance diagnostics', () => {
         async () => {
           const {
             createStoryboardAgentTestCommandCapability,
-            generateStoryboardWithBackendAgent,
-          } = await import('../lib/admin/storyboard/backend-agent.ts');
-          const result = await generateStoryboardWithBackendAgent(request, {
+            normalizeFixtureCommand,
+          } = await import('./support/storyboard-command-fixture');
+          const result = await normalizeFixtureCommand(request, {
             env: { ...process.env, STORYBOARD_AGENT_COMMAND: command.commandPath },
             testCommandCapability: createStoryboardAgentTestCommandCapability(
               command.commandPath,
@@ -135,7 +135,7 @@ describe('admin storyboard caption provenance diagnostics', () => {
     }
   });
 
-  test('keeps unavailable caption lookup explicit for fallback diagnostics', async () => {
+  test('keeps unavailable caption lookup explicit for fallback diagnostics', async () =>{
     const command = createCommand({
       storyboard: { exportMarkdown: '# caption unavailable', operatorBrief: 'caption unavailable' },
       backendAgent: {
@@ -173,9 +173,9 @@ describe('admin storyboard caption provenance diagnostics', () => {
         async () => {
           const {
             createStoryboardAgentTestCommandCapability,
-            generateStoryboardWithBackendAgent,
-          } = await import('../lib/admin/storyboard/backend-agent.ts');
-          const result = await generateStoryboardWithBackendAgent(request, {
+            normalizeFixtureCommand,
+          } = await import('./support/storyboard-command-fixture');
+          const result = await normalizeFixtureCommand(request, {
             env: { ...process.env, STORYBOARD_AGENT_COMMAND: command.commandPath },
             testCommandCapability: createStoryboardAgentTestCommandCapability(
               command.commandPath,

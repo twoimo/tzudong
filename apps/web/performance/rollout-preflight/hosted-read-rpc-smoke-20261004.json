@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "hosted-read-only-rpc-smoke",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "role": "service_role",
+  "transaction": "read-only",
+  "page": {
+    "requested": 50,
+    "records": 50,
+    "total": 1659,
+    "filteredTotal": 1659,
+    "hasMore": true,
+    "jsonTextBytes": 188983
+  },
+  "publicAccess": {
+    "anonCanExecute": false,
+    "authenticatedCanExecute": false
+  },
+  "judgmentEngine": {
+    "provider": "gemini",
+    "model": "gemini-3.8-flash",
+    "promptVersion": "restaurant-review-v1",
+    "requiredForApproval": true,
+    "maxCallsPerClaim": 1
+  },
+  "providerCalls": 0,
+  "sampleCount": 1,
+  "limitations": [
+    "DB RPC readback only; not a browser/API latency benchmark.",
+    "No pre-change live RPC payload measurement; no reduction or confidence interval claimed."
+  ],
+  "receiptRecordedAt": "2026-10-04T12:14:21.625994+00:00"
+}

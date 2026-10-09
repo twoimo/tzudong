@@ -1,0 +1,144 @@
+{
+  "schema": "tzudong-sentry-read-only-readiness-v1",
+  "observedAt": "2026-10-08T23:44:43.498852+00:00",
+  "sourceHead": "d8942781ad76727176efd87f97ce9b578b522bc7",
+  "project": {
+    "name": "tzudong",
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "team": "twoimos-projects",
+    "verified": true
+  },
+  "sdk": {
+    "sourcePin": "11.4.0",
+    "installed": "11.4.0",
+    "pinsChanged": false
+  },
+  "currentConfiguration": {
+    "vercelEnvMetadataCount": 36,
+    "vercelSentryVariables": 0,
+    "candidateEnvSentryVariables": 0,
+    "originalRootEnvSentryVariables": 0,
+    "currentProcessSentryVariables": 0,
+    "envValuesPrintedOrPersisted": false,
+    "vaultFilesModified": false
+  },
+  "account": {
+    "browserProfile": "u0",
+    "state": "sign-in-page",
+    "existingOrganization": "unverified",
+    "region": "unverified",
+    "newAccountOrOrganizationCreated": false,
+    "taskOwnedTabClosed": true
+  },
+  "pluginSearch": {
+    "query": "Sentry",
+    "results": 0,
+    "connectedSentryTools": 0
+  },
+  "historicalEvidence": {
+    "path": "docs/operations/sentry-integration-20261004.md",
+    "date": "2026-10-04",
+    "organizationCreated": false,
+    "regionDecisionPending": true,
+    "realNetworkIngestionProved": false,
+    "statusNotUsedAsCurrentAccountProof": true
+  },
+  "sourceReadback": {
+    "route": "/api/admin/sentry",
+    "authorization": "requireAdmin before query/provider work",
+    "responseCache": "private, no-store",
+    "issuesApi": "GET {SENTRY_URL}/api/0/organizations/{SENTRY_ORG}/issues/",
+    "readScope": "event:read",
+    "allowedOrigins": [
+      "https://sentry.io",
+      "https://us.sentry.io",
+      "https://de.sentry.io"
+    ],
+    "projectBinding": "slug; optional numeric ID additionally validates returned project ID",
+    "pageSize": 50,
+    "query": "is:{status} issue.category:error",
+    "window": "14d",
+    "collectionLabelsAreConfigurationOnly": true,
+    "sdkIngestion": "browser public DSN; Node/Edge private DSN with public fallback; disabled when invalid or absent",
+    "sourceMapsOptional": "SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT enables upload/release operations; separate from read token",
+    "adminMenu": "운영 > 오류 모니터링 /admin?module=sentry"
+  },
+  "materialDecisions": [
+    {
+      "decision": "Existing Sentry account and organization access",
+      "reason": "Current profile is logged out. Verify existing membership without creating an account; do not infer no account from this page."
+    },
+    {
+      "decision": "Organization/project and existing data region",
+      "reason": "Bind exact existing org, project numeric ID, region and matching DSNs. If no org exists, creation and US/DE region selection require explicit authorization; region is fixed after org creation."
+    },
+    {
+      "decision": "Environment/target scope and credential use",
+      "reason": "Choose existing credential source and target development/preview/production. Runtime event:read token stays server-only; project event readback requires existing project:read permission. Source map upload token remains optional and separate."
+    },
+    {
+      "decision": "Synthetic event/remote write authorization",
+      "reason": "Future bounded sentinel ingestion is a remote write and is currently forbidden. Choose named target runtime, event count, release/environment and event purpose before sending."
+    }
+  ],
+  "verificationPlan": [
+    {
+      "stage": "API access and identity",
+      "operation": "Read-only GET issue list under exact existing org/project/region using event:read; where existing permission allows, GET project metadata/DSN metadata without persisting DSN/key values",
+      "acceptance": "HTTP 200 and exact numeric project ID + slug binding; no redirects, no other-project rows. Empty results prove access only."
+    },
+    {
+      "stage": "Event ingestion - separately authorized later",
+      "operation": "One bounded sanitized synthetic exception per explicitly chosen actual runtime (browser/Node/Edge) through installed SDK hooks, bound to named deployment SHA/environment; no source map release/upload as implicit side effect",
+      "acceptance": "SDK capture ID and flush outcome are retained as transport evidence only. Do not call this stored/ingested until remote event readback succeeds. Local network fixture is not hosted API hook proof."
+    },
+    {
+      "stage": "Event identity readback",
+      "operation": "GET {regionOrigin}/api/0/projects/{org}/{project}/events/{eventId}/ using existing project:read permission",
+      "acceptance": "Exact 32-hex eventID, expected groupID, project binding, environment/release and safe error type; persist only allowlisted technical identifiers/boolean privacy findings, never raw provider response or event contents."
+    },
+    {
+      "stage": "Real admin API readback",
+      "operation": "Authenticated GET /api/admin/sentry?status=unresolved with actual admin session, no E2E bypass or response interception",
+      "acceptance": "state=connected and matching event-derived groupID among exact project issues; collection flags indicate config only. Account for process cache TTL30s without repeated unchanged polling."
+    },
+    {
+      "stage": "Real admin UI",
+      "operation": "Open authenticated /admin?module=sentry and read the same group using current status/filter/header selectors",
+      "acceptance": "Same group ID/type/count visible, refresh/status/pagination remain read-only; synthetic mock UI or source tests do not prove live provider connection."
+    }
+  ],
+  "operationsSpent": {
+    "sentryApiRequests": 0,
+    "eventsSent": 0,
+    "newTokens": 0,
+    "newRegionsOrAccounts": 0,
+    "envWrites": 0,
+    "sourceWrites": 0,
+    "deployments": 0,
+    "paidCalls": 0
+  },
+  "currentSourceDefectEstablished": false,
+  "testsRerun": false,
+  "sourceHashes": {
+    "apps/web/lib/monitoring/sentry-admin.ts": "c5988d3781dfa1617674fc5d9fbdc4b7e527968f6165037fb4815f4c6576054b",
+    "apps/web/lib/monitoring/sentry-privacy.ts": "114d04635c8d6a81c210fb33a16b4dbc6e701f1efbb619ba482509a607d212f4",
+    "apps/web/app/api/admin/sentry/route.ts": "165c33fc307c272741fb61773e2878ad41116265adb5b1a171efdcbd7127555a",
+    "apps/web/components/admin/AdminSentryPanel.tsx": "0e7d86af328d385cd8d29f5b7859c04d1b84ef0656cda460451e481ac9957026",
+    "apps/web/instrumentation.ts": "4a9ece75c517c3f9fcdc3090508686dae210bb14a9b6e9a4446b522ebe409660",
+    "apps/web/instrumentation-client.ts": "f0346f404fce861cf6f3491b7e276a11ae50ed4b7d0eed1b22bd3a3dfe0ee967",
+    "apps/web/sentry.server.config.ts": "a68d292f78a4903b2ea4d731173ff76bfc5de5a35d3b4f7f13c05512c9ffac58",
+    "apps/web/sentry.edge.config.ts": "b9cd2b977d29f05e3a9b5d3ff2da93651f2a476fda32d4ccea1363bf6f60ba8c",
+    "apps/web/next.config.mjs": "c3ae70ee133d35dd02a12a3690e97e9f82f1d2509fe3e341c230a7b9e77b43e5",
+    "apps/web/package.json": "52ad2cd9110a0bf94c1c09d8e0f96b9bcff8565e93989eee33a571c6efbee5be",
+    "docs/operations/sentry-integration-20261004.md": "0eacccaeba2a38f61443ed5361c0daa9fecf79e35a33618634e07b49345e6cb7"
+  },
+  "officialSources": {
+    "issueApi": "https://docs.sentry.io/api/events/list-an-organizations-issues/",
+    "eventReadback": "https://docs.sentry.io/api/events/retrieve-an-event-for-a-project/",
+    "regionApi": "https://docs.sentry.io/api/",
+    "regionDecision": "https://www.sentry.help/en/articles/13964942-can-i-change-my-org-s-data-storage-location",
+    "vercelEnv": "https://vercel.com/docs/cli/env"
+  },
+  "unavailableOfficialPage": "Next.js SDK configuration/options page failed to open in web tool; pinned installed SDK and local retained transport evidence inspected instead."
+}

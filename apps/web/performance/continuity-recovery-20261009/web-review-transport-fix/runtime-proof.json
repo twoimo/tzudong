@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-09T19:38:00+09:00",
+  "evidenceClass": "local-isolated-runtime",
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "sourceRevision": "c90544c813a89b077084953e42fb1431a4b1efed",
+  "sourceState": "uncommitted-followup",
+  "runtime": {
+    "postgres": "17.6",
+    "serverVersionNum": "170006",
+    "transport": "unix-socket-only",
+    "tcpListeners": 0,
+    "bun": "1.4.0"
+  },
+  "entryPoints": [
+    "apps/web/scripts/apply-supabase-migration.mjs#runPsql",
+    "apps/web/scripts/admin-record-sql-successor.mjs#createSuccessorPsqlRunner"
+  ],
+  "assertions": {
+    "stdinBoundAsFile": true,
+    "singleTransactionOptionActive": true,
+    "setLocalInsideTransaction": true,
+    "lockTableInsideTransaction": true,
+    "terminalFailureSchemaRollback": true,
+    "terminalFailureLedgerRollback": true,
+    "successSchemaCommit": true,
+    "successLedgerCommit": true,
+    "databaseUriAbsentFromArgv": true,
+    "inheritedConnectionRedirectsRemoved": true
+  },
+  "checks": {
+    "actualRunnerIntegration": { "passed": 1, "failed": 0, "expectations": 7 },
+    "targetedUnit": { "passed": 21, "failed": 0, "expectations": 201 },
+    "targetedEslint": { "passed": true, "warnings": 0 },
+    "typescriptParity": { "passed": true, "diagnostics": 0, "logicalInputs": 3134 },
+    "diffCheck": { "passed": true }
+  },
+  "frozenEvidenceBoundary": {
+    "exactFiveStageProofRevision": "c90544c813a89b077084953e42fb1431a4b1efed",
+    "reboundToEditedSources": false,
+    "currentTransportProofSeparate": true
+  },
+  "releaseState": {
+    "successorLaunch": "held",
+    "manifestUpdatedAtCapture": false,
+    "loaderCodeAtCapture": "SUCCESSOR_SOURCE_DRIFT",
+    "toolchainPinRefreshMayFollow": true,
+    "admissionAuthenticityReady": false
+  }
+}
+

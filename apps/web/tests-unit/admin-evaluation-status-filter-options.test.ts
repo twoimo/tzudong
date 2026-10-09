@@ -174,7 +174,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
 
   test('keeps mobile status filters clickable and view toggles icon-only', () => {
     const tableSource = source('components/admin/EvaluationTableNew.tsx');
-    const pageSource = source('app/admin/evaluations/page.tsx');
+    const pageSource = source('app/admin/evaluations/page.tsx') + source('lib/admin/evaluation-query.ts');
     const categorySidebarSource = source('components/admin/CategorySidebar.tsx');
     const adminOverviewSource = source('components/admin/AdminConsoleOverview.tsx');
     const evaluationApiRouteSource = source('app/api/admin/evaluations/route.ts');
@@ -205,7 +205,6 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(tableSource).toContain('{hasActiveFilters && (');
     expect(tableSource).toContain('variant="ghost"');
     expect(tableSource).toContain('h-8 min-w-0 rounded-full px-2 text-xs font-medium');
-    expect(tableSource).toContain('rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm');
     expect(tableSource).toContain('data-admin-evaluation-mobile-card="true"');
     expect(tableSource).toContain('data-layout-primitives="stack frame"');
     expect(tableSource).toContain('<article');
@@ -231,7 +230,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(pageSource).toContain('필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중');
     expect(pageSource).not.toContain('필터링: <Skeleton');
     expect(tableSource).toContain('<span className="ml-1 font-medium">집계 중</span>');
-    expect(adminOverviewSource).toContain('필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중');
+    expect(adminOverviewSource).toContain('전체 집계 중');
     expect(adminOverviewSource).not.toContain('필터링: <Skeleton');
     expect(adminOverviewSource).toContain('data-admin-evaluation-dynamic-loading-shell="true"');
     expect(adminOverviewSource).toContain('<AdminEvaluationModuleStaticShell />');

@@ -1,0 +1,59 @@
+{
+  "kind": "synthetic-header-geometry",
+  "cases": [
+    {
+      "width": 1423,
+      "card": "topContent",
+      "headerHeight": 60,
+      "titleCenterY": 646.40625,
+      "actionCenterY": 680.40625,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 1423,
+      "card": "engagementRate",
+      "headerHeight": 60,
+      "titleCenterY": 642.40625,
+      "actionCenterY": 676.40625,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "topContent",
+      "headerHeight": 60,
+      "titleCenterY": 1511,
+      "actionCenterY": 1545,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "engagementRate",
+      "headerHeight": 60,
+      "titleCenterY": 1869,
+      "actionCenterY": 1903,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "topContent",
+      "headerHeight": 60,
+      "titleCenterY": 1473,
+      "actionCenterY": 1507,
+      "alignedSameRow": false,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "engagementRate",
+      "headerHeight": 60,
+      "titleCenterY": 1837,
+      "actionCenterY": 1871,
+      "alignedSameRow": false,
+      "overflow": false
+    }
+  ]
+}

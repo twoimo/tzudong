@@ -1,0 +1,615 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "failureCode": null,
+  "sourceHead": "a29e464e3ff94f42e23bccb76388da0bd51a2566",
+  "sourceStart": [
+    {
+      "path": "components/admin/RestaurantReviewAutomation.tsx",
+      "sha256": "8b1ae69bc4fd7b9d7e33e4105423dbbb7f036eca07b5e6261a020120a2f1b53c"
+    },
+    {
+      "path": "lib/admin/restaurant-review-automation.ts",
+      "sha256": "168dec9e80c2f2f654df18218694310eb4442bbd8e6f6a80bfdfa23cbb5f605b"
+    },
+    {
+      "path": "lib/admin/normalize-evaluation-record.ts",
+      "sha256": "8f4d1402e50bf1e6146c592ef5ad1c1c44a5081a1507d818615fed3de456e12d"
+    },
+    {
+      "path": "tests-unit/restaurant-review-judgment.test.ts",
+      "sha256": "24ab5146acce5afae86c930ed6f2844e1c4fe75f9daf4c4834cdf2562bb38353"
+    },
+    {
+      "path": "components/admin/EvaluationRowDetails.tsx",
+      "sha256": "4a4ebc60e291be37dfe807d6ca4d5e95fe7d7d65be1d76f4e3e5125277a442da"
+    },
+    {
+      "path": "app/api/admin/evaluations/automation/route.ts",
+      "sha256": "a6a7a2e9acbbbbe5ce57c32fa2d568816513e686a226b3f8434b9ffb19bbb0af"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "sha256": "649326bd12d162764abf720980ed6c4ffaae7ff6ece5a4bb05cb66498be411a0"
+    },
+    {
+      "path": "scripts/verify-review-judgment-browser.ts",
+      "sha256": "c6b1d285c6f266a18e8679da3162d175dd4f7f11fa7760fb5ba1cdc928409546"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/RestaurantReviewAutomation.tsx",
+      "sha256": "8b1ae69bc4fd7b9d7e33e4105423dbbb7f036eca07b5e6261a020120a2f1b53c"
+    },
+    {
+      "path": "lib/admin/restaurant-review-automation.ts",
+      "sha256": "168dec9e80c2f2f654df18218694310eb4442bbd8e6f6a80bfdfa23cbb5f605b"
+    },
+    {
+      "path": "lib/admin/normalize-evaluation-record.ts",
+      "sha256": "8f4d1402e50bf1e6146c592ef5ad1c1c44a5081a1507d818615fed3de456e12d"
+    },
+    {
+      "path": "tests-unit/restaurant-review-judgment.test.ts",
+      "sha256": "24ab5146acce5afae86c930ed6f2844e1c4fe75f9daf4c4834cdf2562bb38353"
+    },
+    {
+      "path": "components/admin/EvaluationRowDetails.tsx",
+      "sha256": "4a4ebc60e291be37dfe807d6ca4d5e95fe7d7d65be1d76f4e3e5125277a442da"
+    },
+    {
+      "path": "app/api/admin/evaluations/automation/route.ts",
+      "sha256": "a6a7a2e9acbbbbe5ce57c32fa2d568816513e686a226b3f8434b9ffb19bbb0af"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "sha256": "649326bd12d162764abf720980ed6c4ffaae7ff6ece5a4bb05cb66498be411a0"
+    },
+    {
+      "path": "scripts/verify-review-judgment-browser.ts",
+      "sha256": "c6b1d285c6f266a18e8679da3162d175dd4f7f11fa7760fb5ba1cdc928409546"
+    }
+  ],
+  "environment": {
+    "agentBrowserVersion": "0.38.1",
+    "browserOwner": "tzudong-gemini-review-astra-74a1b6",
+    "widths": [
+      390,
+      1423
+    ],
+    "height": 1000,
+    "light": true,
+    "loopbackSyntheticOnly": true
+  },
+  "counts": {
+    "schemaValidationCount": 19,
+    "getAutomationCount": 7,
+    "detailGetCount": 6,
+    "readPostCount": 14,
+    "runAttemptCount": 3,
+    "externalBlocked": 4,
+    "unexpectedMutationsBlocked": 0,
+    "pageErrorCount": 0,
+    "consoleErrorCount": 1,
+    "expectedConsoleErrors": 1,
+    "unexpectedConsoleErrors": 0,
+    "networkFailures": 0,
+    "forwardedMutations": 0,
+    "forwardedExternalRequests": 0,
+    "realProviderCalls": 0
+  },
+  "events": [
+    {
+      "width": 390,
+      "phase": "run-preview-cancel",
+      "action": "preview-run",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "run-preview-cancel",
+      "action": "preview-run",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "run-uncertain",
+      "action": "preview-run",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "run-uncertain",
+      "action": "run",
+      "status": 503
+    },
+    {
+      "width": 1423,
+      "phase": "run-retry",
+      "action": "run",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "run-new-operation",
+      "action": "preview-run",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "run-new-operation",
+      "action": "run",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "stop-confirmation",
+      "action": "preview-stop",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "stop-confirmation",
+      "action": "stop",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "start-confirmation",
+      "action": "preview",
+      "status": 200
+    },
+    {
+      "width": 1423,
+      "phase": "start-confirmation",
+      "action": "start",
+      "status": 200
+    }
+  ],
+  "assertions": [
+    {
+      "width": 0,
+      "name": "owned-blank-browser",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "legacy-does-not-claim-gemini-active",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "legacy-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "verified-engine-status-rendered",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "actual-approved-count-remains-zero",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "engine-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "blocked-recommendation-and-outcome-distinct",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "blocked-six-evidence-codes-rendered",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "blocked-detail-get-preserved",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "detail-blocked-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "deferred-recommendation-and-outcome-distinct",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "deferred-six-evidence-codes-rendered",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "deferred-detail-get-preserved",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "detail-deferred-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "hold-recommendation-and-outcome-distinct",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "hold-six-evidence-codes-rendered",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "hold-detail-get-preserved",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "detail-hold-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "preview-run-has-no-confirmation-or-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "preview-never-runs-before-confirmation",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "run-preview-cancel-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "name": "cancel-sends-no-run",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "legacy-does-not-claim-gemini-active",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "legacy-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "verified-engine-status-rendered",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "actual-approved-count-remains-zero",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "engine-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "blocked-recommendation-and-outcome-distinct",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "blocked-six-evidence-codes-rendered",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "blocked-detail-get-preserved",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "detail-blocked-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "deferred-recommendation-and-outcome-distinct",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "deferred-six-evidence-codes-rendered",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "deferred-detail-get-preserved",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "detail-deferred-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "hold-recommendation-and-outcome-distinct",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "hold-six-evidence-codes-rendered",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "hold-detail-get-preserved",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "detail-hold-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "preview-run-has-no-confirmation-or-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "preview-never-runs-before-confirmation",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "run-preview-cancel-no-horizontal-overflow",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "cancel-sends-no-run",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "preview-run-has-no-confirmation-or-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "run-confirmation-bound-to-preview",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "run-has-v4-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "uncertain-run-retains-confirmation",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "run-confirmation-bound-to-preview",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "run-has-v4-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "uncertain-retry-reuses-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "preview-run-has-no-confirmation-or-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "run-confirmation-bound-to-preview",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "run-has-v4-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "successful-run-clears-uuid-for-new-operation",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "preview-stop-has-no-confirmation-or-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "stop-preview-does-not-apply",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "stop-confirmation-bound-to-preview",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "stop-does-not-invent-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "stop-memory-readback-rendered",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "preview-has-no-confirmation-or-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "preview-start-has-bounded-policy",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "start-preview-does-not-apply",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "start-confirmation-bound-to-preview",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "start-does-not-invent-run-uuid",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "start-memory-readback-rendered",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "no-browser-page-errors",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "no-unexpected-console-errors",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "no-local-network-failures",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "no-unexpected-mutations",
+      "passed": true
+    },
+    {
+      "width": 1423,
+      "name": "source-stable-during-run",
+      "passed": true
+    }
+  ],
+  "overflows": [
+    {
+      "width": 390,
+      "phase": "legacy",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 390,
+      "phase": "engine",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 390,
+      "phase": "detail-blocked",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 390,
+      "phase": "detail-deferred",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 390,
+      "phase": "detail-hold",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 390,
+      "phase": "run-preview-cancel",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 1423,
+      "phase": "legacy",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 1423,
+      "phase": "engine",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 1423,
+      "phase": "detail-blocked",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 1423,
+      "phase": "detail-deferred",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 1423,
+      "phase": "detail-hold",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    },
+    {
+      "width": 1423,
+      "phase": "run-preview-cancel",
+      "document": 0,
+      "target": 0,
+      "escapedHorizontal": 0
+    }
+  ],
+  "scope": {
+    "syntheticRenderAndInteractionOnly": true,
+    "providerAccuracyEvaluated": false,
+    "deployedApiEvaluated": false,
+    "databaseMutationEvaluated": false,
+    "evaluationDetailFixtureUnmodified": true
+  }
+}

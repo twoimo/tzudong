@@ -1,0 +1,79 @@
+{
+  "head": "b085e1d36ad8a8bc5626738b9921b194f50324a1",
+  "job": 113574576187,
+  "fixedCause": "eslint-next-no-assign-module-variable",
+  "installSucceeded": true,
+  "originalEvidenceFilesModified": true,
+  "candidateLintExitCode": 0,
+  "candidateLintCommand": [
+    "/opt/homebrew/opt/node@24/bin/node",
+    "node_modules/eslint/bin/eslint.js",
+    "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/ci-followthrough-20261009/lint-candidates/browser-check.mjs",
+    "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/ci-followthrough-20261009/lint-candidates/browser-selector-reconciliation.mjs",
+    "--max-warnings=0"
+  ],
+  "sourcePatches": [
+    {
+      "path": "apps/web/performance/cms-followthrough-20261009/browser-check.mjs",
+      "beforeSha256": "6611c9e47d3a1e191774aca0674c863ae17979b036217e51efc2b5d015be957c",
+      "afterSha256": "0ee6038c94ebd3d8576ff011545584de30453c7c3eb200a2166f9b34ef08f906",
+      "currentSha256": "eb999db52cf9c63db794d3718dc5b0bac356bcaff1a960ae3de4f2638b1503ed"
+    },
+    {
+      "path": "apps/web/performance/cms-followthrough-20261009/browser-selector-reconciliation.mjs",
+      "beforeSha256": "ce27e3cf6b826efd729593bd0446f06f0335d21a8f3808b60b0c719ebbb0002d",
+      "afterSha256": "daf1ae559ff6009ab002e79cf240a34a24fbfd443937f03f5768e0b59d70a23f",
+      "currentSha256": "daf1ae559ff6009ab002e79cf240a34a24fbfd443937f03f5768e0b59d70a23f"
+    }
+  ],
+  "runtime": "v24.21.0",
+  "remainingDependency": "Root final CMS artifact map regeneration, commit/push and remote CI rerun remain.",
+  "originalTargetedLintExitCode": 1,
+  "originalViolationCount": 2,
+  "candidateSyntaxChecks": "passed-2",
+  "explicitRootAuthorization": "Minimum module-to-moduleId binding rename in both CMS runners with original script/map archival",
+  "actualSourceLintExitCode": 0,
+  "actualSourceLintCommand": [
+    "/opt/homebrew/opt/node@24/bin/node",
+    "node_modules/eslint/bin/eslint.js",
+    "performance/cms-followthrough-20261009/browser-check.mjs",
+    "performance/cms-followthrough-20261009/browser-selector-reconciliation.mjs",
+    "--max-warnings=0"
+  ],
+  "actualSourceSyntaxChecks": "passed-2",
+  "inverseBytePreservation": "passed-2",
+  "originalArtifactMapsPreserved": true,
+  "preexistingDevPid57309StillRunning": true,
+  "browserReconciliation": "passed-5-modules-pageErrors0-blockedMutations0",
+  "browserCheck": "partial-desktop-focus-passed-mobile-drawer-visibility-failed",
+  "browserRawOutputs": "Separate ci-followthrough after-binding-rename subdirectories; original raw CMS results unchanged",
+  "fullLintViaWrapperExitCode": 1,
+  "fullLintWrapperDiagnostic": "REDACTED:bounded",
+  "fullLintDiagnosticExitCode": 1,
+  "fullLintRemainingIssues": {
+    "count": 16,
+    "allInPreexistingGeneratedBuild": true,
+    "actualRunnerIssues": 0,
+    "fixedCode": "LOCAL_GENERATED_BUILD_INCLUDED_IN_LINT_SCOPE"
+  },
+  "fullLintAfterBoundedGeneratedDirExclusionExitCode": 0,
+  "generatedDistDirRegression": {
+    "passed": 1,
+    "assertions": 3,
+    "bun": "1.4.0"
+  },
+  "postResponsiveReadyTargetedLintExitCode": 0,
+  "browserCheckResponsiveReady": {
+    "keyboard": {
+      "desktopEnterEscapeFocusReturn": true,
+      "mobileDrawerEscapeFocusReturn": true
+    },
+    "pageErrorCount": 0,
+    "blockedMutationCount": 0,
+    "modulePassCount": 10,
+    "moduleCount": 15,
+    "legacySelectorFailuresPreserved": 5
+  },
+  "productSourceModified": false,
+  "mobileFinding": "Current drawer DOM and screenshot passed; original failure was transient. Harness now waits for actual aria-haspopup=dialog responsive state without weakening visibility, Escape, or focus checks. Timing attribution is supported by asynchronous matchMedia source but original failure itself was not reproduced in snapshot diagnostic."
+}

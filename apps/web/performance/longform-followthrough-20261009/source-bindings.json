@@ -1,0 +1,71 @@
+{
+  "observedAtUtc": "2026-10-09T00:49:25.041492+00:00",
+  "inputs": [
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/checkpoint.json",
+      "bytes": 21322,
+      "sha256": "04172cc14da4bfc3f87e25434f9397333b196b990dc3ee61c8cca3ba52acbf68"
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/job.json",
+      "bytes": 599,
+      "sha256": "9185b8cc693eae0dbd715715dcb7907649c202a06308a43b7a88a69a1c53a60c"
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/audit.json",
+      "bytes": 694065,
+      "sha256": "691593d03997edd7abe5f83f3332f13b817fb3532237b40f583bd3f21f1cc870"
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/video-index.json",
+      "bytes": 261864,
+      "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762"
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/profile.json",
+      "bytes": 51550,
+      "sha256": "c75c29bc5cda5a175ffe21b67e3afacc94bb5a694eb24d256e6e685c4a85b1d9"
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/analysis/caption-review-status.json",
+      "bytes": 11882,
+      "sha256": "d2ff2b5b44d8760f5665423c388d68955cea96c40f6d38e812393a566e5af677"
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/analysis/caption-review-queue.json",
+      "bytes": 1365301,
+      "sha256": "8e4313cbc45eba76ae26602a1b0ba4b0b2c71fb354f864e8231cb5011335b8dd"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/longform_analysis.py",
+      "bytes": 72700,
+      "sha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/claude_video_adapter.py",
+      "bytes": 12987,
+      "sha256": "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/osk_publication.py",
+      "bytes": 32586,
+      "sha256": "c27308a8b01ef7de2aa080ce4b66878c8b079b6968b40bcccaaf8a82ef53f3c5"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/osk_projection.py",
+      "bytes": 21706,
+      "sha256": "e05282ec8650b5a69b8841dc3c4490fae36792168c97e1aa4f645e8a0007ceb8"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/lib/admin/knowledge-graph-local.ts",
+      "bytes": 2784,
+      "sha256": "947f9e7132dd4486c346a371d3a67ee160933dac44dddd16412609f725595344"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/app/api/admin/knowledge-graph/route.ts",
+      "bytes": 981,
+      "sha256": "dd1465dec54cbba1a7a589a8cbe7d9dfcb0963337a76d464b91b8a9578cfc829"
+    }
+  ],
+  "definitionsOrCaptionsCopied": false
+}

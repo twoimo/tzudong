@@ -1,0 +1,1 @@
+{"status": "passed", "postgresVersion": "15.8", "publicRolesDenied": ["anon", "authenticated"], "snapshotRowsVerified": 1, "rollbackPreservedRevision": true, "updateDeleteInvalidatedRevision": true, "counterOnlyPreservedRevision": true, "hostedWrites": 0}

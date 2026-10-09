@@ -1,0 +1,43 @@
+{
+  "schema": "record-review-fixes/final-fixed-lock-v3",
+  "status": "authorized local source and actual service-role run/stop verified; operating adoption not executed",
+  "source": {
+    "head": "3f86d6999d4a6b00e6221510a0728358747fa997",
+    "sourceFrozen": true,
+    "workingSourcesNotCommitted": true,
+    "files": {
+      "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "backend/supabase/scripts/transform_registration_replay.py": "e5e13a191fd08709104ad6f20c68d926f564bfc2188a7d1432112128307cbcd5",
+      "apps/web/lib/admin/evaluation-record-actions.ts": "df92369624a080f630fb666b9d923f907671230c78f090a5051d2b3047cff3aa",
+      "apps/web/tests-unit/admin-record-metadata-roundtrip.test.ts": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65",
+      "backend/supabase/tests/test_restaurant_review_manual_lock_contract.py": "60f6c03e2cc1d501e74f926aab8c476dc13e102f88c7e76024d191aa280ab5c2"
+    },
+    "scope": "Unapplied forward127: manual preview parity + fixed private revision lock; applied files unchanged",
+    "canonicalPg15": "root batch commit and clean detached source still required",
+    "operatingWrites": false
+  },
+  "operatingWrites": false,
+  "appliedMigrationsEdited": false,
+  "newTableOrRolePrivilegesOrMemberships": false,
+  "newPublicAPI": false,
+  "privateHelperAcl": "New helper only postgres owner EXECUTE + intended service_role EXECUTE; PUBLIC/anon/authenticated denied. All prior function/table/schema ACLs unchanged.",
+  "checks": {
+    "pristineSnapshot": "pristine-reconstruction-lock.json",
+    "m1m2m3Checkpoint": "lock-three-migration-replay.json (same M1 hash; four G014 and six guarded flows)",
+    "serviceRoleRunStopActorsCasAclG014": "fixed-lock-runtime.json",
+    "fullForwardInitialCreationRollback": "fixed-lock-initial-runtime.json (initial apply/rollback/ACL gates before missing-singleton fixture failure)",
+    "queuedRunningStopWorkerBoundary": "manual-stop-queue-runtime.json",
+    "actualPolicyDataRacesAndLockTimeout": "manual-lock-concurrency-runtime.json",
+    "exactManualAndHelperDriftRollback": "fixed-lock-preimage-negatives.json",
+    "sourceOldNewOwnerAclBodyReadback": "manual-lock-catalog-readback.json",
+    "sourceContractUnit": "2 unittest tests passed; exact applied body/inverse byte preservation and fixed helper capability",
+    "unchangedPriorM1Checks": "archive/final-receipt.json.before-fixed-lock.txt"
+  },
+  "manualSourceBinding": "fixed-lock-source-binding.json",
+  "controlDataAssumption": "Pristine schema copies no control data. Positive fixtures explicitly seed singleton=true/revision=0; missing singleton is fail closed REVIEW_AUTOMATION_STALE. No operating data copied.",
+  "preservedSemantics": "Manual remains service-only invoker and keeps active actor, policy lock, table lock, exact preview/CAS, request idempotency, policy version/event, queued/running cancellation and disabled worker behavior. Only its fixed revision FOR UPDATE statement is routed through the private helper.",
+  "historicalEvidence": "Earlier 42501, missing singleton, fixture invalid-status and prior positive/negative proof artifacts preserved; now historical rather than current service-role gap.",
+  "pending": "Root batch commit and clean detached source for canonical PG15; index convergence proposal remains not adopted and operating/freeze/promotion unchanged.",
+  "cleanup": "cleanup-fixed-lock.json"
+}

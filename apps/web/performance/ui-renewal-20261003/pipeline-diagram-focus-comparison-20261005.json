@@ -1,0 +1,74 @@
+{
+  "kind": "diagram-focused-pipeline-geometry",
+  "synthetic": true,
+  "rows": [
+    {
+      "width": 390,
+      "diagramHeightBefore": 291,
+      "diagramHeightAfter": 578,
+      "differencePx": 287,
+      "relativePercent": 98.62542955326461,
+      "diagramShareBeforePercent": 40.02751031636864,
+      "diagramShareAfterPercent": 82.45363766048501,
+      "differencePercentagePoints": 42.426127344116374,
+      "defaultParagraphs": 0,
+      "defaultAccordions": 0,
+      "nodeCount": 8,
+      "edgeCount": 8,
+      "sampleCount": 1,
+      "confidenceInterval": null
+    },
+    {
+      "width": 834,
+      "diagramHeightBefore": 291,
+      "diagramHeightAfter": 865,
+      "differencePx": 574,
+      "relativePercent": 197.25085910652922,
+      "diagramShareBeforePercent": 40.24896265560166,
+      "diagramShareAfterPercent": 92.81115879828326,
+      "differencePercentagePoints": 52.5621961426816,
+      "defaultParagraphs": 0,
+      "defaultAccordions": 0,
+      "nodeCount": 8,
+      "edgeCount": 8,
+      "sampleCount": 1,
+      "confidenceInterval": null
+    },
+    {
+      "width": 1423,
+      "diagramHeightBefore": 205,
+      "diagramHeightAfter": 865,
+      "differencePx": 660,
+      "relativePercent": 321.95121951219517,
+      "diagramShareBeforePercent": 32.18210361067504,
+      "diagramShareAfterPercent": 92.81115879828326,
+      "differencePercentagePoints": 60.629055187608216,
+      "defaultParagraphs": 0,
+      "defaultAccordions": 0,
+      "nodeCount": 8,
+      "edgeCount": 8,
+      "sampleCount": 1,
+      "confidenceInterval": null
+    }
+  ],
+  "limitations": [
+    "Single descriptive DOM geometry observation per viewport; no latency or statistical improvement claim.",
+    "Measured after installing merged React19.3/Next16.3.8; not deployed production."
+  ],
+  "transport": {
+    "serverBoundPosts": 0,
+    "fixturePostsFulfilled": 6,
+    "otherPostsDenied": 0,
+    "externalDenied": 0,
+    "realProviderCalls": 0
+  },
+  "errors": {
+    "pageErrors": 0,
+    "consoleErrors": 14,
+    "consoleKinds": {
+      "synthetic-realtime-handshake": 10,
+      "http-or-denied-resource": 4
+    },
+    "expectedHttpFailures": true
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "command": "Node24/npm11.6.2 run test:unit",
+  "exitCode": 0,
+  "strategy": "one general group and18 isolated nonoverlapping files",
+  "subprocessSummaries": [
+    {
+      "passed": 3067,
+      "skipped": 3,
+      "failed": 0,
+      "assertions": 88163,
+      "tests": 3070,
+      "files": 402
+    },
+    {
+      "passed": 7,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 43,
+      "tests": 7,
+      "files": 1
+    },
+    {
+      "passed": 5,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 519,
+      "tests": 5,
+      "files": 1
+    },
+    {
+      "passed": 19,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 150,
+      "tests": 19,
+      "files": 1
+    },
+    {
+      "passed": 6,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 108,
+      "tests": 6,
+      "files": 1
+    },
+    {
+      "passed": 3,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 13,
+      "tests": 3,
+      "files": 1
+    },
+    {
+      "passed": 2,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 12,
+      "tests": 2,
+      "files": 1
+    },
+    {
+      "passed": 63,
+      "skipped": 8,
+      "failed": 0,
+      "assertions": 682,
+      "tests": 71,
+      "files": 1
+    },
+    {
+      "passed": 13,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 88,
+      "tests": 13,
+      "files": 1
+    },
+    {
+      "passed": 24,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 113,
+      "tests": 24,
+      "files": 1
+    },
+    {
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 18,
+      "tests": 4,
+      "files": 1
+    },
+    {
+      "passed": 7,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 9,
+      "tests": 7,
+      "files": 1
+    },
+    {
+      "passed": 9,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 28,
+      "tests": 9,
+      "files": 1
+    },
+    {
+      "passed": 3,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 13,
+      "tests": 3,
+      "files": 1
+    },
+    {
+      "passed": 15,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 43,
+      "tests": 15,
+      "files": 1
+    },
+    {
+      "passed": 8,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 38,
+      "tests": 8,
+      "files": 1
+    },
+    {
+      "passed": 1,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 9,
+      "tests": 1,
+      "files": 1
+    },
+    {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 36,
+      "tests": 16,
+      "files": 1
+    },
+    {
+      "passed": 11,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 81,
+      "tests": 11,
+      "files": 1
+    }
+  ],
+  "sums": {
+    "passed": 3283,
+    "skipped": 11,
+    "failed": 0,
+    "tests": 3294,
+    "assertions": 90166
+  }
+}

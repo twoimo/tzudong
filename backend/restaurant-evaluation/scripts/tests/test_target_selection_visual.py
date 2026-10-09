@@ -3,6 +3,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+import subprocess
+import sys
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "09-target-selection.py"
@@ -13,6 +15,29 @@ SPEC.loader.exec_module(mod)
 
 
 class TargetSelectionVisualTests(unittest.TestCase):
+    def test_not_selection_transition_retires_rule_and_laaj_without_losing_bytes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);crawl=root/'crawl';evaluation=root/'result';video='ABCDEFGHIJK'
+            (crawl/'crawling').mkdir(parents=True)
+            path=crawl/'crawling'/(video+'.jsonl')
+            path.write_text(json.dumps({'youtube_link':'https://youtu.be/'+video,'restaurants':[{'origin_name':'fixture','address':'fixture address'}]})+'\n')
+            command=[sys.executable,str(MODULE_PATH),'--channel','tzuyang','--crawling-path',str(crawl),'--evaluation-path',str(evaluation)]
+            subprocess.run(command,check=True,capture_output=True)
+            kept={}
+            for stage in ['rule_results','laaj_results']:
+                folder=evaluation/'evaluation'/stage;folder.mkdir(parents=True)
+                for file,body in [(folder/(video+'.jsonl'),b'{"old":1}\n'),(folder/'.receipts'/(video+'.json'),b'{"oldReceipt":1}\n')]:
+                    file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes(body);kept[file]=body
+            path.write_text(json.dumps({'youtube_link':'https://youtu.be/'+video,'restaurants':[]})+'\n')
+            subprocess.run(command,check=True,capture_output=True)
+            self.assertFalse((evaluation/'evaluation/selection'/(video+'.jsonl')).exists())
+            self.assertTrue((evaluation/'evaluation/notSelection'/(video+'.jsonl')).is_file())
+            for file,body in kept.items():
+                self.assertFalse(file.exists());self.assertEqual([p.read_bytes() for p in (file.parent/'.superseded').glob(file.name+'.*')],[body])
+            # Recovery also retires stray downstream work when selection is reused.
+            stale=evaluation/'evaluation/rule_results'/(video+'.jsonl');stale.write_text('{"late":1}\n')
+            subprocess.run(command,check=True,capture_output=True);self.assertFalse(stale.exists())
+
     def test_visual_origin_becomes_pending_candidate_without_address(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

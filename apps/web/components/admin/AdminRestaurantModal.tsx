@@ -29,15 +29,18 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
-import { RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { toast } from "@/lib/no-toast";
-import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
+import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import { isEvaluationRecordStatus } from '@/lib/admin/normalize-evaluation-record';
+import { useRecordAction } from '@/lib/admin/use-record-action';
+import { isRecordActionCancelled, recordActionErrorMessage, type RecordActionInput } from '@/lib/admin/record-action-client';
+import type { RecordActionReceipt, RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS } from "@/lib/admin/restaurant-destructive-action-contract";
 import { Loader2, ChevronDown, X } from "lucide-react";
-import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
-import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
 import {
@@ -53,7 +56,7 @@ import {
 const fetchYouTubeMeta = async (youtubeLink: string) => {
     const videoId = extractVideoIdFromYoutubeLink(youtubeLink);
     if (!videoId) {
-        console.error('Invalid YouTube URL');
+
         return null;
     }
 
@@ -73,33 +76,9 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
 
         return response.json();
     } catch {
-        console.error('Error fetching YouTube metadata:');
+
         return null;
     }
-};
-
-// unique_id 생성 함수 (Python 버전과 동일하게 SHA-256 사용)
-// youtube_link + name + tzuyang_review 순서로 해시
-const generateUniqueId = async (youtubeLink: string, name: string, tzuyangReview: string): Promise<string> => {
-    const keyString = (canonicalizeYoutubeLink(youtubeLink) || "") + (name || "") + (tzuyangReview || "");
-
-    // SHA-256 해시 생성 (Web Crypto API 사용)
-    const encoder = new TextEncoder();
-    const data = encoder.encode(keyString);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-    return hashHex;
-};
-
-const isRestaurantIdentityDuplicateError = (error: unknown): boolean => {
-    if (!error || typeof error !== "object") return false;
-
-    const candidate = error as { code?: string; message?: string; details?: string };
-    const combinedMessage = `${candidate.message || ""} ${candidate.details || ""}`;
-
-    return candidate.code === "23505" && combinedMessage.includes("idx_restaurants_active_video_identity");
 };
 
 interface AdminRestaurantModalProps {
@@ -214,11 +193,11 @@ const parseRestaurantMergeQueryRow = (value: unknown): RestaurantMergeQueryRow |
     if (
         !isRecord(value)
         || typeof value.id !== "string"
-        || typeof value.name !== "string"
+        || !isNullableString(value.name)
         || !isNullableString(value.approved_name)
         || !isNullableString(value.phone)
         || !isStringArray(value.categories)
-        || typeof value.status !== "string"
+        || !isEvaluationRecordStatus(value.status)
         || typeof value.source_type !== "string"
         || !isJsonValue(value.youtube_meta)
         || !isJsonValue(value.evaluation_results)
@@ -253,13 +232,14 @@ const parseRestaurantMergeQueryRow = (value: unknown): RestaurantMergeQueryRow |
         || !isJsonValue(value.recollect_version)
         || typeof value.created_at !== "string"
         || typeof value.updated_at !== "string"
+        || !Number.isFinite(Date.parse(value.updated_at))
     ) {
         return null;
     }
 
     return {
         id: value.id,
-        name: value.name,
+        name: getAdminEvaluationDisplayName({ name: value.name, approved_name: value.approved_name, origin_name: value.origin_name, naver_name: value.naver_name, evaluation_results: isRecord(value.evaluation_results) ? value.evaluation_results : null }),
         approved_name: value.approved_name,
         phone: value.phone,
         categories: value.categories,
@@ -324,17 +304,64 @@ interface NaverGeocodeResponse {
     addresses?: NaverGeocodeAddressItem[];
 }
 
-export function AdminRestaurantModal({
+export function AdminRestaurantModal(props: AdminRestaurantModalProps) {
+    return props.isOpen ? <AdminRestaurantEditor {...props} /> : null;
+}
+
+function AdminRestaurantEditor({
     isOpen,
     onClose,
-    restaurant,
+    restaurant: incomingRestaurant,
     onSuccess,
     presentation = 'auto',
 }: AdminRestaurantModalProps) {
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
     const shouldRenderSheetFrame = isMobileOrTablet || shouldRenderMapPanel;
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [restaurant] = useState(incomingRestaurant);
+    const [working, setIsSubmitting] = useState(false);
+    const [confirmedReceipt, setConfirmedReceipt] = useState<RecordActionReceipt | null>(null);
+    const [discardOpen, setDiscardOpen] = useState(false);
+    const initializedRef = useRef(false);
+    const initialFormRef = useRef('');
+    const refreshAfterAction = async (receipt: RecordActionReceipt) => {
+        setConfirmedReceipt(receipt);
+        try {
+            if (receipt.targetIds.length === 0 || receipt.targetIds.length > 25) throw new Error('RECORD_CURRENT_READ_FAILED');
+            const rows: Array<RestaurantMergeQueryRow | null> = [];
+            for (let offset = 0; offset < receipt.targetIds.length; offset += 5) {
+                const current = await Promise.all(receipt.targetIds.slice(offset, offset + 5).map(async id => {
+                    const response = await fetch(`/api/admin/evaluations/${encodeURIComponent(id)}`, { cache: 'no-store' });
+                    const value = response.ok ? await response.json() : null;
+                    const row = parseRestaurantMergeQueryRow(value?.record);
+                    return row?.id === id && !value?.record?.read_summary ? row : null;
+                }));
+                rows.push(...current);
+            }
+            if (rows.length !== receipt.targetIds.length || rows.some(row => !row || !receipt.targetIds.includes(row.id)) || new Set(rows.map(row => row?.id)).size !== receipt.targetIds.length) throw new Error('RECORD_CURRENT_READ_FAILED');
+            const active = rows.filter((row): row is RestaurantMergeQueryRow => !!row && row.status === 'approved');
+            const primary = active.find(row => row.id === restaurant?.id) ?? active[0];
+            if (restaurant && primary) {
+                onSuccess({ ...restaurant, ...primary,
+                    mergedRestaurants: active.map(row => ({ ...restaurant, ...row })),
+                    youtube_links: active.flatMap(row => row.youtube_link ? [row.youtube_link] : []),
+                    tzuyang_reviews: active.flatMap(row => row.tzuyang_review ? [row.tzuyang_review] : []),
+                    mergedYoutubeLinks: active.flatMap(row => row.youtube_link ? [row.youtube_link] : []),
+                    mergedTzuyangReviews: active.flatMap(row => row.tzuyang_review ? [row.tzuyang_review] : []),
+                    mergedYoutubeMetas: undefined,
+                });
+            } else { onSuccess(); }
+            toast.success('작업 결과 확인 완료');
+            onClose();
+        } catch {
+            toast.error('적용은 확인되었습니다. 저장을 반복하지 말고 현재 정보를 다시 불러와 주세요.');
+        }
+    };
+    const recordActions = useRecordAction(receipt => {
+        if (receipt.action.startsWith('restaurant.') && (!restaurant || receipt.targetIds.includes(restaurant.id))) void refreshAfterAction(receipt);
+    }, { recover: true });
+    const isSubmitting = working || recordActions.busy || confirmedReceipt !== null;
+
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteReason, setDeleteReason] = useState("");
     const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -361,6 +388,12 @@ export function AdminRestaurantModal({
         lat: "",
         lng: "",
     });
+    const requestClose = useCallback(() => {
+        if (isSubmitting || isGeocodingNaver) return;
+        if (JSON.stringify(formData) !== initialFormRef.current || deletedReviewIds.length > 0) { setDiscardOpen(true); return; }
+        onClose();
+    }, [isSubmitting, isGeocodingNaver, formData, deletedReviewIds, onClose]);
+
     const resetForm = useCallback(() => {
         setFormData({
             name: "",
@@ -381,23 +414,17 @@ export function AdminRestaurantModal({
     }, []);
 
     useEffect(() => {
+        if (initializedRef.current) return;
+        initializedRef.current = true;
         if (isOpen && restaurant) {
             // 모달이 열릴 때마다 데이터베이스의 원본 데이터로 초기화
             setDeletedReviewIds([]); // 삭제 추적 초기화
             setDeleteReason("");
             setDeleteConfirmation("");
             // mergedRestaurants에서 status가 'approved'인 유튜브 링크-리뷰 쌍만 추출
-            const youtubeReviews = restaurant.mergedRestaurants
-                ?.filter(r => r.status === 'approved') // 승인된 것만
-                .map(r => ({
-                    id: r.id,
-                    youtube_link: r.youtube_link || "",
-                    tzuyang_review: r.tzuyang_review || "",
-                })) || (restaurant.youtube_link && restaurant.status === 'approved' ? [{
-                    id: restaurant.id,
-                    youtube_link: restaurant.youtube_link,
-                    tzuyang_review: restaurant.tzuyang_review || "",
-                }] : []);
+            const youtubeReviews = Array.from(new Map([restaurant, ...(restaurant.mergedRestaurants ?? [])].map(row => [row.id, row])).values())
+                .filter(row => row.status === 'approved')
+                .map(row => ({ id: row.id, youtube_link: row.youtube_link || '', tzuyang_review: row.tzuyang_review || '' }));
 
             // 병합된 모든 레스토랑에서 카테고리 수집 (중복 제거)
             // restaurant.categories에 이미 병합된 카테고리가 있지만, mergedRestaurants에서 누락된 것도 수집
@@ -435,7 +462,7 @@ export function AdminRestaurantModal({
                 });
             }
 
-            setFormData({
+            const initialForm = {
                 name: restaurant.name || "",
                 searchAddress: restaurant.road_address || restaurant.jibun_address || "",
                 road_address: restaurant.road_address || "",
@@ -445,13 +472,16 @@ export function AdminRestaurantModal({
                 phone: restaurant.phone || "",
                 categories: allCategories,
                 youtube_reviews: youtubeReviews,
-                lat: String(restaurant.lat || ""),
-                lng: String(restaurant.lng || ""),
-            });
+                lat: String(restaurant.lat ?? ""),
+                lng: String(restaurant.lng ?? ""),
+            };
+            initialFormRef.current = JSON.stringify(initialForm);
+            setFormData(initialForm);
             setIsGeocoded(true); // 기존 데이터는 이미 지오코딩됨
             setGeocodingResults([]); // 지오코딩 결과 초기화
             setSelectedGeocodingIndex(null); // 선택 인덱스 초기화
         } else if (isOpen && !restaurant) {
+            initialFormRef.current = JSON.stringify({ name: "", searchAddress: "", road_address: "", jibun_address: "", english_address: "", address_elements: null, phone: "", categories: [], youtube_reviews: [], lat: "", lng: "" });
             resetForm();
         }
     }, [restaurant, isOpen, resetForm]);
@@ -571,7 +601,7 @@ export function AdminRestaurantModal({
     const handleDesktopAdminRestaurantDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
         if (event.key === 'Escape') {
             event.preventDefault();
-            onClose();
+            requestClose();
             return;
         }
 
@@ -595,7 +625,7 @@ export function AdminRestaurantModal({
             event.preventDefault();
             firstElement.focus({ preventScroll: true });
         }
-    }, [onClose]);
+    }, [requestClose]);
 
     useEffect(() => {
         if (!shouldRenderMapPanel || !isOpen) return;
@@ -658,7 +688,7 @@ export function AdminRestaurantModal({
                 y: addr.y,
             }));
         } catch (error) {
-            console.error('지오코딩 에러:');
+
             throw error;
         }
     };
@@ -706,7 +736,7 @@ export function AdminRestaurantModal({
                 toast.error('주소를 찾을 수 없습니다');
             }
         } catch (error) {
-            console.error('Naver Geocoding error:');
+
             toast.error('네이버 지오코딩에 실패했습니다');
         } finally {
             setIsGeocodingNaver(false);
@@ -732,348 +762,95 @@ export function AdminRestaurantModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!formData.name.trim()) {
-            toast.error("이름은 필수입니다");
-            return;
+        if (isSubmitting || isGeocodingNaver) return;
+        if (!formData.name.trim()) { toast.error('맛집 이름을 입력해주세요'); return; }
+        const initial = JSON.parse(initialFormRef.current || '{}') as Partial<typeof formData>;
+        const newReviews = restaurant ? formData.youtube_reviews.filter(review => review.id.startsWith('new-')) : formData.youtube_reviews;
+        const geoKeys = ['road_address', 'jibun_address', 'english_address', 'address_elements', 'lat', 'lng'] as const;
+        const geoChanged = geoKeys.some(key => JSON.stringify(formData[key]) !== JSON.stringify(initial[key]));
+        const needsCompleteLocation = !restaurant || newReviews.length > 0 || geoChanged;
+        if ((!isGeocoded && (needsCompleteLocation || formData.searchAddress !== initial.searchAddress))) { toast.error('주소를 재지오코딩하고 결과를 선택해주세요'); return; }
+        if (needsCompleteLocation && (!formData.lat.trim() || !formData.lng.trim() || !Number.isFinite(Number(formData.lat)) || !Number.isFinite(Number(formData.lng)))) { toast.error('좌표를 확인해주세요'); return; }
+        if ((!restaurant && newReviews.length === 0) || newReviews.some(review => !normalizeCanonicalYouTubeWatchUrl(review.youtube_link) || !review.tzuyang_review.trim())) {
+            toast.error('새 영상 링크와 쯔양 리뷰를 입력해주세요'); return;
         }
-
-        if (!isGeocoded) {
-            toast.error("재지오코딩을 먼저 수행해주세요");
-            return;
-        }
-
-        // 유튜브 링크-리뷰 필수 입력 검증
-        for (const review of formData.youtube_reviews) {
-            if (!review.youtube_link.trim() || !review.tzuyang_review.trim()) {
-                toast.error("모든 유튜브 링크와 쯔양 리뷰를 입력해주세요");
-                return;
+        const originalRows = new Map([...(restaurant ? [restaurant, ...(restaurant.mergedRestaurants ?? [])] : [])].map(row => [row.id, row]));
+        const perTargetChanges: Array<{ id: string; changes: RestaurantRecordChanges }> = [];
+        for (const review of formData.youtube_reviews.filter(row => !row.id.startsWith('new-') && !!restaurant)) {
+            const original = originalRows.get(review.id);
+            const changes: RestaurantRecordChanges = {};
+            if (review.youtube_link.trim() !== (original?.youtube_link ?? '').trim()) {
+                const canonical = normalizeCanonicalYouTubeWatchUrl(review.youtube_link);
+                if (review.youtube_link.trim() && !canonical) { toast.error('변경한 영상 링크를 확인해주세요'); return; }
+                changes.youtube_link = canonical;
             }
+            if (review.tzuyang_review.trim() !== (original?.tzuyang_review ?? '').trim()) changes.tzuyang_review = review.tzuyang_review.trim() || null;
+            if (Object.keys(changes).length > 0) perTargetChanges.push({ id: review.id, changes });
         }
-
-        const lat = parseFloat(formData.lat);
-        const lng = parseFloat(formData.lng);
-
-        if (isNaN(lat) || isNaN(lng)) {
-            toast.error("올바른 좌표를 입력해주세요");
-            return;
-        }
-
         setIsSubmitting(true);
-
         try {
-            assertLegacyBrowserAdminMutationEnabled(
-                "restaurant_record",
-                restaurant ? "update_restaurant" : "insert_restaurant",
-            );
-
-            if (restaurant) {
-                // 공통 필드: 모든 레코드에 적용
-                const commonData = {
-                    approved_name: formData.name.trim(), // approved_name 동기화
-                    road_address: formData.road_address.trim(),
-                    jibun_address: formData.jibun_address.trim() || null,
-                    english_address: formData.english_address.trim() || null,
-                    address_elements: formData.address_elements || null,
-                    phone: formData.phone.trim() || null,
-                    categories: formData.categories,
-                    lat,
-                    lng,
-                };
-
-                // 기존 레코드 ID들 수집
-                const existingIds = restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0
-                    ? restaurant.mergedRestaurants.map(r => r.id)
-                    : [restaurant.id];
-
-                // 새로운 유튜브 링크들 (id가 'new-'로 시작하는 것들)
-                const newReviews = formData.youtube_reviews.filter(r => r.id.startsWith('new-'));
-
-                // 1. X 버튼으로 삭제된 레코드를 소프트 삭제 (status = 'deleted')
-                if (deletedReviewIds.length > 0) {
-                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant");
-                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant_link");
-                    const { error: deleteError } = await supabase
-                        .from('restaurants')
-                        .update({
-                            status: 'deleted',
-                            updated_at: new Date().toISOString(),
-                        })
-                        .in('id', deletedReviewIds);
-
-                    if (deleteError) {
-                        console.error('소프트 삭제 실패:');
-                        toast.error('일부 항목 삭제에 실패했습니다');
-                    } else {
-
-                    }
-                }
-
-                // 2. 공통 필드를 모든 기존 레코드에 업데이트
-                assertLegacyBrowserAdminMutationEnabled("restaurant_record", "update_restaurant");
-                const { error: commonError } = await supabase
-                    .from("restaurants" as never)
-                    .update(commonData as never)
-                    .in("id", existingIds);
-
-                if (commonError) throw commonError;
-
-                // 3. 각 기존 유튜브 링크-리뷰 쌍을 해당 레코드에 개별 업데이트
-                for (const review of formData.youtube_reviews) {
-                    if (review.id.startsWith('new-')) continue; // 새 레코드는 스킵
-
-                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "update_restaurant_link");
-                    const { error: reviewError } = await supabase
-                        .from("restaurants" as never)
-                        .update({
-                            youtube_link: review.youtube_link.trim() || null,
-                            tzuyang_review: review.tzuyang_review.trim() || null,
-                        } as never)
-                        .eq("id", review.id);
-
-                    if (reviewError) {
-                        console.error(`레코드 ${review.id} 업데이트 실패:`);
-                    }
-                }
-
-                // 4. 새로운 유튜브 링크-리뷰가 있으면 신규 레코드 생성
-                let hasError = false; // 에러 플래그
-
-                for (const newReview of newReviews) {
-                    const youtubeLink = canonicalizeYoutubeLink(newReview.youtube_link.trim()) || newReview.youtube_link.trim();
-                    const tzuyangReview = newReview.tzuyang_review.trim();
-
-                    // unique_id 생성 (youtube_link + name + 쯔양리뷰) - Python과 동일
-                    const uniqueId = await generateUniqueId(
-                        youtubeLink,
-                        formData.name.trim(),
-                        tzuyangReview
-                    );
-
-                    // 중복 검사
-                    const duplicateCheck = await checkRestaurantDuplicate(
-                        formData.name.trim(),
-                        formData.jibun_address.trim(),
-                        undefined, // 신규 레코드이므로 id는 없음
-                        youtubeLink
-                    );
-
-                    if (duplicateCheck.isDuplicate) {
-                        // 중복 발견 - 유튜브 링크 비교
-                        const matchedYoutubeVideoId = extractVideoIdFromYoutubeLink(duplicateCheck.matchedRestaurant?.youtube_link);
-                        const currentYoutubeVideoId = extractVideoIdFromYoutubeLink(youtubeLink);
-
-                        if (currentYoutubeVideoId && matchedYoutubeVideoId === currentYoutubeVideoId) {
-                            // 같은 유튜브 링크 - 중복 에러
-                            toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 이미 동일한 유튜브 링크가 존재합니다.`);
-                            hasError = true;
-                            break; // 더 이상 진행하지 않음
-                        }
-                        // 유튜브 링크가 다르면 계속 진행 (아래 INSERT)
-                    }
-
-                    // YouTube 메타데이터 가져오기
-                    toast.info('YouTube 메타데이터를 가져오는 중...');
-                    const youtubeMeta = await fetchYouTubeMeta(youtubeLink);
-
-                    if (!youtubeMeta) {
-                        toast.warning(`YouTube 메타데이터를 가져올 수 없습니다: ${youtubeLink}`);
-                    }
-
-                    // 신규 레코드 생성
-                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "insert_restaurant_link");
-                    const { error: insertError } = await supabase
-                        .from("restaurants" as never)
-                        .insert({
-                            ...commonData,
-                            // DB 스키마 기준: restaurants는 trace_id가 unique key
-                            trace_id: uniqueId,
-                            youtube_link: youtubeLink,
-                            tzuyang_review: tzuyangReview,
-                            youtube_meta: youtubeMeta,
-                            source_type: 'admin',
-                            status: 'approved',
-                            geocoding_success: true,
-                            is_missing: false,
-                            is_not_selected: false,
-                        } as never);
-
-                    if (insertError) {
-                        console.error('신규 레코드 추가 실패:');
-                        if (isRestaurantIdentityDuplicateError(insertError)) {
-                            toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 동일 영상 레코드가 이미 존재합니다.`);
-                            hasError = true;
-                            break;
-                        }
-                        toast.error('신규 유튜브 링크 추가에 실패했습니다');
-                        hasError = true;
-                        break;
-                    } else {
-
-                        toast.success(`✅ 신규 유튜브 링크 추가 성공!`);
-                    }
-                }
-
-                // 에러가 있으면 모달을 닫지 않음
-                if (hasError) {
-                    setIsSubmitting(false);
-                    return;
-                }
-
-                toast.success("맛집이 수정되었습니다");
-
-                // [BUG FIX] 병합된 레스토랑 정보가 손실되지 않도록 전체 그룹 재조회 및 구성
-                const { data: allUpdatedRestaurantRows } = await supabase
-                    .from("restaurants")
-                    .select(RESTAURANT_MERGE_SELECT)
-                    .in("id", existingIds)
-                    .overrideTypes<RestaurantMergeQueryRow[], { merge: false }>();
-
-                if (allUpdatedRestaurantRows && allUpdatedRestaurantRows.length > 0) {
-                    const typedUpdatedRestaurants = allUpdatedRestaurantRows.flatMap((updatedRestaurant) => {
-                        const parsedRestaurant = parseRestaurantMergeQueryRow(updatedRestaurant);
-                        return parsedRestaurant ? [parsedRestaurant] : [];
-                    });
-                    const primaryRestaurant = typedUpdatedRestaurants.find((updatedRestaurant) => updatedRestaurant.id === restaurant.id);
-                    const mergedRestaurantUpdates = new Map<string, RestaurantMergeQueryRow>();
-                    for (const updatedRestaurant of typedUpdatedRestaurants) {
-                        if (updatedRestaurant.id !== restaurant.id) {
-                            mergedRestaurantUpdates.set(updatedRestaurant.id, updatedRestaurant);
-                        }
-                    }
-                    const mergedChildren = (restaurant.mergedRestaurants || []).map((mergedRestaurant) => {
-                        const updatedRestaurant = mergedRestaurantUpdates.get(mergedRestaurant.id);
-                        return updatedRestaurant
-                            ? { ...mergedRestaurant, ...updatedRestaurant }
-                            : mergedRestaurant;
-                    });
-
-                    if (primaryRestaurant) {
-                        const finalRestaurant: Restaurant = {
-                            ...restaurant,
-                            ...primaryRestaurant,
-                            mergedRestaurants: mergedChildren.length > 0 ? mergedChildren : (restaurant.mergedRestaurants || []),
-                        };
-                        onSuccess(finalRestaurant);
-                    } else {
-                        onSuccess(undefined);
-                    }
-                } else {
-                    onSuccess(undefined);
-                }
-            } else {
-                // 새 맛집 등록
-                const primaryYoutubeLink = canonicalizeYoutubeLink(formData.youtube_reviews[0]?.youtube_link?.trim() || null);
-                const primaryReviewText = formData.youtube_reviews[0]?.tzuyang_review?.trim() || "";
-
-                if (primaryYoutubeLink && formData.jibun_address.trim()) {
-                    const duplicateCheck = await checkRestaurantDuplicate(
-                        formData.name.trim(),
-                        formData.jibun_address.trim(),
-                        undefined,
-                        primaryYoutubeLink
-                    );
-
-                    const matchedYoutubeVideoId = extractVideoIdFromYoutubeLink(duplicateCheck.matchedRestaurant?.youtube_link);
-                    const currentYoutubeVideoId = extractVideoIdFromYoutubeLink(primaryYoutubeLink);
-
-                    if (duplicateCheck.isDuplicate && currentYoutubeVideoId && matchedYoutubeVideoId === currentYoutubeVideoId) {
-                        toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 이미 동일한 유튜브 링크가 존재합니다.`);
-                        setIsSubmitting(false);
-                        return;
-                    }
-                }
-
-                const restaurantData = {
-                    approved_name: formData.name.trim(), // approved_name 동기화
-                    road_address: formData.road_address.trim(),
-                    jibun_address: formData.jibun_address.trim() || null,
-                    english_address: formData.english_address.trim() || null,
-                    address_elements: formData.address_elements || null,
-                    phone: formData.phone.trim() || null,
-                    categories: formData.categories,
-                    youtube_link: primaryYoutubeLink,
-                    tzuyang_review: primaryReviewText || null,
-                    lat,
-                    lng,
-                    trace_id: primaryYoutubeLink
-                        ? await generateUniqueId(primaryYoutubeLink, formData.name.trim(), primaryReviewText)
-                        : null,
-                    status: 'approved',
-                    geocoding_success: true,
-                    is_missing: false,
-                    is_not_selected: false,
-                    source_type: 'admin',
-                };
-
-                const { error } = await supabase.from("restaurants" as never).insert(restaurantData as never);
-                if (error) {
-                    if (isRestaurantIdentityDuplicateError(error)) {
-                        throw new Error(`"${formData.name.trim()}" 음식점에 동일 영상 레코드가 이미 존재합니다.`);
-                    }
-                    throw error;
-                }
-
-                toast.success("맛집이 등록되었습니다");
-                onSuccess();
+            const completeChanges: RestaurantRecordChanges = {
+                approved_name: formData.name.trim(), phone: formData.phone.trim() || null,
+                categories: formData.categories as RestaurantRecordChanges['categories'],
+                road_address: formData.road_address.trim(), jibun_address: formData.jibun_address.trim(),
+                english_address: formData.english_address.trim() || null, address_elements: formData.address_elements,
+                lat: Number(formData.lat), lng: Number(formData.lng), geocoding_success: true,
+            };
+            const changes: RestaurantRecordChanges = {};
+            if (!restaurant || formData.name.trim() !== initial.name?.trim()) changes.approved_name = completeChanges.approved_name;
+            if (!restaurant || formData.phone.trim() !== initial.phone?.trim()) changes.phone = completeChanges.phone;
+            if (!restaurant || JSON.stringify(formData.categories) !== JSON.stringify(initial.categories)) changes.categories = completeChanges.categories;
+            if (!restaurant || geoChanged) Object.assign(changes, Object.fromEntries(
+                [...geoKeys, 'geocoding_success'].map(key => [key, completeChanges[key as keyof RestaurantRecordChanges]]),
+            ));
+            const toVideoChanges = (review: typeof formData.youtube_reviews[number]): RestaurantRecordChanges => ({
+                youtube_link: normalizeCanonicalYouTubeWatchUrl(review.youtube_link), tzuyang_review: review.tzuyang_review.trim(),
+            });
+            const additions: RestaurantRecordChanges[] = [];
+            for (const review of newReviews) {
+                const video = toVideoChanges(review);
+                const meta = await fetchYouTubeMeta(video.youtube_link!);
+                const ads = meta?.ads_info && typeof meta.ads_info === 'object' ? meta.ads_info : meta;
+                const whatAds = ads?.what_ads;
+                // Keep only the public DTO fields; provider diagnostics never enter a request or log.
+                const youtube_meta: RestaurantRecordChanges['youtube_meta'] = meta && typeof meta === 'object' ? {
+                    ...(typeof meta.title === 'string' ? { title: meta.title } : {}),
+                    ...(typeof (meta.published_at ?? meta.publishedAt) === 'string' ? { published_at: meta.published_at ?? meta.publishedAt } : {}),
+                    ...(typeof meta.duration === 'number' ? { duration: meta.duration } : {}),
+                    ...(typeof meta.is_shorts === 'boolean' ? { is_shorts: meta.is_shorts } : {}),
+                    ...(typeof ads?.is_ads === 'boolean' ? { is_ads: ads.is_ads } : {}),
+                    ...(typeof whatAds === 'string' ? { what_ads: [whatAds] } : whatAds === null ? { what_ads: null } : Array.isArray(whatAds) && whatAds.every((item: unknown) => typeof item === 'string') ? { what_ads: whatAds } : {}),
+                } : undefined;
+                if (!youtube_meta) toast.warning('영상 메타데이터를 가져오지 못했습니다. 입력한 영상과 리뷰를 확인해주세요.');
+                additions.push({ ...completeChanges, ...video, ...(youtube_meta ? { youtube_meta } : {}) });
             }
-
-            resetForm();
-            onClose();
-        } catch {
-            console.error("Restaurant submission error:");
-            toast.error("맛집 작업에 실패했습니다");
-        } finally {
-            setIsSubmitting(false);
-        }
+            let input: RecordActionInput;
+            if (restaurant && Object.keys(changes).length === 0 && perTargetChanges.length === 0 && deletedReviewIds.length === 0 && additions.length === 0) { toast.error('변경한 내용이 없습니다'); return; }
+            if (restaurant) {
+                const targetIds = Array.from(new Set([restaurant.id, ...(restaurant.mergedRestaurants ?? []).map(row => row.id)]));
+                input = { action: 'restaurant.edit', targetIds, payload: { changes,
+                    perTargetChanges,
+                    removeIds: deletedReviewIds, additions,
+                } };
+            } else {
+                const payload = { changes: additions[0], additions: additions.slice(1) };
+                input = { action: 'restaurant.create', targetIds: [], payload };
+            }
+            await refreshAfterAction(await recordActions.run(input));
+        } catch (error) {
+            if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+        } finally { setIsSubmitting(false); }
     };
 
     const handleDelete = async () => {
-        if (!restaurant) return;
-
+        if (!restaurant || isSubmitting || !deleteReason.trim() || deleteConfirmation.trim() !== RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS.soft_delete_restaurant) return;
+        setShowDeleteConfirm(false);
         setIsSubmitting(true);
-
         try {
-            const response = await fetch(`/api/admin/restaurants/${encodeURIComponent(restaurant.id)}/destructive-action`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                },
-                body: JSON.stringify({
-                    action: "soft_delete_restaurant",
-                    targetRestaurantIds: [restaurant.id],
-                    reason: deleteReason,
-                    confirmation: deleteConfirmation,
-                    expectedRestaurantName: restaurant.name,
-                }),
-            });
-
-            const result = await response.json().catch(() => null) as {
-                error?: string;
-                audit?: { id?: string };
-                correlationId?: string;
-                readback?: { targetCount?: number };
-            } | null;
-
-            if (!response.ok || !result) {
-                throw new Error("RESTAURANT_DELETE_FAILED");
-            }
-
-            const auditSuffix = result.audit?.id && result.correlationId
-                ? ` (감사 ID: ${result.audit.id}, 추적 ID: ${result.correlationId})`
-                : "";
-            toast.success(`맛집이 삭제되었습니다${auditSuffix}`);
-            setDeleteReason("");
-            setDeleteConfirmation("");
-            onSuccess();
-            onClose();
-        } catch {
-            console.error("Restaurant deletion error:");
-            toast.error("맛집 삭제에 실패했습니다");
-        } finally {
-            setIsSubmitting(false);
-        }
+            await refreshAfterAction(await recordActions.run({ action: 'restaurant.delete', targetIds: [restaurant.id], payload: { reason: deleteReason.trim() } }));
+        } catch (error) {
+            if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+        } finally { setIsSubmitting(false); }
     };
 
     const adminRestaurantTitle = restaurant ? "맛집 수정" : "맛집 등록";
@@ -1143,7 +920,7 @@ export function AdminRestaurantModal({
                         ))}
                     </div>
                 </div>
-                <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 창 닫기" onClick={onClose}>
+                <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 창 닫기" onClick={requestClose}>
                     <X className="h-5 w-5" />
                 </Button>
             </div>
@@ -1194,7 +971,7 @@ export function AdminRestaurantModal({
             className={adminRestaurantFormClass}
         >
             {shouldRenderSheetFrame && adminRestaurantSheetHeader}
-            <div className={adminRestaurantBodyClass}>
+            <fieldset disabled={isSubmitting || isGeocodingNaver} className={adminRestaurantBodyClass}>
                 <div className="space-y-4">
                     <div className="rounded-2xl border border-red-200/70 bg-red-50/70 p-3 text-sm leading-6 text-red-950 shadow-sm dark:border-red-950/70 dark:bg-red-950/25 dark:text-red-100">
                         지도에 바로 반영되는 관리자 편집 화면입니다. 제보하기와 같은 흐름으로 기본 정보, 주소/좌표, 영상 리뷰를 순서대로 확인하세요.
@@ -1422,7 +1199,16 @@ export function AdminRestaurantModal({
                                                             ? 'border-primary bg-primary/5 shadow-sm'
                                                             : 'hover:border-primary/50',
                                                     )}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-label={`주소 후보 ${index + 1}: ${result.road_address || result.jibun_address}`}
                                                     onClick={() => handleSelectGeocodingResult(index)}
+                                                    onKeyDown={event => {
+                                                        if (event.key === 'Enter' || event.key === ' ') {
+                                                            event.preventDefault();
+                                                            handleSelectGeocodingResult(index);
+                                                        }
+                                                    }}
                                                 >
                                                     <div className="flex items-center justify-between gap-2">
                                                         <p className="font-medium">도로명: {result.road_address}</p>
@@ -1529,7 +1315,8 @@ export function AdminRestaurantModal({
                                                     <Label htmlFor={`youtube_link_${index}`} className="text-xs">유튜브 링크</Label>
                                                     <Input
                                                         id={`youtube_link_${index}`}
-                                                        type="url"
+                                                        type={review.id.startsWith('new-') ? 'url' : 'text'}
+                                                        inputMode="url"
                                                         value={review.youtube_link}
                                                         onChange={(e) => {
                                                             const newReviews = [...formData.youtube_reviews];
@@ -1564,7 +1351,8 @@ export function AdminRestaurantModal({
                         ),
                     })}
                 </div>
-            </div>
+            </fieldset>
+            {confirmedReceipt && <Button type="button" variant="outline" onClick={() => void refreshAfterAction(confirmedReceipt)}>현재 정보 다시 불러오기</Button>}
 
             <DialogFooter className={adminRestaurantFooterClass}>
                         {restaurant && (
@@ -1581,7 +1369,7 @@ export function AdminRestaurantModal({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={onClose}
+                            onClick={requestClose}
                             disabled={isSubmitting}
                             className={ADMIN_MODAL_ACTION}
                         >
@@ -1674,12 +1462,20 @@ export function AdminRestaurantModal({
         </AlertDialog>
     );
 
+    const guardedDialogs = <>
+        {recordActions.dialog}
+        <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}><AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
+            <AlertDialogHeader><AlertDialogTitle>변경 내용을 버릴까요?</AlertDialogTitle><AlertDialogDescription>저장하지 않은 편집 내용이 있습니다.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>계속 편집</AlertDialogCancel><AlertDialogAction onClick={onClose}>변경 버리기</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent></AlertDialog>
+    </>;
+
     if (isMobileOrTablet) {
         return (
             <>
                 <BottomSheet
-                    isOpen={isOpen}
-                    onClose={onClose}
+                    isOpen={isOpen && !recordActions.busy && !discardOpen && !showDeleteConfirm}
+                    onClose={requestClose}
                     {...MOBILE_FULL_FORM_SHEET}
                     layoutSource="admin-restaurant-modal"
                     className="z-[120]"
@@ -1690,6 +1486,7 @@ export function AdminRestaurantModal({
                     {adminRestaurantForm}
                 </BottomSheet>
                 {deleteConfirmDialog}
+                {guardedDialogs}
             </>
         );
     }
@@ -1700,6 +1497,7 @@ export function AdminRestaurantModal({
         return (
             <>
                 <section
+                    hidden={recordActions.busy || discardOpen || showDeleteConfirm}
                     ref={desktopAdminRestaurantPanelRef}
                     className="fixed bottom-24 right-6 top-6 z-[95] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
                     style={{ transform: `translate3d(${desktopAdminRestaurantPanelPosition.x}px, ${desktopAdminRestaurantPanelPosition.y}px, 0)` }}
@@ -1714,12 +1512,14 @@ export function AdminRestaurantModal({
                     {adminRestaurantForm}
                 </section>
                 {deleteConfirmDialog}
+                {guardedDialogs}
             </>
         );
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <>
+        <Dialog open={isOpen} onOpenChange={next => { if (!next) requestClose(); }}>
             <DialogContent className={ADMIN_MODAL_CONTENT_MD_FLEX}>
                 <DialogHeader>
                     <DialogTitle className="text-2xl">
@@ -1735,6 +1535,8 @@ export function AdminRestaurantModal({
 
             {deleteConfirmDialog}
         </Dialog>
+        {guardedDialogs}
+        </>
     );
 
 }

@@ -1,0 +1,374 @@
+{
+  "kind": "local-review-batch-size-experiment",
+  "formalG003Evidence": false,
+  "postgresVersion": "17.6",
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "cpuCount": 18,
+    "transport": "Unix socket, persistent connection"
+  },
+  "datasetRows": 200,
+  "datasetSha256": "3691371d4a554a4389642cc327da43461b8cad3566b85b6c6402dfa13522a69d",
+  "repeats": 7,
+  "orderSeed": 20261003,
+  "migrationSha256": "1cff7056df006070a76b466a2ad04cf386fdb8d6b868fba491f6cb88a56246e0",
+  "deterministicOutputMatch": true,
+  "observations": [
+    {
+      "repeat": 0,
+      "batchSize": 50,
+      "wallMs": 48.504333943128586,
+      "requests": 4,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 0,
+      "batchSize": 100,
+      "wallMs": 41.208874899894,
+      "requests": 2,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 0,
+      "batchSize": 25,
+      "wallMs": 57.07991681993008,
+      "requests": 8,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 0,
+      "batchSize": 200,
+      "wallMs": 55.225125048309565,
+      "requests": 1,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 0,
+      "batchSize": 1,
+      "wallMs": 341.19554213248193,
+      "requests": 200,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 1,
+      "batchSize": 25,
+      "wallMs": 54.98216697014868,
+      "requests": 8,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 1,
+      "batchSize": 1,
+      "wallMs": 371.77266692742705,
+      "requests": 200,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 1,
+      "batchSize": 200,
+      "wallMs": 48.64083300344646,
+      "requests": 1,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 1,
+      "batchSize": 50,
+      "wallMs": 50.55266688577831,
+      "requests": 4,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 1,
+      "batchSize": 100,
+      "wallMs": 53.258916828781366,
+      "requests": 2,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 2,
+      "batchSize": 1,
+      "wallMs": 365.9214158542454,
+      "requests": 200,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 2,
+      "batchSize": 25,
+      "wallMs": 55.21920812316239,
+      "requests": 8,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 2,
+      "batchSize": 50,
+      "wallMs": 51.67383304797113,
+      "requests": 4,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 2,
+      "batchSize": 100,
+      "wallMs": 52.01683402992785,
+      "requests": 2,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 2,
+      "batchSize": 200,
+      "wallMs": 50.27550016529858,
+      "requests": 1,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 3,
+      "batchSize": 100,
+      "wallMs": 52.3011249024421,
+      "requests": 2,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 3,
+      "batchSize": 25,
+      "wallMs": 66.10170798376203,
+      "requests": 8,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 3,
+      "batchSize": 50,
+      "wallMs": 53.35191707126796,
+      "requests": 4,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 3,
+      "batchSize": 200,
+      "wallMs": 70.74695802293718,
+      "requests": 1,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 3,
+      "batchSize": 1,
+      "wallMs": 414.2252919264138,
+      "requests": 200,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 4,
+      "batchSize": 25,
+      "wallMs": 60.4112499859184,
+      "requests": 8,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 4,
+      "batchSize": 200,
+      "wallMs": 59.255999978631735,
+      "requests": 1,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 4,
+      "batchSize": 50,
+      "wallMs": 62.49154102988541,
+      "requests": 4,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 4,
+      "batchSize": 1,
+      "wallMs": 410.3544589597732,
+      "requests": 200,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 4,
+      "batchSize": 100,
+      "wallMs": 46.94812488742173,
+      "requests": 2,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 5,
+      "batchSize": 25,
+      "wallMs": 51.10945785418153,
+      "requests": 8,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 5,
+      "batchSize": 100,
+      "wallMs": 38.45095890574157,
+      "requests": 2,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 5,
+      "batchSize": 50,
+      "wallMs": 40.88524985127151,
+      "requests": 4,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 5,
+      "batchSize": 1,
+      "wallMs": 354.9318329896778,
+      "requests": 200,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 5,
+      "batchSize": 200,
+      "wallMs": 38.55437505990267,
+      "requests": 1,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 6,
+      "batchSize": 25,
+      "wallMs": 45.683833071962,
+      "requests": 8,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 6,
+      "batchSize": 50,
+      "wallMs": 40.91929201968014,
+      "requests": 4,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 6,
+      "batchSize": 1,
+      "wallMs": 328.08149978518486,
+      "requests": 200,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 6,
+      "batchSize": 100,
+      "wallMs": 37.06262493506074,
+      "requests": 2,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    },
+    {
+      "repeat": 6,
+      "batchSize": 200,
+      "wallMs": 35.18162504769862,
+      "requests": 1,
+      "approved": 200,
+      "outputDigest": "5f3caadbe6450862d29a6b71db7941f4e13ad284c61ff1d677771ce750c28f0a"
+    }
+  ],
+  "comparisons": {
+    "25": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 410.3544589597732,
+      "afterMs": 60.4112499859184,
+      "absoluteReductionMs": 349.9432089738548,
+      "reductionPercent": 85.27827621538275,
+      "reduction95CI": [
+        84.04208789947457,
+        85.27827621538275
+      ],
+      "experimentalNoiseBudgetMs": 53.17316483706236,
+      "mediansMs": [
+        365.9214158542454,
+        55.21920812316239
+      ]
+    },
+    "50": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 410.3544589597732,
+      "afterMs": 53.35191707126796,
+      "absoluteReductionMs": 357.0025418885052,
+      "reductionPercent": 86.99857747214146,
+      "reduction95CI": [
+        84.77132643122773,
+        87.12007255202904
+      ],
+      "experimentalNoiseBudgetMs": 43.112749233841896,
+      "mediansMs": [
+        365.9214158542454,
+        50.55266688577831
+      ]
+    },
+    "100": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 410.3544589597732,
+      "afterMs": 52.3011249024421,
+      "absoluteReductionMs": 358.0533340573311,
+      "reductionPercent": 87.25464686431758,
+      "reduction95CI": [
+        85.6743323093255,
+        88.55912885498242
+      ],
+      "experimentalNoiseBudgetMs": 32.98841370269656,
+      "mediansMs": [
+        365.9214158542454,
+        46.94812488742173
+      ]
+    },
+    "200": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 410.3544589597732,
+      "afterMs": 59.255999978631735,
+      "absoluteReductionMs": 351.09845898114145,
+      "reductionPercent": 85.55980112197574,
+      "reduction95CI": [
+        82.9206570912369,
+        86.91651180129884
+      ],
+      "experimentalNoiseBudgetMs": 46.95516638457775,
+      "mediansMs": [
+        365.9214158542454,
+        50.27550016529858
+      ]
+    }
+  },
+  "limitations": [
+    "Batch-size comparison uses the same new guarded approval function, not the previous unguarded production screen.",
+    "Synthetic rows and Unix socket; no provider, browser, hosted DB or network timing.",
+    "No actual token, cost, accuracy or whole-pipeline claim."
+  ]
+}

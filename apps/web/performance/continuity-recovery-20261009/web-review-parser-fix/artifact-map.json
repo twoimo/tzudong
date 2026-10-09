@@ -1,0 +1,40 @@
+{
+  "schema": "tzudong-sql-parser-artifact-map-v1",
+  "artifacts": [
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "bytes": 15819,
+      "sha256": "9268c882d1cb128d798f65faeb87ac3b1cc1fc3d52e843f8695b0c2ab3aa5b53"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-transaction.test.ts",
+      "bytes": 15300,
+      "sha256": "a913950719a32a0e28c738adf4cee04297bb3b8ab15fc549c4928aef67bab7d9"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-parser-fix/README.md",
+      "bytes": 2238,
+      "sha256": "f12d97853026b59a8d202cf15e5013b6c61ae3b4b7edc2db01426c77f91e3708"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-parser-fix/postgres17.6-parser-fixture.sql",
+      "bytes": 1410,
+      "sha256": "3880b6872df3cc70b9ecd47e402504d3b430345c13db3e1d9159e852eeef5e70"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-parser-fix/parser-differential.json",
+      "bytes": 1247,
+      "sha256": "7fe7fec7da858529fd7255c6fcaa49d160c85c074bde040dd4cf043944a589d5"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-parser-fix/parser-benchmark.json",
+      "bytes": 1363,
+      "sha256": "01249e9383f5cdd3ad0ccd00ff08572445fc61b0f1ca0c65d510d8d744ce7d3c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-parser-fix/runtime-result.json",
+      "bytes": 1631,
+      "sha256": "325e307941781cf2d0a004999acb226a3fe402a4af5399765c26625076620435"
+    }
+  ]
+}

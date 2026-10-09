@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-09T10:18:14.645Z",
+  "state": "ready_readback_confirmed",
+  "deploymentId": "dpl_DRLjCuw7iGP8pH1ZwyMtvqjXAmuE",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "projectName": "tzudong",
+  "url": "https://tzudong-fi9s0ycyh-twoimos-projects.vercel.app",
+  "gitSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "gitRef": "develop",
+  "target": "preview",
+  "targetEvidence": "existing preview redeploy dispatch and Vercel target=null non-production readback",
+  "deploymentDispatchAttempts": 2,
+  "createdDeploymentCount": 1,
+  "environmentWriteAttempts": 1,
+  "environmentScope": "preview/develop",
+  "productionChanged": false,
+  "source": "authenticated Vercel MCP get_deployment",
+  "newCredentialsGenerated": false
+}

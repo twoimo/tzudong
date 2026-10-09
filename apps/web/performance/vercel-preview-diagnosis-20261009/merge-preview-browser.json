@@ -1,0 +1,39 @@
+{
+  "deploymentId": "dpl_He2HgNHEkNsdbQg556dGJsreTEgr",
+  "gitSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "httpStatus": 200,
+      "loginModalRendered": true,
+      "brandTitleAndLogo": true,
+      "modalWithinViewport": true,
+      "credentialsEntered": false,
+      "oauthAttempted": false,
+      "privacyPageRendered": true,
+      "anonymousAdminRedirectedHome": true
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "httpStatus": 200,
+      "loginModalRendered": true,
+      "brandTitleAndLogo": true,
+      "modalWithinViewport": true,
+      "credentialsEntered": false,
+      "oauthAttempted": false,
+      "privacyPageRendered": true,
+      "anonymousAdminRedirectedHome": true
+    }
+  ],
+  "pageErrorNames": [],
+  "consoleErrorCount": 23,
+  "blockedExternalReads": 17,
+  "blockedWriteIntents": 0,
+  "forwardedWrites": 0,
+  "appOAuthStarted": false,
+  "authStateExported": false
+}

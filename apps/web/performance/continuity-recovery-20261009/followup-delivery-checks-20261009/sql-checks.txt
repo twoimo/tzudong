@@ -1,0 +1,78 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/supabase-migration-transaction.test.ts:
+(pass) four exact source envelopes agree with pinned provider-source parser and preserve body bytes [124.87ms]
+(pass) hash/vector drift and all intermediate control aliases are rejected before a call [0.54ms]
+(pass) quoted/dollar/comment control text remains untouched; unsupported meta commands reject [0.15ms]
+(pass) BEGIN ATOMIC and parenthesis nesting match the pinned G037 statement vector [24.08ms]
+(pass) CASE nesting and END identifier suffixes cannot terminate a BEGIN ATOMIC body [0.26ms]
+(pass) comments between BEGIN and ATOMIC are whitespace to PostgreSQL but exceed the pinned provider vector [23.47ms]
+(pass) standard strings keep backslashes literal while escape strings may quote with backslashes [0.19ms]
+(pass) comment-separated prepared transactions remain denied [0.07ms]
+(pass) server guards precede ledger and no source transaction boundary reaches payload [0.65ms]
+(pass) insufficient query contracts deny before connection; no forged expected default [0.36ms]
+(pass) long escaped readback literals compile while mutation outside literals remains denied [11.55ms]
+(pass) dollar literals and nested comments are ignored by readback mutation admission [0.29ms]
+(pass) ledger state selects one valid readback and the lock precedes catalog validation [0.19ms]
+(pass) ambiguous lost ACK reconciles once without resend and remains unconfirmed [0.48ms]
+(pass) server terminal guard rollback stays unconfirmed when another runner later commits [0.22ms]
+(pass) not-applied reconciliation returns only bounded error codes [0.44ms]
+(pass) conflict/unknown are fixed outcomes and not-applied retains bounded failure [0.09ms]
+Supabase migration terminal state verified: g016_privacy_audit_owner_policy
+Supabase migration terminal state verified: g016_onboarding_confirmation_freshness
+(pass) existing caller preserves pinned dry-run and valid provider-owned verify-only shape [3.29ms]
+(pass) exit0 truncated/contaminated/mismatched stdout reconciles once after committed state [0.42ms]
+(pass) local psql startup and raw diagnostics stay outside the executor contract [0.08ms]
+
+tests-unit/admin-record-sql-successor.test.ts:
+(pass) dedicated manifest pins the exact five-source chain, full vectors, toolchain and untouched legacy manifest [0.29ms]
+(pass) production manifest loader either binds the exact current toolchain or fails closed on source drift [119.11ms]
+(pass) production manifest launch hold rejects before checkout, transport or journal creation [2.34ms]
+(pass) fresh admission binds exact revision, rehearsal, rollback, external fences and all five schema/ledger stages [0.55ms]
+(pass) compiled plan checks catalog and ledger roots at every stage under an advisory and ledger-locked outer transaction [250.52ms]
+(pass) successful controller preflights before create-once journal and applies once without persisting the URI [265.37ms]
+(pass) source mismatch, journal collision and fresh preflight mismatch all stop before mutation [242.94ms]
+(pass) lost acknowledgement never resends and journals bounded unconfirmed outcome after one readonly reconciliation [264.13ms]
+(pass) target identity accepts only exact direct and official project-bound pooler endpoints [0.23ms]
+(pass) psql transport keeps the URI out of argv and bounds verbose server diagnostics [0.36ms]
+(pass) state query is a single read-only SELECT contract and does not expand the generic G016 path [4.78ms]
+
+tests-unit/supabase-migration-apply-source.test.ts:
+(pass) reviewed Supabase migration apply contract > bounds transport errors without copying markers, causes, classifiers, or hostile getters [0.12ms]
+(pass) reviewed Supabase migration apply contract > loads only the exact committed external manifest and rejects manifest drift [0.74ms]
+(pass) reviewed Supabase migration apply contract > rejects duplicate manifest schema and duplicate migration identities [0.58ms]
+(pass) reviewed Supabase migration apply contract > accepts only a manifest identity, never caller path or migration digest [0.39ms]
+Supabase migration dry-run checked: restaurant_refresh_history
+(pass) reviewed Supabase migration apply contract > keeps dry-run credential-free after external manifest and migration byte validation [0.73ms]
+(pass) reviewed Supabase migration apply contract > rejects migration byte drift and symbolic checkouts before transport selection [0.60ms]
+(pass) reviewed Supabase migration apply contract > distinguishes wrong prior state, already-applied state, and terminal readback drift [0.17ms]
+(pass) reviewed Supabase migration apply contract > rejects management or service credentials alongside direct Postgres [0.04ms]
+(pass) reviewed Supabase migration apply contract > psql runner uses stdin as an explicit file and keeps the database URI out of argv [0.17ms]
+(pass) reviewed Supabase migration apply contract > requires a manifest-bound provider receipt before G016 terminal verification [0.51ms]
+
+tests-unit/supabase-migration-bundle.test.ts:
+(pass) actual four source files compile in exact identity/hash/vector order with one output SELECT [99.81ms]
+(pass) order, source identity, source hash, vector and suffix drift reject before an executor exists [453.37ms]
+(pass) five-stage compilation is explicit while the historical four-stage API stays exact [124.80ms]
+(pass) fresh prior N and prefix/suffix roots are mandatory and partial target ledger is rejected by the first transaction guard [221.07ms]
+(pass) reconciliation classifies only exact prior/final objects; all intermediate stages conflict [110.40ms]
+(pass) ambiguous transport performs one read-only reconciliation without claiming or resending a commit [104.98ms]
+(pass) server terminal guard rollback cannot become success after a matching external commit [103.66ms]
+(pass) exit-zero malformed or mismatched readback is confirmed once by exact final state [105.75ms]
+(pass) not-applied preserves failure while partial and unknown are fixed fail-closed outcomes [134.72ms]
+(pass) transport and malformed-output diagnostics never escape through errors or causes [105.64ms]
+(pass) successful output must be exactly one JSON object matching the final bundle readback [120.27ms]
+
+tests-unit/admin-user-rpc-forward-successor.test.ts:
+(pass) dedicated held manifest pins the post-five chain and exact forward source/vector [0.08ms]
+(pass) production manifest launch hold rejects before admission, checkout or transport access [0.11ms]
+(pass) fresh admission and compiled plan bind exact 85 preimage, shared lock and one 85 to 86 ledger insert [22.76ms]
+(pass) wrong version, count, five-stage state, target state and protected revision fail closed [0.26ms]
+(pass) wrong project target and fresh preflight mismatch stop before mutation [1.88ms]
+(pass) success uses one read-only preflight and one atomic apply through the successor runner contract [17.61ms]
+(pass) lost acknowledgement never resends and returns only bounded unconfirmed outcome after readonly reconciliation [29.62ms]
+
+ 59 pass
+ 0 fail
+ 523 expect() calls
+Ran 59 tests across 5 files. [3.39s]

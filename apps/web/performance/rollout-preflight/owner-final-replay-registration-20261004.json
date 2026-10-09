@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-04T12:26:55.935966+00:00",
+  "kind": "owner-final-pg15-replay-registration",
+  "scope": "source registration and isolated PG15 adapter only",
+  "sourceBindings": {
+    "schema": "local-replay-proof-v1",
+    "migration_path": "backend/supabase/migrations/20261004115554_g014_pg17_owner_final_verifier.sql",
+    "source_sha256": "a2a50b992a973c7eb12fe447769dc15374690f55488632a8c6e11119ea99ec97",
+    "disposition": "legacy-contract-preserved",
+    "bindings": {
+      "backend/supabase/migrations/20261004115554_g014_pg17_owner_final_verifier.sql": "a2a50b992a973c7eb12fe447769dc15374690f55488632a8c6e11119ea99ec97",
+      "backend/supabase/scripts/verify_g014_owner_final_replay.py": "24a7b612d0dbe3fb4a53aa87711669ed3df25ef4f4dc365198f6bba74a172e17",
+      "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql": "8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483",
+      "backend/supabase/scripts/verify_g014_pg17_owner_replay.py": "8b8ac9857b5931d2e7609280f85a95264fb854ef374d969d25d1f7c3ead3b2c0"
+    },
+    "bindings_sha256": "f0ae73471caaf8dcf1a51766bedf143f5d971030df9afbf46aed36bf0184c304",
+    "verification_sql_sha256": "9b221be84780d740f8c585d6a8849ee1c0a8b8c6bacce9bf6747028273e4bcc3"
+  },
+  "sourceFiles": {
+    "backend/supabase/scripts/verify_g014_owner_final_replay.py": "24a7b612d0dbe3fb4a53aa87711669ed3df25ef4f4dc365198f6bba74a172e17",
+    "backend/supabase/tests/test_g014_owner_final_replay.py": "d822643b6b35d48fb430be30e2694f214fe959013ea5ad0fd3610b44d176d288",
+    "backend/supabase/scripts/local_replay_contract.py": "ea1559b8b226e91b89220f1aa69471ee83c619b83baae7fcb7fca04709b6d3e8",
+    "backend/supabase/scripts/local-migrate.py": "4476739fb53a16de1fc62843460f3ebef7aa095f39fcc38c71fa118ccd00f863",
+    "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh": "037846402a2aaafe30334f21644f362919f686b47825de4039da2de8c88b29d3",
+    "backend/supabase/tests/test_local_replay_contract.py": "282c77bc49dc8078f39d0cbc553601413a5cda4f72ecdff5de339df80ded05a7",
+    ".github/workflows/g014-catalog-contract-baseline.yml": "ab9353cdbb7e7890f5b3b237c7a551983cb6df8378bdfc6682dc2dc936144411",
+    ".github/workflows/security-audit.yml": "a471289aba95b5e858e6f73def4f514e7da5565f9c65da3ec62c1b6d16c5f078"
+  },
+  "localMigrationManifest": {
+    "count": 122,
+    "chainSha256": "b188c4607917464214e65b158f1299523f9d96588c6d10ad22234a5031d81311",
+    "manifestSha256": "c117714cc81041cca2358602997bd45d6e942f4ba0ba4f77b8b87c529e783f73",
+    "finalVerifierDisposition": "legacy-contract-preserved"
+  },
+  "validation": {
+    "pg15AndRelatedPythonTests": 21,
+    "pg15AndRelatedPythonSeconds": 8.739,
+    "additionalSourcePythonTests": 4,
+    "additionalSourcePythonSeconds": 0.355,
+    "securityWorkflowTests": 3,
+    "securityWorkflowSeconds": 0.106,
+    "generatorShellSyntax": "passed",
+    "fullCleanReplayRepeated": false,
+    "hostedWrites": 0,
+    "commits": 0
+  },
+  "limitations": [
+    "No new full clean PG15 replay was run.",
+    "PG15 adapter verifies legacy owner metadata, not the PG17 hosted final assertions.",
+    "The immutable hosted final verifier remains blocked by the parent-observed required-RPC absence; this registration does not admit production.",
+    "Release apply manifest was not expanded: its prior three approved migration entries remain unchanged."
+  ]
+}

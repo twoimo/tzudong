@@ -1,0 +1,61 @@
+{
+  "kind": "adopted-additive-current-pristine-pg17-three-migration-replay",
+  "status": "passed",
+  "sourceHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "operatingWrites": false,
+  "extraLegacyHelperGrants": false,
+  "userRowsCopied": 0,
+  "sourceDatabase": "tzudong_fresh_pg17_4763e95a3163",
+  "database": "tzudong_phase_full_01955f1c",
+  "sources": [
+    {
+      "name": "20261004190259_admin_record_guarded_actions.sql",
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+    },
+    {
+      "name": "20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+    },
+    {
+      "name": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+    }
+  ],
+  "threeMigrationRollbackExact": true,
+  "legacyAclAllowlistFullMetadataPreserved": true,
+  "membershipRolesImmutableManifestExact": true,
+  "g014PassedAfterM1": 4,
+  "g014PassedAfterM3": 4,
+  "persistentRpcBodyHashes": {
+    "raw": "7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304",
+    "record": "a6e469b2b498e038d8cbbd30b96abd245a114137becd931ad9abf5432fd9492a"
+  },
+  "sixFlowProof": {
+    "kind": "fresh-full-source-synthetic-record-fixture",
+    "cases": [
+      "changed_payload_same_uuid_rejected",
+      "restaurant.approve_preview_apply_readback_audit_idempotency",
+      "restaurant.edit_partial_readback_audit",
+      "review.approve_original_triggers_readback_audit",
+      "stale_preview_preserves_later_admin_change_without_audit",
+      "submission.approve_current_schema_readback_audit"
+    ],
+    "status": "checks_passed_in_transaction",
+    "caseCount": 6,
+    "limitations": [
+      "SQL synthetic fixture only; not UI/Auth onboarding/provider/Storage physical deletion.",
+      "Submission edit approval only; new-submission creation is not exercised.",
+      "Single-session optimistic conflict; concurrent commit races remain untested."
+    ],
+    "externalCalls": 0,
+    "syntheticOnly": true,
+    "operatingWrites": false,
+    "assertionsPassed": 4,
+    "rollbackStillRequired": true,
+    "sourceTriggersUnchanged": true,
+    "sourceFunctionsUnchanged": true
+  },
+  "sixFlowTransactionRollbackExact": true,
+  "sourcePristineUnchanged": true,
+  "ownedAppliedTemplateRetainedForConcurrency": true
+}

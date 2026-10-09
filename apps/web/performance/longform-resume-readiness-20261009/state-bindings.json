@@ -1,0 +1,30 @@
+[
+  {
+    "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/checkpoint.json",
+    "sha256": "04172cc14da4bfc3f87e25434f9397333b196b990dc3ee61c8cca3ba52acbf68"
+  },
+  {
+    "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/job.json",
+    "sha256": "9185b8cc693eae0dbd715715dcb7907649c202a06308a43b7a88a69a1c53a60c"
+  },
+  {
+    "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/resume-attempt-2026-10-06.json",
+    "sha256": "f194f3dc5a42934156497ec8e6a5ef8114ad445ac0e664ef36b84e5b957d5592"
+  },
+  {
+    "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/video-index.json",
+    "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762"
+  },
+  {
+    "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/collector.log",
+    "sha256": "d22dd03524aa649a753d518e87e9114e91dd89df6ad8833307cf9fe110c68c17"
+  },
+  {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/batches/pilot-20261004-01.json",
+    "sha256": "eda6f744bdcf7a872a0a2e511f1349150a27435f70c50f7d6416254f487c2629"
+  },
+  {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/batches/root-two-20261005.json",
+    "sha256": "2c519b7e43cc9970150f51ae8d7d7898f34cc87a19cb84d58b25f88c02a0f2b5"
+  }
+]

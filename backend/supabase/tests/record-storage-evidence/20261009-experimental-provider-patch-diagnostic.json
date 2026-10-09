@@ -1,0 +1,23 @@
+{
+  "schema": "record-media-storage-provider-patch-experiment-v1",
+  "status": "failed",
+  "databaseImage": "supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+  "s3Image": "cgr.dev/chainguard/minio@sha256:0d54f6c86e53138c6cfc242e21309a18941624d9034d9cdf598dbba61f69d872",
+  "recordSqlSha256": "1529ad96ebbc2c8e173d5c51fae9bef8051ce632c829eda20f0ae173a77c8caa",
+  "recordSqlUnchanged": true,
+  "harnessSha256": "76c4db66d3d120b65b5519f911f8ca62f0eee473bf4b1d827b7a448e19a97181",
+  "tests": [],
+  "observations": [],
+  "physicalBackend": "s3",
+  "syntheticOnly": true,
+  "hostedOperations": 0,
+  "canonicalReplay": false,
+  "completeCaseSet": false,
+  "sixCaseSetPassed": false,
+  "faultProxySha256": "c16374366da3f311841a8faf742b937b94b99589cb7b7dc0e409651a9228e8c7",
+  "providerModified": true,
+  "admissionEligible": false,
+  "providerPatch": null,
+  "baseStorageImage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177",
+  "code": "STORAGE_NOT_READY"
+}

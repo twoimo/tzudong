@@ -1,0 +1,12 @@
+[
+  {
+    "path": "/s/audit-invalid-code",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/s/Zz00Qq",
+    "status": 200,
+    "errors": []
+  }
+]

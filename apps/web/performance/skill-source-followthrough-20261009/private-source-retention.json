@@ -1,0 +1,24 @@
+{
+  "reason": "Keep complete third-party documentation/skill fetches in private evidence; public project report retains links, findings and exact byte hashes.",
+  "originalArtifactMapSha256": "ab282b04e3225e4296a286336028787385b35733da0c9aa51f3476d7c8043a16",
+  "sources": [
+    {
+      "basename": "supabase_changelog.md",
+      "bytes": 99857,
+      "sha256": "f718b0dc1423d1984fc5f18b8ee81bec2847c6a0fdb6658262afa5a004ddf77a",
+      "privateRetained": true
+    },
+    {
+      "basename": "supabase_current_feedback.md",
+      "bytes": 1035,
+      "sha256": "09ad94c0291735dfc04c92557c8734fa259ec39e1d56bf2bd5c6a6529d838717",
+      "privateRetained": true
+    },
+    {
+      "basename": "vercel_current_env_skill.md",
+      "bytes": 12153,
+      "sha256": "081d79b5b046276631c10b3db6ff07dbff4a59c057fc9bbc64aa364f82bb3045",
+      "privateRetained": true
+    }
+  ]
+}

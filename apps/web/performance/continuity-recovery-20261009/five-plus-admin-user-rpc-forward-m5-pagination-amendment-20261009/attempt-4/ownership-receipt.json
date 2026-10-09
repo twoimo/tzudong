@@ -1,0 +1,42 @@
+{
+  "kind": "five-plus-admin-user-rpc-forward-m5-pagination-amendment-owned-cluster",
+  "status": "unconfirmed",
+  "nonce": "d8a853eebb4f66e8f3d4774f",
+  "container": "tzudong-five-forward-amendment-d8a853eebb4f66e8f3d4774f",
+  "volume": "tzudong-five-forward-amendment-d8a853eebb4f66e8f3d4774f",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "imageId": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "owner": "five-forward-amendment-d8a853eebb4f66e8f3d4774f",
+  "network": "none",
+  "publishedPorts": 0,
+  "operatingWrites": false,
+  "hostedWrites": false,
+  "cleanup": {
+    "nativeClusterRemoved": true,
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  },
+  "nativeServerVersion": "17.6",
+  "nativeServerVersionNum": 170006,
+  "nativeFullSchemaEligible": false,
+  "nativeMissingRequiredExtensions": [
+    "btree_gin",
+    "fuzzystrmatch",
+    "hypopg",
+    "index_advisor",
+    "pg_stat_statements",
+    "pg_trgm",
+    "pgcrypto",
+    "supabase_vault",
+    "uuid-ossp",
+    "vector"
+  ],
+  "imageSource": "local-cache-only",
+  "failure": {
+    "code": "OWNED_COMMAND_FAILED",
+    "fixedCode": null,
+    "exitCode": 1
+  },
+  "completedAt": "2026-10-09T12:42:53.014Z"
+}

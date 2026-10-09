@@ -1,0 +1,21 @@
+{
+  "recordedAt": "2026-10-09T12:02:27.643658+00:00",
+  "source": [
+    {
+      "path": "apps/web/lib/admin/record-action-service.ts",
+      "bytes": 8330,
+      "sha256": "5b7f2cbffb35e0fea3ba8caf5d641d7263da8410f320942fab8a1ca01bbeda99"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-actions.test.ts",
+      "bytes": 22607,
+      "sha256": "e415604ea952ea6fd3f7dabbd4fe25d4c55cff8b03f3f7f7a26b43347e7e22b9"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 12195,
+      "sha256": "03c8ebabaaf7255e1c5ab5dedf59a95782b78dbc960668870ea80fc8780ab3af"
+    }
+  ],
+  "promptSha256": "2a14c9983aeb1ced243eedf5dc2cedd3f2d3637a4722d9d8fdd31321dc02cb3f"
+}

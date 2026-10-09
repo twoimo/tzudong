@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "kind": "authorized-hosted-selected-apply-intent",
+  "at": "2026-10-04T12:09:20.977649+00:00",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "sourceHead": "a60ef70dba0bd32ea44d32218e2c66ef1b5410e1",
+  "planSha256": "0f7ed1db21e59569efc9ec30a651f00be9e4a8a317ba668b5ab3a3595e267847",
+  "pending": [
+    {
+      "version": "20261003171449",
+      "name": "restaurant_review_manual_guards",
+      "file": "20261003171449_restaurant_review_manual_guards.sql",
+      "sha256": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271"
+    },
+    {
+      "version": "20261003172126",
+      "name": "restaurant_review_manual_invoker_contract",
+      "file": "20261003172126_restaurant_review_manual_invoker_contract.sql",
+      "sha256": "8ce3a87564b8b5bb2c4caffd1b62bc2f50c3055f11fc7dc3e2fa9700cffa1af3"
+    },
+    {
+      "version": "20261003182338",
+      "name": "storyboard_service_role_bridge",
+      "file": "20261003182338_storyboard_service_role_bridge.sql",
+      "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+    },
+    {
+      "version": "20261003193717",
+      "name": "restaurant_review_claim_progress",
+      "file": "20261003193717_restaurant_review_claim_progress.sql",
+      "sha256": "a4e98f4c406fc6207468917bcc2ae8ffb958ec2303b314c04ab25705261fc79c"
+    },
+    {
+      "version": "20261003205335",
+      "name": "storyboard_uncertain_lease_recovery",
+      "file": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+      "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+    },
+    {
+      "version": "20261003212017",
+      "name": "admin_evaluation_read_helpers",
+      "file": "20261003212017_admin_evaluation_read_helpers.sql",
+      "sha256": "404331acabd4c3d570e21b0fc1a3d1e2c34dd9525eea7bdbc944bc7c087f261c"
+    },
+    {
+      "version": "20261003215116",
+      "name": "admin_evaluation_keyset_queries",
+      "file": "20261003215116_admin_evaluation_keyset_queries.sql",
+      "sha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3"
+    },
+    {
+      "version": "20261003220841",
+      "name": "admin_evaluation_page_invoker_contract",
+      "file": "20261003220841_admin_evaluation_page_invoker_contract.sql",
+      "sha256": "4471f02096c0c7ee73d074ea7a3c4c0c36674edbaacbf998f4059d7b48d1f095"
+    },
+    {
+      "version": "20261004003503",
+      "name": "admin_evaluation_display_revision",
+      "file": "20261004003503_admin_evaluation_display_revision.sql",
+      "sha256": "777f7fb596006864569d8f418f35bbe0a9e2adf9161833eeee612a6196a92781"
+    },
+    {
+      "version": "20261004010334",
+      "name": "restaurant_review_identity_evidence",
+      "file": "20261004010334_restaurant_review_identity_evidence.sql",
+      "sha256": "27f4fd99e909c9d19e7160c79b0a0cfe5ee3e5f7d137e4d3f53de7819f94af63"
+    },
+    {
+      "version": "20261004023841",
+      "name": "storyboard_claim_capability_order",
+      "file": "20261004023841_storyboard_claim_capability_order.sql",
+      "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+    },
+    {
+      "version": "20261004045404",
+      "name": "restaurant_review_category_contract",
+      "file": "20261004045404_restaurant_review_category_contract.sql",
+      "sha256": "5f16d4f5b50d4a343a737d96be6465c7bef3a51fd89789deff141f928f5ee600"
+    },
+    {
+      "version": "20261004120000",
+      "name": "restaurant_review_gemini_decision",
+      "file": "20261004120000_restaurant_review_gemini_decision.sql",
+      "sha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc"
+    }
+  ],
+  "before": {
+    "policy": {
+      "enabled": false,
+      "version": 1,
+      "batchSize": 50,
+      "lastRunAt": null,
+      "dailyLimit": 50
+    },
+    "restaurantCount": 1659,
+    "runningReviewItems": 0,
+    "restaurantRowsSha256": "32a58ac590418a889708c0fc97539fe7ca5b20a97f0ba43c7b5226340acc8458"
+  },
+  "skipVault": true,
+  "rolesAndSeedExcluded": true,
+  "ownerRecoveryExcluded": true
+}

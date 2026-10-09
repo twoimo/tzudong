@@ -1,0 +1,14 @@
+{
+  "kind": "current-schema-record-operating-readonly-preflight",
+  "observedAt": "2026-10-08T22:09:41.711Z",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "readOnly": true,
+  "operatingWrites": false,
+  "result": {
+    "ledgerCount": 80,
+    "restaurantCount": 1659,
+    "guardedRpcPresent": false,
+    "pendingGuardedApplied": false,
+    "parallelReviewMigrationsApplied": 0
+  }
+}

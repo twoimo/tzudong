@@ -1,0 +1,662 @@
+{
+  "kind": "native-pg17-admin-rpc-preparation",
+  "sourceCommit": "685ad8648e94423cc20d1f880bb14365baff0e9f",
+  "objectiveComplete": false,
+  "operatingMigrationsApplied": false,
+  "privateSchemaExportedToRepository": false,
+  "snapshots": {
+    "pg17-hosted-snapshot.json": {
+      "kind": "hosted-readonly-schema-and-catalog-snapshot",
+      "observedAt": "2026-10-07T08:18:50.397Z",
+      "sourceCommit": "685ad8648e94423cc20d1f880bb14365baff0e9f",
+      "projectRef": "aqlcofblfxdrjhhdmarw",
+      "tls": "libpq verify-full, TLSv1.3",
+      "schemaBytes": 2035137,
+      "schemaSha256": "c5beba83468300f25bf54e602d5b11b19716f209bce6e33d31f4697963af9793",
+      "contractBytes": 815273,
+      "contractSha256": "b326a477d53a2421037794edbe8f3ee70f4d2d7ba48fe950f1284234c2c59f06",
+      "dataTables": [
+        "privacy_retention.g014_catalog_contract_manifest",
+        "privacy_retention.g014_nested_helper_allowlist",
+        "privacy_retention.g014_public_rpc_allowlist"
+      ],
+      "userRowsCopied": 0,
+      "credentialArgv": false,
+      "operatingWrites": false,
+      "privateOnly": true
+    },
+    "pg17-clone-reconstructed.json": {
+      "kind": "pg17-full-schema-contract-reconstruction",
+      "status": "passed",
+      "database": "tzudong_clone_replay",
+      "metadata": {
+        "ownerSet": false,
+        "memberCount": 29,
+        "booleanCases": 27,
+        "manifestRows": 1963,
+        "booleanMismatches": 0,
+        "postgresSuperuser": false
+      },
+      "assertionsPassed": 4,
+      "projections": {
+        "argumentOidRows": 8,
+        "droppedColumnPositions": 7,
+        "booleanAssociativityRows": 1
+      },
+      "temporaryRestoreSuperuserReverted": true,
+      "assertionCodeChanged": false,
+      "immutableTriggerDisabled": false,
+      "operatingWrites": false,
+      "userRowsCopied": 0,
+      "databaseOwner": "postgres",
+      "databaseOwnerCorrectedToHosted": true
+    },
+    "pg17-new-rpc-replay.json": {
+      "kind": "pg17-full-schema-new-rpc-replay",
+      "observedAt": "2026-10-07T09:02:56.583Z",
+      "status": "passed",
+      "sourceCommit": "685ad8648e94423cc20d1f880bb14365baff0e9f",
+      "sources": [
+        {
+          "name": "20261004190259_admin_record_guarded_actions.sql",
+          "sha256": "1529ad96ebbc2c8e173d5c51fae9bef8051ce632c829eda20f0ae173a77c8caa"
+        },
+        {
+          "name": "20261004192657_admin_evaluation_raw_warning_groups.sql",
+          "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+        },
+        {
+          "name": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+          "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+        }
+      ],
+      "rollbackExact": true,
+      "membershipRestored": true,
+      "immutableManifestPreserved": true,
+      "helpersRemovedInApplyingSession": true,
+      "assertionsPassed": 4,
+      "before": {
+        "members": 29,
+        "ownerSet": false,
+        "functions": [
+          {
+            "acl": null,
+            "anon": null,
+            "owner": null,
+            "config": null,
+            "definer": null,
+            "present": false,
+            "service": null,
+            "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+            "bodySha256": null,
+            "authenticated": null
+          },
+          {
+            "acl": null,
+            "anon": null,
+            "owner": null,
+            "config": null,
+            "definer": null,
+            "present": false,
+            "service": null,
+            "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+            "bodySha256": null,
+            "authenticated": null
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "authenticated=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+            "authenticated": true
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "authenticated=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+            "authenticated": true
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "authenticated=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+            "authenticated": true
+          }
+        ],
+        "memberHash": "185a7cab1f9302ebefc71b79d58ff88dac7da5652b6c5509030078860ee7973f",
+        "ownerUsage": false,
+        "manifestHash": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+        "helpersAbsent": true,
+        "postgresSuperuser": false
+      },
+      "after": {
+        "members": 29,
+        "ownerSet": false,
+        "functions": [
+          {
+            "acl": [
+              "postgres=X/postgres",
+              "service_role=X/postgres"
+            ],
+            "anon": false,
+            "owner": "postgres",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "present": true,
+            "service": true,
+            "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+            "bodySha256": "7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "postgres=X/postgres",
+              "service_role=X/postgres"
+            ],
+            "anon": false,
+            "owner": "postgres",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "present": true,
+            "service": true,
+            "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+            "bodySha256": "14961c0de50f8a455af5a4498e89d628c8767e6ef4bbaa8d2db3ace83fc2d5d1",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+            "authenticated": false
+          }
+        ],
+        "memberHash": "185a7cab1f9302ebefc71b79d58ff88dac7da5652b6c5509030078860ee7973f",
+        "ownerUsage": false,
+        "manifestHash": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+        "helpersAbsent": true,
+        "postgresSuperuser": false
+      },
+      "operatingWrites": false,
+      "userRowsCopied": 0,
+      "limitations": [
+        "Clone reconstruction projections are declared separately.",
+        "This is isolated SQL verification, not hosted application, real user workflow or physical Storage deletion proof."
+      ]
+    },
+    "pg17-clone-reconstructed-b.json": {
+      "kind": "pg17-full-schema-contract-reconstruction",
+      "status": "passed",
+      "database": "tzudong_clone_replay_b",
+      "metadata": {
+        "ownerSet": false,
+        "memberCount": 29,
+        "booleanCases": 27,
+        "manifestRows": 1963,
+        "booleanMismatches": 0,
+        "postgresSuperuser": false
+      },
+      "assertionsPassed": 4,
+      "projections": {
+        "argumentOidRows": 8,
+        "droppedColumnPositions": 7,
+        "booleanAssociativityRows": 1
+      },
+      "temporaryRestoreSuperuserReverted": true,
+      "assertionCodeChanged": false,
+      "immutableTriggerDisabled": false,
+      "operatingWrites": false,
+      "userRowsCopied": 0
+    },
+    "pg17-new-rpc-replay-b.json": {
+      "kind": "pg17-full-schema-new-rpc-replay",
+      "observedAt": "2026-10-07T09:11:27.153Z",
+      "status": "passed",
+      "sourceCommit": "685ad8648e94423cc20d1f880bb14365baff0e9f",
+      "sources": [
+        {
+          "name": "20261004190259_admin_record_guarded_actions.sql",
+          "sha256": "1529ad96ebbc2c8e173d5c51fae9bef8051ce632c829eda20f0ae173a77c8caa"
+        },
+        {
+          "name": "20261004192657_admin_evaluation_raw_warning_groups.sql",
+          "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+        },
+        {
+          "name": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+          "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+        }
+      ],
+      "rollbackExact": true,
+      "rollbackSchemaExact": true,
+      "beforeSchemaSha256": "0fb5017e6d2cc9124630a411c9e9711aac5d8c52accdb0a3569ac66dbb7e20d2",
+      "rollbackSchemaSha256": "0fb5017e6d2cc9124630a411c9e9711aac5d8c52accdb0a3569ac66dbb7e20d2",
+      "membershipRestored": true,
+      "immutableManifestPreserved": true,
+      "helpersRemovedInApplyingSession": true,
+      "assertionsPassed": 4,
+      "before": {
+        "members": 29,
+        "ownerSet": false,
+        "functions": [
+          {
+            "acl": null,
+            "anon": null,
+            "owner": null,
+            "config": null,
+            "definer": null,
+            "present": false,
+            "service": null,
+            "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+            "bodySha256": null,
+            "authenticated": null
+          },
+          {
+            "acl": null,
+            "anon": null,
+            "owner": null,
+            "config": null,
+            "definer": null,
+            "present": false,
+            "service": null,
+            "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+            "bodySha256": null,
+            "authenticated": null
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "authenticated=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+            "authenticated": true
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "authenticated=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+            "authenticated": true
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "authenticated=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+            "authenticated": true
+          }
+        ],
+        "memberHash": "185a7cab1f9302ebefc71b79d58ff88dac7da5652b6c5509030078860ee7973f",
+        "ownerUsage": false,
+        "manifestHash": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+        "helpersAbsent": true,
+        "postgresSuperuser": false
+      },
+      "after": {
+        "members": 29,
+        "ownerSet": false,
+        "functions": [
+          {
+            "acl": [
+              "postgres=X/postgres",
+              "service_role=X/postgres"
+            ],
+            "anon": false,
+            "owner": "postgres",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "present": true,
+            "service": true,
+            "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+            "bodySha256": "7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "postgres=X/postgres",
+              "service_role=X/postgres"
+            ],
+            "anon": false,
+            "owner": "postgres",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "present": true,
+            "service": true,
+            "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+            "bodySha256": "14961c0de50f8a455af5a4498e89d628c8767e6ef4bbaa8d2db3ace83fc2d5d1",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+            "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+            "authenticated": false
+          },
+          {
+            "acl": [
+              "privacy_workflow_owner=X/privacy_workflow_owner",
+              "service_role=X/privacy_workflow_owner"
+            ],
+            "anon": false,
+            "owner": "privacy_workflow_owner",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "present": true,
+            "service": true,
+            "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+            "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+            "authenticated": false
+          }
+        ],
+        "memberHash": "185a7cab1f9302ebefc71b79d58ff88dac7da5652b6c5509030078860ee7973f",
+        "ownerUsage": false,
+        "manifestHash": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+        "helpersAbsent": true,
+        "postgresSuperuser": false
+      },
+      "operatingWrites": false,
+      "userRowsCopied": 0,
+      "limitations": [
+        "Clone reconstruction projections are declared separately.",
+        "This is isolated SQL verification, not hosted application, real user workflow or physical Storage deletion proof."
+      ]
+    },
+    "pg17-new-private-acls.json": {
+      "fences": [
+        {
+          "name": "admin_record_object_fence",
+          "publicExecute": false,
+          "serviceExecute": false
+        },
+        {
+          "name": "admin_record_reference_fence",
+          "publicExecute": false,
+          "serviceExecute": false
+        }
+      ],
+      "tables": [
+        {
+          "rls": true,
+          "role": "anon",
+          "table": "admin_record_audit",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "rls": true,
+          "role": "authenticated",
+          "table": "admin_record_audit",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "rls": true,
+          "role": "service_role",
+          "table": "admin_record_audit",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false
+        },
+        {
+          "rls": true,
+          "role": "anon",
+          "table": "admin_record_media_cleanup",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "rls": true,
+          "role": "authenticated",
+          "table": "admin_record_media_cleanup",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "rls": true,
+          "role": "service_role",
+          "table": "admin_record_media_cleanup",
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true
+        },
+        {
+          "rls": true,
+          "role": "anon",
+          "table": "admin_record_operations",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "rls": true,
+          "role": "authenticated",
+          "table": "admin_record_operations",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "rls": true,
+          "role": "service_role",
+          "table": "admin_record_operations",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": true
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "G014 clone reconstruction maps physical OIDs and dropped-column positions and proves the one Boolean-associativity expression over 27 cases. Original snapshots and failed attempts are retained privately.",
+    "This verifies actual SQL registration and grants under the restored non-superuser postgres role. It does not verify real user happy paths, hosted application, physical Storage deletion or service deployment."
+  ],
+  "artifacts": {
+    "pg17-hosted-snapshot.json": "3f9dad3466d256517e261f3824dcd92e34acb4f1cfa5819c80f6e1492d77bb6d",
+    "pg17-clone-reconstructed.json": "dc26e0770fb4ea4d26daf95bbbcfb8aa846a2e0e27b51f08640cfb87b2dcdde2",
+    "pg17-new-rpc-replay.json": "29c1ce85def4ba9c342df02db98ca5e1b794bfb1a00e6d305f83725fce36e637",
+    "pg17-clone-reconstructed-b.json": "cd92c59a38bc45293499c1096bb746923693613c2af7f60c7d58ba6fae136940",
+    "pg17-new-rpc-replay-b.json": "0ab8dcb23962d4fc6346422142b7b35485717d0b8ca1e9e1b3bc6dea6be278be",
+    "pg17-new-private-acls.json": "165915875a371b364ddef6f3eceab170bd5696da27648609b5b8b112652c031e"
+  },
+  "runtime": {
+    "colimaProfile": "tzudong-catalog-20261007",
+    "cpu": 2,
+    "memoryGiB": 3,
+    "diskGiB": 40,
+    "containerNetwork": "none",
+    "publishedPorts": 0,
+    "databaseOwner": "postgres",
+    "postgresRoleSuperuserDuringMigration": false,
+    "schemaDumpRestrictKey": "fixed task-owned key, used only to eliminate random dump framing during hash comparison"
+  },
+  "privateReproductionScripts": {
+    "read-pg17-schema.mjs": "00a41deea8bf5627022af25d08aee39a7a4bbce1608a0c1d6c398eb175395f31",
+    "restore-pg17-clone.mjs": "4a6d69a284c328bbb7b24792d11f89605ea7b57c4a5e73a64defff9ed7debaa5",
+    "check-pg17-clone.mjs": "db7a8b1eeb1d0e49e9850ff8b1396e86e8f4134e6970717d983e52496cd52082",
+    "project-pg17-clone.mjs": "88654590b72c2f7050684061753d2171240a42162f9cdad503bf8de07915bee2",
+    "reconstruct-pg17-clone.mjs": "8a8e782428033f280d2e746257a44e5be105aabac0d85dc3e6ae18d9748905de",
+    "reconstruct-pg17-clone-b.mjs": "3222b79558443653d2fd22072a99921bac4e29728be9ef56539e627b3434214e",
+    "replay-new-rpcs-pg17.mjs": "b65ec476861820bc838d6fe084d2d0f376119547dcceb1128601a555ec397f88",
+    "replay-new-rpcs-pg17-b.mjs": "bd4cd01ec57bf6ca7901f16655098a1e010bce3aefe7e5c964b4251dcc943dfe"
+  },
+  "sampleSize": {
+    "fullNativeMigrationReplays": 2,
+    "fullSchemaRollbackFingerprints": 1,
+    "booleanTruthCases": 27,
+    "performanceInference": "not applicable; deterministic correctness/permission checks, no latency or monetary improvement claim"
+  },
+  "failedAttempts": [
+    "Original pg_dump timed out at 60s; a bounded 240s read completed.",
+    "Initial dump restoration omitted database ownership, physical type OIDs and dropped-column positions; immutable manifest rejected direct updates.",
+    "The supported reconstruction loaded mapped metadata through initial INSERT, preserved the immutable trigger and restored row_security=on before private assertions.",
+    "Database ownership was matched to the current hosted postgres owner before non-superuser migration execution."
+  ],
+  "privateAclVerification": {
+    "matrixRows": 9,
+    "passed": true,
+    "auditServiceSelectInsertOnly": true,
+    "fenceDirectExecuteDenied": true
+  }
+}

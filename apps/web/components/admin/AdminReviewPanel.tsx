@@ -14,7 +14,11 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/no-toast";
-import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
+import { useRecordAction } from "@/lib/admin/use-record-action";
+import { isRecordActionCancelled, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT } from "@/lib/admin/record-action-client";
+import type { RecordActionReceipt } from "@/lib/admin/record-action-contract";
+import { ADMIN_PENDING_COUNTS_QUERY_KEY } from "@/lib/admin/pending-counts";
+import { invalidateRestaurantDiscoveryQueries } from "@/lib/restaurant-discovery-cache";
 import { fetchAdminProfileSummariesLookup, resolveAdminReviewerDisplay } from "@/lib/admin/profile-summaries";
 import {
     CheckCircle2,
@@ -37,7 +41,6 @@ import {
 } from "./admin-modal-styles";
 
 type ReviewRow = Tables<'reviews'>;
-type ReviewStatusRow = Pick<Tables<'reviews'>, 'restaurant_id' | 'is_verified'>;
 type AdminReviewRow = Pick<
     ReviewRow,
     | 'id'
@@ -81,10 +84,6 @@ interface RestaurantSummaryRow {
     jibun_address: string | null;
 }
 
-interface RestaurantReviewCountRow {
-    review_count: number | null;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -121,17 +120,6 @@ function isRestaurantSummaryRow(value: unknown): value is RestaurantSummaryRow {
         && (value.jibun_address === null || typeof value.jibun_address === 'string');
 }
 
-function isReviewStatusRow(value: unknown): value is ReviewStatusRow {
-    return isRecord(value)
-        && typeof value.restaurant_id === 'string'
-        && typeof value.is_verified === 'boolean';
-}
-
-function isRestaurantReviewCountRow(value: unknown): value is RestaurantReviewCountRow {
-    return isRecord(value)
-        && (value.review_count === null || typeof value.review_count === 'number');
-}
-
 function requireRows<T>(
     value: unknown,
     isRow: (row: unknown) => row is T,
@@ -141,15 +129,6 @@ function requireRows<T>(
     const rows = value.filter(isRow);
     if (rows.length !== value.length) throw new Error(errorMessage);
     return rows;
-}
-
-function requireRow<T>(
-    value: unknown,
-    isRow: (row: unknown) => row is T,
-    errorMessage: string,
-): T {
-    if (!isRow(value)) throw new Error(errorMessage);
-    return value;
 }
 
 interface Review {
@@ -177,8 +156,6 @@ interface Review {
     } | null;
 }
 
-const ADMIN_REVIEW_DELETE_CONFIRMATION = '리뷰삭제';
-
 interface AdminReviewPanelProps {
     isOpen: boolean;
     onClose: () => void;
@@ -193,8 +170,6 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
     const [adminNote, setAdminNote] = useState("");
-    const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
-    const [deleteReviewConfirmation, setDeleteReviewConfirmation] = useState('');
 
     const {
         data: reviewsPages,
@@ -202,8 +177,11 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
         hasNextPage,
         isLoading,
         isFetchingNextPage,
+        isError,
+        isFetchNextPageError,
+        refetch,
     } = useInfiniteQuery({
-        queryKey: ['admin-reviews', isAdmin],
+        queryKey: ['admin-reviews', user?.id, isAdmin],
         queryFn: async ({ pageParam = 0 }) => {
             if (!user || !isAdmin) return { reviews: [], nextCursor: null };
 
@@ -224,7 +202,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-            const [profilesLookup, { data: restaurantsData }] = await Promise.all([
+            const [profilesLookup, restaurantsResult] = await Promise.all([
                 fetchAdminProfileSummariesLookup(userIds),
                 supabase
                     .from('restaurants')
@@ -233,6 +211,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     .overrideTypes<RestaurantSummaryRow[], { merge: false }>(),
             ]);
 
+            if (restaurantsResult.error) throw new Error('맛집 정보를 불러오지 못했습니다.');
+            const restaurantsData = restaurantsResult.data;
             const typedRestaurantsData = restaurantsData
                 ? requireRows(restaurantsData, isRestaurantSummaryRow, '레스토랑 데이터 형식이 올바르지 않습니다.')
                 : [];
@@ -279,7 +259,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
         },
         getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
         initialPageParam: 0,
-        enabled: !!user && isOpen,
+        enabled: !!user && isAdmin && isOpen,
     });
 
     const reviews = reviewsPages?.pages.flatMap(page => page.reviews) || [];
@@ -287,10 +267,10 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     const loadMoreReviews = useCallback(() => {
-        if (hasNextPage && !isFetchingNextPage) {
+        if (hasNextPage && !isFetchingNextPage && !isError) {
             fetchNextPage();
         }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    }, [hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -307,214 +287,83 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
         }
 
         return () => observer.disconnect();
-    }, [loadMoreReviews]);
+    }, [loadMoreReviews, isOpen]);
 
+    const refreshReviewViews = useCallback(async () => {
+        await Promise.all([
+            ...[['admin-reviews'], ['admin-reviews-inline'], ['restaurant-reviews'], ['review-feed'], ['review-feed-overlay'], ['user-reviews'], ['admin-pending-counts'], ADMIN_PENDING_COUNTS_QUERY_KEY].map(queryKey => queryClient.invalidateQueries({ queryKey })),
+            invalidateRestaurantDiscoveryQueries(queryClient),
+        ]);
+    }, [queryClient]);
+    useEffect(() => {
+        const invalidate = () => { void refreshReviewViews(); };
+        window.addEventListener(RECORD_VIEWS_INVALIDATED_EVENT, invalidate);
+        return () => window.removeEventListener(RECORD_VIEWS_INVALIDATED_EVENT, invalidate);
+    }, [refreshReviewViews]);
+    const onRecordApplied = async (receipt: RecordActionReceipt) => {
+        toast.success(['변경 확인 완료', recordActionMediaNotice(receipt)].filter(Boolean).join(' · '));
+        setIsReviewModalOpen(false);
+        setSelectedReview(null);
+        setAdminNote("");
+        await refreshReviewViews();
+    };
+    const recordActions = useRecordAction(receipt => { void onRecordApplied(receipt); }, { recover: isOpen && isAdmin });
+    const notifyRecordActionError = (error: unknown) => {
+        if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+    };
+    type ModerationInput = { review: Review; note: string };
+    const afterModeration = async (receipt: RecordActionReceipt, { review, note }: ModerationInput) => {
+        const row = receipt.readback.find(item => item.kind === 'review' && item.id === review.id);
+        const approved = row?.status === 'approved';
+        if (review.user_id && (approved || row?.status === 'rejected')) {
+            void createUserNotification(
+                review.user_id,
+                approved ? 'review_approved' : 'review_rejected',
+                approved ? '리뷰 승인됨' : '리뷰 거부됨',
+                `귀하의 리뷰 "${review.title}"이(가) ${approved ? '승인' : '거부'}되었습니다.`,
+                { reviewId: review.id, restaurantName: review.restaurants?.name, ...(approved ? {} : { adminNote: note }) },
+            ).catch(() => toast.error('변경은 확인됐지만 작성자 알림은 확인하지 못했습니다.'));
+        }
+        await onRecordApplied(receipt);
+    };
     const approveMutation = useMutation({
-        mutationFn: async (reviewId: string) => {
-            assertLegacyBrowserAdminMutationEnabled("review_moderation", "approve_review");
-
-            const { data: review, error: reviewError } = await supabase
-                .from('reviews')
-                .select('restaurant_id, is_verified')
-                .eq('id', reviewId)
-                .single()
-                .overrideTypes<ReviewStatusRow, { merge: false }>();
-
-            if (reviewError) throw reviewError;
-
-            const typedReview = requireRow(review, isReviewStatusRow, '리뷰 정보를 찾을 수 없습니다.');
-            const wasAlreadyVerified = typedReview.is_verified;
-
-            const { error: approveError } = await supabase
-                .from('reviews')
-                .update({
-                    is_verified: true,
-                    admin_note: adminNote.trim() || null,
-                    is_edited_by_admin: !!adminNote.trim(),
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', reviewId);
-
-            if (approveError) throw approveError;
-
-            if (!wasAlreadyVerified) {
-                const { data: restaurant, error: fetchError } = await supabase
-                    .from('restaurants')
-                    .select('review_count')
-                    .eq('id', typedReview.restaurant_id)
-                    .single()
-                    .overrideTypes<RestaurantReviewCountRow, { merge: false }>();
-
-                if (fetchError) throw fetchError;
-
-                const typedRestaurant = requireRow(
-                    restaurant,
-                    isRestaurantReviewCountRow,
-                    '레스토랑 리뷰 수 정보를 찾을 수 없습니다.',
-                );
-
-                const { error: visitError } = await supabase
-                    .from('restaurants')
-                    .update({
-                        review_count: (typedRestaurant.review_count ?? 0) + 1,
-                        updated_at: new Date().toISOString(),
-                    })
-                    .eq('id', typedReview.restaurant_id);
-
-                if (visitError) throw visitError;
-            }
-        },
-        onSuccess: () => {
-            toast.success('리뷰가 승인되었습니다');
-
-            if (selectedReview && selectedReview.user_id) {
-                createUserNotification(
-                    selectedReview.user_id,
-                    'review_approved',
-                    '리뷰 승인됨',
-                    `귀하의 리뷰 "${selectedReview.title}"이(가) 승인되었습니다.`,
-                    { reviewId: selectedReview.id, restaurantName: selectedReview.restaurants?.name }
-                );
-            }
-
-            queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
-            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
-            setIsReviewModalOpen(false);
-            setAdminNote("");
-        },
-        onError: (error: Error) => {
-            toast.error('승인에 실패했습니다');
-        },
+        mutationFn: ({ review, note }: ModerationInput) => recordActions.run({
+            action: 'review.approve', targetIds: [review.id], payload: { note: note.trim() || undefined },
+        }),
+        onSuccess: afterModeration,
+        onError: notifyRecordActionError,
     });
-
     const rejectMutation = useMutation({
-        mutationFn: async (reviewId: string) => {
-            assertLegacyBrowserAdminMutationEnabled("review_moderation", "reject_review");
-
-            const { data: review, error: reviewError } = await supabase
-                .from('reviews')
-                .select('restaurant_id, is_verified')
-                .eq('id', reviewId)
-                .single()
-                .overrideTypes<ReviewStatusRow, { merge: false }>();
-
-            if (reviewError) throw reviewError;
-
-            const typedReview = requireRow(review, isReviewStatusRow, '리뷰 정보를 찾을 수 없습니다.');
-
-            const { error: rejectError } = await supabase
-                .from('reviews')
-                .update({
-                    is_verified: false,
-                    admin_note: adminNote.trim() ? `거부: ${adminNote.trim()}` : '거부: 관리자에 의해 거부됨',
-                    is_edited_by_admin: true,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', reviewId);
-
-            if (rejectError) throw rejectError;
-
-            if (typedReview.is_verified) {
-                const { data: restaurant, error: fetchError } = await supabase
-                    .from('restaurants')
-                    .select('review_count')
-                    .eq('id', typedReview.restaurant_id)
-                    .single()
-                    .overrideTypes<RestaurantReviewCountRow, { merge: false }>();
-
-                if (fetchError) throw fetchError;
-
-                const typedRestaurant = requireRow(
-                    restaurant,
-                    isRestaurantReviewCountRow,
-                    '레스토랑 리뷰 수 정보를 찾을 수 없습니다.',
-                );
-
-                const { error: visitError } = await supabase
-                    .from('restaurants')
-                    .update({
-                        review_count: Math.max((typedRestaurant.review_count ?? 0) - 1, 0),
-                        updated_at: new Date().toISOString(),
-                    })
-                    .eq('id', typedReview.restaurant_id);
-
-                if (visitError) throw visitError;
-            }
-        },
-        onSuccess: () => {
-            toast.success('리뷰가 거부되었습니다');
-
-            if (selectedReview && selectedReview.user_id) {
-                createUserNotification(
-                    selectedReview.user_id,
-                    'review_rejected',
-                    '리뷰 거부됨',
-                    `귀하의 리뷰 "${selectedReview.title}"이(가) 거부되었습니다.`,
-                    { reviewId: selectedReview.id, restaurantName: selectedReview.restaurants?.name, adminNote }
-                );
-            }
-
-            queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
-            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
-            setIsReviewModalOpen(false);
-            setAdminNote("");
-        },
-        onError: (error: Error) => {
-            toast.error('거부에 실패했습니다');
-        },
+        mutationFn: ({ review, note }: ModerationInput) => recordActions.run({
+            action: 'review.reject', targetIds: [review.id], payload: { reason: note.trim() || '관리자에 의해 거부됨' },
+        }),
+        onSuccess: afterModeration,
+        onError: notifyRecordActionError,
     });
-
     const deleteMutation = useMutation({
-        mutationFn: async (reviewId: string) => {
-            assertLegacyBrowserAdminMutationEnabled("review_moderation", "delete_review");
-            const { error } = await supabase
-                .from('reviews')
-                .delete()
-                .eq('id', reviewId);
-
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            toast.success('리뷰가 삭제되었습니다');
-            setReviewToDelete(null);
-            setDeleteReviewConfirmation('');
-            queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
-        },
-        onError: (error: Error) => {
-            toast.error('삭제에 실패했습니다');
-        },
+        mutationFn: (reviewId: string) => recordActions.run({
+            action: 'review.delete', targetIds: [reviewId], payload: { reason: '관리자에 의해 삭제됨' },
+        }),
+        onSuccess: onRecordApplied,
+        onError: notifyRecordActionError,
     });
-
+    const actionBusy = recordActions.busy || approveMutation.isPending || rejectMutation.isPending || deleteMutation.isPending;
     const handleReviewAction = (action: 'approve' | 'reject', review: Review) => {
+        if (actionBusy) return;
         setSelectedReview(review);
         setReviewAction(action);
         setAdminNote(review.admin_note || "");
         setIsReviewModalOpen(true);
     };
-
     const handleConfirmAction = () => {
-        if (!selectedReview) return;
-
-        if (reviewAction === 'approve') {
-            approveMutation.mutate(selectedReview.id);
-        } else if (reviewAction === 'reject') {
-            rejectMutation.mutate(selectedReview.id);
-        }
+        if (!selectedReview || actionBusy || (reviewAction === 'reject' && !adminNote.trim())) return;
+        const input = { review: selectedReview, note: adminNote };
+        setIsReviewModalOpen(false);
+        if (reviewAction === 'approve') approveMutation.mutate(input);
+        else if (reviewAction === 'reject') rejectMutation.mutate(input);
     };
-
     const handleDelete = (review: Review) => {
-        if (reviewToDelete?.id !== review.id) {
-            setReviewToDelete(review);
-            setDeleteReviewConfirmation('');
-            return;
-        }
-
-        if (deleteReviewConfirmation !== ADMIN_REVIEW_DELETE_CONFIRMATION) {
-            toast.error(`"${ADMIN_REVIEW_DELETE_CONFIRMATION}"를 입력한 뒤 삭제를 적용하세요.`);
-            return;
-        }
-
-        deleteMutation.mutate(review.id);
+        if (!actionBusy) deleteMutation.mutate(review.id);
     };
 
     const getStatusBadge = (isVerified: boolean) => {
@@ -525,9 +374,9 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
         );
     };
 
-    const pendingReviews = reviews.filter(r => !r.is_verified && (!r.admin_note || r.admin_note.trim() === ''));
+    const pendingReviews = reviews.filter(r => !r.is_verified && !r.admin_note?.startsWith('거부: '));
     const approvedReviews = reviews.filter(r => r.is_verified);
-    const rejectedReviews = reviews.filter(r => !r.is_verified && r.admin_note && r.admin_note.trim() !== '' && r.admin_note.includes('거부'));
+    const rejectedReviews = reviews.filter(r => !r.is_verified && r.admin_note?.startsWith('거부: '));
 
     if (!user || !isAdmin) {
         return (
@@ -565,13 +414,13 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             {/* 헤더 */}
             <MapPanelHeader
                 title="리뷰관리"
-                description="사용자 리뷰 승인/거부"
+                description={`불러온 리뷰 ${reviews.length}건`}
                 onClose={onClose}
                 closeLabel="리뷰관리 패널 닫기"
             />
 
             {/* 통계 */}
-            <div className="grid grid-cols-3 gap-2 p-3 border-b border-border">
+            <div aria-label="불러온 리뷰 상태" className="grid grid-cols-3 gap-2 p-3 border-b border-border">
                 <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded">
                     <p className="text-xs text-muted-foreground">대기</p>
                     <p className="text-lg font-bold">{pendingReviews.length}</p>
@@ -588,51 +437,12 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             {/* 대기 중인 리뷰 목록 */}
             <div className="flex-1 overflow-auto p-3 space-y-2">
-                {reviewToDelete && (
-                    <section
-                        role="region"
-                        aria-label="관리자 리뷰 삭제 확인"
-                        className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-sm"
-                    >
-                        <p className="font-semibold text-foreground">리뷰 삭제 확인</p>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            모바일과 데스크톱 모두 같은 인라인 확인 흐름으로 처리합니다. 아래 문구를 입력한 뒤 적용하세요.
-                        </p>
-                        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                            <Input
-                                aria-label="관리자 리뷰 삭제 확인 문구"
-                                value={deleteReviewConfirmation}
-                                onChange={(event) => setDeleteReviewConfirmation(event.target.value)}
-                                placeholder={`${ADMIN_REVIEW_DELETE_CONFIRMATION} 입력`}
-                                className="h-9"
-                            />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-9"
-                                onClick={() => {
-                                    setReviewToDelete(null);
-                                    setDeleteReviewConfirmation('');
-                                }}
-                                disabled={deleteMutation.isPending}
-                            >
-                                취소
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                className="h-9"
-                                onClick={() => handleDelete(reviewToDelete)}
-                                disabled={deleteMutation.isPending || deleteReviewConfirmation !== ADMIN_REVIEW_DELETE_CONFIRMATION}
-                            >
-                                삭제 적용
-                            </Button>
-                        </div>
-                    </section>
-                )}
-                {isLoading ? (
+                {isError && !isFetchNextPageError ? (
+                    <div role="alert" className="space-y-2 p-3 text-sm">
+                        <p>리뷰를 불러오지 못했습니다.</p>
+                        <Button variant="outline" size="sm" onClick={() => void refetch()}>다시 불러오기</Button>
+                    </div>
+                ) : isLoading ? (
                     <div className="space-y-2">
                         {[1, 2, 3].map(i => (
                             <Card key={i} className="p-3">
@@ -647,10 +457,10 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     </Card>
                 ) : (
                     <>
-                        {pendingReviews.map((review, index) => (
+                        {pendingReviews.map((review) => (
                             <ReviewCard
                                 key={review.id}
-                                ref={index === pendingReviews.length - 1 ? loadMoreRef : null}
+                                disabled={actionBusy}
                                 review={review}
                                 onApprove={() => handleReviewAction('approve', review)}
                                 onReject={() => handleReviewAction('reject', review)}
@@ -664,9 +474,12 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                         )}
                     </>
                 )}
+                <div ref={loadMoreRef} aria-hidden="true" className="h-px" />
+                {isFetchNextPageError && <p role="alert" className="text-sm text-destructive">다음 리뷰를 불러오지 못했습니다.</p>}
+                {hasNextPage && <Button variant="outline" size="sm" className="w-full" onClick={() => { if (!isFetchingNextPage) void fetchNextPage(); }} disabled={isFetchingNextPage}>{isFetchNextPageError ? '다음 리뷰 다시 불러오기' : '리뷰 더 불러오기'}</Button>}
             </div>
 
-
+            {recordActions.dialog}
             {/* 리뷰 검토 모달 */}
             <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
                 <DialogContent className={ADMIN_MODAL_CONTENT_SM_FLEX}>
@@ -709,6 +522,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                                 <div className="space-y-2">
                                     <Label>관리자 메모{reviewAction === 'reject' && ' (필수)'}</Label>
                                     <Textarea
+                                        aria-label="관리자 메모"
+                                        maxLength={500}
                                         value={adminNote}
                                         onChange={(e) => setAdminNote(e.target.value)}
                                         placeholder={reviewAction === 'approve' ? '승인 사유 (선택)' : '거부 사유를 입력해주세요'}
@@ -723,7 +538,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                                 </Button>
                                 <Button
                                     onClick={handleConfirmAction}
-                                    disabled={approveMutation.isPending || rejectMutation.isPending}
+                                    disabled={actionBusy || (reviewAction === 'reject' && !adminNote.trim())}
                                     className={`${ADMIN_MODAL_ACTION} ${reviewAction === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
                                 >
                                     {(approveMutation.isPending || rejectMutation.isPending) ? (
@@ -746,13 +561,14 @@ interface ReviewCardProps {
     onApprove?: () => void;
     onReject?: () => void;
     onDelete: () => void;
+    disabled?: boolean;
     showApproveButton?: boolean;
     showRejectButton?: boolean;
 }
 
 const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
-    ({ review, onApprove, onReject, onDelete, showApproveButton, showRejectButton }, ref) => {
-        const isPending = !review.is_verified && (!review.admin_note || !review.admin_note.includes('거부'));
+    ({ review, onApprove, onReject, onDelete, disabled, showApproveButton, showRejectButton }, ref) => {
+        const isPending = !review.is_verified && !review.admin_note?.startsWith('거부: ');
         const isApproved = review.is_verified;
 
         return (
@@ -764,7 +580,7 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
                                 <h3 className="text-sm font-semibold truncate">{review.title}</h3>
                                 {isApproved ? (
                                     <Badge className="bg-green-500 gap-1 text-xs"><CheckCircle2 className="h-3 w-3" />승인</Badge>
-                                ) : review.admin_note?.includes('거부') ? (
+                                ) : review.admin_note?.startsWith('거부: ') ? (
                                     <Badge variant="destructive" className="gap-1 text-xs"><XCircle className="h-3 w-3" />거부</Badge>
                                 ) : (
                                     <Badge variant="secondary" className="gap-1 text-xs"><Clock className="h-3 w-3" />대기</Badge>
@@ -798,7 +614,7 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
                         )}
                     </div>
 
-                    {review.admin_note?.includes('거부') && (
+                    {review.admin_note?.startsWith('거부: ') && (
                         <div className="p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 rounded text-xs">
                             <strong>거부 사유:</strong> {review.admin_note.replace('거부: ', '')}
                         </div>
@@ -806,13 +622,13 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
 
                     {isPending && (
                         <div className="flex gap-1">
-                            <Button onClick={onApprove} size="sm" className="flex-1 bg-green-500 hover:bg-green-600 text-xs h-7">
+                            <Button disabled={disabled} onClick={onApprove} size="sm" className="flex-1 bg-green-500 hover:bg-green-600 text-xs h-7">
                                 승인
                             </Button>
-                            <Button onClick={onReject} size="sm" variant="destructive" className="flex-1 text-xs h-7">
+                            <Button disabled={disabled} onClick={onReject} size="sm" variant="destructive" className="flex-1 text-xs h-7">
                                 거부
                             </Button>
-                            <Button onClick={onDelete} size="sm" variant="outline" className="h-7 w-7 p-0">
+                            <Button aria-label="리뷰 삭제" disabled={disabled} onClick={onDelete} size="sm" variant="outline" className="h-7 w-7 p-0">
                                 <Trash2 className="h-3 w-3" />
                             </Button>
                         </div>
@@ -820,10 +636,10 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
 
                     {showRejectButton && (
                         <div className="flex gap-1">
-                            <Button onClick={onReject} size="sm" variant="destructive" className="flex-1 text-xs h-7">
+                            <Button disabled={disabled} onClick={onReject} size="sm" variant="destructive" className="flex-1 text-xs h-7">
                                 승인 취소
                             </Button>
-                            <Button onClick={onDelete} size="sm" variant="outline" className="h-7 w-7 p-0">
+                            <Button aria-label="리뷰 삭제" disabled={disabled} onClick={onDelete} size="sm" variant="outline" className="h-7 w-7 p-0">
                                 <Trash2 className="h-3 w-3" />
                             </Button>
                         </div>
@@ -831,10 +647,10 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
 
                     {showApproveButton && (
                         <div className="flex gap-1">
-                            <Button onClick={onApprove} size="sm" className="flex-1 bg-green-500 hover:bg-green-600 text-xs h-7">
+                            <Button disabled={disabled} onClick={onApprove} size="sm" className="flex-1 bg-green-500 hover:bg-green-600 text-xs h-7">
                                 재승인
                             </Button>
-                            <Button onClick={onDelete} size="sm" variant="outline" className="h-7 w-7 p-0">
+                            <Button aria-label="리뷰 삭제" disabled={disabled} onClick={onDelete} size="sm" variant="outline" className="h-7 w-7 p-0">
                                 <Trash2 className="h-3 w-3" />
                             </Button>
                         </div>

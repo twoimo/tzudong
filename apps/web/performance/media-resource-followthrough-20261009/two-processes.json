@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "wallMs": 852.2753329016268,
+      "cpuMs": 3889.65,
+      "peakTreeRssMiB": 421.34375,
+      "sampledPeakFfmpeg": 4,
+      "resourceSamples": 10,
+      "exitCode": 0,
+      "diagnosticSha256": "826049de3719ae39eec886f6df81b94974c4c4902b16aaf5aab9e2a6ba8a71ca"
+    },
+    {
+      "wallMs": 871.2427921127528,
+      "cpuMs": 3873.617,
+      "peakTreeRssMiB": 431.515625,
+      "sampledPeakFfmpeg": 4,
+      "resourceSamples": 11,
+      "exitCode": 0,
+      "diagnosticSha256": "65bb68a1d8d39bc6d42121a99fa8d434314589c5ab125ec92025af884e1084e8"
+    }
+  ],
+  "exactPeakFfmpegCommands": 8,
+  "ffmpegCalls": 24,
+  "providerReplayCalls": 0,
+  "evaluationReplayCalls": 0,
+  "unclosedFfmpegCommands": 0,
+  "allOutputsEquivalent": true,
+  "hostWideCapClaim": false
+}

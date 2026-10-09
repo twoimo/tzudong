@@ -1,0 +1,42 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-sidebar-order.test.ts:
+(pass) admin sidebar order normalization > keeps server and client defaults stable for review and operations sections [0.03ms]
+(pass) admin sidebar order normalization > covers every routed admin module without tying route id order to sidebar IA order [0.26ms]
+(pass) admin sidebar order normalization > resets old saved section slots when modules move between operations and lab [0.17ms]
+(pass) admin sidebar order normalization > preserves a valid custom order while filling only missing defaults [0.20ms]
+
+tests-unit/admin-family-design-contract.test.ts:
+(pass) admin family design contract > keeps two-pane overview and guarded apply grammar [1.87ms]
+(pass) admin family design contract > does not invent a family error.tsx under admin [0.34ms]
+
+tests-unit/admin-operations-source.test.ts:
+(pass) operations source request boundary > does not start a request after query cancellation [0.26ms]
+(pass) operations source request boundary > propagates query cancellation during fetch instead of returning outage data [0.09ms]
+(pass) operations source request boundary > propagates cancellation while reading a response body [0.04ms]
+(pass) operations source request boundary > retains bounded forbidden and outage states without provider text [0.23ms]
+(pass) operations source request boundary > reads only the canonical endpoint and validates successful payloads [0.21ms]
+
+tests-unit/admin-operations-view-model.test.ts:
+(pass) operations read-model boundary > canonical pending counts remain independent and are summed once [1.48ms]
+(pass) operations read-model boundary > lifecycle fallback is not advertised as scoped pending data [0.07ms]
+(pass) operations read-model boundary > invalid numbers invalidate only their domain and never produce zero [0.38ms]
+(pass) operations read-model boundary > empty or changed schemas do not become ready zero snapshots [0.09ms]
+(pass) operations read-model boundary > conflicting readiness, wrong domain identity and absent timestamp are visible [0.08ms]
+(pass) operations read-model boundary > sum overflow remains unknown while safe individual maxima are preserved [0.06ms]
+(pass) operations read-model boundary > explicit empty canonical sources produce measured zeros [0.10ms]
+(pass) operations read-model boundary > pipeline failure history is independent from active jobs and capped at 20 [0.13ms]
+(pass) operations read-model boundary > unknown and duplicate jobs do not imply an empty active queue [0.06ms]
+(pass) operations read-model boundary > GitHub fallback is limited and cannot assert global queue health [0.10ms]
+(pass) operations read-model boundary > preserves GitHub conclusions while only confirmed failures raise the failure count [0.13ms]
+(pass) operations read-model boundary > incomplete GitHub runs remain non-failures without asserting global progress [0.07ms]
+(pass) operations read-model boundary > missing, future, contradictory or different-run evidence cannot manufacture failure or health [0.10ms]
+(pass) operations read-model boundary > automation uses validated limits and picks the newest returned execution [0.15ms]
+(pass) operations read-model boundary > source failures stay independent, sort before work queues, and refresh can recover [0.16ms]
+(pass) operations read-model boundary > search and attention filters operate on the validated visible projection [0.13ms]
+(pass) operations read-model boundary > raw diagnostics, arbitrary strings and identities are absent from the output [0.23ms]
+
+ 28 pass
+ 0 fail
+ 338 expect() calls
+Ran 28 tests across 4 files. [83.00ms]

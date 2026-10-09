@@ -1,0 +1,58 @@
+{
+  "currentHead": "56819502aaa6993d847efb8b78a5bcd6a4ecdaf2",
+  "historicalSourceBindings": [
+    {
+      "gitSha": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+      "files": [
+        {
+          "path": "apps/web/scripts/vercel-ignore-build.mjs",
+          "sha256": "8a104c499bdb7af2547e45cfe560123aeaea86d1d4f8e82e14abc18a58bc333b",
+          "matchesCurrentBytes": true
+        },
+        {
+          "path": "apps/web/vercel.json",
+          "sha256": "40af06373f8312bd749b71d17ada3819905776f354a589706ed37005108da5cb",
+          "matchesCurrentBytes": true
+        }
+      ]
+    },
+    {
+      "gitSha": "2b6e7339fa75b1d403cb97a257e8d9d5b8b37e3c",
+      "files": [
+        {
+          "path": "apps/web/scripts/vercel-ignore-build.mjs",
+          "sha256": "8a104c499bdb7af2547e45cfe560123aeaea86d1d4f8e82e14abc18a58bc333b",
+          "matchesCurrentBytes": true
+        },
+        {
+          "path": "apps/web/vercel.json",
+          "sha256": "40af06373f8312bd749b71d17ada3819905776f354a589706ed37005108da5cb",
+          "matchesCurrentBytes": true
+        }
+      ]
+    }
+  ],
+  "localDecisionCases": [
+    {
+      "scenario": "feature",
+      "exitCode": 0,
+      "stdout": "[vercel-ignore-build] skip: preview deployments are limited to develop; skipping non-production branch (env=preview, ref=codex/pipeline-performance-restart-20261002)",
+      "environment": "synthetic-preview-only"
+    },
+    {
+      "scenario": "allowed-develop",
+      "exitCode": 1,
+      "stdout": "[vercel-ignore-build] build: allowed preview branch deployment (env=preview, ref=develop)",
+      "environment": "synthetic-preview-only"
+    },
+    {
+      "scenario": "missing-ref",
+      "exitCode": 0,
+      "stdout": "[vercel-ignore-build] skip: branch ref unavailable; fail closed to prevent non-allowlisted deployments (env=preview, ref=unknown)",
+      "environment": "synthetic-preview-only"
+    }
+  ],
+  "noEnvironmentSecretsRead": true,
+  "settingsOrFreezeMutations": 0,
+  "deploymentCreates": 0
+}

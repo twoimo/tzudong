@@ -1,0 +1,10 @@
+{
+  "g014": {
+    "assert_g014_catalog_contract": false,
+    "assert_g014_definer_contract": false,
+    "assert_g014_public_rpc_allowlist": false,
+    "assert_g014_workflow_owner_contract": false
+  },
+  "ledgerUsage": true,
+  "ledgerInsert": true
+}

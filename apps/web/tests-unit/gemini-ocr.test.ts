@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import { GoogleGenAI } from '@google/genai';
 import {
   buildGeminiReceiptOcrParts,
+  buildGeminiReceiptOcrRequest,
   callGeminiReceiptOcr,
   GEMINI_OCR_FALLBACK_MODEL,
   getGeminiOcrDefaultModel,
@@ -10,6 +12,65 @@ import {
 } from '@/lib/ocr/gemini';
 
 describe('gemini receipt ocr helper', () => {
+  test('retains older explicit sampling while omitting removed controls for modern Flash models', () => {
+    const parts = buildGeminiReceiptOcrParts({ prompt: 'synthetic receipt', imageBase64: 'AA==', mimeType: 'image/png' });
+    for (const model of ['gemini-3.5-flash-lite', 'gemini-3.5-flash-lite-001', 'gemini-3.6-flash',
+      'gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash', 'gemini-4.0-flash']) {
+      const request = buildGeminiReceiptOcrRequest({ model, parts, thinkingLevel: 'MEDIUM' });
+      expect(request.model).toBe(model);
+      expect(request.config).not.toHaveProperty('temperature');
+      expect(request.config).not.toHaveProperty('topP');
+      expect(request.config).not.toHaveProperty('topK');
+      expect(request.config.responseMimeType).toBe('application/json');
+      expect(request.config.thinkingConfig).toEqual({ thinkingLevel: 'MEDIUM' });
+    }
+    for (const model of ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.5-flash']) {
+      expect(buildGeminiReceiptOcrRequest({ model, parts, thinkingLevel: 'MEDIUM' }).config.temperature).toBe(0);
+    }
+  });
+
+  test('installed SDK sends no obsolete sampling override for the configured OCR baseline and 3.8', async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ model: string; config: Record<string, unknown> }> = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init), url = new URL(request.url);
+      expect(url.hostname).toBe('generativelanguage.googleapis.com');
+      const body = await request.json();
+      requests.push({ model: url.pathname.split('/').at(-1)!.replace(':generateContent', ''), config: body.generationConfig });
+      return Response.json({ candidates: [{ content: { parts: [{ text: '{}' }] } }] });
+    }) as typeof fetch;
+    try {
+      const client = new GoogleGenAI({ apiKey: 'synthetic-wire-test', httpOptions: { retryOptions: { attempts: 1 } } });
+      const parts = buildGeminiReceiptOcrParts({ prompt: 'synthetic receipt', imageBase64: 'AA==', mimeType: 'image/png' });
+      for (const model of ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash']) {
+        await client.models.generateContent(buildGeminiReceiptOcrRequest({ model, parts, thinkingLevel: 'MEDIUM' }));
+      }
+    } finally { globalThis.fetch = originalFetch; }
+    expect(requests.map(request => request.model)).toEqual(['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash']);
+    expect(requests.slice(0, 2).map(request => request.config)).toEqual([
+      { responseMimeType: 'application/json', thinkingConfig: { thinkingLevel: 'MEDIUM' } },
+      { responseMimeType: 'application/json', thinkingConfig: { thinkingLevel: 'MEDIUM' } },
+    ]);
+    expect(requests[2].config.temperature).toBe(0);
+  });
+
+  test('does not spend a provider call after caller cancellation', async () => {
+    const controller = new AbortController(); controller.abort(); let calls = 0;
+    await expect(callGeminiReceiptOcr({ apiKey: 'test', imageBase64: '', mimeType: 'image/png', prompt: 'test',
+      signal: controller.signal, generateContentImpl: async () => { calls++; return '{}'; },
+    })).rejects.toBeInstanceOf(GeminiOcrError);
+    expect(calls).toBe(0);
+  });
+
+  test('stops fallback after cancellation during a request and drops duplicate models', async () => {
+    const controller = new AbortController(); let calls = 0;
+    await expect(callGeminiReceiptOcr({ apiKey: 'test', imageBase64: '', mimeType: 'image/png', prompt: 'test',
+      env: { GEMINI_OCR_MODEL: 'first,first,second' }, signal: controller.signal,
+      generateContentImpl: async () => { calls++; controller.abort(); throw new DOMException('cancelled', 'AbortError'); },
+    })).rejects.toBeInstanceOf(GeminiOcrError);
+    expect(calls).toBe(1);
+    expect(getGeminiOcrModels({ GEMINI_OCR_MODEL: 'first,first,second' })).toEqual(['first', 'second']);
+  });
   test('defaults to gemini-3.6-flash as the authoritative OCR baseline', () => {
     expect(GEMINI_OCR_FALLBACK_MODEL).toBe('gemini-3.6-flash');
     expect(getGeminiOcrDefaultModel({} as NodeJS.ProcessEnv)).toBe('gemini-3.6-flash');

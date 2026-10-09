@@ -1,0 +1,9 @@
+# Not adopted: candidate index convergence
+
+The target snapshot has only `idx_restaurants_active_video_identity` (video plus resolved normalized name), while canonical replay also installs the narrower video-only `idx_restaurants_active_candidate_identity`. M1 preserves both possible schemas and maps their named unique conflicts to `RECORD_ACTION_DUPLICATE`; it does not globally reject another restaurant in the same video.
+
+A separately reviewed forward migration can remove **only** the exact video-only index after verifying the composite index definition, uniqueness, validity, namespace/table, complete function-expression dependencies and the video-only index preimage against independently captured hashes. Unknown or altered definitions must abort. Absence of the video-only index with the exact composite index is an idempotent target state. No customer data is deleted and no applied migration is edited.
+
+Before adoption, root must resolve the original crawler insert-if-absent contract: the historical migration explicitly used video-only identity to serialize mutual-backup runners. Both hosted ingestion consumers must be audited and, if needed, updated to the composite identity and correct named conflict handling. Dropping this index without that audit could admit duplicate inserts under the old identity contract. This proposal is not an executable migration or operating approval. Root owns adoption and a supported `supabase migration new` invocation after the producer contract is settled.
+
+Required isolated checks: canonical PG15 and pristine PG17 index catalog preimages/readbacks; concurrent same identity uniqueness; same video/different name acceptance; producer duplicate classification; M1 create/restore rollback; G014 and full schema/data fingerprint rollback. The pending media admission remains closed until the root's current source gates pass.

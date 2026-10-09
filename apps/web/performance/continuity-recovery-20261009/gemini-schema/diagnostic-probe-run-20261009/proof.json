@@ -1,0 +1,11 @@
+{
+  "providerPostAttempted": true,
+  "diagnostic": {
+    "httpStatus": 400,
+    "officialCode": "invalid_request",
+    "category": "unknown",
+    "schemaPath": null,
+    "schemaPathSource": null,
+    "schemaKeyword": null
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "packageChanges": [
+    {
+      "path": "",
+      "beforeVersion": "1.2.4",
+      "afterVersion": "1.2.4",
+      "changedFields": [
+        "dependencies"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-darwin-arm64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-darwin-x64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-freebsd-wasm32",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "dependencies",
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-darwin-arm64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-darwin-x64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-arm",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-arm64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-ppc64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-riscv64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-s390x",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-x64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linuxmusl-arm64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linuxmusl-x64",
+      "beforeVersion": "1.3.3",
+      "afterVersion": "1.3.4",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-arm",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-arm64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-ppc64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-riscv64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-s390x",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-x64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linuxmusl-arm64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-linuxmusl-x64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-wasm32",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-webcontainers-wasm32",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "dependencies",
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-win32-arm64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-win32-ia32",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/@img/sharp-win32-x64",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/eslint-config-next/node_modules/eslint-plugin-import",
+      "beforeVersion": "2.32.0",
+      "afterVersion": "2.32.0",
+      "changedFields": [
+        "peer"
+      ]
+    },
+    {
+      "path": "node_modules/sharp",
+      "beforeVersion": "0.35.4",
+      "afterVersion": "0.35.5",
+      "changedFields": [
+        "integrity",
+        "optionalDependencies",
+        "resolved",
+        "version"
+      ]
+    },
+    {
+      "path": "node_modules/source-map-js",
+      "beforeVersion": "1.2.1",
+      "afterVersion": "1.2.2",
+      "changedFields": [
+        "integrity",
+        "resolved",
+        "version"
+      ]
+    }
+  ],
+  "unrelatedVersionChanges": []
+}

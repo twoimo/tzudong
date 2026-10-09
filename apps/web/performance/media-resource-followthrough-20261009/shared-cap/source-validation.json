@@ -1,0 +1,61 @@
+{
+  "finalMediaEvidence": "final-exec-errors",
+  "preflightSha256": "bf79db57752beb86480592160b224c80b874629f1c470f1cdef6766ffa4557cd",
+  "runtimeSourceMatchesPreflight": {
+    "backend/utils/resource-budget.mjs": true,
+    "backend/utils/media_lease_exec.py": true,
+    "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js": true
+  },
+  "tests": {
+    "resourceNodeTests": 6,
+    "affectedFrameAndChunkNodeTests": 31,
+    "actualNativeParentSigkillCancelFailureTest": 1,
+    "actualSaturationAndQueuedParentExitProbe": true
+  },
+  "finalNodeRegressionExitCode": 0,
+  "sourceBindings": [
+    {
+      "path": "backend/utils/resource-budget.mjs",
+      "sha256": "44405bcc6c1ed4b8ea7a99cce4dbcf4b9dae556df22d3bb36cc1c76deedf08f7"
+    },
+    {
+      "path": "backend/utils/media_lease_exec.py",
+      "sha256": "21f85ed83fe458698bbe0abb9845ff2610055a1080a69b0b13a214b91b0d5bd2"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+      "sha256": "bbbd72b4fb760efa8271d3dba558ad3c4f4c78a18f55df354cb912cb1269d0ef"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/split_video_chunks.mjs",
+      "sha256": "a3b3bcb3e69811e79fee4ee8021c4de41d98cc9005e068a36af87b80c3a635ce"
+    },
+    {
+      "path": "backend/utils/tests/resource-budget.test.mjs",
+      "sha256": "82d5aaa6e5821bee3de96cb203271ef5a62668a865fd70d4c5ba37708b7bf466"
+    },
+    {
+      "path": "backend/utils/tests/test_media_shared_lease.py",
+      "sha256": "82fa0e18ae998b1e5fcd505a5cd9caee63918b568cd25ec7d0ea50f2dfe1c724"
+    },
+    {
+      "path": "backend/utils/MEDIA_RESOURCE_BUDGET.md",
+      "sha256": "fb99c4b2eecffc34f75569442b6d362036e19195582a8b6520a59cbb0dbf3cd0"
+    }
+  ],
+  "modelsQuotasQueuesEnvOperatorChanged": false,
+  "sharedProductionNamespaceExecuted": false,
+  "windowsNativeLeaseVerified": false,
+  "speedupAdmitted": false,
+  "fullHostCapClaim": false,
+  "runtimeSourceMatchesNodeRegression": {
+    "backend/restaurant-crawling/scripts/split_video_chunks.mjs": true
+  },
+  "probeFixedCode": "FRAME_MEDIA_RESOURCE_BUSY",
+  "probeAfterRelease": true,
+  "queuedParentExitPreventedExec": true,
+  "finalFailuresPreserved": [
+    "lease-error-classification-failure.json",
+    "node-regression.json"
+  ]
+}

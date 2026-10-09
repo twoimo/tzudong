@@ -1,0 +1,189 @@
+{
+  "observedAtUtc": "2026-10-09T04:28:11.960097+00:00",
+  "collector": {
+    "type": "public YouTube metadata/caption via yt-dlp, not Gemini generation",
+    "status": "paused",
+    "pauseReason": "rate-limit",
+    "lastExitCode": 75,
+    "lastResumeObservedAt": "2026-10-06T09:39:08.999Z",
+    "automaticRetry": false,
+    "counts": {
+      "catalog": 1070,
+      "attempted": 1,
+      "queued": 3,
+      "pending": 459,
+      "successWithCaptions": 611,
+      "missing": 0,
+      "errors": 1,
+      "skippedTerminal": 0
+    },
+    "pendingFirst": "O_hj9Ge-Fdk",
+    "lastExplicitLimit": 3,
+    "lastExplicitConcurrency": 1,
+    "defaultConcurrency": 2,
+    "userStopEvidenceObserved": false,
+    "stopSemantics": "SIGINT/SIGTERM writes interrupted and exit130. Current lifecycle is rate-limit pause/exit75, not recorded signal stop. This does not infer why the human last interacted.",
+    "processesRunningObserved": 0,
+    "resumeCommandPreparedNotExecuted": [
+      "/opt/homebrew/bin/node",
+      "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/collect-public-corpus.mjs",
+      "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang",
+      "--limit",
+      "3",
+      "--concurrency",
+      "1",
+      "--yt-dlp",
+      "/opt/homebrew/bin/yt-dlp"
+    ],
+    "liveYouTubeQuotaRecovered": null,
+    "cookiesOrProfilesChanged": false,
+    "blockers": [
+      "Fresh caption endpoint success/rate-limit admission is unverified; prior 429 is YouTube/yt-dlp, not Gemini project quota.",
+      "Authoritative collector catalog remains 1070 while latest public snapshot has 1071; new video registration is a separate write."
+    ]
+  },
+  "analysis": {
+    "model": "gemini-3.8-flash",
+    "protocol": 2,
+    "segmentSecondsUpper": 900,
+    "serialVideoSegmentExecution": true,
+    "recordedProjectConcurrency": 1,
+    "recordedPacingRequestsPerMinute": 1,
+    "pacingSource": "Existing continuation intent, not a current environment dump or verified provider quota.",
+    "effectiveFutureRuntimeConcurrency": "Must preserve existing project budget environment when launching; current process env values not copied or recorded.",
+    "inputTokenLimit": 1048576,
+    "outputTokenLimit": 65536,
+    "timeoutSeconds": 600,
+    "batches": [
+      {
+        "batchId": "pilot-20261004-01",
+        "limits": {
+          "maxCalls": 1,
+          "maxInputTokens": 1048576,
+          "maxVideos": 1
+        },
+        "reservedCalls": 1,
+        "reservedInputTokens": 1048576,
+        "unreservedCalls": 0,
+        "legacyBatch": true
+      },
+      {
+        "batchId": "root-two-20261005",
+        "limits": {
+          "maxCalls": 2,
+          "maxInputTokens": 2097152,
+          "maxVideos": 2
+        },
+        "reservedCalls": 2,
+        "reservedInputTokens": 2097152,
+        "unreservedCalls": 0,
+        "legacyBatch": true
+      }
+    ],
+    "planCommandPreparedNotExecuted": [
+      "python3",
+      "-m",
+      "backend.knowledge_graph.longform_analysis",
+      "--inventory",
+      "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261004/inventory.json",
+      "--state-dir",
+      "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004",
+      "--model",
+      "gemini-3.8-flash",
+      "--model-evidence",
+      "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261004/model-evidence.json",
+      "--watch-checkout",
+      "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42",
+      "--plan"
+    ],
+    "executeRequirements": [
+      "--execute plus positive --max-videos, --max-calls, --max-input-tokens and a batch identity whose inventory/config/limits match.",
+      "Use fresh protocol2 batch identity for new work; exhausted legacy batches are not reset or reused.",
+      "Two admitted operations per static segment: countTokens then Interactions create; one input-window reservation per segment.",
+      "Existing funded credential must be provided privately to the process; no key/profile/quota/model change.",
+      "Uncertain/invalid receipt requires exact provenance readback/repair rather than blind resend."
+    ],
+    "new980SecondVideoExample": {
+      "segments": 2,
+      "segmentSeconds": [
+        900,
+        80
+      ],
+      "providerCallReservation": 4,
+      "generationCallsUpper": 2,
+      "inputTokenReservation": 2097152,
+      "outputTokenReservation": 131072,
+      "generationOnlyStandardPriceUpperUsd": 2.064384,
+      "priceNotActualCost": true
+    },
+    "monetaryAdmission": "Source enforces calls/videos/input-token reservation, not a dollar cap or current balance/TPM guarantee. Current funded credit balance and generation quota remain unverified.",
+    "authorization": "Existing task authorization remains in force; this is technical readiness reporting, not a request for new resume permission."
+  },
+  "installedHelper": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42",
+    "head": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+    "pinnedHeadMatches": true,
+    "latestStableTag": "v0.3.2",
+    "stablePublishedAt": "2026-09-25T01:27:35Z",
+    "geminiHelperMatchesStableTag": true,
+    "geminiHelperSha256": "e0f29cdfc1f64b6535b6c01a6f21e33493abc240ab18aeac2c85f2f24d3c850e",
+    "watchDefaultModel": "gemini-3.7-flash",
+    "pipelineExplicitModel": "gemini-3.8-flash",
+    "adapterAdds": [
+      "structured JSON response/schema",
+      "static clipped video request",
+      "countTokens before generation",
+      "shared project pacing/permit and bounded response observation"
+    ],
+    "upstreamFilesModified": false
+  },
+  "apiReadiness": {
+    "modelsGet": "model-get.json",
+    "countTokensAdvertised": true,
+    "countTokensExecution": false,
+    "countTokensZeroPriceForThisDirectApiContract": "Not established by the fetched current official billing/docs; no countTokens call sent.",
+    "generationCalls": 0,
+    "metadataSuccessDoesNotProveGenerationQuota": true
+  },
+  "sources": [
+    {
+      "url": "https://github.com/bradautomates/claude-video/releases/tag/v0.3.2",
+      "supports": "Current stable publisher release and pinned helper byte comparison."
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash",
+      "supports": "Exact model and input/output windows plus video/structured-output capability."
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/video-understanding",
+      "supports": "Public YouTube input and bounded static clip processing; low-resolution long-video support is a model bound, not completion evidence."
+    },
+    {
+      "url": "https://ai.google.dev/api/models",
+      "supports": "Non-generative metadata GET/list interfaces."
+    },
+    {
+      "url": "https://ai.google.dev/api/tokens",
+      "supports": "countTokens interface; not a funded quota or bill receipt."
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/rate-limits",
+      "supports": "Project-scoped RPM/TPM/RPD and spend-rate admission; key switching does not create separate quota."
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "supports": "Standard 3.8 Flash input $0.75/M and output/thinking $3.75/M through 2026-12-31, used only for a generation price bound."
+    }
+  ],
+  "preservation": {
+    "collectorResumed": false,
+    "analysisExecuted": false,
+    "newKeys": 0,
+    "paidInferenceCalls": 0,
+    "catalogMetadataGetCalls": 1,
+    "countTokensCalls": 0,
+    "queuePauseProfileVaultMemoryWrites": 0,
+    "envValuesOrKeysPersisted": false,
+    "modelOrQuotaChanges": 0
+  }
+}

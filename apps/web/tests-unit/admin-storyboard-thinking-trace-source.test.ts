@@ -9,18 +9,14 @@ describe("admin storyboard thinking trace source contract", () => {
   test("streams structured trace events from the storyboard chat route", () => {
     const routeSource = source("app/api/admin/storyboard/chat/route.ts");
 
-    expect(routeSource).toContain("send('trace'");
-    expect(routeSource).toContain("createRouteTraceEntry");
-    expect(routeSource).toContain("route-received");
-    expect(routeSource).toContain("route-agent");
-    expect(routeSource).toContain("route-decision");
-    expect(routeSource).toContain("getRouteDecisionTraceDetail");
-    expect(routeSource).not.toContain("promptAddendum");
+    expect(routeSource).toContain("retiredStoryboardApi");
+    expect(routeSource).not.toContain("send('trace'");
+    expect(routeSource).not.toContain("generateStoryboardChatWithBackendAgent");
   });
 
   test("renders a collapsible thinking timeline and keeps image generation steps in it", () => {
     const componentSource = source(
-      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "components/admin/storyboard/LegacyStoryboardReference.tsx",
     );
 
     expect(componentSource).toContain('data-storyboard-thinking-trace="true"');
@@ -39,7 +35,7 @@ describe("admin storyboard thinking trace source contract", () => {
 
   test("keeps the chat composer from showing stacked nested borders", () => {
     const componentSource = source(
-      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "components/admin/storyboard/LegacyStoryboardReference.tsx",
     );
 
     expect(componentSource).toContain("rounded-2xl bg-muted/45");

@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { StoryboardProjectLibrary } from "./StoryboardProjectLibrary";
+
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { z } from "zod";
+import { Clapperboard } from "lucide-react";
 import {
   MAX_STORYBOARD_DOCUMENT_BYTES,
   MAX_STORYBOARD_IMAGE_BYTES,
@@ -9,27 +13,28 @@ import {
   STORYBOARD_WORKFLOW,
   assertStoryboardProviderPolicy,
   buildStoryboardDraftPrompt,
-  isStoryboardLoopbackProviderId,
-  isStoryboardOfficialApiProviderId,
   parseStoryboardDraft,
   storyboardDraftSceneSchema,
   storyboardDraftSchema,
   storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema,
-  storyboardProviderSchema,
   type StoryboardDraftScene,
   type StoryboardProductionAsset,
   type StoryboardProductionDocument,
   type StoryboardProvider,
 } from "@/lib/admin/storyboard/production-contract";
+import { STORYBOARD_GEMINI_TEXT_MODEL, STORYBOARD_GEMINI_IMAGE_MODELS, STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, isAllowedStoryboardGeminiModel } from "@/lib/admin/storyboard/gemini-models";
 import { ADMIN_STORYBOARD_PROJECT_QUERY } from "@/lib/admin/admin-module-routing";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+
+import { storyboardModelsFor } from "@/lib/admin/storyboard/production-model-catalog";
 
 const API = "/api/admin/storyboard/production";
 const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
-const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
+const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:py-1.5";
 const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
-const panelClass = "min-w-0 rounded-xl bg-card p-4 text-card-foreground sm:p-5";
+const panelClass = "min-w-0 rounded-xl bg-card p-3 text-card-foreground sm:p-4";
 
 const statusSchema = z.enum(["waiting_worker", "generating", "awaiting_import", "partial", "ready", "failed", "cancelled"]);
 // These are frontend HTTP views, deliberately independent of the server-only store.
@@ -55,7 +60,7 @@ const catalogSchema = z.object({
   workers: z.array(z.object({
     id: z.string(), online: z.boolean(), lastHeartbeat: z.string().nullable(),
     models: z.array(z.object({
-      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(),
+      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(), owned_by: z.enum(["gemini-api", "mlx-serve"]).optional(),
       bytes_on_disk: z.number().nonnegative(), bytes_resident: z.number().nonnegative(),
     })),
   })),
@@ -70,14 +75,30 @@ type Catalog = z.infer<typeof catalogSchema>;
 type Model = Catalog["workers"][number]["models"][number];
 type ProviderId = StoryboardProvider["id"];
 type DraftScene = StoryboardProductionDocument["scenes"][number];
+type PendingEdit = { draft: StoryboardDraftScene; revision: number };
+type DepartureState = { dirty: boolean; busy: boolean; uncertain: boolean };
+const EMPTY_DEPARTURE: DepartureState = { dirty: false, busy: false, uncertain: false };
+const DISCARD_EDIT = "저장하지 않은 편집 내용이 있습니다. 편집 내용을 버리고 이동할까요?";
+const DISCARD_UNCERTAIN = "저장 여부를 아직 확인하지 못했습니다. 편집 내용을 잃을 수 있습니다. 확인하지 않고 이동할까요?";
+function departureMessage(state: DepartureState): string | null {
+  return state.uncertain ? DISCARD_UNCERTAIN : state.dirty ? DISCARD_EDIT : null;
+}
+function sameDraft(left: StoryboardDraftScene, right: StoryboardDraftScene): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+function confirmsEdit(view: View, pending: PendingEdit): boolean {
+  const scene = view.project.document?.scenes.find((item) => item.sceneNo === pending.draft.sceneNo);
+  return view.project.revision > pending.revision && !!scene && sameDraft(pickDraft(scene), pending.draft);
+}
 
 const PROVIDERS: Record<ProviderId, string> = {
+  "gemini-api": "Gemini API",
   "local-mlx": "로컬 MLX", manual: "수동 가져오기",
   "chatgpt-manual": "ChatGPT 웹 · 수동 가져오기", "grok-manual": "Grok 웹 · 수동 가져오기",
   "openai-api": "OpenAI 공식 API · 설정 전 사용 불가", "xai-api": "xAI 공식 API · 설정 전 사용 불가",
 };
 const STATUSES: Record<Project["status"], string> = {
-  waiting_worker: "로컬 워커 대기", generating: "생성 중", awaiting_import: "가져오기 대기",
+  waiting_worker: "제작 워커 대기", generating: "생성 중", awaiting_import: "가져오기 대기",
   partial: "일부 결과 저장됨", ready: "결과 준비됨", failed: "생성 실패", cancelled: "취소됨",
 };
 const JOB_STATUSES = { queued: "작업 대기", claimed: "작업 실행 중", succeeded: "작업 종료", failed: "작업 실패", cancelled: "작업 취소" };
@@ -144,8 +165,6 @@ function isActive(view: View | null): boolean {
   return !!view && (view.job?.status === "queued" || view.job?.status === "claimed"
     || view.project.status === "waiting_worker" || view.project.status === "generating");
 }
-function isLocal(id: ProviderId) { return isStoryboardLoopbackProviderId(id); }
-function isOfficial(id: ProviderId) { return isStoryboardOfficialApiProviderId(id); }
 function when(value: string | null | undefined): string {
   const date = value ? new Date(value) : null;
   return date && Number.isFinite(date.getTime()) ? date.toLocaleString("ko-KR") : "시각 정보 없음";
@@ -166,32 +185,19 @@ function ProviderField({ kind, value, externalAI, models, onChange }: {
   onChange: (provider: StoryboardProvider) => void;
 }) {
   const label = kind === "text" ? "텍스트" : "이미지";
-  return <fieldset className="min-w-0 space-y-2 rounded-lg border border-border p-3">
-    <legend className="px-1 text-sm font-semibold">{label} 공급자</legend>
-    <label className="block text-sm" htmlFor={`local-${kind}-provider`}>{label} 생성 방식</label>
-    <select id={`local-${kind}-provider`} className={inputClass} value={value.id}
-      onChange={(event) => onChange({ id: storyboardProviderSchema.shape.id.parse(event.target.value), model: "" })}>
-      {storyboardProviderSchema.shape.id.options.filter((id) => isLocal(id) || isOfficial(id) || externalAI).map((id) =>
-        <option key={id} value={id} disabled={isOfficial(id)}>{PROVIDERS[id]}</option>)}
+  const choices = kind === "text" ? [{ id: STORYBOARD_GEMINI_TEXT_MODEL, label: "Gemini 3.8 Flash" }] : STORYBOARD_GEMINI_IMAGE_MODELS;
+  return <fieldset className="min-w-0 space-y-2" disabled={!externalAI}>
+    <label className="block text-sm font-medium" htmlFor={`local-${kind}-model`}>{label} 모델</label>
+    <select id={`local-${kind}-model`} className={inputClass} value={value.model} required
+      onChange={(event) => onChange({ id: "gemini-api", model: event.target.value })}>
+      {choices.map((model) => <option key={model.id} value={model.id} disabled={!models.some(available => available.id === model.id)}>{model.label}{models.some(available => available.id === model.id) ? '' : ' · 사용 불가'}</option>)}
     </select>
-    {value.id === "local-mlx" && <div className="text-sm">
-      <label className="block" htmlFor={`local-${kind}-model`}>{label} 모델</label>
-      <select id={`local-${kind}-model`} className={inputClass} value={value.model} required
-        onChange={(event) => onChange({ ...value, model: event.target.value })}>
-        <option value="">설치된 모델 선택</option>
-        {value.model && !models.some((model) => model.id === value.model) &&
-          <option value={value.model} disabled>이전 선택 · 현재 목록에 없음</option>}
-        {models.map((model) => <option key={model.id} value={model.id}>
-          {model.id} · {model.loaded ? "메모리 로드됨" : "디스크 설치됨"}
-        </option>)}
-      </select>
-      {models.length === 0 && <span className="mt-1 block text-xs text-muted-foreground">이 종류의 설치된 모델이 보고되지 않았습니다.</span>}
-    </div>}
   </fieldset>;
 }
 
-export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () => void } = {}) {
+export function LocalStoryboardWorkspace({ onOpenLegacy, archive }: { onOpenLegacy?: () => void; archive?: ReactNode } = {}) {
   const [showSetup, setShowSetup] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [catalog, setCatalog] = useState<Catalog>({ ok: true, projects: [], workers: [] });
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(true);
@@ -200,25 +206,80 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
   const [prompt, setPrompt] = useState("");
   const [sceneCount, setSceneCount] = useState(6);
   const [dimensions, setDimensions] = useState("1024x576");
-  const [externalAI, setExternalAI] = useState(false);
-  const [textProvider, setTextProvider] = useState<StoryboardProvider>({ id: "local-mlx", model: "" });
-  const [imageProvider, setImageProvider] = useState<StoryboardProvider>({ id: "local-mlx", model: "" });
+  const [externalAI, setExternalAI] = useState(true);
+  const [textProvider, setTextProvider] = useState<StoryboardProvider>({ id: "gemini-api", model: STORYBOARD_GEMINI_TEXT_MODEL });
+  const [imageProvider, setImageProvider] = useState<StoryboardProvider>({ id: "gemini-api", model: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [departureNotice, setDepartureNotice] = useState<string | null>(null);
+  const departure = useRef<DepartureState>(EMPTY_DEPARTURE);
+  const acceptedLocation = useRef<{ href: string; state: unknown } | null>(null);
   const createController = useRef<AbortController | null>(null);
+  const onDepartureChange = useCallback((state: DepartureState) => { departure.current = state; }, []);
+  const mayLeave = useCallback(() => {
+    if (departure.current.busy) {
+      setDepartureNotice("요청 처리 중입니다. 저장 결과를 확인한 뒤 이동하세요.");
+      return false;
+    }
+    const warning = departureMessage(departure.current);
+    const allowed = !warning || window.confirm(warning);
+    if (allowed) setDepartureNotice(null);
+    return allowed;
+  }, []);
   // Preserve the idempotency key when a user retries an uncertain identical create.
   const createAttempt = useRef<{ fingerprint: string; requestId: string } | null>(null);
 
   useEffect(() => {
-    function readLocation() {
+    function readLocation(event?: PopStateEvent) {
+      const previous = acceptedLocation.current;
+      if (event && previous && previous.href !== window.location.href && !mayLeave()) {
+        // popstate is not cancelable. Restore the accepted URL before the router
+        // observes it, retaining its state and the mounted editor. The rejected
+        // destination is replaced in the forward stack, never rendered.
+        window.history.pushState(previous.state, "", previous.href);
+        event.stopImmediatePropagation();
+        return;
+      }
+      acceptedLocation.current = { href: window.location.href, state: window.history.state };
       const id = new URL(window.location.href).searchParams.get(PROJECT_QUERY);
       setProjectId(id && z.uuid().safeParse(id).success ? id : null);
       if (id && !z.uuid().safeParse(id).success) setCreateError(message("invalid_request"));
     }
+    function beforeUnload(event: BeforeUnloadEvent) {
+      if (departure.current.busy || departureMessage(departure.current)) {
+        event.preventDefault(); event.returnValue = "";
+      }
+    }
+    function followLink(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      // Both desktop and portaled mobile sidebar entries are buttons whose
+      // handlers replace the module before changing the URL. Guard the click
+      // in capture phase, before React can unmount this workspace.
+      const moduleButton = event.target instanceof Element
+        ? event.target.closest('button[data-admin-console-menu-item-mode][aria-controls="admin-console-canvas"]') : null;
+      if (moduleButton) {
+        if (!mayLeave()) { event.preventDefault(); event.stopImmediatePropagation(); }
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+      const url = new URL(link.href, window.location.href);
+      const current = new URL(window.location.href);
+      if (url.pathname === current.pathname && url.search === current.search && url.origin === current.origin) return;
+      if (!mayLeave()) { event.preventDefault(); event.stopImmediatePropagation(); }
+    }
     readLocation();
-    window.addEventListener("popstate", readLocation);
-    return () => { window.removeEventListener("popstate", readLocation); createController.current?.abort(); };
-  }, []);
+    window.addEventListener("popstate", readLocation, true);
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", followLink, true);
+    return () => {
+      window.removeEventListener("popstate", readLocation, true);
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", followLink, true);
+      createController.current?.abort();
+    };
+  }, [mayLeave]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -228,36 +289,36 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
       if (!parsed.success) throw new UiError("invalid_response");
       if (!controller.signal.aborted) { setCatalog(parsed.data); setCatalogError(null); }
     }).catch((error: unknown) => {
-      if (!controller.signal.aborted) setCatalogError(failure(error));
+      if (!controller.signal.aborted) setCatalogError(error instanceof UiError && error.code === "unauthorized"
+        ? failure(error) : "프로젝트 목록을 불러오지 못했습니다. 목록을 다시 불러와 확인하세요.");
     }).finally(() => { if (!controller.signal.aborted) setCatalogBusy(false); });
     return () => controller.abort();
   }, [catalogTick]);
 
   const selectProject = useCallback((id: string | null) => {
+    if (id === projectId || !mayLeave()) return;
     const url = new URL(window.location.href);
     if (id) url.searchParams.set(PROJECT_QUERY, id); else url.searchParams.delete(PROJECT_QUERY);
     window.history.pushState(window.history.state, "", url);
-    setProjectId(id); setShowSetup(false);
-  }, []);
+    acceptedLocation.current = { href: window.location.href, state: window.history.state };
+    setProjectId(id); setShowSetup(false); setShowLibrary(false);
+  }, [mayLeave, projectId]);
   const updateSummary = useCallback((project: Project) => {
     const item = { id: project.id, revision: project.revision, status: project.status,
       title: project.document?.title ?? project.request.prompt.slice(0, 120), createdAt: project.createdAt, updatedAt: project.updatedAt };
     setCatalog((previous) => ({ ...previous, projects: [item, ...previous.projects.filter((entry) => entry.id !== item.id)] }));
   }, []);
-  const modelsFor = (capability: "chat" | "image") => {
-    const models = new Map<string, Model>();
-    for (const worker of catalog.workers) for (const model of worker.models) {
-      if (model.bytes_on_disk > 0 && model.capabilities.includes(capability)) models.set(model.id, model);
-    }
-    return [...models.values()];
-  };
-  const textModels = modelsFor("chat");
-  const imageModels = modelsFor("image");
+  const textModels = storyboardModelsFor(catalog.workers, "chat");
+  const imageModels = storyboardModelsFor(catalog.workers, "image");
+  const selectedModelsAvailable = textModels.some(model => model.id === textProvider.model)
+    && imageModels.some(model => model.id === imageProvider.model);
 
   async function create(event: FormEvent) {
     event.preventDefault();
     if (createController.current) return;
     setCreateError(null);
+    if (!externalAI) { setCreateError('Gemini API 사용을 선택하세요.'); return; }
+    if (!selectedModelsAvailable) { setCreateError('선택한 모델을 사용할 수 없습니다.'); return; }
     const [imageWidth, imageHeight] = dimensions.split("x").map(Number);
     const fields = { workflow: STORYBOARD_WORKFLOW, prompt, sceneCount, providers: { externalAI, text: textProvider, image: imageProvider },
       retrieval: "none", sources: [], imageWidth, imageHeight };
@@ -267,9 +328,8 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
     if (!parsed.success) { setCreateError(message("invalid_request")); return; }
     try {
       assertStoryboardProviderPolicy(parsed.data.providers);
-      for (const [provider, models] of [[textProvider, textModels], [imageProvider, imageModels]] as const) {
-        if (isOfficial(provider.id)) throw new UiError("provider_not_configured");
-        if (provider.id === "local-mlx" && !models.some((model) => model.id === provider.model)) throw new UiError("model_not_installed");
+      for (const provider of [textProvider, imageProvider]) {
+        if (provider.id !== "gemini-api" || !isAllowedStoryboardGeminiModel(provider.model, provider === textProvider ? "text" : "image")) throw new UiError("model_not_selected");
       }
     } catch { setCreateError(message("invalid_request")); return; }
     const controller = new AbortController();
@@ -289,29 +349,42 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
   }
 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
-    className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-4 pb-24 text-foreground sm:p-6 sm:pb-8">
-    <header className="mb-4 flex min-w-0 flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h2 id="local-storyboard-title" className="text-xl font-semibold tracking-tight">스토리보드</h2>
-        <p className="mt-1 hidden text-sm text-muted-foreground sm:block">장면을 만들고, 흐름을 다듬고, 영상으로 준비하세요.</p>
-      </div>
-      <div className={`grid w-full min-w-0 items-center gap-2 sm:w-auto ${projectId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
+    className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-3 pb-24 text-foreground sm:p-4 sm:pb-6">
+    <AdminPageHeader title="스토리보드" titleId="local-storyboard-title" titleAs="h2" icon={Clapperboard}
+      className="admin-storyboard-page-header"
+      actions={<div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
-        <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-56`} value={projectId ?? ""}
+        <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-48`} value={projectId ?? ""}
           onChange={(event) => selectProject(event.target.value || null)}>
           <option value="">저장된 프로젝트 선택</option>
           {catalog.projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
+        {projectId && <button type="button" className={buttonClass} aria-expanded={showLibrary} aria-controls="local-storyboard-project-library"
+          onClick={() => setShowLibrary((value) => !value)}>프로젝트 목록</button>}
         <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
         {projectId && <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>}
+      </div>}
+    />
+    {departureNotice && <p role="alert" className="mb-3 text-sm text-destructive">{departureNotice}</p>}
+    {catalogError && projectId && !showLibrary && <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
+      <span>{catalogError}</span>
+      <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick((value) => value + 1)}>목록 다시 불러오기</button>
+    </div>}
+    {archive}
+    <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]" : ""}`}>
+      <div className="min-w-0" hidden={!!projectId && !showLibrary}>
+        <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
+          busy={catalogBusy} error={catalogError} onRefresh={() => setCatalogTick((value) => value + 1)} onSelect={selectProject}
+          onStart={() => {
+            selectProject(null);
+            requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
+          }} />
       </div>
-    </header>
-    <div className={`grid min-w-0 items-start gap-6 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
-      {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "mx-auto w-full max-w-4xl" : ""}`} aria-label="프로젝트 설정과 기록">
+    <div className={`grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
+      {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "w-full" : ""}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
           <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
-          <p className="mb-5 mt-1 break-keep text-sm text-muted-foreground">영상의 주제와 분위기를 알려주세요. 생성 후 장면별로 편집할 수 있습니다.</p>
-          <fieldset disabled={creating} className="min-w-0 space-y-4">
+          <fieldset disabled={creating} className="mt-3 min-w-0 space-y-3">
             <div className="text-sm">
               <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
               <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
@@ -325,64 +398,59 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
                   value={sceneCount} onChange={(event) => setSceneCount(event.target.valueAsNumber)} />
               </div>
               <div className="text-sm">
-                <label className="block" htmlFor="local-image-size">이미지 크기</label>
+                <label className="block" htmlFor="local-image-size">화면 비율</label>
                 <select id="local-image-size" className={inputClass} value={dimensions} onChange={(event) => setDimensions(event.target.value)}>
-                  <option value="1024x576">1024 × 576</option><option value="576x1024">576 × 1024</option><option value="1024x1024">1024 × 1024</option>
+                  <option value="1024x576">가로 · 16:9</option><option value="576x1024">세로 · 9:16</option><option value="1024x1024">정사각 · 1:1</option>
                 </select>
               </div>
             </div>
-            <label className="flex min-h-11 items-start gap-2 text-sm" htmlFor="local-external-ai">
-              <input id="local-external-ai" type="checkbox" className="mt-1 size-4 shrink-0" checked={externalAI}
+            <div className="space-y-1">
+            <label className="flex min-h-9 items-center gap-2 text-sm" htmlFor="local-external-ai">
+              <input id="local-external-ai" type="checkbox" className="size-4 shrink-0" checked={externalAI}
                 aria-describedby="local-external-help" onChange={(event) => {
                   const enabled = event.target.checked;
                   setExternalAI(enabled);
-                  if (!enabled) {
-                    if (!isLocal(textProvider.id)) setTextProvider({ id: "manual", model: "" });
-                    if (!isLocal(imageProvider.id)) setImageProvider({ id: "manual", model: "" });
-                  }
                 }} />
-              외부 AI 사용 허용 · 공식 API
+              Gemini API로 제작
             </label>
-            <p id="local-external-help" className="text-xs text-muted-foreground">ChatGPT·Grok 웹 결과는 외부 AI를 켜지 않고 수동 가져오기로 고를 수 있습니다. 이 옵션은 OpenAI·xAI 공식 API용이며 현재는 설정 전 사용할 수 없습니다.</p>
+            <p id="local-external-help" className="text-xs text-muted-foreground">서버에 연결한 Google 프로젝트로 요청합니다.</p>
+            </div>
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />
             </div>
-            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating}>
+            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || !externalAI || !selectedModelsAvailable}>
               {creating ? "저장 요청 중…" : "프로젝트 만들기"}
             </button>
           </fieldset>
           {createError && <p role="alert" className="mt-3 text-sm text-destructive">{createError}</p>}
         </form>}
-        {projectId && <label className="flex min-h-11 items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1" checked={externalAI} onChange={(event) => setExternalAI(event.target.checked)} />
-          외부 AI 사용 허용 (수동 결과 가져오기)
-        </label>}
         {showSetup && <section className={panelClass} aria-labelledby="local-workers-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 id="local-workers-title" className="font-semibold">로컬 워커</h3>
+            <h3 id="local-workers-title" className="font-semibold">제작 연결</h3>
             <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick((value) => value + 1)}>목록 새로고침</button>
           </div>
           {catalogBusy && <p role="status" className="mt-2 text-sm">목록 확인 중…</p>}
           {catalogError && <p role="alert" className="mt-2 text-sm text-destructive">{catalogError}</p>}
-          {!catalogBusy && !catalogError && catalog.workers.length === 0 && <p className="mt-2 text-sm text-muted-foreground">보고된 로컬 워커가 없습니다. 수동 가져오기는 사용할 수 있습니다.</p>}
+          {!catalogBusy && !catalogError && catalog.workers.length === 0 && <p className="mt-2 text-sm text-muted-foreground">연결된 제작 워커가 없습니다. 연결 후 대기 중인 요청이 시작됩니다.</p>}
           {catalog.workers.map((worker) => <div key={worker.id} className="mt-3 break-words text-sm [overflow-wrap:anywhere]">
-            <p className="font-medium">{worker.online ? "Mac 워커 연결됨" : "Mac 워커 연결 끊김"}</p>
+            <p className="font-medium">{worker.online ? "제작 워커 연결됨" : "제작 워커 연결 끊김"}</p>
             <p className="text-xs text-muted-foreground">마지막 연결: {when(worker.lastHeartbeat)}</p>
             {worker.models.map((model) => <p key={model.id} className="mt-1 text-xs text-muted-foreground">
-              {model.id} · 디스크 {size(model.bytes_on_disk)} · 메모리 {size(model.bytes_resident)} · {model.loaded ? "로드됨" : "미로드"}
+              {model.id} · {model.owned_by === "gemini-api" ? "Gemini API 확인됨" : `디스크 ${size(model.bytes_on_disk)} · 메모리 ${size(model.bytes_resident)}`}
             </p>)}
           </div>)}
         </section>}
-        {showSetup && onOpenLegacy && <button type="button" className="min-h-11 text-sm text-muted-foreground underline underline-offset-4" onClick={onOpenLegacy}>이전 작업 공간 열기</button>}
+        {showSetup && onOpenLegacy && <button type="button" className="min-h-11 text-sm text-muted-foreground underline underline-offset-4" onClick={() => { if (mayLeave()) onOpenLegacy(); }}>이전 작업 공간 열기</button>}
       </aside>}
-      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} externalAI={externalAI} onProject={updateSummary} />}
+      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} onProject={updateSummary} onDepartureChange={onDepartureChange} />}
+    </div>
     </div>
   </section>;
 }
 
-function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
-  projectId: string; externalAI: boolean; onProject: (project: Project) => void;
+function SavedProjectWorkspace({ projectId, onProject, onDepartureChange }: {
+  projectId: string; onProject: (project: Project) => void; onDepartureChange: (state: DepartureState) => void;
 }) {
   const [view, setView] = useState<View | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"scenes" | "history" | "import">("scenes");
@@ -391,11 +459,14 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
   const [readError, setReadError] = useState<string | null>(null);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [retryConfirmation, setRetryConfirmation] = useState<{ revision: number; jobId: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [needsReadback, setNeedsReadback] = useState(false);
   const [importText, setImportText] = useState("");
-  const [editing, setEditing] = useState<{ draft: StoryboardDraftScene; revision: number } | null>(null);
+  const [editing, setEditing] = useState<(PendingEdit & { initial: StoryboardDraftScene }) | null>(null);
+  const pendingEdit = useRef<PendingEdit | null>(null);
+  const [uncertainEdit, setUncertainEdit] = useState(false);
   const readController = useRef<AbortController | null>(null);
   const writeController = useRef<AbortController | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -403,6 +474,25 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
   const editReturnFocus = useRef<{ sceneNo: number; waiting: boolean } | null>(null);
   const endpoint = `${API}/${encodeURIComponent(projectId)}`;
 
+  const dirty = !!editing && !sameDraft(editing.draft, editing.initial);
+  useLayoutEffect(() => {
+    onDepartureChange({ dirty: dirty || !!importText.trim(), busy, uncertain: needsReadback || uncertainEdit });
+    return () => onDepartureChange(EMPTY_DEPARTURE);
+  }, [dirty, importText, busy, needsReadback, uncertainEdit, onDepartureChange]);
+  const acceptEdit = useCallback((next: View, pending: PendingEdit) => {
+    pendingEdit.current = null; setUncertainEdit(false); setWriteError(null);
+    setNotice("저장한 편집 내용을 서버에서 확인했습니다.");
+    setEditing((current) => {
+      if (!current) return null;
+      // A delayed readback must never discard changes made after that request.
+      const parsed = storyboardDraftSceneSchema.safeParse(current.draft);
+      if (parsed.success && sameDraft(parsed.data, pending.draft)) {
+        editReturnFocus.current = { sceneNo: current.draft.sceneNo, waiting: false };
+        return null;
+      }
+      return { ...current, initial: pending.draft, revision: next.project.revision };
+    });
+  }, []);
   const stopReading = useCallback(() => {
     readController.current?.abort();
     if (timer.current) clearTimeout(timer.current);
@@ -416,6 +506,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
         const next = parseView(await json(endpoint, controller.signal), projectId);
         if (controller.signal.aborted) return;
         setView(next); onProject(next.project); setReadError(null); setNeedsReadback(false);
+        const pending = pendingEdit.current;
+        if (pending && confirmsEdit(next, pending)) acceptEdit(next, pending);
         if (isActive(next)) timer.current = setTimeout(() => { void load(); }, POLL_MS);
       } catch (error) {
         if (!controller.signal.aborted) setReadError(failure(error));
@@ -424,7 +516,7 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
     }
     void load();
     return stopReading;
-  }, [endpoint, projectId, readTick, onProject, stopReading]);
+  }, [endpoint, projectId, readTick, onProject, stopReading, acceptEdit]);
   useEffect(() => () => writeController.current?.abort(), []);
   const loadedId = view?.project.id;
   useEffect(() => { if (loadedId) heading.current?.focus({ preventScroll: true }); }, [loadedId]);
@@ -434,8 +526,10 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
   const retryProvider = view?.project.document
     ? view.project.request.providers.image
     : view?.project.request.providers.text;
-  const retryBlocked = !!retryProvider && retryProvider.id !== "local-mlx";
-  const regenerateBlocked = !!view && view.project.request.providers.image.id !== "local-mlx";
+  const retryBlocked = !!retryProvider && retryProvider.id !== "gemini-api";
+  const regenerateBlocked = !!view && view.project.request.providers.image.id !== "gemini-api";
+  const canImportText = view?.project.request.providers.text.id === "manual";
+  const canImportImage = view?.project.request.providers.image.id === "manual";
   // The server refuses a retry once every scene has a stored image (nothing_to_retry).
   const scenesComplete = !!view?.project.document
     && view.project.document.scenes.every((scene) => !!scene.image && !scene.imageError);
@@ -459,10 +553,11 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
     editReturnFocus.current = null;
   }, [editing, locked]);
 
-  async function mutate(body: Record<string, unknown> | FormData, suffix = ""): Promise<boolean> {
+  async function mutate(body: Record<string, unknown> | FormData, suffix = "", expectedEdit?: PendingEdit): Promise<boolean> {
     if (!view || writeController.current || needsReadback || readError) return false;
     const controller = new AbortController();
     writeController.current = controller;
+    if (expectedEdit) { pendingEdit.current = expectedEdit; setUncertainEdit(true); }
     stopReading(); setBusy(true); setWriteError(null); setNotice("");
     let saved = false;
     try {
@@ -470,6 +565,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
         method: "POST", ...(body instanceof FormData ? { body } : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
       }), projectId);
       if (!controller.signal.aborted) {
+        if (expectedEdit && !confirmsEdit(next, expectedEdit)) throw new UiError("invalid_response");
+        if (expectedEdit) acceptEdit(next, expectedEdit);
         setView((previous) => ({ ...next, events: previous?.events ?? next.events }));
         onProject(next.project); setNotice("서버에 변경 사항을 저장했습니다."); saved = true;
       }
@@ -524,6 +621,9 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
     finally { if (!controller.signal.aborted) { writeController.current = null; setBusy(false); } }
   }
   function finishEdit() {
+    const warning = departureMessage({ dirty, busy, uncertain: uncertainEdit || needsReadback });
+    if (busy || (warning && !window.confirm(warning))) return;
+    pendingEdit.current = null; setUncertainEdit(false);
     if (editing) editReturnFocus.current = { sceneNo: editing.draft.sceneNo, waiting: false };
     setEditing(null);
   }
@@ -532,7 +632,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
     if (!editing || locked) return;
     const parsed = storyboardDraftSceneSchema.safeParse(editing.draft);
     if (!parsed.success) { setWriteError(message("invalid_request")); return; }
-    if (await mutate({ action: "edit", revision: editing.revision, sceneNo: parsed.data.sceneNo, scene: parsed.data })) finishEdit();
+    await mutate({ action: "edit", revision: editing.revision, sceneNo: parsed.data.sceneNo, scene: parsed.data }, "",
+      { draft: parsed.data, revision: editing.revision });
   }
 
   return <section className="min-w-0 space-y-4" aria-label="저장된 스토리보드">
@@ -555,7 +656,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
       </div>
       {readError && <p role="alert" className="mt-2 text-sm text-destructive">{readError}</p>}
       {writeError && <p role="alert" className="mt-2 text-sm text-destructive">{writeError}</p>}
-      {view?.job?.errorCode && <p role="alert" className="mt-2 text-sm text-destructive">{message(view.job.errorCode)}</p>}
+      {uncertainEdit && !busy && <p role="alert" className="mt-2 text-sm text-destructive">편집 내용의 저장 여부를 확인하지 못했습니다. 입력은 유지됩니다. 새로고침으로 확인한 뒤 필요한 경우 직접 다시 저장하세요.</p>}
+      {view?.job?.errorCode && <p role="alert" className="mt-2 text-sm text-destructive">{view.job.stage === 'uncertain' ? '생성 결과를 확인하지 못했습니다. 저장 결과를 확인한 뒤 재시도하세요.' : message(view.job.errorCode)}</p>}
       {view && <>
         <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">제작 요청과 모델 정보</summary><p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{view.project.request.prompt}</p>
         <p className="mt-2 text-xs text-muted-foreground">텍스트: {PROVIDERS[view.project.request.providers.text.id]} · 이미지: {PROVIDERS[view.project.request.providers.image.id]}</p>
@@ -570,22 +672,35 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
           {!scenesComplete && <button type="button" className={buttonClass}
             disabled={locked || retryBlocked || scenesComplete
               || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
-            onClick={() => { void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() }); }}>재시도</button>}
+            onClick={() => {
+              if (view.job?.stage === 'uncertain') setRetryConfirmation({ revision: view.project.revision, jobId: view.job.id });
+              else void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() });
+            }}>재시도</button>}
         </div>
-        {(retryBlocked || regenerateBlocked) && <p className="mt-2 text-sm text-muted-foreground">이 프로젝트의 외부 공급자를 사용하려면 외부 AI 사용을 명시적으로 허용해야 합니다. 미설정 공식 API는 사용할 수 없습니다.</p>}
+        {(retryBlocked || regenerateBlocked) && <p className="mt-2 text-sm text-muted-foreground">이전 모델로 만든 프로젝트는 기록과 편집을 보존합니다. 새 생성은 Gemini 프로젝트에서 진행하세요.</p>}
         {active && <p className="mt-2 text-sm text-muted-foreground">작업이 실행되거나 워커를 기다리는 동안 편집과 가져오기를 잠급니다. 이 화면을 닫아도 서버 작업은 취소되지 않습니다.</p>}
       </>}
     </div>
+    <AlertDialog open={Boolean(retryConfirmation)} onOpenChange={open => { if (!open && !busy) setRetryConfirmation(null); }}>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>확인되지 않은 생성을 다시 요청할까요?</AlertDialogTitle><AlertDialogDescription>이전 요청이 처리됐을 수 있습니다. 저장 결과를 확인한 뒤 진행하세요. 재요청은 크레딧을 추가 사용할 수 있습니다.</AlertDialogDescription></AlertDialogHeader>
+      {writeError && <p role="alert" className="text-sm text-destructive">{writeError}</p>}
+      <AlertDialogFooter><AlertDialogCancel disabled={busy}>취소</AlertDialogCancel><AlertDialogAction disabled={locked || !view || view.project.revision !== retryConfirmation?.revision || view.job?.id !== retryConfirmation?.jobId} onClick={event => {
+        event.preventDefault();
+        if (retryConfirmation && view?.job?.id === retryConfirmation.jobId && view.project.revision === retryConfirmation.revision) {
+          void mutate({ action: 'retry', revision: retryConfirmation.revision, requestId: crypto.randomUUID() }).then(applied => { if (applied) setRetryConfirmation(null); });
+        }
+      }}>저장 결과 확인 후 재요청</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+    </AlertDialog>
     {view && <>
       <nav aria-label="스토리보드 작업" className="flex gap-1 border-b border-border/60">
-        {([["scenes", "장면 편집"], ["history", "버전 이력"], ["import", "결과 가져오기"]] as const).map(([id, label]) =>
+        {([["scenes", "장면 편집"], ["history", "버전 이력"], ...(canImportText ? [["import", "결과 가져오기"] as const] : [])] as const).map(([id, label]) =>
           <button key={id} type="button" disabled={!!editing || busy} aria-current={workspaceView === id ? "page" : undefined}
             className={`min-h-11 px-3 py-2 text-sm ${workspaceView === id ? "border-b-2 border-primary font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setWorkspaceView(id)}>{label}</button>)}
       </nav>
       {workspaceView === "history" && <VersionHistory key={`${projectId}:${view.project.revision}`} projectId={projectId}
         revision={view.project.revision} disabled={locked || !!editing || !view.project.document} onRestore={mutate} />}
-      {workspaceView === "import" && <section className={panelClass} aria-labelledby="local-import-title">
+      {workspaceView === "import" && canImportText && <section className={panelClass} aria-labelledby="local-import-title">
         <h3 id="local-import-title" className="font-semibold">수동 결과 가져오기</h3>
         <p className="mt-1 text-sm text-muted-foreground">현재 프로젝트와 버전에 맞는 JSON을 가져옵니다. 웹 구독의 결과는 사용자 가져오기로 표시하며 모델 실행을 검증한 것으로 표시하지 않습니다.</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -595,10 +710,6 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
             JSON.stringify({ schema: STORYBOARD_WORKFLOW, projectId, revision: view.project.revision }),
             "envelope의 JSON Schema:", JSON.stringify(z.toJSONSchema(importSchema)),
           ].join("\n")); }}>현재 텍스트 프롬프트 복사</button>
-          {externalAI && <>
-            <button type="button" className={buttonClass} onClick={() => window.open("https://chatgpt.com", "_blank", "noopener,noreferrer")}>ChatGPT 웹 직접 열기</button>
-            <button type="button" className={buttonClass} onClick={() => window.open("https://grok.com", "_blank", "noopener,noreferrer")}>Grok 웹 직접 열기</button>
-          </>}
         </div>
         <form onSubmit={importDraft} className="mt-3">
           <label className="block text-sm" htmlFor="local-draft-import">버전이 포함된 JSON (schema, projectId, revision, draft)</label>
@@ -628,7 +739,7 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
             <p className="mb-3 text-xs text-muted-foreground">{scene.durationSec}초 · 장면 v{scene.revision}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button id={`local-edit-${scene.sceneNo}`} type="button" className={buttonClass} disabled={locked || !!editing}
-                onClick={() => setEditing({ draft: pickDraft(scene), revision: view.project.revision })} aria-label={`장면 ${scene.sceneNo} 편집`}>편집</button>
+                onClick={() => setEditing({ draft: pickDraft(scene), initial: pickDraft(scene), revision: view.project.revision })} aria-label={`장면 ${scene.sceneNo} 편집`}>편집</button>
               <button type="button" className={buttonClass} disabled={locked || regenerateBlocked || !!editing} aria-label={`장면 ${scene.sceneNo} 재생성`}
                 onClick={() => { void mutate({ action: "regenerate", revision: view.project.revision, sceneNo: scene.sceneNo, requestId: crypto.randomUUID() }); }}>장면 재생성</button>
               <button type="button" className={buttonClass} aria-label={`장면 ${scene.sceneNo} 이미지 프롬프트 복사`}
@@ -668,15 +779,15 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
               </fieldset>
               <button type="button" className={`${buttonClass} mt-2`} disabled={busy} onClick={finishEdit}>편집 닫기</button>
             </form>}
-            <details className="mt-4 border-t border-border/50 pt-3">
+            {canImportImage && <details className="mt-4 border-t border-border/50 pt-3">
               <summary className="cursor-pointer text-sm text-muted-foreground">이미지 파일 가져오기</summary>
               <ImageImport sceneNo={scene.sceneNo} disabled={locked || !!editing} onImport={importImage} />
-            </details>
+            </details>}
             </div>
             </div>
           </article>)}
         </div>
-      </section> : <div className={panelClass}><p className="text-sm text-muted-foreground">저장된 장면이 아직 없습니다. 워커 결과를 기다리거나 현재 버전의 초안을 가져오세요.</p></div>)}
+      </section> : <div className={panelClass}><p className="text-sm text-muted-foreground">{canImportText ? "현재 버전의 초안을 가져오세요." : "장면 생성 결과를 기다리고 있습니다."}</p></div>)}
       {workspaceView === "history" && <section className={panelClass} aria-labelledby="local-events-title">
         <h3 id="local-events-title" className="font-semibold">프로젝트 변경 이력</h3>
         {view.events.length === 0 && <p className="mt-2 text-sm text-muted-foreground">서버에서 제공한 이력이 없습니다.</p>}

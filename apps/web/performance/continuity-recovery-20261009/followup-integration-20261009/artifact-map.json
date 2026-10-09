@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/auth-and-cleanup-tests.txt",
+      "bytes": 8178,
+      "sha256": "51f3b498a7391fb6ede891e7b19abffac8ca116773fc6e0aaac0b8dd5b7090c2"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/forward-contract-final-tests.txt",
+      "bytes": 122,
+      "sha256": "12b162d119e068345808007e091b98794190918d6ef79442ce8240d8f57dbe1a"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/historical-integration-proof.json",
+      "bytes": 6738,
+      "sha256": "cacedc32305272aa64fefe91fa4bc15c293ee76b2430ea7d99d2a3cec2442538"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/knowledge-graph-agent-receipt.json",
+      "bytes": 486,
+      "sha256": "92592d046bc0d1d0761c2ec1a828bce96731720576a7ac34aebcd68f5b2fe69b"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/knowledge-graph-agent-terminal.txt",
+      "bytes": 714,
+      "sha256": "2709e1436a52fbb7c839fb56d220d439ea63f81c36cfd38f41be97937ec302dd"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/proof.json",
+      "bytes": 6877,
+      "sha256": "d2547c90ff8d214ca6d4c6069066d18668ef40e172a5ceeabc9625ce4d329b8d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/readiness-agent-receipt.json",
+      "bytes": 426,
+      "sha256": "df6937a44f716c8408b770b1df30e98cf02b0295a85f165c18300979a842fa85"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/readiness-agent-terminal.txt",
+      "bytes": 598,
+      "sha256": "9e277ffd56ce7c8c3b3232abf52161facf5e851e819a4a2ef2ce50fd8bc1df1d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/sql-admission-final-tests.txt",
+      "bytes": 2760,
+      "sha256": "e840ff7f1a238ce93c7cfe107412c708d6a709e140473157498044088f42434e"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-integration-20261009/sql-admission-tests.txt",
+      "bytes": 2760,
+      "sha256": "47e51b6776a41d725b835c5bd63554895cfb5f763ee7a6468276b51fa76ba656"
+    }
+  ]
+}

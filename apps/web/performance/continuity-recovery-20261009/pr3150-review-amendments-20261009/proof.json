@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "scope": "PR3150 review comments 4228496143, 4228496152, and 4228496189",
+  "reviews": {
+    "4228496143": {
+      "status": "resolved_offline",
+      "behavior": {
+        "engineDeclaredOnlyAfterPreAndPostMajor17": true,
+        "pathPostgresql16RejectedBeforeInitdb": true,
+        "preStartupFailureCode": "POSTGRES_MAJOR_UNSUPPORTED",
+        "postStartupFailureCode": "POSTGRES_SERVER_MAJOR_UNSUPPORTED"
+      },
+      "tests": {
+        "count": 2,
+        "passed": 2
+      },
+      "actualTemporaryRuntime": {
+        "serverVersion": "17.11 (Homebrew)",
+        "serverVersionNum": "170011",
+        "preStartupMajors": {
+          "pgConfig": 17,
+          "initdb": 17,
+          "pgCtl": 17,
+          "psql": 17
+        },
+        "postStartupMajor": 17,
+        "migrationCasesPassed": 6,
+        "cleanupStopped": true,
+        "cleanupRemoved": true,
+        "operatingDatabaseWrites": false
+      }
+    },
+    "4228496152": {
+      "status": "resolved_offline",
+      "behavior": {
+        "explicitOption": "--watch-checkout",
+        "explicitEnvironment": "TZUDONG_CLAUDE_VIDEO_CHECKOUT",
+        "defaultCheckoutFallbackRemoved": true,
+        "pinnedCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+        "cleanSkillsWatchRequired": true,
+        "regularNonSymlinkWatchScriptRequired": true
+      },
+      "tests": {
+        "count": 3,
+        "passed": 3,
+        "missingCode": "WATCH_CHECKOUT_REQUIRED",
+        "unverifiedCode": "WATCH_CHECKOUT_UNAVAILABLE"
+      },
+      "explicitPinnedCheckoutRun": {
+        "passed": true,
+        "historicalOriginalRequestSha256": "121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331",
+        "historicalCandidateRequestSha256": "bc0ef2b02c0827c6538350d04b8deefc29659f28d4faf40d54937e8a11f5d661",
+        "compactProofOutputSha256": "52d6947a8f7712498ce1b6259203b94da9fa78e16c2683a83613c2a0853fa3c1"
+      }
+    },
+    "4228496189": {
+      "status": "resolved_offline",
+      "passContract": {
+        "completeExpectedPathSequence": true,
+        "allCliExitZero": true,
+        "publicAcceptableStatuses": [
+          200,
+          301,
+          302,
+          303,
+          307,
+          308
+        ],
+        "anonymousAdminStatuses": [
+          401,
+          403
+        ],
+        "boundedAdminErrorRequired": true
+      },
+      "tests": {
+        "count": 5,
+        "passed": 5,
+        "rejectedCases": {
+          "public500": "PUBLIC_STATUS_UNACCEPTABLE",
+          "cliFailure": "CLI_EXIT_NONZERO",
+          "earlyBreak": "RECORD_SET_INCOMPLETE",
+          "anonymousAdmin200": "ADMIN_ANONYMOUS_STATUS_INVALID"
+        },
+        "partialEvidencePersisted": true
+      },
+      "actualVercelCommands": 0
+    }
+  },
+  "sourceTransition": {
+    "verifyIsolatedPg17": {
+      "beforeSha256": "04907bf8699f58006a6fe124a0cebc3604f38266647401793542f999ac68fcf4",
+      "afterSha256": "e5c892ea696a0fc2b349dd735499622472488c5c74979d508c6f4011e45facb0"
+    },
+    "verifySchemaFactor": {
+      "beforeSha256": "6b5286c3799708a51bd724effca8703f042d11b8491f27931010278e322df7a8",
+      "afterSha256": "b34f5dca1fb73b2cc0010c5b4cc057d57f3d878a2c5f1aa06a1595937a2a37fe"
+    },
+    "verifyMergePreviewHttp": {
+      "beforeSha256": "68656d301ce9ce112b7955e19244957503e4eef19a4b92994c3720ea2d3df746",
+      "afterSha256": "a312ff7f189e55a2f5a06067a72a15ae16b056e03042e8af8c04c57b874bdf7f"
+    }
+  },
+  "historicalEvidencePreserved": {
+    "geminiSchemaProofSha256": "9531de8f760678196323b839d2403f701286de73d84227aeeb53669a5d89df69",
+    "vercelArtifactMapSha256": "2aae99f2c02fc0c84dfcec7b7184320de52064bee6154b81b34762671bed3140",
+    "vercelHttpRoutesSha256": "1f59779e13c34762846714b2f7faaf0a545d16a8cd1955caa8059035a4e95787",
+    "isolatedPg17HistoricalResultSha256": "a3eb7627b8cf9479fd400195f2818e9f0c22b8bdcd50ee5686ff30c080308a93"
+  },
+  "externalEffects": {
+    "vercelCommands": 0,
+    "providerCalls": 0,
+    "operatingDatabaseWrites": 0,
+    "downloads": 0,
+    "installations": 0,
+    "commits": 0,
+    "pushes": 0
+  }
+}

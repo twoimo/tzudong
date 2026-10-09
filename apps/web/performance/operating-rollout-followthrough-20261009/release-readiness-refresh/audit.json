@@ -1,0 +1,69 @@
+{
+  "schema": "record-sql-release-readonly-preparation/v1",
+  "sourceHead": "2b6e7339fa75b1d403cb97a257e8d9d5b8b37e3c",
+  "sourceBindings": {
+    "docs/agents/release.md": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9",
+    ".github/supabase-migration-release-manifest.v1.json": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d",
+    ".github/workflows/supabase-migration-apply.yml": "2a3b9da3bb069c726539c9d00cc2b7a63dfcc004782c7be2cc6c30bdd8caa9aa",
+    "apps/web/scripts/apply-supabase-migration.mjs": "7b8b99d954711c8bcac87ac90762baf91d02f373463a240dfcdf1f50257f0fb8",
+    "backend/supabase/docs/g037-hosted-closure-runbook.md": "7b7ec379bfdd6ba7518a839c211ddf9e5010440ec7cd72ba2586c4fabc0c4337",
+    "backend/supabase/docs/g038-account-deletion-successor-runbook.md": "2b6fc1857e7de38491d6f0baf600c5866db02859f4e8599c1a44548b7bdf601e",
+    "apps/web/lib/admin/record-action-admission.ts": "9b45ac5ed1ccd061efb58722375931939da076eb3648f45f7374b7471170c6e0",
+    "apps/web/app/api/admin/record-actions/route.ts": "6989185386d879ed0acd0c650c4d16e35959baf8da44385b0db67e8ab2444959",
+    "apps/web/app/api/admin/record-actions/media-cleanup/route.ts": "ba022470cfdb7226795d71042b2d95c979187f5c4c0c44ebac3794115e744d3d"
+  },
+  "migrations": [
+    {
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "releaseManifestRegistered": false,
+      "ownBeginCommit": true
+    },
+    {
+      "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+      "releaseManifestRegistered": false,
+      "ownBeginCommit": true
+    },
+    {
+      "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+      "releaseManifestRegistered": false,
+      "ownBeginCommit": true
+    },
+    {
+      "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "releaseManifestRegistered": false,
+      "ownBeginCommit": true
+    }
+  ],
+  "manifestEntries": [
+    "restaurant_refresh_history",
+    "g016_privacy_audit_owner_policy",
+    "g016_onboarding_confirmation_freshness"
+  ],
+  "manifestSha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d",
+  "workflowManifestPin": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d",
+  "sourceOnlyManifestValidation": {
+    "approvedManifestPinMatches": true,
+    "unregisteredProposedIdsFixedCode": "MIGRATION_ID_NOT_ALLOWLISTED",
+    "connections": 0,
+    "directCliAttemptFixedCode": "MIGRATION_MANIFEST_DIGEST_INVALID",
+    "directCliLimit": "Local process lacked workflow-provided digest; no inference about live configuration. No environment changed."
+  },
+  "activeFreezeWorkflow": "Only the two G016 IDs with verify_terminal_state=true can enter apply job; none of these four are exceptions.",
+  "g034SelectedCount": 29,
+  "fourInG034Selected": false,
+  "operatingMetadataFreshlyRead": false,
+  "standingAuthorization": "Preserved; no new user approval requested",
+  "operatingWrites": false,
+  "manifestOrWorkflowApprovalChanged": false,
+  "envFreezeGrantQueueChanged": false,
+  "productionSourceAudit": "f31904e6dca2d9b608259cf150c5d0894db0928e; historical deployment observation, not refreshed live alias",
+  "limitations": [
+    "Generic per-ID runner uses psql single transaction but source files contain their own COMMIT, so whole multi-migration/terminal-readback atomic rollback is not established. JSON equality is checked after psql returns.",
+    "Generic runner does not insert schema_migrations ledger rows. Fresh supported ledger-aware execution/readback must be established; never fabricate ledger state.",
+    "G037/G038 maintain freeze; no audited generic thaw/apply transition for these four is present."
+  ]
+}

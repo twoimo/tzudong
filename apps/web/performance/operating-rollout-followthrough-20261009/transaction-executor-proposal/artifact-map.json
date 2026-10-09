@@ -1,0 +1,109 @@
+{
+  "sourceBindings": {
+    "apps/web/scripts/apply-supabase-migration.mjs": "7b8b99d954711c8bcac87ac90762baf91d02f373463a240dfcdf1f50257f0fb8",
+    ".github/supabase-migration-release-manifest.v1.json": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d",
+    ".github/workflows/supabase-migration-apply.yml": "2a3b9da3bb069c726539c9d00cc2b7a63dfcc004782c7be2cc6c30bdd8caa9aa"
+  },
+  "artifacts": {
+    "admission-and-batch.py": {
+      "sha256": "9013b3fd9356e48ba51476282ebcf805b9d942f49ff01e636cdbe1f66111a958",
+      "bytes": 6125
+    },
+    "admission-batch-first-negative.json": {
+      "sha256": "97fa53e8dffceb3b04926f3598248d63636f7d35c3043f8fb6ed426ac25c5424",
+      "bytes": 2352
+    },
+    "admission-batch-g014-owner-denial.json": {
+      "sha256": "4fd19132057dc3627122ef79f87a9ca359867187a792aa489c4ae959b18ab97f",
+      "bytes": 2511
+    },
+    "admission-batch-runtime.json": {
+      "sha256": "c56fb1c921d04b3040579e2b5a9cecbf33d3f9bfe9947e62241e683d13a1ff41",
+      "bytes": 3095
+    },
+    "admission-batch-second-negative.json": {
+      "sha256": "2d78e2ae9532a5b81395386923ed0b7214d29aef9d2c186f8026e8311f72fb8d",
+      "bytes": 2392
+    },
+    "bootstrap-snapshot-roles.mjs": {
+      "sha256": "e88928fb0ae3c8bf12b29c7696d5efb5c7a2134ba1b7df4fb21fdfe8615ff5bb",
+      "bytes": 5256
+    },
+    "exact-integration-proposal.md": {
+      "sha256": "a985eb0f546a5886788db77fe0b657544812d7e2e2b0a7017c5a08e0ea89c80f",
+      "bytes": 5381
+    },
+    "executor-principal-admission.json": {
+      "sha256": "62dd1b93f03eb62e73ea4b4c01f4cb1df7283ae30d9997e3701f065de7b5464d",
+      "bytes": 249
+    },
+    "final-receipt.json": {
+      "sha256": "71b1a2a7ed6e56294d457b55195ab12c37ac1c2568c4a32f07d315937d6197bb",
+      "bytes": 884
+    },
+    "fixture-lib.py": {
+      "sha256": "aacc32934b8bd2fa17911833235598722a48d6db93c643bccd2733c13470871b",
+      "bytes": 10285
+    },
+    "minimum-adoption-proposal.md": {
+      "sha256": "26f9f9c996cc4e729cb241c998e81a6c402a31d7fd63eadbf0997dcbc743ec58",
+      "bytes": 8214
+    },
+    "owned-container-id.txt": {
+      "sha256": "790adb866167fcd1cdd2f927bcee6a43da0adde4d5d9c6d32f708745532f89c4",
+      "bytes": 65
+    },
+    "prepare-owned-resource.py": {
+      "sha256": "cda2a8b2c73e874d5bb540ca5d4273c234f227ef53b3879815bd806705e6502b",
+      "bytes": 1749
+    },
+    "pristine-reconstruction.json": {
+      "sha256": "7093d7daa559ef5f837de294eaf41a91d9c9a53ec45f71667906793803520367",
+      "bytes": 4232
+    },
+    "proposal-source-binding.json": {
+      "sha256": "666007ffbbf1674ebb286cbef38755f22db2bf827ba09e90540d3326b6b6534c",
+      "bytes": 622
+    },
+    "reconstruct-pristine.mjs": {
+      "sha256": "01b2d20111d2e0859c280188f8fc85a83443ee1906c2335cf916770efd3cf3a5",
+      "bytes": 23787
+    },
+    "resource-plan.json": {
+      "sha256": "3bec8598eee255e884a12b6c179f7a6a3e77eb47b1807eea8d4b40485d5c2bbf",
+      "bytes": 716
+    },
+    "response-cut-pre-barrier-runtime.json": {
+      "sha256": "3a48e04010d385e6de8c6104c7b24d6713b85fbe06ce0505436d923a6e62e1bb",
+      "bytes": 390
+    },
+    "response-discard-initial-runtime.json": {
+      "sha256": "3a48e04010d385e6de8c6104c7b24d6713b85fbe06ce0505436d923a6e62e1bb",
+      "bytes": 390
+    },
+    "response-loss-runtime.json": {
+      "sha256": "8b3247de7cd85daaabb68a185d02025249de7305b94acd8ac2a83642c66cb494",
+      "bytes": 445
+    },
+    "response-loss.py": {
+      "sha256": "f5e75b1d2f6d8fb1fd60645e74391ca692ce95a3086c86fe9cba97e38f0e33dc",
+      "bytes": 3390
+    },
+    "role-bootstrap.json": {
+      "sha256": "8fde36c5bfd886aaddfd6bdf0568bbc628cd8ed9da82efd6841c588e5350e8c4",
+      "bytes": 542
+    },
+    "scope.json": {
+      "sha256": "f0642b2fa8689f64da6fb0ad7ac66b21dbb154acd775d00da59c1f325eacbe98",
+      "bytes": 408
+    },
+    "transaction-experiments.py": {
+      "sha256": "00aa14f707323a9b4411029a961186917041b6b36033712603b97747d5356993",
+      "bytes": 6555
+    },
+    "transaction-runtime.json": {
+      "sha256": "710a798738e96424becb7011e78adb6e669e9bb1fdc30ecd30c720198c9d98a2",
+      "bytes": 3789
+    }
+  }
+}

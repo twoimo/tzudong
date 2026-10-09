@@ -1,0 +1,67 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-system-status.test.ts:
+(pass) admin system status helper > retired producer URL/key cannot satisfy active RAG setup or trigger old probes [41.95ms]
+(pass) admin system status helper > health and models use independent capability; config false is not a ready provider claim [2.30ms]
+(pass) admin system status helper > reports Gemini RAG readiness and keeps retired BGE disabled [1.67ms]
+(pass) admin system status helper > uses active RAG setup commands and omits retired producer setup [0.93ms]
+(pass) admin system status helper > redacts endpoint credentials and query fragments while checking system status [0.66ms]
+(pass) admin system status helper > omits raw provider token values when they are configured [4.80ms]
+(pass) admin system status helper > marks active RAG issues and omits retired BGE checks [0.82ms]
+(pass) admin system status helper > reports frame-caption readiness from local path and redacts gdrive credentials [1.22ms]
+(pass) admin system status helper > emits frame-caption checklist warnings when both local and gdrive paths are unavailable [1.26ms]
+(pass) admin system status helper > supports auto-discovered frame-caption path when no explicit env var is set [163.36ms]
+(pass) admin system status helper > reports Naver provider readiness through system status without leaking secrets [1.68ms]
+(pass) admin system status helper > maps thumbnail durable release payloads to stable readiness without module mocks [0.64ms]
+(pass) admin system status helper > dual-reads pipelineControl from job API snapshot or current-summary manifest [6.02ms]
+(pass) admin system status API route > requires admin authorization before checks [57.50ms]
+(pass) admin system status API route > returns system status payload with no-store and hides secrets [3.57ms]
+(pass) admin system status API route > returns no server-key checklist when provider keys are configured [1.86ms]
+(pass) admin system status API route > returns frame caption status payload via API route without exposing credential fragments [1.94ms]
+(pass) admin system status API route > prefers run_daily manifest failure state and keeps remote probes disabled by default [2.24ms]
+(pass) admin system status API route > reports missing run_daily current-summary as explicit unknown state [5.98ms]
+(pass) admin system status API route > uses opt-in read-only GitHub and Supabase status probes without leaking tokens [2.39ms]
+(pass) admin system status API route > keeps daily GitHub responses bounded, strict, and fixed-code only [1.79ms]
+(pass) admin system status API route > uses credential-free GitHub reads only in strict local runtime after a rejected token [1.01ms]
+(pass) admin system status API route > allows public workflow status without a token only in strict local runtime [0.74ms]
+(pass) admin system status API route > keeps partial Supabase counts unreachable and returns fixed failure codes [0.74ms]
+(pass) admin system status API route > reports bounded local canonical and hosted fallback nightly history without leaking tokens [0.94ms]
+(pass) admin system status API route > fails closed on malformed or unreachable nightly history without returning provider bodies [0.70ms]
+(pass) admin system status API route > fails closed on malformed run rows and oversized nightly provider responses [0.86ms]
+(pass) admin system status API route > adds stable readiness to Directions local fallback and validation errors [2.96ms]
+[admin/routes/directions] provider request failed {
+  domain: "route_planner",
+  action: "naver_directions",
+  step: "provider-request",
+  provider: "naver-directions",
+  errorName: "Error",
+}
+(pass) admin system status API route > adds redacted Directions readiness for provider auth failure, provider non-OK, and fetch exceptions [3.69ms]
+(pass) admin system status center view model > renders healthy only when all evidence is current, complete, and queues are empty [2.94ms]
+(pass) admin system status center view model > fails closed when run_daily evidence is stale [0.40ms]
+(pass) admin system status center view model > surfaces nightly current conclusion, failure streak, and last success as degraded [0.35ms]
+(pass) admin system status center view model > keeps WARN and skipped run_daily evidence partial instead of healthy [0.31ms]
+(pass) admin system status center view model > keeps UNKNOWN run_daily final status out of healthy state [0.25ms]
+(pass) admin system status center view model > fails closed when manifest evidence is missing [0.26ms]
+(pass) admin system status center view model > treats malformed manifest reads as unknown instead of healthy [0.33ms]
+(pass) admin system status center view model > keeps partial GDrive proof and pending work out of healthy state [0.26ms]
+(pass) admin system status center view model > surfaces canonical pending-count domains and lifecycle degraded state [0.25ms]
+(pass) admin system status center view model > keeps missing log or unreadable pending counts out of healthy state [0.16ms]
+
+tests-unit/storyboard-gemini-rag.test.ts:
+(pass) Gemini RAG isolation and existing data preservation without paid calls > missing/reused inbound capability and unsafe remote URLs fail before transport [0.36ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > remote HTTPS accepts the independent capability and loopback HTTP remains supported [0.23ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > route admits an exact legacy document ahead of a full dense pool while keeping fixed fingerprint [2.84ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > rejects old fingerprints even at matching dimensions without a second call [0.07ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > new versioned writes preserve the old external identity and metadata [1.09ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > query vector search is isolated; legacy text is still returned and is never vector-selected [0.35ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > provider failure has no write or hidden retry and does not return raw diagnostic [0.38ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > legacy read failure does not silently discard existing documents or rerank [0.22ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > user-supplied query vectors cannot replace the server embedding [0.11ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > invalid reused vectors and mismatched spaces fail before worker transport [0.16ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > rejects forged candidate IDs rather than accepting provider-supplied content [0.07ms]
+
+ 50 pass
+ 0 fail
+ 538 expect() calls
+Ran 50 tests across 2 files. [424.00ms]

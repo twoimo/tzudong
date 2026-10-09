@@ -1,0 +1,15 @@
+{
+  "command": "Bun1.4.0 test tests-unit/admin-record-metadata-roundtrip.test.ts",
+  "status": "passed",
+  "exitCode": 0,
+  "tests": 1,
+  "assertions": 3,
+  "actualPg17Fixture": "metadata-roundtrip.json",
+  "priorRelevantSuite": {
+    "tests": 5,
+    "assertions": 35,
+    "exitCode": 0
+  },
+  "targetedEslintExitCode": 0,
+  "nativeCompatParity": "typecheck-parity.json"
+}

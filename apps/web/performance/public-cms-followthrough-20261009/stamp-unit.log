@@ -1,0 +1,16 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/stamp-restaurant-order.test.ts:
+(pass) stamp restaurant ordering > puts stamped restaurants before higher-review unvisited restaurants [0.11ms]
+(pass) stamp restaurant ordering > keeps the selected sort order inside the stamped group [0.06ms]
+(pass) stamp visited lookup memoization > asks the visit predicate once per restaurant even though the comparator repeats [0.43ms]
+(pass) stamp visited lookup memoization > produces the same order as the unmemoized comparator [0.23ms]
+(pass) stamp visited lookup memoization > caches a false verdict too, so unvisited restaurants are not recomputed [0.29ms]
+(pass) stamp visited lookup memoization > judges distinct objects that share an id separately [0.03ms]
+(pass) stamp visited lookup memoization > wires the memoized lookup into the stamp page comparator [0.65ms]
+(pass) stamp visited lookup memoization > wires the memoized lookup into the stamp overlay comparator [0.24ms]
+
+ 8 pass
+ 0 fail
+ 18 expect() calls
+Ran 8 tests across 1 file. [64.00ms]

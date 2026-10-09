@@ -155,7 +155,7 @@ export const StampCard = memo(function StampCard({
         onClick(restaurant);
     };
 
-    if (isList) {
+    if (isList || (!currentVideoId && !isGuideCard)) {
         return (
             <Card
                 className={cn(

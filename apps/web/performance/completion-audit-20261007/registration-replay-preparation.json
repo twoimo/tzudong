@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "cca9e6e2",
+  "hashes": {
+    "backend/supabase/scripts/catalog_docker_endpoint.py": "cef4b8c39e8cafdd43916ce89ae27284862eaf266edd3766e0de5839c680feee",
+    "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh": "4363941d284cd9eb23431c0498d69468959566e92c39db8a5df5426cf3496237",
+    "backend/supabase/scripts/transform_registration_replay.py": "b28d1f192e23fa9b1bf9b285f5e64f767b12f5ea3499c77977695bf1d8b0e492",
+    "backend/supabase/tests/test_catalog_docker_endpoint.py": "801024fe3e703ef577e7360c6d2d79401cba35fc06e160639f4e76e327e2b102",
+    "backend/supabase/tests/test_registration_replay.py": "7d0446d37e239b7a399808166cbb03baee508e095ad7e98aec21d7b3450c76da"
+  },
+  "preliminaryTests": {
+    "passed": 16,
+    "failed": 0
+  },
+  "fullReplayComplete": false,
+  "hostedPg17AdmissionProven": false,
+  "operatingSqlBytesModified": false,
+  "savedDefaultDockerContextChanged": false,
+  "explicitContext": "colima-tzudong-catalog-20261007",
+  "limits": {
+    "cpus": 2,
+    "memoryGiB": 3,
+    "diskGiB": 40
+  },
+  "next": "Wait for the actual full source replay, inspect owner/ACL/catalog receipts, then run the required independent clean comparison."
+}

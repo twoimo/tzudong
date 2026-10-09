@@ -1,0 +1,42 @@
+{
+  "revision": "c90544c813a89b077084953e42fb1431a4b1efed",
+  "meaning": "frozen source used by the prior local five-stage proof and Web critique; subsequent transport/parser source changes require separate evidence",
+  "files": [
+    {
+      "originalPath": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "frozenPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/supabase-migration-transaction.mjs.source.txt",
+      "sha256": "82e35949f693e54c0629fd2f98935b4c4b5b79227c66d6bc6dccb0584b5493f0",
+      "bytes": 14804
+    },
+    {
+      "originalPath": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "frozenPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/supabase-migration-bundle.mjs.source.txt",
+      "sha256": "fdc6c175fe77cc11b6252c6d9b326061d67639c6e7fff728e94e70a85f25c5b6",
+      "bytes": 12236
+    },
+    {
+      "originalPath": "apps/web/scripts/admin-record-sql-successor.mjs",
+      "frozenPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/admin-record-sql-successor.mjs.source.txt",
+      "sha256": "4e5771efa2173bb9a02a44acd5d854a7cc5e7588935e0bcc7077683b2d28619a",
+      "bytes": 32664
+    },
+    {
+      "originalPath": "apps/web/scripts/apply-supabase-migration.mjs",
+      "frozenPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/apply-supabase-migration.mjs.source.txt",
+      "sha256": "b86ebb0e1194c4b164f57467475e09afa3ef03655968732bd0d6c57e37789a0e",
+      "bytes": 20613
+    },
+    {
+      "originalPath": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "frozenPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/20261009091342_admin_record_private_verification_cleanup.sql.source.txt",
+      "sha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065",
+      "bytes": 11649
+    },
+    {
+      "originalPath": ".github/admin-record-sql-successor.v1.json",
+      "frozenPath": "apps/web/performance/continuity-recovery-20261009/web-model-review-20261009/frozen-c90544c8/admin-record-sql-successor.v1.json.source.txt",
+      "sha256": "b88e6f9814a179c66aac344e65ae651653ccf02f8786a380eb5a11d0ced615b3",
+      "bytes": 105556
+    }
+  ]
+}

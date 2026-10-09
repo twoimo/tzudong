@@ -1,0 +1,75 @@
+{
+  "observedAtUtc": "2026-10-09T00:49:25.041492+00:00",
+  "candidateHead": "9ae2d740e5250fd96c6de1c1c3941db1435ff5e0",
+  "publicMembership": {
+    "eligibleLongform": 1071,
+    "videos": 1053,
+    "completedStreams": 18,
+    "shortsExcluded": 81,
+    "totalDurationSeconds": 1216100,
+    "addedSinceCanonical1070": [
+      "FOmKdeHoFIs"
+    ],
+    "removedSinceCanonical1070": []
+  },
+  "coverage": {
+    "individualMetadata": 611,
+    "captionSources": 612,
+    "captionFirstPassReviewed": 9,
+    "preparedAwaitingReview": 603,
+    "modelValidatedFullClipReported": 2,
+    "modelClipReportedSeconds": 1951,
+    "independentWholeVisual": 0,
+    "independentAudio": 0,
+    "firstFrameVideoCount": 1,
+    "firstFrameCount": 6,
+    "modelUncertainRejected": 1,
+    "captionClaimCandidates": 46,
+    "sourceTrackCount": 1739,
+    "captionCueCount": 635851,
+    "tracksOverDuration": 45,
+    "videosWithOverDurationTracks": 44
+  },
+  "state": {
+    "canonicalInventory": 1070,
+    "canonicalCollector": "paused429 exit75 no automatic retries",
+    "freshMetadataMissing": 460,
+    "freshCaptionsMissing": 459,
+    "newInventoryNotRegistered": 1,
+    "observedRelevantCollectorProcesses": 0,
+    "model": "gemini-3.8-flash",
+    "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+    "existingBatchReservedCalls": [
+      1,
+      2
+    ],
+    "freshBatchAuthorized": false,
+    "costVerified": false
+  },
+  "viewer": {
+    "localReaderPassed": true,
+    "generatedAt": "2026-10-04T21:20:08.170525Z",
+    "revision": "f3bf0a6f5a2499c49ffcb5dee67018ab879a11fbf686fbfb9d4931b72186aabe",
+    "exportEligible": 1069,
+    "exportAnalyzed": 0,
+    "nodes": 21,
+    "edges": 79,
+    "QWQueryMatches": 1,
+    "Ck5QueryMatches": 0,
+    "scopeMarkdownFiles": 31,
+    "typedMetadataFiles": 21,
+    "captionFilesWithoutTypedMetadata": 9,
+    "otherUntypedCoverageFiles": 1,
+    "sourceDefectConfirmed": false,
+    "dataMaterializationStale": true,
+    "authenticatedBrowserOrDeployedVerification": false
+  },
+  "boundaries": {
+    "providerCalls": 0,
+    "collectorResumed": false,
+    "oskWrites": false,
+    "profileWrites": false,
+    "vaultGlobalSearch": false,
+    "sourceEdits": false
+  }
+}

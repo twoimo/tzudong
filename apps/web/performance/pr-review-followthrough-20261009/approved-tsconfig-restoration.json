@@ -1,0 +1,9 @@
+{
+  "ownIncludesRemoved": [
+    ".next-web-review-followthrough/types/**/*.ts",
+    ".next-web-review-followthrough/dev/types/**/*.ts"
+  ],
+  "jsonEqualToExpected": true,
+  "jsonEqualToHead": true,
+  "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+}

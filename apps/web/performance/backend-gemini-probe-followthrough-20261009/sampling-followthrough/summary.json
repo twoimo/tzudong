@@ -1,0 +1,127 @@
+{
+  "schema": "gemini-sampling-followthrough/v1",
+  "observedAtUtc": "2026-10-09T00:05:25.793137+00:00",
+  "sourceCommit": "d8def8e98f534c8e94d6da5afbc42245a7348979",
+  "sourceChanges": [
+    {
+      "path": "backend/utils/gemini-client.mjs",
+      "sha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/bin/review_recheck_gemini.mjs",
+      "sha256": "8b78aa7c344cce9717ed021917deb179d6866692962cb0e7715cc90461cc2e9b",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/bin/benchmark_gemini_admission.mjs",
+      "sha256": "c89ed2576cffe1f7d7f5596271068a36c7a2e045d61eda55fd04443a3d0b847e",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/restaurant-evaluation/scripts/gemini_api_request.mjs",
+      "sha256": "b8e39c21c89ccbc2c973e5adf21274b6a4e2880e0713a1a28a72d7e0391ad46e",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/gemini_api_request.mjs",
+      "sha256": "99c5543d225d81f7570d69323546dbe1ee886fac3b086007544643af22e48db7",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/final_merge_chunk.mjs",
+      "sha256": "d423d3a6715234f741c10cfbd6dbdf7ca2f373d6282cc654e8592bf088761bd9",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs",
+      "sha256": "1af2143ca6a697b4f7f313365a5e1662cf14fd951b241293c03d66c4373dd7b4",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/utils/tests/gemini-client.test.mjs",
+      "sha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/tests/test_gemini_chunk_generation_config.mjs",
+      "sha256": "c757455012adef64cd6b435aa802a7885012a2423baba567de90ad91cac3f028",
+      "isolatedCopyMatches": true
+    }
+  ],
+  "priorProbeSourceUnchanged": true,
+  "previousEvidenceRetained": true,
+  "samplingPolicy": {
+    "removedFields": [
+      "temperature",
+      "topP",
+      "topK",
+      "top_p",
+      "top_k"
+    ],
+    "models": "3.5 Flash-Lite; parsed Gemini 3.6+ and future decimal-version families, including models/ prefix and revisions",
+    "olderSupportedExplicitValuesRetained": true,
+    "unknownCustomModelsRetained": true,
+    "chunkPriorGemini3DefaultSamplingRetained": true,
+    "callerConfigMutation": false
+  },
+  "unchanged": [
+    "model defaults/overrides",
+    "thinking and existing MINIMAL checks",
+    "4096/8192 output caps and response MIME",
+    "quota/deadline/retry scope",
+    "keys/fallback pools",
+    "queues/source data",
+    "package pins and shared installations"
+  ],
+  "verification": {
+    "geminiClientFull": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    },
+    "chunkConfigFull": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "stageExecution": {
+      "passed": 6,
+      "failed": 0
+    },
+    "syntaxChecks": 9,
+    "diffCheck": "passed",
+    "controlledReplay": {
+      "observations": 28,
+      "pairedResultHashesEqual": 14,
+      "sixRequestWireHashPairsEqual": 7,
+      "actualGoogleRequests": 0,
+      "scope": "local SDK transport and simulated uncooperative response only; no performance saving inferred"
+    },
+    "failedAttempt": "new final-merge test passed three wrong-order args; fixed fixture to four existing CLI args and retained failed TAP"
+  },
+  "pythonCallerAudit": {
+    "modified": false,
+    "metadataAdAnalyzer": "OpenAI gpt-4o-mini temperature preserved",
+    "transcriptContext": "OpenAI-compatible/Ollama local backends temperature preserved",
+    "frameCaption": "LLaVA torch generation temperature preserved",
+    "ragCaption": "Gemini generationConfig has maxOutputTokens=512 and no sampling override",
+    "ragTopK": "retrieval result count, not a generation sampling setting; unchanged"
+  },
+  "cachePolicy": "08-chunk-multimodal-crawling.sh already includes utils/gemini-client.mjs in receipt asset hashes; stage invalidation tests passed",
+  "paidProviderCalls": 0,
+  "operatingCalls": 0,
+  "modelDownloads": 0,
+  "packageUpgrades": 0,
+  "moneySavingsMeasured": false,
+  "confidenceInterval95": null,
+  "officialSources": [
+    "https://ai.google.dev/gemini-api/docs/generate-content/whats-new-gemini-3.6",
+    "https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.5"
+  ],
+  "limits": [
+    "Real provider compatibility, token/cost/quality and deployment remain unverified.",
+    "Earlier explicit Gemini 3.x models retain configured sampling where supported, as requested; official default recommendation is distinct from deprecation/removal boundary.",
+    "Current active backend dependency directory was absent at first verification; tests use exact lock-matched SDK 2.24.0/dotenv18.0.3 in a private copy."
+  ]
+}

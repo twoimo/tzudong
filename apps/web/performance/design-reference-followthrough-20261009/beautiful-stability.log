@@ -1,0 +1,401 @@
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_Z9pnifUVGCucEE9E'
+}
+✔︎ Opened a new tab and set it active: tabs[0], page → Beautiful UI — Crafted primitives for AI-native interfaces (https://www.beautifului.dev/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Beautiful UI — Crafted primitives for AI-native interfaces" [url=https://www.beautifului.dev/]
+- main:
+  - complementary:
+    - text: "Beautiful UI"
+    - button "Light mode" [ref=e1]
+    - button "Dark mode" [ref=e2]
+    - heading "Beautiful UI for AI-native interfaces." [level=1]
+    - navigation "Components" [ref=e4]:
+      - text: "Components"
+      - link "Loading State" [ref=e5]
+      - link "Thinking" [ref=e6]
+      - link "Streaming Text" [ref=e7]
+      - link "Approval Card" [ref=e8]
+      - link "Tool Chips" [ref=e9]
+      - link "Task Rows" [ref=e10]
+      - link "Chat" [ref=e11]
+      - link "Prompt Bar" [ref=e12]
+      - link "Recommendation Card" [ref=e13]
+      - link "Context Cards" [ref=e14]
+      - link "Diff Table" [ref=e15]
+      - link "Records Table" [ref=e16]
+      - link "Filter Table" [ref=e17]
+      - link "Sidebar Nav" [ref=e18]
+      - link "Search" [ref=e19]
+      - link "Flowchart" [ref=e20]
+      - link "Insight Cards" [ref=e21]
+      - link "Code Block" [ref=e22]
+      - link "Fine-tune Card" [ref=e23]
+      - link "Selection Actions" [ref=e24]
+      - link "Agent Screen" [ref=e25]
+    - link "Built by Turbo Product design studio Get expert product design for your business." [ref=e26]
+    - link "Book a call" [ref=e27]
+  - region:
+    - text: "01"
+    - heading "Loading State" [level=3]
+    - text: "Pixel-grid loader with shimmer and elapsed time."
+    - status: "Churning 0.2s"
+    - button "Drive" [ref=e28]
+    - button "Dots" [ref=e29]
+    - button "Orbit" [ref=e30]
+    - button "Surfer" [ref=e31]
+  - region:
+    - text: "02"
+    - heading "Thinking" [level=3]
+    - text: "Expandable traces — steps, reasoning, search, coding."
+    - button [ref=e32]:
+      - status: "Thinking"
+    - button "Steps" [ref=e33]
+    - button "Reasoning" [ref=e34]
+    - button "Search" [ref=e35]
+    - button "Coding" [ref=e36]
+  - region:
+    - text: "03"
+    - heading "Streaming Text" [level=3]
+    - text: "Streamed answer with inline sources, actions, and follow-ups.Pistachio  is  your  fastest-growing"
+  - region:
+    - text: "04"
+    - heading "Approval Card" [level=3]
+    - text: "Human-in-the-loop questions the agent asks before acting."
+    - button "Dismiss" [ref=e37]
+    - text: "How many flavors should we launch?"
+    - button "Three (core line)" [ref=e38]
+    - button "Five (full case)" [ref=e39]
+    - button "Just one hero" [ref=e40]
+    - label [ref=e41]:
+      - textbox "Custom answer" [ref=e42] [placeholder="Something else…"]
+    - button "Previous question" [ref=e43] [disabled]
+    - text: "1 / 3"
+    - button "Next question" [ref=e44]
+    - button "Skip" [ref=e45]
+    - button "Continue" [ref=e46] [disabled]
+  - region:
+    - text: "05"
+    - heading "Tool Chips" [level=3]
+    - text: "Code edits and tool calls as compact chips."
+    - button "4 tool calls, 2 messages" [ref=e47]
+  - region:
+    - text: "06"
+    - heading "Task Rows" [level=3]
+    - text: "Live agent task status — running, failed, completed."
+    - button "Verified vendor records 12 suppliers Completed" [ref=e48]
+    - button "2 Build reorder task list 7 SKUs" [ref=e49]
+    - button "3 Draft supplier emails 2 messages" [ref=e50]
+    - button "Capsules" [ref=e51]
+    - button "List" [ref=e52]
+  - region:
+    - text: "07"
+    - heading "Chat" [level=3]
+    - text: "Tabbed chat panel with reasoning replies and a composer."
+    - button "Flavors" [ref=e53]
+    - button "Suppliers" [ref=e54]
+    - button "Action" [ref=e55]
+    - button "Action" [ref=e56]
+    - button "Action" [ref=e57]
+    - text: "Compare mint chip to last summer Sales History Flavor Data for  4s Pulled 3 summers of mint chip sales for comparison.Comparison Trend Detection for  2s Mint chip is up 12% with stronger weekend peaks."
+    - textbox "Chat prompt" [ref=e58] [placeholder="Prompt or tag a flavor with @"]
+    - button "Send" [ref=e59] [disabled]
+  - region:
+    - text: "08"
+    - heading "Prompt Bar" [level=3]
+    - text: "Composer with @ sources, / commands, model picker, and dictation."
+    - button "Add attachments and sources" [ref=e60]
+    - textbox "Prompt" [ref=e61] [placeholder="Write a message…"]
+    - button "Choose model" [ref=e62]: "Vanilla 1"
+    - button "Start dictation" [ref=e63]
+    - button "Send" [ref=e64] [disabled]
+    - button "Rounded" [ref=e65]
+    - button "Pill" [ref=e66]
+  - region:
+    - text: "09"
+    - heading "Recommendation Card" [level=3]
+    - text: "Agent suggestion with a confidence meter and actions.Want me to place this restock order?Reorder waffle cones from  C Cone King  with lead time  7 days High confidence"
+    - button "Alternatives" [ref=e67]
+    - button "Accept" [ref=e68]
+  - region:
+    - text: "10"
+    - heading "Context Cards" [level=3]
+    - text: "Retrieved knowledge chunks with their sources.All chunks 32 Vendor onboarding rule 290 characters Cold-chain certification must be verified before a new dairy can be added to the reorder workflow.Seasonal demand row 1,250 characters Q4 velocity table: pistachio +18%, vanilla +6%, rocky road -11%; retire flavors below 40 scoops weekly."
+  - region:
+    - text: "11"
+    - heading "Diff Table" [level=3]
+    - text: "AI-proposed edits sweeping through tabular data.Proposed menu cleanup Flavor Category Supplier Rocky Road Classic aurora-scoops Bubblegum Retro kumo-creamery Mint Chip Classic maple-orbit"
+  - region:
+    - text: "12"
+    - heading "Records Table" [level=3]
+    - text: "CRM-style grid with tags, sorting, and relationship status."
+    - generic [ref=e69] [scrollable]:
+      - generic [ref=e70]:
+        - checkbox "Select all companies" [ref=e71] [hidden]
+        - text: "Company"
+      - separator "Resize Company column"
+      - button "Categories" [ref=e72]
+      - separator "Resize Categories column"
+      - button "Sort by Last interaction" [ref=e73]: "Last interaction"
+      - separator "Resize Last interaction column"
+      - button "Sort by Connection strength" [ref=e74]: "Connection strength"
+      - separator "Resize Connection strength column"
+      - button "Links" [ref=e75]
+      - separator "Resize Links column"
+      - button "New property" [ref=e76]
+      - button "Table options" [ref=e77]
+      - text: "1 A"
+      - link "Alpine Churn — Zürich" [ref=e78]
+      - generic "B2B" [ref=e79]
+      - generic "Gelato" [ref=e80]
+      - generic "Wholesale" [ref=e81]
+      - text: "4 days ago Very strong"
+      - link "alpine-churn.example.com" [ref=e82]
+      - text: "2 A"
+      - link "Amber Scoop — Prague" [ref=e83]
+      - generic "Gelato" [ref=e84]
+      - generic "B2B" [ref=e85]
+      - text: "over 1 year ago No communication—3 A"
+      - link "Andes Snow Creamery — Quito" [ref=e86]
+      - generic "Gelato" [ref=e87]
+      - generic "Catering" [ref=e88]
+      - text: "almost 2 years ago Very weak—4 A"
+      - link "Apricot Atlas — Algiers" [ref=e89]
+      - generic "Sorbet" [ref=e90]
+      - generic "Imports" [ref=e91]
+      - text: "11 months ago Very weak"
+      - link "apricot-atlas.example.com" [ref=e92]
+      - text: "5 A"
+      - link "Aurora Scoops — Reykjavík" [ref=e93]
+      - generic "Gelato" [ref=e94]
+      - generic "Seasonal" [ref=e95]
+      - text: "9 days ago Very strong"
+      - link "aurora-scoops.example.com" [ref=e96]
+      - text: "6 B"
+      - link "Baltic Berry — Tallinn" [ref=e97]
+      - generic "Dairy-free" [ref=e98]
+      - generic "Seasonal" [ref=e99]
+      - generic "B2C" [ref=e100]
+      - text: "5 weeks ago Weak"
+      - link "baltic-berry.example.com" [ref=e101]
+      - text: "7 B"
+      - link "Black Sesame Social — Bandung" [ref=e102]
+      - generic "Vegan" [ref=e103]
+      - generic "Cafe" [ref=e104]
+      - generic "B2C" [ref=e105]
+      - text: "9 days ago Very strong"
+      - link "black-sesame.example.com" [ref=e106]
+      - text: "8 B"
+      - link "Blue Fig Gelato — Florence" [ref=e107]
+      - generic "Gelato" [ref=e108]
+      - generic "Cafe" [ref=e109]
+      - text: "over 1 year ago Very weak"
+      - link "blue-fig.example.com" [ref=e110]
+      - text: "9 B"
+      - link "Boreal Batch — Yellowknife" [ref=e111]
+      - generic "Dairy-free" [ref=e112]
+      - generic "Local" [ref=e113]
+      - generic "Seasonal" [ref=e114]
+      - text: "8 days ago Very strong"
+      - link "boreal-batch.example.com" [ref=e115]
+      - text: "10 C"
+      - link "Cacao Norte — Oaxaca" [ref=e116]
+      - generic "B2B" [ref=e117]
+      - generic "Local" [ref=e118]
+      - generic "Wholesale" [ref=e119]
+      - text: "about 2 years ago No communication"
+      - link "cacao-norte.example.com" [ref=e120]
+      - text: "11 C"
+      - link "Cape Vanilla Co. — Cape Town" [ref=e121]
+      - generic "Wholesale" [ref=e122]
+      - generic "Imports" [ref=e123]
+      - text: "over 1 year ago Very weak"
+      - link "cape-vanilla.example.com" [ref=e124]
+      - text: "12 C"
+      - link "Cedar Spoon — Beirut" [ref=e125]
+      - generic "Cafe" [ref=e126]
+      - generic "Local" [ref=e127]
+      - generic "Seasonal" [ref=e128]
+      - text: "6 days ago Very strong"
+      - link "cedar-spoon.example.com" [ref=e129]
+      - text: "13 C"
+      - link "Cloudberry Cone — Helsinki" [ref=e130]
+      - generic "Dairy-free" [ref=e131]
+      - generic "Seasonal" [ref=e132]
+      - text: "No contact No communication"
+      - link "cloudberry-cone.example.com" [ref=e133]
+      - text: "14 C"
+      - link "Coconut Commons — Manila" [ref=e134]
+      - generic "Vegan" [ref=e135]
+      - generic "B2C" [ref=e136]
+      - generic "Cafe" [ref=e137]
+      - text: "24 days ago Weak"
+      - link "coconut-commons.example.com" [ref=e138]
+      - text: "15 C"
+      - link "Copper Cone — Melbourne" [ref=e139]
+      - generic "Gelato" [ref=e140]
+      - generic "Cafe" [ref=e141]
+      - generic "B2C" [ref=e142]
+      - text: "about 1 month ago Weak"
+      - link "copper-cone.example.com" [ref=e143]
+      - text: "16 C"
+      - link "Coral Coast Sorbet — Honolulu" [ref=e144]
+      - generic "Sorbet" [ref=e145]
+      - generic "Local" [ref=e146]
+      - text: "9 days ago Very strong"
+      - link "coral-coast.example.com" [ref=e147]
+      - text: "17 C"
+      - link "Crimson Clover — Brussels" [ref=e148]
+      - generic "Gelato" [ref=e149]
+      - generic "Wholesale" [ref=e150]
+      - generic "Catering" [ref=e151]
+      - text: "2 months ago Weak"
+      - link "crimson-clover.example.com" [ref=e152]
+      - text: "18 D"
+      - link "Delta Dairy Works — New Orleans" [ref=e153]
+      - generic "B2B" [ref=e154]
+      - generic "Wholesale" [ref=e155]
+      - generic "Local" [ref=e156]
+      - text: "2 days ago Very strong"
+      - link "delta-dairy.example.com" [ref=e157]
+      - text: "19 D"
+      - link "Dolomite Dairy — Bolzano" [ref=e158]
+      - generic "Gelato" [ref=e159]
+      - generic "Wholesale" [ref=e160]
+      - text: "3 days ago Very strong"
+      - link "dolomite-dairy.example.com" [ref=e161]
+      - text: "20 D"
+      - link "Dragonfruit Dock — Shenzhen" [ref=e162]
+      - generic "Sorbet" [ref=e163]
+      - generic "B2B" [ref=e164]
+      - generic "Wholesale" [ref=e165]
+      - text: "No contact No communication—21 E"
+      - link "Ember Cone Company — Seoul" [ref=e166]
+      - generic "B2C" [ref=e167]
+      - generic "Vegan" [ref=e168]
+      - text: "15 days ago Weak"
+      - link "ember-cone.example.com" [ref=e169]
+      - text: "22 E"
+      - link "Equator Cream — Kampala" [ref=e170]
+      - generic "B2B" [ref=e171]
+      - generic "Catering" [ref=e172]
+      - generic "Local" [ref=e173]
+      - text: "10 months ago Very weak"
+      - link "equator-cream.example.com" [ref=e174]
+      - text: "23 F"
+      - link "Fjord Fizz Ice — Oslo" [ref=e175]
+      - generic "Dairy-free" [ref=e176]
+      - generic "Seasonal" [ref=e177]
+      - text: "No contact No communication—24 G"
+      - link "Glacier Grove — Anchorage" [ref=e178]
+      - generic "Seasonal" [ref=e179]
+      - generic "Local" [ref=e180]
+      - generic "Catering" [ref=e181]
+      - text: "7 weeks ago Weak"
+      - link "glacier-grove.example.com" [ref=e182]
+      - text: "25 H"
+      - link "Hibiscus House — Accra" [ref=e183]
+      - generic "Sorbet" [ref=e184]
+      - generic "Cafe" [ref=e185]
+      - text: "6 weeks ago Weak"
+      - link "hibiscus-house.example.com" [ref=e186]
+      - text: "26 J"
+      - link "Juniper & Cream — Vancouver" [ref=e187]
+      - generic "Dairy-free" [ref=e188]
+      - generic "Catering" [ref=e189]
+      - text: "No contact No communication—27 K"
+      - link "Kumo Creamery — Tokyo" [ref=e190]
+      - generic "B2C" [ref=e191]
+      - generic "Cafe" [ref=e192]
+      - generic "Vegan" [ref=e193]
+      - text: "3 weeks ago Very strong"
+      - link "kumo-creamery.example.com" [ref=e194]
+      - text: "28 L"
+      - link "Lagoon Ladle — Venice" [ref=e195]
+      - generic "Gelato" [ref=e196]
+      - generic "Seasonal" [ref=e197]
+      - generic "Catering" [ref=e198]
+      - text: "7 days ago Very strong"
+      - link "lagoon-ladle.example.com" [ref=e199]
+      - text: "29 L"
+      - link "Lotus Leaf Scoops — Hanoi" [ref=e200]
+      - generic "Vegan" [ref=e201]
+      - generic "Cafe" [ref=e202]
+      - text: "15 days ago Weak—30 L"
+      - link "Lumen Soft Serve — Copenhagen" [ref=e203]
+      - generic "Dairy-free" [ref=e204]
+      - generic "Cafe" [ref=e205]
+      - text: "8 months ago Weak"
+      - link "lumen-soft-serve.example.com" [ref=e206]
+      - text: "31 M"
+      - link "Mango Moon Gelato — Nairobi" [ref=e207]
+      - generic "Sorbet" [ref=e208]
+      - generic "Vegan" [ref=e209]
+      - text: "almost 2 years ago Very weak"
+      - link "mango-moon.example.com" [ref=e210]
+      - text: "32 M"
+      - link "Maple Orbit — Montréal" [ref=e211]
+      - generic "B2B" [ref=e212]
+      - generic "Wholesale" [ref=e213]
+      - generic "Seasonal" [ref=e214]
+      - text: "15 days ago Weak"
+      - link "maple-orbit.example.com" [ref=e215]
+      - text: "33 M"
+      - link "Midnight Milk — Tromsø" [ref=e216]
+      - generic "Dairy-free" [ref=e217]
+      - generic "Vegan" [ref=e218]
+      - generic "Wholesale" [ref=e219]
+      - text: "No contact No communication—34 M"
+      - link "Mint Medina — Tunis" [ref=e220]
+      - generic "Dairy-free" [ref=e221]
+      - generic "Vegan" [ref=e222]
+      - generic "Local" [ref=e223]
+      - text: "No contact No communication—35 M"
+      - link "Monsoon Mango — Mumbai" [ref=e224]
+      - generic "Sorbet" [ref=e225]
+      - generic "Vegan" [ref=e226]
+      - generic "Catering" [ref=e227]
+      - text: "18 days ago Weak"
+      - link "monsoon-mango.example.com" [ref=e228]
+      - text: "36 M"
+      - link "Mooncake Ice Cream — Singapore" [ref=e229]
+      - generic "B2B" [ref=e230]
+      - generic "Wholesale" [ref=e231]
+      - text: "about 1 month ago Very weak"
+      - link "mooncake-ice-cream.example.com" [ref=e232]
+      - text: "37 N"
+      - link "Nomad Nougat — Ulaanbaatar" [ref=e233]
+      - generic "Imports" [ref=e234]
+      - generic "B2B" [ref=e235]
+      - text: "almost 2 years ago No communication"
+      - link "nomad-nougat.example.com" [ref=e236]
+      - text: "38 O"
+      - link "Olive Snow — Athens" [ref=e237]
+      - generic "Gelato" [ref=e238]
+      - generic "Cafe" [ref=e239]
+      - generic "Local" [ref=e240]
+      - text: "4 days ago Very strong"
+      - link "olive-snow.example.com" [ref=e241]
+      - text: "39 O"
+      - link "Orchard Cloud — Lyon" [ref=e242]
+      - generic "Gelato" [ref=e243]
+      - generic "Seasonal" [ref=e244]
+      - generic "Cafe" [ref=e245]
+      - text: "5 days ago Very strong"
+      - link "orchard-cloud.example.com" [ref=e246]
+      - text: "40 P"
+      - link "Pacific Pear — Valparaíso" [ref=e247]
+      - generic "Sorbet" [ref=e248]
+      - generic "Seasonal" [ref=e249]
+      - text: "2 months ago Weak"
+      - link "pacific-pear.example.com" [ref=e250]
+      - text: "41 P"
+      - link "Palm Sugar Creamery — Bangkok" [ref=e251]
+      - generic "B2C" [ref=e252]
+      - generic "Vegan" [ref=e253]
+... [REPL output truncated for context. Save to a file if you need the full output.]
+[31mError: Role selector not found: role:heading[name=Records%20Table]
+    at #u (file:///Users/twoimo/Library/Application%20Support/Aside/AsideDaemon/mac-arm64/1.26.1008.1938/Aside%20Daemon.app/Contents/MacOS/aside-daemon:3765:254)
+    at async #r (file:///Users/twoimo/Library/Application%20Support/Aside/AsideDaemon/mac-arm64/1.26.1008.1938/Aside%20Daemon.app/Contents/MacOS/aside-daemon:3724:1412)
+    at async Cn.scrollIntoViewIfNeeded (file:///Users/twoimo/Library/Application%20Support/Aside/AsideDaemon/mac-arm64/1.26.1008.1938/Aside%20Daemon.app/Contents/MacOS/aside-daemon:3724:2409)[0m
+[31m[error | 1047ms][0m

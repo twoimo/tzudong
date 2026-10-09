@@ -1,0 +1,60 @@
+{
+  "schema": "tzudong-osk-organization-review-receipt/v1",
+  "scope": "tzudong",
+  "key": "organization:sha256:39086631d18f2fcdb7dbf5ae66749b7bd8e038a27134608a92df73256be1e253",
+  "submitted": {
+    "after": "sha256:7862ebb66173859d42d971ef0a076aecbe7b5d6f440ae0105c8069aabbf459ab",
+    "outcome": "deferred",
+    "checkedCount": 3,
+    "intentional": [],
+    "at": "2026-10-09 16:25 (KST)",
+    "units": [
+      "261006-1i3c-axw2mngb:sha256:689c546986ffc83682a962a7edc0c83ec21478c70177e186f2decf9931dda9ce:0",
+      "261006-1gn2-s5yq4t2q:sha256:21b628594acf4df28875b39d4082fb5138bae58393b45406e1077c92deb7e874:0",
+      "261006-1dn0-bhr7lw23:sha256:53ae342691d01cc52d94b5794ea0caf06e85120b8f15de3ff0bbcaf814b3d866:0"
+    ],
+    "reason": "13 remaining units exceeded the 3 checked units. The checked nodes retain caption-first observations and no independent full visual or audio verification. Ten units and the order-observation and publisher hub-link questions remain open."
+  },
+  "readback": {
+    "snapshot": "sha256:7862ebb66173859d42d971ef0a076aecbe7b5d6f440ae0105c8069aabbf459ab",
+    "snapshotChanged": false,
+    "coverageRemainingBefore": 13,
+    "coverageRemainingAfter": 10,
+    "coverageTotal": 31,
+    "previousDeferralMatched": true,
+    "previousDeferralAt": "2026-10-09 16:25 (KST)",
+    "nextReviewUnits": [
+      {
+        "id": "261006-1gn2-vuz3x3nu",
+        "name": "YT-tzuyang-Video--C4280KT3S4",
+        "view": "0:3242",
+        "expectedViewHash": "view:sha256:b35a36202dcbca6593245aa2f174850474068aca8c21d82d228b94ed5723ede6"
+      },
+      {
+        "id": "261006-1dn0-q20wgonz",
+        "name": "YT-tzuyang-Video-BTyT60UWiLc",
+        "view": "0:3218",
+        "expectedViewHash": "view:sha256:0f3a39283a1bd261f697d8e4cab35c8a9e0b3a6fb2cd86d555b62c6d4b31c925"
+      },
+      {
+        "id": "261006-1dn0-hdeh43wq",
+        "name": "YT-tzuyang-Video-F93TnnxCNvY",
+        "view": "0:3217",
+        "expectedViewHash": "view:sha256:78c76e6a31fd24ef212b8a80aee2c8d2f49b96da7dac296ed9a88ec9ab484691"
+      }
+    ],
+    "missingHubLinkCount": 7,
+    "unresolvedLinksClosedAsIntentional": 0
+  },
+  "mutations": {
+    "organizationReviewMetadataWrites": 1,
+    "nodeWrites": 0,
+    "hubWrites": 0,
+    "personalMemoryWrites": 0,
+    "engineUpgrades": 0
+  },
+  "openNext": {
+    "nodeId": "261005-0h69-sjf80q5g",
+    "question": "Review the order observation and publisher hub-link contract without promoting model observations to independently verified facts."
+  }
+}

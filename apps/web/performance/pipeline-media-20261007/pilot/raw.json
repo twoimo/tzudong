@@ -1,0 +1,140 @@
+[
+  {
+    "pair": 0,
+    "implementation": "baseline",
+    "phase": "cold",
+    "wallMs": 16586.76604158245,
+    "cpuMs": 1726.0969999999998,
+    "peakTreeRssMiB": 77.265625,
+    "media": {
+      "wallMs": 5238.158207852393,
+      "cpuMs": 874.564,
+      "peakTreeRssMiB": 77.265625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 59,
+      "exitCode": 0,
+      "diagnosticSha256": "b2f282513a4ddd083f7ab350d39e5520e5b522dd1fa4eb5d5c498cdca7ff94c5"
+    },
+    "laaj": {
+      "wallMs": 11271.659708814695,
+      "cpuMs": 792.0619999999999,
+      "peakTreeRssMiB": 29.234375,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 144,
+      "exitCode": 0,
+      "diagnosticSha256": "5c66b66de5c899f21fdc91f13974bbf36d1a5fdbc3af2d36137d9f8af125fc9f"
+    },
+    "transform": {
+      "wallMs": 76.9481249153614,
+      "cpuMs": 59.471,
+      "peakTreeRssMiB": 4.390625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 1,
+      "exitCode": 0,
+      "diagnosticSha256": "904f939636632603c54952aa1dc0ca4dac2561bb2e651b6ccb5e85cadebeca5d"
+    },
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 4,
+    "evaluationReplayCalls": 3,
+    "unclosedFfmpegCommands": 0,
+    "outputs": {
+      "evaluations": [
+        [
+          "0-RhVo6P3zI.jsonl",
+          "cfe5a2f202ec8f1c2324a1e92fdcaa4c29569fd4381a19dd8287239629f135b1"
+        ],
+        [
+          "00S1J_3uC0U.jsonl",
+          "552036de5aefcd3909f1083d02382084593f33a80bd5d0f142d5a850d68ca0ba"
+        ],
+        [
+          "02LzJVZCqt0.jsonl",
+          "893549cf78f83ba70448e54c7e5640ea07abf1498ff02ff94b99c1a9f32ee418"
+        ]
+      ],
+      "evaluationSha256": "92a4d5b3a4fe156b9b2fc4f3a677ce23d098facb0f7ceb5d02fc3a9c7c236dc4",
+      "transformSha256": "3fb3fa871a917da6b5e86c49381aaac63cb414b3f27127b6cc5bc24bb0187d2e",
+      "rows": 3,
+      "traceIds": [
+        "34c6e4be3bd2192be5b8d2d9d906b097a2a7cc2ff587deb890952bda6db4955b",
+        "9aa4975f08a92f4aa4b83ea64d424e345fc2a15750f70903e9fa41753cb39f38",
+        "fb423e391dd567b586754bc95d821ab00b75c4a1ca013bce6cd6ea66ffba0853"
+      ],
+      "duplicates": 0,
+      "frameSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "frames": 0,
+      "failedSegments": 12
+    },
+    "exactOutputEquivalent": true
+  },
+  {
+    "pair": 0,
+    "implementation": "baseline",
+    "phase": "restart",
+    "wallMs": 1294.5324999745935,
+    "cpuMs": 1053.7179999999998,
+    "peakTreeRssMiB": 77.640625,
+    "media": {
+      "wallMs": 961.0431250184774,
+      "cpuMs": 816.8689999999999,
+      "peakTreeRssMiB": 77.640625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 12,
+      "exitCode": 0,
+      "diagnosticSha256": "4092110e4167396785447c2e223f0f89774027c85f7a6d80bca2695963d01897"
+    },
+    "laaj": {
+      "wallMs": 240.4630829114467,
+      "cpuMs": 172.773,
+      "peakTreeRssMiB": 27.578125,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 3,
+      "exitCode": 0,
+      "diagnosticSha256": "74b46fee516ff4152d2aaaac823ab6576a9a4c3c07553451667bfbfc34719c76"
+    },
+    "transform": {
+      "wallMs": 93.02629204466939,
+      "cpuMs": 64.076,
+      "peakTreeRssMiB": 4.390625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 1,
+      "exitCode": 0,
+      "diagnosticSha256": "f689588ebea919a07478518ced83ba1c0dd1d26ab18dced4ec6a44193575bca1"
+    },
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 1,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0,
+    "outputs": {
+      "evaluations": [
+        [
+          "0-RhVo6P3zI.jsonl",
+          "cfe5a2f202ec8f1c2324a1e92fdcaa4c29569fd4381a19dd8287239629f135b1"
+        ],
+        [
+          "00S1J_3uC0U.jsonl",
+          "552036de5aefcd3909f1083d02382084593f33a80bd5d0f142d5a850d68ca0ba"
+        ],
+        [
+          "02LzJVZCqt0.jsonl",
+          "893549cf78f83ba70448e54c7e5640ea07abf1498ff02ff94b99c1a9f32ee418"
+        ]
+      ],
+      "evaluationSha256": "92a4d5b3a4fe156b9b2fc4f3a677ce23d098facb0f7ceb5d02fc3a9c7c236dc4",
+      "transformSha256": "3fb3fa871a917da6b5e86c49381aaac63cb414b3f27127b6cc5bc24bb0187d2e",
+      "rows": 3,
+      "traceIds": [
+        "34c6e4be3bd2192be5b8d2d9d906b097a2a7cc2ff587deb890952bda6db4955b",
+        "9aa4975f08a92f4aa4b83ea64d424e345fc2a15750f70903e9fa41753cb39f38",
+        "fb423e391dd567b586754bc95d821ab00b75c4a1ca013bce6cd6ea66ffba0853"
+      ],
+      "duplicates": 0,
+      "frameSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "frames": 0,
+      "failedSegments": 12
+    },
+    "exactOutputEquivalent": true
+  }
+]

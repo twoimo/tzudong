@@ -1,0 +1,30 @@
+{
+  "kind": "verified-current-production-reference",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "accountId": "team_OUj64KeLxJI3PkEbOaFZnorA"
+  },
+  "deployment": {
+    "id": "dpl_HXG5n1x3k4E2PBA4Vf4pEvXcqfye",
+    "url": "tzudong-niao9yn3r-twoimos-projects.vercel.app",
+    "target": "production",
+    "state": "READY",
+    "readyState": "READY",
+    "aliases": [
+      "www.tzudong.app",
+      "internal.tzudong.app",
+      "tzudong.app",
+      "tzudong-twoimos-projects.vercel.app",
+      "tzudong-git-main-twoimos-projects.vercel.app"
+    ],
+    "sha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+    "branch": "main",
+    "org": "twoimo",
+    "repo": "tzudong",
+    "source": "cli"
+  },
+  "observedVia": "Vercel get_deployment for www.tzudong.app; project identity matched",
+  "policyLimit": "This existing production SHA contains pre-retirement RAG/legacy paths. It is not a policy-safe storyboard rollback without a feature hold or a reviewed compatibility patch.",
+  "deploymentChanged": false
+}

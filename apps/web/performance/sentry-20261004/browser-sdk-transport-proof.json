@@ -1,0 +1,13 @@
+{
+  "environment": "Chrome154, standalone Next SDK browser bundle, custom in-memory transport, no real Sentry I/O",
+  "n": 1,
+  "proof": {
+    "events": 1,
+    "sessions": 0,
+    "attachments": 0,
+    "otherItems": 0,
+    "sensitiveValuesPresent": false,
+    "sessionIntegrationPresent": false,
+    "tracingIntegrationPresent": false
+  }
+}

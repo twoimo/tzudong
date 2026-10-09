@@ -294,11 +294,11 @@ export function useCreateAdBanner() {
                 description: '새 광고 배너가 생성되었습니다.',
             });
         },
-        onError: (error: Error) => {
+        onError: () => {
             console.error('배너 생성 실패:');
             toast({
                 title: '배너 생성 실패',
-                description: error.message,
+                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
                 variant: 'destructive',
             });
         },
@@ -335,11 +335,11 @@ export function useUpdateAdBanner() {
                 description: '광고 배너가 수정되었습니다.',
             });
         },
-        onError: (error: Error) => {
+        onError: () => {
             console.error('배너 수정 실패:');
             toast({
                 title: '배너 수정 실패',
-                description: error.message,
+                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
                 variant: 'destructive',
             });
         },
@@ -370,11 +370,11 @@ export function useDeleteAdBanner() {
                 description: '광고 배너가 삭제되었습니다.',
             });
         },
-        onError: (error: Error) => {
+        onError: () => {
             console.error('배너 삭제 실패:');
             toast({
                 title: '배너 삭제 실패',
-                description: error.message,
+                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
                 variant: 'destructive',
             });
         },
@@ -413,11 +413,11 @@ export function useToggleAdBanner() {
                 description: `광고 배너가 ${variables.is_active ? '활성화' : '비활성화'}되었습니다.`,
             });
         },
-        onError: (error: Error) => {
+        onError: () => {
             console.error('배너 토글 실패:');
             toast({
                 title: '배너 상태 변경 실패',
-                description: error.message,
+                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
                 variant: 'destructive',
             });
         },
@@ -484,11 +484,11 @@ export function useUploadBannerImage() {
                 path: data.path,
             };
         },
-        onError: (error: Error) => {
+        onError: () => {
             console.error('이미지 업로드 실패:');
             toast({
                 title: '이미지 업로드 실패',
-                description: error.message,
+                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
                 variant: 'destructive',
             });
         },
@@ -509,11 +509,11 @@ export function useDeleteBannerImage() {
                 throw error;
             }
         },
-        onError: (error: Error) => {
+        onError: () => {
             console.error('이미지 삭제 실패:');
             toast({
                 title: '이미지 삭제 실패',
-                description: error.message,
+                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
                 variant: 'destructive',
             });
         },

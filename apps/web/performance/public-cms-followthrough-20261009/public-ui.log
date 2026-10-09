@@ -1,0 +1,109 @@
+
+Running 8 tests using 1 worker
+
+(node:52779) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at desktop
+[2/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at tablet
+[3/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at mobile
+[4/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at short-mobile
+[5/8] tests/public-cms-readonly.spec.ts:54:1 › public legal documents scroll and retain their read-only navigation
+[6/8] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at desktop
+  1) tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at desktop 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('alert')
+    Expected substring: "이전에 조회한 결과"
+    Error: strict mode violation: getByRole('alert') resolved to 2 elements:
+        1) <div role="alert" class="space-y-2 px-4 py-3 text-xs text-muted-foreground">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')
+        2) <div role="alert" aria-live="assertive" id="__next-route-announcer__"></div> aka locator('[id="__next-route-announcer__"]')
+
+    Call log:
+      - Expect "toContainText" getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('alert')
+
+
+      93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });
+      94 |     await expect(retry).toBeVisible({ timeout: 15_000 });
+    > 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');
+         |                                           ^
+      96 |     outage = false;
+      97 |     await retry.click();
+      98 |     await expect(retry).toBeHidden();
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43
+
+    Error Context: performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-fa063--outage-recovery-at-desktop/error-context.md
+
+
+(node:52927) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/8] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at tablet
+  2) tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at tablet 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('alert')
+    Expected substring: "이전에 조회한 결과"
+    Error: strict mode violation: getByRole('alert') resolved to 2 elements:
+        1) <div role="alert" class="space-y-2 px-4 py-3 text-xs text-muted-foreground">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')
+        2) <div role="alert" aria-live="assertive" id="__next-route-announcer__"></div> aka locator('[id="__next-route-announcer__"]')
+
+    Call log:
+      - Expect "toContainText" getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('alert')
+
+
+      93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });
+      94 |     await expect(retry).toBeVisible({ timeout: 15_000 });
+    > 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');
+         |                                           ^
+      96 |     outage = false;
+      97 |     await retry.click();
+      98 |     await expect(retry).toBeHidden();
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43
+
+    Error Context: performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-1dd83-d-outage-recovery-at-tablet/error-context.md
+
+
+(node:52965) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/8] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at mobile
+  3) tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at mobile 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('alert')
+    Expected substring: "이전에 조회한 결과"
+    Error: strict mode violation: getByRole('alert') resolved to 2 elements:
+        1) <div role="alert" class="space-y-2 px-4 py-3 text-xs text-muted-foreground">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')
+        2) <div role="alert" aria-live="assertive" id="__next-route-announcer__"></div> aka locator('[id="__next-route-announcer__"]')
+
+    Call log:
+      - Expect "toContainText" getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('alert')
+
+
+      93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });
+      94 |     await expect(retry).toBeVisible({ timeout: 15_000 });
+    > 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');
+         |                                           ^
+      96 |     outage = false;
+      97 |     await retry.click();
+      98 |     await expect(retry).toBeHidden();
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43
+
+    Error Context: performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-1b280-d-outage-recovery-at-mobile/error-context.md
+
+
+  3 failed
+    tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at desktop 
+    tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at tablet 
+    tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at mobile 
+  5 passed (20.0s)

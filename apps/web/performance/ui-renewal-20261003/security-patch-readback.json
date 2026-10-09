@@ -1,0 +1,128 @@
+{
+  "kind": "security-patch-verification",
+  "localOnly": true,
+  "runtime": "Node 24.21.0, npm 11.6.2, Bun 1.4.0",
+  "nextBefore": "16.3.5",
+  "nextAfter": "16.3.8",
+  "webAuditBefore": {
+    "high": 8,
+    "critical": 1,
+    "total": 9
+  },
+  "webAuditAfter": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "backendAuditBefore": {
+    "high": 1,
+    "total": 1
+  },
+  "backendAuditAfter": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "privateFork": "@tzudong/braces@3.0.3-tzudong.1",
+  "officialBracesPatch": false,
+  "astDepthBound": 128,
+  "astNodeBound": 50000,
+  "boundaryTests": 3,
+  "canonicalUnitLanes": [
+    "2508 pass",
+    "1 skip",
+    "0 fail",
+    "Ran 2509 tests across 343 files. [86.12s]",
+    "143 pass",
+    "8 skip",
+    "0 fail",
+    "Ran 151 tests across 9 files. [6.11s]"
+  ],
+  "canonicalUnitLogSha256": "122bd42c8ca7ec91ffdf71ba323294b3c9a9ce9c94acbd611876ce5ed80682df",
+  "pinContract": {
+    "status": "passed",
+    "code": null,
+    "pinContract": [
+      {
+        "item": "npm",
+        "declared": "npm@11.6.2",
+        "resolved": "11.6.2",
+        "match": true
+      },
+      {
+        "item": "node",
+        "declared": "24.x",
+        "resolved": "24.21.0",
+        "match": true
+      },
+      {
+        "item": "typescript_native_alias",
+        "declared": "npm:typescript@7.0.2",
+        "resolved": "7.0.2",
+        "match": true
+      },
+      {
+        "item": "typescript_compat_bridge",
+        "declared": "npm:@typescript/typescript6@6.0.2",
+        "resolved": "6.0.2",
+        "match": true
+      },
+      {
+        "item": "package_json",
+        "declared": "release_authority",
+        "resolved": "release_authority",
+        "match": true
+      },
+      {
+        "item": "package_lock_json",
+        "declared": "release_authority",
+        "resolved": "release_authority",
+        "match": true
+      }
+    ],
+    "typecheck": {
+      "script": "node scripts/run-typecheck.mjs --compiler parity",
+      "match": true,
+      "compilerEntrypoint": "node_modules/@typescript/native/bin/tsc",
+      "compilerInRepoTree": true
+    },
+    "lockReconciliation": {
+      "authority": "package-lock.json",
+      "mismatchPackages": [],
+      "mismatchCount": 0,
+      "bunLockAdjusted": false
+    }
+  },
+  "limits": [
+    "Audit scans dependency metadata; it is not a security certification of the private fork.",
+    "Local checks do not prove deployed behavior.",
+    "Hydration/footer and skeleton markers changed after the full unit run; affected 56 checks passed separately."
+  ],
+  "frozenSourceParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2400,
+    "logicalInputNamesSha256": "bb5633993791a1e7e34ad6241f52688b2dabbdfc0e2a69f6ca913a740b00dcf9",
+    "nonLibraryContentSha256": "032aa16e9bec91ac13a9b9a487714571a425696b7a79586c038a28bf155ed084",
+    "standardLibraryContentSha256": {
+      "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  },
+  "finalProductionBuild": {
+    "nextVersion": "16.3.8",
+    "compiled": true,
+    "generatedPages": 47,
+    "rawLogSha256": "66a563510beb4384e3454a3b1491ca88597608c61d17f388f48d93fecb02ca03"
+  },
+  "reconciliationTests": {
+    "pass": 7,
+    "fail": 0
+  }
+}

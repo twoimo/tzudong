@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { preferredScrollBehavior } from "@/lib/motion/scroll-behavior";
 import { MapPanelHeader } from "@/components/home/map-panel-chrome";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { Trophy, Info } from "lucide-react";
@@ -93,7 +94,7 @@ export default function LeaderboardPage() {
     useEffect(() => {
         if (!isLoading && currentUser && leaderboardData.length > 0) {
             const timer = setTimeout(() => {
-                userItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                userItemRef.current?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
             }, 300);
             return () => clearTimeout(timer);
         }

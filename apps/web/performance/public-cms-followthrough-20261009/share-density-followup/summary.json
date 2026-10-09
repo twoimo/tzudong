@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-10-08T23:33:08.660400+00:00",
+  "observedFailureCause": "React development RSC flushComponentPerformance performance.measure errored entry after expected notFound control flow; URL keyword captured without raw diagnostics.",
+  "fix": "Expected invalid/missing/unavailable reads return ordinary bounded server UI; normal redirect stays outside read catch. No package, performance API, console or event collector patch.",
+  "browserCases": {
+    "passed": 8,
+    "failed": 0
+  },
+  "unitCases": {
+    "readAndPageRuntime": 8,
+    "publicSurfaceAndClientBoundary": 16,
+    "targetedRedirectSecurity": 1,
+    "totalPassed": 25,
+    "failed": 0
+  },
+  "eslint": "passed",
+  "typecheckParity": {
+    "status": "passed",
+    "diagnostics": 0
+  },
+  "shareBeforeRawRuntimeErrors": 1,
+  "shareAfterRawRuntimeErrors": 0,
+  "density": [
+    {
+      "viewport": "tablet",
+      "beforeHeight": 256,
+      "afterHeight": 160,
+      "differencePx": -96,
+      "relativePercent": -37.5,
+      "beforeOverflowX": 0,
+      "afterOverflowX": 0
+    },
+    {
+      "viewport": "mobile",
+      "beforeHeight": 256,
+      "afterHeight": 160,
+      "differencePx": -96,
+      "relativePercent": -37.5,
+      "beforeOverflowX": 0,
+      "afterOverflowX": 0
+    }
+  ],
+  "originalCapturesPreserved": 81,
+  "ownedHarnessProcessesRemaining": 0,
+  "preexistingDevServerStillRunning": true,
+  "devServerStartedOrStopped": false,
+  "operatingMutationOrDeployment": false,
+  "remaining": [
+    "Valid existing share-link operating redirect and live provider outage were not exercised; normal/unsafe redirect and provider exceptions were local mocked page-runtime tests.",
+    "Authenticated account/data, live map, physical-device and deployment evidence retain earlier boundaries."
+  ]
+}

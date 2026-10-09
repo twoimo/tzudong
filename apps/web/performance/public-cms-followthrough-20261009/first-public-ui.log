@@ -1,0 +1,137 @@
+
+Running 8 tests using 1 worker
+
+(node:51561) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at desktop
+[2/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at tablet
+[3/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at mobile
+[4/8] tests/public-cms-readonly.spec.ts:25:3 › auth branding, signup scroll and Escape at short-mobile
+[5/8] tests/public-cms-readonly.spec.ts:54:1 › public legal documents scroll and retain their read-only navigation
+  1) tests/public-cms-readonly.spec.ts:54:1 › public legal documents scroll and retain their read-only navigation 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '데이터 삭제 요청', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '데이터 삭제 요청', exact: true }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: '데이터 삭제 요청', exact: true })
+
+
+      63 |   await page.getByRole('link', { name: '데이터 삭제 요청 안내', exact: true }).click();
+      64 |   await expect(page).toHaveURL(/\/data-deletion$/);
+    > 65 |   await expect(page.getByRole('heading', { name: '데이터 삭제 요청', exact: true })).toBeVisible();
+         |                                                                               ^
+      66 | });
+      67 |
+      68 | for (const size of sizes.slice(0, 3)) {
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:65:79
+
+    Error Context: performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-public-2ddbd--their-read-only-navigation/error-context.md
+
+
+(node:51781) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[6/8] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at desktop
+  2) tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at desktop 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: '다시 시도', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: '다시 시도', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '다시 시도', exact: true })
+
+
+      92 |     await page.getByRole('tab', { name: '전체', exact: true }).click();
+      93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });
+    > 94 |     await expect(retry).toBeVisible();
+         |                         ^
+      95 |     outage = false;
+      96 |     await retry.click();
+      97 |     await expect(page.getByText('합성전체랭킹', { exact: true })).toBeVisible();
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:94:25
+
+    Error Context: performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-fa063--outage-recovery-at-desktop/error-context.md
+
+
+(node:51919) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/8] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at tablet
+  3) tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at tablet 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: '다시 시도', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: '다시 시도', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '다시 시도', exact: true })
+
+
+      92 |     await page.getByRole('tab', { name: '전체', exact: true }).click();
+      93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });
+    > 94 |     await expect(retry).toBeVisible();
+         |                         ^
+      95 |     outage = false;
+      96 |     await retry.click();
+      97 |     await expect(page.getByText('합성전체랭킹', { exact: true })).toBeVisible();
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:94:25
+
+    Error Context: performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-1dd83-d-outage-recovery-at-tablet/error-context.md
+
+
+(node:52048) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/8] tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at mobile
+  4) tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at mobile 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: '다시 시도', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: '다시 시도', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '다시 시도', exact: true })
+
+
+      92 |     await page.getByRole('tab', { name: '전체', exact: true }).click();
+      93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });
+    > 94 |     await expect(retry).toBeVisible();
+         |                         ^
+      95 |     outage = false;
+      96 |     await retry.click();
+      97 |     await expect(page.getByText('합성전체랭킹', { exact: true })).toBeVisible();
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:94:25
+
+    Error Context: performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-1b280-d-outage-recovery-at-mobile/error-context.md
+
+
+  4 failed
+    tests/public-cms-readonly.spec.ts:54:1 › public legal documents scroll and retain their read-only navigation 
+    tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at desktop 
+    tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at tablet 
+    tests/public-cms-readonly.spec.ts:69:3 › synthetic public leaderboard period reads and outage recovery at mobile 
+  4 passed (41.5s)

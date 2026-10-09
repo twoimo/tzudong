@@ -34,7 +34,8 @@ describe('admin evaluation missing metric UI contracts', () => {
     expect(combined).not.toMatch(/rerunAll|resetAll|bulkRerun|bulkEvaluation/i);
     expect(pageSource).not.toContain('검수삭제');
     expect(pageSource).not.toContain('EVALUATION_DELETE_CONFIRMATION');
-    expect(pageSource).toContain('검수복원');
+    expect(pageSource).toContain("recordActions.run({ action: 'restaurant.restore'");
+    expect(pageSource).toContain('{recordActions.dialog}');
     expect(pageSource).toContain('shouldAutoDeleteMissingEvaluationRecord');
   });
 });

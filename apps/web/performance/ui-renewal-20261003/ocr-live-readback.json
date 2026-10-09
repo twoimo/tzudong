@@ -1,0 +1,32 @@
+{
+  "kind": "live-synthetic-ocr-readback",
+  "measuredAt": "2026-10-03T01:15:10.887Z",
+  "models": [
+    "gemini-3.6-flash"
+  ],
+  "syntheticInput": true,
+  "operationalDatabaseWrites": 0,
+  "maximumCalls": 1,
+  "callsStarted": 1,
+  "limits": [
+    "Single synthetic receipt only; no general accuracy or speed comparison.",
+    "No deployment or promotional credit deduction receipt."
+  ],
+  "inputSha256": "de860d67e2fab63da7b8bc4636b0f2e05d0d69b121c42f0dabf2f42a08239999",
+  "pending": null,
+  "responseModel": "gemini-3.6-flash",
+  "usage": {
+    "promptTokens": 1495,
+    "outputTokens": 128,
+    "thoughtTokens": 365,
+    "totalTokens": 1988
+  },
+  "elapsedMs": 4157.3184169999995,
+  "matches": {
+    "store": true,
+    "date": true,
+    "total": true
+  },
+  "outputSha256": "e8a442bcd7cd790a057462be43b40ad7042496d3b2972c19b9a37c9125867dc0",
+  "passed": true
+}

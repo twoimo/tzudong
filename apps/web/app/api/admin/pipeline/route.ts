@@ -15,6 +15,7 @@ import {
   snapshotRevision,
 } from "@/lib/admin/pipeline-control";
 import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
+import { parseGithubWorkflowState } from "@/lib/admin/operations-view-model";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
 import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
@@ -147,26 +148,43 @@ async function pipelineFetch(path: string, init: RequestInit = {}): Promise<Resp
   }
 }
 
+function githubRepository(): string | null {
+  const explicit = process.env.GITHUB_REPOSITORY?.trim() || "";
+  const split =
+    process.env.GITHUB_OWNER?.trim() || process.env.GITHUB_REPO?.trim()
+      ? `${process.env.GITHUB_OWNER?.trim() || ""}/${process.env.GITHUB_REPO?.trim() || ""}`
+      : "";
+  const repository = explicit || split || "twoimo/tzudong";
+  return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ? repository : null;
+}
+
 async function readGithubCrawlerSnapshot() {
-  const repository = process.env.GITHUB_REPOSITORY?.trim() || "twoimo/tzudong";
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+  const repository = githubRepository();
+  if (!repository) {
     return null;
   }
   const token = process.env.GITHUB_TOKEN?.trim() || process.env.INSIGHT_GITHUB_TOKEN?.trim() || "";
-  const headers: Record<string, string> = {
+  const publicHeaders: Record<string, string> = {
     Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2026-03-10",
     "User-Agent": "tzudong-admin-pipeline",
   };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  const headers = token ? { ...publicHeaders, Authorization: `Bearer ${token}` } : publicHeaders;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PIPELINE_UPSTREAM_TIMEOUT_MS);
   try {
-    const response = await fetch(
-      `https://api.github.com/repos/${repository}/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main`,
+    const url = `https://api.github.com/repos/${repository}/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main`;
+    let response = await fetch(
+      url,
       { headers, signal: controller.signal, cache: "no-store" },
     );
+    if (token && [401, 403, 404].includes(response.status)) {
+      response = await fetch(url, {
+        headers: publicHeaders,
+        signal: controller.signal,
+        cache: "no-store",
+      });
+    }
     if (!response.ok) {
       return null;
     }
@@ -180,11 +198,15 @@ async function readGithubCrawlerSnapshot() {
         created_at?: string;
       }>;
     };
-    const run = payload.workflow_runs?.[0];
-    if (!run?.id) {
+    if (!Array.isArray(payload?.workflow_runs)) {
       return null;
     }
-    const conclusion = String(run.conclusion ?? run.status ?? "unknown").slice(0, 32);
+    const run = payload.workflow_runs?.[0];
+    if (!run || !Number.isSafeInteger(run.id) || Number(run.id) <= 0) {
+      return null;
+    }
+    const state = parseGithubWorkflowState(run);
+    const failureFrames = state.failed === true ? [{ errorCode: "github_crawler", line: "1" }] : [];
     return {
       targets: [],
       jobs: [
@@ -192,20 +214,15 @@ async function readGithubCrawlerSnapshot() {
           id: String(run.id),
           target: "tzuyang",
           profile: "lite_gha",
-          status: conclusion === "success" ? "Succeeded" : "Failed",
-          error_code: conclusion === "success" ? null : "github_crawler",
-          dry_run: false,
-          adapter_index: 0,
+          status: state.jobStatus,
+          error_code: state.failed === true ? "github_crawler" : null,
         },
       ],
-      failures:
-        conclusion === "success"
-          ? []
-          : [{ errorCode: "github_crawler", line: "1" }],
+      githubRun: { id: String(run.id), status: state.status, conclusion: state.conclusion },
+      failures: failureFrames,
       gauges: {},
-      failureFrames:
-        conclusion === "success" ? [] : [{ errorCode: "github_crawler", line: "1" }],
-      hardware: process.env.TZUDONG_HARDWARE_CHIP ?? "github_actions",
+      failureFrames,
+      hardware: "github_actions",
       dataEnv: "hosted_read",
       source: "github_actions",
     };

@@ -1,0 +1,6 @@
+{
+  "measuredHarnessSha256": "cb8aae24e825be1d87337b4ab82432e517f968de1eca4f708728020683d5feea",
+  "currentHarnessSha256": "1fd68dbd8a834ed3f660a22ed7c134126ad48bb63456c47ab13a6d1685c77fe5",
+  "changesAfterMeasurement": "Only auto-freezing harness source and explicit replay/selection metadata were added after timing. Executed harness is retained byte-for-byte in benchmark-source.py. No product source was modified.",
+  "scorerSha256": "e6d783c73103edb9992a534cbb10a9ad060a80db3420698320591c156c408292"
+}

@@ -236,6 +236,15 @@ describe('admin route auth source contract', () => {
         continue;
       }
 
+      if (/export const (?:GET|POST) = retiredStoryboardApi;/.test(source)) {
+        expect(source).toContain("@/lib/admin/storyboard/retired-api");
+        const retired = appSource('lib/admin/storyboard/retired-api.ts');
+        assertFailClosedAuthGate(retired, 'requireAdmin', `${file} retired handler`);
+        expect(retired).toContain('status: 410');
+        expect(retired).not.toContain('createSupabaseServiceRoleClient');
+        if (exportedHandlerBodies(source).length === 0) continue;
+      }
+
       const handlerBodies = exportedHandlerBodies(source);
 
       expect(handlerBodies.length, `${file} must export at least one HTTP handler`).toBeGreaterThan(0);
@@ -262,6 +271,15 @@ describe('admin route auth source contract', () => {
 
     for (const file of listAdminRouteFiles()) {
       const source = routeSource(file);
+      if (/export const (?:GET|POST) = retiredStoryboardApi;/.test(source)) {
+        expect(source).toContain("@/lib/admin/storyboard/retired-api");
+        const retired = appSource('lib/admin/storyboard/retired-api.ts');
+        assertFailClosedAuthGate(retired, 'requireAdmin', `${file} retired handler`);
+        expect(retired).toContain('status: 410');
+        expect(retired).not.toContain('createSupabaseServiceRoleClient');
+        continue;
+      }
+
       const handlerBodies = exportedHandlerBodies(source);
 
       for (const { method, body } of handlerBodies) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
@@ -51,42 +53,17 @@ export function AdminEmbeddedModuleShell({
           {title}
         </h2>
       ) : (
-        <div
-          className={cn(
-            "shrink-0 border-b border-border bg-card px-2 py-1.5",
-            headerClassName,
-          )}
+        <AdminPageHeader
+          title={title}
+          titleId={titleId}
+          titleAs="h2"
+          icon={Icon}
+          summary={summary}
+          actions={actions}
+          className={headerClassName}
           data-admin-module-header="compact"
           data-admin-module-header-module={moduleId}
-        >
-          <div className="flex min-w-0 flex-row items-start justify-between gap-1.5 lg:items-center">
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-                <h2
-                  id={titleId}
-                  className="min-w-0 truncate whitespace-nowrap bg-gradient-primary bg-clip-text text-sm font-bold text-transparent"
-                >
-                  {title}
-                </h2>
-              </div>
-              <div
-                className="mt-0.5 min-w-0 truncate text-2xs text-muted-foreground"
-                data-admin-module-summary="true"
-              >
-                {summary}
-              </div>
-            </div>
-            {actions ? (
-              <div
-                className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5"
-                data-admin-module-actions="top-right"
-              >
-                {actions}
-              </div>
-            ) : null}
-          </div>
-        </div>
+        />
       )}
       <div
         className={cn("min-h-0 min-w-0 flex-1 overflow-hidden", contentClassName)}

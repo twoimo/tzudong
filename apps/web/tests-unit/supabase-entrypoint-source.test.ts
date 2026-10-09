@@ -47,7 +47,7 @@ const PREEXISTING_ADDITIONAL_CLIENT_SITES = [
   'app/api/account/delete/route.ts', // self account deletion service-role path (account-deletion contracts)
   'app/api/privacy/onboarding/route.ts', // challenge-bound onboarding client (privacy-onboarding contract)
   'app/api/shorten/route.ts', // public + service-role clients (api-security-source contract)
-  'app/s/[code]/page.tsx', // public short-url redirect anon read client
+  'app/s/[code]/route.ts', // public short-url redirect anon read client
   'scripts/capture-youtube-kpi-snapshot.mjs', // KPI snapshot CLI (server-side tooling)
   'scripts/admin-evaluations-smoke.mjs', // admin evaluation smoke CLI (server-side tooling)
   'scripts/restaurant-refresh-cron.mjs', // restaurant refresh cron CLI (server-side tooling)
