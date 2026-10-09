@@ -1,0 +1,251 @@
+{
+  "observedAtUtc": "2026-10-09T13:00:35.071Z",
+  "name": "batches/3fga58v7b3q2chu102t5jiafi13hnu42oeqg",
+  "status": "rejected",
+  "admittedRows": 0,
+  "admittedRequests": 0,
+  "incomplete": [
+    {
+      "index": 10,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 11,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 12,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 13,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 14,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 15,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 16,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 17,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 18,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 19,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 20,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 21,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 22,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 23,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 24,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 25,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 26,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 27,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 28,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 29,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 30,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 31,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 32,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 33,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 34,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 35,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 36,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 37,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 38,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 39,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 40,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 41,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 42,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 43,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 44,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 45,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 46,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 47,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 48,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 49,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 50,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 51,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 52,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 53,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 54,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 55,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 56,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 57,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 58,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 59,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 60,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 61,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 62,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 63,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 64,
+      "class": "schema_unconfirmed"
+    },
+    {
+      "index": 65,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 66,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 67,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 68,
+      "class": "coverage_unconfirmed"
+    },
+    {
+      "index": 69,
+      "class": "coverage_unconfirmed"
+    }
+  ],
+  "operatingWrites": 0,
+  "state": "JOB_STATE_SUCCEEDED"
+}

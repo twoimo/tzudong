@@ -1,0 +1,19 @@
+{
+  "name": "batches/ou10609mribyd7b806gebolzxtvkjmcjngzv",
+  "displayName": "tzuyang-schema-pilot-v2-68e0a651cabab971",
+  "state": "JOB_STATE_RUNNING",
+  "model": "models/gemini-3.8-flash",
+  "createTime": "2026-10-09T13:06:33.038399791Z",
+  "inputSha256": "15cef2bc99725755b7d3def73e2e8aca52d48032af825d1a0fe9f920098bb15b",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "requestSha256": "68e0a651cabab971291b2bcc0a6fb26a512bc8ea869f73590ca4e5f602567539",
+  "requestedModel": "gemini-3.8-flash",
+  "thinkingLevel": "HIGH",
+  "requestCount": 1,
+  "rows": 8,
+  "offset": 224,
+  "normalInferenceJob": true,
+  "operatingWrites": 0,
+  "capacityPurchase": false,
+  "changedTransport": "responseSchema with explicit 8-item/object/key bounds plus repeated task in user content; editorial rubric unchanged"
+}

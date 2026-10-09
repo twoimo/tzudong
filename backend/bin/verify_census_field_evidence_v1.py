@@ -6,14 +6,16 @@ import json
 repo = Path(__file__).resolve().parents[2]
 packages = [
     ('apps/web/performance/tzuyang-review-census-20261009/checkpoint-v1',
-     'docs/evidence/tzuyang-census-checkpoint-v1.sha256'),
+     'docs/evidence/tzuyang-census-checkpoint-v1.sha256', 'artifact-map-v1.json'),
     ('apps/web/performance/field-readback-20261009-v1',
-     'docs/evidence/field-readback-20261009-map-v1.sha256'),
+     'docs/evidence/field-readback-20261009-map-v1.sha256', 'artifact-map-v1.json'),
+    ('apps/web/performance/tzuyang-review-census-20261009/checkpoint-recovery-v2',
+     'docs/evidence/tzuyang-census-recovery-v2.sha256', 'artifact-map-v2.json'),
 ]
 results = []
-for relative, pin_path in packages:
+for relative, pin_path, map_name in packages:
     root = repo / relative
-    mapping = root / 'artifact-map-v1.json'
+    mapping = root / map_name
     digest = hashlib.sha256(mapping.read_bytes()).hexdigest()
     if digest != (repo / pin_path).read_text().strip():
         raise SystemExit('EVIDENCE_PIN_DENIED')
