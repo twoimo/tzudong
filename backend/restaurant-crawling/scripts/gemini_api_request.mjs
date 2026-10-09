@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
@@ -123,11 +123,11 @@ async function main() {
         const request = {
             model: modelName,
             contents: [{ role: 'user', parts: promptParts.map(part => typeof part === 'string' ? { text: part } : part) }],
-            config: {
+            config: omitUnsupportedGeminiSampling(modelName, {
                 temperature: 0.2,
                 maxOutputTokens: 4096,
                 thinkingConfig: { thinkingLevel }
-            }
+            })
         };
 
         console.log("DEBUG: Calling generateContent...");

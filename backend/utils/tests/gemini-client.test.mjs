@@ -10,7 +10,7 @@ import test from 'node:test';
 import { GoogleGenAI } from '@google/genai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { generateChunkContent } from '../../restaurant-crawling/scripts/gemini_chunk_video_request.mjs';
-import { createGeminiClient, generateWithProjectBudget, geminiHttpOptions, logGeminiUsage, requireGeminiText, withGeminiDeadline } from '../gemini-client.mjs';
+import { createGeminiClient, generateWithProjectBudget, omitUnsupportedGeminiSampling, geminiHttpOptions, logGeminiUsage, requireGeminiText, withGeminiDeadline } from '../gemini-client.mjs';
 import { withProjectBudget } from '../provider-budget.mjs';
 
 const execute = promisify(execFile);
@@ -106,7 +106,7 @@ test('legacy and current SDK preserve model, prompt and generation settings on t
         bodies.push(JSON.parse(data));routes.push(req.url.split('?')[0]);
         res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify(responseBody));
     });
-    const config={temperature:.1,maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'MEDIUM'}};
+    const config=omitUnsupportedGeminiSampling('gemini-3.7-flash',{temperature:.1,maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'MEDIUM'}});
     try {
         const model=new GoogleGenerativeAI('fixture').getGenerativeModel({model:'gemini-3.7-flash',generationConfig:config},{baseUrl:fixture.baseUrl});
         await model.generateContent('fixture');
@@ -191,7 +191,7 @@ test('thinking fallback retains Gemini 3 default sampling and chunk output limit
     assert.equal(await leases(),0);
 });
 
-test('evaluation entrypoints keep model and thinking settings while omitting sampling only for 3.8', async () => {
+test('evaluation entrypoints keep model and thinking settings while omitting unsupported sampling', async () => {
     const input = path.join(directory, 'compatibility-input.txt');
     const output = path.join(directory, 'compatibility-output.txt');
     const wire = path.join(directory, 'compatibility-wire.jsonl');
@@ -208,7 +208,7 @@ globalThis.fetch = async (input, init) => {
 };\n`);
     const scripts = ['../../restaurant-evaluation/scripts/gemini_api_request.mjs', '../../bin/review_recheck_gemini.mjs'];
     for (const script of scripts) {
-        for (const model of [undefined, 'gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash']) {
+        for (const model of [undefined, 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash']) {
             for (const thinking of ['LOW', 'MEDIUM', 'HIGH', 'MINIMAL', 'minimal']) {
                 fs.writeFileSync(wire, '');
                 fs.rmSync(output, { force: true });
@@ -236,12 +236,204 @@ globalThis.fetch = async (input, init) => {
                 assert.equal(requests[0].method, 'POST');
                 assert.deepEqual(requests[0].body.contents, [{ role: 'user', parts: [{ text: 'synthetic evaluation prompt' }] }]);
                 assert.deepEqual(requests[0].body.generationConfig, {
-                    ...(model?.includes('gemini-3.8-flash') ? {} : { temperature: 0.1 }),
+                    ...(['gemini-2.5-flash', 'gemini-3.5-flash'].includes(model) ? { temperature: 0.1 } : {}),
                     maxOutputTokens: 4096,
                     thinkingConfig: { thinkingLevel: script.includes('gemini_api_request') ? thinking.toUpperCase() : thinking },
                 });
                 assert.equal(fs.readFileSync(output, 'utf8'), '{"ok":true}');
             }
+        }
+    }
+});
+
+test('pipeline connectivity probe preserves request caps, funded priority and once-only uncertain receipts', async t => {
+    const probe = fileURLToPath(new URL('../../bin/probe_gemini_pipeline.mjs', import.meta.url));
+    const fixture = path.join(directory, 'pipeline-probe');
+    fs.mkdirSync(fixture);
+    const preload = path.join(fixture, 'transport.mjs');
+    fs.writeFileSync(preload, `import fs from 'node:fs';
+globalThis.fetch = async (input, init) => {
+  const request = new Request(input, init);
+  const url = new URL(request.url);
+  if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error('UNEXPECTED_FIXTURE_HOST');
+  const value = request.headers.get('x-goog-api-key');
+  const keySource = value === 'synthetic-funded-key' ? 'funded'
+    : value === 'synthetic-generic-key' ? 'generic' : value === 'synthetic-legacy-key' ? 'legacy' : 'unexpected';
+  fs.appendFileSync(process.env.FX_PROBE_WIRE, JSON.stringify({ path: url.pathname, method: request.method,
+    body: await request.json(), keySource }) + '\\n');
+  if (process.env.FX_PROBE_MODE === 'crash') process.exit(86);
+  if (process.env.FX_PROBE_MODE === 'lost_ack') throw new TypeError('synthetic response unavailable');
+  if (process.env.FX_PROBE_MODE === 'hold') await new Promise(resolve => setTimeout(resolve, 800));
+  if (process.env.FX_PROBE_MODE === '403') return Response.json({error:{code:403,message:'synthetic denial',status:'PERMISSION_DENIED'}},{status:403});
+  return Response.json({ ...${JSON.stringify(responseBody)}, ...(process.env.FX_PROBE_RESPONSE_MODEL === undefined ? {} : {modelVersion:process.env.FX_PROBE_RESPONSE_MODEL}) });
+};\n`);
+    const setup = (name, source, mode = 'ok', responseModel) => {
+        const credentials = path.join(fixture, `${name}.env`);
+        const output = path.join(fixture, `${name}.json`);
+        const wire = path.join(fixture, `${name}.wire`);
+        fs.writeFileSync(credentials, source, { mode: 0o600 });
+        fs.writeFileSync(wire, '');
+        const env = { PATH: process.env.PATH, RUN_DAILY_PYTHON: process.env.RUN_DAILY_PYTHON || 'python3',
+            GEMINI_BUDGET_PATH: path.join(fixture, `${name}.sqlite`), GEMINI_BUDGET_PROJECT: 'offline-probe-fixture',
+            GEMINI_REQUESTS_PER_MINUTE: '37', GEMINI_MAX_INFLIGHT: '1', FX_PROBE_WIRE: wire, FX_PROBE_MODE: mode,
+            ...(responseModel === undefined ? {} : { FX_PROBE_RESPONSE_MODEL: responseModel }) };
+        const invoke = () => execute(process.execPath, ['--import', preload, probe, '--output', output, '--credential-env', credentials], { env });
+        const requests = () => fs.readFileSync(wire, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+        return { output, wire, invoke, requests };
+    };
+    const allKeys = 'GEMINI_CREDITS_API_KEY=synthetic-funded-key\nGEMINI_API_KEY=synthetic-generic-key\nGEMINI_API_KEY_BYEON=synthetic-legacy-key\n';
+    const assertRequest = (request, keySource) => {
+        assert.equal(request.keySource, keySource);
+        assert.equal(request.path, '/v1beta/models/gemini-3.7-flash:generateContent');
+        assert.equal(request.method, 'POST');
+        assert.deepEqual(request.body.generationConfig, { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' } });
+        for (const name of ['temperature', 'topP', 'topK', 'top_p', 'top_k']) assert.equal(Object.hasOwn(request.body.generationConfig, name), false);
+    };
+    await t.test('funded key is authoritative and request/CLI/receipt caps are retained', async () => {
+        const fx = setup('funded', allKeys);
+        const { stdout } = await fx.invoke();
+        assert.equal(fx.requests().length, 1); assertRequest(fx.requests()[0], 'funded');
+        const report = JSON.parse(fs.readFileSync(fx.output, 'utf8'));
+        assert.equal(report.model, 'gemini-3.7-flash');
+        assert.equal(report.credentialSource, 'GEMINI_CREDITS_API_KEY');
+        assert.deepEqual(report.config, { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' } });
+        assert.deepEqual(report.configuredBudget, { projectScope: 'offline-probe-fixture', requestsPerMinute: 37, concurrency: 1 });
+        assert.equal(report.configuredMaxAttempts, 1); assert.equal(report.apiCallsStarted, 1);
+        assert.equal(report.status, 'ok'); assert.equal(report.resultUnconfirmed, false);
+        assert.equal(report.responseModelVersion, null); assert.equal(report.responseModelProvenance, 'not_reported');
+        assert.deepEqual(report.usage, { promptTokenCount: 3, candidatesTokenCount: 5, totalTokenCount: 8 });
+        assert.equal(report.moneySpent, null);
+        assert.deepEqual(Object.keys(JSON.parse(stdout)).sort(), ['apiCallsStarted', 'elapsedMs', 'status', 'usage']);
+        assert.equal(fs.statSync(fx.output).mode & 0o777, 0o600);
+        const saved = fs.readFileSync(fx.output, 'utf8');
+        await assert.rejects(fx.invoke(), error => error.code === 1 && error.stderr.includes('GEMINI_PROBE_FAILED'));
+        assert.equal(fx.requests().length, 1); assert.equal(fs.readFileSync(fx.output, 'utf8'), saved);
+        for (const secret of ['synthetic-funded-key', 'synthetic-generic-key', 'synthetic-legacy-key']) {
+            assert.equal(saved.includes(secret), false); assert.equal(stdout.includes(secret), false);
+        }
+    });
+    await t.test('SDK model provenance preserves a returned revision and rejects unknown metadata', async () => {
+        for (const [name, returned, expected, provenance] of [
+            ['reported-base', 'gemini-3.7-flash', 'gemini-3.7-flash', 'sdk_reported_supported_id'],
+            ['reported-revision', 'models/gemini-3.7-flash-001', 'gemini-3.7-flash-001', 'sdk_reported_supported_id'],
+            ['reported-other-family', 'gemini-3.6-flash', null, 'unrecognized'],
+            ['reported-unsafe', 'provider diagnostic synthetic-funded-key', null, 'unrecognized'],
+        ]) {
+            const fx = setup(name, allKeys, 'ok', returned);
+            await fx.invoke(); assert.equal(fx.requests().length, 1);
+            const raw = fs.readFileSync(fx.output, 'utf8');
+            const report = JSON.parse(raw);
+            assert.equal(report.model, 'gemini-3.7-flash'); assert.equal(report.status, 'ok');
+            assert.equal(report.responseModelVersion, expected); assert.equal(report.responseModelProvenance, provenance);
+            assert.equal(raw.includes('provider diagnostic'), false); assert.equal(raw.includes('synthetic-funded-key'), false);
+        }
+    });
+    await t.test('blank funded key retains the explicit generic credential fallback', async () => {
+        const fx = setup('generic', 'GEMINI_CREDITS_API_KEY=" "\nGEMINI_API_KEY=synthetic-generic-key\nGEMINI_API_KEY_BYEON=synthetic-legacy-key\n');
+        await fx.invoke(); assert.equal(fx.requests().length, 1); assertRequest(fx.requests()[0], 'generic');
+        assert.equal(JSON.parse(fs.readFileSync(fx.output, 'utf8')).credentialSource, 'GEMINI_API_KEY');
+    });
+    await t.test('blank generic credential retains the legacy alias fallback', async () => {
+        const fx = setup('legacy', 'GEMINI_API_KEY=" "\nGEMINI_API_KEY_BYEON=synthetic-legacy-key\n');
+        await fx.invoke(); assert.equal(fx.requests().length, 1); assertRequest(fx.requests()[0], 'legacy');
+    });
+    await t.test('missing credential starts no SDK request and creates no misleading receipt', async () => {
+        const fx = setup('missing', 'GEMINI_CREDITS_API_KEY=" "\nGEMINI_API_KEY=" "\n');
+        await assert.rejects(fx.invoke(), error => error.code === 1);
+        assert.deepEqual(fx.requests(), []); assert.equal(fs.existsSync(fx.output), false);
+    });
+    await t.test('funded authentication error does not rotate to another key or retry', async () => {
+        const fx = setup('denied', allKeys, '403');
+        await assert.rejects(fx.invoke(), error => error.code === 1);
+        assert.equal(fx.requests().length, 1); assertRequest(fx.requests()[0], 'funded');
+        const report = JSON.parse(fs.readFileSync(fx.output, 'utf8'));
+        assert.equal(report.status, 'auth_failed'); assert.equal(report.httpStatus, 403);
+        assert.equal(report.apiCallsStarted, 1); assert.equal(report.credentialSource, 'GEMINI_CREDITS_API_KEY');
+    });
+    await t.test('lost response remains uncertain and the same output cannot resend', async () => {
+        const fx = setup('lost', allKeys, 'lost_ack');
+        await assert.rejects(fx.invoke(), error => error.code === 1);
+        const report = JSON.parse(fs.readFileSync(fx.output, 'utf8'));
+        assert.equal(fx.requests().length, 1); assert.equal(report.apiCallsStarted, 1);
+        assert.equal(report.status, 'api_unavailable'); assert.equal(report.resultUnconfirmed, true);
+        await assert.rejects(fx.invoke(), error => error.code === 1); assert.equal(fx.requests().length, 1);
+    });
+    await t.test('process interruption leaves a running once-only receipt before request dispatch', async () => {
+        const fx = setup('crash', allKeys, 'crash');
+        await assert.rejects(fx.invoke(), error => error.code === 86);
+        const report = JSON.parse(fs.readFileSync(fx.output, 'utf8'));
+        assert.equal(report.status, 'running'); assert.equal(report.resultUnconfirmed, true);
+        assert.equal(report.apiCallsStarted, 1); assert.equal(fx.requests().length, 1);
+        await assert.rejects(fx.invoke(), error => error.code === 1); assert.equal(fx.requests().length, 1);
+    });
+    await t.test('overlapping CLI runs sharing an output admit only one request', async () => {
+        const fx = setup('overlap', allKeys, 'hold');
+        const first = fx.invoke().then(value => ({ value }), error => ({ error }));
+        for (let index = 0; index < 100 && fx.requests().length === 0; index++) await pause(20);
+        assert.equal(fx.requests().length, 1);
+        assert.equal(JSON.parse(fs.readFileSync(fx.output, 'utf8')).status, 'running');
+        await assert.rejects(fx.invoke(), error => error.code === 1);
+        const completed = await first;
+        if (completed.error) throw completed.error;
+        assert.equal(fx.requests().length, 1); assert.equal(JSON.parse(fs.readFileSync(fx.output, 'utf8')).status, 'ok');
+    });
+});
+
+test('shared sampling policy removes only unsupported fields and never mutates caller config', async () => {
+    const original = { temperature: 0.2, topP: 0.8, topK: 30, top_p: 0.9, top_k: 20,
+        maxOutputTokens: 8192, responseMimeType: 'application/json', thinkingConfig: { thinkingLevel: 'HIGH' } };
+    const before = structuredClone(original);
+    for (const model of ['gemini-3.5-flash-lite', 'models/gemini-3.5-flash-lite-001', 'gemini-3.6-flash',
+        'gemini-3.7-flash', 'models/gemini-3.7-flash-001', 'gemini-3.8-flash', 'gemini-3.10-flash', 'gemini-4.0-flash']) {
+        const config = omitUnsupportedGeminiSampling(model, original);
+        assert.deepEqual(config, { maxOutputTokens: 8192, responseMimeType: 'application/json', thinkingConfig: { thinkingLevel: 'HIGH' } });
+        let wire;
+        await generateWithProjectBudget({ models: { generateContent: async value => { wire = value; return { text: 'fixture' }; } } }, { model, contents: 'fixture', config: original });
+        assert.equal(wire.model, model);
+        for (const name of ['temperature', 'topP', 'topK', 'top_p', 'top_k']) assert.equal(Object.hasOwn(wire.config, name), false);
+        assert.equal(wire.config.maxOutputTokens, 8192); assert.deepEqual(wire.config.thinkingConfig, { thinkingLevel: 'HIGH' });
+    }
+    for (const model of ['gemini-2.0-flash', 'models/gemini-2.5-flash', 'gemini-3-flash-preview',
+        'gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-30-flash', 'custom-model']) {
+        assert.deepEqual(omitUnsupportedGeminiSampling(model, original), original);
+    }
+    assert.deepEqual(original, before);
+    assert.deepEqual(omitUnsupportedGeminiSampling('gemini-3.7-flash'), {});
+    assert.equal(await leases(), 0);
+});
+
+test('crawler and final merge entrypoints retain older explicit sampling and modern request caps', async () => {
+    const local = path.join(directory, 'crawler-sampling');fs.mkdirSync(local);
+    const prompt = path.join(local, 'prompt.txt'), chunks = path.join(local, 'chunks.json'), output = path.join(local, 'output.txt'), transcript = path.join(local, 'transcript.jsonl');
+    const preload = path.join(local, 'transport.mjs'), wire = path.join(local, 'wire.jsonl');
+    fs.writeFileSync(prompt, 'synthetic prompt {CHUNK_JSON_DATA} {FULL_TRANSCRIPT}');
+    fs.writeFileSync(chunks, '{"synthetic":true}');
+    fs.writeFileSync(transcript, '{"transcript":[{"start":1,"text":"synthetic transcript"}]}\n');
+    fs.writeFileSync(preload, `import fs from 'node:fs';
+globalThis.fetch = async (input, init) => {
+ const request = new Request(input, init);const url = new URL(request.url);
+ if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error('UNEXPECTED_FIXTURE_HOST');
+ fs.appendFileSync(process.env.FX_CRAWLER_WIRE,JSON.stringify({path:url.pathname,body:await request.json()})+'\\n');
+ return Response.json(${JSON.stringify(responseBody)});
+};\n`);
+    for (const kind of ['crawl', 'merge']) {
+        let expectedContents;
+        const script = fileURLToPath(new URL(kind === 'crawl' ? '../../restaurant-crawling/scripts/gemini_api_request.mjs' : '../../restaurant-crawling/scripts/final_merge_chunk.mjs', import.meta.url));
+        for (const model of [undefined, 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash', 'models/gemini-3.7-flash', 'gemini-3.8-flash']) {
+            fs.writeFileSync(wire, '');fs.rmSync(output,{force:true});
+            const env={PATH:process.env.PATH,GEMINI_API_KEY:'synthetic-crawler-key',FX_CRAWLER_WIRE:wire,
+                GEMINI_BUDGET_PATH:path.join(local,'budget.sqlite'),GEMINI_BUDGET_PROJECT:'offline-crawler-fixture',
+                GEMINI_REQUESTS_PER_MINUTE:'100000',GEMINI_MAX_INFLIGHT:'1',...(model?{CURRENT_MODEL:model}:{})};
+            await execute(process.execPath,['--import',preload,script,...(kind==='crawl'?[prompt,output]:[prompt,output,chunks,transcript])],{env});
+            const requests=fs.readFileSync(wire,'utf8').trim().split('\n').map(line=>JSON.parse(line));assert.equal(requests.length,1);
+            expectedContents ??= requests[0].body.contents;assert.deepEqual(requests[0].body.contents,expectedContents);
+            assert.equal(requests[0].path,`/v1beta/models/${(model||'gemini-3.7-flash').replace(/^models\//,'')}:generateContent`);
+            assert.deepEqual(requests[0].body.generationConfig,{
+                ...(['gemini-2.5-flash','gemini-3.5-flash'].includes(model)?{temperature:kind==='crawl'?0.2:0.1}:{}),
+                maxOutputTokens:kind==='crawl'?4096:8192,...(kind==='merge'?{responseMimeType:'application/json'}:{}),
+                thinkingConfig:{thinkingLevel:kind==='crawl'?'LOW':'MEDIUM'},
+            });
+            assert.equal(fs.readFileSync(output,'utf8'),'{"ok":true}');
         }
     }
 });

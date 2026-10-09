@@ -47,12 +47,27 @@ export async function withGeminiDeadline(work, timeoutMs = 300000, externalSigna
     } finally { clearTimeout(timer); }
 }
 
+// Match the current GenerateContent migration boundary without changing models,
+// thinking/output limits, or supported older-model configuration.
+export function omitUnsupportedGeminiSampling(model, config = {}) {
+    const id = typeof model === 'string' ? model.replace(/^models\//, '') : '';
+    const version = /^gemini-(\d+)\.(\d+)-/.exec(id);
+    const unsupported = /^gemini-3\.5-flash-lite(?:-|$)/.test(id)
+        || (version !== null && (Number(version[1]) > 3
+            || (Number(version[1]) === 3 && Number(version[2]) >= 6)));
+    const supported = { ...config };
+    if (unsupported) {
+        for (const key of ['temperature', 'topP', 'topK', 'top_p', 'top_k']) delete supported[key];
+    }
+    return supported;
+}
+
 export function generateWithProjectBudget(ai, request, timeoutMs = 300000) {
     if (request.config?.abortSignal?.aborted) return Promise.reject(fixedError('GEMINI_REQUEST_ABORTED'));
     return withProjectBudget(() => withGeminiDeadline(signal => ai.models.generateContent({
         ...request,
         config: {
-            ...request.config,
+            ...omitUnsupportedGeminiSampling(request.model, request.config),
             abortSignal: signal,
             httpOptions: { ...request.config?.httpOptions, timeout: timeoutMs, retryOptions: { attempts: 1 } },
         },

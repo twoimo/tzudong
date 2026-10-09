@@ -1,5 +1,5 @@
 import { retryAfterSeconds } from '../../utils/provider-budget.mjs';
-import { createGeminiClient, generateWithProjectBudget, withGeminiDeadline as fetchWithTimeout, logGeminiUsage } from '../../utils/gemini-client.mjs';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, withGeminiDeadline as fetchWithTimeout, logGeminiUsage } from '../../utils/gemini-client.mjs';
 /**
  * Gemini File API를 사용한 청크 비디오 멀티모달 분석
  * (@google/genai — 헬스체크/런타임과 동일한 SDK)
@@ -152,13 +152,13 @@ export async function generateChunkContent(ai, modelName, promptText, processedF
         model: modelName,
         contents,
     };
-    request.config = {
+    request.config = omitUnsupportedGeminiSampling(modelName, {
         // Gemini 3 reasoning uses the default sampling settings (temperature 1.0).
-        // https://ai.google.dev/gemini-api/docs/generate-content/gemini-3#temperature
+        // Newer sampling fields are also filtered by the shared GenerateContent policy.
         ...(/^(?:models\/)?gemini-3(?:\.\d+)?(?:-|$)/.test(modelName) ? {} : { temperature: 0.2 }),
         maxOutputTokens: 4096,
         ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
-    };
+    });
     return generateWithProjectBudget(ai, request, GENERATE_TIMEOUT_MS);
 }
 

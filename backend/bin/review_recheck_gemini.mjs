@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../utils/gemini-client.mjs';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../utils/gemini-client.mjs';
 
 // One call per leased item: no health probe, rotation, second model, or replay
 // after an uncertain provider response. Uses the existing LAAJ model/settings.
@@ -15,7 +15,7 @@ try {
   if (isGemini38 && thinkingLevel.trim().toUpperCase() === 'MINIMAL') throw new Error('GEMINI_THINKING_LEVEL_UNSUPPORTED');
   const response = await generateWithProjectBudget(createGeminiClient(key), {
     model, contents: prompt,
-    config: { ...(isGemini38 ? {} : { temperature: 0.1 }), maxOutputTokens: 4096, thinkingConfig: { thinkingLevel } },
+    config: omitUnsupportedGeminiSampling(model, { temperature: 0.1, maxOutputTokens: 4096, thinkingConfig: { thinkingLevel } }),
   }, 300000);
   const text = requireGeminiText(response);
   fs.writeFileSync(output, text, { mode: 0o600 });

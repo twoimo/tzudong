@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createGeminiClient, generateWithProjectBudget } from '../utils/gemini-client.mjs';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget } from '../utils/gemini-client.mjs';
 import { withProjectBudget } from '../utils/provider-budget.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
@@ -22,7 +22,7 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'
     ?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const config={temperature:.1,maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'MEDIUM'}};
+const config=omitUnsupportedGeminiSampling('gemini-3.7-flash',{temperature:.1,maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'MEDIUM'}});
 let current;
 const server=createServer(async(req,res)=>{
     current.calls++;current.active++;current.peak=Math.max(current.peak,current.active);

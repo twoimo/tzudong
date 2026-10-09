@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
@@ -66,12 +66,12 @@ async function main() {
         const response = await generateWithProjectBudget(ai, {
             model: modelName,
             contents: promptText,
-            config: {
+            config: omitUnsupportedGeminiSampling(modelName, {
                 temperature: 0.1,
                 maxOutputTokens: 8192,
                 responseMimeType: "application/json",
                 thinkingConfig: { thinkingLevel },
-            }
+            })
         });
 
         logGeminiUsage(response);

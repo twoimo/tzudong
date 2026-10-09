@@ -1,4 +1,4 @@
-import { createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import fs from 'fs';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
@@ -68,12 +68,11 @@ async function main() {
                 const response = await generateWithProjectBudget(ai, {
                     model: modelName,
                     contents: prompt,
-                    config: {
-                        // Preserve older-model settings; 3.8 removed sampling overrides.
-                        ...(isGemini38 ? {} : { temperature: 0.1 }),
+                    config: omitUnsupportedGeminiSampling(modelName, {
+                        temperature: 0.1,
                         maxOutputTokens: 4096,
                         thinkingConfig: { thinkingLevel },
-                    },
+                    }),
                 });
                 logGeminiUsage(response);
                 const text = requireGeminiText(response);

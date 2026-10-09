@@ -35,7 +35,11 @@ const contents = [{ role: 'user', parts: [
 const cases = [
     ['gemini-3-flash-preview', undefined],
     ['gemini-3.1-pro-preview', undefined],
+    ['gemini-3.5-flash-lite', undefined],
+    ['gemini-3.6-flash', undefined],
     ['gemini-3.7-flash', undefined],
+    ['models/gemini-3.7-flash-001', undefined],
+    ['gemini-4.0-flash', undefined],
     ['gemini-3.8-flash', undefined],
     ['models/gemini-3.8-flash', undefined],
     ['gemini-2.5-flash', 0.2],
