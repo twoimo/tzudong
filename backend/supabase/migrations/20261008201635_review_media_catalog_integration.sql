@@ -35,6 +35,7 @@ DECLARE
   v_definition text;
   v_public jsonb;
   v_self jsonb; v_major integer := current_setting('server_version_num')::integer / 10000;
+  v_pg15_lease boolean := false;
 BEGIN
   IF current_user <> 'postgres' OR session_user <> 'postgres' OR v_major NOT IN (15,17)
      OR current_setting('transaction_read_only') <> 'off'
@@ -89,7 +90,10 @@ BEGIN
   IF v_major=17 THEN
     EXECUTE 'GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE, INHERIT FALSE, SET TRUE GRANTED BY postgres';
   ELSE
-    GRANT privacy_workflow_owner TO postgres;
+    -- PG15 has one row per role/member pair, even when another grantor owns it.
+    -- Lease only absent membership; never revoke a pre-existing grantor's row.
+    v_pg15_lease := NOT pg_has_role(v_runner,v_owner,'MEMBER');
+    IF v_pg15_lease THEN GRANT privacy_workflow_owner TO postgres; END IF;
   END IF;
   SET LOCAL ROLE privacy_workflow_owner;
   -- Existing G041 claim boundary: never restore auth-schema access for the
@@ -264,10 +268,11 @@ BEGIN
     RAISE EXCEPTION 'review_media_catalog_manifest_drift';
   END IF;
   RESET ROLE;
-  IF v_self IS NULL THEN
-    IF v_major=17 THEN REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres;
-    ELSE REVOKE privacy_workflow_owner FROM postgres; END IF;
-  ELSIF v_major=17 THEN
+  IF v_major=15 THEN
+    IF v_pg15_lease THEN REVOKE privacy_workflow_owner FROM postgres; END IF;
+  ELSIF v_self IS NULL THEN
+    REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres;
+  ELSE
     EXECUTE format('GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE, INHERIT %s, SET %s GRANTED BY postgres',
       upper(v_self->>'inherit_option'),upper(v_self->>'set_option'));
   END IF;
