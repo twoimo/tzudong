@@ -116,4 +116,36 @@ describe('OAuth callback redirect origin', () => {
       VERCEL_BRANCH_URL: undefined,
     })).toBe(productionSite);
   });
+
+  test('rejects production configuration drift without following a request origin', () => {
+    for (const NEXT_PUBLIC_SITE_URL of [
+      'http://configured.example',
+      'https://configured.example:444',
+      'https://user:password@configured.example',
+      'https://configured.example/auth/callback',
+      'https://configured.example?next=/admin',
+      'https://configured.example#admin',
+      'javascript:alert(1)',
+      'file:///tmp/configured-site',
+      'not a URL',
+    ]) {
+      for (const productionEnv of [
+        { NODE_ENV: 'production' },
+        { NODE_ENV: 'development', VERCEL_ENV: 'production' },
+      ]) {
+        expect(getTrustedAuthCallbackOrigin('https://request.example', {
+          ...productionEnv,
+          NEXT_PUBLIC_SITE_URL,
+        }), NEXT_PUBLIC_SITE_URL).toBe(productionSite);
+      }
+    }
+    expect(getTrustedAuthCallbackOrigin('https://request.example', {
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_SITE_URL: 'https://configured.example',
+    })).toBe('https://configured.example');
+    expect(getTrustedAuthCallbackOrigin('https://request.example', {
+      NODE_ENV: 'development',
+      NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3000',
+    })).toBe('http://127.0.0.1:3000');
+  });
 });

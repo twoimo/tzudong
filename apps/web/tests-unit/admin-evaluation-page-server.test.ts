@@ -130,16 +130,18 @@ describe('DB-backed bounded evaluation pages',()=>{
     await expect(cache.read(f.client,'tenant',query,1,pages[0].nextCursor)).rejects.toThrow('EVALUATION_CURSOR_STALE');
     await cache.read(f.client,'other-tenant',query,1,null);expect(f.loads()).toBe(4);
   });
-  test('old database compatibility is revision scoped and never sticks after RPC availability changes',async()=>{
+  test('missing raw RPC uses five bounded cold-cache calls, no row stream, and never sticks after availability changes',async()=>{
     const f=fixture();const cache=new DatabaseEvaluationPageCache();
     const missing={data:null,error:{code:'PGRST202',message:'Could not find the function public.admin_evaluation_raw_warning_groups(after_cursor, batch_size, expected_revision, page_ids) in the schema cache'}};
     f.setRaw(missing);const legacy=await cache.read(f.client,'legacy',query,1,null);
-    expect(legacy.warningReadPath).toBe('WARNING_STREAM_RAW_UNAVAILABLE');
+    expect(legacy.warningReadPath).toBe('WARNING_RPC');expect(f.ranges).toEqual([]);
+    expect(f.rpc.mock.calls.map(call=>call[0])).toEqual(['admin_evaluation_revision','admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_warning_groups','admin_evaluation_revision']);
     await cache.read(f.client,'legacy',query,1,null);expect(f.loads()).toBe(1);
     f.setRevision('2');f.setRaw(null);const prepared=await cache.read(f.client,'legacy',query,1,null);
     expect(prepared.warningReadPath).toBe('WARNING_RAW_GROUPS');expect(prepared.warnings).toEqual(legacy.warnings);expect(f.loads()).toBe(2);
-    f.setRevision('3');f.setRaw(missing);f.setRelated({data:null,error:{code:'42501',message:'permission denied'}});
+    f.setRevision('3');f.setRaw(missing);f.setWarning({data:null,error:{code:'P0001',message:'EVALUATION_WARNING_CAPACITY_EXCEEDED'}});
     await expect(cache.read(f.client,'legacy',query,1,null)).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');
+    expect(f.ranges).toEqual([]);
   });
   test('never caches a failed or inconsistent load',async()=>{
     const cache=new DatabaseEvaluationPageCache();const f=fixture();f.setFinish('2');
@@ -172,6 +174,9 @@ describe('raw warning server transport', () => {
         calls.push({ name, args });
         if (name === 'admin_evaluation_revision') return { data: finalRevision, error: null };
         if (name === 'admin_evaluation_raw_warning_groups') { const value = replies[requests++]; if (value instanceof Error) throw value; return value; }
+        if (name === 'admin_evaluation_warning_groups') return { data: { revision:'1', groups:[{ id:id(0),
+          sameVideo:{ count:297, candidates:[1,2,3].map(n=>({ id:id(n),name:'a\u0897',status:'pending',address:null,adminTouched:false,rule:'exact_identity',confidence:1 })) },
+          deleted:{ count:2, samples:[298,299].map(n=>({ id:id(n),origin_name:'a\u0897',candidate_name:'a\u0897' })) } }] }, error:null };
         if (name !== 'admin_evaluation_page') throw new Error('unexpected_rpc');
         return { data: { records: [rows[0]], revision: '1', hasMore: false, filteredTotal: 300, stats: { total: 300, pending: 298, approved: 0, hold: 0, db_conflict: 0, ready_for_approval: 0, unconfirmed_map: 0, missing: 0, not_selected: 0, deleted: 2 } }, error: null };
       },
@@ -193,8 +198,8 @@ describe('raw warning server transport', () => {
   test('default preserves all Unicode/deleted warnings when the old database has no raw RPC', async () => {
     const legacy=fixture([missing]);const actual=await readDatabaseEvaluationPage(legacy.client,query,1,null);
     const expected=await readDatabaseEvaluationPage(fixture().client,query,1,null,undefined,'stream');
-    expect(actual.warnings).toEqual(expected.warnings);expect(actual.warningReadPath).toBe('WARNING_STREAM_RAW_UNAVAILABLE');expect(legacy.streams()).toBe(2);
-    expect(legacy.calls.map(call=>call.name)).toEqual(['admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_revision']);
+    expect(actual.warnings).toEqual(expected.warnings);expect(actual.warningReadPath).toBe('WARNING_RPC');expect(legacy.streams()).toBe(0);
+    expect(legacy.calls.map(call=>call.name)).toEqual(['admin_evaluation_page','admin_evaluation_raw_warning_groups','admin_evaluation_warning_groups','admin_evaluation_revision']);
     const stale=fixture([missing]);stale.setFinal('2');await expect(readDatabaseEvaluationPage(stale.client,query,1,null)).rejects.toThrow('EVALUATION_CURSOR_STALE');
     const explicit=fixture([missing]);await expect(readDatabaseEvaluationPage(explicit.client,query,1,null,undefined,'raw')).rejects.toThrow('EVALUATION_RECORDS_UNAVAILABLE');expect(explicit.streams()).toBe(0);
   });

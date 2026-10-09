@@ -15,7 +15,7 @@ type RelatedQuery=PromiseLike<Result>&{
   order(column:string,options:{ascending:boolean}):RelatedQuery;range(from:number,to:number):RelatedQuery;
 };
 type WarningMode='auto'|'stream'|'rpc'|'raw';
-type WarningReadPath='WARNING_STREAM'|'WARNING_RPC'|'WARNING_STREAM_RUNTIME'|'WARNING_STREAM_UNICODE'|'WARNING_STREAM_CAPACITY'|'WARNING_RAW_FLAT'|'WARNING_RAW_GROUPS'|'WARNING_STREAM_RAW_CAPACITY'|'WARNING_STREAM_RAW_UNAVAILABLE';
+type WarningReadPath='WARNING_STREAM'|'WARNING_RPC'|'WARNING_STREAM_RUNTIME'|'WARNING_STREAM_UNICODE'|'WARNING_STREAM_CAPACITY'|'WARNING_RAW_FLAT'|'WARNING_RAW_GROUPS'|'WARNING_STREAM_RAW_CAPACITY';
 const warningMode=():WarningMode=>process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='stream'?'stream':process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='rpc'?'rpc':process.env.ADMIN_EVALUATION_WARNING_READ_PATH==='raw'?'raw':'auto';
 export interface EvaluationPageClient {
   rpc(name:string,args?:Record<string,unknown>):PromiseLike<Result>;
@@ -65,7 +65,7 @@ export async function readDatabaseEvaluationPage(client:EvaluationPageClient,que
   // Default to bounded raw transport with unchanged JS warning semantics.
   // Only exact first-request absence permits automatic compatibility. Explicit
   // raw stays fail-closed; stream/rpc preserve their existing admission.
-  let warningReadPath=selectEvaluationWarningReadPath(mode);
+  let warningReadPath=selectEvaluationWarningReadPath(mode);let rawWarningRpcMissing=false;
   if(!Number.isInteger(limit)||limit<1||limit>200)throw new Error('EVALUATION_QUERY_INVALID');
   const key=createHash('sha256').update(JSON.stringify(query)).digest('hex');
   let after:string|null=null;let expected:string|null=null;
@@ -104,7 +104,10 @@ export async function readDatabaseEvaluationPage(client:EvaluationPageClient,que
       });
       if(block.error){
         if(mode==='auto'&&request===0&&isMissingRawWarningRpc(block)){
-          warningReadPath='WARNING_STREAM_RAW_UNAVAILABLE';break;
+          // The predecessor aggregate is one bounded DB call and preserves
+          // full-dataset warning semantics. Never replace a missing RPC with
+          // a 50,000-row request-time compatibility scan.
+          rawWarningRpcMissing=true;warningReadPath='WARNING_RPC';break;
         }
         if(block.data===null&&block.error.code==='P0001'&&block.error.message==='EVALUATION_CURSOR_STALE')throw new Error('EVALUATION_CURSOR_STALE');
         if(block.data===null&&block.error.code==='P0001'&&block.error.message==='EVALUATION_WARNING_RAW_CAPACITY_EXCEEDED'){
@@ -125,7 +128,7 @@ export async function readDatabaseEvaluationPage(client:EvaluationPageClient,que
     if(grouped.error){
       // Only exact SQL admission refusals can use the existing JS algorithm.
       // Never disguise transport/DB errors, missing RPCs or malformed results.
-      if(grouped.data!==null||grouped.error.code!=='P0001')throw new Error('EVALUATION_RECORDS_UNAVAILABLE');
+      if(rawWarningRpcMissing||grouped.data!==null||grouped.error.code!=='P0001')throw new Error('EVALUATION_RECORDS_UNAVAILABLE');
       if(grouped.error.message==='EVALUATION_WARNING_UNICODE_UNSUPPORTED')warningReadPath='WARNING_STREAM_UNICODE';
       else if(grouped.error.message==='EVALUATION_WARNING_CAPACITY_EXCEEDED')warningReadPath='WARNING_STREAM_CAPACITY';
       else throw new Error('EVALUATION_RECORDS_UNAVAILABLE');
