@@ -584,7 +584,10 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).toContain('PHONE_LIKE_PATTERN');
     expect(processRouteSource).toContain('SAFE_OCR_FAILURE_CODES');
     expect(processRouteSource).toContain("return errorResponse(PRIVACY_UNSAFE_VALUE_REASON, 422);");
-    expect(processRouteSource).toContain('downloadReviewVerification(storageAdmin, review.verification_photo)');
+    expect(processRouteSource).toContain('downloadReviewVerification(storageAdmin, receiptObjectPath)');
+    expect(processRouteSource).toContain(".eq('verification_photo', oldStoredValue)");
+    expect(processRouteSource).toContain('the authoritative review-media UPDATE');
+    expect(processRouteSource).toContain('removeOriginalReceiptObject(storageAdmin, oldBucket, oldObjectPath)');
     expect(processRouteSource).not.toContain('getPublicUrl');
     expect(processRouteSource).not.toContain('publicUrl');
     expect(processRouteSource).not.toContain('fetch(');
@@ -659,11 +662,11 @@ describe('OCR extract route privacy and normalization contract', () => {
     const verifyIndex = replacementSource.indexOf(
       'const uploadedImage = await downloadPrivateReceiptObject',
     );
-    const conditionalUpdateIndex = replacementSource.indexOf(".eq('verification_photo', oldObjectPath)");
-    const oldDeleteIndex = replacementSource.indexOf('storage.remove([oldObjectPath])');
+    const conditionalUpdateIndex = replacementSource.indexOf(".eq('verification_photo', oldStoredValue)");
+    const oldDeleteIndex = replacementSource.indexOf('removeOriginalReceiptObject(storageAdmin, oldBucket, oldObjectPath)');
 
     expect(processRouteSource).toContain('canonicalStorageImage.bytes.byteLength < downloadedImage.bytes.byteLength');
-    expect(processRouteSource).toContain('assertSafeReceiptObjectPath(review.verification_photo)');
+    expect(processRouteSource).toContain('assertSafeReceiptObjectPath(receiptObjectPath)');
     expect(processRouteSource).not.toContain('getPublicUrl');
     expect(processRouteSource).not.toContain('publicUrl');
     expect(uploadIndex).toBeGreaterThanOrEqual(0);
@@ -677,7 +680,7 @@ describe('OCR extract route privacy and normalization contract', () => {
       'currentReadbackError',
       'removeReplacementObject(storageAdmin, newObjectPath)',
       'replacementStateIndeterminate',
-      'removeOldObjectError',
+      'removeOriginalReceiptObject(storageAdmin, oldBucket, oldObjectPath)',
     ]) {
       expect(replacementSource).toContain(failureBoundary);
     }

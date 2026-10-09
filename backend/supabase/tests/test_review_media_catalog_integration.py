@@ -20,6 +20,11 @@ PARENTS = (
 
 
 class ReviewMediaCatalogIntegrationTests(unittest.TestCase):
+    def test_complete_receipt_remains_admitted(self):
+        # Negative tests must reach their intended guard, not an earlier stale
+        # inventory count after adding the two restrictive Storage policies.
+        local_migrate.parse_readback(_receipt_rows())
+
     def test_final_function_bodies_are_bound_to_both_canonical_sources(self):
         functions = {}
         before_hashes = {}
@@ -41,15 +46,15 @@ class ReviewMediaCatalogIntegrationTests(unittest.TestCase):
                     "i" if "IMMUTABLE" in attrs else "v",
                     " ".join(result.split()),
                 )
-        self.assertEqual(len(functions), 12)
-        self.assertEqual(sum(key.startswith("public.") for key in functions), 6)
+        self.assertEqual(len(functions), 14)
+        self.assertEqual(sum(key.startswith("public.") for key in functions), 7)
         self.assertEqual(set(functions), {row[0] for row in local_migrate.REVIEW_MEDIA_FUNCTIONS})
         sql = MIGRATION.read_text()
         for row in local_migrate.REVIEW_MEDIA_FUNCTIONS:
             with self.subTest(signature=row[0]):
                 self.assertEqual((row[6], row[3], row[4], row[2]), functions[row[0]])
                 self.assertIn(f"('{row[0]}','{before_hashes[row[0]]}','{row[6]}'", sql)
-        self.assertEqual(sum(before_hashes[key] != value[0] for key, value in functions.items()), 6)
+        self.assertEqual(sum(before_hashes[key] != value[0] for key, value in functions.items()), 7)
 
     def test_claim_transition_pins_existing_helper_without_auth_schema_grant(self):
         source = (ROOT / "backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql").read_text()

@@ -18,8 +18,8 @@ const localSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const localSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const localAppOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:18080').origin;
 const localSupabaseOrigin = new URL(localSupabaseUrl || 'http://127.0.0.1').origin;
-const localStorageUploadPath = /^\/storage\/v1\/object\/review-photos\/[0-9a-f-]{36}\/nightly-browser-cors\/review\.webp$/;
-const localStoragePublicPath = /^\/storage\/v1\/object\/public\/review-photos\/[0-9a-f-]{36}\/nightly-browser-cors\/review\.webp$/;
+const localStorageUploadPath = /^\/storage\/v1\/object\/review-photos\/[0-9a-f-]{36}\/reviews\/[0-9a-f-]{36}\/food\/nightly-browser-cors\.webp$/;
+const localStoragePublicPath = /^\/storage\/v1\/object\/public\/review-photos\/[0-9a-f-]{36}\/reviews\/[0-9a-f-]{36}\/food\/nightly-browser-cors\.webp$/;
 const localProfileAvatarOperationId = '00000000-0000-4000-8000-000000000905';
 const localProfileAvatarJpegBase64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPxB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPxB//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxB//9k=';
 
@@ -157,7 +157,8 @@ test.describe('real local Supabase and admin lifecycle', () => {
         functionExactFixture = false;
       }
 
-      const objectPrefix = `${userId}/nightly-browser-cors/review.webp`;
+      const storageReviewId = '00000000-0000-4000-8000-000000000906';
+      const objectPrefix = `${userId}/reviews/${storageReviewId}/food/nightly-browser-cors.webp`;
       const objectUrl = `${supabaseUrl}/storage/v1/object/review-photos/${objectPrefix}`;
       const publicObjectUrl = `${supabaseUrl}/storage/v1/object/public/review-photos/${objectPrefix}`;
       const webpBase64 = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/v89WAAAAA==';

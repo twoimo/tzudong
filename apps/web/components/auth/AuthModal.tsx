@@ -113,6 +113,8 @@ const UNDER_14_SIGNUP_UNAVAILABLE_CODE = "UNDER_14_SIGNUP_UNAVAILABLE";
 const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "현재 만 14세 미만은 가입할 수 없습니다.";
 const POLICY_VERSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POLICY_CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const MIN_SIGNUP_PASSWORD_LENGTH = 8;
+const MAX_SIGNUP_PASSWORD_LENGTH = 72;
 
 function OnboardingConsentFields({
   ageBand,
@@ -481,8 +483,11 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
     // 기존 계정의 개인정보 처리 확인에서는 이미 설정된 비밀번호를 다시 입력하는 것이므로
     // 신규 가입 비밀번호 규칙을 적용하지 않는다. 실제 검증은 서버 로그인이 담당한다.
-    if (!isExistingAccountRecovery && password.length < 8) {
-      toast.error("비밀번호는 8자 이상이어야 합니다");
+    if (
+      !isExistingAccountRecovery
+      && (password.length < MIN_SIGNUP_PASSWORD_LENGTH || password.length > MAX_SIGNUP_PASSWORD_LENGTH)
+    ) {
+      toast.error("비밀번호는 8자 이상 72자 이하여야 합니다");
       return;
     }
     if (!isExistingAccountRecovery && password !== confirmPassword) {
@@ -544,6 +549,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           email,
           password,
           nickname: username.trim(),
+          next: requestedRedirect ?? "/",
         }),
       });
       if (!response.ok) {
@@ -589,7 +595,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       if (recoveryToken !== null) endExistingAccountPrivacyRecovery(recoveryToken);
       setIsLoading(false);
     }
-  }, [ageBand, closeAfterAuthSuccess, confirmPassword, email, isExistingAccountRecovery, password, policyContentSha256, policyVersion, privacyAgreed, redirectAfterRequestedLogin, rejectPrivacyIneligibleSession, resetForm, startOnboardingChallenge, username]);
+  }, [ageBand, closeAfterAuthSuccess, confirmPassword, email, isExistingAccountRecovery, password, policyContentSha256, policyVersion, privacyAgreed, redirectAfterRequestedLogin, rejectPrivacyIneligibleSession, requestedRedirect, resetForm, startOnboardingChallenge, username]);
 
   const handleForgotPassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -853,10 +859,17 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
+                    aria-describedby={isExistingAccountRecovery ? undefined : "signup-password-help"}
                     autoComplete="new-password"
                     enterKeyHint="next"
                     className="h-10 sm:h-11"
                   />
+                  {!isExistingAccountRecovery && (
+                    <p id="signup-password-help" className="text-xs text-muted-foreground">
+                      8자 이상 72자 이하로 입력해주세요.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password" className="text-sm">비밀번호 확인</Label>
@@ -866,6 +879,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
                     autoComplete="new-password"
                     enterKeyHint="done"
                     className="h-10 sm:h-11"
@@ -1104,10 +1118,17 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
+                    aria-describedby={isExistingAccountRecovery ? undefined : "signup-password-help"}
                     autoComplete="new-password"
                     enterKeyHint="next"
                     className="h-10 sm:h-11"
                   />
+                  {!isExistingAccountRecovery && (
+                    <p id="signup-password-help" className="text-xs text-muted-foreground">
+                      8자 이상 72자 이하로 입력해주세요.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password" className="text-sm">비밀번호 확인</Label>
@@ -1117,6 +1138,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
                     autoComplete="new-password"
                     enterKeyHint="done"
                     className="h-10 sm:h-11"

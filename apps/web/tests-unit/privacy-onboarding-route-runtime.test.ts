@@ -45,7 +45,8 @@ function fixture(settings: { emailConfirmation?: boolean; denyEligibility?: bool
     events: [], challenges: new Map(), confirmed: false, active: true,
     signupCalls: 0, simulatedIdentityMutations: 0, blockedExternalCalls: 0,
     confirmCalls: 0, confirmAccepted: 0, digestMatched: false, nonceMatched: false,
-    argumentBindingsValid: true,
+    argumentBindingsValid: true, signupEmailRedirectTo: null as string | null,
+    signupUsesSsrClient: false,
   };
   const deny = () => { state.blockedExternalCalls++; throw new Error('OFFLINE_BOUNDARY'); };
   const context = vm.createContext({
@@ -116,8 +117,9 @@ function fixture(settings: { emailConfirmation?: boolean; denyEligibility?: bool
   const client = { rpc: async (...args) => intoRealm(JSON.stringify(await rpc(...args))), auth: {
     exchangeCodeForSession: async () => { state.events.push('exchange'); return { error: null }; },
     getUser: async () => { state.events.push('getUser'); return { error: null, data: { user: state.active ? { id: state.userId } : null } }; },
-    signUp: async () => {
+    signUp: async (credentials) => {
       state.events.push('simulated-signup'); state.signupCalls++;
+      state.signupEmailRedirectTo = credentials?.options?.emailRedirectTo ?? null;
       return { error: null, data: { user: { id: state.userId, identities: [{}] }, session: settings.emailConfirmation ? null : {} } };
     },
     signOut: async ({ scope }) => { state.events.push(`signOut-${scope}`); state.active = false; return { error: null }; },
@@ -129,8 +131,26 @@ function fixture(settings: { emailConfirmation?: boolean; denyEligibility?: bool
   } };
   const providerImports = {
     'node:crypto': crypto, 'next/server': next,
-    '@supabase/supabase-js': { createClient: () => client },
-    '@/lib/supabase/server': { createClient: async () => client },
+    '@supabase/supabase-js': {},
+    '@supabase/ssr': {},
+    '@/lib/supabase/server': {
+      createClient: async () => client,
+      createClientForCookieStore: (cookieStore) => {
+        state.signupUsesSsrClient = true;
+        return {
+          ...client,
+          auth: {
+            ...client.auth,
+            signUp: async (credentials) => {
+              cookieStore.set('sb-fixture-auth-token-code-verifier', 'fixture-pkce-verifier', {
+                path: '/', sameSite: 'lax', secure: true,
+              });
+              return client.auth.signUp(credentials);
+            },
+          },
+        };
+      },
+    },
     '@/lib/supabase/service-role': { createSupabaseServiceRoleClient: () => client },
     // Unexercised profile avatar/read helpers are denied, never substituted as successes.
     '@/lib/profile-avatar-url': { classifyProfileAvatarUrl: deny, getProfileAvatarVersionedReference: deny, getProfileAvatarVersionedStorageKey: deny },
@@ -166,7 +186,7 @@ function fixture(settings: { emailConfirmation?: boolean; denyEligibility?: bool
     const response = await route.POST(post({ policyVersion: state.policyId, ageBand: 'age_14_plus', intent, policyAcknowledged: true }));
     return { response, cookie: response.cookies.get(lib.ONBOARDING_CHALLENGE_COOKIE) };
   };
-  const signup = () => ({ action: 'password_signup', email: 'fixture@example.invalid', password: crypto.randomBytes(8).toString('hex'), nickname: 'fixture' });
+  const signup = (next = '/') => ({ action: 'password_signup', email: 'fixture@example.invalid', password: crypto.randomBytes(8).toString('hex'), nickname: 'fixture', next });
   return { state, lib, route, callback, policy, env, post, start, signup };
 }
 
@@ -185,6 +205,9 @@ describe('privacy onboarding full route runtime contracts', () => {
     const created = await response.json();
     assert('exact creation result', response.status === 201 && created.status === 'created' && created.emailConfirmationRequired === emailConfirmation && Object.keys(created).length === 2);
     assert('single creation and confirmed digest', f.state.signupCalls === 1 && f.state.confirmCalls === 1 && f.state.confirmAccepted === 1 && f.state.digestMatched && f.state.nonceMatched && f.state.argumentBindingsValid);
+    assert('signup uses the SSR PKCE client', f.state.signupUsesSsrClient === true);
+    assert('server binds confirmation to its same-origin callback', f.state.signupEmailRedirectTo === `${origin}/auth/callback`);
+    assert('PKCE verifier is emitted only for email confirmation', Boolean(response.cookies.get('sb-fixture-auth-token-code-verifier')) === emailConfirmation);
     assert('ordered source profile/confirmation/eligibility validators', traceContainsInOrder(f.state.events, ['simulated-signup', 'read_signup_profile_state', 'confirm_privacy_onboarding', 'get_privacy_eligibility_for_user']));
     assert('no compensation on success', f.state.simulatedIdentityMutations === 0 && !f.state.events.some(x => x.startsWith('signOut')));
     assert('challenge consumed and response not cacheable', cookieCleared(response, f.lib.ONBOARDING_CHALLENGE_COOKIE) && response.headers.get('cache-control') === 'no-store');
@@ -194,6 +217,62 @@ describe('privacy onboarding full route runtime contracts', () => {
     const repeated = await repeatedResponse.json();
     assert('replay requires login without duplicate account', repeatedResponse.status === 409 && repeated.code === 'ONBOARDING_PASSWORD_LOGIN_REQUIRED' && f.state.signupCalls === 1 && f.state.confirmAccepted === 1);
     assert('no network attempts', f.state.blockedExternalCalls === 0);
+  });
+
+  test('email-confirmed signup restores the server-validated destination through the callback', async () => {
+    const f = fixture({ emailConfirmation: true });
+    const { cookie } = await f.start('password');
+    assert('challenge issued', Boolean(cookie));
+    const restaurantId = '11111111-1111-4111-8111-111111111111';
+    const next = `/stamp?restaurant=${restaurantId}&writeReview=1`;
+    const response = await f.route.POST(f.post(f.signup(next), [cookie]));
+    const created = await response.json();
+    assert('email confirmation required', response.status === 201 && created.emailConfirmationRequired === true);
+
+    const signupEmailRedirectTo = f.state.signupEmailRedirectTo;
+    assert('server produced a confirmation callback', typeof signupEmailRedirectTo === 'string');
+    if (!signupEmailRedirectTo) throw new Error('missing signup confirmation callback');
+    const confirmationCallback = new URL(signupEmailRedirectTo);
+    assert('server confirmation callback carries the encoded continuation', confirmationCallback.origin === origin
+      && confirmationCallback.pathname === '/auth/callback'
+      && confirmationCallback.searchParams.get('next') === next);
+    confirmationCallback.searchParams.set('code', 'fixture');
+    const verifierCookie = response.cookies.get('sb-fixture-auth-token-code-verifier');
+    assert('server returned the SDK PKCE verifier', Boolean(verifierCookie?.value));
+    const callbackResponse = await f.callback.GET(new Request(confirmationCallback, {
+      headers: { cookie: `${verifierCookie.name}=${verifierCookie.value}` },
+    }));
+    const destination = new URL(callbackResponse.headers.get('location'));
+    assert('confirmed session resumes the exact destination', callbackResponse.status === 307
+      && `${destination.pathname}${destination.search}` === next);
+    assert('callback validates the live privacy receipt without a second challenge', traceContainsInOrder(f.state.events, [
+      'confirm_privacy_onboarding', 'exchange', 'getUser', 'get_current_privacy_eligibility',
+    ]));
+    assert('success preserves the session', !f.state.events.some(x => x.startsWith('signOut')));
+    assert('no external calls', f.state.blockedExternalCalls === 0);
+  });
+
+  test('an already open legacy signup form retains its default confirmation destination', async () => {
+    const f = fixture({ emailConfirmation: true });
+    const { cookie } = await f.start('password');
+    const legacy = { ...f.signup() };
+    delete legacy.next;
+    const response = await f.route.POST(f.post(legacy, [cookie]));
+    const created = await response.json();
+    assert('legacy form remains admitted', response.status === 201 && created.emailConfirmationRequired === true);
+    assert('legacy confirmation keeps the canonical default', f.state.signupEmailRedirectTo === `${origin}/auth/callback`);
+    assert('one bounded signup and confirmation', f.state.signupCalls === 1 && f.state.confirmAccepted === 1);
+    assert('no external calls', f.state.blockedExternalCalls === 0);
+  });
+
+  test('password signup rejects an external continuation before account creation', async () => {
+    const f = fixture({ emailConfirmation: true });
+    const { cookie } = await f.start('password');
+    const response = await f.route.POST(f.post(f.signup('https://attacker.example'), [cookie]));
+    const body = await response.json();
+
+    assert('unsafe continuation rejected', response.status === 400 && body.code === 'ONBOARDING_CHALLENGE_INVALID');
+    assert('no account or callback created', f.state.signupCalls === 0 && f.state.signupEmailRedirectTo === null);
   });
 
   test('existing password account confirms and accepts same-challenge replay without creating an account', async () => {
@@ -235,6 +314,27 @@ describe('privacy onboarding full route runtime contracts', () => {
     }
     assert('OAuth does not mutate identities', f.state.signupCalls === 0 && f.state.simulatedIdentityMutations === 0);
     assert('no network attempts', f.state.blockedExternalCalls === 0);
+  });
+
+  test('stale no-challenge OAuth recovery keeps only a validated user continuation', async () => {
+    const f = fixture();
+    const next = '/mypage/reviews';
+    const response = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent(next)}`));
+    const location = new URL(response.headers.get('location'));
+
+    assert('privacy recovery route retained', response.status === 307
+      && location.pathname === '/'
+      && location.searchParams.get('auth') === 'login'
+      && location.searchParams.get('reason') === 'privacy_onboarding'
+      && location.searchParams.get('next') === next);
+    assert('stale recovery keeps the session for challenge completion', !f.state.events.some(x => x.startsWith('signOut')));
+
+    const unsafe = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent('https://attacker.example')}`));
+    const unsafeLocation = new URL(unsafe.headers.get('location'));
+    assert('external destination omitted', unsafeLocation.origin === origin
+      && unsafeLocation.pathname === '/'
+      && unsafeLocation.searchParams.get('reason') === 'privacy_onboarding'
+      && !unsafeLocation.searchParams.has('next'));
   });
 
   for (const control of ['tamper', 'expiry', 'origin', 'nonce', 'secret']) test(`OAuth rejects ${control} before exchanging provider code`, async () => {

@@ -24,8 +24,8 @@ RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
     p_path LIKE p_owner::text || '/reviews/' || p_review::text || '/' || p_purpose || '/%' AND
     length(split_part(p_path, '/', 5)) <= 240 AND p_path ~* '^[A-Za-z0-9_-]+/reviews/[A-Za-z0-9_-]+/(food|verification)/[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.(avif|jpe?g|png|webp)$', false)
 $$;
--- Decode historical public/signed URL values only for conservative reference
--- checks. They are never accepted as new writes or as cleanup candidates.
+-- Decode historical public/signed URL values for reference checks and for
+-- cleanup only after the authoritative pre-image passes owner/purpose checks.
 CREATE FUNCTION review_media_private.reference_key(p_value text)
 RETURNS text LANGUAGE plpgsql IMMUTABLE SET search_path = '' AS $$
 DECLARE v text := p_value; b bytea := ''::bytea; i integer := 1;
@@ -100,6 +100,32 @@ END $$;
 CREATE TRIGGER review_media_reference_guard BEFORE INSERT OR UPDATE OF food_photos, verification_photo, user_id, id
   ON public.reviews FOR EACH ROW EXECUTE FUNCTION review_media_private.guard_references();
 
+-- Every delete path (including legacy and guarded admin) captures OLD, not an
+-- actor-supplied path list. The statement trigger already holds the media lock.
+CREATE FUNCTION review_media_private.enqueue_removed()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE p text; purpose text; retained text[] := ARRAY[]::text[];
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    retained := COALESCE(NEW.food_photos, ARRAY[]::text[]) || ARRAY[NEW.verification_photo];
+  END IF;
+  FOR p, purpose IN SELECT review_media_private.reference_key(value), 'food'
+      FROM unnest(COALESCE(OLD.food_photos, ARRAY[]::text[])) value
+    UNION ALL SELECT review_media_private.reference_key(OLD.verification_photo), 'verification' LOOP
+    IF (review_media_private.canonical(p, OLD.user_id, OLD.id, purpose)
+        OR review_media_private.owned_legacy(p, OLD.user_id, purpose))
+      AND NOT EXISTS (SELECT 1 FROM unnest(retained) value
+        WHERE review_media_private.reference_key(value) = p) THEN
+      INSERT INTO review_media_private.cleanup(path, owner_id, review_id, purpose, retired)
+        VALUES (p, OLD.user_id, OLD.id, purpose, NOT review_media_private.referenced(p))
+        ON CONFLICT DO NOTHING;
+    END IF;
+  END LOOP;
+  RETURN NULL;
+END $$;
+CREATE TRIGGER review_media_enqueue_removed AFTER DELETE OR UPDATE OF food_photos, verification_photo, user_id, id
+  ON public.reviews FOR EACH ROW EXECUTE FUNCTION review_media_private.enqueue_removed();
+
 -- Definer is required for the private receipt/queue and global reference check,
 -- not to broaden review access. Owner authorization is checked before any row
 -- mutation. Existing review triggers, cascades and RLS policies are unchanged.
@@ -108,7 +134,7 @@ CREATE FUNCTION public.mutate_review_with_media(
   p_content text DEFAULT NULL, p_categories text[] DEFAULT NULL, p_food_photos text[] DEFAULT NULL
 ) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE u uuid := auth.uid(); r public.reviews%ROWTYPE;
-  receipt review_media_private.commits%ROWTYPE; h text; p text; purpose text;
+  receipt review_media_private.commits%ROWTYPE; h text; p text;
 BEGIN
   IF u IS NULL THEN RETURN 'REVIEW_UNAUTHORIZED'; END IF;
   IF p_operation_id IS NULL OR p_review_id IS NULL OR p_kind IS NULL OR p_kind NOT IN ('edit','delete') THEN
@@ -122,11 +148,11 @@ BEGIN
   IF p_kind = 'edit' THEN
     IF p_content IS NULL OR octet_length(p_content) > 262144 OR length(btrim(p_content)) < 20
       OR p_categories IS NULL OR cardinality(p_categories) NOT BETWEEN 1 AND 100
-      OR p_food_photos IS NULL OR cardinality(p_food_photos) NOT BETWEEN 0 AND 10 THEN
+      OR p_food_photos IS NULL OR cardinality(p_food_photos) NOT BETWEEN 1 AND 10 THEN
       RETURN 'REVIEW_INVALID';
     END IF;
     IF EXISTS (SELECT 1 FROM unnest(p_categories) value WHERE value IS NULL OR length(value) NOT BETWEEN 1 AND 200)
-      OR EXISTS (SELECT 1 FROM unnest(p_food_photos) value WHERE value IS NULL OR octet_length(value) > 512) THEN
+      OR EXISTS (SELECT 1 FROM unnest(p_food_photos) value WHERE value IS NULL OR octet_length(value) > 8192) THEN
       RETURN 'REVIEW_INVALID';
     END IF;
   END IF;
@@ -145,14 +171,14 @@ BEGIN
   IF NOT FOUND THEN RETURN 'REVIEW_NOT_FOUND'; END IF;
   IF p_expected_updated_at IS NULL OR r.updated_at IS DISTINCT FROM p_expected_updated_at THEN RETURN 'REVIEW_CONFLICT'; END IF;
   IF p_kind = 'edit' THEN
-    IF cardinality(p_food_photos) + (SELECT count(*) FROM unnest(COALESCE(r.food_photos, ARRAY[]::text[])) x
-      WHERE NOT review_media_private.canonical(x, u, r.id, 'food')
-        AND NOT review_media_private.owned_legacy(x, u, 'food')) NOT BETWEEN 1 AND 10 THEN
-      RETURN 'REVIEW_INVALID';
-    END IF;
     IF p_content IS NULL OR length(btrim(p_content)) < 20 OR p_categories IS NULL OR cardinality(p_categories) = 0
-      OR p_food_photos IS NULL OR cardinality(p_food_photos) NOT BETWEEN 0 AND 10 THEN RETURN 'REVIEW_INVALID'; END IF;
+      OR p_food_photos IS NULL OR cardinality(p_food_photos) NOT BETWEEN 1 AND 10 THEN RETURN 'REVIEW_INVALID'; END IF;
     FOREACH p IN ARRAY p_food_photos LOOP
+      -- The submitted list is the complete desired state. Historical display
+      -- values can only be kept verbatim from this row or omitted, never added.
+      IF p = ANY(COALESCE(r.food_photos, ARRAY[]::text[]))
+        AND NOT review_media_private.canonical(p, u, r.id, 'food')
+        AND NOT review_media_private.owned_legacy(p, u, 'food') THEN CONTINUE; END IF;
       IF NOT review_media_private.canonical(p, u, r.id, 'food')
         AND NOT (review_media_private.owned_legacy(p, u, 'food') AND p = ANY(COALESCE(r.food_photos, ARRAY[]::text[]))) THEN
         RETURN 'REVIEW_INVALID';
@@ -162,24 +188,13 @@ BEGIN
       END IF;
     END LOOP;
     UPDATE public.reviews SET content = btrim(p_content), categories = p_categories,
-      -- Preserve existing historical display-only values; clients cannot add them.
-      food_photos = p_food_photos || ARRAY(SELECT x FROM unnest(COALESCE(r.food_photos, ARRAY[]::text[])) x
-        WHERE NOT review_media_private.canonical(x, u, r.id, 'food')
-          AND NOT review_media_private.owned_legacy(x, u, 'food')),
+      food_photos = p_food_photos,
       is_verified = false, admin_note = NULL, updated_at = clock_timestamp()
       WHERE id = r.id AND user_id = u;
   ELSE
     DELETE FROM public.reviews WHERE id = r.id AND user_id = u;
   END IF;
-  -- Enqueue both purposes from the authoritative pre-image, never client keys.
-  FOREACH p IN ARRAY COALESCE(r.food_photos, ARRAY[]::text[]) || ARRAY[r.verification_photo] LOOP
-    purpose := CASE WHEN p = r.verification_photo THEN 'verification' ELSE 'food' END;
-    IF (review_media_private.canonical(p, u, r.id, purpose) OR review_media_private.owned_legacy(p, u, purpose))
-      AND (p_kind = 'delete' OR (purpose = 'food' AND NOT (p = ANY(p_food_photos)))) THEN
-      INSERT INTO review_media_private.cleanup(path, owner_id, review_id, purpose, retired)
-        VALUES (p, u, r.id, purpose, NOT review_media_private.referenced(p)) ON CONFLICT DO NOTHING;
-    END IF;
-  END LOOP;
+  -- The AFTER trigger queues the authoritative pre-image in this transaction.
   INSERT INTO review_media_private.commits VALUES (p_operation_id, u, r.id, p_kind, h);
   RETURN 'REVIEW_COMMITTED';
 END $$;

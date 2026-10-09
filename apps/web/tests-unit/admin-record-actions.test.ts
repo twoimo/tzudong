@@ -74,6 +74,47 @@ describe('admin action boundary',()=>{
    expect(removes).toBe(state==='pending'?1:0);expect(phases.includes('cleanup_absent')).toBe(state==='pending');expect(result.mediaCleanupPending).toBe(state!=='pending');
   }
  });
+ test('guarded review cleanup routes verification jobs to the private bucket',async()=>{
+  let present=true;const buckets:string[]=[];
+  const rpc:RecordActionRpc=async args=>({error:null,data:args.p_phase==='readback'
+   ?{...receipt,action:'review.delete',mediaCleanupPending:present}
+   :args.p_phase==='cleanup_read'
+    ?{jobs:[{id:jobId,bucket:'review-verifications',objectName:`${actor}/reviews/${target}/verification/proof.jpg`,state:'pending'}]}
+    :{ok:true,claimed:true}});
+  await resumeRecordMediaCleanup(rpc,{exists:async bucket=>{buckets.push(bucket);return present;},remove:async bucket=>{buckets.push(bucket);present=false;}},actor,operationId,unitAdmission);
+  expect(buckets).toEqual(['review-verifications','review-verifications','review-verifications']);
+ });
+ test('guarded verification cleanup removes and reads back private plus legacy public objects',async()=>{
+  const objectName=`${actor}/reviews/${target}/verification/proof.jpg`;
+  const publicJob='55555555-5555-4555-8555-555555555555';
+  const jobs=[
+   {id:jobId,bucket:'review-verifications',objectName,state:'pending'},
+   {id:publicJob,bucket:'review-photos',objectName,state:'pending'},
+  ] as const;
+  const keys=new Map(jobs.map(job=>[job.id,`${job.bucket}:${job.objectName}`]));
+  const present=new Set(keys.values());const storageCalls:string[]=[];
+  const rpc:RecordActionRpc=async args=>{
+   if(args.p_phase==='readback')return {error:null,data:{...receipt,action:'review.delete',mediaCleanupPending:present.size>0}};
+   if(args.p_phase==='cleanup_read')return {error:null,data:{jobs}};
+   if(args.p_phase==='cleanup_absent')present.delete(keys.get(String((args.p_payload as {jobId?:unknown})?.jobId))??'');
+   return {error:null,data:{ok:true,claimed:true}};
+  };
+  const result=await resumeRecordMediaCleanup(rpc,{
+   exists:async(bucket,path)=>{const key=`${bucket}:${path}`;storageCalls.push(`exists:${key}`);return present.has(key);},
+   remove:async(bucket,path)=>{const key=`${bucket}:${path}`;storageCalls.push(`remove:${key}`);present.delete(key);},
+  },actor,operationId,unitAdmission);
+  expect(result.mediaCleanupPending).toBe(false);
+  expect(storageCalls).toEqual([
+   `exists:review-verifications:${objectName}`,`remove:review-verifications:${objectName}`,`exists:review-verifications:${objectName}`,
+   `exists:review-photos:${objectName}`,`remove:review-photos:${objectName}`,`exists:review-photos:${objectName}`,
+  ]);
+ });
+ test('private bucket jobs cannot target food objects',async()=>{
+  const rpc:RecordActionRpc=async args=>({error:null,data:args.p_phase==='readback'
+   ?{...receipt,action:'review.delete'}
+   :{jobs:[{id:jobId,bucket:'review-verifications',objectName:`${actor}/reviews/${target}/food/fixture.jpg`,state:'pending'}]}});
+  await expect(resumeRecordMediaCleanup(rpc,{exists:async()=>true,remove:async()=>{}},actor,operationId,unitAdmission)).rejects.toThrow('UNCERTAIN');
+ });
 });
 
 // Run the actual route source with only its I/O dependencies injected, without network or module mocks.

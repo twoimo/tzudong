@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { buildHomeAuthLoginPath, buildStampReviewContinuationPath } from "@/lib/auth/auth-redirect";
+import { buildDesktopStampHomeRedirectPath, buildHomeAuthLoginPath, buildStampReviewContinuationPath } from "@/lib/auth/auth-redirect";
 import dynamic from "next/dynamic";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
 import { MapPanelHeader } from "@/components/home/map-panel-chrome";
@@ -193,15 +193,16 @@ export default function StampPage() {
     // const { isMobileOrTablet, isDesktop } = useDeviceType(); // Hook check replaced
     const { isMobileOrTablet, isDesktop } = useDeviceType(); // Keep for logic usage later, but NOT for redirect
     const [isMounted, setIsMounted] = useState(false);
+    const reviewContinuationHandled = useRef<string | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
 
         const redirectIfDesktop = () => {
             if (window.location.pathname === '/stamp' && window.innerWidth > BREAKPOINTS.tabletMax) {
-                const parameters = new URLSearchParams(window.location.search);
-                parameters.set('panel', 'stamp');
-                router.replace(`/?${parameters.toString()}`);
+                if (reviewContinuationHandled.current) return;
+                const redirectPath = buildDesktopStampHomeRedirectPath(window.location.search);
+                if (redirectPath) router.replace(redirectPath);
             }
         };
 
@@ -237,7 +238,6 @@ export default function StampPage() {
 
     // 리뷰 모달 상태
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-    const reviewContinuationHandled = useRef<string | null>(null);
     const [reviewContinuationError, setReviewContinuationError] = useState<string | null>(null);
     const [showStampGuide, setShowStampGuide] = useState(false);
     const [editingReview, setEditingReview] = useState<{
@@ -335,7 +335,9 @@ export default function StampPage() {
         const continuationParameters = new URLSearchParams(reviewContinuationQuery);
         const restaurantId = continuationParameters.get('restaurant');
         if (continuationParameters.get('writeReview') !== '1') {
-            reviewContinuationHandled.current = null;
+            if (restaurantId !== reviewContinuationHandled.current) {
+                reviewContinuationHandled.current = null;
+            }
             return;
         }
         if (!restaurantId || authLoading || isRestaurantsLoading || reviewContinuationHandled.current === restaurantId) return;

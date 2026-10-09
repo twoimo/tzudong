@@ -8,6 +8,32 @@ VALUES ('review-verifications', 'review-verifications', false, 5242880,
 ON CONFLICT (id) DO UPDATE SET public = false, file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
+-- Serialize Storage writes with review references and retirement. A private
+-- object must not shadow a referenced public receipt, and a completed tombstone
+-- must continue to deny delayed uploads. Storage upsert/update uses both checks.
+CREATE FUNCTION public.review_media_upload_allowed(p_bucket text, p_path text)
+RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE u uuid := auth.uid(); review_id uuid; purpose text;
+BEGIN
+  IF u IS NULL OR current_setting('transaction_isolation') <> 'read committed'
+    OR p_bucket IS NULL OR p_bucket NOT IN ('review-photos','review-verifications')
+    OR p_path IS NULL OR octet_length(p_path) > 512 THEN RETURN false; END IF;
+  BEGIN review_id := split_part(p_path, '/', 3)::uuid;
+  EXCEPTION WHEN invalid_text_representation THEN RETURN false; END;
+  purpose := CASE p_bucket WHEN 'review-photos' THEN 'food' ELSE 'verification' END;
+  IF NOT review_media_private.canonical(p_path, u, review_id, purpose) THEN RETURN false; END IF;
+  PERFORM pg_advisory_xact_lock(741093, 1);
+  RETURN NOT EXISTS (SELECT 1 FROM review_media_private.cleanup c WHERE c.path = p_path AND c.retired)
+    AND NOT review_media_private.referenced(p_path);
+END $$;
+REVOKE ALL ON FUNCTION public.review_media_upload_allowed(text,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.review_media_upload_allowed(text,text) TO authenticated;
+CREATE POLICY review_media_safe_insert ON storage.objects AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK (bucket_id NOT IN ('review-photos','review-verifications') OR public.review_media_upload_allowed(bucket_id,name));
+CREATE POLICY review_media_safe_update ON storage.objects AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING (bucket_id NOT IN ('review-photos','review-verifications') OR public.review_media_upload_allowed(bucket_id,name))
+  WITH CHECK (bucket_id NOT IN ('review-photos','review-verifications') OR public.review_media_upload_allowed(bucket_id,name));
+
 CREATE POLICY review_verifications_owner_read ON storage.objects FOR SELECT TO authenticated
   USING (bucket_id = 'review-verifications' AND
     ((storage.foldername(name))[1] = (SELECT auth.uid()::text)

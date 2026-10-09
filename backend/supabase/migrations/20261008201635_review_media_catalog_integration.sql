@@ -10,12 +10,14 @@ CREATE TEMP TABLE review_media_expected (
 ) ON COMMIT DROP;
 INSERT INTO review_media_expected VALUES
     ('public.finish_review_media_cleanup()','f7e925a25dedb987a3166c5ca641ba7db1568a7583bdeca3cee04f27d9189f20','f6c4e71988ed2b789b887484af5fdf2e482bde98f1d1c5b5d4e7ad124c314bd1',true,'v','plpgsql','bigint',ARRAY[]::text[]),
-    ('public.mutate_review_with_media(uuid,uuid,text,timestamp with time zone,text,text[],text[])','a257b40fae93d0c163653395b3de7fd78bf980ae5ca512f5cb3b2400d3e94c02','a47b34c81605a515df01a6a2da7c5503c0a7abfea6946028b51ed52bb31a8830',true,'v','plpgsql','text',ARRAY['p_operation_id','p_review_id','p_kind','p_expected_updated_at','p_content','p_categories','p_food_photos']::text[]),
+    ('public.mutate_review_with_media(uuid,uuid,text,timestamp with time zone,text,text[],text[])','6f1450d4afaa7d3e9dcba3abb231de62aeb7c0a687cc2a9ceafbbe6dc2c2e413','50bfad7bc4fc7ddbc9d9379e8eb13facd938a15f66553576cc69fbcf69aa98b1',true,'v','plpgsql','text',ARRAY['p_operation_id','p_review_id','p_kind','p_expected_updated_at','p_content','p_categories','p_food_photos']::text[]),
     ('public.pending_review_media_cleanup()','21fa71446354fe855508550a3df78ddbe0ad4c1f7007ea905d04bdb98f1ac766','5a92c8f282c895eabaa77f8cf3f452fb659bac33bd519ed8cf439dc1f2905c7b',true,'v','plpgsql','TABLE(path text, owner_id uuid, review_id uuid, purpose text)',ARRAY[]::text[]),
     ('public.queue_review_upload_cleanup(uuid,text[])','00784e9daa9b6b707432200e4df6592010e9f22d2bc9db831bf8329e14bdb453','89c3b573891f598cac5df6ce9a3217639092801a7439ec0404f338f2097114a8',true,'v','plpgsql','text',ARRAY['p_review_id','p_paths']::text[]),
     ('public.read_review_media_commit(uuid,uuid,text)','c7d2e4e111223150ceeda5893310df0e9656e5930823db053135812a69222081','2f14abfc04864f369467f5ac5f0603defa149b8023d7e6b04e2bb8535f8a268e',true,'v','sql','text',ARRAY['p_operation_id','p_review_id','p_kind']::text[]),
     ('public.review_media_delete_allowed(text)','45fd396f240fb1d9fc084f31bd4feea7ee097017f2fd2b8d12df9c2c59152f78','a75dbd787dd388b0761bee11c82a56d5f410688e4cfd953181bce4d613062ae7',true,'v','plpgsql','boolean',ARRAY['p_path']::text[]),
+    ('public.review_media_upload_allowed(text,text)','0a3d375685c5e3fd82721bd8033345c93031704c838a0a7f1b61ff248d9b6636','298c6a127f3a44a193b78be8c1f2577ab58aa34c772b66ccd53f774d807cc90c',true,'v','plpgsql','boolean',ARRAY['p_bucket','p_path']::text[]),
     ('review_media_private.canonical(text,uuid,uuid,text)','87d8397c36cf4c7b986f75cbc2788979333a76be2cc26dc5522cd362f62414a9','87d8397c36cf4c7b986f75cbc2788979333a76be2cc26dc5522cd362f62414a9',false,'i','sql','boolean',ARRAY['p_path','p_owner','p_review','p_purpose']::text[]),
+    ('review_media_private.enqueue_removed()','7edb21d70ea3ff81ab90e13617e8c1c2749b54b1506f1ff42aaa6c5dc33f9e38','7edb21d70ea3ff81ab90e13617e8c1c2749b54b1506f1ff42aaa6c5dc33f9e38',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.guard_references()','846030547ffd76e17596755d7eee4279dcb9b563361435260826071d2f250d59','846030547ffd76e17596755d7eee4279dcb9b563361435260826071d2f250d59',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.lock_changes()','381d89aa6bbf5a59c2ee0fef2a7392ef705147252b324527201b8b6f74376250','381d89aa6bbf5a59c2ee0fef2a7392ef705147252b324527201b8b6f74376250',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.owned_legacy(text,uuid,text)','a2d55f09f03fcaeedd77461198511673da7342a6a4873d37227f9cf612090980','a2d55f09f03fcaeedd77461198511673da7342a6a4873d37227f9cf612090980',false,'i','sql','boolean',ARRAY['p_path','p_owner','p_purpose']::text[]),
@@ -74,7 +76,7 @@ BEGIN
       RAISE EXCEPTION 'review_media_catalog_source_drift';
     END IF;
   END LOOP;
-  IF (SELECT count(*) FROM pg_proc WHERE pronamespace='review_media_private'::regnamespace)<>6 THEN
+  IF (SELECT count(*) FROM pg_proc WHERE pronamespace='review_media_private'::regnamespace)<>7 THEN
     RAISE EXCEPTION 'review_media_catalog_identity_conflict';
   END IF;
   -- Preserve semantic defaults. PG15 pg_node_tree contains parser location
@@ -333,12 +335,14 @@ BEGIN
   PERFORM set_config('search_path','public, pg_catalog',true);
   FOR v_expected IN SELECT * FROM (VALUES
     ('public.finish_review_media_cleanup()','f6c4e71988ed2b789b887484af5fdf2e482bde98f1d1c5b5d4e7ad124c314bd1',true,'v','plpgsql','bigint',ARRAY[]::text[]),
-    ('public.mutate_review_with_media(uuid,uuid,text,timestamp with time zone,text,text[],text[])','a47b34c81605a515df01a6a2da7c5503c0a7abfea6946028b51ed52bb31a8830',true,'v','plpgsql','text',ARRAY['p_operation_id','p_review_id','p_kind','p_expected_updated_at','p_content','p_categories','p_food_photos']::text[]),
+    ('public.mutate_review_with_media(uuid,uuid,text,timestamp with time zone,text,text[],text[])','50bfad7bc4fc7ddbc9d9379e8eb13facd938a15f66553576cc69fbcf69aa98b1',true,'v','plpgsql','text',ARRAY['p_operation_id','p_review_id','p_kind','p_expected_updated_at','p_content','p_categories','p_food_photos']::text[]),
     ('public.pending_review_media_cleanup()','5a92c8f282c895eabaa77f8cf3f452fb659bac33bd519ed8cf439dc1f2905c7b',true,'v','plpgsql','TABLE(path text, owner_id uuid, review_id uuid, purpose text)',ARRAY[]::text[]),
     ('public.queue_review_upload_cleanup(uuid,text[])','89c3b573891f598cac5df6ce9a3217639092801a7439ec0404f338f2097114a8',true,'v','plpgsql','text',ARRAY['p_review_id','p_paths']::text[]),
     ('public.read_review_media_commit(uuid,uuid,text)','2f14abfc04864f369467f5ac5f0603defa149b8023d7e6b04e2bb8535f8a268e',true,'v','sql','text',ARRAY['p_operation_id','p_review_id','p_kind']::text[]),
     ('public.review_media_delete_allowed(text)','a75dbd787dd388b0761bee11c82a56d5f410688e4cfd953181bce4d613062ae7',true,'v','plpgsql','boolean',ARRAY['p_path']::text[]),
+    ('public.review_media_upload_allowed(text,text)','298c6a127f3a44a193b78be8c1f2577ab58aa34c772b66ccd53f774d807cc90c',true,'v','plpgsql','boolean',ARRAY['p_bucket','p_path']::text[]),
     ('review_media_private.canonical(text,uuid,uuid,text)','87d8397c36cf4c7b986f75cbc2788979333a76be2cc26dc5522cd362f62414a9',false,'i','sql','boolean',ARRAY['p_path','p_owner','p_review','p_purpose']::text[]),
+    ('review_media_private.enqueue_removed()','7edb21d70ea3ff81ab90e13617e8c1c2749b54b1506f1ff42aaa6c5dc33f9e38',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.guard_references()','846030547ffd76e17596755d7eee4279dcb9b563361435260826071d2f250d59',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.lock_changes()','381d89aa6bbf5a59c2ee0fef2a7392ef705147252b324527201b8b6f74376250',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.owned_legacy(text,uuid,text)','a2d55f09f03fcaeedd77461198511673da7342a6a4873d37227f9cf612090980',false,'i','sql','boolean',ARRAY['p_path','p_owner','p_purpose']::text[]),
@@ -366,7 +370,7 @@ BEGIN
       RAISE EXCEPTION 'review_media_catalog_function_drift';
     END IF;
   END LOOP;
-  IF (SELECT count(*) FROM pg_proc WHERE pronamespace='review_media_private'::regnamespace)<>6
+  IF (SELECT count(*) FROM pg_proc WHERE pronamespace='review_media_private'::regnamespace)<>7
      OR (SELECT count(*) FROM pg_class WHERE relnamespace='review_media_private'::regnamespace AND relkind IN ('r','p','v','m','f','S'))<>2
      OR NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname='review_media_private' AND nspowner='postgres'::regrole)
      OR NOT has_schema_privilege(v_owner,'review_media_private','USAGE')
@@ -470,10 +474,25 @@ BEGIN
   END IF;
   -- Exact allowlist and unchanged G014 assertions run through the owner bridge
   -- above; canonical readback also runs them before this catalog-only block.
+  -- REVIEW_MEDIA_TRIGGER_READBACK_BEGIN
+  IF EXISTS (
+    WITH expected(name,definition) AS (VALUES
+      ('review_media_enqueue_removed','CREATE TRIGGER review_media_enqueue_removed AFTER DELETE OR UPDATE OF food_photos, verification_photo, user_id, id ON public.reviews FOR EACH ROW EXECUTE FUNCTION review_media_private.enqueue_removed()'),
+      ('review_media_reference_guard','CREATE TRIGGER review_media_reference_guard BEFORE INSERT OR UPDATE OF food_photos, verification_photo, user_id, id ON public.reviews FOR EACH ROW EXECUTE FUNCTION review_media_private.guard_references()'),
+      ('review_media_serialize','CREATE TRIGGER review_media_serialize BEFORE INSERT OR DELETE OR UPDATE OF food_photos, verification_photo, user_id, id ON public.reviews FOR EACH STATEMENT EXECUTE FUNCTION review_media_private.lock_changes()')
+    ), actual AS (
+      SELECT tgname::text,pg_get_triggerdef(oid),tgenabled::text FROM pg_trigger
+      WHERE tgrelid='public.reviews'::regclass AND tgname LIKE 'review_media_%' AND NOT tgisinternal
+    ), wanted AS (SELECT name,definition,'O'::text FROM expected)
+    (SELECT * FROM wanted EXCEPT SELECT * FROM actual) UNION ALL (SELECT * FROM actual EXCEPT SELECT * FROM wanted)
+  ) THEN RAISE EXCEPTION 'review_media_catalog_trigger_drift'; END IF;
+  -- REVIEW_MEDIA_TRIGGER_READBACK_END
   -- Compare command, role, permissive/restrictive bit and BOTH complete predicates.
   IF EXISTS (
     WITH expected(name,cmd,permissive,role_name,using_expr,check_expr) AS (VALUES
       ('review_media_safe_delete','d',false,'authenticated','((bucket_id <> ''review-photos''::text) OR review_media_delete_allowed(name))',NULL::text),
+      ('review_media_safe_insert','a',false,'authenticated',NULL::text,'((bucket_id <> ALL (ARRAY[''review-photos''::text, ''review-verifications''::text])) OR review_media_upload_allowed(bucket_id, name))'),
+      ('review_media_safe_update','w',false,'authenticated','((bucket_id <> ALL (ARRAY[''review-photos''::text, ''review-verifications''::text])) OR review_media_upload_allowed(bucket_id, name))','((bucket_id <> ALL (ARRAY[''review-photos''::text, ''review-verifications''::text])) OR review_media_upload_allowed(bucket_id, name))'),
       ('review_media_workflow_read','r',true,'privacy_workflow_owner','(bucket_id = ANY (ARRAY[''review-photos''::text, ''review-verifications''::text]))',NULL::text),
       ('review_photos_food_insert','a',false,'authenticated',NULL::text,'((bucket_id <> ''review-photos''::text) OR ((split_part(name, ''/''::text, 4) = ''food''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))'),
       ('review_photos_food_update','w',false,'authenticated','((bucket_id <> ''review-photos''::text) OR ((split_part(name, ''/''::text, 4) = ''food''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))','((bucket_id <> ''review-photos''::text) OR ((split_part(name, ''/''::text, 4) = ''food''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))'),

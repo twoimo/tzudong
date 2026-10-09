@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 MIGRATION = ROOT / 'backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql'
 PRIVATE_MIGRATION = ROOT / 'backend/supabase/migrations/20261008200719_review_verification_private.sql'
 PG = Path(os.environ.get('REVIEW_TEST_PG_BIN', '/opt/homebrew/opt/postgresql@17/bin'))
+EXPECTED_PG_VERSION = os.environ.get('REVIEW_TEST_PG_VERSION', '17.11')
 DOCKER_CONTEXT = os.environ.get('REVIEW_TEST_DOCKER_CONTEXT')
 DOCKER_CONTAINER = os.environ.get('REVIEW_TEST_DOCKER_CONTAINER')
 OWNER = '11111111-1111-4111-8111-111111111111'
@@ -104,10 +105,12 @@ class ReviewMediaSQL(unittest.TestCase):
                 raise unittest.SkipTest('REVIEW_TEST_POSTGRES_VERSION_MISMATCH')
             cls.connection = ['-h', '127.0.0.1', '-U', 'supabase_admin']
             return
+        if EXPECTED_PG_VERSION not in ('17.6', '17.11'):
+            raise unittest.SkipTest('REVIEW_TEST_POSTGRES_VERSION_NOT_ADMITTED')
         if not (PG / 'initdb').exists():
-            raise unittest.SkipTest('REVIEW_TEST_REQUIRES_ISOLATED_POSTGRES_17_11')
+            raise unittest.SkipTest('REVIEW_TEST_REQUIRES_ISOLATED_POSTGRES')
         version = subprocess.check_output([str(PG / 'postgres'), '--version'], text=True)
-        if ' 17.11 ' not in version:
+        if not re.search(r'\b' + re.escape(EXPECTED_PG_VERSION) + r'(?:\s|$)', version):
             raise unittest.SkipTest('REVIEW_TEST_POSTGRES_VERSION_MISMATCH')
         cls.temp = tempfile.TemporaryDirectory(prefix='review-media-pg-')
         cls.base = Path(cls.temp.name)
@@ -130,6 +133,15 @@ class ReviewMediaSQL(unittest.TestCase):
         subprocess.run(self.command('createdb') + self.connection + [self.database], check=True, capture_output=True)
         self.psql = self.command('psql') + ['-X', '-qAt'] + self.connection + ['-d', self.database, '-v', 'ON_ERROR_STOP=1']
         self.sql(fixture())
+        if self._testMethodName.startswith('test_historical_url_'):
+            self.sql(f"""
+UPDATE public.reviews SET food_photos = ARRAY(
+ SELECT 'https://fixture.invalid/storage/v1/object/public/review-photos/{BASE}/food/history-' || i || '.webp?fixture=1'
+ FROM generate_series(1,10) i) WHERE id = '{REVIEW}';
+UPDATE public.fixture_revision SET updated_at = (SELECT updated_at FROM public.reviews WHERE id = '{REVIEW}');
+INSERT INTO storage.objects SELECT 'review-photos','{BASE}/food/history-' || i || '.webp' FROM generate_series(1,10) i;
+DELETE FROM storage.objects WHERE name = '{OLD}';
+""")
         if self._testMethodName == 'test_authoritative_legacy_edit_and_cleanup':
             self.sql(f"""
 UPDATE public.reviews SET food_photos = ARRAY['{OWNER}/1720000000000_food_0_old.webp'],
@@ -330,6 +342,201 @@ DO $$ BEGIN
 END $$;
 SELECT public.check_test(public.finish_review_media_cleanup() = 0,'REVIEW_TEST_COMPENSATION_READBACK');
 """)
+
+    def test_direct_delete_queues_authoritative_media_and_rolls_back(self):
+        self.sql(PRIVATE_MIGRATION.read_text())
+        self.sql(f"""
+UPDATE storage.objects SET bucket_id = 'review-verifications' WHERE name = '{VERIFY}';
+BEGIN;
+DELETE FROM public.reviews WHERE id = '{REVIEW}';
+SELECT public.check_test((SELECT count(*) FROM review_media_private.cleanup WHERE owner_id='{OWNER}' AND retired) = 2,'REVIEW_TEST_DIRECT_QUEUE');
+ROLLBACK;
+SELECT public.check_test((SELECT count(*) FROM review_media_private.cleanup) = 0,'REVIEW_TEST_DIRECT_ROLLBACK');
+-- Direct/guarded deletion has an admin actor, but the queued owner is OLD.user_id.
+SET request.jwt.claim.sub = '{OTHER}';
+DELETE FROM public.reviews WHERE id = '{REVIEW}';
+SET ROLE authenticated;
+SELECT public.check_test((SELECT count(*) FROM public.pending_review_media_cleanup()) = 0,'REVIEW_TEST_OTHER_QUEUE_HIDDEN');
+SET request.jwt.claim.sub = '{OWNER}';
+SELECT public.check_test((SELECT count(*) FROM public.pending_review_media_cleanup()) = 2,'REVIEW_TEST_OWNER_DIRECT_QUEUE');
+SELECT public.check_test(public.finish_review_media_cleanup() = 2,'REVIEW_TEST_PRIVATE_ABSENCE_REQUIRED');
+DELETE FROM storage.objects WHERE name IN ('{OLD}','{VERIFY}');
+SELECT public.check_test(public.finish_review_media_cleanup() = 0,'REVIEW_TEST_DIRECT_DRAIN');
+""")
+
+    def test_private_shadow_upload_rejected(self):
+        self.sql(PRIVATE_MIGRATION.read_text())
+        self.sql(f"""
+SET ROLE authenticated; SET request.jwt.claim.sub = '{OWNER}';
+DO $$ BEGIN
+ BEGIN INSERT INTO storage.objects VALUES ('review-verifications','{VERIFY}');
+   RAISE EXCEPTION 'REVIEW_TEST_PRIVATE_SHADOW';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+INSERT INTO storage.objects VALUES ('review-verifications','{BASE}/verification/fresh.webp');
+SELECT public.check_test((SELECT is_verified FROM public.reviews WHERE id='{REVIEW}'),'REVIEW_TEST_MODERATION_PRESERVED');
+""")
+
+    def test_retired_uploads_rejected_after_cleanup(self):
+        self.sql(PRIVATE_MIGRATION.read_text())
+        self.sql(f"""
+SET ROLE authenticated; SET request.jwt.claim.sub = '{OWNER}';
+SELECT public.check_test(public.mutate_review_with_media('{DELETE}','{REVIEW}','delete',
+ (SELECT updated_at FROM public.fixture_revision))='REVIEW_COMMITTED','REVIEW_TEST_RETIRE_DELETE');
+DELETE FROM storage.objects WHERE name IN ('{OLD}','{VERIFY}');
+SELECT public.check_test(public.finish_review_media_cleanup()=0,'REVIEW_TEST_RETIRE_COMPLETE');
+DO $$ BEGIN
+ BEGIN INSERT INTO storage.objects VALUES ('review-photos','{OLD}');
+   RAISE EXCEPTION 'REVIEW_TEST_RETIRED_FOOD_UPLOAD';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO storage.objects VALUES ('review-verifications','{VERIFY}');
+   RAISE EXCEPTION 'REVIEW_TEST_RETIRED_VERIFICATION_UPLOAD';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+""")
+
+    def test_historical_url_edit_removes_only_authoritative_values(self):
+        retained = f'https://fixture.invalid/storage/v1/object/public/review-photos/{BASE}/food/history-1.webp?fixture=1'
+        self.sql(f"""
+SET ROLE authenticated; SET request.jwt.claim.sub = '{OWNER}';
+SELECT public.check_test(public.mutate_review_with_media('{EDIT}','{REVIEW}','edit',
+ (SELECT updated_at FROM public.fixture_revision),'Updated historical review text.',ARRAY['한식'],ARRAY['{retained}','{NEW}'])='REVIEW_COMMITTED','REVIEW_TEST_HISTORICAL_EDIT');
+SELECT public.check_test((SELECT food_photos FROM public.reviews WHERE id='{REVIEW}')=ARRAY['{retained}','{NEW}'],'REVIEW_TEST_HISTORICAL_FINAL_LIST');
+SELECT public.check_test((SELECT count(*) FROM public.pending_review_media_cleanup())=9,'REVIEW_TEST_HISTORICAL_QUEUE');
+SELECT public.check_test(public.mutate_review_with_media('{DELETE}','{REVIEW}','edit',
+ (SELECT updated_at FROM public.reviews WHERE id='{REVIEW}'),'Attempt to add foreign URL photo.',ARRAY['한식'],ARRAY['https://untrusted.invalid/food.webp'])='REVIEW_INVALID','REVIEW_TEST_FOREIGN_URL_REJECTED');
+DELETE FROM storage.objects WHERE name LIKE '{BASE}/food/history-%';
+SELECT public.check_test(public.finish_review_media_cleanup()=0,'REVIEW_TEST_HISTORICAL_DRAIN');
+SELECT public.check_test(EXISTS(SELECT 1 FROM storage.objects WHERE name='{BASE}/food/history-1.webp'),'REVIEW_TEST_RETAINED_HISTORY_PROTECTED');
+""")
+
+    def test_historical_url_delete_normalizes_owned_paths(self):
+        self.sql(f"""
+DELETE FROM public.reviews WHERE id='{REVIEW}';
+SELECT public.check_test((SELECT count(*) FROM review_media_private.cleanup)=11,'REVIEW_TEST_HISTORICAL_DELETE_QUEUE');
+SELECT public.check_test(NOT EXISTS(SELECT 1 FROM review_media_private.cleanup WHERE path LIKE 'https:%'),'REVIEW_TEST_HISTORY_NO_URL_QUEUE');
+""")
+
+    def test_minimum_owner_upload_trigger_and_cleanup(self):
+        if self.prefix:
+            self.skipTest('REVIEW_TEST_FRESH_CLUSTER_ONLY')
+        self.sql(PRIVATE_MIGRATION.read_text())
+        source = (ROOT / 'backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql').read_text()
+        claim = re.search(r'CREATE OR REPLACE FUNCTION privacy_retention.g041_current_claim_user_id\(\).*?\$function\$;', source, re.S).group(0)
+        # A narrow functional fixture, not a replay of the G014 integration.
+        # Only this newly initialized cluster receives the synthetic role.
+        self.sql(f"""
+CREATE ROLE review_boundary_owner NOLOGIN NOINHERIT NOBYPASSRLS;
+CREATE SCHEMA privacy_retention;
+{claim}
+ALTER FUNCTION privacy_retention.g041_current_claim_user_id() OWNER TO review_boundary_owner;
+REVOKE ALL ON FUNCTION privacy_retention.g041_current_claim_user_id() FROM PUBLIC,anon,authenticated;
+GRANT USAGE ON SCHEMA public,storage,review_media_private,privacy_retention TO review_boundary_owner;
+GRANT SELECT,DELETE ON public.reviews TO review_boundary_owner;
+GRANT UPDATE(content,categories,food_photos,is_verified,admin_note,updated_at) ON public.reviews TO review_boundary_owner;
+CREATE POLICY fixture_boundary_reviews ON public.reviews FOR ALL TO review_boundary_owner USING(true) WITH CHECK(true);
+GRANT SELECT ON storage.objects TO review_boundary_owner;
+CREATE POLICY fixture_boundary_storage ON storage.objects FOR SELECT TO review_boundary_owner USING(bucket_id IN ('review-photos','review-verifications'));
+GRANT SELECT,INSERT ON review_media_private.commits TO review_boundary_owner;
+GRANT SELECT,INSERT,UPDATE ON review_media_private.cleanup TO review_boundary_owner;
+ALTER TABLE review_media_private.commits FORCE ROW LEVEL SECURITY;
+ALTER TABLE review_media_private.cleanup FORCE ROW LEVEL SECURITY;
+CREATE POLICY fixture_commits_select ON review_media_private.commits FOR SELECT TO review_boundary_owner USING(true);
+CREATE POLICY fixture_commits_insert ON review_media_private.commits FOR INSERT TO review_boundary_owner WITH CHECK(true);
+CREATE POLICY fixture_cleanup_select ON review_media_private.cleanup FOR SELECT TO review_boundary_owner USING(true);
+CREATE POLICY fixture_cleanup_insert ON review_media_private.cleanup FOR INSERT TO review_boundary_owner WITH CHECK(true);
+CREATE POLICY fixture_cleanup_update ON review_media_private.cleanup FOR UPDATE TO review_boundary_owner USING(true) WITH CHECK(true);
+DO $$ DECLARE f record; BEGIN
+ FOR f IN SELECT p.oid,p.proname,n.nspname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='review_media_private' OR (n.nspname='public' AND p.proname IN (
+    'mutate_review_with_media','queue_review_upload_cleanup','read_review_media_commit',
+    'pending_review_media_cleanup','finish_review_media_cleanup','review_media_delete_allowed','review_media_upload_allowed')) LOOP
+  EXECUTE format('ALTER FUNCTION %s OWNER TO review_boundary_owner',f.oid::regprocedure);
+  IF f.nspname='public' THEN
+   EXECUTE replace(pg_get_functiondef(f.oid),'auth.uid()','privacy_retention.g041_current_claim_user_id()');
+  END IF;
+ END LOOP;
+END $$;
+SELECT public.check_test(NOT has_schema_privilege('review_boundary_owner','auth','USAGE'),'REVIEW_TEST_NO_AUTH_GRANT');
+SELECT public.check_test(NOT has_table_privilege('review_boundary_owner','storage.objects','INSERT,UPDATE,DELETE'),'REVIEW_TEST_NO_STORAGE_WRITE_GRANT');
+SELECT public.check_test(NOT has_function_privilege('anon','public.review_media_upload_allowed(text,text)','EXECUTE'),'REVIEW_TEST_UPLOAD_ANON_DENIED');
+SET ROLE authenticated; SET request.jwt.claim.sub='{OWNER}'; SET request.jwt.claim.role='authenticated';
+SELECT public.check_test(NOT public.review_media_upload_allowed('review-verifications','{VERIFY}'),'REVIEW_TEST_OWNER_SHADOW_DENIED');
+INSERT INTO storage.objects VALUES ('review-verifications','{BASE}/verification/fresh.webp');
+SELECT public.check_test(public.mutate_review_with_media('{DELETE}','{REVIEW}','delete',
+ (SELECT updated_at FROM public.fixture_revision))='REVIEW_COMMITTED','REVIEW_TEST_MINIMUM_OWNER_DELETE');
+SELECT public.check_test((SELECT count(*) FROM public.pending_review_media_cleanup())=2,'REVIEW_TEST_MINIMUM_OWNER_QUEUE');
+DELETE FROM storage.objects WHERE name IN ('{OLD}','{VERIFY}');
+SELECT public.check_test(public.finish_review_media_cleanup()=0,'REVIEW_TEST_MINIMUM_OWNER_FINISH');
+SELECT public.check_test(NOT public.review_media_upload_allowed('review-photos','{OLD}'),'REVIEW_TEST_MINIMUM_OWNER_RETIRED');
+""")
+
+    def test_storage_update_cannot_bypass_retirement_or_shadow(self):
+        self.sql(PRIVATE_MIGRATION.read_text())
+        self.sql(f"""
+GRANT UPDATE ON storage.objects TO authenticated;
+CREATE POLICY fixture_storage_update ON storage.objects FOR UPDATE TO authenticated
+ USING(split_part(name,'/',1)=auth.uid()::text) WITH CHECK(split_part(name,'/',1)=auth.uid()::text);
+SET ROLE authenticated; SET request.jwt.claim.sub='{OWNER}';
+INSERT INTO storage.objects VALUES ('review-verifications','{BASE}/verification/candidate.webp');
+DO $$ BEGIN
+ BEGIN UPDATE storage.objects SET name='{VERIFY}' WHERE name='{BASE}/verification/candidate.webp';
+  RAISE EXCEPTION 'REVIEW_TEST_SHADOW_RENAME';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+SELECT public.check_test(public.queue_review_upload_cleanup('{REVIEW}',ARRAY['{BASE}/food/retired.webp'])='REVIEW_CLEANUP_QUEUED','REVIEW_TEST_RENAME_RETIRE');
+DO $$ BEGIN
+ BEGIN UPDATE storage.objects SET name='{BASE}/food/retired.webp' WHERE name='{NEW}';
+  RAISE EXCEPTION 'REVIEW_TEST_RETIRED_RENAME';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+WITH changed AS (UPDATE storage.objects SET name=name WHERE name='{OLD}' RETURNING 1)
+ SELECT public.check_test((SELECT count(*) FROM changed)=0,'REVIEW_TEST_LIVE_REPLACE_DENIED');
+""")
+
+    def test_independent_trigger_readback_rejects_disabled_or_missing_queue(self):
+        sql = (ROOT / 'backend/supabase/scripts/local_catalog_readback.sql').read_text()
+        block = sql.split('-- REVIEW_MEDIA_TRIGGER_READBACK_BEGIN', 1)[1].split('-- REVIEW_MEDIA_TRIGGER_READBACK_END', 1)[0]
+        self.sql('DO $$ BEGIN ' + block + ' END $$;')
+        for action in ('DISABLE TRIGGER review_media_enqueue_removed', 'DROP TRIGGER review_media_enqueue_removed'):
+            mutation = ('ALTER TABLE public.reviews ' + action if action.startswith('DISABLE')
+                        else action + ' ON public.reviews')
+            result = subprocess.run(self.psql, input='BEGIN; ' + mutation + '; DO $$ BEGIN ' + block + ' END $$; ROLLBACK;',
+                                    text=True, capture_output=True, timeout=10)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('review_media_catalog_trigger_drift', result.stderr)
+
+    def test_concurrent_upload_waits_for_retirement(self):
+        self.sql(PRIVATE_MIGRATION.read_text())
+        retire = subprocess.Popen(self.psql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        upload = None
+        path = f'{BASE}/food/delayed.webp'
+        try:
+            retire.stdin.write(f"BEGIN; SET ROLE authenticated; SET request.jwt.claim.sub='{OWNER}'; SELECT public.queue_review_upload_cleanup('{REVIEW}',ARRAY['{path}']); SELECT 'READY';\n")
+            retire.stdin.flush()
+            self.assertEqual(retire.stdout.readline().strip(), 'REVIEW_CLEANUP_QUEUED')
+            self.assertEqual(retire.stdout.readline().strip(), 'READY')
+            upload = subprocess.Popen(self.psql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            upload.stdin.write(f"SET ROLE authenticated; SET request.jwt.claim.sub='{OWNER}'; SELECT 'UPLOAD_READY'; INSERT INTO storage.objects VALUES ('review-photos','{path}');\n")
+            upload.stdin.close()
+            self.assertEqual(upload.stdout.readline().strip(), 'UPLOAD_READY')
+            with self.assertRaises(subprocess.TimeoutExpired):
+                upload.wait(timeout=0.15)
+            retire.stdin.write('COMMIT;\n'); retire.stdin.close()
+            retire.wait(timeout=5)
+            self.assertEqual(retire.returncode, 0)
+            upload.wait(timeout=5)
+            self.assertNotEqual(upload.returncode, 0)
+            self.assertIn('row-level security policy', upload.stderr.read())
+            self.sql(f"SELECT public.check_test(NOT EXISTS(SELECT 1 FROM storage.objects WHERE name='{path}'),'REVIEW_TEST_DELAYED_UPLOAD_ABSENT');")
+        finally:
+            for process in (retire, upload):
+                if process and process.poll() is None:
+                    process.kill(); process.wait(timeout=5)
+                if process:
+                    for stream in (process.stdin, process.stdout, process.stderr):
+                        if stream and not stream.closed:
+                            stream.close()
 
     def test_concurrent_reattach_waits_for_retirement(self):
         retire = subprocess.Popen(self.psql, stdin=subprocess.PIPE, stdout=subprocess.PIPE,

@@ -19,11 +19,10 @@ describe('review photo ownership source contracts', () => {
   test('ReviewEditModal validates ownership before rendering, persisting, or deleting object keys', () => {
     const modalSource = source('components/reviews/ReviewEditModal.tsx');
 
-    expect(modalSource).toContain('getCanonicalReviewPhotoObjectPath');
-    expect(modalSource).toContain('getLegacyReviewPhotoObjectPath');
-    expect(modalSource).toContain('getOwnedFoodPhotoPaths');
+    expect(modalSource).toContain('getEditableFoodPhotoValues');
+    expect(modalSource).toContain('restoreEditableFoodPhotoValues');
     expect(modalSource).toContain('ReviewMediaMutation');
-    expect(modalSource).toContain('resolveReviewPhotoUrl(path, foodPhotoOwnership)');
+    expect(modalSource).toContain('resolveReviewPhotoUrl(storedValue, foodPhotoOwnership)');
     const helper = source('lib/reviews/review-media-mutation.ts');
     expect(helper).toContain(".eq('user_id', ownerId)");
     expect(helper).toContain('getCanonicalReviewPhotoObjectPath(path, { ownerId, reviewId: review_id, purpose })');

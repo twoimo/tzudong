@@ -538,7 +538,7 @@ describe("nightly regression package and source contracts", () => {
       "fetch(`${supabaseUrl}/functions/v1/naver-geocode`",
       "LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:naver-geocode-fixture-v1",
       "functionResponse.headers.get('cache-control') === 'no-store'",
-      "const objectPrefix = `${userId}/nightly-browser-cors/review.webp`;",
+      "const objectPrefix = `${userId}/reviews/${storageReviewId}/food/nightly-browser-cors.webp`;",
       "'Content-Type': 'image/webp'",
       "storagePublicReadOk = publicReadResponse.ok",
       "} finally {",

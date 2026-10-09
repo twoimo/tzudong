@@ -9,11 +9,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
-    getCanonicalReviewPhotoObjectPath,
-    getLegacyReviewPhotoObjectPath,
     resolveReviewPhotoUrl,
     type ReviewPhotoOwnership,
 } from "@/lib/review-photo-url";
+import { getEditableFoodPhotoValues, restoreEditableFoodPhotoValues } from "@/lib/reviews/review-edit-food-values";
 import { ReviewMediaMutation, createReviewMediaDependencies, reviewMutationMessage } from "@/lib/reviews/review-media-mutation";
 import imageCompression from "browser-image-compression";
 import {
@@ -92,17 +91,6 @@ function getFoodPhotoOwnership(
     };
 }
 
-function getOwnedFoodPhotoPaths(
-    values: unknown,
-    ownership: ReviewPhotoOwnership | null,
-): string[] {
-    if (!Array.isArray(values)) return [];
-    return [...new Set(values.flatMap((value) => {
-        const path = getCanonicalReviewPhotoObjectPath(value, ownership) ?? getLegacyReviewPhotoObjectPath(value, ownership);
-        return path ? [path] : [];
-    }))];
-}
-
 function isSupportedFoodPhotoFile(file: File): boolean {
     return SUPPORTED_FOOD_PHOTO_MIME_TYPES.has(file.type);
 }
@@ -143,12 +131,43 @@ const CATEGORIES = [
 
 type Category = typeof CATEGORIES[number];
 
+function ExistingFoodPhoto({ url, index, disabled, onRemove }: {
+    url: string | null;
+    index: number;
+    disabled: boolean;
+    onRemove: () => void;
+}) {
+    return (
+        <div className="relative group">
+            <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
+                {url ? (
+                    <Image src={url} alt={`기존 음식 사진 ${index + 1}`} fill unoptimized sizes="80px" className="object-cover" />
+                ) : (
+                    <div role="img" aria-label={`기존 음식 사진 ${index + 1}: 미리보기 없음`} className="flex h-full items-center justify-center bg-muted p-2 text-center text-xs text-muted-foreground">
+                        미리보기 없음
+                    </div>
+                )}
+            </div>
+            <button
+                type="button"
+                aria-label={`기존 음식 사진 ${index + 1} 제거`}
+                disabled={disabled}
+                onClick={onRemove}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 disabled:cursor-not-allowed"
+            >
+                <XIcon className="h-3 w-3" />
+            </button>
+        </div>
+    );
+}
+
 export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEditModalProps) {
     const { user } = useAuth();
     const ownerRef = useRef(user?.id);
     useLayoutEffect(() => { ownerRef.current = user?.id; }, [user?.id]);
     const mutationRef = useRef<ReviewMediaMutation | null>(null);
     const [retryKind, setRetryKind] = useState<'edit' | 'delete' | null>(null);
+    const [canCancelMissingUpload, setCanCancelMissingUpload] = useState(false);
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
@@ -162,6 +181,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     useEffect(() => {
         mutationRef.current = new ReviewMediaMutation(createReviewMediaDependencies(supabase, () => ownerRef.current, compressFoodImage));
         setRetryKind(null);
+        setCanCancelMissingUpload(false);
         setCleanupFailureMessage(null);
     }, [user?.id]);
     const foodPhotoOwnership = useMemo(
@@ -169,14 +189,13 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         [review?.id, user?.id],
     );
     const existingFoodPhotoPreviews = useMemo(() => {
-        return getOwnedFoodPhotoPaths(existingFoodPhotos, foodPhotoOwnership).reduce<
-            Array<{ path: string; url: string }>
-        >((previews, path) => {
-            const url = resolveReviewPhotoUrl(path, foodPhotoOwnership);
-            if (url) previews.push({ path, url });
-            return previews;
-        }, []);
-    }, [existingFoodPhotos, foodPhotoOwnership]);
+        return getEditableFoodPhotoValues(existingFoodPhotos, review?.foodPhotos, foodPhotoOwnership)
+            .map((storedValue, storedIndex) => ({
+                storedValue,
+                storedIndex,
+                url: resolveReviewPhotoUrl(storedValue, foodPhotoOwnership),
+            }));
+    }, [existingFoodPhotos, foodPhotoOwnership, review?.foodPhotos]);
 
     // Refs
     const foodPhotosDropRef = useRef<HTMLDivElement>(null);
@@ -216,11 +235,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             }
 
             setCategories(puredCategories);
-            setExistingFoodPhotos(getOwnedFoodPhotoPaths(review.foodPhotos, foodPhotoOwnership));
+            setExistingFoodPhotos([...review.foodPhotos]);
             setNewFoodPhotos([]);
             setRemovedPhotos([]);
             setCleanupFailureMessage(null);
             setRetryKind(null);
+            setCanCancelMissingUpload(false);
         }
     }, [foodPhotoOwnership, isOpen, review]);
 
@@ -232,12 +252,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         const saveTimer = setTimeout(async () => {
             try {
                 // Use review ID as draft key
-                const ownedExistingFoodPhotos = getOwnedFoodPhotoPaths(
+                const draftFoodPhotoValues = getEditableFoodPhotoValues(
                     existingFoodPhotos,
+                    review.foodPhotos,
                     foodPhotoOwnership,
                 );
-                const ownedRemovedPhotos = getOwnedFoodPhotoPaths(
+                const draftRemovedValues = getEditableFoodPhotoValues(
                     removedPhotos,
+                    review.foodPhotos,
                     foodPhotoOwnership,
                 );
                 await saveEditDraft({
@@ -249,8 +271,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     content: content,
                     verificationPhoto: null,
                     foodPhotos: [],
-                    existingFoodPhotos: ownedExistingFoodPhotos,
-                    removedPhotos: ownedRemovedPhotos,
+                    existingFoodPhotos: draftFoodPhotoValues,
+                    removedPhotos: draftRemovedValues,
                 });
                 setLastSavedAt(new Date());
             } catch (error) {
@@ -263,12 +285,13 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Load draft on open
     useEffect(() => {
+        let cancelled = false;
         const loadDraft = async () => {
             if (!isOpen || !review || !user || mutationRef.current?.pending) return;
 
             try {
                 const draft = await getEditDraft(user.id, `edit_${review.id}`);
-                if (ownerRef.current !== user.id || mutationRef.current?.pending) return;
+                if (cancelled || ownerRef.current !== user.id || mutationRef.current?.pending) return;
                 if (draft && draft.savedAt) {
                     // Only load draft if it's newer than review data
                     const draftDate = new Date(draft.savedAt);
@@ -282,12 +305,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     }
                     if (Array.isArray(draft.existingFoodPhotos)) {
                         setExistingFoodPhotos(
-                            getOwnedFoodPhotoPaths(draft.existingFoodPhotos, foodPhotoOwnership),
+                            restoreEditableFoodPhotoValues(review.foodPhotos, draft.existingFoodPhotos, draft.removedPhotos, foodPhotoOwnership),
                         );
                     }
                     if (Array.isArray(draft.removedPhotos)) {
                         setRemovedPhotos(
-                            getOwnedFoodPhotoPaths(draft.removedPhotos, foodPhotoOwnership),
+                            getEditableFoodPhotoValues(draft.removedPhotos, review.foodPhotos, foodPhotoOwnership),
                         );
                     }
                 }
@@ -296,6 +319,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             }
         };
         loadDraft();
+        return () => { cancelled = true; };
     }, [foodPhotoOwnership, isOpen, review, user]);
 
     const appendNewFoodPhotos = useCallback((files: File[]) => {
@@ -327,17 +351,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     }, []);
 
     // Remove existing photo
-    const removeExistingFoodPhoto = useCallback((photoPath: string) => {
+    const removeExistingFoodPhoto = useCallback((storedValue: string, storedIndex: number) => {
         if (mutationRef.current?.pending) return;
-        const ownedPhotoPath = getCanonicalReviewPhotoObjectPath(photoPath, foodPhotoOwnership)
-            ?? getLegacyReviewPhotoObjectPath(photoPath, foodPhotoOwnership);
-        if (!ownedPhotoPath) return;
+        if (existingFoodPhotos[storedIndex] !== storedValue) return;
 
-        setExistingFoodPhotos(prev => prev.filter(p => p !== ownedPhotoPath));
-        setRemovedPhotos(prev => (
-            prev.includes(ownedPhotoPath) ? prev : [...prev, ownedPhotoPath]
-        ));
-    }, [foodPhotoOwnership]);
+        setExistingFoodPhotos(prev => prev.filter((value, index) => (
+            index !== storedIndex || value !== storedValue
+        )));
+        setRemovedPhotos(prev => [...prev, storedValue]);
+    }, [existingFoodPhotos]);
 
     // Drag and drop handlers
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -379,13 +401,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                 ownerId, reviewId: review.id, kind,
                 ...(kind === 'edit' ? { edit: {
                     content, categories: [...categories],
-                    foodPhotos: getOwnedFoodPhotoPaths(existingFoodPhotos, foodPhotoOwnership),
+                    foodPhotos: getEditableFoodPhotoValues(existingFoodPhotos, review.foodPhotos, foodPhotoOwnership),
                     files: [...newFoodPhotos],
                     original: { content: review.content, categories: review.categories, foodPhotos: review.foodPhotos },
                 } } : {}),
             });
             if (ownerRef.current !== ownerId) return;
-            setRetryKind(mutationRef.current!.pending ? kind : null);
+            setRetryKind(mutationRef.current!.pendingKind);
+            setCanCancelMissingUpload(mutationRef.current!.canCancelConfirmedMissingUpload);
             setCleanupFailureMessage(outcome.committed ? null : reviewMutationMessage(outcome.code));
             toast({
                 title: outcome.committed ? (kind === 'edit' ? '리뷰 수정 완료' : '리뷰 삭제 완료') : '리뷰 변경 확인 필요',
@@ -405,6 +428,20 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     };
     const handleSubmit = () => executeMutation('edit');
     const handleDeleteReview = () => executeMutation('delete');
+    const handleCancelMissingUpload = async () => {
+        if (isSubmitting || isDeleting || !mutationRef.current?.canCancelConfirmedMissingUpload) return;
+        setIsSubmitting(true);
+        try {
+            const cancelled = await mutationRef.current.cancelConfirmedMissingUpload();
+            if (!cancelled || ownerRef.current !== user?.id) return;
+            setRetryKind(null);
+            setCanCancelMissingUpload(false);
+            setCleanupFailureMessage(null);
+            toast({ title: "실패한 업로드 취소", description: "확인된 업로드만 정리 대기열에 넣었습니다. 사진을 다시 선택해 주세요." });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleClose = useCallback((force = false) => {
         if (!force && (isSubmitting || isDeleting || mutationRef.current?.pending)) {
@@ -424,18 +461,20 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         setCleanupFailureMessage(null);
         setLastSavedAt(null);
         setRetryKind(null);
+        setCanCancelMissingUpload(false);
         onClose();
     }, [cleanupFailureMessage, isSubmitting, isDeleting, onClose]);
 
     // Form validation
     const isFormValid = useMemo(() => {
-        const ownedExistingFoodPhotos = getOwnedFoodPhotoPaths(
+        const editableExistingFoodPhotos = getEditableFoodPhotoValues(
             existingFoodPhotos,
+            review?.foodPhotos,
             foodPhotoOwnership,
         );
-        const totalPhotos = ownedExistingFoodPhotos.length + newFoodPhotos.length;
-        return categories.length > 0 && content.trim().length >= 20 && totalPhotos > 0;
-    }, [categories.length, content, existingFoodPhotos, foodPhotoOwnership, newFoodPhotos.length]);
+        const totalPhotos = editableExistingFoodPhotos.length + newFoodPhotos.length;
+        return categories.length > 0 && content.trim().length >= 20 && totalPhotos > 0 && totalPhotos <= MAX_FOOD_PHOTOS;
+    }, [categories.length, content, existingFoodPhotos, foodPhotoOwnership, newFoodPhotos.length, review?.foodPhotos]);
 
     // Check if this is a rejected review
     const isRejected = review?.adminNote?.includes("거부");
@@ -511,6 +550,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                 <Button type="button" variant="outline" className="mt-2" disabled={isSubmitting || isDeleting}
                                                     onClick={() => void executeMutation(retryKind)}>
                                                     같은 요청 다시 확인
+                                                </Button>
+                                            )}
+                                            {canCancelMissingUpload && (
+                                                <Button type="button" variant="outline" className="mt-2 ml-2" disabled={isSubmitting || isDeleting}
+                                                    onClick={() => void handleCancelMissingUpload()}>
+                                                    실패한 업로드 취소
                                                 </Button>
                                             )}
                                         </AlertDescription>
@@ -629,26 +674,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground">기존 사진</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {existingFoodPhotoPreviews.map(({ path, url }, idx) => (
-                                                    <div key={path} className="relative group">
-                                                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
-                                                            <Image
-                                                                src={url}
-                                                                alt={`기존 음식 사진 ${idx + 1}`}
-                                                                fill
-                                                                unoptimized
-                                                                sizes="80px"
-                                                                className="object-cover"
-                                                            />
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeExistingFoodPhoto(path)}
-                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            <XIcon className="h-3 w-3" />
-                                                        </button>
-                                                    </div>
+                                                {existingFoodPhotoPreviews.map(({ storedValue, url, storedIndex }, idx) => (
+                                                    <ExistingFoodPhoto
+                                                        key={storedIndex}
+                                                        url={url}
+                                                        index={idx}
+                                                        disabled={isSubmitting || isDeleting || retryKind !== null}
+                                                        onRemove={() => removeExistingFoodPhoto(storedValue, storedIndex)}
+                                                    />
                                                 ))}
                                             </div>
                                         </div>
@@ -733,7 +766,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <Button
                                             variant="destructive"
                                             size="icon"
-                                            disabled={isSubmitting || isDeleting}
+                                            disabled={isSubmitting || isDeleting || retryKind !== null}
                                             title="리뷰 삭제"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -854,6 +887,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                     같은 요청 다시 확인
                                                 </Button>
                                             )}
+                                            {canCancelMissingUpload && (
+                                                <Button type="button" variant="outline" className="mt-2 ml-2" disabled={isSubmitting || isDeleting}
+                                                    onClick={() => void handleCancelMissingUpload()}>
+                                                    실패한 업로드 취소
+                                                </Button>
+                                            )}
                                         </AlertDescription>
                                     </Alert>
                                 )}
@@ -970,26 +1009,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground">기존 사진</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {existingFoodPhotoPreviews.map(({ path, url }, idx) => (
-                                                    <div key={path} className="relative group">
-                                                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
-                                                            <Image
-                                                                src={url}
-                                                                alt={`기존 음식 사진 ${idx + 1}`}
-                                                                fill
-                                                                unoptimized
-                                                                sizes="80px"
-                                                                className="object-cover"
-                                                            />
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeExistingFoodPhoto(path)}
-                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            <XIcon className="h-3 w-3" />
-                                                        </button>
-                                                    </div>
+                                                {existingFoodPhotoPreviews.map(({ storedValue, url, storedIndex }, idx) => (
+                                                    <ExistingFoodPhoto
+                                                        key={storedIndex}
+                                                        url={url}
+                                                        index={idx}
+                                                        disabled={isSubmitting || isDeleting || retryKind !== null}
+                                                        onRemove={() => removeExistingFoodPhoto(storedValue, storedIndex)}
+                                                    />
                                                 ))}
                                             </div>
                                         </div>
@@ -1074,7 +1101,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <Button
                                             variant="destructive"
                                             size="icon"
-                                            disabled={isSubmitting || isDeleting}
+                                            disabled={isSubmitting || isDeleting || retryKind !== null}
                                             title="리뷰 삭제"
                                         >
                                             <Trash2 className="h-4 w-4" />

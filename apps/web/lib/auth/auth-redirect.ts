@@ -34,13 +34,27 @@ export function isAdminAuthRedirect(reason: string | null | undefined, nextPath:
 export function resolveRequestedAuthRedirect(reason: string | null | undefined, next: string | null | undefined): string | null {
   const safeNext = getSafeAuthNextPath(next);
   if (isAdminAuthRedirect(reason, safeNext)) return safeNext;
-  if ((reason === 'mypage' || reason === 'review') && safeNext !== '/' && !isAdminAuthNextPath(safeNext)) return safeNext;
+  if (
+    (reason === 'mypage' || reason === 'review' || reason === AUTH_PRIVACY_ONBOARDING_REASON)
+    && safeNext !== '/'
+    && !isAdminAuthNextPath(safeNext)
+  ) {
+    return safeNext;
+  }
   return null;
 }
 
 export function buildStampReviewContinuationPath(restaurantId: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(restaurantId)) return '/stamp';
   return `/stamp?restaurant=${restaurantId}&writeReview=1`;
+}
+
+export function buildDesktopStampHomeRedirectPath(search: string) {
+  const params = new URLSearchParams(search);
+  if (params.get('writeReview') === '1') return null;
+
+  params.set('panel', 'stamp');
+  return `/?${params.toString()}`;
 }
 
 export function buildHomeAuthLoginPath({
@@ -59,11 +73,15 @@ export function buildHomeAuthLoginPath({
   return `/?${params.toString()}`;
 }
 
-export function buildHomePrivacyOnboardingPath() {
+export function buildHomePrivacyOnboardingPath(next?: string | null) {
   const params = new URLSearchParams({
     [AUTH_LOGIN_QUERY_PARAM]: AUTH_LOGIN_QUERY_VALUE,
     [AUTH_REDIRECT_REASON_PARAM]: AUTH_PRIVACY_ONBOARDING_REASON,
   });
+  const safeNext = getSafeAuthNextPath(next);
+  if (safeNext !== '/' && !isAdminAuthNextPath(safeNext)) {
+    params.set(AUTH_REDIRECT_NEXT_PARAM, safeNext);
+  }
 
   return `/?${params.toString()}`;
 }
@@ -74,9 +92,24 @@ export function isHomePrivacyOnboardingRequest(
   if (location.pathname !== '/') return false;
 
   const params = new URLSearchParams(location.search);
-  return params.size === 2
-    && params.get(AUTH_LOGIN_QUERY_PARAM) === AUTH_LOGIN_QUERY_VALUE
-    && params.get(AUTH_REDIRECT_REASON_PARAM) === AUTH_PRIVACY_ONBOARDING_REASON;
+  const allowedKeys = new Set([
+    AUTH_LOGIN_QUERY_PARAM,
+    AUTH_REDIRECT_REASON_PARAM,
+    AUTH_REDIRECT_NEXT_PARAM,
+  ]);
+  if (
+    params.size < 2
+    || params.size > 3
+    || [...params.keys()].some((key) => !allowedKeys.has(key) || params.getAll(key).length !== 1)
+    || params.get(AUTH_LOGIN_QUERY_PARAM) !== AUTH_LOGIN_QUERY_VALUE
+    || params.get(AUTH_REDIRECT_REASON_PARAM) !== AUTH_PRIVACY_ONBOARDING_REASON
+  ) {
+    return false;
+  }
+
+  const next = params.get(AUTH_REDIRECT_NEXT_PARAM);
+  return next === null
+    || (getSafeAuthNextPath(next) === next && !isAdminAuthNextPath(next));
 }
 
 export function readHomeAuthLoginRequestFromLocation(location: Pick<Location, 'search'>) {

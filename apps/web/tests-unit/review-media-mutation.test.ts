@@ -10,9 +10,14 @@ const edit = (): ReviewMutationInput => ({ ownerId: owner, reviewId: review, kin
         files: [new File(['synthetic'], 'fixture.webp', { type: 'image/webp' })],
         original: { content: 'Original fixture review text.', categories: ['한식'], foodPhotos: [old] } } });
 function fixture() {
+    const bucketObjects = {
+        'review-photos': new Set([old]),
+        'review-verifications': new Set([proof]),
+    };
     const f = { currentOwner: owner as string | undefined,
         row: { id: review, user_id: owner, updated_at: 'revision-1', content: 'Original fixture review text.', categories: ['한식'], food_photos: [old] } as ReviewMediaRow | null,
-        objects: new Set([old, proof]), queue: new Set<string>(), receipts: new Set<string>(), events: [] as string[],
+        objects: new Set([old, proof]), bucketObjects, queue: new Set<string>(), receipts: new Set<string>(), events: [] as string[],
+        removeBuckets: [] as string[],
         mode: 'ok', confirmation: true, cleanup: true, removal: 'ok', upload: 'ok', mutations: 0, uploads: 0,
         rpcArgs: [] as Record<string, unknown>[],
     };
@@ -23,18 +28,22 @@ function fixture() {
         upload: async path => {
             f.uploads++;
             if (f.upload === 'throw-before') throw privateFailure;
-            f.objects.add(path);
+            f.objects.add(path); f.bucketObjects['review-photos'].add(path);
             if (f.upload === 'throw-after') throw privateFailure;
             return { error: null };
         },
         exists: async path => f.objects.has(path),
-        remove: async (paths, purpose = 'food') => {
+        remove: async (paths, bucket) => {
             f.events.push('remove');
+            f.removeBuckets.push(bucket);
             if (f.removal === 'error') return { error: privateFailure };
-            if (f.removal === 'partial' && purpose === 'verification') throw privateFailure;
+            if (f.removal === 'partial' && bucket === 'review-verifications') throw privateFailure;
             for (const path of f.removal === 'partial' ? paths.slice(0, 1) : paths) {
                 if (live(path)) throw new Error('test attempted live deletion');
-                f.objects.delete(path);
+                f.bucketObjects[bucket].delete(path);
+                if (!f.bucketObjects['review-photos'].has(path) && !f.bucketObjects['review-verifications'].has(path)) {
+                    f.objects.delete(path);
+                }
             }
             if (['throw-after', 'partial'].includes(f.removal)) throw privateFailure;
             return { error: null };
@@ -71,7 +80,12 @@ function fixture() {
                     purpose: path.includes('/verification/') ? 'verification' : 'food' })), error: null };
             }
             if (name === 'finish_review_media_cleanup') {
-                for (const path of f.queue) if (!f.objects.has(path)) f.queue.delete(path);
+                for (const path of f.queue) {
+                    const present = path.includes('/verification/')
+                        ? f.bucketObjects['review-photos'].has(path) || f.bucketObjects['review-verifications'].has(path)
+                        : f.bucketObjects['review-photos'].has(path);
+                    if (!present) f.queue.delete(path);
+                }
                 return { data: f.queue.size, error: null };
             }
             throw new Error('unexpected test RPC');
@@ -129,6 +143,16 @@ describe('review commit and media failure boundaries', () => {
         expect(await retryReviewMediaCleanup({ ...deps }, owner)).toBe(true);
         expect(f.objects.size).toBe(0); expect(f.mutations).toBe(1);
     });
+    test('legacy verification cleanup attempts private and public buckets before readback', async () => {
+        const { f, deps } = fixture();
+        f.bucketObjects['review-verifications'].delete(proof);
+        f.bucketObjects['review-photos'].add(proof);
+        expect((await new ReviewMediaMutation(deps).run({ ownerId: owner, reviewId: review, kind: 'delete' })).code)
+            .toBe('REVIEW_COMMITTED');
+        expect(f.removeBuckets).toContain('review-verifications');
+        expect(f.removeBuckets).toContain('review-photos');
+        expect(f.objects.has(proof)).toBe(false);
+    });
     test('delete transport failure after completion is resolved by metadata readback', async () => {
         const { f, deps } = fixture(); f.removal = 'throw-after';
         expect((await new ReviewMediaMutation(deps).run(edit())).code).toBe('REVIEW_COMMITTED'); expect(f.objects.has(fresh)).toBe(true);
@@ -152,6 +176,30 @@ describe('review commit and media failure boundaries', () => {
         const { f, deps } = fixture(); f.upload = 'throw-before'; const op = new ReviewMediaMutation(deps);
         expect((await op.run(edit())).code).toBe('REVIEW_UPLOAD_FAILED'); expect(f.mutations).toBe(0);
         f.upload = 'ok'; expect((await op.run(edit())).committed).toBe(true); expect(f.objects.has(fresh)).toBe(true);
+    });
+    test('confirmed missing upload can be abandoned only after uploaded siblings are durably queued', async () => {
+        const { f, deps } = fixture(); const op = new ReviewMediaMutation(deps); const input = edit();
+        input.edit!.files.push(new File(['second'], 'second.webp', { type: 'image/webp' }));
+        deps.upload = async path => {
+            f.uploads++;
+            if (path.endsWith('_1.webp')) return { error: { statusCode: 413 } };
+            f.objects.add(path); f.bucketObjects['review-photos'].add(path);
+            return { error: null };
+        };
+        expect((await op.run(input)).code).toBe('REVIEW_UPLOAD_FAILED');
+        expect(op.pendingKind).toBe('edit');
+        expect(op.canCancelConfirmedMissingUpload).toBe(true);
+        expect((await op.run({ ownerId: owner, reviewId: review, kind: 'delete' })).code).toBe('REVIEW_NOT_CONFIRMED');
+        expect(await op.cancelConfirmedMissingUpload()).toBe(true);
+        expect(op.pending).toBe(false); expect(f.mutations).toBe(0); expect(f.objects.has(fresh)).toBe(false);
+        expect(f.events).toContain('compensate');
+    });
+    test('uncertain upload stays frozen and cannot use the confirmed-missing cancellation path', async () => {
+        const { f, deps } = fixture(); f.upload = 'throw-before'; const op = new ReviewMediaMutation(deps);
+        expect((await op.run(edit())).code).toBe('REVIEW_UPLOAD_FAILED');
+        expect(op.canCancelConfirmedMissingUpload).toBe(false);
+        expect(await op.cancelConfirmedMissingUpload()).toBe(false);
+        expect(op.pending).toBe(true); expect(f.events).not.toContain('compensate');
     });
     test('owner change during upload blocks mutation and cleanup', async () => {
         const { f, deps } = fixture(); const upload = deps.upload;

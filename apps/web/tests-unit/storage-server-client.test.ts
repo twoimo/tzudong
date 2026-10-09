@@ -53,7 +53,7 @@ describe('server-only privileged Storage boundary', () => {
     const registry = source('lib/admin/youtube-thumbnail-generator/release-registry.ts');
     expect(ocr).toContain('createSupabaseStorageServerClient');
     expect(ocr).toContain('storageAdmin.from(REVIEW_VERIFICATION_BUCKET)');
-    expect(ocr).toContain('downloadReviewVerification(storageAdmin, review.verification_photo)');
+    expect(ocr).toContain('downloadReviewVerification(storageAdmin, receiptObjectPath)');
     expect(ocr).not.toContain('storageAdmin.storage');
     expect(ocr).not.toContain("supabase.storage.from('review-photos')");
     expect(registry).toContain('createSupabaseStorageServerClient()');

@@ -52,14 +52,35 @@ describe('private review verification image boundary', () => {
         const response = await readPrivateVerificationImage(Promise.resolve({ reviewId: review }), deps);
         expect(response.status).toBe(503); expect(await response.json()).toEqual({ code: 'REVIEW_IMAGE_UNAVAILABLE' });
     });
-    test('new canonical images never fall back to public Storage; legacy first tries private', async () => {
+    test('canonical and legacy authoritative keys fall back to the pre-migration public bucket', async () => {
         const calls: string[] = [];
         const storage = { from: (bucket: string) => ({ download: async () => {
             calls.push(bucket); return { data: null, error: new Error('fixture') };
         } }) } as unknown as SupabaseClient<Database>['storage'];
-        await downloadReviewVerification(storage, key);
-        expect(calls).toEqual(['review-verifications']); calls.length = 0;
-        await downloadReviewVerification(storage, `${owner}/1720000000000_verification_proof.jpg`);
+        const canonical = await downloadReviewVerification(storage, key);
         expect(calls).toEqual(['review-verifications', 'review-photos']);
+        expect(canonical.bucket).toBe('review-photos'); calls.length = 0;
+        const legacy = await downloadReviewVerification(storage, `${owner}/1720000000000_verification_proof.jpg`);
+        expect(calls).toEqual(['review-verifications', 'review-photos']);
+        expect(legacy.bucket).toBe('review-photos');
+    });
+    test('normalizes the authoritative same-origin historical URL before download', async () => {
+        const prior = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project-ref.supabase.co';
+        try {
+            const { deps } = fixture();
+            const historicalUrl = `https://project-ref.supabase.co/storage/v1/object/public/review-photos/${key}`;
+            let downloadedPath = '';
+            deps.read = async () => ({ data: { user_id: owner, verification_photo: historicalUrl }, error: null });
+            deps.download = async path => {
+                downloadedPath = path;
+                return { data: new Blob(['fixture'], { type: 'image/webp' }), error: null };
+            };
+            expect((await readPrivateVerificationImage(Promise.resolve({ reviewId: review }), deps)).status).toBe(200);
+            expect(downloadedPath).toBe(key);
+        } finally {
+            if (prior === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+            else process.env.NEXT_PUBLIC_SUPABASE_URL = prior;
+        }
     });
 });

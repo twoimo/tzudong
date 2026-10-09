@@ -177,7 +177,7 @@ export async function GET(request: Request) {
       }
       const eligibility = await getCurrentPrivacyEligibility(supabase);
       if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
-        return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath());
+        return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath(next));
       }
 
       return redirectWithOnboardingCookiesCleared(origin, next);

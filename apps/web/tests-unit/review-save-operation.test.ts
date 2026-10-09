@@ -74,15 +74,15 @@ describe('bounded review save operation (offline)', () => {
         expect(f.counts).toEqual({ ids: 1, prepares: 1, uploads: 2, writes: 1, reads: 0, removes: 0, lists: 0 });
         expect(f.rows.size).toBe(1); expect(f.orphanCount()).toBe(0);
     });
-    test('definite denial cleans uploads and retains ID and paths across five retries', async () => {
+    test('definite denial fully compensates and regenerates retired IDs and paths', async () => {
         const f = fixture(); const insert = f.deps.insert;
         f.deps.insert = async (_draft, id) => { f.ids.push(id); return { error: { code: '42501' } }; };
         for (let i = 0; i < 5; i++) expect(await f.operation.submit(f.draft)).toBe('failed');
-        expect(f.objects.size).toBe(0); expect(new Set(f.ids).size).toBe(1);
-        expect(new Set(f.removed).size).toBe(2); expect(f.counts.prepares).toBe(1);
+        expect(f.objects.size).toBe(0); expect(new Set(f.ids).size).toBe(5);
+        expect(new Set(f.removed).size).toBe(10); expect(f.counts.prepares).toBe(5);
         f.deps.insert = insert;
         expect(await f.operation.submit(f.draft)).toBe('saved');
-        expect(f.counts.ids).toBe(1); expect(f.orphanCount()).toBe(0);
+        expect(f.counts.ids).toBe(6); expect(f.orphanCount()).toBe(0);
     });
     for (const thrown of [false, true]) test(`lost commit reply (${thrown ? 'thrown' : 'returned'}) recovers without reupload or second insert`, async () => {
         const f = fixture(); const insert = f.deps.insert;

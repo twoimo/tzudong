@@ -351,6 +351,11 @@ describe('admin auth redirect helpers', () => {
       pathname: '/',
       search: `${onboardingPath.slice(1)}&next=%2Fadmin`,
     })).toBe(false);
+    const continuationPath = buildHomePrivacyOnboardingPath('/stamp?restaurant=11111111-1111-4111-8111-111111111111&writeReview=1');
+    expect(isHomePrivacyOnboardingRequest({
+      pathname: '/',
+      search: continuationPath.slice(1),
+    })).toBe(true);
     expect(isHomePrivacyOnboardingRequest({
       pathname: '/privacy/onboarding',
       search: '',

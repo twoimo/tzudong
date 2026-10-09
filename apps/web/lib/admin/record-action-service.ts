@@ -87,8 +87,11 @@ export async function resumeRecordMediaCleanup(runner: RecordActionRpc, storage:
   const receipt=await readRecordAction(runner,actor,operationId);
   if (receipt.state!=='applied' || receipt.action!=='review.delete') throw new RecordActionError('RECORD_ACTION_STATE_CONFLICT');
   const base={p_actor:actor,p_operation_id:operationId};
-  const jobs=z.strictObject({jobs:z.array(z.strictObject({id:z.uuid(),bucket:z.literal('review-photos'),objectName:z.string().max(1024).regex(/^[0-9a-f-]{36}\/reviews\/[0-9a-f-]{36}\/(?:food|verification)\/[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.(?:avif|jpe?g|png|webp)$/),state:z.enum(['pending','inflight','uncertain'])})).max(25)}).safeParse(await rpc(runner,{...base,p_phase:'cleanup_read'}));
+  const jobs=z.strictObject({jobs:z.array(z.strictObject({id:z.uuid(),bucket:z.enum(['review-photos','review-verifications']),objectName:z.string().max(1024).regex(/^[0-9a-f-]{36}\/reviews\/[0-9a-f-]{36}\/(?:food|verification)\/[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.(?:avif|jpe?g|png|webp)$/),state:z.enum(['pending','inflight','uncertain'])})).max(25)}).safeParse(await rpc(runner,{...base,p_phase:'cleanup_read'}));
   if (!jobs.success) throw new RecordActionError('RECORD_ACTION_UNCERTAIN',503);
+  if (jobs.data.jobs.some(job => job.bucket === 'review-verifications' && !job.objectName.includes('/verification/'))) {
+    throw new RecordActionError('RECORD_ACTION_UNCERTAIN',503);
+  }
   for (const job of jobs.data.jobs) {
     const payload={p_payload:{jobId:job.id}};
     // Read before every attempt. An inflight/uncertain attempt is NEVER automatically resent.

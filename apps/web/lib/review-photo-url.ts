@@ -286,14 +286,35 @@ function extractSameOriginPublicReviewPhotoObjectPath(
     }
 }
 
-function getOwnedReviewPhotoObjectPath(
+export function getOwnedReviewPhotoObjectPath(
     value: string | null | undefined,
     ownership: ReviewPhotoOwnership | string | null | undefined,
-    configuredOrigin: string | null,
+    configuredOrigin: string | null = resolveConfiguredSupabaseOrigin(),
 ): string | null {
     return getCanonicalReviewPhotoObjectPath(value, ownership)
         ?? getLegacyReviewPhotoObjectPath(value, ownership)
         ?? extractSameOriginPublicReviewPhotoObjectPath(value, ownership, configuredOrigin);
+}
+
+/**
+ * Keeps authoritative stored values byte-for-byte while admitting only values
+ * that resolve to an object owned by the requested review. Edit RPCs use the
+ * original values as their final-list contract; object-path normalization is
+ * reserved for Storage access and cleanup.
+ */
+export function getOwnedReviewPhotoValues(
+    values: unknown,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+    configuredOrigin: string | null = resolveConfiguredSupabaseOrigin(),
+): string[] {
+    if (!Array.isArray(values)) return [];
+
+    return values.flatMap((value) => (
+        typeof value === 'string'
+        && getOwnedReviewPhotoObjectPath(value, ownership, configuredOrigin)
+            ? [value]
+            : []
+    ));
 }
 
 export function resolveReviewPhotoUrl(

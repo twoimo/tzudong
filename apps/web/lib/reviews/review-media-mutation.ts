@@ -12,6 +12,7 @@ export type ReviewMediaRow = {
 };
 type Reply = { data: unknown; error: unknown };
 type Upload = { path: string; file: File; available: boolean };
+type ReviewMediaBucket = 'review-photos' | 'review-verifications';
 export type ReviewMutationInput = {
     ownerId: string; reviewId: string; kind: 'edit' | 'delete';
     edit?: { content: string; categories: string[]; foodPhotos: string[]; files: File[];
@@ -25,7 +26,7 @@ export interface ReviewMediaDependencies {
     prepare(file: File): Promise<File>;
     upload(path: string, file: File): PromiseLike<{ error: unknown }>;
     exists(path: string): Promise<boolean>;
-    remove(paths: string[], purpose?: 'food' | 'verification'): PromiseLike<{ error: unknown }>;
+    remove(paths: string[], bucket: ReviewMediaBucket): PromiseLike<{ error: unknown }>;
 }
 const rejectedCodes = new Set<ReviewMutationCode>([
     'REVIEW_NOT_FOUND', 'REVIEW_UNAUTHORIZED', 'REVIEW_CONFLICT', 'REVIEW_INVALID', 'REVIEW_MEDIA_MISSING',
@@ -33,6 +34,11 @@ const rejectedCodes = new Set<ReviewMutationCode>([
 const result = (code: ReviewMutationCode): ReviewMutationResult => ({
     code, committed: code === 'REVIEW_COMMITTED' || code === 'REVIEW_CLEANUP_PENDING',
 });
+function isDefiniteUploadRejection(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const status = 'statusCode' in error ? error.statusCode : 'status' in error ? error.status : undefined;
+    return ['400', '401', '403', '413', '415', '422'].includes(String(status));
+}
 export function reviewMutationMessage(code: ReviewMutationCode): string {
     switch (code) {
         case 'REVIEW_COMMITTED': return '리뷰 변경이 완료되었습니다.';
@@ -72,9 +78,13 @@ export async function retryReviewMediaCleanup(deps: ReviewMediaDependencies, own
         if (paths.length || verificationPaths.length) {
             // Even an error may follow a partial or complete delete. Read back
             // through the DB; unremoved objects remain queued across revisits.
-            await Promise.all(([[paths, 'food'], [verificationPaths, 'verification']] as const).map(async ([keys, purpose]) => {
+            await Promise.all(([
+                [paths, 'review-photos'],
+                [verificationPaths, 'review-verifications'],
+                [verificationPaths, 'review-photos'],
+            ] as const).map(async ([keys, bucket]) => {
                 if (!keys.length) return;
-                try { await deps.remove(keys, purpose); } catch { /* fixed-code readback below */ }
+                try { await deps.remove(keys, bucket); } catch { /* fixed-code readback below */ }
             }));
         }
         if (deps.owner() !== ownerId) return false;
@@ -83,7 +93,14 @@ export async function retryReviewMediaCleanup(deps: ReviewMediaDependencies, own
     } catch { return false; }
 }
 
-type Operation = { input: ReviewMutationInput; args: Record<string, unknown>; uploads: Upload[]; sent: boolean; rejection?: ReviewMutationCode };
+type Operation = {
+    input: ReviewMutationInput;
+    args: Record<string, unknown>;
+    uploads: Upload[];
+    sent: boolean;
+    confirmedMissingUpload: boolean;
+    rejection?: ReviewMutationCode;
+};
 /** One frozen request per editor/delete confirmation. Retries reuse the exact
  * operation ID and payload; the atomic receipt proves this commit even if a
  * later moderation/edit changed the row. Never compensate an unanswered write.
@@ -95,6 +112,28 @@ export class ReviewMediaMutation {
     private activeInput: ReviewMutationInput | null = null;
     constructor(private readonly deps: ReviewMediaDependencies) {}
     get pending(): boolean { return this.operation !== null; }
+    get pendingKind(): ReviewMutationInput['kind'] | null { return this.operation?.input.kind ?? null; }
+    get canCancelConfirmedMissingUpload(): boolean {
+        return Boolean(this.operation && !this.operation.sent && this.operation.confirmedMissingUpload && !this.active);
+    }
+    async cancelConfirmedMissingUpload(): Promise<boolean> {
+        const op = this.operation;
+        if (this.active || !op || op.sent || !op.confirmedMissingUpload || this.deps.owner() !== op.input.ownerId) return false;
+        const uploadedPaths = op.uploads.filter(upload => upload.available).map(upload => upload.path);
+        if (uploadedPaths.length) {
+            try {
+                const queued = await this.deps.rpc('queue_review_upload_cleanup', {
+                    p_review_id: op.input.reviewId, p_paths: uploadedPaths,
+                });
+                if (queued.error || queued.data !== 'REVIEW_CLEANUP_QUEUED') return false;
+            } catch { return false; }
+            // The durable queue owns every confirmed upload before the frozen
+            // pre-DB operation is released. Cleanup may finish on a later visit.
+            await retryReviewMediaCleanup(this.deps, op.input.ownerId);
+        }
+        this.operation = null;
+        return true;
+    }
     run(input: ReviewMutationInput): Promise<ReviewMutationResult> {
         if (this.active) {
             return this.activeInput?.ownerId === input.ownerId && this.activeInput.reviewId === input.reviewId && this.activeInput.kind === input.kind
@@ -138,7 +177,7 @@ export class ReviewMediaMutation {
                 if (!path) return result('REVIEW_INVALID');
                 uploads.push({ path, file: prepared, available: false });
             }
-            this.operation = { input, uploads, sent: false, args: {
+            this.operation = { input, uploads, sent: false, confirmedMissingUpload: false, args: {
                 p_operation_id: operationId, p_review_id: input.reviewId, p_kind: input.kind,
                 p_expected_updated_at: row.data.updated_at,
                 p_content: edit?.content.trim() ?? null, p_categories: edit ? [...edit.categories] : null,
@@ -150,6 +189,7 @@ export class ReviewMediaMutation {
         // Always query this operation's receipt before any retransmission once a
         // write may have reached the DB (including a resolved PostgREST error).
         if (op.sent && await this.confirm(op)) return this.finish(input.ownerId);
+        op.confirmedMissingUpload = false;
         for (const upload of op.uploads) {
             if (this.deps.owner() !== input.ownerId) return result('REVIEW_UNAUTHORIZED');
             if (upload.available) continue;
@@ -157,6 +197,10 @@ export class ReviewMediaMutation {
             try {
                 const reply = await this.deps.upload(upload.path, upload.file);
                 if (!reply.error) { upload.available = true; continue; }
+                if (isDefiniteUploadRejection(reply.error) && !await this.deps.exists(upload.path)) {
+                    op.confirmedMissingUpload = true;
+                    return result('REVIEW_UPLOAD_FAILED');
+                }
             } catch { /* The upload may have completed. */ }
             if (!await this.deps.exists(upload.path)) return result('REVIEW_UPLOAD_FAILED');
             upload.available = true;
@@ -225,6 +269,6 @@ export function createReviewMediaDependencies(
                 return !reply.error && !!reply.data?.some(item => item.name === path.slice(separator + 1));
             } catch { return false; }
         },
-        remove: (paths, purpose = 'food') => client.storage.from(purpose === 'verification' ? 'review-verifications' : 'review-photos').remove(paths),
+        remove: (paths, storageBucket) => client.storage.from(storageBucket).remove(paths),
     };
 }

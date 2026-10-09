@@ -8,7 +8,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactNode } from 'react';
 import type { ReviewDraft } from '../lib/reviewDraftDB';
 import { ReviewSaveOperation } from '../lib/reviews/review-save-operation';
-import { buildReviewPhotoObjectPath, cleanupCanonicalReviewPhotoObjects, normalizeReviewPhotoFilename, getCanonicalReviewPhotoObjectPaths } from '../lib/review-photo-url';
+import { buildReviewPhotoObjectPath, cleanupCanonicalReviewPhotoObjects, normalizeReviewPhotoFilename } from '../lib/review-photo-url';
+import { getEditableFoodPhotoValues } from '../lib/reviews/review-edit-food-values';
 
 // Run the actual component handlers and Supabase adapter with offline boundaries.
 // This avoids global module mocks affecting other unit suites and never imports
@@ -142,6 +143,12 @@ function fixture() {
 }
 
 describe('actual ReviewModal submit and Supabase adapter', () => {
+    test('receipt selection and preparation enforce the private bucket MIME allowlist', () => {
+        expect(source).toContain('SUPPORTED_RECEIPT_MIME_TYPES.has(file.type)');
+        expect(source).toContain("if (!isSupportedReceiptImage(file)) throw new Error('REVIEW_VERIFICATION_FORMAT_UNSUPPORTED')");
+        expect(source.match(/accept=\{RECEIPT_IMAGE_ACCEPT\}/g)?.length).toBe(3);
+        expect(source).toContain('const imageFiles = files.filter(isSupportedReceiptImage);');
+    });
     test('saved cleanup owns its revision even after the current restaurant selection is cleared', async () => {
         const f = fixture(); await f.submit();
         const clear = evaluate(`${nodeText(source, 'clearDraft')};`, {
@@ -285,13 +292,13 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
         const execute = evaluate(`${nodeText(edit, 'executeMutation')};`, {
             review: { id: 'fixture-review', ...original }, user: { id: 'fixture-owner' }, foodPhotoOwnership: ownership,
             isSubmitting: false, isDeleting: false, ownerRef: { current: 'fixture-owner' },
-            mutationRef: { current: { pending: false, run: async (input: Record<string, unknown>) => {
+            mutationRef: { current: { pending: false, pendingKind: null, canCancelConfirmedMissingUpload: false, run: async (input: Record<string, unknown>) => {
                 calls.update++; submitted = input; return { committed: true, code: 'REVIEW_COMMITTED' };
             } } },
             content: 'Synthetic existing review content for edit regression.', categories: ['한식'],
             existingFoodPhotos: [existing], removedPhotos: [], newFoodPhotos: [],
-            getOwnedFoodPhotoPaths: getCanonicalReviewPhotoObjectPaths,
-            setIsSubmitting() {}, setIsDeleting() {}, setCleanupFailureMessage() {}, setRetryKind() {}, reviewMutationMessage: () => 'COMMITTED',
+            getEditableFoodPhotoValues,
+            setIsSubmitting() {}, setIsDeleting() {}, setCleanupFailureMessage() {}, setRetryKind() {}, setCanCancelMissingUpload() {}, reviewMutationMessage: () => 'COMMITTED',
             toast() {}, deleteEditDraft: async () => { calls.draft++; }, onSuccess: () => { calls.success++; },
             handleClose: () => { calls.close++; },
         }) as (kind: string) => Promise<void>;

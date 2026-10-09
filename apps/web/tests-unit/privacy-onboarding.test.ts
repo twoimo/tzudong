@@ -284,7 +284,7 @@ describe('privacy onboarding challenge', () => {
     const authContext = source('contexts/AuthContext.tsx');
     const onboardingPage = source('app/privacy/onboarding/page.tsx');
 
-    expect(callbackRoute).toContain('return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath());');
+    expect(callbackRoute).toContain('return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath(next));');
     expect(callbackRoute).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id))');
     expect(authContext).toContain('function isLiteralLoopSafePrivacyOnboarding()');
     expect(authContext).toContain("window.location.pathname === '/privacy/onboarding'");
