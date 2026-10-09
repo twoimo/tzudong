@@ -1,0 +1,82 @@
+{
+  "schema": "gemini-source-integration-progress-v1",
+  "headBeforeMerge": "385dfefb",
+  "mergedDevelop": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "resolvedConflicts": 8,
+  "sourceMigrationCount": 126,
+  "sourceChainSha256": "11f598ab1a27fe3304a0ae57b2d18a59ca2763e7ed49e559115fe11e86a2db6c",
+  "verification": {
+    "web": {
+      "groups": 19,
+      "pass": 3167,
+      "skip": 9,
+      "fail": 0
+    },
+    "ledgerPython": {
+      "pass": 95,
+      "fail": 0
+    },
+    "ocrAndStoryboardWire": {
+      "pass": 29,
+      "fail": 0
+    },
+    "nightlyBridge": {
+      "pass": 30,
+      "fail": 0
+    },
+    "typeParityDiagnostics": 0,
+    "nextBuild": {
+      "version": "16.3.8",
+      "staticPages": 50,
+      "cssBoundaries": "passed"
+    },
+    "finalTypeParity": {
+      "diagnostics": 0,
+      "nonLibraryContentSha256": "413d714fb93a7565caf546dbada72af8f70328e940cdebb97b993b92ed1fc21f"
+    }
+  },
+  "rawFiles": {
+    "apps/web/performance/completion-audit-20261007/integration-web-unit-raw-20261009.log": {
+      "bytes": 413045,
+      "sha256": "187f8a034d3bceaa019502fb00ba05d44263fd064f696253b9b7c4f2ccbe0e06"
+    },
+    "apps/web/performance/completion-audit-20261007/integration-ledger-unit-raw-20261009.log": {
+      "bytes": 195,
+      "sha256": "2332a51533f3bc7bf1c44f8e3264148f25106ac62230ba41a670c955fd5008db"
+    },
+    "apps/web/performance/completion-audit-20261007/integration-typecheck-raw-20261009.log": {
+      "bytes": 510,
+      "sha256": "dcef20ece88ba753420f12d3911f4fd4ad7bfc786bf7ba783360f2824ff16cc7"
+    },
+    "apps/web/performance/completion-audit-20261007/integration-build-raw-20261009.log": {
+      "bytes": 1078,
+      "sha256": "5402bfd0c8fd6120b167f392eeaa8ab391bf7ae66615918ed3534f21e81739a6"
+    },
+    "apps/web/performance/completion-audit-20261007/gemini-model-wire-raw-20261009.log": {
+      "bytes": 3463,
+      "sha256": "4bdeff050a4e3c249cab581cc4a02b0cca9411583fa9cad8310996b8a6a06097"
+    },
+    "apps/web/performance/completion-audit-20261007/integration-typecheck-final-raw-20261009.log": {
+      "bytes": 510,
+      "sha256": "dcef20ece88ba753420f12d3911f4fd4ad7bfc786bf7ba783360f2824ff16cc7"
+    }
+  },
+  "operating": {
+    "readOnly": true,
+    "ledgerCount": 80,
+    "restaurantCount": 1659,
+    "restaurantDigestUnchanged": true,
+    "pendingMigrationsApplied": false,
+    "automationEnabled": false,
+    "inferenceCalls": 0,
+    "billingChanges": 0,
+    "deployment": false
+  },
+  "limits": [
+    "No current full database/catalog replay of merged source",
+    "No paid generation, OCR quality, asset persistence or credit attribution verification",
+    "No deployed whole-goal evidence; skips remain skips",
+    "Prior failure logs retained in private cache; historical archive receipts not rewritten"
+  ],
+  "fullGoalComplete": false
+}

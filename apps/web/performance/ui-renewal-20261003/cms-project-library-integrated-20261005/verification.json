@@ -1,0 +1,364 @@
+{
+  "schema": "tzudong-storyboard-integrated-cms-v1",
+  "passed": true,
+  "startedAt": "2026-10-04T21:39:39.649Z",
+  "finishedAt": "2026-10-04T21:39:48.315Z",
+  "phase": "source-readback",
+  "origin": "http://127.0.0.1:18812",
+  "requestedWidths": [
+    834,
+    1423
+  ],
+  "priorAttempts": [
+    {
+      "passed": false,
+      "phase": "sidebar-entry-834-item-click",
+      "startedAt": "2026-10-04T21:38:30.673Z",
+      "finishedAt": "2026-10-04T21:38:40.533Z",
+      "safety": {
+        "serverBoundMethods": [
+          "GET",
+          "HEAD",
+          "OPTIONS"
+        ],
+        "syntheticReadPostsFulfilled": 12,
+        "forwardedPosts": 0,
+        "catalogReads": 4,
+        "detailReads": 4,
+        "deniedExternal": 6,
+        "deniedNonreadAttempts": 0,
+        "deniedPaths": [],
+        "pageErrors": 0,
+        "consoleErrors": 1,
+        "actualOperatingWrites": 0,
+        "providerCalls": 0
+      },
+      "widths": [
+        390
+      ]
+    }
+  ],
+  "synthetic": true,
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0",
+  "sourceStart": [
+    {
+      "path": "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "sha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53"
+    },
+    {
+      "path": "components/admin/storyboard/StoryboardProjectLibrary.tsx",
+      "sha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45"
+    },
+    {
+      "path": "tests-unit/storyboard-project-library-browser.test.ts",
+      "sha256": "37979ae0d436d207ffdc17062dcafc83e736986c99dfc7ab6c3b872da7b89788"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "sha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53"
+    },
+    {
+      "path": "components/admin/storyboard/StoryboardProjectLibrary.tsx",
+      "sha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45"
+    },
+    {
+      "path": "tests-unit/storyboard-project-library-browser.test.ts",
+      "sha256": "37979ae0d436d207ffdc17062dcafc83e736986c99dfc7ab6c3b872da7b89788"
+    }
+  ],
+  "sourceStable": true,
+  "boundaryStart": [
+    {
+      "path": "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "candidateSha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53",
+      "runtimeSha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53",
+      "identical": true
+    },
+    {
+      "path": "components/admin/storyboard/StoryboardProjectLibrary.tsx",
+      "candidateSha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45",
+      "runtimeSha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45",
+      "identical": true
+    },
+    {
+      "path": "components/admin/AdminConsoleOverview.tsx",
+      "candidateSha256": "003bfcc18f860dd93943038704e74f28eecdebb2763c77725eb80fc8de49cc82",
+      "runtimeSha256": "003bfcc18f860dd93943038704e74f28eecdebb2763c77725eb80fc8de49cc82",
+      "identical": true
+    },
+    {
+      "path": "components/admin/AdminPageHeader.tsx",
+      "candidateSha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6",
+      "runtimeSha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6",
+      "identical": true
+    },
+    {
+      "path": "components/admin/AdminEmbeddedModuleShell.tsx",
+      "candidateSha256": "3a157aec7dbfc2c7ed3ca872618f927bc117b1059e0f0bfa425a4bf82ac9e5f8",
+      "runtimeSha256": "3a157aec7dbfc2c7ed3ca872618f927bc117b1059e0f0bfa425a4bf82ac9e5f8",
+      "identical": true
+    },
+    {
+      "path": "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "candidateSha256": "cb8dcc7bcd01d62d293793fd13461817063ea68b61acf040d5e452cf7c15a752",
+      "runtimeSha256": "cb8dcc7bcd01d62d293793fd13461817063ea68b61acf040d5e452cf7c15a752",
+      "identical": true
+    },
+    {
+      "path": "styles/admin-ui.css",
+      "candidateSha256": "248a28f912a3e8a806566ceaffe9a4efc65b22bc5e31b9811c24bba066e4d9df",
+      "runtimeSha256": "248a28f912a3e8a806566ceaffe9a4efc65b22bc5e31b9811c24bba066e4d9df",
+      "identical": true
+    },
+    {
+      "path": "app/admin/layout.tsx",
+      "candidateSha256": "b9263c7a9583237bdc78662718e2f48c7607e78dce245c1f4d4363612b8006b1",
+      "runtimeSha256": "b9263c7a9583237bdc78662718e2f48c7607e78dce245c1f4d4363612b8006b1",
+      "identical": true
+    },
+    {
+      "path": "app/admin/page.tsx",
+      "candidateSha256": "765f9964b40fe4adaea536e358550271fe651b41869d11a408b873e78c8cf235",
+      "runtimeSha256": "765f9964b40fe4adaea536e358550271fe651b41869d11a408b873e78c8cf235",
+      "identical": true
+    },
+    {
+      "path": "lib/admin/admin-module-routing.ts",
+      "candidateSha256": "878c7dc8e5fc8a2bf29c4b17a9fe4544c548c1b95c8aa76a53abdb138981c22a",
+      "runtimeSha256": "878c7dc8e5fc8a2bf29c4b17a9fe4544c548c1b95c8aa76a53abdb138981c22a",
+      "identical": true
+    }
+  ],
+  "boundaryEnd": [
+    {
+      "path": "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "candidateSha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53",
+      "runtimeSha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53",
+      "identical": true
+    },
+    {
+      "path": "components/admin/storyboard/StoryboardProjectLibrary.tsx",
+      "candidateSha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45",
+      "runtimeSha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45",
+      "identical": true
+    },
+    {
+      "path": "components/admin/AdminConsoleOverview.tsx",
+      "candidateSha256": "003bfcc18f860dd93943038704e74f28eecdebb2763c77725eb80fc8de49cc82",
+      "runtimeSha256": "003bfcc18f860dd93943038704e74f28eecdebb2763c77725eb80fc8de49cc82",
+      "identical": true
+    },
+    {
+      "path": "components/admin/AdminPageHeader.tsx",
+      "candidateSha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6",
+      "runtimeSha256": "017edb22125132ee64885236c2d40a554b34364696ed58061c1d3647794a22f6",
+      "identical": true
+    },
+    {
+      "path": "components/admin/AdminEmbeddedModuleShell.tsx",
+      "candidateSha256": "3a157aec7dbfc2c7ed3ca872618f927bc117b1059e0f0bfa425a4bf82ac9e5f8",
+      "runtimeSha256": "3a157aec7dbfc2c7ed3ca872618f927bc117b1059e0f0bfa425a4bf82ac9e5f8",
+      "identical": true
+    },
+    {
+      "path": "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+      "candidateSha256": "cb8dcc7bcd01d62d293793fd13461817063ea68b61acf040d5e452cf7c15a752",
+      "runtimeSha256": "cb8dcc7bcd01d62d293793fd13461817063ea68b61acf040d5e452cf7c15a752",
+      "identical": true
+    },
+    {
+      "path": "styles/admin-ui.css",
+      "candidateSha256": "248a28f912a3e8a806566ceaffe9a4efc65b22bc5e31b9811c24bba066e4d9df",
+      "runtimeSha256": "248a28f912a3e8a806566ceaffe9a4efc65b22bc5e31b9811c24bba066e4d9df",
+      "identical": true
+    },
+    {
+      "path": "app/admin/layout.tsx",
+      "candidateSha256": "b9263c7a9583237bdc78662718e2f48c7607e78dce245c1f4d4363612b8006b1",
+      "runtimeSha256": "b9263c7a9583237bdc78662718e2f48c7607e78dce245c1f4d4363612b8006b1",
+      "identical": true
+    },
+    {
+      "path": "app/admin/page.tsx",
+      "candidateSha256": "765f9964b40fe4adaea536e358550271fe651b41869d11a408b873e78c8cf235",
+      "runtimeSha256": "765f9964b40fe4adaea536e358550271fe651b41869d11a408b873e78c8cf235",
+      "identical": true
+    },
+    {
+      "path": "lib/admin/admin-module-routing.ts",
+      "candidateSha256": "878c7dc8e5fc8a2bf29c4b17a9fe4544c548c1b95c8aa76a53abdb138981c22a",
+      "runtimeSha256": "878c7dc8e5fc8a2bf29c4b17a9fe4544c548c1b95c8aa76a53abdb138981c22a",
+      "identical": true
+    }
+  ],
+  "copyManifest": [
+    {
+      "path": "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "runtimeExisted": true,
+      "runtimeBeforeSha256": "cba0b54400e317a19af009ed5d1179373bd110b7e516dc37d65853e084d6091d",
+      "backupPath": "/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-storyboard-integrated-20261005-3pqq2n5m/backup/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "candidateSha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53",
+      "runtimeCopiedSha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53"
+    },
+    {
+      "path": "components/admin/storyboard/StoryboardProjectLibrary.tsx",
+      "runtimeExisted": false,
+      "runtimeBeforeSha256": null,
+      "backupPath": null,
+      "candidateSha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45",
+      "runtimeCopiedSha256": "87c4e55b5726d25f1528be30f47b75306c6669cab92b19c75a0cd0b52b4f8c45"
+    }
+  ],
+  "checks": [
+    {
+      "width": 390,
+      "enteredViaActualSidebar": true,
+      "listGeometry": {
+        "viewport": 390,
+        "documentOverflow": 0,
+        "workspaceOverflow": 0,
+        "headerOverflow": 0,
+        "activeModule": "storyboard",
+        "headingCount": 1
+      },
+      "detailGeometry": {
+        "viewport": 390,
+        "documentOverflow": 0,
+        "workspaceOverflow": 0,
+        "headerOverflow": 0,
+        "activeModule": "storyboard",
+        "headingCount": 1
+      },
+      "searchAndStatusFilter": true,
+      "keyboardSelectionFocus": true,
+      "staleRowsRetainedOnFailure": true,
+      "readRetryAndLoading": true,
+      "rowDepartureDismissPreserved": true,
+      "rowDepartureAcceptSwitched": true,
+      "sidebarDepartureDismissPreserved": null
+    },
+    {
+      "width": 834,
+      "enteredViaActualSidebar": true,
+      "listGeometry": {
+        "viewport": 834,
+        "documentOverflow": 0,
+        "workspaceOverflow": 0,
+        "headerOverflow": 0,
+        "activeModule": "storyboard",
+        "headingCount": 1
+      },
+      "detailGeometry": {
+        "viewport": 834,
+        "documentOverflow": 0,
+        "workspaceOverflow": 0,
+        "headerOverflow": 0,
+        "activeModule": "storyboard",
+        "headingCount": 1
+      },
+      "searchAndStatusFilter": true,
+      "keyboardSelectionFocus": true,
+      "staleRowsRetainedOnFailure": true,
+      "readRetryAndLoading": true,
+      "rowDepartureDismissPreserved": true,
+      "rowDepartureAcceptSwitched": true,
+      "sidebarDepartureDismissPreserved": null
+    },
+    {
+      "width": 1423,
+      "enteredViaActualSidebar": true,
+      "listGeometry": {
+        "viewport": 1423,
+        "documentOverflow": 0,
+        "workspaceOverflow": 0,
+        "headerOverflow": 0,
+        "activeModule": "storyboard",
+        "headingCount": 1
+      },
+      "detailGeometry": {
+        "viewport": 1423,
+        "documentOverflow": 0,
+        "workspaceOverflow": 0,
+        "headerOverflow": 0,
+        "activeModule": "storyboard",
+        "headingCount": 1
+      },
+      "searchAndStatusFilter": true,
+      "keyboardSelectionFocus": true,
+      "staleRowsRetainedOnFailure": true,
+      "readRetryAndLoading": true,
+      "rowDepartureDismissPreserved": true,
+      "rowDepartureAcceptSwitched": true,
+      "sidebarDepartureDismissPreserved": true
+    }
+  ],
+  "safety": {
+    "serverBoundMethods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "syntheticReadPostsFulfilled": 12,
+    "forwardedPosts": 0,
+    "catalogReads": 8,
+    "detailReads": 6,
+    "deniedExternal": 6,
+    "deniedNonreadAttempts": 0,
+    "deniedPaths": [],
+    "pageErrors": 0,
+    "consoleErrors": 2,
+    "actualOperatingWrites": 0,
+    "providerCalls": 0
+  },
+  "screenshots": [
+    {
+      "file": "integrated-storyboard-list-390.png",
+      "sha256": "c3627a4547a5c6d36fcba4e81287e149203d683d1d71eb231c99a26c706e17c5",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "integrated-storyboard-detail-390.png",
+      "sha256": "a998b9712fa28d9ddf96f47dc2eb9c7d114a05d873ea250cb0195684442c7b12",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "integrated-storyboard-list-834.png",
+      "sha256": "7437b88c99ca3aa96f6351db55fd8b2f8612c368a6cba61fc75af39596f716fd",
+      "width": 834,
+      "height": 1000
+    },
+    {
+      "file": "integrated-storyboard-detail-834.png",
+      "sha256": "3942c4aadcc6a66e541268983104ff87f242a81443a3e741be2ff29971b8905f",
+      "width": 834,
+      "height": 1000
+    },
+    {
+      "file": "integrated-storyboard-list-1423.png",
+      "sha256": "6531caa17c9cc12b0e47d41f8cc7214c136669343fd51358d9c4a1b5f6f98588",
+      "width": 1423,
+      "height": 1000
+    },
+    {
+      "file": "integrated-storyboard-detail-1423.png",
+      "sha256": "e59ece7374bccf39390361d2dd23a2bad20b93e173dde4612c8888a07ed3f84a",
+      "width": 1423,
+      "height": 1000
+    }
+  ],
+  "limitations": [
+    "Actual Next administrator shell with synthetic browser-local catalog/project reads and synthetic local login. This does not prove hosted data, provider execution or deployment.",
+    "Only the two owned storyboard components were copied. The boundary manifest records other runtime/candidate differences."
+  ],
+  "runtimeDirectory": "/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/tzudong-storyboard-integrated-20261005-3pqq2n5m",
+  "runner": {
+    "path": "verify-integrated.mjs",
+    "sha256": "8e972b9e12a3caef3177604df5345f4aa80993d5ca9174a2119191dd8370bca0"
+  },
+  "renderedSourceBoundaryStable": true
+}

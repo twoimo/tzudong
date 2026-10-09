@@ -1,0 +1,19 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/short-url-read.test.ts:
+(pass) bounded short URL read outcomes > accepts allocator codes and rejects malformed codes before lookup [0.25ms]
+(pass) bounded short URL read outcomes > separates missing rows from provider failures and invalid shapes [0.22ms]
+(pass) bounded short URL read outcomes > redirects only allowed targets and retains the safe home fallback [0.08ms]
+(pass) bounded short URL read outcomes > never passes provider diagnostics to the target validator or result [0.05ms]
+
+tests-unit/short-url-page-runtime.test.ts:
+(pass) short URL HTTP status and recovery contract > invalid code is HTTP404 without a data client and includes recovery/noindex [0.43ms]
+(pass) short URL HTTP status and recovery contract > missing row is HTTP404 with a bounded read [0.06ms]
+(pass) short URL HTTP status and recovery contract > provider error, thrown read and malformed data are HTTP503 without diagnostics [0.10ms]
+(pass) short URL HTTP status and recovery contract > safe same-origin review target is HTTP307 and an unsafe target redirects home [0.23ms]
+(pass) short URL HTTP status and recovery contract > control characters cannot produce malformed Location headers [0.13ms]
+
+ 9 pass
+ 0 fail
+ 50 expect() calls
+Ran 9 tests across 2 files. [79.00ms]

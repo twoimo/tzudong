@@ -1,0 +1,46 @@
+{
+  "status": "unconfirmed",
+  "purpose": "isolated real four-source atomicity/ledger prototype, not adopted executor or operating ledger proof",
+  "operatingWrites": false,
+  "sourceEdits": false,
+  "schemaLedgerRowsAreSyntheticLocalOnly": true,
+  "sourceAdmission": [
+    {
+      "path": "20261004190259_admin_record_guarded_actions.sql",
+      "sourceSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "vectorSha256": "5038d14ce704d494889562f04d33cacae7bd7a117bf4cd2341752bd3b40f12af",
+      "executionViewSha256": "96f57b4c4a94202136380fd0cf2c3310bd359f484be7e24ba56c4c26c211756d",
+      "inverseByteExact": true,
+      "topLevelTransactionControlsOnlyOuter": true
+    },
+    {
+      "path": "20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "sourceSha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+      "vectorSha256": "082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8",
+      "executionViewSha256": "f8968d72ae26685f0e07210a9279e705f027eff2b1f9acf8302302cc17ba1e26",
+      "inverseByteExact": true,
+      "topLevelTransactionControlsOnlyOuter": true
+    },
+    {
+      "path": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "sourceSha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+      "vectorSha256": "f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1",
+      "executionViewSha256": "f1c4c1889b7d292b14deeb88b4b51170e9f1bec9033117b59ea1b35fe1974f39",
+      "inverseByteExact": true,
+      "topLevelTransactionControlsOnlyOuter": true
+    },
+    {
+      "path": "20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "sourceSha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "vectorSha256": "ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958",
+      "executionViewSha256": "cb0f17dc98696ee7c9fa60098dc02356d7c2f61c075e09006f19108dc368ad4a",
+      "inverseByteExact": true,
+      "topLevelTransactionControlsOnlyOuter": true
+    }
+  ],
+  "admissionLimits": "Known-hash four-source envelope only; lexical control check is not a generic SQL AST security validator. Root must choose fail-closed typed transaction admission before broader sources.",
+  "failure": {
+    "kind": "AssertionError"
+  },
+  "ownedDbDropped": true
+}

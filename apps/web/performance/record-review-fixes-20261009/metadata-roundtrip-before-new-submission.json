@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "title": "synthetic video",
+    "ads_info": {
+      "is_ads": true,
+      "what_ads": "A, B"
+    },
+    "duration": 42,
+    "is_shorts": false,
+    "publishedAt": "2026-10-01"
+  },
+  "sourceSha256": "8cbaa9d042f32bd4a42e60580e6aa8e32c67b9a1b942d9fbef738767324f24ce",
+  "kind": "actual-pg17-compose-output",
+  "syntheticOnly": true
+}

@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/restaurant-management-routing.test.ts:
+(pass) integrated restaurant management > old history links open the refresh tab and preserve existing filters [0.19ms]
+(pass) integrated restaurant management > refresh selection survives canonicalization and unrelated pages do not inherit it [0.04ms]
+(pass) integrated restaurant management > old saved sidebar slots remove only the merged entry and preserve the remaining order [0.37ms]
+
+ 3 pass
+ 0 fail
+ 10 expect() calls
+Ran 3 tests across 1 file. [66.00ms]

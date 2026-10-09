@@ -1,0 +1,16 @@
+{
+  "sourceHead": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+  "serverVersion": "15.8",
+  "catalogRows": 1917,
+  "artifactFiles": 56,
+  "artifactManifestEntries": 55,
+  "selectedSourceChainLines": [
+    "8742990450646f08ddb6219adbeb8c109207263c2dd05a2c8b716b95893ad6ab  b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95  backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+    "a9ba779b6552dfe8c591a258809f46537f4f14f66eb88a585489ef768a7bdf95  8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3  backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql"
+  ],
+  "sourceInventorySha256": "77159c530a6bc8377e7af315de969d0112094bc09b235246004645cde7c5e221",
+  "migrationChainSha256": "9175e4189ee6b3b242bf8710df81b9deb054805a954517c83e3d91da9432af19",
+  "forward127Admission": "Source-bound helper/manual metadata/body guards executed in the unchanged canonical migration chain; G014 catalog manifest does not enumerate this pipeline_control helper.",
+  "metadataSha256": "f45af885754d16be1034b31613dc615ff4578308d2d4ff8b4c2c0545fc681561",
+  "operatingWrites": false
+}

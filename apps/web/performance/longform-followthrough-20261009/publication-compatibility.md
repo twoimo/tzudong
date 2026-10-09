@@ -1,0 +1,15 @@
+# Publication engine compatibility 후속
+
+1,071편 coverage와 최초 readback은 그대로 보존했다. 최초 OSK_ENGINE_UNSUPPORTED는 실제 API signature 오류가 아니라 **전체 runtime pin의 릴리스 차이**다. 후보의 이전 `fb25fd8c...`는 vault Git `3472a96`에서 복원한 54개 runtime digest와 정확히 같다. 이어 `8682932`는 `ca3ca2fa...`, 현재 `627f2bf`는 `790bb326...`다. 현재 engine 경로의 tracked/untracked 변경은 없었다. 공식 v4.1.8 tag archive를 메모리에서 읽어 54개 runtime 모두 현재 설치본과 바이트 동등성을 확인했다. archive SHA와 파일별 SHA는 official-engine-v418-contract.json에 보존했으며 archive/엔진을 설치하거나 업데이트하지 않았다.
+
+이전→현재 Python runtime 변경은 9개(cli, distillation, evictions, growth, integration, organization, raw_view, rechecks, response_growth)다. MCP entrypoint, write, graph, core, contract, space_layout, approvals/authority 등은 그대로다. 따라서 projection의 4개 read API pin은 계속 일치한다. 그러나 publication은 writer가 호출하는 `rechecks.after_write/ensure_baseline`과 `evictions._after_node_write`, overview의 organization/recheck 경로를 사용하므로 read pin의 일치만으로 write 호환성을 주장할 수 없다.
+
+실제 차이 중 rechecks는 hub의 본문 변경을 전파 대상으로 삼지 않는다. 일반 leaf source 확인은 유지된다. evictions는 다중 target settlement와 hash-confirmed transit discard를 추가하고 안내를 바꿨다. adapter는 distill/settle/discard/growth를 요청하지 않으며 source 원문·receipt를 자신의 계약으로 저장한다. organization 수정은 허브 이동/검토 경로에 영향을 줄 수 있어 기존 sharded migration/organization plan 테스트로 검증했다. raw_view/integration의 대화 증거 안내 변경을 Tzudong의 독립 영상 검증으로 승계하지 않았다.
+
+후보에서는 arbitrary version allowlist를 추가하지 않고 **검증된 공식 v4.1.8 전체 exact digest로 단일 pin을 교체**했다. 범위/이름/버전만으로 허용하는 fallback은 없다. 기존 rechecks 파일 1개만 변조하거나 runtime .py를 추가해도 projection pin은 같지만 publication은 API import 전에 OSK_ENGINE_UNSUPPORTED로 거부한다. 공유/vault engine 파일은 수정하지 않았다.
+
+격리 검증은 기존 OSK Python 환경으로 실행했다. `OSK_TEST_ENGINE=/Users/twoimo/Documents/osk-vault/_governance/_engine /Users/twoimo/Documents/osk-vault/.venv/bin/python -B -m unittest backend.knowledge_graph.tests.test_osk_publication`의 기존 테스트 18개가 13.172초에 통과했다. 임시 vault subprocess에서 실제 pinned API를 사용하여 idempotency, ACK/readback loss, 부분 재개, CAS human edit 거부, 타 scope 거부, shared lock, capacity admission, sharded pages/source roundtrip, migration/pinned moves/manual edits, exact receipt/model evidence를 검사했다. 새 PublicationEngineAdmissionTests 1개(2 mutation subcases)는 0.039초에 통과했다. test mutation은 임시 engine copy이며 원본 engine·vault에 publication을 실행하지 않았다.
+
+공식 최신 stable은 조회 시 [v5.0.0](https://github.com/lpaiu-cs/osk-system/releases/tag/v5.0.0), published 2026-10-07T07:25:22Z다. [v4.1.8 안내](https://github.com/lpaiu-cs/osk-system/blob/v4.1.8/docs/UPGRADING.md)와 [v5.0.0 이행 안내](https://github.com/lpaiu-cs/osk-system/blob/v5.0.0/docs/UPGRADING.md)를 구분했다. v5는 cite_round/read_cited 전환, 기기 간 업데이트 정합성, dropped 출력 등을 변경한다. 이번 수정은 기존 설치 pin을 보존하는 v4.1.8 호환 검증이며 v5 호환·공유 엔진 업데이트를 주장하지 않는다. 현재 vault의 root release.json은 여전히 v4.1.3을 기록하므로 engine byte equivalence와 governance release baseline 인증도 구분한다. baseline/보호 상태 점검·이행은 소유자의 별도 작업이며 이 파일로 approval이 생기지 않는다.
+
+현재 후보의 engine admission blocker는 격리 검증으로 해소됐다. 실제 publication에는 기존 receipt admission·scope/topology·single writer·노드 CAS/readback·비용/큐 상태 등의 원래 전제가 그대로 필요하다. coverage, 유료 분석, 운영 viewer, typed caption integration의 미완료 상태는 바뀌지 않았다. 원본 vault/queue/model/profile/memory·컨테이너는 변경하지 않았다.

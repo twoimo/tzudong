@@ -1,0 +1,26 @@
+{
+  "kind": "sanitized_operator_billing_readback",
+  "observedDate": "2026-10-02",
+  "project": "tzudong-free-zero",
+  "oneTimeTopUpKRW": 10000,
+  "topUpConfirmed": true,
+  "displayedPrepayBalanceBeforeProbeKRW": 10000,
+  "displayedPromotionalCreditsApproxKRW": 81500,
+  "projectBillingLinked": true,
+  "projectTier": "Tier 1",
+  "projectPlan": "Prepay",
+  "autoReloadEnabled": false,
+  "samePreviouslyVerifiedProjectKeySuffix": true,
+  "realProviderProbeArtifact": "gemini-real-probe-raw.json",
+  "providerChargeAmount": null,
+  "promotionalCreditsDeductionReadback": null,
+  "paymentMethodDeletionCompleted": false,
+  "deletionBlocker": "valid_replacement_required_by_Google_Cloud",
+  "deletionPathsChecked": [
+    "AI_Studio_Prepay",
+    "Google_Payments_correct_country_profile"
+  ],
+  "billingAccountClosed": false,
+  "projectBillingDisabled": false,
+  "scope": "UI readback summary; no credential, card, account ID or raw receipt stored."
+}

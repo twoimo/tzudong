@@ -8,77 +8,112 @@ import {
   E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
 } from '../lib/e2e-admin-route-bypass';
 import { gotoAndHidePopup } from './helpers';
+import { ADMIN_SIDEBAR_ITEM_IDS } from '../lib/admin/sidebar-order';
 
 const ADMIN_MODULE_SMOKE_TARGETS = [
   {
     path: '/admin',
     moduleId: 'overview',
+    headerSelector: '[data-admin-dashboard-management="true"] [data-admin-page-header]',
     readySelector: '[data-admin-dashboard-management="true"]',
   },
   {
     path: '/admin?module=routes',
     moduleId: 'routes',
+    headerSelector: '[data-admin-module-header-module="routes"]',
     readySelector: '[aria-label="관리자 지도 운영 개요 2분할"]',
   },
   {
     path: '/admin?module=restaurants',
     moduleId: 'restaurants',
+    headerSelector: '[data-admin-restaurant-primary-header="true"]',
     readySelector: '#scroll-container',
   },
   {
     path: '/admin?module=restaurant-refresh-history',
     moduleId: 'restaurant-refresh-history',
+    activeModuleId: 'restaurants',
+    headerSelector: '[data-admin-restaurant-primary-header="true"]',
     readySelector: '[data-admin-restaurant-refresh-history="true"]',
   },
   {
     path: '/admin?module=submissions',
     moduleId: 'submissions',
+    headerSelector: '[data-admin-module-header-module="submissions"]',
     readySelector: '#scroll-container',
   },
   {
     path: '/admin?module=reviews',
     moduleId: 'reviews',
+    headerSelector: '[data-admin-module-header-module="reviews"]',
     readySelector: '#scroll-container',
   },
   {
     path: '/admin?module=storyboard',
     moduleId: 'storyboard',
-    readySelector: '[data-admin-storyboard-generator="true"]',
+    headerSelector: '[data-local-storyboard-workspace="true"] [data-admin-page-header]',
+    readySelector: '[data-local-storyboard-workspace="true"]',
   },
   {
     path: '/admin?module=banners',
     moduleId: 'banners',
+    headerSelector: '[data-admin-module-header-module="banners"]',
     readySelector: '[aria-labelledby="banner-list-title"]',
   },
   {
     path: '/admin?module=users',
     moduleId: 'users',
+    headerSelector: '[data-admin-module-header-module="users"]',
     readySelector: '[data-admin-users-summary]',
   },
   {
     path: '/admin?module=insights',
     moduleId: 'insights',
+    headerSelector: '[data-admin-module-header-module="insights"]',
     readySelector: '[data-admin-embedded-module-id="insights"]',
   },
   {
     path: '/admin?module=audit',
     moduleId: 'audit',
+    headerSelector: '[data-admin-module-header-module="audit"]',
     readySelector: '[data-admin-audit-coverage="partial-domain-specific"]',
   },
   {
     path: '/admin?module=youtube-thumbnail-generator',
     moduleId: 'youtube-thumbnail-generator',
+    headerSelector: '[data-admin-module-header-module="youtube-thumbnail-generator"]',
     readySelector: '[data-admin-youtube-thumbnail-generator="true"]',
   },
   {
     path: '/admin?module=llm',
     moduleId: 'llm',
-    readySelector: '[aria-label="운영 보조 제안"]',
+    headerSelector: '[data-admin-module-header-module="llm"]',
+    readySelector: '[data-admin-operations-panel]',
+  },
+  {
+    path: '/admin?module=pipeline',
+    moduleId: 'pipeline',
+    headerSelector: '[data-admin-module-header-module="pipeline"]',
+    readySelector: '[data-admin-pipeline-dashboard="true"]',
+  },
+  {
+    path: '/admin?module=knowledge-graph',
+    moduleId: 'knowledge-graph',
+    headerSelector: '[data-admin-knowledge-graph-panel] [data-admin-page-header]',
+    readySelector: '[data-knowledge-canvas]',
+  },
+  {
+    path: '/admin?module=sentry',
+    moduleId: 'sentry',
+    headerSelector: '[data-admin-sentry-panel] [data-admin-page-header]',
+    readySelector: '[data-admin-sentry-panel]',
   },
 ] as const;
 
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = 'tzudong:e2e-admin-shell-bypass';
-const HYDRATION_SMOKE_ARTIFACT_DIR = resolve(process.cwd(), '..', '..', 'artifacts', 'ultragoal');
+const HYDRATION_SMOKE_ARTIFACT_DIR = process.env.ADMIN_HYDRATION_ARTIFACT_DIR
+  ? resolve(process.env.ADMIN_HYDRATION_ARTIFACT_DIR)
+  : resolve(process.cwd(), '..', '..', 'artifacts', 'ultragoal');
 const HYDRATION_SMOKE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-admin-console-modules-final.png');
 const HYDRATION_SMOKE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-admin-console-modules-transcript.json');
 const MOBILE_MENU_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-mobile-admin-menu-final.jpg');
@@ -167,12 +202,32 @@ function attachRuntimeErrorCollectors(page: Page, runtimeErrors: string[]) {
 }
 
 test.describe('admin console module hydration smoke', () => {
-  test('loads core admin modules without hydration/runtime errors', async ({ page }, testInfo) => {
+  test('loads core admin modules without hydration/runtime errors', async ({ page, context }, testInfo) => {
     test.setTimeout(300_000);
 
     const runtimeErrors: string[] = [];
     const visited: Array<{ path: string; moduleId: string; headerSelector: string; readySelector: string }> = [];
     attachRuntimeErrorCollectors(page, runtimeErrors);
+    const targetIds = ADMIN_MODULE_SMOKE_TARGETS.map(target => target.moduleId);
+    expect(new Set(targetIds).size).toBe(targetIds.length);
+    expect(targetIds.filter(id => id !== 'restaurant-refresh-history').sort()).toEqual([...ADMIN_SIDEBAR_ITEM_IDS].sort());
+    const blockedMutations: string[] = [];
+    // Optional isolated shell smoke: bounded failures are rendered content too,
+    // but this mode provides no successful hosted-data or mutation evidence.
+    if (process.env.ADMIN_HYDRATION_READ_ONLY === '1') {
+      const origin = new URL(testInfo.project.use.baseURL as string).origin;
+      await context.route('**/*', async route => {
+        const request = route.request();
+        const url = new URL(request.url());
+        if (!['GET', 'HEAD'].includes(request.method())) {
+          blockedMutations.push(url.pathname);
+          return route.fulfill({ status: 503, json: { code: 'local_read_only_check' } });
+        }
+        if (url.origin !== origin) return route.fulfill({ status: 503, body: '' });
+        if (url.pathname.startsWith('/api/')) return route.fulfill({ status: 503, json: { code: 'local_read_only_check' } });
+        return route.continue();
+      });
+    }
 
     await installE2EAdminShellBypass(page);
 
@@ -185,17 +240,22 @@ test.describe('admin console module hydration smoke', () => {
       await gotoAndHidePopup(page, target.path);
       await expect(page.locator('#admin-console-canvas')).toHaveAttribute(
         'data-admin-console-active-module',
-        target.moduleId,
+        'activeModuleId' in target ? target.activeModuleId : target.moduleId,
         { timeout: 30_000 },
       );
-      const headerSelector = `[data-admin-module-header-module="${target.moduleId}"]`;
+      const headerSelector = target.headerSelector;
       await expect(page.locator(headerSelector)).toBeVisible({ timeout: 30_000 });
       await expect(page.locator(target.readySelector)).toBeVisible({ timeout: 30_000 });
+      if (target.moduleId === 'restaurant-refresh-history') {
+        await expect(page).toHaveURL(/module=restaurants.*restaurantView=refresh/);
+        await expect(page.getByRole('tab', { name: '최신화·이력' })).toHaveAttribute('aria-selected', 'true');
+      }
       visited.push({ path: target.path, moduleId: target.moduleId, headerSelector, readySelector: target.readySelector });
       await page.waitForTimeout(300);
     }
 
     expect(runtimeErrors).toEqual([]);
+    expect(blockedMutations).toEqual([]);
     mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
     await page.screenshot({ path: HYDRATION_SMOKE_SCREENSHOT, fullPage: false });
     writeFileSync(
@@ -203,6 +263,9 @@ test.describe('admin console module hydration smoke', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         kind: 'playwright-browser-automation-report',
+        scope: process.env.ADMIN_HYDRATION_READ_ONLY === '1' ? 'local-read-only-synthetic-failure-states' : 'configured-runtime',
+        sidebarModuleCount: ADMIN_SIDEBAR_ITEM_IDS.length,
+        blockedMutationCount: blockedMutations.length,
         visited,
         runtimeErrors,
         screenshot: HYDRATION_SMOKE_SCREENSHOT,

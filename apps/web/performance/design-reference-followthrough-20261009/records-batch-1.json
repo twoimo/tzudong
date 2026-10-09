@@ -1,0 +1,34 @@
+[
+  {
+    "index": 1,
+    "name": "Supahero",
+    "url": "https://supahero.io/",
+    "actualUrl": "https://supahero.io/",
+    "title": "Supahero - Website hero section library",
+    "screenshot": "01-reference.png"
+  },
+  {
+    "index": 2,
+    "name": "Dark Design",
+    "url": "https://dark.design/",
+    "actualUrl": "https://www.dark.design/",
+    "title": "Dark Themed Web Design Inspiration",
+    "screenshot": "02-reference.png"
+  },
+  {
+    "index": 3,
+    "name": "Mac App Supply",
+    "url": "https://macapp.supply/",
+    "actualUrl": "https://macapp.supply/",
+    "title": "Macapp Supply — Beautifully designed macOS apps, curated",
+    "screenshot": "03-reference.png"
+  },
+  {
+    "index": 4,
+    "name": "Layers",
+    "url": "https://getlayers.ai/",
+    "actualUrl": "https://www.getlayers.ai/",
+    "title": "GetLayers AI — An AI-native library of templates.",
+    "screenshot": "04-reference.png"
+  }
+]

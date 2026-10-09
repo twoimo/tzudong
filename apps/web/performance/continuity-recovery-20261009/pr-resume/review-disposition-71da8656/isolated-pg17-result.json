@@ -1,0 +1,75 @@
+{
+  "observedAt": "2026-10-09T08:12:30Z",
+  "status": "passed",
+  "engine": "PostgreSQL 17.11 (Homebrew)",
+  "transport": "temporary Unix socket only",
+  "operatingDatabaseWrites": false,
+  "sourceHashes": {
+    "apps/web/scripts/apply-supabase-migration.mjs": "af2ecd0246b278f9e4198817eaa711bec0afd62bd033005f4fc26d5280c3df45",
+    "apps/web/scripts/supabase-migration-transaction.mjs": "ba054d1c2c9c8eb2d19a110c4b58be999f52521880cbf66aef02ce963b97bbb5",
+    "apps/web/tests-unit/supabase-migration-transaction.test.ts": "d0d5932a5e26bbe95577a48a5240bf9bbe4722308a2bfe1b79ac4ff82fe2be37"
+  },
+  "verifier": {
+    "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/verify-isolated-pg17.mjs",
+    "sha256": "04907bf8699f58006a6fe124a0cebc3604f38266647401793542f999ac68fcf4"
+  },
+  "cases": [
+    {
+      "name": "terminal_query_not_run_on_preimage",
+      "status": "passed",
+      "evidence": "The terminal query referenced the table created by the migration and the application succeeded from a preimage where that table did not exist."
+    },
+    {
+      "name": "prior_query_not_run_on_existing_ledger",
+      "status": "passed",
+      "code": "MIGRATION_ALREADY_APPLIED",
+      "evidence": "The prior query referenced an absent table while the matching ledger row and terminal state existed; only the terminal branch was sent."
+    },
+    {
+      "name": "reconciliation_skips_missing_terminal_table",
+      "status": "passed",
+      "evidence": "A no-ledger reconciliation returned the prior state with terminal=null although the terminal query referenced an absent relation."
+    },
+    {
+      "name": "select_insert_cannot_reach_exclusive_lock",
+      "status": "passed",
+      "code": "MIGRATION_LEDGER_UNAVAILABLE",
+      "evidence": "A role with schema usage plus SELECT and INSERT on the ledger failed at the bounded admission guard; no source table or ledger row was created."
+    },
+    {
+      "name": "ambiguous_ack_no_resend_fail_closed",
+      "status": "passed",
+      "calls": 2,
+      "code": "MIGRATION_OUTCOME_UNCONFIRMED",
+      "evidence": "The first transaction committed and then raised a synthetic transport error. The caller made one state-specific read-only reconciliation, did not resend the INSERT/source SQL, and did not convert the preexisting-looking final state into success."
+    },
+    {
+      "name": "exit0_invalid_stdout_reconciles",
+      "status": "passed",
+      "calls": 2,
+      "evidence": "A successful psql exit with missing stdout remained distinguishable from an ambiguous transport failure and was confirmed by one read-only reconciliation."
+    }
+  ],
+  "existingStateDiagnostic": {
+    "callerCode": "MIGRATION_ALREADY_APPLIED",
+    "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+    "firstFixedSqlCode": "MIGRATION_ALREADY_APPLIED",
+    "reconciliation": {
+      "ledger_exists": true,
+      "ledger_equal": true,
+      "prior": null,
+      "terminal": {
+        "ready": true
+      }
+    }
+  },
+  "cleanup": {
+    "serverStopped": true,
+    "temporaryClusterRemoved": true
+  },
+  "limits": [
+    "This is isolated local PostgreSQL 17.11 evidence, not hosted Supabase or an operating database readback.",
+    "Historical PG15.8 and PG17.6 results are not promoted to these source hashes.",
+    "The separate bundle PG17.6 fixture owned by the root task is not used as evidence for these files."
+  ]
+}

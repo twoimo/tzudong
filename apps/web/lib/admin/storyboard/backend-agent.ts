@@ -1,110 +1,81 @@
-import {
-  accessSync,
-  constants,
-  existsSync,
-  readFileSync,
-} from "node:fs";
+import { accessSync, constants, existsSync } from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
 import { randomBytes } from "node:crypto";
 import { gzipSync } from "node:zlib";
-
 import { buildStoryboardAgentGraphFidelity } from "./agent-graph-fidelity";
-import {
-  createBoundStoryboardAgentTestCommandCapability,
-  getStoryboardAgentTestCommandBinding,
-  type StoryboardAgentTestCommandCapability,
-} from "./test-command-capability";
-import {
-  generateLocalStoryboard,
-  normalizeStoryboardExportMarkdown,
-} from "./generator";
-import {
-  hasUnsafeStoryboardInstructionRequest,
-  sanitizeStoryboardPublicText,
-} from "./prompt-safety";
+import { createBoundStoryboardAgentTestCommandCapability, getStoryboardAgentTestCommandBinding, type StoryboardAgentTestCommandCapability } from "./test-command-capability";
+import { generateLocalStoryboard, normalizeStoryboardExportMarkdown } from "./generator";
+import { hasUnsafeStoryboardInstructionRequest, sanitizeStoryboardPublicText } from "./prompt-safety";
 import { buildStoryboardRagModelStackDiagnostics, buildStoryboardRagProfileTraceDetail } from "./rag";
-import {
-  STORYBOARD_CHAT_MIN_SEGMENT_COUNT,
-  STORYBOARD_MAX_SEGMENT_COUNT,
-} from "./types";
-import type {
-  StoryboardBackendAgentStatus,
-  StoryboardChatAgentRequest,
-  StoryboardChatFocusContext,
-  StoryboardChatAgentResult,
-  StoryboardChatCanvasPatch,
-  StoryboardChatConversationMessage,
-  StoryboardChatScenePatch,
-  StoryboardGenerateRequest,
-  StoryboardGenerationResult,
-  StoryboardGenerationMode,
-  StoryboardGraphDiagnostics,
-  StoryboardGraphFallbackReason,
-  StoryboardChatImageAttachment,
-  StoryboardThinkingTraceEntry,
-  StoryboardTone,
-} from "./types";
+import { STORYBOARD_CHAT_MIN_SEGMENT_COUNT, STORYBOARD_MAX_SEGMENT_COUNT } from "./types";
+import type { StoryboardBackendAgentStatus, StoryboardChatAgentRequest, StoryboardChatFocusContext, StoryboardChatAgentResult, StoryboardChatCanvasPatch, StoryboardChatConversationMessage, StoryboardChatScenePatch, StoryboardGenerateRequest, StoryboardGenerationResult, StoryboardGraphDiagnostics, StoryboardGraphFallbackReason, StoryboardChatImageAttachment, StoryboardThinkingTraceEntry, StoryboardTone } from "./types";
 
-const BACKEND_AGENT_NOTEBOOKS = [
-  "scripts/03-storyboard-agent.ipynb",
-  "scripts/04-storyboard-agent-graph-debug.ipynb",
-];
-const BACKEND_AGENT_GRAPH = "src/graph.py";
-const BACKEND_AGENT_RUNNER = "scripts/run-storyboard-agent.py";
 const STORYBOARD_AGENT_TEST_FIXTURE_CAPABILITY =
   "checked-in-langgraph-runner-fixture-v1";
+
 const APP_WEB_MARKER = "app/api/admin/storyboard/route.ts";
-const REQUIRED_PYTHON_MODULES = [
-  "langgraph",
-  "langchain_openai",
-  "langchain_core",
-  "FlagEmbedding",
-  "supabase",
-  "dotenv",
-  "numpy",
-  "pydantic",
-];
-const REQUIRED_AUTO_RUNNER_PYTHON_MODULES = [
-  "langgraph",
-  "langchain_core",
-  "pydantic",
-];
+
 const DEFAULT_STORYBOARD_AGENT_TIMEOUT_MS = 120_000;
+
 const MIN_STORYBOARD_AGENT_TIMEOUT_MS = 5_000;
+
 const MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES = 64 * 1024;
+
 const DEFAULT_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS = 5_000;
+
 const MIN_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS = 25;
+
 const MAX_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS = 15_000;
+
 const WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS = 5_000;
+
 const WINDOWS_JOB_SUPERVISOR_CLEANUP_GRACE_MS = 5_000;
+
 const WINDOWS_JOB_SUPERVISOR_FINAL_CLOSE_TIMEOUT_MS = 5_000;
+
 const LINUX_NAMESPACE_TERMINATION_TIMEOUT_MS = 10_000;
+
 const LINUX_NAMESPACE_SUPERVISOR_DRAIN_TIMEOUT_MS = 7_000;
+
 const LINUX_NAMESPACE_DESCENDANT_TERM_GRACE_MS = 500;
+
 const LINUX_NAMESPACE_INNER_CLEANUP_TIMEOUT_MS = 3_000;
+
 const MAX_STORYBOARD_AGENT_TIMEOUT_MS = 600_000;
+
 function getRuntimeCwd() {
   const cwd = Reflect.get(process, "cwd");
   return typeof cwd === "function" ? cwd.call(process) : ".";
 }
 
+
 function resolveFromRuntimeCwd(...segments: string[]) {
   return path.resolve(/* turbopackIgnore: true */ getRuntimeCwd(), ...segments);
 }
 
+
 function getDefaultStoryboardAgentPython(platform: NodeJS.Platform = process.platform) {
   return platform === "win32" ? "python" : "python3";
 }
+
 const DEFAULT_STORYBOARD_AGENT_RUNTIME = "langgraph";
+
 const DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = "gpt-5.5";
+
 const DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "low";
+
 const DEFAULT_STORYBOARD_CHAT_SEGMENT_COUNT = 10;
+
 const STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT = 8;
+
 const STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT = 280;
+
 const UNSAFE_COMMAND_PATTERN = /[\u0000-\u001f\u007f"';&|`$<>()[\]{}!#%^?*]/;
+
 const WINDOWS_UNSAFE_COMMAND_TEXT_PATTERN = /[%^&|<>()!"]/;
+
 const STORYBOARD_AGENT_ENV_ALLOWLIST = [
   "HOME",
   "LANG",
@@ -119,6 +90,7 @@ const STORYBOARD_AGENT_ENV_ALLOWLIST = [
   "USERPROFILE",
   "WINDIR",
 ] as const;
+
 
 function buildStoryboardAgentEnvironment(
   payload: Record<string, unknown>,
@@ -151,9 +123,11 @@ function buildStoryboardAgentEnvironment(
   return env;
 }
 
+
 function hasUnsafeWindowsCommandText(value: string) {
   return WINDOWS_UNSAFE_COMMAND_TEXT_PATTERN.test(value);
 }
+
 
 type CommandResult = {
   ok: boolean;
@@ -172,6 +146,7 @@ type CommandResult = {
   stdoutTruncated: boolean;
   stderrTruncated: boolean;
 };
+
 
 type ParsedStoryboardAgentOutput = Partial<StoryboardGenerationResult> & {
   markdown?: string;
@@ -192,6 +167,7 @@ type ParsedStoryboardAgentOutput = Partial<StoryboardGenerationResult> & {
   };
 };
 
+
 type ResolvedStoryboardAgentCommand =
   | {
       ok: true;
@@ -204,6 +180,7 @@ type ResolvedStoryboardAgentCommand =
       reason: string;
     };
 
+
 function firstExistingPath(candidates: string[], fallback = getRuntimeCwd()) {
   return (
     candidates.find((candidate) => existsSync(candidate)) ??
@@ -211,6 +188,7 @@ function firstExistingPath(candidates: string[], fallback = getRuntimeCwd()) {
     fallback
   );
 }
+
 
 function resolveAppWebRoot() {
   return firstExistingPath(
@@ -223,28 +201,11 @@ function resolveAppWebRoot() {
   );
 }
 
+
 const APP_WEB_ROOT = resolveAppWebRoot();
 
-function loadStoryboardAgentEnvFromAppWebRoot() {
-  if (process.env.STORYBOARD_AGENT_LOAD_ENV_LOCAL !== "1") return;
-  const envPath = path.join(/* turbopackIgnore: true */ APP_WEB_ROOT, ".env.local");
-  if (!existsSync(envPath)) return;
-  try {
-    for (const rawLine of readFileSync(envPath, "utf8").split(/\r?\n/)) {
-      const line = rawLine.trim();
-      if (!line || line.startsWith("#") || !line.includes("=")) continue;
-      const [rawKey, ...rawValueParts] = line.split("=");
-      const key = rawKey.trim();
-      if (!key.startsWith("STORYBOARD_AGENT_")) continue;
-      if (process.env[key]) continue;
-      process.env[key] = rawValueParts.join("=").trim().replace(/^['"]|['"]$/g, "");
-    }
-  } catch {
-    // Next normally loads .env.local; this is only a dev/runtime fallback.
-  }
-}
 
-loadStoryboardAgentEnvFromAppWebRoot();
+
 
 const BACKEND_AGENT_ROOT = process.env.STORYBOARD_AGENT_ROOT?.trim()
   ? path.resolve(/* turbopackIgnore: true */ APP_WEB_ROOT, process.env.STORYBOARD_AGENT_ROOT.trim())
@@ -253,9 +214,6 @@ const BACKEND_AGENT_ROOT = process.env.STORYBOARD_AGENT_ROOT?.trim()
       resolveFromRuntimeCwd("backend/storyboard-agent"),
     ]);
 
-function backendAgentPath(relativePath: string) {
-  return path.join(BACKEND_AGENT_ROOT, relativePath);
-}
 
 export function resolveStoryboardAgentPythonForPlatform(
   env: NodeJS.ProcessEnv = process.env,
@@ -263,6 +221,7 @@ export function resolveStoryboardAgentPythonForPlatform(
 ) {
   return env.STORYBOARD_AGENT_PYTHON?.trim() || getDefaultStoryboardAgentPython(platform);
 }
+
 
 function resolveStoryboardAgentPython(env: NodeJS.ProcessEnv = process.env) {
   const configured = env.STORYBOARD_AGENT_PYTHON?.trim();
@@ -272,9 +231,11 @@ function resolveStoryboardAgentPython(env: NodeJS.ProcessEnv = process.env) {
   return resolveStoryboardAgentPythonForPlatform(env, process.platform);
 }
 
+
 function getPathEnvironmentValue(env: NodeJS.ProcessEnv = process.env) {
   return env.PATH || env.Path || env.path || "";
 }
+
 
 function resolveWindowsCommandFromPath(command: string, env: NodeJS.ProcessEnv = process.env) {
   if (process.platform !== "win32" || command.includes("/") || command.includes("\\")) {
@@ -305,24 +266,24 @@ function resolveWindowsCommandFromPath(command: string, env: NodeJS.ProcessEnv =
   return command;
 }
 
+
 function resolveStoryboardAgentPythonCommand(env: NodeJS.ProcessEnv = process.env) {
   return resolveWindowsCommandFromPath(resolveStoryboardAgentPython(env), env);
 }
 
-function shouldRunThroughWindowsCommandShell(command: string) {
-  return process.platform === "win32" && /\.(?:cmd|bat)$/i.test(command.trim());
-}
 function getWindowsCommandShell() {
   const windowsRoot =
     process.env.SystemRoot?.trim() || process.env.WINDIR?.trim() || "C:\\Windows";
   return path.win32.join(windowsRoot, "System32", "cmd.exe");
 }
+
 function quoteWindowsCommandArgument(value: string) {
   if (/[\u0000\r\n]/.test(value)) {
     throw new Error("unsafe Windows command argument");
   }
   return `"${value.replace(/"/g, '""')}"`;
 }
+
 function buildWindowsCommandShellSpec(command: string, args: string[]) {
   // cmd parses exactly once. CALL would reparse percent escapes and must not be used.
   const commandLine = `"${[quoteWindowsCommandArgument(path.win32.resolve(command)), ...args.map(quoteWindowsCommandArgument)].join(" ")}"`;
@@ -332,9 +293,11 @@ function buildWindowsCommandShellSpec(command: string, args: string[]) {
     windowsVerbatimArguments: true,
   };
 }
+
 export function __buildWindowsCommandShellSpecForTests(command: string, args: string[]) {
   return buildWindowsCommandShellSpec(command, args);
 }
+
 const WINDOWS_JOB_SUPERVISOR_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
 $source = @'
@@ -1804,6 +1767,7 @@ try {
 }
 `;
 
+
 const WINDOWS_JOB_SUPERVISOR_BOOTSTRAP = String.raw`
 $ErrorActionPreference = 'Stop'
 $encoded = $env:TZUDONG_JOB_SCRIPT_GZIP_B64
@@ -1824,6 +1788,7 @@ try {
 }
 & ([ScriptBlock]::Create($script))
 `;
+
 
 function quoteWindowsCreateProcessArgument(value: string) {
   if (!value || /[\s"]/.test(value)) {
@@ -1847,6 +1812,7 @@ function quoteWindowsCreateProcessArgument(value: string) {
   return value;
 }
 
+
 function resolveTrustedWindowsPowerShell() {
   const windowsRoot =
     process.env.SystemRoot?.trim() ||
@@ -1864,6 +1830,7 @@ function resolveTrustedWindowsPowerShell() {
   }
   return executable;
 }
+
 
 function buildWindowsJobSupervisorSpec({
   executable,
@@ -1925,16 +1892,19 @@ function buildWindowsJobSupervisorSpec({
   };
 }
 
+
 type DiagnosticCapture = {
   value: string;
   byteCount: number;
   truncated: boolean;
 };
+
 type WindowsLifecycleChannel = {
   pipeName: string;
   socket: Promise<net.Socket>;
   close: () => void;
 };
+
 
 function createWindowsLifecycleChannel(
   purpose: "proof" | "parent",
@@ -1967,6 +1937,7 @@ function createWindowsLifecycleChannel(
     },
   };
 }
+
 function appendCommandDiagnostic(capture: DiagnosticCapture, chunk: unknown, budget: number) {
   const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), "utf8");
   capture.byteCount += bytes.length;
@@ -1978,6 +1949,7 @@ function appendCommandDiagnostic(capture: DiagnosticCapture, chunk: unknown, bud
     capture.value += bytes.subarray(0, remaining).toString("utf8");
   }
 }
+
 function appendTrustedLifecycleDiagnostic(current: string, diagnostic: string) {
   const trusted = `\n[trusted lifecycle: ${diagnostic.slice(0, 240)}]`;
   const prefixBudget = Math.max(
@@ -1990,11 +1962,13 @@ function appendTrustedLifecycleDiagnostic(current: string, diagnostic: string) {
   return `${prefix}${trusted}`;
 }
 
+
 type WindowsHelperResult = {
   status: "success" | "failed" | "timed_out";
   stdout: string;
   truncated: boolean;
 };
+
 
 type ProcessControl = {
   platform: NodeJS.Platform;
@@ -2004,16 +1978,20 @@ type ProcessControl = {
   streamDrainTimeoutMs?: number;
 };
 
+
 const defaultProcessControl: ProcessControl = {
   platform: process.platform,
   spawnProcess: spawn,
 };
 
+
 const MAX_WINDOWS_CAPTURED_PROCESS_COUNT = 4096;
+
 
 function remainingCleanupMs(deadline: number) {
   return Math.max(0, deadline - Date.now());
 }
+
 
 function runWindowsHelper(
   command: string,
@@ -2062,6 +2040,7 @@ function runWindowsHelper(
   });
 }
 
+
 async function captureWindowsProcessTree(
   pid: number,
   processControl: ProcessControl,
@@ -2085,6 +2064,7 @@ async function captureWindowsProcessTree(
   return pids.size <= MAX_WINDOWS_CAPTURED_PROCESS_COUNT ? [...pids] : null;
 }
 
+
 function runWindowsTaskkill(pid: number, processControl: ProcessControl, deadline: number) {
   return runWindowsHelper(
     "taskkill.exe",
@@ -2093,6 +2073,7 @@ function runWindowsTaskkill(pid: number, processControl: ProcessControl, deadlin
     deadline,
   ).then((result) => result.status);
 }
+
 
 async function verifyWindowsProcessTreeGone(
   pids: number[],
@@ -2112,6 +2093,7 @@ async function verifyWindowsProcessTreeGone(
   }
   return survivors;
 }
+
 
 async function terminateWindowsProcessTree(
   pid: number,
@@ -2167,18 +2149,21 @@ async function terminateWindowsProcessTree(
         : `windows process-tree cleanup incomplete (primary=${primary})`,
   };
 }
+
 export function __terminateWindowsProcessTreeForTests(
   pid: number,
   processControl: ProcessControl,
 ) {
   return terminateWindowsProcessTree(pid, processControl);
 }
+
 type LinuxNamespaceContainment = {
   available: boolean;
   launcher?: string;
   python?: string;
   diagnostic: string;
 };
+
 
 const LINUX_NAMESPACE_INIT_SUPERVISOR = String.raw`
 import base64, ctypes, json, os, select, signal, sys, time
@@ -2317,6 +2302,7 @@ while True:
             send("FAIL cleanup")
             sys.exit(125)
 `;
+
 const LINUX_NAMESPACE_OUTER_SUPERVISOR = String.raw`
 import base64, ctypes, os, select, signal, subprocess, sys, time
 libc = ctypes.CDLL(None)
@@ -2466,12 +2452,16 @@ if done and not failed and return_code == done_code:
 sys.exit(125)
 `;
 
+
 let linuxNamespaceContainmentProbe: LinuxNamespaceContainment | undefined;
+
 const LINUX_NAMESPACE_PROBE_CAPTURE_BYTES = 128;
+
 
 function linuxNamespaceCompletionMarker(nonce: string) {
   return Buffer.from(`\nTZUDONG_NS_COMPLETE ${nonce}\n`, "ascii");
 }
+
 
 function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
   if (linuxNamespaceContainmentProbe) return linuxNamespaceContainmentProbe;
@@ -2547,9 +2537,11 @@ function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
   });
 }
 
+
 export function __probeLinuxNamespaceContainmentForTests() {
   return probeLinuxNamespaceContainment();
 }
+
 
 async function terminateLinuxNamespaceScope(
   child: ReturnType<typeof spawn> | null,
@@ -2589,17 +2581,6 @@ async function terminateLinuxNamespaceScope(
   return { gone: false, diagnostic: "linux namespace containment cleanup incomplete" };
 }
 
-function resolveStoryboardAgentRuntime(env: NodeJS.ProcessEnv = process.env) {
-  const runtime = (
-    env.STORYBOARD_AGENT_RUNTIME?.trim() ||
-    DEFAULT_STORYBOARD_AGENT_RUNTIME
-  );
-  return runtime === "codex_cli_oauth" || runtime === "codex"
-    ? "codex_cli_oauth_legacy"
-    : runtime === "local_adapter_fallback"
-      ? "local_adapter_fallback"
-      : "langgraph";
-}
 
 function resolveStoryboardAgentCodexModel(
   env: NodeJS.ProcessEnv = process.env,
@@ -2610,6 +2591,7 @@ function resolveStoryboardAgentCodexModel(
   );
 }
 
+
 function resolveStoryboardAgentCodexEffort(
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -2619,6 +2601,7 @@ function resolveStoryboardAgentCodexEffort(
   );
 }
 
+
 function resolveStoryboardAgentTimeoutMs() {
   const parsed = Number(process.env.STORYBOARD_AGENT_TIMEOUT_MS);
   if (!Number.isFinite(parsed)) return DEFAULT_STORYBOARD_AGENT_TIMEOUT_MS;
@@ -2627,6 +2610,7 @@ function resolveStoryboardAgentTimeoutMs() {
     Math.max(MIN_STORYBOARD_AGENT_TIMEOUT_MS, Math.floor(parsed)),
   );
 }
+
 function resolveStoryboardAgentStreamDrainTimeoutMs() {
   const parsed = Number(process.env.STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS);
   if (!Number.isFinite(parsed)) return DEFAULT_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS;
@@ -2636,9 +2620,11 @@ function resolveStoryboardAgentStreamDrainTimeoutMs() {
   );
 }
 
+
 function sanitizePublicAgentText(value: string) {
   return sanitizeStoryboardPublicText(value);
 }
+
 
 function resolveStoryboardAgentCommand(
   rawCommand?: string | null,
@@ -2667,37 +2653,6 @@ function resolveStoryboardAgentCommand(
   }
 }
 
-function resolveDefaultStoryboardAgentRunnerCommand(
-  runtime: StoryboardBackendAgentStatus["runtime"] = resolveStoryboardAgentRuntime(),
-  env: NodeJS.ProcessEnv = process.env,
-): ResolvedStoryboardAgentCommand {
-  if (runtime !== "langgraph") {
-    return { ok: false, reason: "auto-runner-runtime-disabled" };
-  }
-  if (env.STORYBOARD_AGENT_DISABLE_AUTO_RUNNER === "1") {
-    return { ok: false, reason: "auto-runner-disabled" };
-  }
-  const executable = backendAgentPath(BACKEND_AGENT_RUNNER);
-  if (!existsSync(executable)) {
-    return { ok: false, reason: "auto-runner-missing" };
-  }
-  try {
-    accessSync(executable, constants.R_OK);
-    return { ok: true, executable, args: [], source: "auto_runner" };
-  } catch {
-    return { ok: false, reason: "auto-runner-not-readable" };
-  }
-}
-
-function resolveEffectiveStoryboardAgentCommand(
-  rawCommand?: string | null,
-  runtime: StoryboardBackendAgentStatus["runtime"] = resolveStoryboardAgentRuntime(),
-  env: NodeJS.ProcessEnv = process.env,
-): ResolvedStoryboardAgentCommand {
-  const configured = resolveStoryboardAgentCommand(rawCommand);
-  if (configured.ok || rawCommand?.trim()) return configured;
-  return resolveDefaultStoryboardAgentRunnerCommand(runtime, env);
-}
 function resolveWindowsShellScriptRunner() {
   return firstExistingPath(
     [
@@ -2711,218 +2666,25 @@ function resolveWindowsShellScriptRunner() {
   );
 }
 
+
 export function isPythonRuntimeUnavailableDiagnostic(value: string | null | undefined) {
   return /enoent|executable not found in \$path|is not recognized as an internal or external command|cannot find the file specified|no such file or directory|python was not found|no python at|unable to create process/i.test(
     value ?? "",
   );
 }
 
-type PythonModuleProbeResult = {
-  missingModules: string[];
-  runtimeAvailable: boolean;
-  runtimeError?: string;
-};
-function buildPythonProbeEnvironment(
-  env: NodeJS.ProcessEnv = process.env,
-): NodeJS.ProcessEnv {
-  const allowed = new Set([
-    "COMSPEC",
-    "HOME",
-    "PATH",
-    "PATHEXT",
-    "PYTHONHOME",
-    "SYSTEMROOT",
-    "TEMP",
-    "TMP",
-    "USERPROFILE",
-    "VIRTUAL_ENV",
-    "WINDIR",
-  ]);
-  const probeEnvironment: NodeJS.ProcessEnv = {
-    NODE_ENV: env.NODE_ENV,
-  };
-  for (const [key, value] of Object.entries(env)) {
-    if (allowed.has(key.toUpperCase()) && typeof value === "string" && value) {
-      probeEnvironment[key] = value;
-    }
-  }
-  return probeEnvironment;
-}
-
-async function probePythonModules(
-  modules: string[] = REQUIRED_PYTHON_MODULES,
-  env: NodeJS.ProcessEnv = process.env,
-): Promise<PythonModuleProbeResult> {
-  const probeSource = [
-    "import importlib.util, json",
-    `mods = ${JSON.stringify(modules)}`,
-    "missing = [mod for mod in mods if importlib.util.find_spec(mod) is None]",
-    "print(json.dumps(missing))",
-  ].join("\n");
-  const script = `import base64;exec(base64.b64decode('${Buffer.from(probeSource, "utf8").toString("base64")}'))`;
-  const pythonCommand = resolveStoryboardAgentPythonCommand(env);
-  const result = await runStoryboardAgentCommand(
-    {
-      ok: true,
-      executable: pythonCommand,
-      args: ["-c", script],
-      source: "configured",
-    },
-    {},
-    {
-      ...defaultProcessControl,
-      commandTimeoutMs: 15_000,
-    },
-    {
-      cwd: BACKEND_AGENT_ROOT,
-      inheritEnv: false,
-      env: {
-        ...buildPythonProbeEnvironment(env),
-        PYTHONPATH: [backendAgentPath("src"), env.PYTHONPATH]
-          .filter(Boolean)
-          .join(path.delimiter),
-      },
-    },
-  );
-  if (!result.ok) {
-    const probeText = `${result.stdout}\n${result.stderr}`.trim();
-    const fallbackMessage = result.timedOut
-      ? "python dependency probe timed out"
-      : isPythonRuntimeUnavailableDiagnostic(probeText)
-        ? "python runtime is unavailable"
-        : "python dependency probe failed closed";
-    return {
-      missingModules: [],
-      runtimeAvailable: false,
-      runtimeError: sanitizePublicAgentDiagnostic(
-        probeText || fallbackMessage,
-        600,
-      ),
-    };
-  }
-  try {
-    const parsed = JSON.parse(result.stdout.trim()) as unknown;
-    if (
-      !Array.isArray(parsed) ||
-      parsed.some(
-        (item) => typeof item !== "string" || !modules.includes(item),
-      ) ||
-      new Set(parsed).size !== parsed.length
-    ) {
-      return {
-        missingModules: [],
-        runtimeAvailable: false,
-        runtimeError: "python dependency probe returned invalid output",
-      };
-    }
-    return {
-      missingModules: parsed as string[],
-      runtimeAvailable: true,
-    };
-  } catch {
-    return {
-      missingModules: [],
-      runtimeAvailable: false,
-      runtimeError: "python dependency probe returned invalid output",
-    };
-  }
-}
-let pythonModuleProbeCache:
-  | {
-      key: string;
-      result: Promise<PythonModuleProbeResult>;
-    }
-  | undefined;
-
-function probePythonModulesCached(
-  modules: string[],
-  env: NodeJS.ProcessEnv = process.env,
-) {
-  const key = JSON.stringify({
-    modules,
-    python: resolveStoryboardAgentPythonCommand(env),
-    path: getPathEnvironmentValue(env),
-    pythonPath: env.PYTHONPATH ?? "",
-    root: BACKEND_AGENT_ROOT,
-  });
-  if (pythonModuleProbeCache?.key === key) {
-    return pythonModuleProbeCache.result;
-  }
-  const result = probePythonModules(modules, env);
-  pythonModuleProbeCache = { key, result };
-  return result;
-}
 
 export async function getStoryboardBackendAgentStatus(
   env: NodeJS.ProcessEnv = process.env,
-): Promise<StoryboardBackendAgentStatus> {
-  const commandConfigured = Boolean(
-    env.STORYBOARD_AGENT_COMMAND?.trim(),
-  );
-  const runtime = resolveStoryboardAgentRuntime(env);
-  const commandResolution = resolveEffectiveStoryboardAgentCommand(
-    env.STORYBOARD_AGENT_COMMAND,
-    runtime,
-    env,
-  );
-  const notebooks = BACKEND_AGENT_NOTEBOOKS.filter((notebook) =>
-    existsSync(backendAgentPath(notebook)),
-  );
-  const graphEntrypoint = existsSync(backendAgentPath(BACKEND_AGENT_GRAPH))
-    ? backendAgentPath(BACKEND_AGENT_GRAPH)
-    : null;
-  const pythonProbe =
-    commandResolution.ok && runtime !== "codex_cli_oauth_legacy"
-      ? await probePythonModulesCached(
-          commandResolution.source === "auto_runner"
-            ? REQUIRED_AUTO_RUNNER_PYTHON_MODULES
-            : REQUIRED_PYTHON_MODULES,
-          env,
-        )
-      : null;
-  const missingPythonModules = pythonProbe
-    ? pythonProbe.missingModules
-    : commandConfigured
-      ? []
-      : REQUIRED_PYTHON_MODULES;
+): Promise<StoryboardBackendAgentStatus> { return { available:false,mode:'local_adapter',rootPath:'',notebooks:[],graphEntrypoint:null,commandConfigured:false,commandAvailable:false,commandRejectionReason:'STORYBOARD_WORKFLOW_RETIRED',localAdapterAvailable:false,missingPythonModules:[],streamingAvailable:false,runtime:'langgraph' }; }
 
-  const localAdapterAvailable =
-    existsSync(BACKEND_AGENT_ROOT) &&
-    Boolean(graphEntrypoint) &&
-    notebooks.length > 0;
-  const commandAvailable = commandResolution.ok;
-
-  return {
-    available: localAdapterAvailable || commandAvailable,
-    mode: commandAvailable ? "command" : "local_adapter",
-    rootPath: BACKEND_AGENT_ROOT,
-    notebooks,
-    graphEntrypoint,
-    commandConfigured,
-    commandAvailable,
-    commandSource: commandResolution.ok ? commandResolution.source : undefined,
-    commandPath: commandResolution.ok
-      ? commandResolution.executable
-      : undefined,
-    commandRejectionReason: commandResolution.ok
-      ? undefined
-      : commandResolution.reason,
-    localAdapterAvailable,
-    missingPythonModules,
-    pythonRuntimeAvailable: pythonProbe?.runtimeAvailable,
-    pythonRuntimeError: pythonProbe?.runtimeError,
-    runtime,
-    codexModel: resolveStoryboardAgentCodexModel(),
-    codexEffort: resolveStoryboardAgentCodexEffort(),
-    streamingAvailable: true,
-  };
-}
 
 function normalizeStoryboardChatRequirement(value: unknown) {
   return typeof value === "string"
     ? sanitizePublicAgentText(value).replace(/\s+/g, " ").slice(0, 400)
     : "";
 }
+
 
 function stripStoryboardExecutionControls(value: string) {
   return value
@@ -2959,11 +2721,13 @@ function stripStoryboardExecutionControls(value: string) {
     .trim();
 }
 
+
 function normalizeStoryboardChatPromptBrief(value: unknown) {
   const normalized = normalizeStoryboardChatRequirement(value);
   if (!normalized) return "";
   return stripStoryboardExecutionControls(normalized);
 }
+
 
 function normalizeStoryboardChatConversationContent(value: unknown) {
   const normalized = normalizeStoryboardChatRequirement(value);
@@ -2973,6 +2737,7 @@ function normalizeStoryboardChatConversationContent(value: unknown) {
     STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT,
   );
 }
+
 
 function normalizeStoryboardChatFocusContext(
   value: unknown,
@@ -3017,6 +2782,7 @@ function normalizeStoryboardChatFocusContext(
   };
 }
 
+
 function formatStoryboardChatFocusContext(
   value: StoryboardChatFocusContext | null,
 ) {
@@ -3032,11 +2798,13 @@ function formatStoryboardChatFocusContext(
     .join(" · ");
 }
 
+
 function normalizeStoryboardChatThreadId(value: unknown) {
   return typeof value === "string"
     ? sanitizePublicAgentText(value).replace(/[^\w:.-]/g, "").slice(0, 120)
     : "";
 }
+
 
 function isStoryboardConversationReadbackMessage(
   message: StoryboardChatConversationMessage,
@@ -3050,6 +2818,7 @@ function isStoryboardConversationReadbackMessage(
     message.content.startsWith("준비된 스토리보드를 불러왔어요")
   );
 }
+
 
 function normalizeStoryboardChatConversationMessages(
   value: unknown,
@@ -3081,6 +2850,7 @@ function normalizeStoryboardChatConversationMessages(
     .slice(-STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT);
 }
 
+
 function formatStoryboardChatConversationContext(
   messages: StoryboardChatConversationMessage[],
 ) {
@@ -3093,6 +2863,7 @@ function formatStoryboardChatConversationContext(
     .join(" / ");
 }
 
+
 function formatStoryboardChatConversationBrief(
   messages: StoryboardChatConversationMessage[],
 ) {
@@ -3104,6 +2875,7 @@ function formatStoryboardChatConversationBrief(
     .slice(0, STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT * 2);
 }
 
+
 function clampStoryboardNumber(
   value: number,
   min: number,
@@ -3113,6 +2885,7 @@ function clampStoryboardNumber(
   if (!Number.isFinite(value)) return fallback;
   return Math.min(max, Math.max(min, Math.trunc(value)));
 }
+
 
 function deriveStoryboardTone(
   message: string,
@@ -3124,6 +2897,7 @@ function deriveStoryboardTone(
   if (/(힐링|편안|잔잔|소리|식감)/i.test(message)) return "comfort";
   return fallback;
 }
+
 
 function deriveStoryboardSegmentCount(message: string, fallback: number) {
   if (deriveExplicitStoryboardSceneNo(message) !== undefined) return fallback;
@@ -3138,14 +2912,17 @@ function deriveStoryboardSegmentCount(message: string, fallback: number) {
   );
 }
 
+
 function deriveStoryboardTargetLength(message: string, fallback: number) {
   const explicit = message.match(/(\d{1,2})\s*(?:분|minute|minutes|min)/i)?.[1];
   return clampStoryboardNumber(Number(explicit), 6, 60, fallback);
 }
 
+
 function isStoryboardGenerationQuestion(message: string) {
   return /[?？]/.test(message) || /(?:얼마나|언제|어떻게|왜|무엇|뭐|뭔가|어디|가능|필요|되나|되나요|돼|돼요|될까|걸려|걸리|알려|설명|방법|하려면|하면\s*돼)/i.test(message);
 }
+
 
 function hasStoryboardFullGenerationNegation(message: string) {
   const compact = message.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
@@ -3156,6 +2933,7 @@ function hasStoryboardFullGenerationNegation(message: string) {
     )
   );
 }
+
 
 function hasStoryboardImageGenerationNegation(message: string) {
   return (
@@ -3170,6 +2948,7 @@ function hasStoryboardImageGenerationNegation(message: string) {
     )
   );
 }
+
 
 function wantsStoryboardGeneration(message: string) {
   if (hasUnsafeStoryboardInstructionRequest(message)) return false;
@@ -3187,9 +2966,11 @@ function wantsStoryboardGeneration(message: string) {
   );
 }
 
+
 function wantsStoryboardReset(message: string) {
   return /(초기화|리셋|reset)/i.test(message);
 }
+
 
 export function isCasualStoryboardChatMessage(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
@@ -3197,6 +2978,7 @@ export function isCasualStoryboardChatMessage(message: string) {
   const compact = normalized.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
   return /^(ㅎㅇ+|하이+|안녕|안녕하세(?:요|여)|안뇽|hi|hello|hey|yo)$/.test(compact);
 }
+
 function isStoryboardRagProcessQuestionLike(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
   if (!normalized) return false;
@@ -3215,6 +2997,7 @@ function isStoryboardRagProcessQuestionLike(message: string) {
 }
 
 
+
 function hasStoryboardMutationCommand(message: string) {
   return (
     !isStoryboardRagProcessQuestionLike(message) &&
@@ -3225,6 +3008,7 @@ function hasStoryboardMutationCommand(message: string) {
       ))
   );
 }
+
 
 function isStoryboardRuntimeMetaQuestion(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
@@ -3241,6 +3025,7 @@ function isStoryboardRuntimeMetaQuestion(message: string) {
   return hasMetaSubject && hasQuestionIntent;
 }
 
+
 function isStoryboardAttachmentCapabilityQuestion(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
   if (!normalized || hasStoryboardMutationCommand(normalized)) return false;
@@ -3254,11 +3039,13 @@ function isStoryboardAttachmentCapabilityQuestion(message: string) {
   );
 }
 
+
 function hasStoryboardDirectPatchCommandLanguage(message: string) {
   return /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|교체|재작성|다시\s*써|반영해|반영해\s*줘)/i.test(
     message,
   );
 }
+
 
 function isStoryboardSuggestionConversation(message: string) {
   if (/(검토|리뷰|평가|피드백)/i.test(message)) return false;
@@ -3285,6 +3072,7 @@ function isStoryboardSuggestionConversation(message: string) {
   );
 }
 
+
 function isStoryboardFieldQuestion(message: string) {
   if (/(검토|리뷰|평가|피드백)/i.test(message)) return false;
   if (!/[?？]|(?:해야|해도|넣어야|필요|가능|되나|되나요|돼|돼요|될까|어디|어떻게|방법|알려|설명|꼭|잘\s*보)/i.test(message)) {
@@ -3301,6 +3089,7 @@ function isStoryboardFieldQuestion(message: string) {
   if (directCommand && !explanationIntent) return false;
   return /(?:자막|subtitle|문구|카피|caption|오디오|멘트|대사|나레이션|이미지|컷|cut|스토리보드|PNG|저장|다운로드|복사|장면|음식|구도|화면|비주얼|리액션|표정|훅|맛있|먹음직|식감|조명|색감|분위기|톤|무드)/i.test(message);
 }
+
 
 export function isGeneralStoryboardConversationMessage(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
@@ -3349,6 +3138,7 @@ export function isGeneralStoryboardConversationMessage(message: string) {
   return /[?？]$/.test(normalized) && !hasExplicitStoryboardScenePatchIntent(normalized) && !hasStoryboardNavigationIntent(normalized);
 }
 
+
 function wantsStoryboardTraceExplanation(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
   const compact = normalized.replace(/[\s?!?.。~]/g, "").toLowerCase();
@@ -3367,6 +3157,7 @@ function wantsStoryboardTraceExplanation(message: string) {
     normalized,
   );
 }
+
 
 function wantsStoryboardReviewOnly(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
@@ -3389,6 +3180,7 @@ function wantsStoryboardReviewOnly(message: string) {
   );
 }
 
+
 function wantsSelectedStoryboardImageRegeneration(message: string) {
   return (
     /(?:이|현재|선택|선택한)\s*컷\s*만.*(?:재생성|다시\s*생성|다시\s*만들|이미지)/i.test(
@@ -3407,11 +3199,13 @@ function wantsSelectedStoryboardImageRegeneration(message: string) {
   );
 }
 
+
 function hasExplicitStoryboardScenePatchIntent(message: string) {
   return /(자막|subtitle|문구|카피|caption|오디오|멘트|대사|말|나레이션|감탄사|audio|연출|비주얼|구도|클로즈업|화면|이미지|리액션|표정|음식|visual|제목|타이틀|title|수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성)/i.test(
     message,
   );
 }
+
 
 function hasStoryboardNavigationIntent(message: string) {
   return /(?:보여줘|보여\s*줘|이동|가줘|열어|확인|선택|포커스|focus|show|open|go\s*to)/i.test(
@@ -3419,12 +3213,14 @@ function hasStoryboardNavigationIntent(message: string) {
   );
 }
 
+
 function parseStoryboardSceneNo(value: string | undefined) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return undefined;
   const sceneNo = Math.trunc(parsed);
   return sceneNo >= 1 && sceneNo <= 99 ? sceneNo : undefined;
 }
+
 
 function matchStoryboardSceneNoFromMessage(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
@@ -3448,6 +3244,7 @@ function matchStoryboardSceneNoFromMessage(message: string) {
   return parseStoryboardSceneNo(koreanCut);
 }
 
+
 function deriveExplicitStoryboardSceneNo(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
   if (!normalized || !hasExplicitStoryboardScenePatchIntent(normalized)) {
@@ -3455,6 +3252,7 @@ function deriveExplicitStoryboardSceneNo(message: string) {
   }
   return matchStoryboardSceneNoFromMessage(normalized);
 }
+
 
 function deriveStoryboardNavigationSceneNo(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
@@ -3469,6 +3267,7 @@ function deriveStoryboardNavigationSceneNo(message: string) {
   }
   return matchStoryboardSceneNoFromMessage(normalized);
 }
+
 
 function createStoryboardScenePatch(
   message: string,
@@ -3529,6 +3328,7 @@ function createStoryboardScenePatch(
 
   return patch;
 }
+
 
 function createStoryboardChatCanvasPatch(
   request: StoryboardChatAgentRequest,
@@ -3629,6 +3429,7 @@ function createStoryboardChatCanvasPatch(
   };
 }
 
+
 function isStoryboardRagProcessQuestion(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
   if (!normalized) return false;
@@ -3636,6 +3437,7 @@ function isStoryboardRagProcessQuestion(message: string) {
     normalized,
   );
 }
+
 
 function createStoryboardChatRagTraceEntry(
   id: string,
@@ -3650,6 +3452,7 @@ function createStoryboardChatRagTraceEntry(
     timestamp: new Date().toISOString(),
   };
 }
+
 
 function buildStoryboardChatRagTraceEntries({
   message,
@@ -3714,6 +3517,7 @@ function buildStoryboardChatRagTraceEntries({
     ),
   ];
 }
+
 
 function buildStoryboardConversationMessage(message: string, forceSafety = false) {
   const raw = typeof message === "string" ? message : "";
@@ -3874,6 +3678,7 @@ function buildStoryboardConversationMessage(message: string, forceSafety = false
   ].join(" ");
 }
 
+
 function normalizeStoryboardChatImageAttachments(
   attachments: StoryboardChatAgentRequest["imageAttachments"],
 ): StoryboardChatImageAttachment[] {
@@ -3892,11 +3697,13 @@ function normalizeStoryboardChatImageAttachments(
   });
 }
 
+
 function formatStoryboardBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "크기 미상";
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
   return `${Math.max(1, Math.round(bytes / 1024))}KB`;
 }
+
 
 function formatStoryboardChatImageAttachmentSummary(
   attachments: StoryboardChatAgentRequest["imageAttachments"],
@@ -3915,222 +3722,12 @@ function formatStoryboardChatImageAttachmentSummary(
     .join("; ");
 }
 
+
 export async function generateStoryboardChatWithBackendAgent(
   request: StoryboardChatAgentRequest,
   env: NodeJS.ProcessEnv = process.env,
-): Promise<StoryboardChatAgentResult> {
-  const rawMessage = typeof request.message === "string" ? request.message : "";
-  const isRawSafetyConversation =
-    hasUnsafeStoryboardInstructionRequest(rawMessage);
-  const normalizedMessage = normalizeStoryboardChatRequirement(request.message);
-  if (!normalizedMessage) {
-    throw new Error("채팅 요구사항을 입력하세요.");
-  }
+): Promise<StoryboardChatAgentResult> { throw new Error('STORYBOARD_WORKFLOW_RETIRED'); }
 
-  const canvasPatch = createStoryboardChatCanvasPatch(
-    isRawSafetyConversation ? { ...request, message: "" } : request,
-  );
-  const focusContext = normalizeStoryboardChatFocusContext(
-    request.focusContext,
-  );
-  const focusText = formatStoryboardChatFocusContext(focusContext);
-  const imageAttachments = normalizeStoryboardChatImageAttachments(
-    request.imageAttachments,
-  );
-  const imageAttachmentText =
-    formatStoryboardChatImageAttachmentSummary(imageAttachments);
-  const conversationMessages = normalizeStoryboardChatConversationMessages(
-    request.conversationMessages,
-  );
-  const conversationText =
-    formatStoryboardChatConversationContext(conversationMessages);
-  const chatThreadId =
-    normalizeStoryboardChatThreadId(request.chatThreadId) ||
-    `storyboard-chat-${Date.now().toString(36)}`;
-  const isNavigationOnly = Boolean(
-    canvasPatch.focusSceneNo && !canvasPatch.scenePatch,
-  );
-  const isUnavailableNavigation = Boolean(
-    canvasPatch.unavailableFocusSceneNo && !canvasPatch.scenePatch,
-  );
-  const effectiveFocusText =
-    canvasPatch.scenePatch?.targetSource === "explicit" ||
-    isNavigationOnly ||
-    isUnavailableNavigation
-      ? ""
-      : focusText;
-  const status = await getStoryboardBackendAgentStatus()
-  const isSafetyConversation =
-    isRawSafetyConversation ||
-    hasUnsafeStoryboardInstructionRequest(normalizedMessage);
-  const shouldReset =
-    !isSafetyConversation && wantsStoryboardReset(normalizedMessage);
-  const isReviewOnly = wantsStoryboardReviewOnly(normalizedMessage);
-  const isCasualChat = isCasualStoryboardChatMessage(normalizedMessage);
-  const isGeneralConversation =
-    isSafetyConversation ||
-    (!isReviewOnly && isGeneralStoryboardConversationMessage(normalizedMessage));
-  const shouldRegenerateSelectedSceneImage = Boolean(
-    canvasPatch.scenePatch?.regenerateImage,
-  );
-  const shouldGenerate =
-    !isSafetyConversation &&
-    wantsStoryboardGeneration(normalizedMessage) &&
-    !shouldReset &&
-    !isGeneralConversation &&
-    !isReviewOnly &&
-    !shouldRegenerateSelectedSceneImage;
-  const shouldGenerateImages =
-    shouldGenerate && !hasStoryboardImageGenerationNegation(normalizedMessage);
-  const runtime = status.runtime ?? DEFAULT_STORYBOARD_AGENT_RUNTIME;
-  const model = status.codexModel ?? resolveStoryboardAgentCodexModel(env);
-  const effort = status.codexEffort ?? resolveStoryboardAgentCodexEffort(env);
-  const safeNormalizedMessage = sanitizeStoryboardPublicText(normalizedMessage);
-  const ragTrace = buildStoryboardChatRagTraceEntries({
-    message: safeNormalizedMessage,
-    shouldGenerate,
-    shouldGenerateImages,
-    conversationTurnCount: conversationMessages.length,
-    imageAttachmentCount: imageAttachments.length,
-  });
-
-  return {
-    assistantMessage: isCasualChat
-      ? [
-          "안녕하세요! 스토리보드 도우미입니다.",
-          "화면은 바꾸지 않고 사용 방법만 안내할게요.",
-          "원하는 음식이나 장면, 컷 수, 꼭 보여주고 싶은 순간을 적어 주면 바로 스토리보드를 만들 수 있어요.",
-          "예시가 필요하면 “예시 만들기”를 누르거나, 바로 만들려면 “생성해줘”라고 입력하세요.",
-        ].join(" ")
-      : isSafetyConversation
-      ? buildStoryboardConversationMessage(rawMessage || normalizedMessage, true)
-      : isGeneralConversation
-      ? buildStoryboardConversationMessage(normalizedMessage)
-      : isReviewOnly
-      ? [
-          "검토 결과를 쉽게 정리했어요.",
-          `현재 보이는 ${canvasPatch.segmentCount}컷 흐름을 기준으로 보면, 앞부분은 관심을 끌고 중간 컷은 맛과 반응을 이어주며 마지막 컷은 다시 보고 싶은 포인트를 잡는 구조예요.`,
-          "바꾸고 싶은 컷이 있으면 “2컷 자막을 더 짧게”처럼 말해 주세요.",
-        ].join(" ")
-      : [
-          "요청을 이해했어요",
-          shouldReset
-            ? "입력값을 처음 상태로 되돌릴게요."
-            : `캔버스에 ${canvasPatch.segmentCount}컷, 약 ${canvasPatch.targetLengthMinutes}분짜리 흐름으로 정리했어요.`,
-          canvasPatch.scenePatch
-            ? `CUT ${String(canvasPatch.scenePatch.sceneNo).padStart(2, "0")}만 수정할 준비를 했어요.`
-            : null,
-          isNavigationOnly
-            ? `화면을 CUT ${String(canvasPatch.focusSceneNo).padStart(2, "0")} 쪽으로 맞춰둘게요.`
-            : null,
-          isUnavailableNavigation
-            ? `CUT ${String(canvasPatch.unavailableFocusSceneNo).padStart(2, "0")}는 지금 결과에 없어서 선택을 풀었어요.`
-            : null,
-          effectiveFocusText
-            ? `지금 선택한 항목(${focusContext?.label})도 함께 참고했어요.`
-            : null,
-          imageAttachmentText
-            ? `첨부 사진 ${imageAttachments.length}장도 함께 참고했어요.`
-            : null,
-          conversationText
-            ? `최근 대화 ${conversationMessages.length}개도 참고했어요.`
-            : null,
-          shouldRegenerateSelectedSceneImage
-            ? "현재 선택한 컷의 이미지만 다시 만들 준비를 했어요."
-            : null,
-          shouldGenerate
-            ? shouldGenerateImages
-              ? "이어서 실제 스토리보드 만들기와 CUT 이미지 생성까지 진행할게요."
-              : "이어서 컷 구성만 먼저 화면에 반영하고 이미지는 만들지 않을게요."
-            : "바로 만들고 싶으면 “생성해줘”라고 입력하세요.",
-        ]
-          .filter(Boolean)
-          .join(" · "),
-    canvasPatch,
-    shouldGenerate,
-    shouldGenerateImages,
-    shouldReset,
-    backendAgent: {
-      mode: status.mode,
-      runtime,
-      concept: `${canvasPatch.segmentCount}컷 스토리보드 채팅 요구사항을 실제 히트맵 기반 생성 요청으로 정리`,
-      layoutBrief: `좌측 2×2 캔버스 페이지에 ${canvasPatch.tone} 톤으로 ${canvasPatch.targetLengthMinutes}분 분량의 컷 흐름을 반영`,
-      promptAddendum: [
-        "Storyboard chat agent task.",
-        `User chat request: ${safeNormalizedMessage}`,
-        conversationText ? `Conversation context: ${conversationText}` : "",
-        effectiveFocusText ? `Canvas focus context: ${effectiveFocusText}` : "",
-        imageAttachmentText ? `Image attachments: ${imageAttachmentText}` : "",
-        `Resolved prompt: ${canvasPatch.prompt}`,
-        `Resolved cuts: ${canvasPatch.segmentCount}`,
-        `Resolved target length minutes: ${canvasPatch.targetLengthMinutes}`,
-        `Resolved tone: ${canvasPatch.tone}`,
-        canvasPatch.focusSceneNo
-          ? `Navigation focusSceneNo: ${canvasPatch.focusSceneNo}`
-          : "",
-        canvasPatch.unavailableFocusSceneNo
-          ? `Navigation unavailableFocusSceneNo: ${canvasPatch.unavailableFocusSceneNo}`
-          : "",
-        canvasPatch.scenePatch
-          ? `Selected CUT scenePatch: ${JSON.stringify(canvasPatch.scenePatch)}`
-          : "",
-      ].join("\n"),
-      safetyReview:
-        "관리자 콘솔 채팅 입력은 스토리보드 생성 요청으로만 반영하며, 실제 이미지 생성은 별도 GPT Image 2 단계에서 검수합니다.",
-      nextActions: [
-        "채팅 반영 결과 확인",
-        "스토리보드 생성 실행",
-        "필요 시 현재 페이지 이미지 생성",
-      ],
-      diagnostics: {
-        runtime,
-        codexModel: model,
-        codexEffort: effort,
-        chatThreadId,
-        conversationTurnCount: conversationMessages.length,
-        conversationSummary: conversationText,
-        checkpointScope: "response_payload_state",
-        langGraphResumeContract:
-          "chatThreadId and bounded conversationMessages are forwarded so future Command(resume=...) integration can bind UI turns to a graph thread without trusting hidden client instructions.",
-        ragTrace,
-        ragTraceSurface: "storyboard_chat_thinking_panel",
-        ragTraceSteerContract:
-          "mid-stream user message aborts the current SSE turn and replays as a new steer request",
-        imageGenerationAction: shouldGenerateImages
-          ? "auto_generate_after_storyboard"
-          : shouldGenerate
-            ? "skip_image_generation_by_user_directive"
-            : "none",
-        imageAttachmentCount: imageAttachments.length,
-        chatIntent: isCasualChat
-          ? "casual_chat"
-          : isSafetyConversation
-            ? "safety"
-          : isGeneralConversation
-            ? "conversation"
-            : shouldRegenerateSelectedSceneImage
-            ? "regenerate_selected_scene"
-            : shouldGenerate
-              ? "generate"
-              : shouldReset
-                ? "reset"
-                : isReviewOnly
-                  ? "review"
-                  : isNavigationOnly
-                    ? "navigate"
-                    : isUnavailableNavigation
-                      ? "navigate_unavailable"
-                      : "edit",
-      },
-    },
-    diagnostics: {
-      runtime,
-      model,
-      effort,
-      streaming: "sse-progress",
-    },
-  };
-}
 
 type StoryboardCommandRunOptions = {
   cwd?: string;
@@ -4139,10 +3736,12 @@ type StoryboardCommandRunOptions = {
   testCommandCapability?: StoryboardAgentTestCommandCapability;
 };
 
+
 export type StoryboardBackendAgentExecutionOptions = {
   env?: NodeJS.ProcessEnv;
   testCommandCapability?: StoryboardAgentTestCommandCapability;
 };
+
 
 
 export function createStoryboardAgentTestCommandCapability(
@@ -4161,6 +3760,7 @@ export function createStoryboardAgentTestCommandCapability(
   });
 }
 
+
 function isTrustedLangGraphFixtureCommand(
   command: Extract<ResolvedStoryboardAgentCommand, { ok: true }>,
   capability: StoryboardAgentTestCommandCapability | undefined,
@@ -4173,6 +3773,7 @@ function isTrustedLangGraphFixtureCommand(
   if (binding.args.length !== command.args.length) return false;
   return binding.args.every((arg, index) => arg === command.args[index]);
 }
+
 
 
 function runStoryboardAgentCommand(
@@ -5010,6 +4611,7 @@ function runStoryboardAgentCommand(
   });
 }
 
+
 export function __runStoryboardAgentCommandForTests(
   command: Extract<ResolvedStoryboardAgentCommand, { ok: true }>,
   payload: Record<string, unknown>,
@@ -5019,9 +4621,11 @@ export function __runStoryboardAgentCommandForTests(
   return runStoryboardAgentCommand(command, payload, processControl, options);
 }
 
+
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
+
 
 function toStringArray(value: unknown) {
   return Array.isArray(value)
@@ -5029,7 +4633,9 @@ function toStringArray(value: unknown) {
     : [];
 }
 
+
 const SENSITIVE_DIAGNOSTIC_KEY_PATTERN = /(?:api[_-]?key|token|secret|password|credential|authorization|service[_-]?role|database[_-]?url|private[_-]?key|access[_-]?key|session(?:[_-]?key)?|cookie)/i;
+
 
 function redactSensitiveAgentDiagnostic(value: string) {
   let redacted = value;
@@ -5058,21 +4664,26 @@ function redactSensitiveAgentDiagnostic(value: string) {
     .replace(/\b(cookie\s*:\s*)[^\r\n]*/gi, "$1[REDACTED]")
     .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\/\s:@]+:[^\/\s@]+@/gi, "$1[REDACTED]@");
 }
+
 function sanitizePublicAgentOutput(value: string) {
   return sanitizePublicAgentText(redactSensitiveAgentDiagnostic(value));
 }
 
 
+
 function sanitizePublicAgentDiagnostic(value: string, maxLength = 300) {
   return sanitizePublicAgentOutput(value).slice(0, maxLength);
 }
+
 export function __sanitizePublicAgentDiagnosticForTests(value: string) {
   return sanitizePublicAgentDiagnostic(value, 1200);
 }
 
+
 function sanitizeCommandOutput(value: string, maxLength = 1200) {
   return sanitizePublicAgentDiagnostic(value, maxLength);
 }
+
 
 function sanitizePublicJson(value: unknown, depth = 0): unknown {
   if (depth > 6) return "[TRUNCATED]";
@@ -5106,11 +4717,13 @@ function sanitizePublicJson(value: unknown, depth = 0): unknown {
   );
 }
 
+
 function toPublicDiagnosticStringArray(value: unknown, maxItemLength = 120) {
   return toStringArray(value)
     .map((item) => sanitizePublicAgentDiagnostic(item, maxItemLength))
     .filter(Boolean);
 }
+
 
 function normalizeGraphRuntime(value: unknown): StoryboardGraphDiagnostics["runtime"] {
   return value === "codex_cli_oauth" || value === "codex_cli_oauth_legacy"
@@ -5119,6 +4732,7 @@ function normalizeGraphRuntime(value: unknown): StoryboardGraphDiagnostics["runt
       ? "local_adapter_fallback"
       : "langgraph";
 }
+
 
 function parseGraphRuntime(
   value: unknown,
@@ -5134,6 +4748,7 @@ function parseGraphRuntime(
   return null;
 }
 
+
 function parseGraphStatus(
   value: unknown,
 ): StoryboardGraphDiagnostics["status"] | null {
@@ -5145,6 +4760,7 @@ function parseGraphStatus(
     ? value
     : null;
 }
+
 
 function normalizeGraphRetrieval(
   value: unknown,
@@ -5204,6 +4820,7 @@ function normalizeGraphRetrieval(
     ...(caption ? { caption } : {}),
   };
 }
+
 
 function normalizeCaptionRetrievalDiagnostics(
   value: unknown,
@@ -5274,6 +4891,7 @@ function normalizeCaptionRetrievalDiagnostics(
     : null;
 }
 
+
 function normalizeGraphInterrupts(
   value: unknown,
 ): StoryboardGraphDiagnostics["interrupts"] {
@@ -5293,6 +4911,7 @@ function normalizeGraphInterrupts(
           : "LangGraph interrupt",
     }));
 }
+
 
 function normalizeGraphDiagnostics(
   value: unknown,
@@ -5375,6 +4994,7 @@ function normalizeGraphDiagnostics(
   };
 }
 
+
 function normalizeFallbackReason(value: string): StoryboardGraphFallbackReason {
   if (
     value === "not_configured" ||
@@ -5395,6 +5015,7 @@ function normalizeFallbackReason(value: string): StoryboardGraphFallbackReason {
   if (value === "unsafe-command-string") return "unsupported_runtime";
   return "graph_execution_failed";
 }
+
 
 function mapCommandFailureToFallbackReason(
   status: StoryboardBackendAgentStatus,
@@ -5424,26 +5045,6 @@ function mapCommandFailureToFallbackReason(
   return "graph_execution_failed";
 }
 
-function createFallbackGraphDiagnostics(
-  status: StoryboardBackendAgentStatus,
-  reason: StoryboardGraphFallbackReason,
-  detail?: string,
-): StoryboardGraphDiagnostics {
-  return {
-    status: "fallback",
-    runtime: "local_adapter_fallback",
-    mode: "local_adapter",
-    graphEntrypoint: status.graphEntrypoint
-      ? sanitizePublicAgentDiagnostic(status.graphEntrypoint, 300)
-      : undefined,
-    nodesVisited: [],
-    interrupts: [],
-    toolsCalled: [],
-    retrieval: { status: "not_used" },
-    fallbackReason: reason,
-    fallbackDetail: detail ? sanitizePublicAgentDiagnostic(detail, 600) : undefined,
-  };
-}
 
 function createLegacyGraphDiagnostics(command?: CommandResult): StoryboardGraphDiagnostics {
   return {
@@ -5461,369 +5062,6 @@ function createLegacyGraphDiagnostics(command?: CommandResult): StoryboardGraphD
   };
 }
 
-function summarizeLocalAdapterSceneData(result: StoryboardGenerationResult) {
-  return result.storyboard.scenes.slice(0, STORYBOARD_MAX_SEGMENT_COUNT).map((scene) => ({
-    cut: scene.sceneNo,
-    title: sanitizePublicAgentDiagnostic(scene.title, 160),
-    role: sanitizePublicAgentDiagnostic(scene.operatorIntent, 220),
-    scene: sanitizePublicAgentDiagnostic(scene.visualDirection, 260),
-    caption: sanitizePublicAgentDiagnostic(scene.captionIdea, 220),
-    evidence: {
-      videoId: sanitizePublicAgentDiagnostic(scene.heatmapEvidence.videoId, 120),
-      peakTime: sanitizePublicAgentDiagnostic(scene.heatmapEvidence.peakTime, 40),
-      replayScore: scene.heatmapEvidence.replayScore,
-      reason: sanitizePublicAgentDiagnostic(scene.heatmapEvidence.reason, 300),
-    },
-  }));
-}
-
-function buildLocalAdapterResearchQueries(result: StoryboardGenerationResult) {
-  const prompt = sanitizePublicAgentDiagnostic(result.request.prompt, 240);
-  const keywordQuery =
-    result.planner?.topicProfile.keywords.slice(0, 5).join(" ") ||
-    result.planner?.topicProfile.label ||
-    "먹방 반복시청 피크";
-  const arcQuery = result.planner?.arcPlan.roles
-    .slice(0, 5)
-    .map((role) => String(role).replace(/_/g, " "))
-    .join(" → ");
-  return [
-    prompt,
-    `topic:${sanitizePublicAgentDiagnostic(keywordQuery, 180)}`,
-    `arc:${sanitizePublicAgentDiagnostic(arcQuery || "intro → first bite → review", 180)}`,
-  ].filter(Boolean);
-}
-
-function buildLocalAdapterResearchWebSummary(result: StoryboardGenerationResult) {
-  return result.sourceSummary.isFallbackData
-    ? "required_worker_unavailable: external search data is missing; Designer must not claim live RAG provider use."
-    : "required_worker: local heatmap evidence is only a seed; live BGE/reranker/RPC evidence must come from the required worker.";
-}
-
-function createLocalAdapterInternRequest() {
-  return {
-    tool: "search_scene_data",
-    rpc: "match_documents_hybrid",
-    policy: "review_only_required_worker_contract",
-    reason:
-      "Researcher requires scene evidence before Designer finalization; local adapter reviews the Tool/RPC contract without mutating production tools.",
-  };
-}
-
-function runLocalAdapterSupervisorStep(args: {
-  sceneData: ReturnType<typeof summarizeLocalAdapterSceneData>;
-  researchWebSummary: string;
-  promptFeedback: string;
-  internResult?: Record<string, unknown>;
-}) {
-  return {
-    research_sufficient: args.sceneData.length > 0,
-    agent_instructions: {
-      researcher:
-        "Run bounded self-RAG over local heatmap/caption-equivalent evidence before storyboard design.",
-      intern:
-        "Review search_scene_data Tool/RPC safety and block mutation without human approval.",
-      designer:
-        "Create a storyboard only from Researcher evidence and keep the operator feedback loop open.",
-    },
-    is_approved: { researcher: true, designer: true },
-    research_scene_data: args.sceneData,
-    research_web_summary: args.researchWebSummary,
-    human_feedback: [args.promptFeedback || "operator prompt"],
-    intern_result: args.internResult ?? { status: "pending_intern_review" },
-    messages: [
-      "Supervisor extracted slots from the operator request.",
-      "Supervisor delegated evidence gathering to Researcher.",
-      "Supervisor required Intern review before Designer trusts the evidence path.",
-      args.internResult
-        ? "Supervisor approved Designer after Researcher sufficiency passed."
-        : "Supervisor is waiting for Intern review before final Designer approval.",
-    ],
-  };
-}
-
-function runLocalAdapterResearcherStep(args: {
-  result: StoryboardGenerationResult;
-  sceneData: ReturnType<typeof summarizeLocalAdapterSceneData>;
-  previousQueries: string[];
-  internRequest: ReturnType<typeof createLocalAdapterInternRequest>;
-  internResult?: Record<string, unknown>;
-  localRag?: StoryboardGenerationResult["backendAnalysis"]["localRag"];
-}) {
-  return {
-    agent_instructions: [
-      "Think about the needed scene evidence.",
-      "Call search_scene_data against local heatmap evidence.",
-      "Evaluate whether each planned cut has evidence before Designer handoff.",
-    ],
-    research_sufficient: args.sceneData.length > 0,
-    research_summary: [
-      `Researcher completed required self-RAG planning with ${args.sceneData.length} scene evidence rows and ${args.result.sourceSummary.totalMarkers} heatmap markers.`,
-      args.localRag
-        ? `Required RAG diagnostics ${args.localRag.status}: ${args.localRag.selectedCount} selected / ${args.localRag.documentCount} documents; ${args.localRag.modelStack.models.length} required provider roles registered fail-closed.`
-        : '',
-    ].filter(Boolean).join(' '),
-    previous_queries: args.previousQueries,
-    researcher_stall_summary:
-      "No stall: local adapter had enough heatmap-backed scene evidence for Designer.",
-    intern_request: args.internRequest,
-    intern_result: args.internResult ?? { status: "pending_intern_review" },
-    researcher_think_count: Math.max(1, Math.min(5, args.previousQueries.length)),
-    local_rag: args.localRag,
-    messages: [
-      "think: identify missing scene/caption evidence.",
-      "tools: search_scene_data local adapter read-only lookup.",
-      "evaluate: sufficient evidence for storyboard draft.",
-    ],
-    loop: { think: true, tools: true, evaluate: true },
-  };
-}
-
-function runLocalAdapterInternStep(
-  internRequest: ReturnType<typeof createLocalAdapterInternRequest>,
-) {
-  const internResult = {
-    status: "reviewed",
-    decision: "approved_read_only_local_adapter",
-    execution: "guarded_noop",
-    notes:
-      "Tool/RPC creation or deletion is blocked in local adapter mode until an operator approves a generated patch.",
-  };
-  const state = {
-    intern_request: internRequest,
-    agent_instructions: [
-      "Plan before any Tool/RPC mutation.",
-      "Review generated search_scene_data contract before execution.",
-      "Keep mutation blocked unless a human approves the generated patch.",
-    ],
-    intern_action: "create_modify_tool_rpc_review_only",
-    pending_execute_calls: ["create_tool_rpc_patch"],
-    intern_result: internResult,
-    modified_tool_calls: ["search_scene_data"],
-    plan_update_events: [
-      "plan",
-      "review_create",
-      "human_interrupt_before_mutation",
-      "execute_guarded_noop",
-    ],
-    messages: [
-      "Intern drafted a Tool/RPC review plan.",
-      "Intern reviewed search_scene_data as read-only local evidence.",
-      "Intern blocked unapproved mutation and returned a safe review result.",
-    ],
-    planCreated: true,
-    review: { planApproved: true, reviewer: "local_adapter_safety_gate" },
-    toolRpcMutation: true,
-    searchSceneDataReviewed: true,
-    humanInterrupts: {
-      beforeCreateDelete: true,
-      afterToolRpcGeneration: true,
-      blocksUnapprovedExecution: true,
-      recordsHumanDecision: true,
-      reviewBeforeTrust: true,
-    },
-  };
-  return { state, internResult };
-}
-
-function runLocalAdapterDesignerStep(args: {
-  result: StoryboardGenerationResult;
-  sceneData: ReturnType<typeof summarizeLocalAdapterSceneData>;
-  researchWebSummary: string;
-  promptFeedback: string;
-}) {
-  return {
-    research_scene_data: args.sceneData,
-    research_web_summary: args.researchWebSummary,
-    final_output: args.result.storyboard.exportMarkdown,
-    storyboard_history: [
-      "draft_from_research_scene_data",
-      "operator_prompt_feedback_classified",
-      "final_storyboard_export",
-    ],
-    human_feedback: [args.promptFeedback || "operator prompt"],
-    conversation_summary:
-      "Designer transformed Researcher evidence into cuts and remains ready to revise from operator feedback.",
-    feedback_action: "revise_or_finalize_from_operator_feedback",
-    messages: [
-      "Designer consumed Researcher scene evidence.",
-      "Designer produced storyboard export markdown.",
-      "Designer kept feedback state for follow-up revisions.",
-    ],
-  };
-}
-
-function createLocalAdapterGraphDiagnostics(
-  status: StoryboardBackendAgentStatus,
-  result: StoryboardGenerationResult,
-): StoryboardGraphDiagnostics {
-  const localRag = result.backendAnalysis.localRag;
-  const localRagRetrievalStatus =
-    localRag?.status === "used"
-      ? "used"
-      : localRag?.status === "failed"
-        ? "failed"
-        : "not_used";
-  return {
-    status: "used",
-    runtime: "local_adapter_fallback",
-    mode: "local_adapter",
-    graphEntrypoint: status.graphEntrypoint
-      ? sanitizePublicAgentDiagnostic(status.graphEntrypoint, 300)
-      : "apps/web/lib/admin/storyboard/backend-agent.ts",
-    nodesVisited: [
-      "extract_slots",
-      "supervisor",
-      "researcher",
-      "intern",
-      "designer",
-    ],
-    interrupts: [
-      {
-        node: "intern.review_create",
-        resumable: true,
-        outputReady: false,
-        summary:
-          "Local adapter reviewed the read-only search_scene_data contract and blocked Tool/RPC mutation without operator approval.",
-      },
-      {
-        node: "designer_node",
-        resumable: true,
-        outputReady: true,
-        summary:
-          "Designer output is ready and can be revised by the operator prompt feedback loop.",
-      },
-    ],
-    toolsCalled: [
-      "search_scene_data",
-      "rank_heatmap_markers",
-      "review_tool_rpc_plan",
-      "designer_feedback_classifier",
-    ],
-    retrieval: {
-      status: localRagRetrievalStatus,
-      operations: {
-        mmrApplied: Boolean(localRag?.operations.mmrApplied),
-      },
-      caption: {
-        lookupStatus: "unavailable",
-        provider: "unknown_legacy",
-        authMode: "unknown_legacy",
-        fallbackReason:
-          localRag?.status === "used"
-            ? "Required worker caption/RPC retrieval is attached to this graph diagnostic."
-            : `Required worker RAG failed closed: ${localRag?.providerUnavailableReason ?? "not_used"}.`,
-      },
-    },
-    fallbackDetail:
-      "Command runner unavailable; required backend generation aborts before this legacy diagnostic can be treated as product output.",
-  };
-}
-
-function buildLocalAdapterReferenceGraph(
-  result: StoryboardGenerationResult,
-  graph: StoryboardGraphDiagnostics,
-) {
-  const sceneData = summarizeLocalAdapterSceneData(result);
-  const previousQueries = buildLocalAdapterResearchQueries(result);
-  const promptFeedback = sanitizePublicAgentDiagnostic(result.request.prompt, 240);
-  const researchWebSummary = buildLocalAdapterResearchWebSummary(result);
-  const internRequest = createLocalAdapterInternRequest();
-  const supervisorPlan = runLocalAdapterSupervisorStep({
-    sceneData,
-    researchWebSummary,
-    promptFeedback,
-  });
-  const researcherPlan = runLocalAdapterResearcherStep({
-    result,
-    sceneData,
-    previousQueries,
-    internRequest,
-    localRag: result.backendAnalysis.localRag,
-  });
-  const internRun = runLocalAdapterInternStep(internRequest);
-  const researcher = runLocalAdapterResearcherStep({
-    result,
-    sceneData,
-    previousQueries,
-    internRequest,
-    internResult: internRun.internResult,
-    localRag: result.backendAnalysis.localRag,
-  });
-  const supervisor = runLocalAdapterSupervisorStep({
-    sceneData,
-    researchWebSummary,
-    promptFeedback,
-    internResult: internRun.internResult,
-  });
-  const designer = runLocalAdapterDesignerStep({
-    result,
-    sceneData,
-    researchWebSummary,
-    promptFeedback,
-  });
-
-  return {
-    lifecycle: {
-      start: true,
-      extractSlots: true,
-      supervisor: true,
-      researcherDelegated: true,
-      internRoutedByResearcher: true,
-      designerDelegated: true,
-      end: true,
-      order: [
-        "start",
-        "extract_slots",
-        "supervisor",
-        "researcher",
-        "intern",
-        "researcher.evaluate",
-        "designer",
-        "end",
-      ],
-      executionTrace: [
-        "extractLocalAdapterSlots",
-        "runLocalAdapterSupervisorStep",
-        "runLocalAdapterResearcherStep",
-        "runLocalAdapterInternStep",
-        "runLocalAdapterResearcherStep:after_intern",
-        "runLocalAdapterSupervisorStep:approve_designer",
-        "runLocalAdapterDesignerStep",
-      ],
-    },
-    supervisor: {
-      ...supervisor,
-      messages: [
-        ...supervisorPlan.messages,
-        ...supervisor.messages.slice(-1),
-      ],
-    },
-    researcher: {
-      ...researcher,
-      messages: [
-        ...researcherPlan.messages,
-        "evaluate_after_intern: Intern review result accepted.",
-      ],
-    },
-    intern: internRun.state,
-    designer,
-    audit: {
-      persisted: true,
-      persistenceScope: "response_payload",
-      perAgentStateVisible: true,
-      messagesCaptured: true,
-      eventsOrdered: true,
-      safeForPublicUi: true,
-      evidencePointers: [
-        "apps/web/lib/admin/storyboard/backend-agent.ts",
-        "apps/web/lib/admin/storyboard/generator.ts",
-        "backend/storyboard-agent/src/graph.py",
-        ...graph.toolsCalled,
-      ],
-    },
-  };
-}
 
 
 function extractReferenceAgentGraphCandidate(
@@ -5838,11 +5076,13 @@ function extractReferenceAgentGraphCandidate(
   );
 }
 
+
 function extractReferenceGraphCandidate(
   parsed: ParsedStoryboardAgentOutput | null,
 ) {
   return parsed?.referenceGraph ?? parsed?.backendAgent?.referenceGraph ?? null;
 }
+
 
 function canUseReferenceAgentGraphCandidate(
   result: StoryboardGenerationResult,
@@ -5855,6 +5095,7 @@ function canUseReferenceAgentGraphCandidate(
     graph.status !== "fallback"
   );
 }
+
 
 function applyAgentGraphFidelityReport(
   result: StoryboardGenerationResult,
@@ -5875,6 +5116,7 @@ function applyAgentGraphFidelityReport(
     finalOutputReady: Boolean(result.storyboard.exportMarkdown || result.storyboard.scenes.length),
   });
 }
+
 
 function appendBackendAgentAnalysis(
   result: StoryboardGenerationResult,
@@ -5911,6 +5153,7 @@ function appendBackendAgentAnalysis(
   };
 }
 
+
 function applyBackendAdapterMode(result: StoryboardGenerationResult) {
   result.mode = "backend_agent_local_adapter";
   result.request.generationMode = "backend_agent";
@@ -5946,6 +5189,7 @@ function applyBackendAdapterMode(result: StoryboardGenerationResult) {
   normalizeStoryboardExportMarkdown(result);
 }
 
+
 function parseStoryboardAgentOutput(
   command: CommandResult,
 ): ParsedStoryboardAgentOutput | null {
@@ -5975,6 +5219,7 @@ function parseStoryboardAgentOutput(
 }
 
 
+
 function isParsedStoryboardMetadataAuthoritative(
   parsed: ParsedStoryboardAgentOutput,
 ) {
@@ -5984,6 +5229,7 @@ function isParsedStoryboardMetadataAuthoritative(
   if (graph?.runtime !== "langgraph") return true;
   return parsed.storyboard?.contentAuthority === "authoritative";
 }
+
 
 function applyBackendCommandOutput(
   result: StoryboardGenerationResult,
@@ -6022,6 +5268,7 @@ function applyBackendCommandOutput(
   }
 }
 
+
 function extractGraphDiagnosticsFromParsedOutput(
   parsed: ParsedStoryboardAgentOutput | null,
 ) {
@@ -6031,38 +5278,19 @@ function extractGraphDiagnosticsFromParsedOutput(
   );
 }
 
+
 export async function generateStoryboardWithBackendAgent(
   input?: Partial<StoryboardGenerateRequest> | null,
   options: StoryboardBackendAgentExecutionOptions = {},
-): Promise<StoryboardGenerationResult> {
-  const sanitizedInput =
-    input && typeof input.prompt === "string"
-      ? { ...input, prompt: sanitizePublicAgentText(input.prompt) }
-      : input;
-  const env = options.env ?? process.env;
-  const status = await getStoryboardBackendAgentStatus(env)
-  const base = generateLocalStoryboard({
-    ...sanitizedInput,
-    generationMode: "backend_agent",
-  });
-  applyBackendAdapterMode(base);
+): Promise<StoryboardGenerationResult> { throw new Error('STORYBOARD_WORKFLOW_RETIRED'); }
 
-  const command = resolveEffectiveStoryboardAgentCommand(
-    env.STORYBOARD_AGENT_COMMAND,
-    status.runtime,
-    env,
-  );
-  if (command.ok) {
-    const commandResult = await runStoryboardAgentCommand(command, {
-      request: base.request,
-      backendAgentRoot: status.rootPath,
-      graphEntrypoint: status.graphEntrypoint,
-      localStoryboard: base,
-    }, defaultProcessControl, {
-      env,
-      testCommandCapability: options.testCommandCapability,
-    });
-    if (commandResult.ok) {
+
+/** Pure fixture/history output normalization; never starts a provider or subprocess. */
+export function normalizeStoryboardBackendAgentOutput(input: Partial<StoryboardGenerateRequest> | null | undefined, commandResult: CommandResult, status: StoryboardBackendAgentStatus): StoryboardGenerationResult {
+ const sanitizedInput = input && typeof input.prompt === 'string' ? {...input,prompt:sanitizePublicAgentText(input.prompt)} : input;
+ const base=generateLocalStoryboard({...sanitizedInput,generationMode:'backend_agent'});
+ applyBackendAdapterMode(base);
+     if (commandResult.ok) {
       const parsed = parseStoryboardAgentOutput(commandResult);
       if (!parsed) {
         throw new Error(
@@ -6109,15 +5337,223 @@ export async function generateStoryboardWithBackendAgent(
         .join(": ")
         .slice(0, 1200),
     );
+}
+
+
+/** Pure chat intent normalization; the returned flags do not execute work. */
+export async function normalizeStoryboardChatRequest(
+  request: StoryboardChatAgentRequest,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<StoryboardChatAgentResult> {
+  const rawMessage = typeof request.message === "string" ? request.message : "";
+  const isRawSafetyConversation =
+    hasUnsafeStoryboardInstructionRequest(rawMessage);
+  const normalizedMessage = normalizeStoryboardChatRequirement(request.message);
+  if (!normalizedMessage) {
+    throw new Error("채팅 요구사항을 입력하세요.");
   }
 
-  throw new Error(
-    [
-      "required_storyboard_backend_command_unavailable",
-      status.commandRejectionReason,
-      "Configure STORYBOARD_AGENT_COMMAND or keep the bundled auto-runner readable, and run with STORYBOARD_AGENT_PYTHON pointing at the installed RAG runtime.",
-    ]
-      .filter(Boolean)
-      .join(": "),
+  const canvasPatch = createStoryboardChatCanvasPatch(
+    isRawSafetyConversation ? { ...request, message: "" } : request,
   );
+  const focusContext = normalizeStoryboardChatFocusContext(
+    request.focusContext,
+  );
+  const focusText = formatStoryboardChatFocusContext(focusContext);
+  const imageAttachments = normalizeStoryboardChatImageAttachments(
+    request.imageAttachments,
+  );
+  const imageAttachmentText =
+    formatStoryboardChatImageAttachmentSummary(imageAttachments);
+  const conversationMessages = normalizeStoryboardChatConversationMessages(
+    request.conversationMessages,
+  );
+  const conversationText =
+    formatStoryboardChatConversationContext(conversationMessages);
+  const chatThreadId =
+    normalizeStoryboardChatThreadId(request.chatThreadId) ||
+    `storyboard-chat-${Date.now().toString(36)}`;
+  const isNavigationOnly = Boolean(
+    canvasPatch.focusSceneNo && !canvasPatch.scenePatch,
+  );
+  const isUnavailableNavigation = Boolean(
+    canvasPatch.unavailableFocusSceneNo && !canvasPatch.scenePatch,
+  );
+  const effectiveFocusText =
+    canvasPatch.scenePatch?.targetSource === "explicit" ||
+    isNavigationOnly ||
+    isUnavailableNavigation
+      ? ""
+      : focusText;
+  const status = await getStoryboardBackendAgentStatus()
+  const isSafetyConversation =
+    isRawSafetyConversation ||
+    hasUnsafeStoryboardInstructionRequest(normalizedMessage);
+  const shouldReset =
+    !isSafetyConversation && wantsStoryboardReset(normalizedMessage);
+  const isReviewOnly = wantsStoryboardReviewOnly(normalizedMessage);
+  const isCasualChat = isCasualStoryboardChatMessage(normalizedMessage);
+  const isGeneralConversation =
+    isSafetyConversation ||
+    (!isReviewOnly && isGeneralStoryboardConversationMessage(normalizedMessage));
+  const shouldRegenerateSelectedSceneImage = Boolean(
+    canvasPatch.scenePatch?.regenerateImage,
+  );
+  const shouldGenerate =
+    !isSafetyConversation &&
+    wantsStoryboardGeneration(normalizedMessage) &&
+    !shouldReset &&
+    !isGeneralConversation &&
+    !isReviewOnly &&
+    !shouldRegenerateSelectedSceneImage;
+  const shouldGenerateImages =
+    shouldGenerate && !hasStoryboardImageGenerationNegation(normalizedMessage);
+  const runtime = status.runtime ?? DEFAULT_STORYBOARD_AGENT_RUNTIME;
+  const model = status.codexModel ?? resolveStoryboardAgentCodexModel(env);
+  const effort = status.codexEffort ?? resolveStoryboardAgentCodexEffort(env);
+  const safeNormalizedMessage = sanitizeStoryboardPublicText(normalizedMessage);
+  const ragTrace = buildStoryboardChatRagTraceEntries({
+    message: safeNormalizedMessage,
+    shouldGenerate,
+    shouldGenerateImages,
+    conversationTurnCount: conversationMessages.length,
+    imageAttachmentCount: imageAttachments.length,
+  });
+
+  return {
+    assistantMessage: isCasualChat
+      ? [
+          "안녕하세요! 스토리보드 도우미입니다.",
+          "화면은 바꾸지 않고 사용 방법만 안내할게요.",
+          "원하는 음식이나 장면, 컷 수, 꼭 보여주고 싶은 순간을 적어 주면 바로 스토리보드를 만들 수 있어요.",
+          "예시가 필요하면 “예시 만들기”를 누르거나, 바로 만들려면 “생성해줘”라고 입력하세요.",
+        ].join(" ")
+      : isSafetyConversation
+      ? buildStoryboardConversationMessage(rawMessage || normalizedMessage, true)
+      : isGeneralConversation
+      ? buildStoryboardConversationMessage(normalizedMessage)
+      : isReviewOnly
+      ? [
+          "검토 결과를 쉽게 정리했어요.",
+          `현재 보이는 ${canvasPatch.segmentCount}컷 흐름을 기준으로 보면, 앞부분은 관심을 끌고 중간 컷은 맛과 반응을 이어주며 마지막 컷은 다시 보고 싶은 포인트를 잡는 구조예요.`,
+          "바꾸고 싶은 컷이 있으면 “2컷 자막을 더 짧게”처럼 말해 주세요.",
+        ].join(" ")
+      : [
+          "요청을 이해했어요",
+          shouldReset
+            ? "입력값을 처음 상태로 되돌릴게요."
+            : `캔버스에 ${canvasPatch.segmentCount}컷, 약 ${canvasPatch.targetLengthMinutes}분짜리 흐름으로 정리했어요.`,
+          canvasPatch.scenePatch
+            ? `CUT ${String(canvasPatch.scenePatch.sceneNo).padStart(2, "0")}만 수정할 준비를 했어요.`
+            : null,
+          isNavigationOnly
+            ? `화면을 CUT ${String(canvasPatch.focusSceneNo).padStart(2, "0")} 쪽으로 맞춰둘게요.`
+            : null,
+          isUnavailableNavigation
+            ? `CUT ${String(canvasPatch.unavailableFocusSceneNo).padStart(2, "0")}는 지금 결과에 없어서 선택을 풀었어요.`
+            : null,
+          effectiveFocusText
+            ? `지금 선택한 항목(${focusContext?.label})도 함께 참고했어요.`
+            : null,
+          imageAttachmentText
+            ? `첨부 사진 ${imageAttachments.length}장도 함께 참고했어요.`
+            : null,
+          conversationText
+            ? `최근 대화 ${conversationMessages.length}개도 참고했어요.`
+            : null,
+          shouldRegenerateSelectedSceneImage
+            ? "현재 선택한 컷의 이미지만 다시 만들 준비를 했어요."
+            : null,
+          shouldGenerate
+            ? shouldGenerateImages
+              ? "이어서 실제 스토리보드 만들기와 CUT 이미지 생성까지 진행할게요."
+              : "이어서 컷 구성만 먼저 화면에 반영하고 이미지는 만들지 않을게요."
+            : "바로 만들고 싶으면 “생성해줘”라고 입력하세요.",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+    canvasPatch,
+    shouldGenerate,
+    shouldGenerateImages,
+    shouldReset,
+    backendAgent: {
+      mode: status.mode,
+      runtime,
+      concept: `${canvasPatch.segmentCount}컷 스토리보드 채팅 요구사항을 실제 히트맵 기반 생성 요청으로 정리`,
+      layoutBrief: `좌측 2×2 캔버스 페이지에 ${canvasPatch.tone} 톤으로 ${canvasPatch.targetLengthMinutes}분 분량의 컷 흐름을 반영`,
+      promptAddendum: [
+        "Storyboard chat agent task.",
+        `User chat request: ${safeNormalizedMessage}`,
+        conversationText ? `Conversation context: ${conversationText}` : "",
+        effectiveFocusText ? `Canvas focus context: ${effectiveFocusText}` : "",
+        imageAttachmentText ? `Image attachments: ${imageAttachmentText}` : "",
+        `Resolved prompt: ${canvasPatch.prompt}`,
+        `Resolved cuts: ${canvasPatch.segmentCount}`,
+        `Resolved target length minutes: ${canvasPatch.targetLengthMinutes}`,
+        `Resolved tone: ${canvasPatch.tone}`,
+        canvasPatch.focusSceneNo
+          ? `Navigation focusSceneNo: ${canvasPatch.focusSceneNo}`
+          : "",
+        canvasPatch.unavailableFocusSceneNo
+          ? `Navigation unavailableFocusSceneNo: ${canvasPatch.unavailableFocusSceneNo}`
+          : "",
+        canvasPatch.scenePatch
+          ? `Selected CUT scenePatch: ${JSON.stringify(canvasPatch.scenePatch)}`
+          : "",
+      ].join("\n"),
+      safetyReview:
+        "관리자 콘솔 채팅 입력은 스토리보드 생성 요청으로만 반영하며, 실제 이미지 생성은 별도 GPT Image 2 단계에서 검수합니다.",
+      nextActions: [
+        "채팅 반영 결과 확인",
+        "스토리보드 생성 실행",
+        "필요 시 현재 페이지 이미지 생성",
+      ],
+      diagnostics: {
+        runtime,
+        codexModel: model,
+        codexEffort: effort,
+        chatThreadId,
+        conversationTurnCount: conversationMessages.length,
+        conversationSummary: conversationText,
+        checkpointScope: "response_payload_state",
+        langGraphResumeContract:
+          "chatThreadId and bounded conversationMessages are forwarded so future Command(resume=...) integration can bind UI turns to a graph thread without trusting hidden client instructions.",
+        ragTrace,
+        ragTraceSurface: "storyboard_chat_thinking_panel",
+        ragTraceSteerContract:
+          "mid-stream user message aborts the current SSE turn and replays as a new steer request",
+        imageGenerationAction: shouldGenerateImages
+          ? "auto_generate_after_storyboard"
+          : shouldGenerate
+            ? "skip_image_generation_by_user_directive"
+            : "none",
+        imageAttachmentCount: imageAttachments.length,
+        chatIntent: isCasualChat
+          ? "casual_chat"
+          : isSafetyConversation
+            ? "safety"
+          : isGeneralConversation
+            ? "conversation"
+            : shouldRegenerateSelectedSceneImage
+            ? "regenerate_selected_scene"
+            : shouldGenerate
+              ? "generate"
+              : shouldReset
+                ? "reset"
+                : isReviewOnly
+                  ? "review"
+                  : isNavigationOnly
+                    ? "navigate"
+                    : isUnavailableNavigation
+                      ? "navigate_unavailable"
+                      : "edit",
+      },
+    },
+    diagnostics: {
+      runtime,
+      model,
+      effort,
+      streaming: "sse-progress",
+    },
+  };
 }

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "sourceRoot": "/Users/twoimo/Documents/projects/tzudong",
+      "relativeFile": "apps/web/.env.local",
+      "symlink": false,
+      "readableFile": true,
+      "sentryVariablePresence": {}
+    },
+    {
+      "sourceRoot": "/Users/twoimo/Documents/projects/tzudong",
+      "relativeFile": "backend/.env",
+      "symlink": false,
+      "readableFile": true,
+      "sentryVariablePresence": {}
+    },
+    {
+      "sourceRoot": "/Users/twoimo/Documents/projects/tzudong",
+      "relativeFile": "backend/.env.gemini-file-api.local",
+      "symlink": false,
+      "readableFile": true,
+      "sentryVariablePresence": {}
+    }
+  ],
+  "envValuesPersisted": false,
+  "sourceFilesUnmodified": true
+}

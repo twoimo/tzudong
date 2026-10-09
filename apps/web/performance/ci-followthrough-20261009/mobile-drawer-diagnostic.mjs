@@ -1,0 +1,57 @@
+import { chromium, expect } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import { existsSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const output = resolve('performance/ci-followthrough-20261009/mobile-drawer-diagnostic');
+const processEnv = execFileSync('ps', ['eww', '-p', process.env.CMS_DEV_SERVER_PID ?? '57309', '-o', 'command='], { encoding: 'utf8' });
+const token = processEnv.match(/(?:^| )E2E_ADMIN_ROUTE_BYPASS_TOKEN=([^\s]+)/)?.[1];
+if (!token) throw new Error('Existing local test bypass unavailable');
+const binary = '/Users/twoimo/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
+const browser = await chromium.launch({ headless: true, executablePath: existsSync(binary) ? binary : '/Users/twoimo/Applications/Spark.app/Contents/Resources/chromium/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, extraHTTPHeaders: { 'x-e2e-admin-bypass': '1', 'x-e2e-admin-bypass-token': token } });
+await context.addInitScript(() => { localStorage.setItem('tzudong:e2e-admin-shell-bypass', '1'); });
+const page = await context.newPage();
+let pageErrorCount = 0, blockedMutationCount = 0;
+page.on('pageerror', () => { pageErrorCount++; });
+await context.route('**/*', async route => {
+  const request = route.request(), url = new URL(request.url());
+  if (!['GET', 'HEAD'].includes(request.method())) { blockedMutationCount++; return route.fulfill({ status: 503, json: { code: 'local_read_only_check' } }); }
+  if (url.origin !== 'http://127.0.0.1:19872') return route.fulfill({ status: 503, body: '' });
+  if (url.pathname.startsWith('/api/')) {
+    if (url.pathname === '/api/admin/pipeline') return route.fulfill({ json: { source: 'job_api', jobs: [], failures: [] } });
+    return route.fulfill({ status: 503, json: { code: 'local_read_only_check' } });
+  }
+  return route.continue();
+});
+const observations = [];
+const row = page.locator('[data-operations-row="pipeline"] button');
+const snapshot = async stage => observations.push({ stage, state: await page.evaluate(() => ({ width: innerWidth, desktopMedia: matchMedia('(min-width: 1024px)').matches, rowDialog: document.querySelector('[data-operations-row="pipeline"] button')?.getAttribute('aria-haspopup'), inspectorCount: document.querySelectorAll('[data-operations-inspector]').length, drawerCount: document.querySelectorAll('[data-operations-drawer]').length, focusedTag: document.activeElement?.tagName })) });
+try {
+  await page.goto('http://127.0.0.1:19872/admin?module=llm', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await expect(page.locator('[data-admin-operations-panel]')).toBeVisible();
+  await row.focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('[data-operations-inspector]')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-operations-inspector]')).toHaveCount(0);
+  await expect(row).toBeFocused();
+  await snapshot('desktop-closed');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await snapshot('immediate-resize');
+  await row.focus(); await page.keyboard.press('Enter');
+  await snapshot('immediate-mobile-enter');
+  try { await expect(page.locator('[data-operations-drawer]')).toBeVisible({ timeout: 5000 }); observations.push({ stage: 'original-mobile-drawer', passed: true }); }
+  catch { observations.push({ stage: 'original-mobile-drawer', passed: false }); }
+  await snapshot('settled-mobile-state');
+  await page.screenshot({ path: resolve(output, 'mobile-drawer-current.png') });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-operations-inspector]')).toHaveCount(0);
+  await expect(row).toHaveAttribute('aria-haspopup', 'dialog');
+  await row.focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('[data-operations-drawer]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-operations-drawer]')).toHaveCount(0);
+  await expect(row).toBeFocused();
+  observations.push({ stage: 'responsive-ready-mobile-enter-escape-focus', passed: true });
+} catch { observations.push({ stage: 'diagnostic', passed: false }); }
+finally { writeFileSync(resolve(output, 'observations.json'), JSON.stringify({ observations, pageErrorCount, blockedMutationCount }, null, 2) + '\n'); await browser.close(); }
+console.log(JSON.stringify({ observations, pageErrorCount, blockedMutationCount }));

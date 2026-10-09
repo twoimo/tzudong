@@ -1,0 +1,321 @@
+{
+  "kind": "actual-five-source-full-schema-bundle-replay",
+  "status": "passed",
+  "operatingWrites": false,
+  "hostedWrites": false,
+  "userRowsCopied": 0,
+  "hostedLedgerRowsCopied": 0,
+  "fixturePrefix": "local-synthetic-only",
+  "databases": {
+    "source": "tzudong_fresh_pg17_281325b03520",
+    "stageFiveMismatch": "tzudong_actual5_stage_18ff575f76eb514be3f43b1a",
+    "finalMismatch": "tzudong_actual5_final_18ff575f76eb514be3f43b1a",
+    "success": "tzudong_actual5_ok_18ff575f76eb514be3f43b1a"
+  },
+  "sourceHead": "8571b65b5e8079d2f238389aaf68f41740aa170e",
+  "serverVersion": "17.6",
+  "serverVersionNum": 170006,
+  "sourceBindings": [
+    {
+      "id": "admin_record_guarded_actions",
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "bytes": 60166,
+      "statementCount": 39,
+      "statementVectorSha256": "5038d14ce704d494889562f04d33cacae7bd7a117bf4cd2341752bd3b40f12af"
+    },
+    {
+      "id": "admin_evaluation_raw_warning_groups",
+      "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+      "bytes": 13706,
+      "statementCount": 10,
+      "statementVectorSha256": "082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8"
+    },
+    {
+      "id": "admin_evaluation_raw_warning_invoker_contract",
+      "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+      "bytes": 5957,
+      "statementCount": 4,
+      "statementVectorSha256": "f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1"
+    },
+    {
+      "id": "restaurant_review_manual_preview_eligibility",
+      "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "bytes": 7769,
+      "statementCount": 4,
+      "statementVectorSha256": "ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958"
+    },
+    {
+      "id": "admin_record_private_verification_cleanup",
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "sha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065",
+      "bytes": 11649,
+      "statementCount": 13,
+      "statementVectorSha256": "efd37cbc628681232e53d3b404a90cb52fe57e659b67214826fb475f90a79143"
+    }
+  ],
+  "helperBindings": {
+    "apps/web/scripts/supabase-migration-bundle.mjs": "fdc6c175fe77cc11b6252c6d9b326061d67639c6e7fff728e94e70a85f25c5b6",
+    "apps/web/scripts/supabase-migration-transaction.mjs": "82e35949f693e54c0629fd2f98935b4c4b5b79227c66d6bc6dccb0584b5493f0",
+    "apps/web/scripts/apply-supabase-migration.mjs": "b86ebb0e1194c4b164f57467475e09afa3ef03655968732bd0d6c57e37789a0e",
+    "backend/supabase/scripts/g037_supabase_statement_vector.mjs": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+  },
+  "syntheticPrefix": {
+    "count": 3,
+    "sha256": "abf472efd359eae9fc80c9477b24f8eadfc917222cae13e76a092920fe301229",
+    "copiedFromHosted": false
+  },
+  "standardConformingStrings": {
+    "callerDefault": "off",
+    "compiledTransactionForcesOn": true,
+    "reconciliationTransactionForcesOn": true
+  },
+  "stageFiveMismatch": {
+    "fixedCode": "MIGRATION_TERMINAL_READBACK_FAILED",
+    "sqlState": "P0001",
+    "rollbackExact": true,
+    "schemaSha256": "787aa504e70e44553ffd55ecd31f1426b52103cc0529d88be0556d36c6c80ca5",
+    "dataSha256": "60cc37fdec996a73b8f6705eeed99373798b56126f76b6791b2503cbe94a09d6",
+    "rolesAndMembershipPreserved": true,
+    "reconciliation": "not_applied",
+    "targetLedgerRows": 0
+  },
+  "finalMismatch": {
+    "fixedCode": "MIGRATION_TERMINAL_READBACK_FAILED",
+    "sqlState": "P0001",
+    "rollbackExact": true,
+    "schemaSha256": "787aa504e70e44553ffd55ecd31f1426b52103cc0529d88be0556d36c6c80ca5",
+    "dataSha256": "60cc37fdec996a73b8f6705eeed99373798b56126f76b6791b2503cbe94a09d6",
+    "rolesAndMembershipPreserved": true,
+    "reconciliation": "not_applied",
+    "targetLedgerRows": 0
+  },
+  "bundle": {
+    "id": "actual_admin_five_migration_bundle",
+    "transactionMode": "single-outer-transaction",
+    "priorCount": 3,
+    "prefixRoot": "abf472efd359eae9fc80c9477b24f8eadfc917222cae13e76a092920fe301229",
+    "suffixRoot": "264191a36996f815a40a19155666cd18cd7b007b4cdf6638c03ee4b696cb3593",
+    "topLevelStatementCount": 112,
+    "outputSelectCount": 1,
+    "sourceRoot": "1ddf5066a3d34177cb75ed9e29ec1ce7c11ed8b44ff08b5bbe81f3fd741f2faf"
+  },
+  "success": {
+    "exactFinalReadback": true,
+    "reconciliation": "committed",
+    "ledgerCount": 8,
+    "targetLedgerRows": 5,
+    "originalVectorsPreserved": true,
+    "prefixPreserved": true,
+    "existingManifestPreserved": true,
+    "legacyFunctionMetadataPreserved": true,
+    "rolesAndMembershipPreserved": true,
+    "g014AssertionsPassed": 4,
+    "metadata": {
+      "functions": [
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "signature": "pipeline_control.admin_record_review_media(jsonb)",
+          "bodySha256": "e2e2aea7a72440b151d69ceea13dab5855ba691199f74e065a2850b848004d99",
+          "securityDefiner": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "signature": "pipeline_control.admin_record_snapshot(text,uuid[])",
+          "bodySha256": "7132001985972c0e0fece15782ba7aac68338508f04ef3365733024a7c975cd5",
+          "securityDefiner": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "signature": "pipeline_control.admin_record_storage_snapshot(text,text)",
+          "bodySha256": "952f92d709f60b7f47168e0f4f6ff1b141ceae23f7cf3632db760f4ea2cd541d",
+          "securityDefiner": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\"",
+            "lock_timeout=2s"
+          ],
+          "signature": "pipeline_control.lock_restaurant_review_catalog_revision()",
+          "bodySha256": "5fe3230899d7669896f562b5a7afa5e088761b3ecc26f531c13cf0953a569413",
+          "securityDefiner": true
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "signature": "pipeline_control.restaurant_review_manual_preview(uuid,text)",
+          "bodySha256": "2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1",
+          "securityDefiner": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+          "bodySha256": "7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304",
+          "securityDefiner": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+          "bodySha256": "ab9c11c438e482bcdd1373ec3bb43a2abf579f535aad919a18a452930ec1912c",
+          "securityDefiner": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\"",
+            "lock_timeout=2s"
+          ],
+          "signature": "public.restaurant_review_automation_manual(uuid,text,text,text,uuid)",
+          "bodySha256": "b792a1646aac690fa2b2b1714978c762408c7a467c3fa8079a51763c956319e1",
+          "securityDefiner": false
+        }
+      ],
+      "assertions": [
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_catalog_contract",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "50948ddce54dbba9497978964bebc535c27ebe98fb0f46bf05e2ec17ab0b9e01"
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_definer_contract",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "b9e2f7d812783deee6c91d27d22d6c2019be9aa04e4f1221cc7482567775354a"
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_public_rpc_allowlist",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef"
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_workflow_owner_contract",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d"
+        }
+      ],
+      "privateHelperAcl": {
+        "anon": false,
+        "serviceRole": true,
+        "authenticated": false
+      },
+      "cleanupConstraint": "CHECK ((bucket = ANY (ARRAY['review-photos'::text, 'review-verifications'::text])))",
+      "registrationHelpers": 0,
+      "targetAllowlistRows": 2
+    }
+  },
+  "phaseAssertions": {
+    "adminRecordCases": [
+      "changed_payload_same_uuid_rejected",
+      "restaurant.approve_preview_apply_readback_audit_idempotency",
+      "restaurant.edit_partial_readback_audit",
+      "review.approve_original_triggers_readback_audit",
+      "stale_preview_preserves_later_admin_change_without_audit",
+      "submission.approve_current_schema_readback_audit"
+    ],
+    "adminRecordCaseCount": 6,
+    "adminRecordRollbackExact": true,
+    "manualPreviewCases": [
+      "applied_fingerprint_excluded",
+      "today_finished_approval_prior_day_run_counted",
+      "same_policy_daily_deferred_reincluded",
+      "stale_policy_excluded",
+      "stop_counts_empty_version_preserved"
+    ],
+    "manualPreviewCaseCount": 5,
+    "manualPreviewRollbackExact": true,
+    "privateVerificationCases": [
+      "claimed_private_job_fences_object_and_reference_late_writes",
+      "private_metadata_cas_stale_rejected_without_cleanup",
+      "public_absent_done_private_uncertain_readback_pending",
+      "verification_key_creates_exact_private_and_public_jobs"
+    ],
+    "privateVerificationCaseCount": 4,
+    "privateVerificationExactJobCount": 2,
+    "privateVerificationRollbackExact": true,
+    "syntheticOnly": true,
+    "providerCalls": 0,
+    "storageApiCalls": 0
+  },
+  "databaseCleanup": {
+    "tzudong_actual5_stage_18ff575f76eb514be3f43b1a": true,
+    "tzudong_actual5_final_18ff575f76eb514be3f43b1a": true,
+    "tzudong_actual5_ok_18ff575f76eb514be3f43b1a": true
+  },
+  "completedAt": "2026-10-09T09:52:06.197Z"
+}

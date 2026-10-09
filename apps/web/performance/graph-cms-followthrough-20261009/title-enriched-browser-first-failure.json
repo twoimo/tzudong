@@ -1,0 +1,8 @@
+{
+  "source": "actual-reader-staged-title-migration-fixture-current-30-nodes-88-edges-not-canonical-title-publication",
+  "viewports": [],
+  "pageErrors": [],
+  "externalBlocked": 0,
+  "mutationsBlocked": 0,
+  "failure": "expect(locator).toBeVisible() failed"
+}

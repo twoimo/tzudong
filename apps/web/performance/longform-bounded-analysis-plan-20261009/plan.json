@@ -1,0 +1,202 @@
+{
+  "observedAtUtc": "2026-10-09T04:56:04.508753+00:00",
+  "target": {
+    "videoId": "-D43ezc57z8",
+    "durationSeconds": 835,
+    "kind": "video",
+    "sourceUrl": "https://www.youtube.com/@tzuyang6145/videos",
+    "freshPublicMembershipMatch": true,
+    "priorVideoStateDirectoryExists": false,
+    "priorReceiptOrAnalysisFiles": 0,
+    "cachedState": "new",
+    "segmentCount": 1,
+    "clipBoundsSeconds": [
+      0,
+      835
+    ]
+  },
+  "plan": {
+    "inventorySha256": "5f2283e4248c0b59686c7c593842e7d424ce53ff9e3ddcb154b5bf0b3e658068",
+    "inventoryRows": 1,
+    "excludedShorts": 0,
+    "duplicateRows": 0,
+    "videoTabCount": 1,
+    "completedStreamCount": 0,
+    "excludedLiveNotReady": 0,
+    "excludedLiveStatusCounts": {
+      "is_live": 0,
+      "is_upcoming": 0,
+      "post_live": 0
+    },
+    "phase": "plan",
+    "model": "gemini-3.8-flash",
+    "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+    "longformVideoCount": 1,
+    "totalDurationSeconds": 835,
+    "cache": {
+      "reusable": 0,
+      "new": 1,
+      "readback_required": 0,
+      "corrupt": 0
+    },
+    "estimatedInputTokens": null,
+    "estimatedCost": null,
+    "inputReservationPerCall": 1048576,
+    "reservationBasis": "official_model_input_limit_per_static_segment",
+    "segmentSecondsUpper": 900,
+    "remainingSegments": 1,
+    "remainingWork": {
+      "callsMin": 0,
+      "callsUpper": 2,
+      "generationCallsUpper": 1,
+      "countCallsUpper": 1,
+      "inputTokenReservationUpper": 1048576
+    },
+    "boundedExecution": {
+      "callsMin": 0,
+      "callsUpper": 2,
+      "generationCallsUpper": 1,
+      "inputTokenReservationUpper": 1048576,
+      "elapsedSecondsUpper": 1330
+    },
+    "costVerified": false,
+    "providerObservationsIndependentlyVerified": false
+  },
+  "config": {
+    "identity": {
+      "model": "gemini-3.8-flash",
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536,
+      "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+      "promptSha256": "d486e2873147342a310303a4f2ab180be06ab75dc16bc367e5c25f19b09d9b66",
+      "processing": "static_segments",
+      "timeoutSeconds": 600,
+      "schemaVersion": 2,
+      "segmentSeconds": 900,
+      "callsReservedPerSegment": 2,
+      "responseSchemaSha256": "6b295d868e28bb0560c9da2fe0afbeb2a5d6593767f99244288452db4011aad9",
+      "adapterSha256": "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c",
+      "policySha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86"
+    },
+    "configSha256": "00317c9d54d01ca9a29250ddd86744c917a46f4f2c77282786cf1e4cf3e6aec7",
+    "sourceIdentity": {
+      "videoId": "-D43ezc57z8",
+      "inputSha256": "ad1d6e1b050f3b41dfafd3e5823135bcf0fb522ba168210c5f1bb2a466c41330",
+      "configSha256": "00317c9d54d01ca9a29250ddd86744c917a46f4f2c77282786cf1e4cf3e6aec7"
+    },
+    "promptSha256": "d486e2873147342a310303a4f2ab180be06ab75dc16bc367e5c25f19b09d9b66",
+    "segmentPromptSha256": "d0ca6816f9379e8d72c3f9ae23778249c3b00d624f3e0e5d989e9bbe5d1e5955",
+    "modelEvidenceSha256": "f5001bba8f40b35d52259a8cefeda797ac61a1ca0756d64409e4b240370ce24a",
+    "projectConcurrencyToPreserve": 1,
+    "requestsPerMinuteToPreserve": 1,
+    "newBatchId": "one-full-D43ezc57z8-20261009T045604Z",
+    "batchLedgerExists": false,
+    "limits": {
+      "maxVideos": 1,
+      "maxCalls": 2,
+      "maxInputTokens": 1048576
+    },
+    "runtimeAdmissionToPreserve": {
+      "GEMINI_MAX_INFLIGHT": 1,
+      "GEMINI_REQUESTS_PER_MINUTE": 1,
+      "mustBeVerifiedInPrivateLaunchProcess": true,
+      "persistentEnvOrQuotaChange": false
+    }
+  },
+  "funding": {
+    "freshReadbackSha256": "7f5d3cc62e7931c7111ccf0b8e7c2257f5f9d25e04bbafdff93b42288c9b6d5a",
+    "fundingAccountProjectMatchVerified": true,
+    "existingVaultCopyUiKeyProjectMatchPreviouslyVerified": true,
+    "executionCredentialProjectMatchVerified": false,
+    "executionCredentialMatch": null,
+    "reason": "Existing funded vault copy is attested by prior UI evidence, but its exact private runtime locator is not present in this preparation context. Local generic Gemini key has no independently verified funded-project binding. No key value or key-derived hash was copied.",
+    "newKeysOrAccountChanges": false
+  },
+  "billingInterpretation": {
+    "standardGenerationOnlyPriceWindowUpperUsd": 1.032192,
+    "inputReservation": 1048576,
+    "outputReservation": 65536,
+    "countAndGenerationOperations": 2,
+    "countTokensRestZeroPriceVerified": false,
+    "GetTokensToCountTokensInference": "Root fresh billing evidence records unbilled GetTokens; treating REST models.countTokens as the same operation is an inference, not exact zero-charge proof.",
+    "creditBalanceIsAdmissionContextNotOperationCostReceipt": true,
+    "quotaHeadroomNotGuaranteedByPeakDisplay": true,
+    "providerPostCalls": 0,
+    "topupsOrAutoRechargeChanges": 0,
+    "officialBillingSource": "https://ai.google.dev/gemini-api/docs/billing",
+    "officialBillingGetTokensStatementVerified": true,
+    "officialBillingInference": "GetTokens is documented as unbilled and outside inference quota. Direct REST models.countTokens naming differs; exact zero-charge attribution for this planned operation remains unverified."
+  },
+  "executionPreparedNotRun": [
+    "python3",
+    "-m",
+    "backend.knowledge_graph.longform_analysis",
+    "--inventory",
+    "/Users/twoimo/.codex/runtime-cache/longform-one-analysis-plan-20261009T045604Z-06c092/single-video-inventory.json",
+    "--state-dir",
+    "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004",
+    "--model",
+    "gemini-3.8-flash",
+    "--model-evidence",
+    "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261004/model-evidence.json",
+    "--watch-checkout",
+    "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42",
+    "--execute",
+    "--batch-id",
+    "one-full-D43ezc57z8-20261009T045604Z",
+    "--max-videos",
+    "1",
+    "--max-calls",
+    "2",
+    "--max-input-tokens",
+    "1048576"
+  ],
+  "privatePreparationPath": "/Users/twoimo/.codex/runtime-cache/longform-one-analysis-plan-20261009T045604Z-06c092",
+  "sourceHashes": [
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261004/inventory.json",
+      "sha256": "867d451d8586ed4d075e21d84c825ee5a1086f944d92597a0a249b7cc33834ad"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261004/model-evidence.json",
+      "sha256": "a711f96edc01354d76202608582d2f4b61a6e82fd9eaeeda715fda581abe8c8f"
+    },
+    {
+      "path": "apps/web/performance/longform-followthrough-20261009/fresh-videos-membership.json",
+      "sha256": "0bfc95e7dbcd45f02205ca4bd61b69145fb7196ab52052178a8c01006bfe7cbb"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/longform_analysis.py",
+      "sha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/claude_video_adapter.py",
+      "sha256": "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42/skills/watch/scripts/gemini.py",
+      "sha256": "e0f29cdfc1f64b6535b6c01a6f21e33493abc240ab18aeac2c85f2f24d3c850e"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42/skills/watch/scripts/runtime.py",
+      "sha256": "70f9741d7b863380840da602f9311eb118572c33e083cfdea99524bd282eadbd"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/longform-resume-readiness-20261009/fresh-funding-readback.json",
+      "sha256": "7f5d3cc62e7931c7111ccf0b8e7c2257f5f9d25e04bbafdff93b42288c9b6d5a"
+    }
+  ],
+  "stateHashManifestSha256": "6595789ffff22d23c6f44d40e7dbbd58722720e664ef5bf682482292787199a2",
+  "stateHashCount": 1082,
+  "checks": {
+    "pinnedWatchSourceVerified": true,
+    "newTargetNoPriorUncertainFailedRunningRejectedOperation": true,
+    "freshProtocol2": true,
+    "previousLegacyLedgersReusedOrModified": false,
+    "collectorPauseStatus": "paused",
+    "collectorPauseReason": "rate-limit",
+    "providerPostsSent": 0,
+    "vaultPublication": false,
+    "awaitingRootPlanAndBillingReview": true
+  }
+}

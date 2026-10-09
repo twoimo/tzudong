@@ -1,0 +1,70 @@
+{
+  "preparedAt": "2026-10-09T07:26:46Z",
+  "status": "proposed_not_authorized",
+  "executionAuthorized": false,
+  "requiresRootReview": true,
+  "decisions": {
+    "purpose": "diagnose_exact_previous_synthetic_rejection",
+    "newSchemaRepresentationExperiment": false,
+    "failed835VideoResend": false,
+    "productionAdoption": false,
+    "factoredSchemaAcceptance": false
+  },
+  "request": {
+    "model": "gemini-3.8-flash",
+    "maxOutputTokens": 65536,
+    "store": false,
+    "hasVideo": false,
+    "hasTools": false,
+    "hasCache": false,
+    "hasHistory": false,
+    "promptSha256": "81377b15578f67767fab3a8b4a72cede12c75a83544f103109ca4b437a4f671b",
+    "payloadCanonicalBytes": 2553,
+    "payloadSha256": "a9dcf0aa926e214d3b7d0e91e35e7ea1c575086c4b2ed04d87b4ca19335587ae",
+    "schemaCanonicalBytes": 2004,
+    "schemaSha256": "d72c43afe8d12d0a85a815d8ec70ce107dc40e0bc97d2dfbedfeaf6065846953"
+  },
+  "executionLimits": {
+    "providerPostMaximum": 1,
+    "retries": 0,
+    "automaticRetry": false,
+    "readbacks": 0,
+    "redirects": 0,
+    "timeoutSeconds": 120,
+    "requestsPerMinuteMaximum": 1,
+    "concurrencyMaximum": 1,
+    "maxErrorBodyBytesInMemory": 65536,
+    "sharedBudgetNamespaceRequired": true
+  },
+  "sanitizedOutputOnly": {
+    "httpStatus": "bounded_integer_or_null",
+    "officialCode": "allowlisted_exact_value_or_null",
+    "category": "fixed_enum",
+    "schemaPath": "submitted_schema_tokens_and_numeric_indices_or_null",
+    "schemaPathSource": "typed_detail_or_message_marker_or_null",
+    "schemaKeyword": "allowlisted_keyword_or_null"
+  },
+  "fixedCategories": [
+    "schema_complexity",
+    "unsupported_keyword",
+    "type_mismatch",
+    "schema_constraint",
+    "auth_or_permission",
+    "quota",
+    "server_error",
+    "unknown"
+  ],
+  "holds": {
+    "providerCall": true,
+    "productionSourceWrite": false,
+    "failedReceiptWrite": false,
+    "successCacheWrite": false,
+    "queueWrite": false,
+    "vaultWrite": false,
+    "rawBodyPersistence": false,
+    "messagePersistence": false,
+    "headerPersistence": false,
+    "keyPersistence": false,
+    "responseIdPersistence": false
+  }
+}

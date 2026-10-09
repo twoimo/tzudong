@@ -1,0 +1,74 @@
+{
+  "observedAtUtc": "2026-10-09T00:54:23.601224+00:00",
+  "engine": {
+    "admittedDigest": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "actualDigest": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "matches": true,
+    "sharedEngineGitStatus": ""
+  },
+  "tests": [
+    {
+      "module": "backend.knowledge_graph.tests.test_osk_publication (before added admission test)",
+      "tests": 18,
+      "seconds": 13.172,
+      "exitCode": 0,
+      "result": "OK",
+      "realApiVault": "disposable subprocess fixtures only"
+    },
+    {
+      "module": "backend.knowledge_graph.tests.test_osk_publication.PublicationEngineAdmissionTests",
+      "tests": 1,
+      "mutationSubcases": 2,
+      "seconds": 0.039,
+      "exitCode": 0,
+      "result": "OK"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "backend/knowledge_graph/osk_publication.py",
+      "sha256": "01d76cc5547ae2f9ace9000123a30e263663b181de21f1f863214fc60284c382"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_osk_publication.py",
+      "sha256": "cd8d929b3c674e141ec5c1a0b872b5cf179031e2a7c7c4ae6eb9dc8d1383175a"
+    },
+    {
+      "path": "backend/knowledge_graph/OSK_PUBLICATION.md",
+      "sha256": "c66c25d03b4819e80fe2efa1d687d2f22d755779b1de3e11a224f3b71ca02186"
+    }
+  ],
+  "canonicalChannelSourcesReadback": [
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/checkpoint.json",
+      "sameAsInitialEvidence": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/job.json",
+      "sameAsInitialEvidence": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/audit.json",
+      "sameAsInitialEvidence": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/video-index.json",
+      "sameAsInitialEvidence": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/profile.json",
+      "sameAsInitialEvidence": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/analysis/caption-review-status.json",
+      "sameAsInitialEvidence": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/analysis/caption-review-queue.json",
+      "sameAsInitialEvidence": true
+    }
+  ],
+  "paidProviderCalls": 0,
+  "originalVaultPublicationExecuted": false,
+  "sharedEngineUpdated": false
+}

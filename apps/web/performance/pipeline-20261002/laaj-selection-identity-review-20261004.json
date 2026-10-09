@@ -1,0 +1,41 @@
+{
+  "scope": "sequential/OAuth admission, POSIX child lock inheritance, selection retirement, approval evidence identity",
+  "paid_calls": 0,
+  "hosted_mutations": 0,
+  "restart_and_stage_tests": 22,
+  "rule_precision_tests": 15,
+  "selection_tests": 3,
+  "isolated_pg_tests": 3,
+  "default_sequential_overlap": {
+    "invocations": 2,
+    "mock_provider_calls": 1,
+    "output_rows": 1
+  },
+  "posix_coordinator_sigkill": {
+    "live_child_locked": true,
+    "second_worker_waited": true,
+    "work_executions": 1
+  },
+  "selection_retirement": {
+    "active_downstream_artifacts": 0,
+    "original_bytes_preserved": true
+  },
+  "approval_binding": {
+    "misattached_or_missing_source_identity_approved": 0,
+    "active_duplicate_held": true,
+    "deleted_history_ignored": true
+  },
+  "limits": [
+    "Windows coordinator-crash descriptor inheritance was not proved",
+    "No real provider token/cost or latency claim",
+    "New SQL is unapplied hosted"
+  ],
+  "source_hashes": {
+    "backend/bin/run_parallel_laaj.py": "b3fb6c5366cf2721e106c0066b053b2e37663b25c3f9774a4220f1db4ce88a96",
+    "backend/utils/stage_cache.py": "73297c3d683c3c0f09c1dded087042adf99f50c3a0220b0d1a83ccecf7da9af4",
+    "backend/restaurant-evaluation/scripts/09-target-selection.py": "538b391157f337f74300141be20e7f4c53dd1253bd0e5e46ca089efc00758af3",
+    "backend/restaurant-evaluation/scripts/10-rule-evaluation.py": "ff905344ed3b36be5c1c6938fdaf5370033957976dfc0be8f7d7ba8a01ad2c5b",
+    "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh": "194b9783730a200d4875e30de102d06601eec85d738d1334f7de85c13fbdacf5",
+    "backend/supabase/migrations/20261004010334_restaurant_review_identity_evidence.sql": "27f4fd99e909c9d19e7160c79b0a0cfe5ee3e5f7d137e4d3f53de7819f94af63"
+  }
+}

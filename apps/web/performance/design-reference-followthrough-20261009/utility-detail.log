@@ -1,0 +1,1981 @@
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_MmXPr9BArDDfN3fT'
+}
+✔︎ Opened a new tab and set it active: tabs[0], page → Animated Components for React and Next.js · beUI (https://beui.dev/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Animated Components for React and Next.js · beUI" [url=https://beui.dev/]
+- banner:
+  - link "beUI" [ref=e1]
+  - navigation:
+    - link "Components" [ref=e2]
+    - link "Blocks" [ref=e3]
+    - link "Agents" [ref=e4]
+    - link "Charts" [ref=e5]
+    - link "Playground" [ref=e6]
+    - link "Sponsors" [ref=e7]
+  - navigation:
+    - button "Search components" [ref=e8]
+    - tablist:
+      - tab "Light theme" [ref=e9]
+      - tab "Dark theme" [ref=e10] [selected]
+      - tab "System theme" [ref=e11]
+    - button "Customize theme" [ref=e12]
+    - link "Star on GitHub" [ref=e13]
+    - link "Get Pro" [ref=e14]
+- main:
+  - region:
+    - link "138 components · Tailwind 4 + React 19" [ref=e15]
+    - heading "Animated componentsfor React and Next.js" [level=1]: "Animated components for React and Next.js"
+    - text: "Copy-paste React components built with Motion and Tailwind CSS. Free, open source, and fully customizable."
+    - link "Browse components" [ref=e16]
+    - link "Explore Pro" [ref=e17]
+  - region "Sponsored by" [ref=e18]:
+    - heading "Sponsored by" [level=2]
+    - link "Tracwell" [ref=e19]
+  - region "Built on Framer Motion. Distributed via shadcn." [ref=e20]:
+    - heading "Built on Framer Motion. Distributed via shadcn." [level=2]
+    - tablist:
+      - tab "bun" [ref=e21] [selected]
+      - tab "npm" [ref=e22]
+      - tab "pnpm" [ref=e23]
+      - tab "yarn" [ref=e24]
+    - button "Copy code" [ref=e25]
+    - generic "$ bunx --bun shadcn add @beui/collapsible" [ref=e26] [scrollable]
+  - region:
+    - text: "New"
+    - heading "Recently launched" [level=2]
+    - article:
+      - link "View Treemap" [ref=e27]
+      - heading "Treemap" [level=3]
+      - text: "New Proportional tiles that morph with your data, with value and share tooltips."
+    - article:
+      - link "View Volume Profile" [ref=e28]
+      - heading "Volume Profile" [level=3]
+      - text: "New Animated volume by price, with point of control and value area highlights."
+    - article:
+      - link "View Status Bar" [ref=e29]
+      - heading "Status Bar" [level=3]
+      - text: "New Animated status history with rounded bars and period tooltips."
+    - article:
+      - link "View Animated Alert" [ref=e30]
+      - heading "Animated Alert" [level=3]
+      - text: "New Composable feedback with smooth transitions."
+    - article:
+      - link "View Animated Collapsible" [ref=e31]
+      - heading "Animated Collapsible" [level=3]
+      - text: "New Expandable content with a smooth reveal."
+    - article:
+      - link "View Aspect Ratio" [ref=e32]
+      - heading "Aspect Ratio" [level=3]
+      - text: "New Responsive media with smooth aspect ratio transitions."
+    - article:
+      - link "View Arc Picker" [ref=e33]
+      - heading "Arc Picker" [level=3]
+      - text: "New Radial text picker with top, bottom, left or right curves, smooth wheel movement and live selection on each scroll step. One persistent bracket frame grows and squeezes around each label. Supports drag momentum, keyboard input, disabled choices, controlled or uncontrolled values, forms and reduced motion."
+    - article:
+      - link "View Voice Orb" [ref=e34]
+      - heading "Voice Orb" [level=3]
+      - text: "New Breathing liquid voice visualization with flowing highlights, custom pigments and a soft, voice-reactive silhouette. Accepts a normalized level, MotionValue or caller-owned audio analyser, pauses offscreen and supports reduced motion."
+    - article:
+      - link "View Sortable List" [ref=e35]
+      - heading "Sortable List" [level=3]
+      - text: "Composable sortable list with group, item, drag handle, content and undo parts, plus a shared state hook. Spring layout, keyboard reordering, accessible position announcements, and controlled or uncontrolled items."
+    - article:
+      - link "View Image Viewer" [ref=e36]
+      - heading "Image Viewer" [level=3]
+      - text: "A composable React image viewer for galleries and attachment previews, with animated lightbox variants, custom thumbnails and controls, swipe and keyboard navigation, zoom and pan, accessible focus management, and controlled or uncontrolled selection."
+    - article:
+      - link "View Date Range Picker" [ref=e37]
+      - heading "Date Range Picker" [level=3]
+      - text: "Composable date range picker with root, trigger, popover content, calendar, header, grid, summary, footer, clear and preset parts, plus a shared state hook. Compact inline and dropdown compositions, direct month and year selection, and full keyboard navigation."
+  - region:
+    - text: "Components"
+    - heading "Motion primitives" [level=2]
+    - link "Browse animated React components" [ref=e38]
+    - article:
+      - link "View Button" [ref=e39]
+      - heading "Button" [level=3]
+      - text: "Spring-pressed Button plus StatefulButton, MagneticButton, and MetallicButton variants."
+    - article:
+      - link "View Morphing Modal" [ref=e40]
+      - heading "Morphing Modal" [level=3]
+      - text: "Family-app-style modal. A single panel that morphs its height as you navigate between inner views, with blur cross-fade on content."
+    - article:
+      - link "View Animated Toast Stack" [ref=e41]
+      - heading "Animated Toast Stack" [level=3]
+      - text: "Stacked toasts with status morphs, swipe dismissal, actions and layout-aware motion."
+    - article:
+      - link "View Action Swap" [ref=e42]
+      - heading "Action Swap" [level=3]
+      - text: "CTA button and slot primitives for swapping text and icons with blur motion."
+    - article:
+      - link "View Dock" [ref=e43]
+      - heading "Dock" [level=3]
+      - text: "macOS-style dock with grouped actions and a gliding active pill."
+    - article:
+      - link "View Tabs" [ref=e44]
+      - heading "Tabs" [level=3]
+      - text: "Pill, segment or underline tabs with a spring layoutId indicator."
+    - article:
+      - link "View Dynamic Island" [ref=e45]
+      - heading "Dynamic Island" [level=3]
+      - text: "iOS-style island pill that morphs between live activity views with bouncy shell resize and blur crossfades."
+    - article:
+      - link "View Command Palette" [ref=e46]
+      - heading "Command Palette" [level=3]
+      - text: "⌘K palette with fuzzy filter, spring-animated active row and glass surface."
+    - article:
+      - link "View Expandable Action Bar" [ref=e47]
+      - heading "Expandable Action Bar" [level=3]
+      - text: "Compact icon actions that expand into labeled controls on hover or focus with shared layout motion."
+    - article:
+      - link "View Expandable Tabs" [ref=e48]
+      - heading "Expandable Tabs" [level=3]
+      - text: "Icon tab bar where the active tab expands to a labelled pill, with a panel above that morphs height and slides content direction-aware on switch."
+    - article:
+      - link "View Tilt Card" [ref=e49]
+      - heading "Tilt Card" [level=3]
+      - text: "3D perspective tilt on hover with cursor-tracked glare."
+    - article:
+      - link "View Bottom Sheet" [ref=e50]
+      - heading "Bottom Sheet" [level=3]
+      - text: "Vaul-inspired draggable bottom sheet with snap points, inertia and glass surface."
+    - article:
+      - link "View Switch" [ref=e51]
+      - heading "Switch" [level=3]
+      - text: "Toggle with a spring-driven thumb and press feedback."
+    - article:
+      - link "View Tooltip" [ref=e52]
+      - heading "Tooltip" [level=3]
+      - text: "Hover or focus tooltip with a subtle scale and fade, collision-aware placement, and optional cursor tracking."
+    - article:
+      - link "View Text Animation" [ref=e53]
+      - heading "Text Animation" [level=3]
+      - text: "Animated text primitives for spring reveals, chromatic sweeps, shimmer loading states, letter-cascade swaps and character scrambles."
+    - article:
+      - link "View Number Animation" [ref=e54]
+      - heading "Number Animation" [level=3]
+      - text: "Animated number primitives for count-up values, rolling tickers, and fixed-slot digit swaps."
+    - article:
+      - link "View Bouncy Accordion" [ref=e55]
+      - heading "Bouncy Accordion" [level=3]
+      - text: "Single-open accordion with weighted spring layout, icon rows and reduced-motion-safe content reveals."
+    - article:
+      - link "View Range Slider" [ref=e56]
+      - heading "Range Slider" [level=3]
+      - text: "Slider with tick dots and a vertical-bar thumb that bounces as it lands on each step. Drag or keyboard, reduced-motion safe."
+    - article:
+      - link "View Theme Toggle" [ref=e57]
+      - heading "Theme Toggle" [level=3]
+      - text: "Theme toggle button that repaints the whole page through the View Transition API — a rectangle or circle clip-path reveal, or slats that open across the screen like a shutter."
+    - article:
+      - link "View Drawer" [ref=e58]
+      - heading "Drawer" [level=3]
+      - text: "Side panel that slides in from the left or right with a spring, backdrop blur, body scroll lock and esc-to-close."
+    - article:
+      - link "View Multi-chain Swap" [ref=e59]
+      - heading "Multi-chain Swap" [level=3]
+      - text: "Cross-chain swap widget with chain + token selectors, morphing views, animated flip and quote."
+    - article:
+      - link "View OTP Input" [ref=e60]
+      - heading "OTP Input" [level=3]
+      - text: "One-time-code input with a gliding focus ring, digits that roll in per slot, error shake and a success check draw."
+    - article:
+      - link "View Swipeable List" [ref=e61]
+      - heading "Swipeable List" [level=3]
+      - text: "Mobile-style list rows that swipe left or right to reveal contextual action buttons."
+    - article:
+      - link "View Bloom Menu" [ref=e62]
+      - heading "Bloom Menu" [level=3]
+      - text: "A button that morphs open into a menu and blooms iris-out from the center, the grid revealing in every direction with radially staggered items."
+  - region "Loved by builders" [ref=e63]:
+    - text: "Testimonials"
+    - heading "Loved by builders" [level=2]
+    - link "ajeet patel@Iampatelajeet@saurra3h crazy sick ser." [ref=e64]
+    - link "izayl@izayl_@saurra3h love the motion" [ref=e65]
+    - link "Adithya Krishna@adii_kris@saurra3h huge fan of this library 🙌" [ref=e66]
+    - link "Nanda@treshnanda Indeed, my favorite component library right now! Thanks for releasing such an amazi" [ref=e67]
+    - link "ericts@erictsdotcom Really like the animations throughout @saurra3h's ui-components. A lot of the co" [ref=e68]
+    - link "Stephen Haney@stephenhaney@saurra3h @paper Super cool!" [ref=e69]
+    - link "Saurabh | NodeOps@saurra3h this > any metric this is exactly why i keep building beui" [ref=e70]
+    - link "Amanjot Singh@amans_twt@saurra3h @paper damn just explored the components, i'm using it ASAP." [ref=e71]
+    - link "Hossain Jahed@EaseMizeUI@saurra3h Your Component Library is amazing been using it for a long time gl" [ref=e72]
+    - link "Enes Aktaş@ensaktas@saurra3h @motiondotdev I appreciate the work you’re doing at Beui! It’s great." [ref=e73]
+    - link "Tyler Gibbs@Tylerbryy@saurra3h just check it out looks clean, gonna use it!" [ref=e74]
+    - link [ref=e75]
+    - link [ref=e76]
+    - link [ref=e77]
+    - link [ref=e78]
+    - link [ref=e79]
+    - link [ref=e80]
+    - link [ref=e81]
+    - link [ref=e82]
+    - link [ref=e83]
+    - link [ref=e84]
+    - link "SWEET!!" [ref=e85]
+  - region "Choose your starting point" [ref=e86]:
+    - text: "Free and Pro"
+    - heading "Choose your starting point" [level=2]
+    - heading "beUI" [level=3]
+    - text: "Free & open source Build with the essentials.Animated components you can install, customize, and keep in your codebase.Components, blocks, charts, and AI interfaces Public shadcn registry and copy-paste source MIT licensed for personal and commercial projects"
+    - link "Browse free components" [ref=e87]
+    - heading "beUI Pro" [level=3]
+    - text: "Go further with Pro Start with more built for you.220+ premium blocks to build your next product faster. Get the complete collection with Lifetime, including full templates and animated illustrations.220+ premium blocks and animated components Full landing-page templates · Lifetime Animated illustrations · Lifetime Agent Skill, MCP access, and one-command installs Private registry and downloadable source Unlimited personal and client projects All future updates · Lifetime"
+    - link "Explore Pro" [ref=e88]
+  - region "A few things to know" [ref=e89]:
+    - text: "FAQ"
+    - heading "A few things to know" [level=2]
+    - button "Is beUI free for commercial projects?" [ref=e90]
+    - button "How do I install a component?" [ref=e91]
+    - button "What does my project need?" [ref=e92]
+    - button "Can I change the design and animations?" [ref=e93]
+    - button "Do I need Pro to use the free components?" [ref=e94]
+  - region "Need components built for your product?" [ref=e95]:
+    - text: "Work with me"
+    - heading "Need components built for your product?" [level=2]
+    - text: "Custom motion components and frontend systems, built to spec. Book a call or drop a line, whichever's easier."
+    - link "Book a call" [ref=e96]
+    - link "Email me" [ref=e97]
+  - contentinfo:
+    - link "beUI" [ref=e98]
+    - text: "Animated components for React and Next.js. Copy-paste via the shadcn registry.Created by  Saurabh"
+    - link "X / Twitter" [ref=e99]
+    - link "Email" [ref=e100]
+    - navigation "Components" [ref=e101]:
+      - text: "Components"
+      - link "Animated Alert" [ref=e102]
+      - link "Animated Collapsible" [ref=e103]
+      - link "Aspect Ratio" [ref=e104]
+      - link "Arc Picker" [ref=e105]
+      - link "Sortable List" [ref=e106]
+      - link "Image Viewer" [ref=e107]
+      - link "Date Range Picker" [ref=e108]
+      - link "View all (51)" [ref=e109]
+    - navigation "Blocks" [ref=e110]:
+      - text: "Blocks"
+      - link "Infinite Masonry" [ref=e111]
+      - link "Notification Stack" [ref=e112]
+      - link "Project Folder" [ref=e113]
+      - link "Card Folder" [ref=e114]
+      - link "Fixtures" [ref=e115]
+      - link "Availability Scheduler" [ref=e116]
+      - link "Multi-chain Swap" [ref=e117]
+      - link "View all (23)" [ref=e118]
+    - navigation "AI Agents" [ref=e119]:
+      - text: "AI Agents"
+      - link "Voice Orb" [ref=e120]
+      - link "Message Bubble" [ref=e121]
+      - link "Message" [ref=e122]
+      - link "Message Scroller" [ref=e123]
+      - link "Prompt Input" [ref=e124]
+      - link "Todo List" [ref=e125]
+      - link "Code Block" [ref=e126]
+      - link "View all (18)" [ref=e127]
+    - navigation "Charts" [ref=e128]:
+      - text: "Charts"
+      - link "Treemap" [ref=e129]
+      - link "Volume Profile" [ref=e130]
+      - link "Status Bar" [ref=e131]
+      - link "Composition Chart" [ref=e132]
+      - link "Funnel Chart" [ref=e133]
+      - link "Liquidity Heatmap" [ref=e134]
+      - link "Bump Chart" [ref=e135]
+      - link "View all (11)" [ref=e136]
+    - navigation "Links" [ref=e137]:
+      - text: "Links"
+      - link "Browse all" [ref=e138]
+      - link "Playground" [ref=e139]
+      - link "GitHub" [ref=e140]
+      - link "For coding agents" [ref=e141]
+      - link "Theming" [ref=e142]
+      - link "Motion patterns" [ref=e143]
+      - link "Sponsor" [ref=e144]
+      - link "llms.txt" [ref=e145]
+      - link "beUI Pro" [ref=e146]
+    - navigation "Also by us" [ref=e147]:
+      - text: "Also by us"
+      - link "Tracwell" [ref=e148]
+      - link "Pulse" [ref=e149]
+      - link "Markd" [ref=e150]
+# note: interactive (clickable / focusable) elements only.
+- title: "Sortable List · React motion component · beUI" [url=https://beui.dev/components/motion/sortable-stack]
+- banner:
+  - link "beUI" [ref=e1]
+  - navigation:
+    - link "Components" [ref=e2]
+    - link "Blocks" [ref=e3]
+    - link "Agents" [ref=e4]
+    - link "Charts" [ref=e5]
+    - link "Playground" [ref=e6]
+    - link "Sponsors" [ref=e7]
+  - navigation:
+    - button "Search components" [ref=e8]
+    - tablist:
+      - tab "Light theme" [ref=e9]
+      - tab "Dark theme" [ref=e10] [selected]
+      - tab "System theme" [ref=e11]
+    - button "Customize theme" [ref=e12]
+    - link "Star on GitHub" [ref=e13]
+    - link "Get Pro" [ref=e14]
+- main:
+  - generic [ref=e151] [scrollable]:
+    - complementary "Site navigation":
+      - navigation "Browse components" [ref=e152]:
+        - region "Filter navigation by category" [ref=e153]:
+          - tablist "Component categories":
+            - tab "All" [ref=e154] [selected]
+            - tab "Agents" [ref=e155]
+            - tab "Components" [ref=e156]
+            - tab "Blocks" [ref=e157]
+        - tabpanel "All":
+          - text: "Intro"
+          - link "Home" [ref=e158]
+          - text: "Guides"
+          - link "Motion Guides" [ref=e159]
+          - link "Agent Guide" [ref=e160]
+          - link "OpenUI" [ref=e161]
+          - link "AI Agents" [ref=e162]: "AI Agents 18"
+          - link "Voice Orb New" [ref=e163]
+          - link "Message Bubble" [ref=e164]
+          - link "Message" [ref=e165]
+          - link "Message Scroller" [ref=e166]
+          - link "Prompt Input" [ref=e167]
+          - link "Todo List" [ref=e168]
+          - link "Code Block" [ref=e169]
+          - link "Approval Card" [ref=e170]
+          - link "File Diff" [ref=e171]
+          - link "Tool Result" [ref=e172]
+          - link "Streaming Response" [ref=e173]
+          - link "Image Generation" [ref=e174]
+          - link "Tool Approval" [ref=e175]
+          - link "Citations" [ref=e176]
+          - link "Agent Activity" [ref=e177]
+          - link "Agent Loading States" [ref=e178]
+          - link "AI Sidebar" [ref=e179]
+          - link "Chat App" [ref=e180]
+          - link "Components" [ref=e181]: "Components 51"
+          - link "Animated Alert New" [ref=e182]
+          - link "Animated Collapsible New" [ref=e183]
+          - link "Aspect Ratio New" [ref=e184]
+          - link "Arc Picker New" [ref=e185]
+          - link "Sortable List" [ref=e186]
+          - link "Image Viewer" [ref=e187]
+          - link "Date Range Picker" [ref=e188]
+          - link "Animated Color Selector" [ref=e189]
+          - link "Animated Breadcrumb" [ref=e190]
+          - link "Tilt Card" [ref=e191]
+          - link "Button" [ref=e192]
+          - link "Animated CTA Buttons" [ref=e193]
+          - link "Expandable Control" [ref=e194]
+          - link "Adaptive Stepper" [ref=e195]
+          - link "Marquee" [ref=e196]
+          - link "Tabs" [ref=e197]
+          - link "Switch" [ref=e198]
+          - link "Input" [ref=e199]
+          - link "Select" [ref=e200]
+          - link "Combobox" [ref=e201]
+          - link "Multi Select" [ref=e202]
+          - link "Checkbox" [ref=e203]
+          - link "Radio Group" [ref=e204]
+          - link "Bottom Sheet" [ref=e205]
+          - link "Pull to Refresh" [ref=e206]
+          - link "Shared Layout Background" [ref=e207]
+          - link "Bounce Sidebar" [ref=e208]
+          - link "Animated Sidebar" [ref=e209]
+          - link "File Tree" [ref=e210]
+          - link "Preview Rail" [ref=e211]
+          - link "Dock" [ref=e212]
+          - link "Tooltip" [ref=e213]
+          - link "Animated Context Menu" [ref=e214]
+          - link "Popover" [ref=e215]
+          - link "Morphing Modal" [ref=e216]
+          - link "Center Morph Modal" [ref=e217]
+          - link "Text Animation" [ref=e218]
+          - link "Number Animation" [ref=e219]
+          - link "Animated Badge" [ref=e220]
+          - link "Action Swap" [ref=e221]
+          - link "Animated Toast Stack" [ref=e222]
+          - link "Theme Toggle" [ref=e223]
+          - link "Bouncy Accordion" [ref=e224]
+          - link "Drawer" [ref=e225]
+          - link "Scroll Animation" [ref=e226]
+          - link "Range Slider" [ref=e227]
+          - link "Wheel Picker" [ref=e228]
+          - link "Table" [ref=e229]
+          - link "Shader Background" [ref=e230]
+          - link "Cylinder Carousel" [ref=e231]
+          - link "Loader" [ref=e232]
+          - link "Blocks" [ref=e233]: "Blocks 23"
+          - link "Infinite Masonry" [ref=e234]
+          - link "Notification Stack" [ref=e235]
+          - link "Project Folder" [ref=e236]
+          - link "Card Folder" [ref=e237]
+          - link "Fixtures" [ref=e238]
+          - link "Availability Scheduler" [ref=e239]
+          - link "Multi-chain Swap" [ref=e240]
+          - link "Dynamic Island" [ref=e241]
+          - link "Command Palette" [ref=e242]
+          - link "Morphing Search" [ref=e243]
+          - link "Expandable Action Bar" [ref=e244]
+          - link "Overflow Actions" [ref=e245]
+          - link "Expandable Tabs" [ref=e246]
+          - link "Morphing Tabs" [ref=e247]
+          - link "Swipeable List" [ref=e248]
+          - link "File Upload" [ref=e249]
+          - link "Prediction Market" [ref=e250]
+          - link "Wallet Card" [ref=e251]
+          - link "OTP Input" [ref=e252]
+          - link "Sign Up Form" [ref=e253]
+          - link "Bloom Menu" [ref=e254]
+          - link "Feedback Widget" [ref=e255]
+          - link "404 / Not Found" [ref=e256]
+  - navigation "Breadcrumb" [ref=e257]:
+    - link "Components" [ref=e258]
+    - text: "Sortable List"
+  - heading "Sortable List" [level=1]
+  - button "Copy page as Markdown" [ref=e259]: "Copy Page"
+  - button "More page actions" [ref=e260]
+  - text: "Composable sortable list with group, item, drag handle, content and undo parts, plus a shared state hook. Spring layout, keyboard reordering, accessible position announcements, and controlled or uncontrolled items."
+  - region:
+    - heading "Preview" [level=2]
+    - tablist:
+      - tab "Preview" [ref=e261] [selected]
+      - tab "Usage" [ref=e262]
+      - tab "Code" [ref=e263]
+    - text: "In the studio"
+    - heading "Make room for what matters." [level=3]
+    - text: "04 tasks Drag a handle to reorder. With a handle focused, use Up and Down to move, Home and End to move to the edges."
+    - button "Reorder Collect references" [ref=e264]
+    - text: "Collect references Find the right direction 01"
+    - button "Reorder Explore the visual system" [ref=e265]
+    - text: "Explore the visual system Type, color, and composition 02"
+    - button "Reorder Build the first prototype" [ref=e266]
+    - text: "Build the first prototype Make the interaction tangible 03"
+    - button "Reorder Ship something useful" [ref=e267]
+    - text: "Ship something useful Polish the details and release 04"
+    - button "Undo reorder" [ref=e268] [disabled]
+    - status
+  - region:
+    - heading "Install" [level=2]
+    - text: "Add it with the shadcn CLI, or copy the source manually."
+    - tablist:
+      - tab "CLI" [ref=e269] [selected]
+      - tab "Manual" [ref=e270]
+    - tablist:
+      - tab "bun" [ref=e271] [selected]
+      - tab "npm" [ref=e272]
+      - tab "pnpm" [ref=e273]
+      - tab "yarn" [ref=e274]
+    - button "Copy code" [ref=e275]
+    - text: "$ bunx --bun  shadcn  add @beui/sortable-stack"
+  - region:
+    - heading "API Reference" [level=2]
+    - heading "SortableList" [level=3]
+    - text: "items?T[]—defaultItems?T[][]onItemsChange?((items: T[]) => void)—renderItem?((item: T, index: number) => ReactNode)Convenience row contents when children are omitted.—getItemLabel(item: T) => string—children?ReactNode | ((items: T[]) => ReactNode)Compose parts; the render function receives items in their current order.—label?string Sortable items disabled?boolean false showUndo?boolean Show the automatic undo button in the convenience composition.true className?string—itemClassName?string—"
+    - heading "SortableListGroup" [level=3]
+    - text: "className?string—"
+    - heading "SortableListItem" [level=3]
+    - text: "id string Identity of an item supplied to the root. Use it as the React key too.—className?string—"
+    - heading "SortableListHandle" [level=3]
+    - text: "className?string—"
+    - heading "SortableListItemContent" [level=3]
+    - text: "className?string—"
+    - heading "SortableListUndo" [level=3]
+    - text: "className?string—"
+  - region:
+    - heading "Related components" [level=2]
+    - link "Date Range Picker Composable date range picker with root, trigger, popover content, calendar, header" [ref=e276]
+    - link "Animated Color Selector Composable color swatches with a spring-gliding selection ring, press feedba" [ref=e277]
+    - link "Image Viewer A composable React image viewer for galleries and attachment previews, with animated li" [ref=e278]
+  - text: "Updated  Oct 2, 2026"
+  - complementary "Sponsors and resources":
+    - region "Winter Arc sale" [ref=e279]:
+      - text: "beUI Pro"
+      - heading "Winter Arc sale" [level=2]
+      - text: "260+ blocks and premium motion components for React and Next.js.$149 lifetime access· Limited offer"
+      - link "Explore beUI Pro" [ref=e280]
+    - region "Sponsors" [ref=e281]:
+      - heading "Sponsors" [level=2]
+      - text: "Diamond"
+      - link "Tracwell Visitor insights for growth" [ref=e282]
+      - link "Become a sponsor" [ref=e283]
+✔︎ Opened a new tab and set it active: tabs[0], page → Dark Themed Web Design Inspiration (https://www.dark.design/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Dark Themed Web Design Inspiration" [url=https://www.dark.design/]
+- navigation:
+  - link [ref=e1]
+  - link "Sites" [ref=e2]:
+    - button "Sites" [ref=e3]
+  - link "Templates" [ref=e4]:
+    - button "Templates" [ref=e5]: "Templates Free"
+  - link "Sponsor" [ref=e6]:
+    - button "Sponsor" [ref=e7]
+  - button "Submit" [ref=e8]
+  - link "Sign in" [ref=e9]:
+    - button "Sign in" [ref=e10]
+  - link "Create Account" [ref=e11]:
+    - button "Create Account" [ref=e12]
+- main:
+  - heading "Handpicked websitesfrom the dark side" [level=1]: "Handpicked websites from the dark side"
+  - button "Get Monthly Picks" [ref=e13]
+  - link "Done admiring?" [ref=e14]
+  - link "Billow Sponsor" [ref=e15]
+  - text: "Meet Billow Sponsored"
+  - button "All" [ref=e16]
+  - button "Agency" [ref=e17]
+  - button "AI" [ref=e18]
+  - button "Culture" [ref=e19]
+  - button "Education" [ref=e20]
+  - button "Hardware" [ref=e21]
+  - button "Personal" [ref=e22]
+  - button "Software" [ref=e23]
+  - button "Web3" [ref=e24]
+  - button "New" [ref=e25]
+  - button "Popular" [ref=e26]
+  - link "Basement" [ref=e27]
+  - text: "Basement· Agency"
+  - button "Bookmark" [ref=e28]
+  - link "Visit site" [ref=e29]
+  - link "V7" [ref=e30]
+  - text: "V7· AI"
+  - button "Bookmark" [ref=e31]
+  - link "Visit site" [ref=e32]
+  - link "Railway" [ref=e33]
+  - text: "Railway· Software"
+  - button "Bookmark" [ref=e34]
+  - link "Visit site" [ref=e35]
+  - link "Pryzm" [ref=e36]
+  - text: "Pryzm· Software"
+  - button "Bookmark" [ref=e37]
+  - link "Visit site" [ref=e38]
+  - link "Framer" [ref=e39]
+  - text: "Framer· Affiliated"
+  - button "Bookmark" [ref=e40]
+  - link "Visit site" [ref=e41]
+  - link "108™" [ref=e42]
+  - text: "108™· Software"
+  - button "Bookmark" [ref=e43]
+  - link "Visit site" [ref=e44]
+  - link "Ponder" [ref=e45]
+  - text: "Ponder· Software"
+  - button "Bookmark" [ref=e46]
+  - link "Visit site" [ref=e47]
+  - link "Glyphs & Grids" [ref=e48]
+  - text: "Glyphs & Grids· Software"
+  - button "Bookmark" [ref=e49]
+  - link "Visit site" [ref=e50]
+  - link "Rectangles" [ref=e51]
+  - text: "Rectangles· Culture"
+  - button "Bookmark" [ref=e52]
+  - link "Visit site" [ref=e53]
+  - link "TRIONN" [ref=e54]
+  - text: "TRIONN· Agency"
+  - button "Bookmark" [ref=e55]
+  - link "Visit site" [ref=e56]
+  - link "xAI" [ref=e57]
+  - text: "xAI· AI"
+  - button "Bookmark" [ref=e58]
+  - link "Visit site" [ref=e59]
+  - link "Mainframe" [ref=e60]
+  - text: "Mainframe· AI"
+  - button "Bookmark" [ref=e61]
+  - link "Visit site" [ref=e62]
+  - link "Rig" [ref=e63]
+  - text: "Rig· AI"
+  - button "Bookmark" [ref=e64]
+  - link "Visit site" [ref=e65]
+  - link "Damn Good Brands" [ref=e66]
+  - text: "Damn Good Brands· Agency"
+  - button "Bookmark" [ref=e67]
+  - link "Visit site" [ref=e68]
+  - link "Ink Games" [ref=e69]
+  - text: "Ink Games· Software"
+  - button "Bookmark" [ref=e70]
+  - link "Visit site" [ref=e71]
+  - link "Griflan" [ref=e72]
+  - text: "Griflan· Agency"
+  - button "Bookmark" [ref=e73]
+  - link "Visit site" [ref=e74]
+  - link "Corentin Bernadou" [ref=e75]
+  - text: "Corentin Bernadou· Personal"
+  - button "Bookmark" [ref=e76]
+  - link "Visit site" [ref=e77]
+  - link "MONOLOG" [ref=e78]
+  - text: "MONOLOG· Agency"
+  - button "Bookmark" [ref=e79]
+  - link "Visit site" [ref=e80]
+  - link "Mohit Singh" [ref=e81]
+  - text: "Mohit Singh· Personal"
+  - button "Bookmark" [ref=e82]
+  - link "Visit site" [ref=e83]
+  - link "Fora" [ref=e84]
+  - text: "Fora· Software"
+  - button "Bookmark" [ref=e85]
+  - link "Visit site" [ref=e86]
+  - link "CSS Studio" [ref=e87]
+  - text: "CSS Studio· Software"
+  - button "Bookmark" [ref=e88]
+  - link "Visit site" [ref=e89]
+  - link "Reve" [ref=e90]
+  - text: "Reve· Software"
+  - button "Bookmark" [ref=e91]
+  - link "Visit site" [ref=e92]
+  - link "TitanGate Equity" [ref=e93]
+  - text: "TitanGate Equity· Web3"
+  - button "Bookmark" [ref=e94]
+  - link "Visit site" [ref=e95]
+  - link "Runlayer" [ref=e96]
+  - text: "Runlayer· AI"
+  - button "Bookmark" [ref=e97]
+  - link "Visit site" [ref=e98]
+  - link "1820 Productions" [ref=e99]
+  - text: "1820 Productions· Agency"
+  - button "Bookmark" [ref=e100]
+  - link "Visit site" [ref=e101]
+  - link "Defined" [ref=e102]
+  - text: "Defined· Software"
+  - button "Bookmark" [ref=e103]
+  - link "Visit site" [ref=e104]
+  - link "xmcp" [ref=e105]
+  - text: "xmcp· Software"
+  - button "Bookmark" [ref=e106]
+  - link "Visit site" [ref=e107]
+  - link "OXI" [ref=e108]
+  - text: "OXI· Hardware"
+  - button "Bookmark" [ref=e109]
+  - link "Visit site" [ref=e110]
+  - link "Danilo Sierra" [ref=e111]
+  - text: "Danilo Sierra· Personal"
+  - button "Bookmark" [ref=e112]
+  - link "Visit site" [ref=e113]
+  - link "Subdivision" [ref=e114]
+  - text: "Subdivision· Agency"
+  - button "Bookmark" [ref=e115]
+  - link "Visit site" [ref=e116]
+  - link "Wahba" [ref=e117]
+  - text: "Wahba· Personal"
+  - button "Bookmark" [ref=e118]
+  - link "Visit site" [ref=e119]
+  - link "Khroma" [ref=e120]
+  - text: "Khroma· AI"
+  - button "Bookmark" [ref=e121]
+  - link "Visit site" [ref=e122]
+  - link "Dropshot" [ref=e123]
+  - text: "Dropshot· Software"
+  - button "Bookmark" [ref=e124]
+  - link "Visit site" [ref=e125]
+  - link "State of Sites 2026" [ref=e126]
+  - text: "State of Sites 2026· Software"
+  - button "Bookmark" [ref=e127]
+  - link "Visit site" [ref=e128]
+  - link "Cape Town Dam Levels Today" [ref=e129]
+  - text: "Cape Town Dam Levels Today· Software"
+  - button "Bookmark" [ref=e130]
+  - link "Visit site" [ref=e131]
+  - link "Cédric" [ref=e132]
+  - text: "Cédric· Personal"
+  - button "Bookmark" [ref=e133]
+  - link "Visit site" [ref=e134]
+  - link "Supercommon Systems" [ref=e135]
+  - text: "Supercommon Systems· Software"
+  - button "Bookmark" [ref=e136]
+  - link "Visit site" [ref=e137]
+  - link "Fey App" [ref=e138]
+  - text: "Fey App· Software"
+  - button "Bookmark" [ref=e139]
+  - link "Visit site" [ref=e140]
+  - link "Stellar" [ref=e141]
+  - text: "Stellar· Agency"
+  - button "Bookmark" [ref=e142]
+  - link "Visit site" [ref=e143]
+  - link "Umbrel" [ref=e144]
+  - text: "Umbrel· Hardware"
+  - button "Bookmark" [ref=e145]
+  - link "Visit site" [ref=e146]
+  - link "Lazy" [ref=e147]
+  - text: "Lazy· Software"
+  - button "Bookmark" [ref=e148]
+  - link "Visit site" [ref=e149]
+  - link "Resend" [ref=e150]
+  - text: "Resend· Software"
+  - button "Bookmark" [ref=e151]
+  - link "Visit site" [ref=e152]
+  - link "Wope" [ref=e153]
+  - text: "Wope· Software"
+  - button "Bookmark" [ref=e154]
+  - link "Visit site" [ref=e155]
+  - link "Twingate" [ref=e156]
+  - text: "Twingate· Software"
+  - button "Bookmark" [ref=e157]
+  - link "Visit site" [ref=e158]
+  - link "Sol" [ref=e159]
+  - text: "Sol· Hardware"
+  - button "Bookmark" [ref=e160]
+  - link "Visit site" [ref=e161]
+  - link "Article" [ref=e162]
+  - text: "Article· Agency"
+  - button "Bookmark" [ref=e163]
+  - link "Visit site" [ref=e164]
+  - link "Coronel" [ref=e165]
+  - text: "Coronel· Personal"
+  - button "Bookmark" [ref=e166]
+  - link "Visit site" [ref=e167]
+  - link "Tome" [ref=e168]
+  - text: "Tome· Software"
+  - button "Bookmark" [ref=e169]
+  - link "Visit site" [ref=e170]
+  - link "TIMES TWO" [ref=e171]
+  - text: "TIMES TWO· Software"
+  - button "Bookmark" [ref=e172]
+  - link "Visit site" [ref=e173]
+  - link "Yann-Edern Gillet" [ref=e174]
+  - text: "Yann-Edern Gillet· Personal"
+  - button "Bookmark" [ref=e175]
+  - link "Visit site" [ref=e176]
+  - link "Wonderland" [ref=e177]
+  - text: "Wonderland· Agency"
+  - button "Bookmark" [ref=e178]
+  - link "Visit site" [ref=e179]
+  - link "STRV" [ref=e180]
+  - text: "STRV· Agency"
+  - button "Bookmark" [ref=e181]
+  - link "Visit site" [ref=e182]
+  - link "Cncpt" [ref=e183]
+  - text: "Cncpt· Education"
+  - button "Bookmark" [ref=e184]
+  - link "Visit site" [ref=e185]
+  - link "Shape" [ref=e186]
+  - text: "Shape· Software"
+  - button "Bookmark" [ref=e187]
+  - link "Visit site" [ref=e188]
+  - link "Canopy" [ref=e189]
+  - text: "Canopy· Education"
+  - button "Bookmark" [ref=e190]
+  - link "Visit site" [ref=e191]
+  - link "Journey of Zajno" [ref=e192]
+  - text: "Journey of Zajno· Agency"
+  - button "Bookmark" [ref=e193]
+  - link "Visit site" [ref=e194]
+  - link "Marco Flammini" [ref=e195]
+  - text: "Marco Flammini· Personal"
+  - button "Bookmark" [ref=e196]
+  - link "Visit site" [ref=e197]
+  - link "Opal Composer" [ref=e198]
+  - text: "Opal Composer· Software"
+  - button "Bookmark" [ref=e199]
+  - link "Visit site" [ref=e200]
+  - link "Open AI" [ref=e201]
+  - text: "Open AI· Software"
+  - button "Bookmark" [ref=e202]
+  - link "Visit site" [ref=e203]
+  - link "Nicolas Lanthemann" [ref=e204]
+  - text: "Nicolas Lanthemann· Personal"
+  - button "Bookmark" [ref=e205]
+  - link "Visit site" [ref=e206]
+  - link "Arrival" [ref=e207]
+  - text: "Arrival· Hardware"
+  - button "Bookmark" [ref=e208]
+  - link "Visit site" [ref=e209]
+  - link "Framer University" [ref=e210]
+  - text: "Framer University· Education"
+  - button "Bookmark" [ref=e211]
+  - link "Visit site" [ref=e212]
+  - link "Specify Launch" [ref=e213]
+  - text: "Specify Launch· Software"
+  - button "Bookmark" [ref=e214]
+  - link "Visit site" [ref=e215]
+  - link "Hayden Bleasel" [ref=e216]
+  - text: "Hayden Bleasel· Personal"
+  - button "Bookmark" [ref=e217]
+  - link "Visit site" [ref=e218]
+  - link "Webflow Conf" [ref=e219]
+  - text: "Webflow Conf· Education"
+  - button "Bookmark" [ref=e220]
+  - link "Visit site" [ref=e221]
+  - link "Makepill" [ref=e222]
+  - text: "Makepill· Agency"
+  - button "Bookmark" [ref=e223]
+  - link "Visit site" [ref=e224]
+  - link "The Network State Company" [ref=e225]
+  - text: "The Network State Company· Software"
+  - button "Bookmark" [ref=e226]
+  - link "Visit site" [ref=e227]
+  - link "BonsAI" [ref=e228]
+  - text: "BonsAI· Software"
+  - button "Bookmark" [ref=e229]
+  - link "Visit site" [ref=e230]
+  - link "Minhpham" [ref=e231]
+  - text: "Minhpham· Personal"
+  - button "Bookmark" [ref=e232]
+  - link "Visit site" [ref=e233]
+  - link "Wanted for Nothing" [ref=e234]
+  - text: "Wanted for Nothing· Agency"
+  - button "Bookmark" [ref=e235]
+  - link "Visit site" [ref=e236]
+  - link "Paul Lapkin" [ref=e237]
+  - text: "Paul Lapkin· Personal"
+  - button "Bookmark" [ref=e238]
+  - link "Visit site" [ref=e239]
+  - link "Morrow" [ref=e240]
+  - text: "Morrow· Agency"
+  - button "Bookmark" [ref=e241]
+  - link "Visit site" [ref=e242]
+  - link "Offsuit" [ref=e243]
+  - text: "Offsuit· Software"
+  - button "Bookmark" [ref=e244]
+  - link "Visit site" [ref=e245]
+  - link "Ultra Mail" [ref=e246]
+  - text: "Ultra Mail· Software"
+  - button "Bookmark" [ref=e247]
+  - link "Visit site" [ref=e248]
+  - link "Dimension" [ref=e249]
+  - text: "Dimension· Software"
+  - button "Bookmark" [ref=e250]
+  - link "Visit site" [ref=e251]
+  - link "Arcade" [ref=e252]
+  - text: "Arcade· Personal"
+  - button "Bookmark" [ref=e253]
+  - link "Visit site" [ref=e254]
+  - link "Orion" [ref=e255]
+  - text: "Orion· Software"
+  - button "Bookmark" [ref=e256]
+  - link "Visit site" [ref=e257]
+  - link "Gitness" [ref=e258]
+  - text: "Gitness· Software"
+  - button "Bookmark" [ref=e259]
+  - link "Visit site" [ref=e260]
+  - link "Procreate" [ref=e261]
+  - text: "Procreate· Software"
+  - button "Bookmark" [ref=e262]
+  - link "Visit site" [ref=e263]
+  - link "Mona & Hubot Sans" [ref=e264]
+  - text: "Mona & Hubot Sans· Software"
+  - button "Bookmark" [ref=e265]
+  - link "Visit site" [ref=e266]
+  - link "Vercel" [ref=e267]
+  - text: "Vercel· Software"
+  - button "Bookmark" [ref=e268]
+  - link "Visit site" [ref=e269]
+  - link "Multiversx" [ref=e270]
+  - text: "Multiversx· Software"
+  - button "Bookmark" [ref=e271]
+  - link "Visit site" [ref=e272]
+  - link "Halodhimas" [ref=e273]
+  - text: "Halodhimas· Personal"
+  - button "Bookmark" [ref=e274]
+  - link "Visit site" [ref=e275]
+  - link "Justin Farrugia" [ref=e276]
+  - text: "Justin Farrugia· Personal"
+  - button "Bookmark" [ref=e277]
+  - link "Visit site" [ref=e278]
+  - link "GSAP" [ref=e279]
+  - text: "GSAP· Software"
+  - button "Bookmark" [ref=e280]
+  - link "Visit site" [ref=e281]
+  - link "Charge Cars" [ref=e282]
+  - text: "Charge Cars· Hardware"
+  - button "Bookmark" [ref=e283]
+  - link "Visit site" [ref=e284]
+  - link "Moth3r" [ref=e285]
+  - text: "Moth3r· Personal"
+  - button "Bookmark" [ref=e286]
+  - link "Visit site" [ref=e287]
+  - link "Midday" [ref=e288]
+  - text: "Midday· AI"
+  - button "Bookmark" [ref=e289]
+  - link "Visit site" [ref=e290]
+  - link "Electronic Materials Office" [ref=e291]
+  - text: "Electronic Materials Office· Hardware"
+  - button "Bookmark" [ref=e292]
+  - link "Visit site" [ref=e293]
+  - link "Incident" [ref=e294]
+  - text: "Incident· Personal"
+  - button "Bookmark" [ref=e295]
+  - link "Visit site" [ref=e296]
+  - link "Endless Tools" [ref=e297]
+  - text: "Endless Tools· Software"
+  - button "Bookmark" [ref=e298]
+  - link "Visit site" [ref=e299]
+  - link "ETH Cap" [ref=e300]
+  - text: "ETH Cap· Web3"
+  - button "Bookmark" [ref=e301]
+  - link "Visit site" [ref=e302]
+  - link "Mubien" [ref=e303]
+  - text: "Mubien· Agency"
+  - button "Bookmark" [ref=e304]
+  - link "Visit site" [ref=e305]
+  - link "Anton Komandin" [ref=e306]
+  - text: "Anton Komandin· Personal"
+  - button "Bookmark" [ref=e307]
+  - link "Visit site" [ref=e308]
+  - link "Half Past Nine" [ref=e309]
+  - text: "Half Past Nine· Agency"
+  - button "Bookmark" [ref=e310]
+  - link "Visit site" [ref=e311]
+  - link "Capsule" [ref=e312]
+  - text: "Capsule· Software"
+  - button "Bookmark" [ref=e313]
+  - link "Visit site" [ref=e314]
+  - link "And Again" [ref=e315]
+  - text: "And Again· Agency"
+  - button "Bookmark" [ref=e316]
+  - link "Visit site" [ref=e317]
+  - link "Spellar" [ref=e318]
+  - text: "Spellar· AI"
+  - button "Bookmark" [ref=e319]
+  - link "Visit site" [ref=e320]
+  - link "Nav Supply" [ref=e321]
+  - text: "Nav Supply· Software"
+  - button "Bookmark" [ref=e322]
+  - link "Visit site" [ref=e323]
+  - link "Avara" [ref=e324]
+  - text: "Avara· Web3"
+  - button "Bookmark" [ref=e325]
+  - link "Visit site" [ref=e326]
+  - link "AuthKit" [ref=e327]
+  - text: "AuthKit· Software"
+  - button "Bookmark" [ref=e328]
+  - link "Visit site" [ref=e329]
+  - link "Arrow Dynamics" [ref=e330]
+  - text: "Arrow Dynamics· Software"
+  - button "Bookmark" [ref=e331]
+  - link "Visit site" [ref=e332]
+  - link "Ozone" [ref=e333]
+  - text: "Ozone· Software"
+  - button "Bookmark" [ref=e334]
+  - link "Visit site" [ref=e335]
+  - link "Seda" [ref=e336]
+  - text: "Seda· Web3"
+  - button "Bookmark" [ref=e337]
+  - link "Visit site" [ref=e338]
+  - link "ST33P" [ref=e339]
+  - text: "ST33P"
+  - button "Bookmark" [ref=e340]
+  - link "Visit site" [ref=e341]
+  - link "Traf" [ref=e342]
+  - text: "Traf· Personal"
+  - button "Bookmark" [ref=e343]
+  - link "Visit site" [ref=e344]
+  - link "Geist" [ref=e345]
+  - text: "Geist· Software"
+  - button "Bookmark" [ref=e346]
+  - link "Visit site" [ref=e347]
+  - link "Google Gemini" [ref=e348]
+  - text: "Google Gemini· AI"
+  - button "Bookmark" [ref=e349]
+  - link "Visit site" [ref=e350]
+  - link "Oval" [ref=e351]
+  - text: "Oval"
+  - button "Bookmark" [ref=e352]
+  - link "Visit site" [ref=e353]
+  - link "Daybox" [ref=e354]
+  - text: "Daybox· Software"
+  - button "Bookmark" [ref=e355]
+  - link "Visit site" [ref=e356]
+  - link "Benjamin Hoppe" [ref=e357]
+  - text: "Benjamin Hoppe· Personal"
+  - button "Bookmark" [ref=e358]
+  - link "Visit site" [ref=e359]
+  - link "099" [ref=e360]
+  - text: "099"
+  - button "Bookmark" [ref=e361]
+  - link "Visit site" [ref=e362]
+  - link "Gurudutt Perichetla" [ref=e363]
+  - text: "Gurudutt Perichetla· Personal"
+  - button "Bookmark" [ref=e364]
+  - link "Visit site" [ref=e365]
+  - link "Verse" [ref=e366]
+  - text: "Verse· Personal"
+  - button "Bookmark" [ref=e367]
+  - link "Visit site" [ref=e368]
+  - link "Pedro Duarte" [ref=e369]
+  - text: "Pedro Duarte· Personal"
+  - button "Bookmark" [ref=e370]
+  - link "Visit site" [ref=e371]
+  - link "Morningstar" [ref=e372]
+  - text: "Morningstar· Web3"
+  - button "Bookmark" [ref=e373]
+  - link "Visit site" [ref=e374]
+  - link "Shift A" [ref=e375]
+  - text: "Shift A· Education"
+  - button "Bookmark" [ref=e376]
+  - link "Visit site" [ref=e377]
+  - link "Mita" [ref=e378]
+  - text: "Mita· Software"
+  - button "Bookmark" [ref=e379]
+  - link "Visit site" [ref=e380]
+  - link "Pinnacle Design Lab" [ref=e381]
+  - text: "Pinnacle Design Lab· Agency"
+  - button "Bookmark" [ref=e382]
+  - link "Visit site" [ref=e383]
+  - link "Fabian Albert" [ref=e384]
+  - text: "Fabian Albert· Personal"
+  - button "Bookmark" [ref=e385]
+  - link "Visit site" [ref=e386]
+  - link "Para" [ref=e387]
+  - text: "Para· Software"
+  - button "Bookmark" [ref=e388]
+  - link "Visit site" [ref=e389]
+  - link "Algo API" [ref=e390]
+  - text: "Algo API· Software"
+  - button "Bookmark" [ref=e391]
+  - link "Visit site" [ref=e392]
+  - link "LPB" [ref=e393]
+  - text: "LPB· Personal"
+  - button "Bookmark" [ref=e394]
+  - link "Visit site" [ref=e395]
+  - link "Nikita" [ref=e396]
+  - text: "Nikita· Personal"
+  - button "Bookmark" [ref=e397]
+  - link "Visit site" [ref=e398]
+  - link "Ander" [ref=e399]
+  - text: "Ander· Agency"
+  - button "Bookmark" [ref=e400]
+  - link "Visit site" [ref=e401]
+  - link "Marc Kuiper" [ref=e402]
+  - text: "Marc Kuiper· Personal"
+  - button "Bookmark" [ref=e403]
+  - link "Visit site" [ref=e404]
+  - link "Core Framework" [ref=e405]
+  - text: "Core Framework· Software"
+  - button "Bookmark" [ref=e406]
+  - link "Visit site" [ref=e407]
+  - link "Motion" [ref=e408]
+  - text: "Motion· Software"
+  - button "Bookmark" [ref=e409]
+  - link "Visit site" [ref=e410]
+  - link "Sharon Lee" [ref=e411]
+  - text: "Sharon Lee· Personal"
+  - button "Bookmark" [ref=e412]
+  - link "Visit site" [ref=e413]
+  - link "Nexis" [ref=e414]
+  - text: "Nexis· AI"
+  - button "Bookmark" [ref=e415]
+  - link "Visit site" [ref=e416]
+  - link "Atio" [ref=e417]
+  - text: "Atio· Agency"
+  - button "Bookmark" [ref=e418]
+  - link "Visit site" [ref=e419]
+  - link "Vana" [ref=e420]
+  - text: "Vana· Software"
+  - button "Bookmark" [ref=e421]
+  - link "Visit site" [ref=e422]
+  - link "Webflow" [ref=e423]
+  - text: "Webflow· Software"
+  - button "Bookmark" [ref=e424]
+  - link "Visit site" [ref=e425]
+  - link "Langbase" [ref=e426]
+  - text: "Langbase· AI"
+  - button "Bookmark" [ref=e427]
+  - link "Visit site" [ref=e428]
+  - link "CP" [ref=e429]
+  - text: "CP· Agency"
+  - button "Bookmark" [ref=e430]
+  - link "Visit site" [ref=e431]
+  - link "Time to Refokus" [ref=e432]
+  - text: "Time to Refokus· Agency"
+  - button "Bookmark" [ref=e433]
+  - link "Visit site" [ref=e434]
+  - link "Cobalt" [ref=e435]
+  - text: "Cobalt· Software"
+  - button "Bookmark" [ref=e436]
+  - link "Visit site" [ref=e437]
+  - link "Small Square" [ref=e438]
+  - text: "Small Square· Agency"
+  - button "Bookmark" [ref=e439]
+  - link "Visit site" [ref=e440]
+  - link "Satellitor" [ref=e441]
+  - text: "Satellitor· Software"
+  - button "Bookmark" [ref=e442]
+  - link "Visit site" [ref=e443]
+  - link "Alex Murashko" [ref=e444]
+  - text: "Alex Murashko· Personal"
+  - button "Bookmark" [ref=e445]
+  - link "Visit site" [ref=e446]
+  - link "Droplette" [ref=e447]
+  - text: "Droplette· Software"
+  - button "Bookmark" [ref=e448]
+  - link "Visit site" [ref=e449]
+  - link "G3DAAS" [ref=e450]
+  - text: "G3DAAS· Software"
+  - button "Bookmark" [ref=e451]
+  - link "Visit site" [ref=e452]
+  - link "Sun-Rise" [ref=e453]
+  - text: "Sun-Rise· Hardware"
+  - button "Bookmark" [ref=e454]
+  - link "Visit site" [ref=e455]
+  - link "Just Build" [ref=e456]
+  - text: "Just Build· Agency"
+  - button "Bookmark" [ref=e457]
+  - link "Visit site" [ref=e458]
+  - link "Simarro Lozano" [ref=e459]
+  - text: "Simarro Lozano· Personal"
+  - button "Bookmark" [ref=e460]
+  - link "Visit site" [ref=e461]
+  - link "Jim Schachterle" [ref=e462]
+  - text: "Jim Schachterle· Personal"
+  - button "Bookmark" [ref=e463]
+  - link "Visit site" [ref=e464]
+  - link "Creme" [ref=e465]
+  - text: "Creme· Culture"
+  - button "Bookmark" [ref=e466]
+  - link "Visit site" [ref=e467]
+  - link "Reflektor" [ref=e468]
+  - text: "Reflektor· Agency"
+  - button "Bookmark" [ref=e469]
+  - link "Visit site" [ref=e470]
+  - link "Open" [ref=e471]
+  - text: "Open· Education"
+  - button "Bookmark" [ref=e472]
+  - link "Visit site" [ref=e473]
+  - link "Guillaume Azadian" [ref=e474]
+  - text: "Guillaume Azadian· Personal"
+  - button "Bookmark" [ref=e475]
+  - link "Visit site" [ref=e476]
+  - link "Kevin Bhagat" [ref=e477]
+  - text: "Kevin Bhagat· Personal"
+  - button "Bookmark" [ref=e478]
+  - link "Visit site" [ref=e479]
+  - link "Roud Studio" [ref=e480]
+  - text: "Roud Studio· Agency"
+  - button "Bookmark" [ref=e481]
+  - link "Visit site" [ref=e482]
+  - link "More Sleep" [ref=e483]
+  - text: "More Sleep· Agency"
+  - button "Bookmark" [ref=e484]
+  - link "Visit site" [ref=e485]
+  - link "Hyper Card" [ref=e486]
+  - text: "Hyper Card· Software"
+  - button "Bookmark" [ref=e487]
+  - link "Visit site" [ref=e488]
+  - link "Framer 2023" [ref=e489]
+  - text: "Framer 2023· Software"
+  - button "Bookmark" [ref=e490]
+  - link "Visit site" [ref=e491]
+  - link "Ferrari Movie" [ref=e492]
+  - text: "Ferrari Movie· Culture"
+  - button "Bookmark" [ref=e493]
+  - link "Visit site" [ref=e494]
+  - link "Studio Arde" [ref=e495]
+  - text: "Studio Arde· Agency"
+  - button "Bookmark" [ref=e496]
+  - link "Visit site" [ref=e497]
+  - link "Elapse" [ref=e498]
+  - text: "Elapse· AI"
+  - button "Bookmark" [ref=e499]
+  - link "Visit site" [ref=e500]
+  - link "David Anthony Chenault" [ref=e501]
+  - text: "David Anthony Chenault· Personal"
+  - button "Bookmark" [ref=e502]
+  - link "Visit site" [ref=e503]
+  - link "Trionn" [ref=e504]
+  - text: "Trionn· Agency"
+  - button "Bookmark" [ref=e505]
+  - link "Visit site" [ref=e506]
+  - link "Dokument" [ref=e507]
+  - text: "Dokument· Agency"
+  - button "Bookmark" [ref=e508]
+  - link "Visit site" [ref=e509]
+  - link "Knob" [ref=e510]
+  - text: "Knob· Hardware"
+  - button "Bookmark" [ref=e511]
+  - link "Visit site" [ref=e512]
+  - link "Robert Borghesi" [ref=e513]
+  - text: "Robert Borghesi· Personal"
+  - button "Bookmark" [ref=e514]
+  - link "Visit site" [ref=e515]
+  - link "Brilliant" [ref=e516]
+  - text: "Brilliant· Hardware"
+  - button "Bookmark" [ref=e517]
+  - link "Visit site" [ref=e518]
+  - link "Somefolk" [ref=e519]
+  - text: "Somefolk· Personal"
+  - button "Bookmark" [ref=e520]
+  - link "Visit site" [ref=e521]
+  - link "Jessica Mille" [ref=e522]
+  - text: "Jessica Mille· Personal"
+  - button "Bookmark" [ref=e523]
+  - link "Visit site" [ref=e524]
+  - link "Halo Lab" [ref=e525]
+  - text: "Halo Lab· Agency"
+  - button "Bookmark" [ref=e526]
+  - link "Visit site" [ref=e527]
+  - link "Jeff Koons" [ref=e528]
+  - text: "Jeff Koons· Culture"
+  - button "Bookmark" [ref=e529]
+  - link "Visit site" [ref=e530]
+  - link "ODA" [ref=e531]
+  - text: "ODA· Agency"
+  - button "Bookmark" [ref=e532]
+  - link "Visit site" [ref=e533]
+  - link "Modules" [ref=e534]
+  - text: "Modules· Software"
+  - button "Bookmark" [ref=e535]
+  - link "Visit site" [ref=e536]
+  - link "Vercel Ship" [ref=e537]
+  - text: "Vercel Ship· Software"
+  - button "Bookmark" [ref=e538]
+  - link "Visit site" [ref=e539]
+  - link "Sageeast" [ref=e540]
+  - text: "Sageeast· Personal"
+  - button "Bookmark" [ref=e541]
+  - link "Visit site" [ref=e542]
+  - link "IR" [ref=e543]
+  - text: "IR· Software"
+  - button "Bookmark" [ref=e544]
+  - link "Visit site" [ref=e545]
+  - link "Metalab" [ref=e546]
+  - text: "Metalab· Agency"
+  - button "Bookmark" [ref=e547]
+  - link "Visit site" [ref=e548]
+  - link "Nikita Labutin" [ref=e549]
+  - text: "Nikita Labutin· Personal"
+  - button "Bookmark" [ref=e550]
+  - link "Visit site" [ref=e551]
+  - link "Ithaca" [ref=e552]
+  - text: "Ithaca· Web3"
+  - button "Bookmark" [ref=e553]
+  - link "Visit site" [ref=e554]
+  - link "KnowMore" [ref=e555]
+  - text: "KnowMore· Software"
+  - button "Bookmark" [ref=e556]
+  - link "Visit site" [ref=e557]
+  - link "Noon" [ref=e558]
+  - text: "Noon· Software"
+  - button "Bookmark" [ref=e559]
+  - link "Visit site" [ref=e560]
+  - link "Studio AI" [ref=e561]
+  - text: "Studio AI· AI"
+  - button "Bookmark" [ref=e562]
+  - link "Visit site" [ref=e563]
+  - link "PP Fragment Font" [ref=e564]
+  - text: "PP Fragment Font· Software"
+  - button "Bookmark" [ref=e565]
+  - link "Visit site" [ref=e566]
+  - link "Unicorn Studio" [ref=e567]
+  - text: "Unicorn Studio· Software"
+  - button "Bookmark" [ref=e568]
+  - link "Visit site" [ref=e569]
+  - link "Eleveight" [ref=e570]
+  - text: "Eleveight· Software"
+  - button "Bookmark" [ref=e571]
+  - link "Visit site" [ref=e572]
+  - link "We are Gradient" [ref=e573]
+  - text: "We are Gradient· Software"
+  - button "Bookmark" [ref=e574]
+  - link "Visit site" [ref=e575]
+  - link "September" [ref=e576]
+  - text: "September· Agency"
+  - button "Bookmark" [ref=e577]
+  - link "Visit site" [ref=e578]
+  - link "Keywords AI" [ref=e579]
+  - text: "Keywords AI· Software"
+  - button "Bookmark" [ref=e580]
+  - link "Visit site" [ref=e581]
+  - link "Frame v4" [ref=e582]
+  - text: "Frame v4· Software"
+  - button "Bookmark" [ref=e583]
+  - link "Visit site" [ref=e584]
+  - link "Paco Lui" [ref=e585]
+  - text: "Paco Lui· Personal"
+  - button "Bookmark" [ref=e586]
+  - link "Visit site" [ref=e587]
+  - link "Kaisermann" [ref=e588]
+  - text: "Kaisermann· Personal"
+  - button "Bookmark" [ref=e589]
+  - link "Visit site" [ref=e590]
+  - link "Flareum" [ref=e591]
+  - text: "Flareum· Software"
+  - button "Bookmark" [ref=e592]
+  - link "Visit site" [ref=e593]
+  - link "Aimpie" [ref=e594]
+  - text: "Aimpie· Agency"
+  - button "Bookmark" [ref=e595]
+  - link "Visit site" [ref=e596]
+  - link "Raycast" [ref=e597]
+  - text: "Raycast· Software"
+  - button "Bookmark" [ref=e598]
+  - link "Visit site" [ref=e599]
+  - link "Design Engineer" [ref=e600]
+  - text: "Design Engineer· Software"
+  - button "Bookmark" [ref=e601]
+  - link "Visit site" [ref=e602]
+  - link "ChainGPT" [ref=e603]
+  - text: "ChainGPT· AI"
+  - button "Bookmark" [ref=e604]
+  - link "Visit site" [ref=e605]
+  - link "AngelList 2023" [ref=e606]
+  - text: "AngelList 2023"
+  - button "Bookmark" [ref=e607]
+  - link "Visit site" [ref=e608]
+  - link "Remote Jobs" [ref=e609]
+  - text: "Remote Jobs· Software"
+  - button "Bookmark" [ref=e610]
+  - link "Visit site" [ref=e611]
+  - link "Shawn Lukas" [ref=e612]
+  - text: "Shawn Lukas· Personal"
+  - button "Bookmark" [ref=e613]
+  - link "Visit site" [ref=e614]
+  - link "Storytime" [ref=e615]
+  - text: "Storytime· Culture"
+  - button "Bookmark" [ref=e616]
+  - link "Visit site" [ref=e617]
+  - link "iPad Pro" [ref=e618]
+  - text: "iPad Pro· Hardware"
+  - button "Bookmark" [ref=e619]
+  - link "Visit site" [ref=e620]
+  - link "Toronto Tech Week" [ref=e621]
+  - text: "Toronto Tech Week· Culture"
+  - button "Bookmark" [ref=e622]
+  - link "Visit site" [ref=e623]
+  - link "Blitzit" [ref=e624]
+  - text: "Blitzit· Software"
+  - button "Bookmark" [ref=e625]
+  - link "Visit site" [ref=e626]
+  - link "Fura" [ref=e627]
+  - text: "Fura· Hardware"
+  - button "Bookmark" [ref=e628]
+  - link "Visit site" [ref=e629]
+  - link "Arock" [ref=e630]
+  - text: "Arock· Personal"
+  - button "Bookmark" [ref=e631]
+  - link "Visit site" [ref=e632]
+  - link "Van Schneider" [ref=e633]
+  - text: "Van Schneider· Personal"
+  - button "Bookmark" [ref=e634]
+  - link "Visit site" [ref=e635]
+  - link "Rekki" [ref=e636]
+  - text: "Rekki· Software"
+  - button "Bookmark" [ref=e637]
+  - link "Visit site" [ref=e638]
+  - link "ESE" [ref=e639]
+  - text: "ESE· Agency"
+  - button "Bookmark" [ref=e640]
+  - link "Visit site" [ref=e641]
+  - link "Yinger" [ref=e642]
+  - text: "Yinger· Personal"
+  - button "Bookmark" [ref=e643]
+  - link "Visit site" [ref=e644]
+  - link "Onmi" [ref=e645]
+  - text: "Onmi· Software"
+  - button "Bookmark" [ref=e646]
+  - link "Visit site" [ref=e647]
+  - link "Shuttle" [ref=e648]
+  - text: "Shuttle· Software"
+  - button "Bookmark" [ref=e649]
+  - link "Visit site" [ref=e650]
+  - link "Linear" [ref=e651]
+  - text: "Linear· Software"
+  - button "Bookmark" [ref=e652]
+  - link "Visit site" [ref=e653]
+  - link "Droppable" [ref=e654]
+  - text: "Droppable· Software"
+  - button "Bookmark" [ref=e655]
+  - link "Visit site" [ref=e656]
+  - link "GoPidge" [ref=e657]
+  - text: "GoPidge· Software"
+  - button "Bookmark" [ref=e658]
+  - link "Visit site" [ref=e659]
+  - link "TYPO72TYPO" [ref=e660]
+  - text: "TYPO72TYPO· Software"
+  - button "Bookmark" [ref=e661]
+  - link "Visit site" [ref=e662]
+  - link "Jin Su Park" [ref=e663]
+  - text: "Jin Su Park· Personal"
+  - button "Bookmark" [ref=e664]
+  - link "Visit site" [ref=e665]
+  - link "Gokul Krishnan" [ref=e666]
+  - text: "Gokul Krishnan· Personal"
+  - button "Bookmark" [ref=e667]
+  - link "Visit site" [ref=e668]
+  - link "Lapz" [ref=e669]
+  - text: "Lapz· Software"
+  - button "Bookmark" [ref=e670]
+  - link "Visit site" [ref=e671]
+  - link "Trigger" [ref=e672]
+  - text: "Trigger· Software"
+  - button "Bookmark" [ref=e673]
+  - link "Visit site" [ref=e674]
+  - link "ZBS" [ref=e675]
+  - text: "ZBS· Web3"
+  - button "Bookmark" [ref=e676]
+  - link "Visit site" [ref=e677]
+  - link "Hey Valentin" [ref=e678]
+  - text: "Hey Valentin· Personal"
+  - button "Bookmark" [ref=e679]
+  - link "Visit site" [ref=e680]
+  - link "Kino" [ref=e681]
+  - text: "Kino· Software"
+  - button "Bookmark" [ref=e682]
+  - link "Visit site" [ref=e683]
+  - link "Festina" [ref=e684]
+  - text: "Festina"
+  - button "Bookmark" [ref=e685]
+  - link "Visit site" [ref=e686]
+  - link "Retool" [ref=e687]
+  - text: "Retool· Software"
+  - button "Bookmark" [ref=e688]
+  - link "Visit site" [ref=e689]
+  - link "Blok" [ref=e690]
+  - text: "Blok· Hardware"
+  - button "Bookmark" [ref=e691]
+  - link "Visit site" [ref=e692]
+  - link "Playlist Studio" [ref=e693]
+  - text: "Playlist Studio· Agency"
+  - button "Bookmark" [ref=e694]
+  - link "Visit site" [ref=e695]
+  - link "Time Drift" [ref=e696]
+  - text: "Time Drift· Software"
+  - button "Bookmark" [ref=e697]
+  - link "Visit site" [ref=e698]
+  - link "Hyperstudio" [ref=e699]
+  - text: "Hyperstudio· Agency"
+  - button "Bookmark" [ref=e700]
+  - link "Visit site" [ref=e701]
+  - link "Warp" [ref=e702]
+  - text: "Warp· Software"
+  - button "Bookmark" [ref=e703]
+  - link "Visit site" [ref=e704]
+  - link "Deeo" [ref=e705]
+  - text: "Deeo· Agency"
+  - button "Bookmark" [ref=e706]
+  - link "Visit site" [ref=e707]
+  - link "Refresh 2024" [ref=e708]
+  - text: "Refresh 2024· Software"
+  - button "Bookmark" [ref=e709]
+  - link "Visit site" [ref=e710]
+  - link "HEX" [ref=e711]
+  - text: "HEX· Software"
+  - button "Bookmark" [ref=e712]
+  - link "Visit site" [ref=e713]
+  - link "Framer Plugins" [ref=e714]
+  - text: "Framer Plugins· Software"
+  - button "Bookmark" [ref=e715]
+  - link "Visit site" [ref=e716]
+  - link "Height" [ref=e717]
+  - text: "Height· Software"
+  - button "Bookmark" [ref=e718]
+  - link "Visit site" [ref=e719]
+  - link "Framer Studio" [ref=e720]
+  - text: "Framer Studio· Agency"
+  - button "Bookmark" [ref=e721]
+  - link "Visit site" [ref=e722]
+  - link "Shareio" [ref=e723]
+  - text: "Shareio· Software"
+  - button "Bookmark" [ref=e724]
+  - link "Visit site" [ref=e725]
+  - link "Modal" [ref=e726]
+  - text: "Modal· AI"
+  - button "Bookmark" [ref=e727]
+  - link "Visit site" [ref=e728]
+  - link "13g" [ref=e729]
+  - text: "13g· Agency"
+  - button "Bookmark" [ref=e730]
+  - link "Visit site" [ref=e731]
+  - link "Cursor" [ref=e732]
+  - text: "Cursor· AI"
+  - button "Bookmark" [ref=e733]
+  - link "Visit site" [ref=e734]
+  - link "Better Stack" [ref=e735]
+  - text: "Better Stack· Software"
+  - button "Bookmark" [ref=e736]
+  - link "Visit site" [ref=e737]
+  - link "Blocks" [ref=e738]
+  - text: "Blocks· Personal"
+  - button "Bookmark" [ref=e739]
+  - link "Visit site" [ref=e740]
+  - link "Osmo" [ref=e741]
+  - text: "Osmo· Education"
+  - button "Bookmark" [ref=e742]
+  - link "Visit site" [ref=e743]
+  - link "Tiempo" [ref=e744]
+  - text: "Tiempo· Software"
+  - button "Bookmark" [ref=e745]
+  - link "Visit site" [ref=e746]
+  - link "Fey Earnings" [ref=e747]
+  - text: "Fey Earnings· Software"
+  - button "Bookmark" [ref=e748]
+  - link "Visit site" [ref=e749]
+  - link "Grok" [ref=e750]
+  - text: "Grok· AI"
+  - button "Bookmark" [ref=e751]
+  - link "Visit site" [ref=e752]
+  - link "Orbi" [ref=e753]
+  - text: "Orbi· Software"
+  - button "Bookmark" [ref=e754]
+  - link "Visit site" [ref=e755]
+  - link "Slash" [ref=e756]
+  - text: "Slash· Software"
+  - button "Bookmark" [ref=e757]
+  - link "Visit site" [ref=e758]
+  - link "AntiMetal" [ref=e759]
+  - text: "AntiMetal· Software"
+  - button "Bookmark" [ref=e760]
+  - link "Visit site" [ref=e761]
+  - link "Fey Finder" [ref=e762]
+  - text: "Fey Finder· Software"
+  - button "Bookmark" [ref=e763]
+  - link "Visit site" [ref=e764]
+  - link "Toolbar" [ref=e765]
+  - text: "Toolbar· Software"
+  - button "Bookmark" [ref=e766]
+  - link "Visit site" [ref=e767]
+- contentinfo:
+  - link [ref=e768]
+  - text: "© 2026  Dark –"
+  - link "Product by Y5K LLC" [ref=e769]
+  - navigation:
+    - link "Sites" [ref=e770]
+    - link "Templates" [ref=e771]
+    - link "Sponsor" [ref=e772]
+- region "Notifications alt+T" [ref=e773]
+# note: interactive (clickable / focusable) elements only.
+- title: "Dark Themed Web Design Inspiration" [url=https://www.dark.design/?category=software]
+- navigation:
+  - link [ref=e1]
+  - link "Sites" [ref=e2]:
+    - button "Sites" [ref=e3]
+  - link "Templates" [ref=e4]:
+    - button "Templates" [ref=e5]: "Templates Free"
+  - link "Sponsor" [ref=e6]:
+    - button "Sponsor" [ref=e7]
+  - button "Submit" [ref=e8]
+  - link "Sign in" [ref=e9]:
+    - button "Sign in" [ref=e10]
+  - link "Create Account" [ref=e11]:
+    - button "Create Account" [ref=e12]
+- main:
+  - heading "Handpicked websitesfrom the dark side" [level=1]: "Handpicked websites from the dark side"
+  - button "Get Monthly Picks" [ref=e13]
+  - link "Done admiring?" [ref=e14]
+  - link "Billow Sponsor" [ref=e15]
+  - text: "Meet Billow Sponsored"
+  - button "All" [ref=e16]
+  - button "Agency" [ref=e17]
+  - button "AI" [ref=e18]
+  - button "Culture" [ref=e19]
+  - button "Education" [ref=e20]
+  - button "Hardware" [ref=e21]
+  - button "Personal" [ref=e22]
+  - button "Software" [ref=e23] [focused]
+  - button "Web3" [ref=e24]
+  - button "New" [ref=e25]
+  - button "Popular" [ref=e26]
+  - link "Railway" [ref=e33]
+  - text: "Railway· Software"
+  - button "Bookmark" [ref=e34]
+  - link "Visit site" [ref=e35]
+  - link "Pryzm" [ref=e36]
+  - text: "Pryzm· Software"
+  - button "Bookmark" [ref=e37]
+  - link "Visit site" [ref=e38]
+  - link "108™" [ref=e42]
+  - text: "108™· Software"
+  - button "Bookmark" [ref=e43]
+  - link "Visit site" [ref=e44]
+  - link "Ponder" [ref=e45]
+  - text: "Ponder· Software"
+  - button "Bookmark" [ref=e46]
+  - link "Visit site" [ref=e47]
+  - link "Framer" [ref=e39]
+  - text: "Framer· Affiliated"
+  - button "Bookmark" [ref=e40]
+  - link "Visit site" [ref=e41]
+  - link "Glyphs & Grids" [ref=e48]
+  - text: "Glyphs & Grids· Software"
+  - button "Bookmark" [ref=e49]
+  - link "Visit site" [ref=e50]
+  - link "Ink Games" [ref=e69]
+  - text: "Ink Games· Software"
+  - button "Bookmark" [ref=e70]
+  - link "Visit site" [ref=e71]
+  - link "Fora" [ref=e84]
+  - text: "Fora· Software"
+  - button "Bookmark" [ref=e85]
+  - link "Visit site" [ref=e86]
+  - link "CSS Studio" [ref=e87]
+  - text: "CSS Studio· Software"
+  - button "Bookmark" [ref=e88]
+  - link "Visit site" [ref=e89]
+  - link "Reve" [ref=e90]
+  - text: "Reve· Software"
+  - button "Bookmark" [ref=e91]
+  - link "Visit site" [ref=e92]
+  - link "Defined" [ref=e102]
+  - text: "Defined· Software"
+  - button "Bookmark" [ref=e103]
+  - link "Visit site" [ref=e104]
+  - link "xmcp" [ref=e105]
+  - text: "xmcp· Software"
+  - button "Bookmark" [ref=e106]
+  - link "Visit site" [ref=e107]
+  - link "Dropshot" [ref=e123]
+  - text: "Dropshot· Software"
+  - button "Bookmark" [ref=e124]
+  - link "Visit site" [ref=e125]
+  - link "State of Sites 2026" [ref=e126]
+  - text: "State of Sites 2026· Software"
+  - button "Bookmark" [ref=e127]
+  - link "Visit site" [ref=e128]
+  - link "Cape Town Dam Levels Today" [ref=e129]
+  - text: "Cape Town Dam Levels Today· Software"
+  - button "Bookmark" [ref=e130]
+  - link "Visit site" [ref=e131]
+  - link "Supercommon Systems" [ref=e135]
+  - text: "Supercommon Systems· Software"
+  - button "Bookmark" [ref=e136]
+  - link "Visit site" [ref=e137]
+  - link "Fey App" [ref=e138]
+  - text: "Fey App· Software"
+  - button "Bookmark" [ref=e139]
+  - link "Visit site" [ref=e140]
+  - link "Lazy" [ref=e147]
+  - text: "Lazy· Software"
+  - button "Bookmark" [ref=e148]
+  - link "Visit site" [ref=e149]
+  - link "Resend" [ref=e150]
+  - text: "Resend· Software"
+  - button "Bookmark" [ref=e151]
+  - link "Visit site" [ref=e152]
+  - link "Wope" [ref=e153]
+  - text: "Wope· Software"
+  - button "Bookmark" [ref=e154]
+  - link "Visit site" [ref=e155]
+  - link "Twingate" [ref=e156]
+  - text: "Twingate· Software"
+  - button "Bookmark" [ref=e157]
+  - link "Visit site" [ref=e158]
+  - link "Tome" [ref=e168]
+  - text: "Tome· Software"
+  - button "Bookmark" [ref=e169]
+  - link "Visit site" [ref=e170]
+  - link "TIMES TWO" [ref=e171]
+  - text: "TIMES TWO· Software"
+  - button "Bookmark" [ref=e172]
+  - link "Visit site" [ref=e173]
+  - link "Shape" [ref=e186]
+  - text: "Shape· Software"
+  - button "Bookmark" [ref=e187]
+  - link "Visit site" [ref=e188]
+  - link "Opal Composer" [ref=e198]
+  - text: "Opal Composer· Software"
+  - button "Bookmark" [ref=e199]
+  - link "Visit site" [ref=e200]
+  - link "Open AI" [ref=e201]
+  - text: "Open AI· Software"
+  - button "Bookmark" [ref=e202]
+  - link "Visit site" [ref=e203]
+  - link "Specify Launch" [ref=e213]
+  - text: "Specify Launch· Software"
+  - button "Bookmark" [ref=e214]
+  - link "Visit site" [ref=e215]
+  - link "The Network State Company" [ref=e225]
+  - text: "The Network State Company· Software"
+  - button "Bookmark" [ref=e226]
+  - link "Visit site" [ref=e227]
+  - link "BonsAI" [ref=e228]
+  - text: "BonsAI· Software"
+  - button "Bookmark" [ref=e229]
+  - link "Visit site" [ref=e230]
+  - link "Offsuit" [ref=e243]
+  - text: "Offsuit· Software"
+  - button "Bookmark" [ref=e244]
+  - link "Visit site" [ref=e245]
+  - link "Ultra Mail" [ref=e246]
+  - text: "Ultra Mail· Software"
+  - button "Bookmark" [ref=e247]
+  - link "Visit site" [ref=e248]
+  - link "Dimension" [ref=e249]
+  - text: "Dimension· Software"
+  - button "Bookmark" [ref=e250]
+  - link "Visit site" [ref=e251]
+  - link "Orion" [ref=e255]
+  - text: "Orion· Software"
+  - button "Bookmark" [ref=e256]
+  - link "Visit site" [ref=e257]
+  - link "Gitness" [ref=e258]
+  - text: "Gitness· Software"
+  - button "Bookmark" [ref=e259]
+  - link "Visit site" [ref=e260]
+  - link "Procreate" [ref=e261]
+  - text: "Procreate· Software"
+  - button "Bookmark" [ref=e262]
+  - link "Visit site" [ref=e263]
+  - link "Mona & Hubot Sans" [ref=e264]
+  - text: "Mona & Hubot Sans· Software"
+  - button "Bookmark" [ref=e265]
+  - link "Visit site" [ref=e266]
+  - link "Vercel" [ref=e267]
+  - text: "Vercel· Software"
+  - button "Bookmark" [ref=e268]
+  - link "Visit site" [ref=e269]
+  - link "Multiversx" [ref=e270]
+  - text: "Multiversx· Software"
+  - button "Bookmark" [ref=e271]
+  - link "Visit site" [ref=e272]
+  - link "GSAP" [ref=e279]
+  - text: "GSAP· Software"
+  - button "Bookmark" [ref=e280]
+  - link "Visit site" [ref=e281]
+  - link "Endless Tools" [ref=e297]
+  - text: "Endless Tools· Software"
+  - button "Bookmark" [ref=e298]
+  - link "Visit site" [ref=e299]
+  - link "Capsule" [ref=e312]
+  - text: "Capsule· Software"
+  - button "Bookmark" [ref=e313]
+  - link "Visit site" [ref=e314]
+  - link "Nav Supply" [ref=e321]
+  - text: "Nav Supply· Software"
+  - button "Bookmark" [ref=e322]
+  - link "Visit site" [ref=e323]
+  - link "AuthKit" [ref=e327]
+  - text: "AuthKit· Software"
+  - button "Bookmark" [ref=e328]
+  - link "Visit site" [ref=e329]
+  - link "Arrow Dynamics" [ref=e330]
+  - text: "Arrow Dynamics· Software"
+  - button "Bookmark" [ref=e331]
+  - link "Visit site" [ref=e332]
+  - link "Ozone" [ref=e333]
+  - text: "Ozone· Software"
+  - button "Bookmark" [ref=e334]
+  - link "Visit site" [ref=e335]
+  - link "Geist" [ref=e345]
+  - text: "Geist· Software"
+  - button "Bookmark" [ref=e346]
+  - link "Visit site" [ref=e347]
+  - link "Daybox" [ref=e354]
+  - text: "Daybox· Software"
+  - button "Bookmark" [ref=e355]
+  - link "Visit site" [ref=e356]
+  - link "Mita" [ref=e378]
+  - text: "Mita· Software"
+  - button "Bookmark" [ref=e379]
+  - link "Visit site" [ref=e380]
+  - link "Para" [ref=e387]
+  - text: "Para· Software"
+  - button "Bookmark" [ref=e388]
+  - link "Visit site" [ref=e389]
+  - link "Algo API" [ref=e390]
+  - text: "Algo API· Software"
+  - button "Bookmark" [ref=e391]
+  - link "Visit site" [ref=e392]
+  - link "Core Framework" [ref=e405]
+  - text: "Core Framework· Software"
+  - button "Bookmark" [ref=e406]
+  - link "Visit site" [ref=e407]
+  - link "Motion" [ref=e408]
+  - text: "Motion· Software"
+  - button "Bookmark" [ref=e409]
+  - link "Visit site" [ref=e410]
+  - link "Vana" [ref=e420]
+  - text: "Vana· Software"
+  - button "Bookmark" [ref=e421]
+  - link "Visit site" [ref=e422]
+  - link "Webflow" [ref=e423]
+  - text: "Webflow· Software"
+  - button "Bookmark" [ref=e424]
+  - link "Visit site" [ref=e425]
+  - link "Cobalt" [ref=e435]
+  - text: "Cobalt· Software"
+  - button "Bookmark" [ref=e436]
+  - link "Visit site" [ref=e437]
+  - link "Satellitor" [ref=e441]
+  - text: "Satellitor· Software"
+  - button "Bookmark" [ref=e442]
+  - link "Visit site" [ref=e443]
+  - link "Droplette" [ref=e447]
+  - text: "Droplette· Software"
+  - button "Bookmark" [ref=e448]
+  - link "Visit site" [ref=e449]
+  - link "G3DAAS" [ref=e450]
+  - text: "G3DAAS· Software"
+  - button "Bookmark" [ref=e451]
+  - link "Visit site" [ref=e452]
+  - link "Hyper Card" [ref=e486]
+  - text: "Hyper Card· Software"
+  - button "Bookmark" [ref=e487]
+  - link "Visit site" [ref=e488]
+  - link "Framer 2023" [ref=e489]
+  - text: "Framer 2023· Software"
+  - button "Bookmark" [ref=e490]
+  - link "Visit site" [ref=e491]
+  - link "Modules" [ref=e534]
+  - text: "Modules· Software"
+  - button "Bookmark" [ref=e535]
+  - link "Visit site" [ref=e536]
+  - link "Vercel Ship" [ref=e537]
+  - text: "Vercel Ship· Software"
+  - button "Bookmark" [ref=e538]
+  - link "Visit site" [ref=e539]
+  - link "IR" [ref=e543]
+  - text: "IR· Software"
+  - button "Bookmark" [ref=e544]
+  - link "Visit site" [ref=e545]
+  - link "KnowMore" [ref=e555]
+  - text: "KnowMore· Software"
+  - button "Bookmark" [ref=e556]
+  - link "Visit site" [ref=e557]
+  - link "Noon" [ref=e558]
+  - text: "Noon· Software"
+  - button "Bookmark" [ref=e559]
+  - link "Visit site" [ref=e560]
+  - link "PP Fragment Font" [ref=e564]
+  - text: "PP Fragment Font· Software"
+  - button "Bookmark" [ref=e565]
+  - link "Visit site" [ref=e566]
+  - link "Unicorn Studio" [ref=e567]
+  - text: "Unicorn Studio· Software"
+  - button "Bookmark" [ref=e568]
+  - link "Visit site" [ref=e569]
+  - link "Eleveight" [ref=e570]
+  - text: "Eleveight· Software"
+  - button "Bookmark" [ref=e571]
+  - link "Visit site" [ref=e572]
+  - link "We are Gradient" [ref=e573]
+  - text: "We are Gradient· Software"
+  - button "Bookmark" [ref=e574]
+  - link "Visit site" [ref=e575]
+  - link "Keywords AI" [ref=e579]
+  - text: "Keywords AI· Software"
+  - button "Bookmark" [ref=e580]
+  - link "Visit site" [ref=e581]
+  - link "Frame v4" [ref=e582]
+  - text: "Frame v4· Software"
+  - button "Bookmark" [ref=e583]
+  - link "Visit site" [ref=e584]
+  - link "Flareum" [ref=e591]
+  - text: "Flareum· Software"
+  - button "Bookmark" [ref=e592]
+  - link "Visit site" [ref=e593]
+  - link "Raycast" [ref=e597]
+  - text: "Raycast· Software"
+  - button "Bookmark" [ref=e598]
+  - link "Visit site" [ref=e599]
+  - link "Design Engineer" [ref=e600]
+  - text: "Design Engineer· Software"
+  - button "Bookmark" [ref=e601]
+  - link "Visit site" [ref=e602]
+  - link "Remote Jobs" [ref=e609]
+  - text: "Remote Jobs· Software"
+  - button "Bookmark" [ref=e610]
+  - link "Visit site" [ref=e611]
+  - link "Blitzit" [ref=e624]
+  - text: "Blitzit· Software"
+  - button "Bookmark" [ref=e625]
+  - link "Visit site" [ref=e626]
+  - link "Rekki" [ref=e636]
+  - text: "Rekki· Software"
+  - button "Bookmark" [ref=e637]
+  - link "Visit site" [ref=e638]
+  - link "Onmi" [ref=e645]
+  - text: "Onmi· Software"
+  - button "Bookmark" [ref=e646]
+  - link "Visit site" [ref=e647]
+  - link "Shuttle" [ref=e648]
+  - text: "Shuttle· Software"
+  - button "Bookmark" [ref=e649]
+  - link "Visit site" [ref=e650]
+  - link "Linear" [ref=e651]
+  - text: "Linear· Software"
+  - button "Bookmark" [ref=e652]
+  - link "Visit site" [ref=e653]
+  - link "Droppable" [ref=e654]
+  - text: "Droppable· Software"
+  - button "Bookmark" [ref=e655]
+  - link "Visit site" [ref=e656]
+  - link "GoPidge" [ref=e657]
+  - text: "GoPidge· Software"
+  - button "Bookmark" [ref=e658]
+  - link "Visit site" [ref=e659]
+  - link "TYPO72TYPO" [ref=e660]
+  - text: "TYPO72TYPO· Software"
+  - button "Bookmark" [ref=e661]
+  - link "Visit site" [ref=e662]
+  - link "Lapz" [ref=e669]
+  - text: "Lapz· Software"
+  - button "Bookmark" [ref=e670]
+  - link "Visit site" [ref=e671]
+  - link "Trigger" [ref=e672]
+  - text: "Trigger· Software"
+  - button "Bookmark" [ref=e673]
+  - link "Visit site" [ref=e674]
+  - link "Kino" [ref=e681]
+  - text: "Kino· Software"
+  - button "Bookmark" [ref=e682]
+  - link "Visit site" [ref=e683]
+  - link "Retool" [ref=e687]
+  - text: "Retool· Software"
+  - button "Bookmark" [ref=e688]
+  - link "Visit site" [ref=e689]
+  - link "Time Drift" [ref=e696]
+  - text: "Time Drift· Software"
+  - button "Bookmark" [ref=e697]
+  - link "Visit site" [ref=e698]
+  - link "Warp" [ref=e702]
+  - text: "Warp· Software"
+  - button "Bookmark" [ref=e703]
+  - link "Visit site" [ref=e704]
+  - link "Refresh 2024" [ref=e708]
+  - text: "Refresh 2024· Software"
+  - button "Bookmark" [ref=e709]
+  - link "Visit site" [ref=e710]
+  - link "HEX" [ref=e711]
+  - text: "HEX· Software"
+  - button "Bookmark" [ref=e712]
+  - link "Visit site" [ref=e713]
+  - link "Framer Plugins" [ref=e714]
+  - text: "Framer Plugins· Software"
+  - button "Bookmark" [ref=e715]
+  - link "Visit site" [ref=e716]
+  - link "Height" [ref=e717]
+  - text: "Height· Software"
+  - button "Bookmark" [ref=e718]
+  - link "Visit site" [ref=e719]
+  - link "Shareio" [ref=e723]
+  - text: "Shareio· Software"
+  - button "Bookmark" [ref=e724]
+  - link "Visit site" [ref=e725]
+  - link "Better Stack" [ref=e735]
+  - text: "Better Stack· Software"
+  - button "Bookmark" [ref=e736]
+  - link "Visit site" [ref=e737]
+  - link "Tiempo" [ref=e744]
+  - text: "Tiempo· Software"
+  - button "Bookmark" [ref=e745]
+  - link "Visit site" [ref=e746]
+  - link "Fey Earnings" [ref=e747]
+  - text: "Fey Earnings· Software"
+  - button "Bookmark" [ref=e748]
+  - link "Visit site" [ref=e749]
+  - link "Orbi" [ref=e753]
+  - text: "Orbi· Software"
+  - button "Bookmark" [ref=e754]
+  - link "Visit site" [ref=e755]
+  - link "Slash" [ref=e756]
+  - text: "Slash· Software"
+  - button "Bookmark" [ref=e757]
+  - link "Visit site" [ref=e758]
+  - link "AntiMetal" [ref=e759]
+  - text: "AntiMetal· Software"
+  - button "Bookmark" [ref=e760]
+  - link "Visit site" [ref=e761]
+  - link "Fey Finder" [ref=e762]
+  - text: "Fey Finder· Software"
+  - button "Bookmark" [ref=e763]
+  - link "Visit site" [ref=e764]
+  - link "Toolbar" [ref=e765]
+  - text: "Toolbar· Software"
+  - button "Bookmark" [ref=e766]
+  - link "Visit site" [ref=e767]
+- contentinfo:
+  - link [ref=e768]
+  - text: "© 2026  Dark –"
+  - link "Product by Y5K LLC" [ref=e769]
+  - navigation:
+    - link "Sites" [ref=e770]
+    - link "Templates" [ref=e771]
+    - link "Sponsor" [ref=e772]
+- region "Notifications alt+T" [ref=e773]
+[2m[ok | 7579ms][0m

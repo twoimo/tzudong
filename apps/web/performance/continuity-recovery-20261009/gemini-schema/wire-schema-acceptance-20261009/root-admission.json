@@ -1,0 +1,61 @@
+{
+  "admittedAt": "2026-10-09T09:00:42Z",
+  "admission": "admitted",
+  "executionAuthorized": true,
+  "purpose": "test_implemented_365_byte_wire_schema_on_exact_prior_synthetic_text",
+  "request": {
+    "model": "gemini-3.8-flash",
+    "maxOutputTokens": 65536,
+    "store": false,
+    "hasVideo": false,
+    "hasTools": false,
+    "hasCache": false,
+    "hasHistory": false,
+    "promptSha256": "81377b15578f67767fab3a8b4a72cede12c75a83544f103109ca4b437a4f671b",
+    "payloadCanonicalBytes": 914,
+    "payloadSha256": "1bb888763dc647849967c89dc5eca5dcfec912245aa48e6246307f1cf5fba4a2"
+  },
+  "schema": {
+    "canonicalBytes": 365,
+    "sha256": "e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360",
+    "strictValidatorRetained": true
+  },
+  "continuity": {
+    "previousFlatPromptSha256Matched": true,
+    "onlyResponseFormatSchemaChangedFromFlatControl": true,
+    "priorExactProbeEvidenceCount": 0,
+    "sharedBudgetNamespaceReused": true,
+    "probeHarnessSha256": "72af68fe181dc6f6f539ee24c8f547e37144514c9e8c0f66db079cd798272392",
+    "implementationArtifactMapSha256": "3fa68ad4077577758f8a712116f4e1969366546ff991d594d1c92f7b6b695aea",
+    "fixedImplementationArtifactCount": 10,
+    "fixedImplementationArtifactsMatched": true
+  },
+  "executionLimits": {
+    "providerPostMaximum": 1,
+    "retries": 0,
+    "automaticRetry": false,
+    "readbacks": 0,
+    "redirects": 0,
+    "timeoutSeconds": 120,
+    "requestsPerMinuteMaximum": 1,
+    "concurrencyMaximum": 1,
+    "maxResponseBodyBytesInMemory": 65536
+  },
+  "decisions": {
+    "automaticVariantAfterResult": false,
+    "videoGeneration": false,
+    "productionAdoptionBeforeResult": false
+  },
+  "persistence": {
+    "rawBody": false,
+    "generatedText": false,
+    "headers": false,
+    "key": false,
+    "responseId": false,
+    "successCacheWrite": false,
+    "failedReceiptWrite": false,
+    "queueWrite": false,
+    "vaultWrite": false,
+    "productionSourceWrite": false
+  }
+}

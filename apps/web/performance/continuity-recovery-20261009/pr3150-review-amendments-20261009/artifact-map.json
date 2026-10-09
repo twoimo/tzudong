@@ -1,0 +1,64 @@
+{
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/verify-isolated-pg17.mjs",
+      "role": "PostgreSQL 17 pre-start and post-start verifier",
+      "bytes": 15822,
+      "sha256": "e5c892ea696a0fc2b349dd735499622472488c5c74979d508c6f4011e45facb0"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/verify-isolated-pg17.test.mjs",
+      "role": "PostgreSQL major false-pass process tests",
+      "bytes": 3380,
+      "sha256": "3f84ee4ca7bb5b59c051d0f4372e6d338693861fc94765d6f370d1a4d9fe47e5"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/proofs/verify_schema_factor.py",
+      "role": "explicit pinned-checkout schema proof verifier",
+      "bytes": 8183,
+      "sha256": "b34f5dca1fb73b2cc0010c5b4cc057d57f3d878a2c5f1aa06a1595937a2a37fe"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/proofs/test_verify_schema_factor.py",
+      "role": "missing and unverified checkout process tests",
+      "bytes": 1618,
+      "sha256": "c41d058bc79427bcae51414523641389cd955ba066a33b3e79a1e61f72d1af6e"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/proposal/README.md",
+      "role": "exact pinned source prerequisite documentation",
+      "bytes": 4650,
+      "sha256": "0f22ddd167dbd9ad3e8c15c4604a7ba8a4edbb75514f6d3b51c3f2fd1f308e62"
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/verify-merge-preview-http.py",
+      "role": "complete fail-closed preview HTTP verifier",
+      "bytes": 11382,
+      "sha256": "a312ff7f189e55a2f5a06067a72a15ae16b056e03042e8af8c04c57b874bdf7f"
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/test_verify_merge_preview_http.py",
+      "role": "offline fixture process exit and partial-evidence tests",
+      "bytes": 3093,
+      "sha256": "d514b4cc1acd8af7c9967c4e8c369d97223a987138738545b52c3609bfe665c5"
+    },
+    {
+      "path": "apps/web/performance/vercel-preview-diagnosis-20261009/README.md",
+      "role": "preview verifier pass contract documentation",
+      "bytes": 5763,
+      "sha256": "909ac8c2249b058590b3049975919788de6cdeef8bb08c37ffa5c561c07c383b"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr3150-review-amendments-20261009/proof.json",
+      "role": "amended verifier source and behavior proof",
+      "bytes": 4058,
+      "sha256": "3379f05fa89d9d0a8a39ba1208b50881456e82e9dab6fcf82cd007cc52fa8546"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr3150-review-amendments-20261009/checks.txt",
+      "role": "sanitized check summary",
+      "bytes": 722,
+      "sha256": "057fd9c51d5872dce76c9f93cc7b810f48233ce53cf13349735a3ecaa590da0d"
+    }
+  ]
+}

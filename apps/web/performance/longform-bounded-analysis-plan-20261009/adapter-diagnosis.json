@@ -1,0 +1,135 @@
+{
+  "scope": "Offline investigation only; source edit not authorized yet",
+  "paidProviderPosts": 0,
+  "rawProviderDiagnosticsKeysHeadersOrOcrCopied": false,
+  "previousStatusRecovery": {
+    "files": [
+      {
+        "path": "/Users/twoimo/.codex/runtime-cache/longform-one-analysis-plan-20261009T045604Z-06c092/execute.stdout.jsonl",
+        "bytes": 1435,
+        "sha256": "28d020cde41e356e03044307f97bd9e585e31e2c4763b1e0cb4d49a511604ec1",
+        "numericHttpStatusFound": false,
+        "rawBodyRetainedInNewEvidence": false
+      },
+      {
+        "path": "/Users/twoimo/.codex/runtime-cache/longform-one-analysis-plan-20261009T045604Z-06c092/execute.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "numericHttpStatusFound": false,
+        "rawBodyRetainedInNewEvidence": false
+      }
+    ],
+    "numericHttpStatus": null,
+    "confirmedClass": "HTTP4xx",
+    "reason": "Pinned helper caught urllib.HTTPError, read its body into a SystemExit message, and adapter normalized that to WATCH_HTTP_REJECTED while retaining only httpOutcome. Stdout has no labeled numeric status; stderr is empty."
+  },
+  "sdkErrorShapes": {
+    "actualTransport": "Python urllib.error.HTTPError.code (integer)",
+    "pythonGenaiInstalledInExecutionRuntime": false,
+    "currentOfficialPythonGenai": {
+      "numeric": "APIError.code or error.response.status_code",
+      "notNumeric": "APIError.status is the provider status string",
+      "source": "https://raw.githubusercontent.com/googleapis/python-genai/main/google/genai/errors.py"
+    },
+    "installedJsSdkVersion": "2.24.0",
+    "installedJsGenerateContent": "ApiError.status number",
+    "installedJsInteractions": {
+      "source": "GoogleGenAiError.statusCode from HTTP response status",
+      "fixture": {
+        "class": "BadRequestError",
+        "name": "BadRequestError",
+        "status": 400,
+        "statusCode": 400,
+        "code": null,
+        "status_code": null
+      }
+    },
+    "mustNeverSerialize": [
+      "error.message",
+      "error.details",
+      "error.body",
+      "error.headers",
+      "error.rawResponse",
+      "error.response.text"
+    ]
+  },
+  "payloadComparison": {
+    "originalRequestSha256": "121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331",
+    "reconstructedPayloadMatchesOriginalFingerprint": true,
+    "officialOpenApiSha256": "106eeb911d76f8e887ab16efaad3f38381708f6fa36988bf98a65a37f1d84028",
+    "checks": {
+      "modelAndGenerationKeysMatchOfficial": true,
+      "videoInputKeysMatchOfficial": true,
+      "clipKeysMatchOfficial": true,
+      "clipTypesAreDurationStrings": true,
+      "responseFormatKeysMatchOfficial": true,
+      "textJsonSchemaShapeMatchesOfficial": true
+    },
+    "sdkFixture": {
+      "offlineMockOnly": true,
+      "remoteNetworkRequests": 0,
+      "localSyntheticRequests": 1,
+      "requestTransmittedBySdkFixture": true,
+      "payloadSemanticsPreserved": true,
+      "errorShape": {
+        "class": "BadRequestError",
+        "name": "BadRequestError",
+        "status": 400,
+        "statusCode": 400,
+        "code": null,
+        "status_code": null
+      }
+    },
+    "schemaMetrics": {
+      "canonicalSchemaBytes": 5335,
+      "payloadCanonicalBytes": 8011
+    },
+    "providerPostsSent": 0,
+    "sourceEdited": false
+  },
+  "confirmedLegalFields": [
+    "Explicit gemini-3.8-flash and max_output_tokens65536",
+    "Public YouTube VideoContent uri; mime_type optional in API/SDK schema",
+    "Static processing duration strings 0s/835s match API/SDK types; guide numeric examples differ but do not invalidate formal types",
+    "TextResponseFormat object with type text, application/json mime_type and schema; object or array is allowed",
+    "Schema keywords type/properties/required/additionalProperties/enum/minimum/maximum/items/maxItems are documented"
+  ],
+  "causeAssessment": {
+    "specificRejectedFieldConfirmed": false,
+    "requestFormatMismatchFound": false,
+    "schemaComplexityStillPossible": "5335-byte nested response schema; official docs permit the keywords but warn large/deep schemas may be rejected. No status/diagnostic survived to prove this hypothesis.",
+    "authRateQuotaAlsoNotDistinguished": true,
+    "countTokensSuccessDoesNotProveInteractionsInferenceAdmission": true
+  },
+  "proposedMinimalChange": {
+    "adapterOwnership": "backend/knowledge_graph/claude_video_adapter.py and its narrow tests only after root assigns",
+    "capture": "At tracked_open HTTPError catch, preserve type-checked numeric code and fixed mapped category on AdapterError; no raw body/header/message parsing or logging.",
+    "fixedCategories": [
+      "authentication",
+      "rate_limit",
+      "invalid_request",
+      "server_error",
+      "transport_uncertain",
+      "unknown"
+    ],
+    "executorCoordination": "Root-owned executor may copy only optional numeric httpStatus and allowlisted httpCategory into a NEW failure receipt. Keep existing six-field observation unchanged to avoid breaking strict validator/old evidence.",
+    "fingerprints": "No provider payload/prompt/media/model change. Request digest stays canonical. Adapter source hash/config identity intentionally changes; existing receipts/batches remain immutable and are not silently migrated/replayed.",
+    "compatibility": "AdapterError.code and current uncertain/rejected/no-resend semantics stay unchanged; older receipts without diagnostics remain accepted by their original schema.",
+    "testsNeeded": [
+      "400/401/403/429/500/503 mocked HTTP cases persist only bounded numeric/fixed categories",
+      "Malformed codes bool/string/out-of-range do not masquerade as numeric status",
+      "Raw message/header/key/OCR never appears in observation/error serialization",
+      "Response-loss/lost ACK remains uncertain and never triggers another POST",
+      "Prior observation/receipt shapes and request digests stay compatible"
+    ]
+  },
+  "officialSources": [
+    "https://ai.google.dev/api/interactions-api",
+    "https://ai.google.dev/static/api/interactions.openapi.json",
+    "https://ai.google.dev/gemini-api/docs/video-understanding",
+    "https://ai.google.dev/gemini-api/docs/structured-output",
+    "https://ai.google.dev/gemini-api/docs/interactions-breaking-changes-may-2026"
+  ],
+  "oldReceiptImmutabilityVerified": true,
+  "sourceOriginalHashesUnchanged": true
+}

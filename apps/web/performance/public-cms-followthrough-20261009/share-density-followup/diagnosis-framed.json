@@ -1,0 +1,21 @@
+[
+  {
+    "path": "/s/audit-invalid-code",
+    "status": 200,
+    "errors": [
+      {
+        "name": "TypeError",
+        "classification": "unclassified",
+        "property": null,
+        "frames": [
+          "(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3907:35",
+          "(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3822:27",
+          "(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:4268:11"
+        ],
+        "keywords": [
+          "url"
+        ]
+      }
+    ]
+  }
+]

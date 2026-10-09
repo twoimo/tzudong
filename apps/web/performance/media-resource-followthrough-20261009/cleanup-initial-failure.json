@@ -1,0 +1,10 @@
+{
+  "wallMs": 64.8544579744339,
+  "cpuMs": 41.412,
+  "peakTreeRssMiB": 1.40625,
+  "sampledPeakFfmpeg": 0,
+  "resourceSamples": 1,
+  "exitCode": 1,
+  "diagnosticSha256": "0adac279f40323b5af9cd0cb9bd7bb2fbeac5ee9dd34fcd9ca2e66c3a53b2ae9",
+  "result": null
+}

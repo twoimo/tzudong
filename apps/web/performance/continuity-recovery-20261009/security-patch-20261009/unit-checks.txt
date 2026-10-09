@@ -1,0 +1,26 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/pin-contract.test.ts:
+(pass) Pin_Contract authority invariant (Property 12) > generates a broad case set exceeding the 100-example floor per position [0.04ms]
+(pass) Pin_Contract authority invariant (Property 12) > npm pin passes iff declaration and runtime both equal the exact fixed string [0.18ms]
+(pass) Pin_Contract authority invariant (Property 12) > node pin passes iff engines is exactly 24.x and the runtime major is 24 [0.23ms]
+(pass) Pin_Contract authority invariant (Property 12) > @typescript/native alias passes iff declared alias and resolved name+version are exact [0.08ms]
+(pass) Pin_Contract authority invariant (Property 12) > compat bridge TypeScript passes iff declared alias and resolved name+version are exact [0.06ms]
+(pass) Pin_Contract authority invariant (Property 12) > the verifier never mutates the npm-side release authority (source-contract) [0.53ms]
+(pass) Pin_Contract authority invariant (Property 12) > the real tree's declared and resolved values match the fixed contract [2.29ms]
+
+tests-unit/dependency-modernization-server-compatibility.test.ts:
+(pass) dependency modernization release authority > the named dependency gate is the fail-closed candidate-bound release runner [0.95ms]
+(pass) dependency modernization release authority > the current npm lock has no root or nested lodash and sonner package paths [2.91ms]
+(pass) dependency modernization release authority > the standalone browser proof keeps the production build, CSS verifier, and real browser suite [0.10ms]
+(pass) dependency modernization release authority > the built server, health probe, and isolated browser share the admitted origin [0.36ms]
+(pass) dependency modernization release authority > invalid proof ports fail before package installation or server execution [114.64ms]
+(pass) dependency modernization release authority > the dependency runner retains no raw child diagnostics or exception messages [0.18ms]
+
+tests-unit/brand-logo-alpha.test.ts:
+(pass) compact brand PNG preserves transparent background and pin center [3.22ms]
+
+ 14 pass
+ 0 fail
+ 951 expect() calls
+Ran 14 tests across 3 files. [299.00ms]

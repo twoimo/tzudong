@@ -1,0 +1,13 @@
+{
+  "sourceHead": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "sharedSourceHashes": {
+    "apps/web/scripts/apply-supabase-migration.mjs": "7b8b99d954711c8bcac87ac90762baf91d02f373463a240dfcdf1f50257f0fb8",
+    ".github/supabase-migration-release-manifest.v1.json": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d",
+    ".github/workflows/supabase-migration-apply.yml": "2a3b9da3bb069c726539c9d00cc2b7a63dfcc004782c7be2cc6c30bdd8caa9aa"
+  },
+  "sourceEdits": false,
+  "manifestPinOrG037Changed": false,
+  "operatingActions": 0,
+  "proposal": "minimum-adoption-proposal.md",
+  "adoptionOwner": "root"
+}

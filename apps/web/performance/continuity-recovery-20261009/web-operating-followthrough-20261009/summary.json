@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "sourceBase": "671d9ca1ee88c484674087c6640732b7de6ac5b2",
+  "sourceFiles": {
+    ".github/scripts/build-nightly-local-publication.py": "5cf5a648791955d2673ebc6931325aeae1c89cd03767acb8e310d6d8821c3c11",
+    ".github/scripts/verify-nightly-local-publication.py": "d293cb0103292ee116bb8a2285ba33e87958f2f309a37d8d3b4e06cd2f27bf58",
+    "backend/supabase/scripts/local-migrate.py": "bafa8fcb2d6e425f6a10e4391342b623dc68c1a4cc903781691b8a94be7de4bb",
+    "backend/supabase/tests/test_local_function_runtime_contract.py": "72631cc6f0a2fb57d0dcd2c8579fcc12fd597908b0638ce1dae7a9144cbe33ce",
+    "backend/supabase/tests/test_local_publication_verifier.py": "13b995ef40f823a7570dab905ff3a6602e30311688508605de304a399441132f",
+    "backend/supabase/tests/test_local_seed_receipt_contract.py": "cd4f515a6ee115d3e97bcfbe740d5ec5d094c13d17cdda8835a59ba7271904e2",
+    "apps/web/lib/admin/evaluation-page-server.ts": "ca7e8bf97ba928305c201f305de1bf05143b670cb3c775bce29e2bd30d427564",
+    "apps/web/lib/auth/callback-origin.ts": "bf4bd3964b33b8bb54fe80cbc107a8fdb09e960b6effbf6d5356006defae16fb",
+    "apps/web/tests-unit/admin-evaluation-page-server.test.ts": "b97a25fc868eb8af3fad45f8d46c346a18ff56d4b8f63c7ec06e894f35f608b6",
+    "apps/web/tests-unit/auth-callback-origin.test.ts": "c443304a8b7cf386656fc277bf72045165cb68d2e415dbf44aa7373c2c648d58",
+    "apps/web/tests-unit/nightly-regression-workflow.test.ts": "000d6be5e604379694d8fa13b5b9df5d7f510bd28ec16f2d63764905e10481cc"
+  },
+  "rootObservedChecks": [
+    {
+      "scope": "auth and same-origin",
+      "pass": 43,
+      "fail": 0,
+      "assertions": 325
+    },
+    {
+      "scope": "nightly workflow contract",
+      "pass": 30,
+      "fail": 0,
+      "assertions": 926
+    },
+    {
+      "scope": "seed receipt contract",
+      "pass": 21,
+      "fail": 0
+    },
+    {
+      "scope": "evaluation page server",
+      "pass": 19,
+      "fail": 0,
+      "assertions": 150
+    },
+    {
+      "scope": "typescript parity",
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3134
+    },
+    {
+      "scope": "targeted auth eslint",
+      "status": "passed"
+    }
+  ],
+  "agentObservedChecks": [
+    {
+      "scope": "publication/runtime",
+      "pass": 81,
+      "fail": 0
+    },
+    {
+      "scope": "evaluation/normalization",
+      "pass": 24,
+      "fail": 0,
+      "assertions": 669
+    }
+  ],
+  "warningsRpcBound": {
+    "basis": "fixed source upper bound; current synthetic missing-RPC test",
+    "beforeMaximumCalls": 255,
+    "afterMaximumCalls": 5,
+    "absoluteCallDifference": -250,
+    "maximumCallReductionPercent": 98.0392156862745,
+    "maximumTransferredCompatibilityRowsBefore": 50000,
+    "maximumTransferredCompatibilityRowsAfter": 0,
+    "confidenceInterval": null,
+    "confidenceIntervalReason": "deterministic upper bound, not a sample estimate",
+    "productionLatencyMeasured": false
+  },
+  "authHardening": "reject malformed/non-HTTPS/path/query/fragment/userinfo/custom-port production origin configuration; preserve local loopback and exact preview behavior",
+  "operatingScope": {
+    "authConfigWrites": 1,
+    "databaseWrites": 0,
+    "storageDeletes": 0,
+    "newGeminiInference": 0,
+    "additionalTopUps": 0
+  },
+  "limitations": [
+    "UI read probes do not prove write flows.",
+    "Users list still returns a fixed unavailable error because required RPCs are absent.",
+    "M5 and forward operating launch remains held.",
+    "These local changes are not deployed.",
+    "No runtime speed, quota or cash saving is claimed."
+  ]
+}

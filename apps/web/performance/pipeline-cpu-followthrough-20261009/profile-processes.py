@@ -1,0 +1,38 @@
+from pathlib import Path
+import importlib.util, sys, json, os
+repo=Path(__file__).resolve().parents[4]
+spec=importlib.util.spec_from_file_location('media_replay',repo/'backend/bin/benchmark_media_orchestration.py')
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+original_execute=m.execute
+wrapped=set()
+profile_file=Path(__file__).resolve().parent/'process-profile-v2.jsonl'
+wrapper = r"""import subprocess,sys,time,resource,fcntl,json,os
+kind=KIND
+arguments=sys.argv[1:]
+started=time.perf_counter()
+r=subprocess.run([REAL,*arguments],check=False)
+usage=resource.getrusage(resource.RUSAGE_CHILDREN)
+category=kind
+operation=None
+if kind=='python':
+ category=os.path.basename(arguments[0]) if arguments and arguments[0].endswith('.py') else 'python-inline'
+ if category=='stage_cache.py' and len(arguments)>1: operation=arguments[1]
+with open(PROFILE,'a') as f:
+ fcntl.flock(f,fcntl.LOCK_EX)
+ f.write(json.dumps({'sample':os.path.basename(os.environ.get('REPLAY_JOURNAL','unknown')),'tool':category,'operation':operation,'wallMs':(time.perf_counter()-started)*1000,'childCpuMs':(usage.ru_utime+usage.ru_stime)*1000,'exitCode':r.returncode})+'\n')
+ f.flush()
+raise SystemExit(r.returncode)
+"""
+def execute(command,env,cwd,input_text=None):
+ tools=Path(env['PATH'].split(':')[0])
+ if tools not in wrapped:
+  wrapped.add(tools)
+  for kind,real in [('python',sys.executable),('jq','/usr/bin/jq'),('date','/bin/date')]:
+   p=tools/kind
+   if p.exists() or p.is_symlink():p.unlink()
+   body=wrapper.replace('KIND',repr(kind)).replace('REAL',repr(real)).replace('PROFILE',repr(str(profile_file)))
+   p.write_text('#!'+sys.executable+'\n'+body);p.chmod(0o700)
+ return original_execute(command,env,cwd,input_text)
+m.execute=execute
+sys.argv=['benchmark_media_orchestration.py','--pairs','1','--output',str(Path(__file__).resolve().parent/'profile-replay-v2')]
+m.main()

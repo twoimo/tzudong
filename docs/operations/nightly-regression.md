@@ -209,7 +209,7 @@ This diagnostic does not repair ACLs, update the migration ledger, clear ambigui
 
 ## Replay receipt version and source accounting
 
-Admission requires accounting for 101 source units: 98 source applications, two `verified-existing` overlaps, and one `legacy-contract-preserved` PG15 contract. Each non-application row contains its full pinned verification proof and an independently read-back proof digest. These statuses do not assert that hosted PG17 repair SQL ran. A conflicting terminal proof is never overwritten; uncertain outcomes still require a fresh isolated database.
+Admission requires accounting for 126 source units: 123 source applications, two `verified-existing` overlaps, and one `legacy-contract-preserved` PG15 contract. Each non-application row contains its full pinned verification proof and an independently read-back proof digest. These statuses do not assert that hosted PG17 repair SQL ran. A conflicting terminal proof is never overwritten; uncertain outcomes still require a fresh isolated database.
 
 Receipt content now uses `local-receipt-v2` with the unchanged `receipt-v1` row serializer. The historical artifact filename `local-receipt-v1.json` remains the workflow path, but readers reject v1 **content** and require the v2 `replay_proofs` field. The web, closure and publication checks validate the same exact source/proof bindings. These source changes do not establish a successful current full-stack replay.
 
@@ -356,7 +356,7 @@ set +a
 
 For ordinary development and generated schema types, do not source the file.
 The wrappers validate owner-only provenance, current service readiness, and the
-101-unit source ledger before exposing only mapped loopback values to the
+126-unit source ledger before exposing only mapped loopback values to the
 child process:
 
 ```sh

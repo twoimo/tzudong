@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "artifacts": {
+    "README.md": {
+      "bytes": 1054,
+      "sha256": "4408ffb88c32438ed9c799dbd7c11be15936c730ffc1c1617c0d507cdf509af7"
+    },
+    "baseline-source.txt": {
+      "bytes": 16833,
+      "sha256": "0549f7d77ddb5bf1d11ccd86b9e0f914139202fa3d932fd4de189fc7735c1584"
+    },
+    "paired-counts-raw.json": {
+      "bytes": 1274,
+      "sha256": "5ca019f386882e4d766c487c8febe3ff2d5e6c92929c29b0bc5d657b90c9823e"
+    },
+    "paired-counts-source.txt": {
+      "bytes": 2974,
+      "sha256": "f531c2a9b0d389b4e96c459f8407c786a8645e0f2c8edaf2fdacec6fb3bceb60"
+    },
+    "source-bindings.json": {
+      "bytes": 397,
+      "sha256": "1a50b1b001f75dbbbeafa14775476012f50d64856fc4d4d72df5df83c651e1f4"
+    },
+    "summary.json": {
+      "bytes": 2488,
+      "sha256": "3c63fa3626d0ddc1407e3963e2dcf7746e3f5f4c96952e523e3f7a9b11d70301"
+    }
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "kind": "local_experimental_comparison",
+  "liveEvidenceEligible": false,
+  "formalPerformanceClaim": "not_established",
+  "formalLimitations": [
+    "No 24-hour live observation window",
+    "No production or live-provider timing",
+    "Complete repository G003 evidence-set scorer/validator not satisfied"
+  ],
+  "transform": {
+    "cold": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 537.8771249670535,
+      "afterMs": 853.4740421455353,
+      "absoluteReductionMs": -315.5969171784818,
+      "reductionPercent": -58.67453783200263,
+      "reduction95CI": [
+        -65.27773936198675,
+        -48.136745348646826
+      ],
+      "experimentalNoiseBudgetMs": 110.0873346440494,
+      "mediansMs": [
+        523.7714578397572,
+        796.7936669010669
+      ]
+    },
+    "unchanged": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 539.5253340248019,
+      "afterMs": 257.84012489020824,
+      "absoluteReductionMs": 281.6852091345936,
+      "reductionPercent": 52.20982062756012,
+      "reduction95CI": [
+        49.299075933707094,
+        53.03233165006541
+      ],
+      "experimentalNoiseBudgetMs": 17.8834181278944,
+      "mediansMs": [
+        531.9793748203665,
+        254.67758299782872
+      ]
+    },
+    "delta-five": {
+      "samples": 7,
+      "statistic": "p75",
+      "beforeMs": 581.5122500061989,
+      "afterMs": 447.2480001859367,
+      "absoluteReductionMs": 134.2642498202622,
+      "reductionPercent": 23.0888085021134,
+      "reduction95CI": [
+        20.229648479720975,
+        24.656696065688166
+      ],
+      "experimentalNoiseBudgetMs": 20.246416330337524,
+      "mediansMs": [
+        563.524833181873,
+        438.13054193742573
+      ]
+    }
+  },
+  "apiReplay": {
+    "samples": 100,
+    "statistic": "p95",
+    "beforeMs": 13.15083299999992,
+    "afterMs": 0.9415840000001481,
+    "absoluteReductionMs": 12.209248999999772,
+    "reductionPercent": 92.84011894911787,
+    "reduction95CI": [
+      89.90860738821321,
+      93.93716119388587
+    ],
+    "experimentalNoiseBudgetMs": 2.178542000000107,
+    "mediansMs": [
+      10.53127100000006,
+      0.5980414999997947
+    ]
+  },
+  "providerReplay": {
+    "samples": 7,
+    "statistic": "p75",
+    "beforeMs": 758.7471669539809,
+    "afterMs": 41.000042110681534,
+    "absoluteReductionMs": 717.7471248432994,
+    "reductionPercent": 94.59634989145623,
+    "reduction95CI": [
+      94.34298262365792,
+      94.82231854072634
+    ],
+    "experimentalNoiseBudgetMs": 3.6292499862611294,
+    "mediansMs": [
+      755.905875004828,
+      40.048457914963365
+    ]
+  },
+  "dataset": {
+    "sha256": "71d4a176f6eff028cecf4963f3332f97c14284148b6d769e3617fce8ef8361c9",
+    "files": 3307,
+    "bytes": 23636539
+  },
+  "quality": {
+    "transformRecords": 1257,
+    "transformOutputHashesEquivalent": true,
+    "originalSourcePreserved": true,
+    "pageIdsEquivalent": true,
+    "paginationOver10000Omissions": 0,
+    "paginationOver10000Duplicates": 0
+  },
+  "apiIndexBuildMs": 10.868959,
+  "providerAttempts": {
+    "before": 500,
+    "after": 25,
+    "actualNetworkCallsInReplay": 0
+  },
+  "payload": {
+    "baseline": {
+      "payloadBytes": 4905647,
+      "gzipBytes": 937532
+    },
+    "candidate": {
+      "payloadBytes": 163824,
+      "gzipBytes": 23115
+    }
+  },
+  "browser": {
+    "samples": 100,
+    "errors": 0,
+    "p75Ms": 2992.653874999989,
+    "p95Ms": 3730.050707999995,
+    "baselineAvailable": false
+  },
+  "amortization": {
+    "formula": "N*warm_saving > cold_overhead",
+    "unchangedRerunsToRecoverColdOverhead": 2
+  },
+  "environment": {
+    "os": "Darwin",
+    "architecture": "arm64",
+    "python": "3.14.7",
+    "webRuntime": "Node 24.21.0",
+    "next": "16.3.5",
+    "typescriptNative": "7.0.2",
+    "typescriptCompat": "6.0.2",
+    "postgresFixture": "15.8"
+  },
+  "verification": {
+    "webUnitPassed": 2620,
+    "webUnitSkipped": 9,
+    "backendOrchestrationPassed": 213,
+    "backendContractsAndCachePassed": 86,
+    "backendEvidenceFixtureSkipped": 1,
+    "nodeUtilityPassed": 11,
+    "browserNavigations": 100,
+    "browserRuntimeErrors": 0,
+    "sqlPermissionAndReadbackVerified": true,
+    "productionBundleCompiled": true,
+    "productionGeneratedRouteTypesPassed": true
+  },
+  "credit": {
+    "currentOffersRedeemedUSD": 60,
+    "gcpBalanceDisplay": "\u20a98.15\ub9cc",
+    "prepaidBalanceKRW": 0,
+    "autoReloadEnabled": false,
+    "futureOfferAutoApplyEnabled": false,
+    "cashPurchaseExecuted": false,
+    "projectBillingConnectionExecuted": false,
+    "additionalApprovalPending": true
+  }
+}

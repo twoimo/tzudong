@@ -1,0 +1,155 @@
+{
+  "observedAt": "2026-10-09T04:28:02.790Z",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "readOnly": true,
+  "sourceHead": "56819502aaa6993d847efb8b78a5bcd6a4ecdaf2",
+  "base": {
+    "ledger_count": 80,
+    "latest_ledger": "20261008124858",
+    "review_tables": [
+      "restaurant_review_items",
+      "restaurant_review_policy",
+      "restaurant_review_policy_events",
+      "restaurant_review_runs"
+    ],
+    "server_version": "17.6",
+    "restaurant_count": 1659,
+    "guarded_rpc_present": false,
+    "raw_warning_rpc_present": false,
+    "pending_versions_present": 0
+  },
+  "details": {
+    "policies": [
+      {
+        "enabled": false,
+        "version": 1,
+        "batch_size": 50,
+        "daily_limit": 50,
+        "last_run_at": null
+      }
+    ],
+    "functions": [
+      {
+        "owner": null,
+        "present": false,
+        "settings": null,
+        "signature": "pipeline_control.lock_restaurant_review_catalog_revision()",
+        "body_sha256": null,
+        "auth_execute": false,
+        "service_execute": false,
+        "security_definer": null
+      },
+      {
+        "owner": "postgres",
+        "present": true,
+        "settings": [
+          "search_path=\"\""
+        ],
+        "signature": "pipeline_control.restaurant_review_manual_preview(uuid,text)",
+        "body_sha256": "62720283cc47a766451a0e483e628e15175bf3038a7ccc0b26444f4bfc4dee52",
+        "auth_execute": false,
+        "service_execute": true,
+        "security_definer": false
+      },
+      {
+        "owner": null,
+        "present": false,
+        "settings": null,
+        "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+        "body_sha256": null,
+        "auth_execute": false,
+        "service_execute": false,
+        "security_definer": null
+      },
+      {
+        "owner": null,
+        "present": false,
+        "settings": null,
+        "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+        "body_sha256": null,
+        "auth_execute": false,
+        "service_execute": false,
+        "security_definer": null
+      },
+      {
+        "owner": "privacy_workflow_owner",
+        "present": true,
+        "settings": [
+          "search_path=\"\""
+        ],
+        "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "body_sha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+        "auth_execute": true,
+        "service_execute": true,
+        "security_definer": true
+      },
+      {
+        "owner": "privacy_workflow_owner",
+        "present": true,
+        "settings": [
+          "search_path=\"\""
+        ],
+        "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "body_sha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+        "auth_execute": true,
+        "service_execute": true,
+        "security_definer": true
+      },
+      {
+        "owner": "privacy_workflow_owner",
+        "present": true,
+        "settings": [
+          "search_path=\"\""
+        ],
+        "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+        "body_sha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+        "auth_execute": true,
+        "service_execute": true,
+        "security_definer": true
+      }
+    ],
+    "review_runs": 0,
+    "review_items": 0,
+    "active_review_items": 0
+  },
+  "correctedCanonicalManualReadback": [
+    {
+      "owner": "postgres",
+      "present": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "signature": "pipeline_control.restaurant_review_manual_preview(uuid,text)",
+      "body_sha256": "62720283cc47a766451a0e483e628e15175bf3038a7ccc0b26444f4bfc4dee52",
+      "auth_execute": false,
+      "service_execute": true,
+      "security_definer": false
+    },
+    {
+      "owner": "postgres",
+      "present": true,
+      "settings": [
+        "search_path=\"\"",
+        "lock_timeout=2s"
+      ],
+      "signature": "public.restaurant_review_automation_manual(uuid,text,text,text,uuid)",
+      "body_sha256": "ec67787639924dbc0a6c6b3753995ba211dae8e4d49cef7e0639d36e2084d7eb",
+      "auth_execute": false,
+      "service_execute": true,
+      "security_definer": false
+    }
+  ],
+  "nonCanonicalProbe": {
+    "owner": null,
+    "present": false,
+    "settings": null,
+    "signature": "public.admin_restaurant_review_manual(uuid,text,uuid,text,text)",
+    "body_sha256": null,
+    "auth_execute": false,
+    "service_execute": false,
+    "security_definer": null
+  },
+  "probeCorrection": "Initial admin_restaurant_review_manual probe is not the source contract; its absence is not absence of the real manual API. Canonical restaurant_review_automation_manual was read separately and matches forward127 exact old body SHA.",
+  "operatingWrites": false,
+  "limitations": "Three read-only transactions, not one shared snapshot. Metadata/counts only; no apply, deployment, quality or function-execution proof."
+}

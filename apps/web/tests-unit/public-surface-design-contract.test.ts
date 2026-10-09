@@ -45,7 +45,6 @@ const PAGE_MATRIX = [
   'app/admin/banners/page.tsx',
   'app/admin/submissions/page.tsx',
   'app/admin/privacy-incidents/page.tsx',
-  'app/s/[code]/page.tsx',
 ] as const;
 
 const APP_RUNTIME_LAYOUT_FAMILIES = [
@@ -171,12 +170,14 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'storyboard-canvas-toolbar',
   'storyboard-chat-examples',
   'storyboard-chat-attachments',
+  'knowledge-graph-canvas',
+  'insights-controls',
 ] as const;
 
 const LIGHT_TOKEN_LITERALS = [
-  '--background: 38 30% 98%',
-  '--primary: 0 74% 42%',
-  '--radius: 0.5rem',
+  '--background: 220 27% 98%',
+  '--primary: 352 74% 42%',
+  '--radius: 0.625rem',
   '--app-header-height: 56px',
   '--mobile-bottom-nav-height: 60px',
 ] as const;
@@ -232,7 +233,7 @@ function collectOwnerAttributeValues(root: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) {
+        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".next")) {
           continue;
         }
         visit(fullPath);
@@ -260,7 +261,7 @@ function walkCssUnder(root: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) {
+        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".next")) {
           continue;
         }
         visit(fullPath);
@@ -276,10 +277,14 @@ function walkCssUnder(root: string): string[] {
 }
 
 describe('public surface design contract', () => {
-  test('page inventory is exactly the 27-row matrix', () => {
+  test('page and share transport inventory preserves all 27 surfaces', () => {
     const actual = walkFiles(appDir, (name) => name === 'page.tsx');
     expect(actual).toEqual([...PAGE_MATRIX].sort());
-    expect(actual).toHaveLength(27);
+    const transport = 'app/s/[code]/route.ts';
+    expect([...actual, transport]).toHaveLength(27);
+    expect(existsSync(join(appRoot, transport))).toBe(true);
+    expect(readApp(transport)).toContain('export async function GET(');
+    expect(existsSync(join(appRoot, 'app/s/[code]/page.tsx'))).toBe(false);
   });
 
   test('loading files use the three-way taxonomy and do not treat null loaders as missing', () => {
@@ -331,7 +336,9 @@ describe('public surface design contract', () => {
     expect(readApp('app/data-deletion/page.tsx')).not.toContain('AppRuntimeLayout');
     expect(existsSync(join(appRoot, 'app/privacy/layout.tsx'))).toBe(false);
     expect(existsSync(join(appRoot, 'app/data-deletion/layout.tsx'))).toBe(false);
-    expect(readApp('app/s/[code]/page.tsx')).toContain('notFound()');
+    expect(readApp('app/s/[code]/route.ts')).toContain('resolveShortUrlRead(');
+    expect(readApp('app/s/[code]/route.ts')).toContain('createShortUrlResponse');
+    expect(readApp('app/s/[code]/route.ts')).not.toContain('notFound()');
     expect(readApp('app/s/layout.tsx')).toContain('AppRuntimeLayout');
   });
 
@@ -397,7 +404,9 @@ describe('public surface design contract', () => {
     expect(notFoundSource).toContain('text-muted-foreground');
     expect(notFoundSource).not.toContain('CenteredErrorState');
     expect(readApp('app/error.tsx')).toContain('CenteredErrorState');
-    expect(readApp('app/s/[code]/page.tsx')).toContain('notFound()');
+    expect(readApp('app/s/[code]/route.ts')).toContain('resolveShortUrlRead(');
+    expect(readApp('app/s/[code]/route.ts')).toContain('createShortUrlResponse');
+    expect(readApp('app/s/[code]/route.ts')).not.toContain('notFound()');
     expect(readApp('app/layout.tsx')).toContain('import "./globals.css"');
     expect(readApp('app/layout.tsx')).not.toContain('app-globals.css');
     expect(readApp('app/s/layout.tsx')).toContain('AppRuntimeLayout');
@@ -409,7 +418,7 @@ describe('public surface design contract', () => {
       expect(partial).toContain(literal);
     }
     expect(partial).not.toMatch(/^\.dark\s*\{/m);
-    expect(partial).not.toContain('--primary: 0 74% 50%');
+    expect(partial).not.toContain('--primary: 352 78% 62%');
     expect(partial).not.toContain('@import "tailwindcss"');
     expect(partial).not.toContain('@source');
 
@@ -419,7 +428,7 @@ describe('public surface design contract', () => {
       globalsSource.indexOf(':root {'),
     );
     expect(globalsSource).not.toMatch(/@layer base[\s\S]*@import "\.\.\/styles\/light-root-tokens\.css"/);
-    expect(globalsSource).not.toContain('--primary: 0 74% 50%');
+    expect(globalsSource.match(/:root\s*\{[\s\S]*?\n\}/)?.[0]).not.toContain('--primary:');
 
     for (const owner of [
       'app/home-app-globals.css',
@@ -435,7 +444,7 @@ describe('public surface design contract', () => {
       );
     }
 
-    expect(readApp('app/app-globals.css')).toContain('--primary: 0 74% 50%');
+    expect(readApp('app/app-globals.css')).toContain('--primary: 352 78% 62%');
     expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: calc(8.75rem * var(--phi))');
   });
 

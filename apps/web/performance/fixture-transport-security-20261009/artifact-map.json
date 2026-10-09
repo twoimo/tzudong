@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/README.md",
+      "sha256": "d3d1837d72f8cbea8d88ab82cbfbca53ef4aee568f71cf64b7abfc76231e0ab4",
+      "bytes": 2305
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/loopback-transport.mjs",
+      "sha256": "2a6409c33cb7e3708451ca2d8ec5075cbe03a1107afd4c56a3ce9d5585b29382",
+      "bytes": 3575
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/original-bindings.json",
+      "sha256": "932e8c213094e00922d9c7e274d37f909fc6947866006bfde5df9c8652a440fa",
+      "bytes": 1905
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/originals/approved-fixture-gateway.mjs.txt",
+      "sha256": "e760d6bb2f5471c6f0e1ec9a50cf428bb119b1fd4e3149eca7d99ca4980e4965",
+      "bytes": 23756
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/originals/artifact-map-amendment1.json.txt",
+      "sha256": "794ab436248f8612f722987aadc4eb1dc07e9f5062f03b2d59738614ad70377a",
+      "bytes": 2881
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/originals/artifact-map.json.txt",
+      "sha256": "6d6f49d5c4a752ceb9e227fabec7348997bc2f880bdde0f1e082771ab07b26af",
+      "bytes": 7556
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/originals/fixture-gateway.mjs.txt",
+      "sha256": "8bf12b85fc6e0df9549c0c4d3d25ccd405fb68841996bc3c01566e6c12714b03",
+      "bytes": 23359
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/originals/title-fixture-gateway.mjs.txt",
+      "sha256": "ee4995124f01a207cd080ace249c9da0548754b355c49b31ad15de0c4de05b33",
+      "bytes": 23397
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/originals/transport-verification-67.json.txt",
+      "sha256": "6b56759435961d80fecb481450e2d4ce64f2aa3cae7286f551e9798a145cd553",
+      "bytes": 9306
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/originals/web-artifact-map.json.txt",
+      "sha256": "cb62091141340f3f9d53fa54958e4a8a0ec25d29a5b5e5b239fd4795b9b8b70d",
+      "bytes": 10028
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/resolved-48-source-reviews.json",
+      "sha256": "2bdf81d868a58ff20c8b3df6c3352234fdedc917e7cc0252fdb8bed71088cef4",
+      "bytes": 1856
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/transport-verification.json",
+      "sha256": "9bb351f45020560b6d025610ff73cb3940466472b59127430dda4614619d68c6",
+      "bytes": 10052
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/vercel-readiness.json",
+      "sha256": "51495e9ac1c498323859c665750bd172a0b1024563c2b538547530b642c74421",
+      "bytes": 960
+    },
+    {
+      "path": "apps/web/performance/fixture-transport-security-20261009/verify-transport.mjs",
+      "sha256": "f5103b0aa984dcc340e5263c9d3e87e7052eeb54c747c97d047169f328ab0c3d",
+      "bytes": 9796
+    },
+    {
+      "path": "apps/web/performance/graph-cms-followthrough-20261009/fixture-gateway.mjs",
+      "sha256": "3874fa50526976c6b52ade81d5d68d47e61b673eae610d7280cd1b8b69a22d2a",
+      "bytes": 22955
+    },
+    {
+      "path": "apps/web/performance/graph-cms-followthrough-20261009/title-fixture-gateway.mjs",
+      "sha256": "bc55d908ff87ec8330225e1823d4de974a324bf90b06dbfbde37ca249b41bca5",
+      "bytes": 22993
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/approved-fixture-gateway.mjs",
+      "sha256": "ebc667cf502309cc0b0cd69f18ad3ca7d3a3c38aafa82b04fb79b859454c5ad0",
+      "bytes": 23352
+    }
+  ]
+}

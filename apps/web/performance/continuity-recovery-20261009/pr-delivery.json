@@ -1,0 +1,46 @@
+{
+  "observedAt": "2026-10-09T07:23:15Z",
+  "repository": "twoimo/tzudong",
+  "pullRequest": {
+    "number": 3150,
+    "url": "https://github.com/twoimo/tzudong/pull/3150",
+    "state": "OPEN",
+    "mergeable": "MERGEABLE",
+    "base": "develop",
+    "head": "codex/pipeline-continuity-20261009"
+  },
+  "sourceBinding": {
+    "localHeadSha": "c483542c480225af6830e10d1c29365f2b010989",
+    "remoteBranchHeadSha": "c483542c480225af6830e10d1c29365f2b010989",
+    "pullRequestHeadSha": "c483542c480225af6830e10d1c29365f2b010989",
+    "releaseRunHeadSha": "c483542c480225af6830e10d1c29365f2b010989",
+    "localTreeSha": "34fcfa277aa2266a7ff020a1544a6d8cf75af987",
+    "remoteCommitTreeSha": "34fcfa277aa2266a7ff020a1544a6d8cf75af987",
+    "headAndTreeMatch": true
+  },
+  "requiredChecks": {
+    "allPassed": true,
+    "promotionPath": {
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "jobId": 113714659861,
+      "url": "https://github.com/twoimo/tzudong/actions/runs/37898297408/job/113714659861"
+    },
+    "release": {
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "runId": 37898297878,
+      "jobId": 113714660391,
+      "startedAt": "2026-10-09T07:18:53Z",
+      "completedAt": "2026-10-09T07:20:23Z",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/37898297878/job/113714660391",
+      "failureLogsRead": false
+    }
+  },
+  "excludedUserWork": [
+    "apps/web/CLAUDE.md",
+    "apps/web/performance/continuity-recovery-20261009/gemini-schema/"
+  ],
+  "sourceDefectFound": false,
+  "mergePerformed": false
+}

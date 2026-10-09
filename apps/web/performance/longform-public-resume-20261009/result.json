@@ -1,0 +1,164 @@
+{
+  "observedAtUtc": "2026-10-09T04:41:05.344244+00:00",
+  "authorizedBound": {
+    "maxVideos": 3,
+    "concurrency": 1,
+    "executionStrategy": "Existing supported CLI, single-video bound then readback; stopped after first rate-limit."
+  },
+  "admission": {
+    "observedAtUtc": "2026-10-09T04:39:25.216121+00:00",
+    "videoId": "O_hj9Ge-Fdk",
+    "endpoint": "youtube.com/oembed",
+    "requestsAllowed": 1,
+    "retries": 0,
+    "redirectsAllowed": false,
+    "collectorStarted": false,
+    "httpStatus": 200,
+    "metadataMatchesPublicYoutube": true,
+    "responseSha256": "8c5fcbfcc108d4b24d2bfcbbdb5bbb10eca6e335d3f821d6c9f69861463e5135",
+    "admitted": true
+  },
+  "attempt": {
+    "nodeVersion": "v24.19.0",
+    "ytDlpVersion": "2026.08.19",
+    "toolSessionId": 67936,
+    "collectorPid": null,
+    "processHandleState": "completed",
+    "exitCode": 75,
+    "startedVideoId": "O_hj9Ge-Fdk",
+    "attempted": 1,
+    "queued": 1,
+    "elapsedSec": 4,
+    "error": {
+      "id": "O_hj9Ge-Fdk",
+      "kind": "rate-limit",
+      "retryable": false,
+      "observedAt": "2026-10-09T04:39:59.843Z"
+    },
+    "retryable": false,
+    "nextVideosNotStarted": [
+      "6KDmeK_6qsI",
+      "DZXKCO_REJ4"
+    ],
+    "noRetransmissionAfterRateLimit": true
+  },
+  "readback": {
+    "status": "paused",
+    "pauseReason": "rate-limit",
+    "pendingBefore": 459,
+    "pendingAfter": 459,
+    "pendingOrderUnchanged": true,
+    "successWithCaptionsBefore": 611,
+    "successWithCaptionsAfter": 611,
+    "catalogCount": 1070,
+    "metadataRowsBefore": 611,
+    "metadataRowsAfter": 611,
+    "metadataAddedIds": [],
+    "metadataUpdatedIds": [],
+    "metadataRemovedIds": [],
+    "captionFilesAdded": [],
+    "captionFilesChanged": [],
+    "captionFilesRemoved": [],
+    "matchingLiveProcessCount": 0,
+    "lockExists": false
+  },
+  "backup": {
+    "privatePath": "/Users/twoimo/.codex/runtime-cache/longform-public-resume-20261009T043852Z-46217f",
+    "directoryMode": "0700",
+    "originalFilesMode": "0600",
+    "originalManifestSha256": "de69a2995487e17ee77aa77ad17bd4fc5669d0474e858c54deb45631f9072520",
+    "originalSnapshotsVerifiedUnchanged": true
+  },
+  "sourceInputHashes": [
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/checkpoint.json",
+      "beforeSha256": "04172cc14da4bfc3f87e25434f9397333b196b990dc3ee61c8cca3ba52acbf68",
+      "afterSha256": "d24f99535d773e96422b3a82cd80fb81202df66b81ebeac3013fba573222141f",
+      "changed": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/job.json",
+      "beforeSha256": "9185b8cc693eae0dbd715715dcb7907649c202a06308a43b7a88a69a1c53a60c",
+      "afterSha256": "9185b8cc693eae0dbd715715dcb7907649c202a06308a43b7a88a69a1c53a60c",
+      "changed": false
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/video-index.json",
+      "beforeSha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+      "afterSha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762",
+      "changed": false
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/metadata.json",
+      "beforeSha256": "ac925fd61860692e895044b88884d85d00f71095d122a6936d378cc22e3f2f0a",
+      "afterSha256": "ac925fd61860692e895044b88884d85d00f71095d122a6936d378cc22e3f2f0a",
+      "changed": false
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/resume-attempt-2026-10-06.json",
+      "beforeSha256": "f194f3dc5a42934156497ec8e6a5ef8114ad445ac0e664ef36b84e5b957d5592",
+      "afterSha256": "f194f3dc5a42934156497ec8e6a5ef8114ad445ac0e664ef36b84e5b957d5592",
+      "changed": false
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/source/corpus/collector.log",
+      "beforeSha256": "d22dd03524aa649a753d518e87e9114e91dd89df6ad8833307cf9fe110c68c17",
+      "afterSha256": "70dd3b4e8c077ad9afcf570a59ce19eb9df0406febd189b1008244eddc7fd6fe",
+      "changed": true
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang/profile.json",
+      "beforeSha256": "c75c29bc5cda5a175ffe21b67e3afacc94bb5a694eb24d256e6e685c4a85b1d9",
+      "afterSha256": "c75c29bc5cda5a175ffe21b67e3afacc94bb5a694eb24d256e6e685c4a85b1d9",
+      "changed": false
+    },
+    {
+      "path": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/collect-public-corpus.mjs",
+      "beforeSha256": "7e303c47bed79ff0a969ef2c424f3939090c4f4cfa952ebd828bd3f0ff6acbba",
+      "afterSha256": "7e303c47bed79ff0a969ef2c424f3939090c4f4cfa952ebd828bd3f0ff6acbba",
+      "changed": false
+    }
+  ],
+  "preservation": {
+    "newCookiesKeysProxiesProfiles": 0,
+    "modelOrQuotaChanges": 0,
+    "paidAnalysisCalls": 0,
+    "wholeCatalogPrune": false,
+    "sharedVaultOrPersonalMemoryWrites": 0,
+    "videoVisualOrAudioCompletionClaim": false
+  },
+  "limits": [
+    "oEmbed metadata 200 did not establish captions or yt-dlp endpoint rate-limit recovery.",
+    "Current evidence is the collector sanitized rate-limit classification and exit75; raw provider diagnostics were not logged in shared evidence.",
+    "Collected public metadata/caption artifacts are source evidence, not completed visual/audio analysis.",
+    "job.json remains its prior wrapper snapshot; fresh checkpoint/log and owned tool handle are execution evidence."
+  ],
+  "lifecycle": [
+    {
+      "at": "2026-10-09T04:39:56.285Z",
+      "event": "start",
+      "catalogCount": 1070,
+      "queued": 1,
+      "concurrency": 1
+    },
+    {
+      "at": "2026-10-09T04:39:59.844Z",
+      "event": "pause",
+      "id": "O_hj9Ge-Fdk",
+      "reason": "rate-limit"
+    },
+    {
+      "at": "2026-10-09T04:39:59.846Z",
+      "event": "finish",
+      "status": "paused",
+      "catalog": 1070,
+      "attempted": 1,
+      "queued": 1,
+      "pending": 459,
+      "successWithCaptions": 611,
+      "missing": 0,
+      "errors": 1,
+      "skippedTerminal": 0
+    }
+  ]
+}

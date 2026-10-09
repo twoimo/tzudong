@@ -1,0 +1,19 @@
+{
+  "observedAtUtc": "2026-10-09T01:44:59.054194+00:00",
+  "draftPath": "docs/operations/proposals/vercel-env-vars-maintainer-issue.md",
+  "draftSha256": "2c88eaf966f7e6b474b2f24d7c793f5a295579f9d101ffd45dbac6856e860ef3",
+  "recipient": "vercel/vercel-plugin/issues",
+  "posted": false,
+  "approvalQuestionPending": true,
+  "appUiAttempt": {
+    "surface": "Codex",
+    "operation": "getApp read-only entry",
+    "outcome": "denied by computer-use app safety policy",
+    "fallbackOrBypass": false,
+    "uiUpdateCapability": "unverified"
+  },
+  "managedCacheChanged": false,
+  "projectPinsChanged": false,
+  "mcpPermissionsChanged": false,
+  "officialPublicationDocs": "https://developers.openai.com/plugins/deploy/submission"
+}

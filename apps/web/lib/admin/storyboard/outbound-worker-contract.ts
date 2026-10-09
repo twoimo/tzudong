@@ -37,7 +37,7 @@ export function validateStoryboardWorkerOrigin(value: string): URL {
   let url: URL;
   try { url = new URL(value); } catch { throw new StoryboardProductionError('invalid_worker_origin'); }
   const local = ['127.0.0.1', '[::1]'].includes(url.hostname) && url.protocol === 'http:';
-  const hosted = url.hostname === 'tzudong.app' && url.protocol === 'https:' && !url.port;
+  const hosted = ['tzudong.app', 'www.tzudong.app'].includes(url.hostname) && url.protocol === 'https:' && !url.port;
   if ((!local && !hosted) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
     throw new StoryboardProductionError('invalid_worker_origin');
   }

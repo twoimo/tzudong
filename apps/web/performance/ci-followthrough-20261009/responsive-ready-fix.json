@@ -1,0 +1,7 @@
+{
+  "beforeSha256": "0ee6038c94ebd3d8576ff011545584de30453c7c3eb200a2166f9b34ef08f906",
+  "afterSha256": "eb999db52cf9c63db794d3718dc5b0bac356bcaff1a960ae3de4f2638b1503ed",
+  "change": "Wait for row aria-haspopup=dialog after viewport change; keep all drawer/Escape/focus assertions",
+  "productSourceModified": false,
+  "evidenceLimit": "The prior transient failure was not reproduced with state snapshots; current source uses asynchronous matchMedia effect and current drawer DOM/screenshot behaved correctly."
+}

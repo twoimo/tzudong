@@ -1,0 +1,66 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/storyboard-rag-service-role-boundary.test.ts:
+(pass) storyboard RAG service-role narrowing > bounded client module stays type-only and never imports the privileged client [0.41ms]
+(pass) storyboard RAG service-role narrowing > RAG routes narrow the privileged client instead of widening it to any [0.28ms]
+
+tests-unit/storyboard-production-api.test.ts:
+(pass) worker authentication and proof boundary > hashes canonical 32-byte-or-longer base64url token text with SHA256 [0.34ms]
+(pass) worker authentication and proof boundary > DB lookup gets only the hash and must return one UUID owner [1.85ms]
+(pass) worker authentication and proof boundary > requires paired heartbeat job and lease and forbids full document or diagnostic fields [1.56ms]
+(pass) worker authentication and proof boundary > requires configured local model, installed catalog capability and consistent evidence [2.63ms]
+(pass) worker authentication and proof boundary > manual proof is always generated as unverified user import [0.05ms]
+(pass) admin/API contracts and bounded failures > reads a recovered uncertain job without dropping the project snapshot [1.37ms]
+(pass) admin/API contracts and bounded failures > historical restore validates its strict envelope [0.19ms]
+(pass) admin/API contracts and bounded failures > restore goes through the atomic admin RPC without worker or model calls [0.74ms]
+(pass) admin/API contracts and bounded failures > restore refuses missing or corrupt original bytes before any mutation [7.55ms]
+(pass) admin/API contracts and bounded failures > full restore re-hashes only the bounded original and still proves every asset [4.07ms]
+(pass) admin/API contracts and bounded failures > versions and preview use the authenticated existing project GET handler [0.35ms]
+(pass) admin/API contracts and bounded failures > restore DB failures have bounded HTTP codes [1.16ms]
+(pass) admin/API contracts and bounded failures > all admin endpoints require auth before params, body, storage or DB work [0.15ms]
+(pass) admin/API contracts and bounded failures > synthetic dev/e2e identities cannot become UUID owners [0.09ms]
+(pass) admin/API contracts and bounded failures > admin mutations reject cross-origin even with an arbitrary bearer header [0.06ms]
+(pass) admin/API contracts and bounded failures > invalid IDs and unknown payload fields fail before DB calls [1.05ms]
+(pass) admin/API contracts and bounded failures > external providers need consent and configured official APIs never dispatch [0.47ms]
+(pass) admin/API contracts and bounded failures > actual JSON size is bounded even with a false content-length [0.31ms]
+(pass) admin/API contracts and bounded failures > fixed error response never includes exception strings or DB diagnostics [0.13ms]
+(pass) admin/API contracts and bounded failures > worker endpoint authenticates before consuming invalid JSON [0.08ms]
+(pass) multipart and transactional image checkpoints > rejects unknown and duplicate multipart fields [1.69ms]
+(pass) multipart and transactional image checkpoints > bounds chunked multipart bytes before parsing a file [0.11ms]
+(pass) multipart and transactional image checkpoints > manual image import rejects projectId mismatch and provenance metadata [1.91ms]
+(pass) multipart and transactional image checkpoints > rechecks lease after upload and removes unreferenced variants after cancellation [5.78ms]
+(pass) multipart and transactional image checkpoints > reads back an uncertain checkpoint before cleanup and accepts only its committed asset [2.87ms]
+(pass) multipart and transactional image checkpoints > keeps uploaded files private when checkpoint readback is itself uncertain [3.06ms]
+(pass) multipart and transactional image checkpoints > rejects mismatched MIME or provenance before any upload [2.68ms]
+(pass) private asset downloads and bounded reopenable exports > exports original plus WebP bytes and preserves request/document fields [2.83ms]
+(pass) private asset downloads and bounded reopenable exports > selects only the exact DB variant basename and checks MIME and SHA256 [2.57ms]
+(pass) private asset downloads and bounded reopenable exports > refuses URL parameters and extra/duplicate variant selectors [0.21ms]
+(pass) private asset downloads and bounded reopenable exports > export rejects document asset claims that differ from authoritative rows [2.14ms]
+(pass) private asset downloads and bounded reopenable exports > checks total base64 export budget before downloading any object [2.34ms]
+
+tests-unit/storyboard-gemini-rag.test.ts:
+(pass) Gemini RAG isolation and existing data preservation without paid calls > missing/reused inbound capability and unsafe remote URLs fail before transport [0.45ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > remote HTTPS accepts the independent capability and loopback HTTP remains supported [0.23ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > route admits an exact legacy document ahead of a full dense pool while keeping fixed fingerprint [2.22ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > rejects old fingerprints even at matching dimensions without a second call [0.07ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > new versioned writes preserve the old external identity and metadata [0.98ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > query vector search is isolated; legacy text is still returned and is never vector-selected [0.34ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > provider failure has no write or hidden retry and does not return raw diagnostic [0.34ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > legacy read failure does not silently discard existing documents or rerank [0.25ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > user-supplied query vectors cannot replace the server embedding [0.09ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > invalid reused vectors and mismatched spaces fail before worker transport [0.24ms]
+(pass) Gemini RAG isolation and existing data preservation without paid calls > rejects forged candidate IDs rather than accepting provider-supplied content [0.07ms]
+
+tests-unit/storyboard-production-catalog.test.ts:
+(pass) store list to workspace provider selection > validated Gemini ownership survives serialization for both selected capabilities [0.43ms]
+(pass) store list to workspace provider selection > missing, MLX ownership, offline, unapproved model or wrong capability cannot enable selection [0.17ms]
+
+tests-unit/storyboard-rag-admission.test.ts:
+(pass) bounded admission across Gemini and legacy text pools > exact legacy title survives a full fifty-row dense pool without old vector comparison [0.10ms]
+(pass) bounded admission across Gemini and legacy text pools > lexical ranking from the dense pool also survives fifty strong legacy candidates [0.05ms]
+(pass) bounded admission across Gemini and legacy text pools > deduplicates shared identities; empty and dense-only pools stay bounded and deterministic [0.03ms]
+
+ 50 pass
+ 0 fail
+ 251 expect() calls
+Ran 50 tests across 5 files. [246.00ms]

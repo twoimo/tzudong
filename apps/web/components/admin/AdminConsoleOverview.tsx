@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
 import dynamic from "next/dynamic";
 import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import Image from "next/image";
@@ -23,6 +25,7 @@ import {
   Activity,
   BarChart2,
   Bot,
+  Bug,
   CheckCircle2,
   ClipboardCheck,
   Clapperboard,
@@ -37,6 +40,7 @@ import {
   Maximize2,
   Minimize2,
   Monitor,
+  Network,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -133,7 +137,9 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
+import { RestaurantManagementWorkspace } from "@/components/admin/RestaurantManagementWorkspace";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
+import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
@@ -167,6 +173,24 @@ type SidebarSection = {
 };
 
 const consoleModules: ConsoleModule[] = [
+  {
+    id: "knowledge-graph",
+    title: "지식 그래프",
+    description: "쯔양 영상·맛집·메뉴 근거",
+    href: "/admin?module=knowledge-graph",
+    icon: Network,
+    badge: "OSK",
+    actionLabel: "지식 탐색",
+  },
+  {
+    id: "sentry",
+    title: "오류 모니터링",
+    description: "Sentry 오류 현황",
+    href: "/admin?module=sentry",
+    icon: Bug,
+    badge: "Sentry",
+    actionLabel: "오류 확인",
+  },
   {
     id: "restaurants",
     title: "맛집 관리",
@@ -244,13 +268,13 @@ const consoleModules: ConsoleModule[] = [
   },
   {
     id: "insights",
-    title: "핵심 인사이트",
+    title: "영상 성과 분석",
     description:
       "조회수/좋아요/댓글/영상 길이 기반 트리맵과 변화 추이를 확인합니다.",
     href: "/admin?module=insights",
     icon: BarChart2,
     badge: "분석",
-    actionLabel: "핵심 인사이트 보기",
+    actionLabel: "영상 성과 분석 보기",
   },
   {
     id: "pipeline",
@@ -386,7 +410,6 @@ const sidebarSections: SidebarSection[] = [
       .filter((module) =>
         [
           "restaurants",
-          "restaurant-refresh-history",
           "submissions",
           "reviews",
         ].includes(module.id),
@@ -401,7 +424,7 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
-    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline"]),
+    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"]),
   },
   {
     label: "실험실",
@@ -630,7 +653,7 @@ function moveAdminSidebarItem(
 ): AdminSidebarOrderPreference {
   const normalized = normalizeAdminSidebarOrder(order);
   const sectionItems = normalized.items[section] ?? [];
-  const index = sectionItems.indexOf(itemId);
+  const index = sectionItems.findIndex(id => id === itemId);
 
   return {
     ...normalized,
@@ -687,6 +710,14 @@ function loadAdminUsersModule() {
   return import("@/components/admin/AdminUsersPanel");
 }
 
+function loadAdminSentryModule() {
+  return import("@/components/admin/AdminSentryPanel").then((module) => module.AdminSentryPanel);
+}
+
+function loadAdminKnowledgeGraphModule() {
+  return import("@/components/admin/AdminKnowledgeGraphPanel").then((module) => module.AdminKnowledgeGraphPanel);
+}
+
 function loadAdminStoryboardGenerator() {
   return import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
     (module) => module.AdminStoryboardGenerator,
@@ -726,9 +757,9 @@ function AdminEvaluationModuleStaticShell() {
     >
       <span className="sr-only">정적인 관리자 데이터 검수 컨트롤은 바로 표시하고, 동적인 검수 데이터만 불러오는 중입니다.</span>
       <div className="border-b border-border bg-card px-2 py-1.5">
-        <div className="flex min-h-10 items-start justify-between gap-1.5 lg:items-center">
+        <div className="flex min-h-8 items-center justify-between gap-1.5">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="sr-only">
               <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-primary" aria-hidden="true">
                 <ClipboardCheck className="h-5 w-5" strokeWidth={2.25} />
               </span>
@@ -737,7 +768,7 @@ function AdminEvaluationModuleStaticShell() {
               </h1>
             </div>
             <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
+              전체 집계 중
             </div>
           </div>
           <div className="ml-auto flex items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
@@ -871,6 +902,9 @@ const AdminUsersModule = dynamic(loadAdminUsersModule, {
   loading: () => null,
 });
 
+const AdminSentryModule = dynamic(loadAdminSentryModule, { ssr: false, loading: () => null });
+const AdminKnowledgeGraphModule = dynamic(loadAdminKnowledgeGraphModule, { ssr: false, loading: () => null });
+
 const AdminStoryboardGenerator = dynamic(loadAdminStoryboardGenerator, {
   ssr: false,
   loading: () => null,
@@ -923,6 +957,10 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
       return loadAdminYoutubeThumbnailGenerator();
     case "users":
       return loadAdminUsersModule();
+    case "sentry":
+      return loadAdminSentryModule();
+    case "knowledge-graph":
+      return loadAdminKnowledgeGraphModule();
     case "insights":
       return loadInsightsModule();
     case "pipeline":
@@ -1860,10 +1898,10 @@ function getAdminDashboardDataQualityStatus(
 function getAdminDashboardDeltaSourceLabel(
   source: AdminYouTubeChannelStats["deltaSource"],
 ) {
-  if (source === "snapshot-delta") return "수집 delta";
-  if (source === "derived-live-comparison") return "실시간-스냅샷 비교";
-  if (source === "derived-snapshot-comparison") return "스냅샷 재계산";
-  return "delta 대기";
+  if (source === "snapshot-delta") return "수집한 변화량";
+  if (source === "derived-live-comparison") return "현재·이전 비교";
+  if (source === "derived-snapshot-comparison") return "이전 기록 비교";
+  return "비교 기록 없음";
 }
 
 function getVideoEngagementTotal(video: InsightTreemapVideoRow) {
@@ -3207,30 +3245,29 @@ function AdminDashboardInfoTooltip({
   lines: string[];
 }) {
   return (
-    <UiTooltipProvider delayDuration={150}>
-      <UiTooltip>
-        <UiTooltipTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label={`${label} · 초보자 설명`}
-            data-admin-dashboard-metric-tooltip="beginner-plain"
-          >
-            <Info className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </UiTooltipTrigger>
-        <UiTooltipContent
-          side="top"
-          align="start"
-          className={adminDashboardTooltipPortalClassName}
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`${label} · 초보자 설명`}
+          data-admin-dashboard-metric-tooltip="beginner-plain"
         >
-          <AdminDashboardTooltipLinesPanel
-            lines={lines}
-            dataAttribute="metric-info"
-          />
-        </UiTooltipContent>
-      </UiTooltip>
-    </UiTooltipProvider>
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        aria-label={label}
+        className={adminDashboardTooltipPortalClassName}
+      >
+        <AdminDashboardTooltipLinesPanel
+          lines={lines}
+          dataAttribute="metric-info"
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -3797,13 +3834,8 @@ function AdminDashboardManagementSkeleton() {
       role="status"
       aria-busy="true"
     >
-      <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="hidden min-w-0 md:block">
-          <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
-          </h1>
-        </div>
-        <div
+      <AdminPageHeader title="쯔양 성과 대시보드" icon={Activity} className="mb-2"
+        actions={<div
           className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
@@ -3887,8 +3919,8 @@ function AdminDashboardManagementSkeleton() {
               </Button>
             ))}
           </div>
-        </div>
-      </div>
+        </div>}
+      />
       <p
         className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-2xs font-semibold leading-5 text-muted-foreground md:hidden"
         data-admin-dashboard-mobile-loading-prompt="true"
@@ -3896,7 +3928,7 @@ function AdminDashboardManagementSkeleton() {
         KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
       </p>
 
-      <div className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
+      <div className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
         <AdminDashboardKpiCard
           widgetId="subscribers"
           title="현재 구독자"
@@ -3951,7 +3983,7 @@ function AdminDashboardManagementSkeleton() {
           value="—"
           progress={0}
           tone="neutral"
-          className="lg:col-span-2"
+          className="col-span-2 lg:col-span-2"
           delta="—"
           deltaLabel="기간 대비"
           isLoading
@@ -4146,7 +4178,7 @@ function AdminDashboardCardTitle({
         data-admin-dashboard-card-title-row="single-line"
       >
         <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5">
-          <p className="truncate whitespace-nowrap text-2xs font-extrabold leading-none text-foreground">
+          <p className="text-sm font-semibold leading-5 text-foreground" data-admin-dashboard-card-title-text="true">
             {title}
             {metric ? (
               <span
@@ -4291,17 +4323,21 @@ function AdminDashboardKpiCard({
   const chartData = sparklineData.filter((point) =>
     Number.isFinite(point.value),
   );
+  const metricInfoLines = infoLines.filter(
+    (line) => !/^(설명|읽는 법|주의):/.test(line),
+  );
 
   return (
     <div
       className={cn(
         adminDashboardCardClass,
-        "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
+        "relative z-0 grid min-h-[96px] grid-rows-[auto_minmax(0,1fr)_auto] gap-2 overflow-visible p-2.5 sm:p-3 hover:z-20 focus-within:z-20",
         emphasisClass,
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
       )}
       data-admin-dashboard-kpi-card="recharts-sparkline"
+      data-scroll-reveal="panel"
       data-admin-dashboard-widget-card={widgetId}
       data-admin-dashboard-kpi-emphasis={emphasis}
       data-admin-dashboard-kpi-tone={tone}
@@ -4315,13 +4351,13 @@ function AdminDashboardKpiCard({
           data-admin-dashboard-kpi-title-row="single-line"
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <p className="truncate whitespace-nowrap text-2xs font-extrabold tracking-[0.04em] text-muted-foreground">
+            <p className="text-xs font-medium leading-5 text-muted-foreground">
               {title}
             </p>
             {infoLines.length > 0 ? (
               <AdminDashboardInfoTooltip
                 label={`${title} 지표 설명`}
-                lines={infoLines}
+                lines={caption ? [caption, ...metricInfoLines] : metricInfoLines}
               />
             ) : null}
           </div>
@@ -4350,9 +4386,9 @@ function AdminDashboardKpiCard({
                 )}
               >
                 <span data-admin-dashboard-kpi-delta="timeframe">
-                  <span className="font-extrabold text-muted-foreground">
+                  <span className="font-extrabold text-muted-foreground" data-admin-dashboard-kpi-delta-label="full">
                     {deltaLabel}
-                  </span>{" "}
+                  </span><span className="hidden font-extrabold text-muted-foreground" data-admin-dashboard-kpi-delta-label="compact">대비</span>{" "}
                   {delta}
                 </span>
               </AdminDashboardInlineTooltip>
@@ -4368,13 +4404,13 @@ function AdminDashboardKpiCard({
         <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <p
-              className="whitespace-nowrap text-sm font-black leading-none tracking-[-0.035em] tabular-nums text-foreground sm:text-base"
+              className="whitespace-nowrap text-xl font-semibold leading-tight tracking-tight tabular-nums text-foreground sm:text-2xl"
               data-admin-dashboard-kpi-value-size="bounded"
             >
               {value}
             </p>
             {caption ? (
-              <p className="mt-1.5 line-clamp-2 text-2xs font-semibold leading-4 text-muted-foreground">
+              <p className="mt-1 line-clamp-1 text-2xs font-medium leading-4 text-muted-foreground" data-admin-dashboard-kpi-caption="true">
                 {caption}
               </p>
             ) : null}
@@ -4487,6 +4523,7 @@ function AdminDashboardOpsSummaryCard({
       )}
       data-admin-dashboard-ops-summary-visual="progress-bars"
       data-admin-dashboard-widget-card="ops"
+      data-scroll-reveal="panel"
       style={style}
       {...reorderProps}
     >
@@ -5935,7 +5972,9 @@ function AdminDashboardManagementPanel({
   isAdmin: boolean;
 }) {
   const { toast } = useToast();
-  const hasShownDashboardDataErrorToastRef = useRef(false);
+  const lastDashboardDataErrorKindRef = useRef<
+    "metrics" | "operations" | null
+  >(null);
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
   const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
     useState<AdminDashboardPeriod | null>(null);
@@ -5970,6 +6009,9 @@ function AdminDashboardManagementPanel({
     () => normalizeAdminDashboardWidgetOrder(dashboardWidgetOrder),
     [dashboardWidgetOrder],
   );
+  const lastMetricWidgetId = orderedDashboardWidgetIds
+    .filter((widgetId) => getAdminDashboardWidgetLayoutGroup(widgetId) === 0)
+    .at(-1);
   const isDashboardWidgetOrderDefault = useMemo(
     () =>
       areAdminDashboardWidgetOrdersEqual(
@@ -6369,12 +6411,13 @@ function AdminDashboardManagementPanel({
   const getDashboardReorderCardClassName = useCallback(
     (widgetId: AdminDashboardWidgetId) =>
       cn(
+        widgetId === lastMetricWidgetId && "col-span-2 lg:col-span-2",
         isDashboardOrderEditorOpen &&
           "cursor-grab select-none ring-1 ring-primary/20 transition-[box-shadow,opacity,transform] hover:ring-primary/45 active:cursor-grabbing",
         draggedDashboardWidgetId === widgetId &&
           "scale-[0.99] opacity-70 ring-2 ring-primary/50",
       ),
-    [draggedDashboardWidgetId, isDashboardOrderEditorOpen],
+    [draggedDashboardWidgetId, isDashboardOrderEditorOpen, lastMetricWidgetId],
   );
   const getDashboardCardReorderProps = useCallback(
     (widgetId: AdminDashboardWidgetId): AdminDashboardCardReorderProps => ({
@@ -6626,22 +6669,32 @@ function AdminDashboardManagementPanel({
     growthInsightQuery.isLoading ||
     pendingSkeletonPeriod === period;
   const isChartLoading = isInsightDynamicLoading;
-  const chartHasError =
-    hasError || insightQuery.isError || growthInsightQuery.isError;
+  const dashboardDataErrorKind =
+    insightQuery.isError || growthInsightQuery.isError
+      ? "metrics"
+      : hasError
+        ? "operations"
+        : null;
   useEffect(() => {
-    if (!chartHasError) {
-      hasShownDashboardDataErrorToastRef.current = false;
+    if (!dashboardDataErrorKind) {
+      lastDashboardDataErrorKindRef.current = null;
       return;
     }
 
-    if (hasShownDashboardDataErrorToastRef.current) return;
-    hasShownDashboardDataErrorToastRef.current = true;
+    if (lastDashboardDataErrorKindRef.current === dashboardDataErrorKind) return;
+    lastDashboardDataErrorKindRef.current = dashboardDataErrorKind;
     toast({
       variant: "destructive",
-      title: "지표 데이터 로드 실패",
-      description: "대시보드 정적 영역은 유지합니다.",
+      title:
+        dashboardDataErrorKind === "metrics"
+          ? "지표 데이터 로드 실패"
+          : "운영 데이터 일부 로드 실패",
+      description:
+        dashboardDataErrorKind === "metrics"
+          ? "조회·좋아요·댓글 지표를 확인하지 못했습니다."
+          : "대기·맛집·영상·배너 수치 중 불러오지 못한 값은 미확인으로 표시합니다.",
     });
-  }, [chartHasError, toast]);
+  }, [dashboardDataErrorKind, toast]);
 
   const periodCohortViewValue = videos.reduce(
     (sum, video) => sum + video.viewCount,
@@ -6763,7 +6816,7 @@ function AdminDashboardManagementPanel({
     period === "ALL"
       ? `전체 영상 · 현재 ${formatNumber(cumulativeVideoTotal)}`
       : hasSnapshotVideoCountComparison
-        ? `${selectedPeriodLabel} · 채널 videoCount 순증 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)} · 현재 ${formatNumber(cumulativeVideoTotal)}`
+        ? `${selectedPeriodLabel} 영상 순증 · 전체 ${formatNumber(cumulativeVideoTotal)}`
         : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
   const periodUploadVideoProgress =
     typeof periodUploadVideoValue === "number" && periodUploadVideoValue > 0
@@ -6824,8 +6877,8 @@ function AdminDashboardManagementPanel({
     : !hasSubscriberCount
       ? "채널 통계 확인 필요"
       : subscriberDelta == null
-        ? `현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
-        : `현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`;
+        ? `현재 구독자 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
+        : `${selectedPeriodLabel} 구독자 순증 ${formatSignedNumber(subscriberDelta)}`;
   const subscriberCardTitle = "현재 구독자";
   const viewCardTitle = hasPeriodGrowthComparison
     ? "기간 조회 증가"
@@ -7262,13 +7315,8 @@ function AdminDashboardManagementPanel({
       data-admin-dashboard-realtime-charts="true"
       data-admin-dashboard-channel-kpi="true"
     >
-      <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="hidden min-w-0 md:block">
-          <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
-          </h1>
-        </div>
-        <div
+      <AdminPageHeader title="쯔양 성과 대시보드" icon={Activity} className="mb-2"
+        actions={<div
           className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
@@ -7341,8 +7389,8 @@ function AdminDashboardManagementPanel({
               }
             }}
           />
-        </div>
-      </div>
+        </div>}
+      />
       {shouldShowMobileDashboardLoadingPrompt ? (
         <p
           className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-2xs font-semibold leading-5 text-muted-foreground md:hidden"
@@ -7373,7 +7421,7 @@ function AdminDashboardManagementPanel({
       ) : null}
 
       <div
-        className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible"
+        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-hidden overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible"
         data-admin-dashboard-order-mode={
           isDashboardOrderEditorOpen ? "direct-drag" : "off"
         }
@@ -7533,6 +7581,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("impact")}
           data-admin-dashboard-widget-card="impact"
+          data-scroll-reveal="panel"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("impact") ? "true" : undefined
           }
@@ -7655,6 +7704,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("trend")}
           data-admin-dashboard-widget-card="trend"
+          data-scroll-reveal="panel"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("trend") ? "true" : undefined
           }
@@ -7785,6 +7835,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("topContent")}
           data-admin-dashboard-widget-card="topContent"
+          data-scroll-reveal="panel"
           {...getDashboardCardReorderProps("topContent")}
         >
           <AdminDashboardCardTitle
@@ -7887,6 +7938,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("engagementRate")}
           data-admin-dashboard-widget-card="engagementRate"
+          data-scroll-reveal="panel"
           {...getDashboardCardReorderProps("engagementRate")}
         >
           <AdminDashboardCardTitle
@@ -8218,8 +8270,8 @@ function AdminSidebar({
             isCollapsed &&
             "md:mx-auto md:h-8 md:min-h-8 md:w-8 md:justify-center md:gap-0 md:px-0",
           isActive
-            ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
-            : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
+            ? "border-transparent bg-primary/8 text-primary"
+            : "border-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground",
         )}
         onClick={() =>
           isDropdown ? handleMenuNavigation(item.id) : onSelectModule(item.id)
@@ -8230,8 +8282,8 @@ function AdminSidebar({
             "flex shrink-0 items-center justify-center border transition-colors motion-reduce:transition-none",
             isDropdown ? "h-6 w-6 rounded-md" : "h-6 w-6 rounded-md",
             isActive
-              ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
-              : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
+              ? "border-transparent bg-transparent text-primary"
+              : "border-transparent bg-transparent text-muted-foreground group-hover:text-foreground",
           )}
           aria-hidden="true"
         >
@@ -8255,10 +8307,10 @@ function AdminSidebar({
               "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-2xs font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
               itemStatus.urgent
                 ? isActive
-                  ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+                  ? "border-primary/20 bg-primary/10 text-primary"
                   : "border-primary/25 bg-primary/5 text-primary"
                 : isActive
-                  ? "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground/80"
+                  ? "border-primary/15 bg-primary/5 text-primary"
                   : "border-border bg-background/80 text-muted-foreground",
               !isDropdown &&
                 (!showLabels || isCollapsed) &&
@@ -8920,109 +8972,8 @@ function AdminSidebar({
   );
 }
 
-function GuardedApplyCard() {
-  return (
-    <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-lg">안전 적용 원칙</CardTitle>
-          <Badge variant="outline" className="border-primary/30 text-primary">
-            관리자 확인 필수
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {guardedSteps.map((step, index) => (
-            <div key={step} className="flex items-center gap-2">
-              <Badge
-                variant={index === 0 ? "default" : "secondary"}
-                className={cn(
-                  index === 0 && "bg-primary text-primary-foreground",
-                )}
-              >
-                {step}
-              </Badge>
-              {index < guardedSteps.length - 1 && (
-                <span className="text-muted-foreground">→</span>
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="text-sm leading-6 text-muted-foreground">
-          제보 승인, 리뷰 반려, 맛집 삭제/복구, 배너 공개처럼 사용자에게 보이는
-          변경은 적용 전에 한 번 더 확인하고, 적용 후에는 실제 상태를 다시 읽어
-          관리자에게 보여주는 흐름을 기본값으로 둡니다.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function LlmSessionWorkspace() {
-  return (
-    <AdminEmbeddedModuleShell
-      moduleId="llm"
-      titleId="admin-llm-session-title"
-      title="운영 보조"
-      icon={Bot}
-      summary="읽기 전용 · 제안만 제공 · 적용은 각 모듈에서"
-      contentClassName="overflow-y-auto p-2 md:p-3"
-    >
-      <section aria-label="운영 보조 제안" className="space-y-3">
-        <div className="grid gap-3 xl:grid-cols-3">
-          {[
-            [
-              "현재 화면 요약",
-              "선택한 모듈의 대기 건수, 실패 상태, 위험 액션 후보를 한 문단으로 요약합니다.",
-            ],
-            [
-              "다음 검수 추천",
-              "오래된 제보, 지오코딩 실패, 미승인 리뷰, 배너 공개 변경을 우선순위로 정리합니다.",
-            ],
-            [
-              "위험 액션 체크리스트",
-              "삭제·반려·공개 배너 변경 전 미리보기 → 확인 → 적용 → 재확인 → 감사 기록 순서를 확인합니다.",
-            ],
-          ].map(([title, description]) => (
-            <Card key={title} className="border-border bg-card/95 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-          <GuardedApplyCard />
-          <Card className="border-border bg-card/95 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bot className="h-5 w-5 text-primary" aria-hidden="true" />
-                운영 원칙
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <p>1. 자동 운영 보조는 읽기 전용 제안 화면으로 유지합니다.</p>
-              <p>
-                2. 데이터 변경, 권한 정책, 데이터 구조 변경은 이 화면에서 직접
-                수행하지 않습니다.
-              </p>
-              <p>
-                3. 위험 작업은 반드시 관리자 UI의 명시적 확인과 상태 재확인을
-                거칩니다.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-    </AdminEmbeddedModuleShell>
-  );
+  return <AdminOperationsPanel />;
 }
 
 function getAdminAuditActionLabel(action: string) {
@@ -9057,6 +9008,9 @@ function getAdminAuditStatusClassName(status: string) {
 
 function AuditPlaceholder() {
   const router = useRouter();
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const auditEventsQuery = useQuery({
     queryKey: ["admin-audit-events", "recent"],
     queryFn: fetchAdminAuditEvents,
@@ -9065,6 +9019,10 @@ function AuditPlaceholder() {
   });
   const auditPayload = auditEventsQuery.data;
   const events = auditPayload?.events ?? [];
+  const normalizedSearch = search.trim().toLocaleLowerCase("ko-KR");
+  const visibleEvents = events.filter((event) => (!status || event.status === status) &&
+    (!normalizedSearch || [getAdminAuditActionLabel(event.action), event.reasonCode, event.id, event.targetUserId]
+      .some((value) => value?.toLocaleLowerCase("ko-KR").includes(normalizedSearch))));
   const unavailable = auditPayload?.unavailable ?? null;
   const coverage = auditPayload?.coverage ?? adminAuditFallbackCoverage;
   const isAuditCoverageMissing =
@@ -9091,19 +9049,23 @@ function AuditPlaceholder() {
       title="감사 로그"
       icon={ScrollText}
       summary={coverageBadgeLabel}
-      contentClassName="overflow-y-auto p-2 md:p-3"
+      contentClassName="overflow-y-auto"
     >
-      <div className="min-h-[480px] space-y-3">
-        <div
-          className="rounded-2xl border border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground"
+      <div className="min-h-[480px]">
+        <div className="admin-cms-toolbar">
+          <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input aria-label="감사 로그 검색" placeholder="작업·대상·감사 ID 검색" value={search} maxLength={256} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
+          <select aria-label="감사 처리 상태" value={status} onChange={(event) => setStatus(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs"><option value="">전체 상태</option><option value="intent">적용 전</option><option value="applied">적용됨</option><option value="failed">실패</option></select>
+          <Button size="sm" variant="ghost" aria-label="감사 로그 새로고침" disabled={auditEventsQuery.isFetching} onClick={() => auditEventsQuery.refetch()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /></Button>
+          <Link href="/admin/privacy-incidents" className="inline-flex min-h-8 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground" title="사람이 검토하고 처리합니다. 자동 신고나 수리 완료를 주장하지 않습니다." data-admin-privacy-incidents-link="true">개인정보 사고 대응<ExternalLink aria-hidden="true" className="h-3 w-3" /></Link>
+        </div>
+        <details
+          className="border-b border-border px-3 py-2 text-xs leading-5 text-muted-foreground"
           data-admin-audit-coverage="partial-domain-specific"
           data-admin-audit-coverage-source={getAdminAuditCoverageSourceSummary(coverage)}
           data-admin-audit-coverage-domain={getAdminAuditCoverageDomainSummary(coverage)}
           data-admin-audit-universal={coverage.universal ? "true" : "false"}
         >
-          <p className="font-bold text-foreground">
-            {getAdminAuditCoverageLabel(coverage)}
-          </p>
+          <summary className="cursor-pointer font-medium text-foreground">{getAdminAuditCoverageLabel(coverage)}</summary>
           <p className="mt-1">
             소스: {getAdminAuditCoverageSourceSummary(coverage)} · 도메인:{" "}
             {getAdminAuditCoverageDomainSummary(coverage)}
@@ -9113,21 +9075,7 @@ function AuditPlaceholder() {
             검토 감사는 restaurant_request_review_audit의 별도 도메인별 경로입니다.
             전체 운영 변경을 포괄하는 범용 감사 로그처럼 표시하지 않습니다.
           </p>
-        </div>
-
-        <Link
-          href="/admin/privacy-incidents"
-          className="flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
-          data-admin-privacy-incidents-link="true"
-        >
-          <span>
-            <strong className="block">개인정보 사고 대응</strong>
-            <span className="mt-1 block text-xs">
-              사람의 평가·외부 제출 기록·72시간 기준을 관리하며 자동 신고나 수리 완료를 주장하지 않습니다.
-            </span>
-          </span>
-          <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" />
-        </Link>
+        </details>
 
         {auditEventsQuery.isLoading ? (
           <div className="space-y-2" aria-label="감사 로그 로딩 중">
@@ -9195,68 +9143,35 @@ function AuditPlaceholder() {
           </div>
         ) : null}
 
-        {events.length > 0 ? (
-          <ol
-            className="divide-y divide-border overflow-hidden rounded-2xl border border-border"
-            data-admin-audit-event-list="admin_audit_events"
-          >
-            {events.map((event) => (
-              <li key={event.id} className="bg-background p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">
-                      {getAdminAuditActionLabel(event.action)}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {formatDashboardDateTime(event.createdAt)}
-                      {event.reasonCode ? ` · ${event.reasonCode}` : ""}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "w-fit shrink-0 rounded-full px-2 py-0.5 text-2xs",
-                      getAdminAuditStatusClassName(event.status),
-                    )}
-                  >
-                    {event.status}
-                  </Badge>
-                </div>
-                <dl className="mt-2 grid gap-1 text-2xs leading-5 text-muted-foreground sm:grid-cols-2">
-                  <div>
-                    <dt className="font-semibold text-foreground">감사 ID</dt>
-                    <dd className="break-all font-mono">{event.id}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">대상</dt>
-                    <dd className="break-all font-mono">{event.targetUserId ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">범위</dt>
-                    <dd className="break-all font-mono">
-                      admin_user_management · admin_audit_events
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">적용 시각</dt>
-                    <dd className="break-all font-mono">
-                      {event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">상관 ID</dt>
-                    <dd className="break-all font-mono">{event.correlationId ?? "—"}</dd>
-                  </div>
-                  {event.errorCode ? (
-                    <div className="sm:col-span-2">
-                      <dt className="font-semibold text-destructive">오류 코드</dt>
-                      <dd className="break-all font-mono text-destructive">{event.errorCode}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </li>
-            ))}
-          </ol>
+        {events.length > 0 && !unavailable && !auditEventsQuery.isError ? (
+          <>
+            <div className="admin-cms-table-container">
+              <table className="admin-cms-table" data-admin-audit-event-list="admin_audit_events">
+                <thead><tr><th scope="col">작업 · 시각</th><th scope="col" className="hidden sm:table-cell">대상</th><th scope="col">상태</th></tr></thead>
+                <tbody>{visibleEvents.map((event) => (
+                  <Fragment key={event.id}>
+                    <tr className={selectedId === event.id ? "admin-cms-row-selected" : ""}>
+                      <td><button type="button" aria-expanded={selectedId === event.id} aria-controls={`audit-detail-${event.id}`} onClick={() => setSelectedId(selectedId === event.id ? null : event.id)} className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block text-sm font-medium">{getAdminAuditActionLabel(event.action)}</span><span className="block text-xs text-muted-foreground">{formatDashboardDateTime(event.createdAt)}</span></button></td>
+                      <td className="hidden max-w-48 truncate font-mono text-xs sm:table-cell">{event.targetUserId ?? "—"}</td>
+                      <td><Badge variant="outline" className={cn("whitespace-nowrap px-2 py-0.5 text-2xs", getAdminAuditStatusClassName(event.status))}>{event.status === "applied" ? "적용됨" : event.status === "failed" ? "실패" : event.status === "intent" ? "적용 전" : event.status}</Badge></td>
+                    </tr>
+                    {selectedId === event.id ? <tr id={`audit-detail-${event.id}`}><td colSpan={3}>
+                      <dl className="grid gap-2 break-all text-xs sm:grid-cols-2" aria-label="감사 항목 상세">
+                        <div><dt className="text-muted-foreground">감사 ID</dt><dd className="font-mono">{event.id}</dd></div>
+                        <div><dt className="text-muted-foreground">대상</dt><dd className="font-mono">{event.targetUserId ?? "—"}</dd></div>
+                        <div><dt className="text-muted-foreground">사유</dt><dd>{event.reasonCode || "—"}</dd></div>
+                        <div><dt className="text-muted-foreground">적용 시각</dt><dd>{event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}</dd></div>
+                        <div><dt className="text-muted-foreground">상관 ID</dt><dd className="font-mono">{event.correlationId ?? "—"}</dd></div>
+                        {event.errorCode ? <div><dt className="text-destructive">오류 코드</dt><dd className="font-mono text-destructive">{event.errorCode}</dd></div> : null}
+                      </dl>
+                    </td></tr> : null}
+                  </Fragment>
+                ))}</tbody>
+              </table>
+            </div>
+            {visibleEvents.length === 0 ? <p role="status" className="p-4 text-center text-xs text-muted-foreground">일치하는 감사 로그가 없습니다.</p> : null}
+            <footer className="admin-cms-footer"><span>최근 조회 {visibleEvents.length} / {events.length}개 · 사용자 관리</span><span className="ml-auto">항목을 선택해 상세 확인</span></footer>
+          </>
         ) : null}
       </div>
     </AdminEmbeddedModuleShell>
@@ -9280,12 +9195,12 @@ function InlineModulePanel({
     switch (module.id) {
       case "restaurants":
         return (
-          <AdminEvaluationModule
+          <RestaurantManagementWorkspace review={<AdminEvaluationModule
             key="restaurants"
             embedded
             initialView="evaluations"
             onInitialContentReady={() => onModuleContentReady?.("restaurants")}
-          />
+          />} refresh={<AdminRestaurantRefreshHistoryModule onInitialContentReady={() => onModuleContentReady?.("restaurants")} />} />
         );
       case "restaurant-refresh-history":
         return (
@@ -9333,6 +9248,10 @@ function InlineModulePanel({
         return <InsightsModule key="admin-insights" embedded />;
       case "pipeline":
         return <AdminPipelineDashboard key="admin-pipeline" />;
+      case "sentry":
+        return <AdminSentryModule key="admin-sentry" />;
+      case "knowledge-graph":
+        return <AdminKnowledgeGraphModule key="admin-knowledge-graph" />;
       default: {
         const exhaustiveModuleId: never = module.id;
         return exhaustiveModuleId;
@@ -9343,7 +9262,7 @@ function InlineModulePanel({
   return (
     <section
       aria-label={`${module.title} 작업 화면`}
-      className="flex min-h-full min-w-0 flex-col md:h-full md:min-h-0"
+      className={cn("flex min-h-full min-w-0 flex-col md:h-full md:min-h-0", module.id === "knowledge-graph" && "!h-full !min-h-0")}
       data-admin-console-inline-module-frame="true"
       data-admin-console-inline-module-id={module.id}
     >
@@ -9351,6 +9270,7 @@ function InlineModulePanel({
         className={cn(
           "min-h-[360px] flex-1 rounded-lg bg-background shadow-none md:min-h-0 md:rounded-xl md:border md:border-border md:shadow-sm",
           "overflow-visible md:overflow-hidden",
+          module.id === "knowledge-graph" && "flex min-h-0 flex-col !overflow-hidden",
         )}
         data-admin-console-inline-module-panel="true"
       >
@@ -9485,7 +9405,7 @@ function getAdminConsoleCanvasSkeletonConfig({
     case "insights":
       return {
         moduleId,
-        title: title ?? "핵심 인사이트",
+        title: title ?? "영상 성과 분석",
         description: "지표 카드, 트리맵, 추세 차트를 뷰포트에 맞춰 준비합니다.",
         icon: BarChart2,
         variant: "insights-grid",
@@ -10336,7 +10256,7 @@ export function AdminConsoleOverview({
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(false);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
   const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false);
@@ -10383,11 +10303,10 @@ export function AdminConsoleOverview({
       ? user.user_metadata.nickname.trim()
       : "";
   const adminAccountDisplayName =
-    profileNickname ||
-    userMetadataNickname ||
-    user?.email?.split("@")[0] ||
-    "관리자";
-  const adminAccountEmail = user?.email ?? "관리자 세션";
+    hasHydrated
+      ? (profileNickname || userMetadataNickname || user?.email?.split("@")[0] || "관리자")
+      : "관리자";
+  const adminAccountEmail = hasHydrated ? (user?.email ?? "관리자 세션") : "관리자 세션";
 
   useEffect(() => {
     setHasHydrated(true);
@@ -10395,9 +10314,10 @@ export function AdminConsoleOverview({
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY, "1");
-    setIsSidebarCollapsed(true);
-    setShowSidebarLabels(false);
+    const saved = readBrowserStorageString("local", ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY);
+    const collapsed = saved === "1" || saved === "true";
+    setIsSidebarCollapsed(collapsed);
+    setShowSidebarLabels(!collapsed);
   }, []);
 
   useEffect(() => {
@@ -10485,9 +10405,10 @@ export function AdminConsoleOverview({
     setIsSidebarCollapsed((currentCollapsed) => {
       const nextCollapsed = !currentCollapsed;
 
-      window.localStorage.setItem(
+      writeBrowserStorageString(
+        "local",
         ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
-        nextCollapsed ? "1" : "session-expanded",
+        nextCollapsed ? "1" : "0",
       );
 
       return nextCollapsed;
@@ -10859,13 +10780,14 @@ export function AdminConsoleOverview({
   const overviewModuleSummary = statsLoading
     ? "KPI 데이터를 불러오는 중입니다."
     : statsHasError
-      ? "일부 KPI를 확인하지 못했습니다."
+      ? "일부 운영 데이터를 확인하지 못했습니다."
       : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`;
 
   return (
     <main
       className="h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
+      data-design-surface="admin"
       data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
     >
       <a
@@ -10914,7 +10836,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
-          style={{ paddingBottom: isAdminMobileViewport ? "calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.5rem)" : "1rem" }}
+          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 0.75rem)" : "1rem" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"

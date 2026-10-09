@@ -1,0 +1,11 @@
+{
+  "evidence": "local-browser-with-synthetic-read-responses",
+  "hostedEvidence": false,
+  "modules": [],
+  "keyboard": {
+    "desktopEnterEscapeFocusReturn": true
+  },
+  "pageErrorCount": 0,
+  "blockedMutationCount": 0,
+  "failure": "expect(locator).toBeVisible() failed"
+}

@@ -1,0 +1,47 @@
+{
+  "kind": "funded-gemini-current-candidate-raw-evidence",
+  "generationAttempts": 1,
+  "operatingWrites": false,
+  "artifacts": {
+    "README.md": {
+      "sha256": "04f8c1dba2e7e0307968e0d2e9659b66636c296868a3ae32c14d03d9d5444640",
+      "bytes": 3512
+    },
+    "billing-after.json": {
+      "sha256": "4adf25d5d9eee029fff2ed24f307ceab7148689b057834d0040461e35f2a409e",
+      "bytes": 1304
+    },
+    "billing-before.json": {
+      "sha256": "61e493dde7d8c23f88b44613497fa61a6dfe6e2897a04ed6e788a8e6efb7cb77",
+      "bytes": 1173
+    },
+    "card-deletion-blocker.json": {
+      "sha256": "c7c8b62ce8a92e8eaf96949d8cfa22b9eff7ec30ac4d5a57834ec604c4d1fdcf",
+      "bytes": 768
+    },
+    "cli-boundary-tests.log": {
+      "sha256": "31db1758d13ca34aac3bac5da3cf41f196d5e77009fd56174bf495fd31ecbe40",
+      "bytes": 459
+    },
+    "current-production-reference.json": {
+      "sha256": "9cfac8898fe3590024054eeccb1eb74d0cbad9ca04ce3d58e0a17514eb76ba9f",
+      "bytes": 566
+    },
+    "next-env-doc-reconciliation.json": {
+      "sha256": "6a3eb86e1d3e1b13ae11fd3d3414794f32ae87cfc5dcaada83d147c8a232a770",
+      "bytes": 849
+    },
+    "ocr-live-readback.json": {
+      "sha256": "b29c42c1316ac291c9233300c69deafc27ac6d3dc9a3a5640646cce43655c56b",
+      "bytes": 1635
+    },
+    "production-env-metadata.json": {
+      "sha256": "9c2dd3cc096ac7fc8a6c9977208bc6954494f1314ac917e83baccb2052c3ce97",
+      "bytes": 859
+    },
+    "typecheck-before-final.log": {
+      "sha256": "2c0f3608b13382c34b11f7beaccd94d1a1cc83e122f89283aacea6d1e8d44388",
+      "bytes": 510
+    }
+  }
+}

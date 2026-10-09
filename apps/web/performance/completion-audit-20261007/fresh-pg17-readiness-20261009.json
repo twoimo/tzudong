@@ -1,0 +1,1113 @@
+{
+  "kind": "fresh-bound-pg17-migration-readiness",
+  "sourceCommit": "5e3d5e37fb2733bb989c39946f21f8734d13f228",
+  "snapshot": {
+    "kind": "hosted-readonly-consistent-pg17-snapshot",
+    "observedAtUtc": "2026-10-08T20:16:44.418805+00:00",
+    "sourceCommit": "5e3d5e37fb2733bb989c39946f21f8734d13f228",
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "tls": "libpq verify-full, TLSv1.3",
+    "singleExportedRepeatableReadSnapshot": true,
+    "exporterHeldUntilAllReadsCompleted": true,
+    "ledgerCount": 80,
+    "ledgerRowsCopied": 0,
+    "userRowsCopied": 0,
+    "operatingWrites": false,
+    "credentialArgv": false,
+    "dataTables": [
+      "privacy_retention.g014_catalog_contract_manifest",
+      "privacy_retention.g014_nested_helper_allowlist",
+      "privacy_retention.g014_public_rpc_allowlist"
+    ],
+    "artifacts": {
+      "pg17-hosted-schema-private.sql": {
+        "bytes": 2043143,
+        "sha256": "fde46030bf7ac212631fcb02d4dff503e733899e853a7fe42202009aedf364c2"
+      },
+      "pg17-hosted-contract-private.sql": {
+        "bytes": 815804,
+        "sha256": "44e840d04c5d9ad02055d470da1cae261273043fb9a48cc1e660f7d704bb055c"
+      },
+      "pg17-hosted-role-metadata-private.json": {
+        "bytes": 16186,
+        "sha256": "70d3b0a79b7f4023d97e8cbdbd55aae7b8055798865f12379643399afa824789"
+      },
+      "pg17-hosted-extensions-private.json": {
+        "bytes": 1289,
+        "sha256": "dfd07cb81ddce437cfe06820ad5e9c339e95f4ee5a3f7144a4ce7a713b309be4"
+      },
+      "pg17-hosted-attributes-private.json": {
+        "bytes": 2160,
+        "sha256": "5930f5c777d391c9fb7664669dd85da93d6148c6ae89dab465bf83df94f32f4b"
+      },
+      "pg17-hosted-platform-settings-private.json": {
+        "bytes": 1007,
+        "sha256": "232cf874e2e7ac9b6c8be9a2f515497445cac41fcb8fd0d153ecc5caa386c6ad"
+      },
+      "pg17-hosted-boundary-private.json": {
+        "bytes": 2839,
+        "sha256": "13e4d269164e41ff64668ee7a23b3be55820a4733f27c3f9441155d754a296b9"
+      }
+    },
+    "exporterSha256": "6a78cf6591c1a6ee6343f24a58c0b99746f7d556fd0ebbe4463ba0b69817c659"
+  },
+  "reconstruction": {
+    "kind": "fresh-bound-pg17-schema-contract-reconstruction",
+    "status": "passed",
+    "observedAt": "2026-10-08T20:18:01.233Z",
+    "snapshotSourceCommit": "5e3d5e37fb2733bb989c39946f21f8734d13f228",
+    "snapshotManifestSha256": "ccd0373d1138301a586b75ab07f01ddcd061765d22e22da646e774cfc1e92563",
+    "inputs": {
+      "pg17-hosted-schema-private.sql": {
+        "bytes": 2043143,
+        "sha256": "fde46030bf7ac212631fcb02d4dff503e733899e853a7fe42202009aedf364c2"
+      },
+      "pg17-hosted-contract-private.sql": {
+        "bytes": 815804,
+        "sha256": "44e840d04c5d9ad02055d470da1cae261273043fb9a48cc1e660f7d704bb055c"
+      },
+      "pg17-hosted-role-metadata-private.json": {
+        "bytes": 16186,
+        "sha256": "70d3b0a79b7f4023d97e8cbdbd55aae7b8055798865f12379643399afa824789"
+      },
+      "pg17-hosted-extensions-private.json": {
+        "bytes": 1289,
+        "sha256": "dfd07cb81ddce437cfe06820ad5e9c339e95f4ee5a3f7144a4ce7a713b309be4"
+      },
+      "pg17-hosted-attributes-private.json": {
+        "bytes": 2160,
+        "sha256": "5930f5c777d391c9fb7664669dd85da93d6148c6ae89dab465bf83df94f32f4b"
+      },
+      "pg17-hosted-platform-settings-private.json": {
+        "bytes": 1007,
+        "sha256": "232cf874e2e7ac9b6c8be9a2f515497445cac41fcb8fd0d153ecc5caa386c6ad"
+      },
+      "pg17-hosted-boundary-private.json": {
+        "bytes": 2839,
+        "sha256": "13e4d269164e41ff64668ee7a23b3be55820a4733f27c3f9441155d754a296b9"
+      }
+    },
+    "helperSha256": "cf1f39877febdc1f79ba23bcae60ab3cbaf9b181d2fe8f9dd03119e2a7c65827",
+    "container": {
+      "id": "dea156ac11f4ac72937c69bd9544adf6b700db611fe470051adae4799651d922",
+      "imageId": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+      "name": "tzudong-record-bootstrap-v3-20261009",
+      "owner": "01a0f860-10d0-71b0-bb2a-95c2b52e025e",
+      "network": "none",
+      "ports": 0
+    },
+    "database": "tzudong_fresh_pg17_2434703beb8a",
+    "metadata": {
+      "ownerSet": false,
+      "assertions": [
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_catalog_contract",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "8e9101ecdbb506e25a9ace2a40f7de9cc0dcf3f06d80cc1a75fe07a55effbeab"
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_definer_contract",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "a5fff8ca63e34d41fc7c56e5a646023d44645750a7abf9ae0c0efc35818aa964"
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_public_rpc_allowlist",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef"
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner"
+          ],
+          "name": "assert_g014_workflow_owner_contract",
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "bodySha256": "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d"
+        }
+      ],
+      "nestedRows": 45,
+      "ownerUsage": false,
+      "booleanCases": 27,
+      "manifestRows": 1963,
+      "allowlistRows": 132,
+      "booleanMismatches": 0,
+      "postgresSuperuser": false
+    },
+    "assertionsPassed": 4,
+    "bootstrapExtensionDelegationTemporarilyDisabled": true,
+    "requiresSourceRuntimeSettingsBeforeReplay": true,
+    "projections": {
+      "argumentOidRows": 8,
+      "droppedColumnPositions": 7,
+      "booleanAssociativityRows": 1,
+      "cloneOnly": true
+    },
+    "immutableTriggerDisabled": false,
+    "assertionCodeChanged": false,
+    "temporaryRestoreSuperuserReverted": true,
+    "hostedLedgerCountObserved": 80,
+    "ledgerRowsCopied": 0,
+    "userRowsCopied": 0,
+    "operatingWrites": false,
+    "limitations": [
+      "Clone-only physical OID/attnum and proven Boolean regrouping projections.",
+      "No hosted application, deployment, user workflow, physical Storage deletion or performance proof."
+    ]
+  },
+  "runtimeBaseline": {
+    "kind": "source-runtime-baseline-verification",
+    "status": "passed",
+    "platformSettingsExact": true,
+    "assertionsPassed": 4,
+    "manifestRows": 1963,
+    "postgresSuperuser": false,
+    "ownerSet": false,
+    "database": "tzudong_fresh_pg17_2434703beb8a",
+    "operatingWrites": false,
+    "userRowsCopied": 0
+  },
+  "replay": {
+    "kind": "pg17-full-schema-new-rpc-replay",
+    "observedAt": "2026-10-08T20:23:29.239Z",
+    "status": "passed",
+    "sourceCommit": "5e3d5e37fb2733bb989c39946f21f8734d13f228",
+    "sources": [
+      {
+        "name": "20261004190259_admin_record_guarded_actions.sql",
+        "sha256": "1529ad96ebbc2c8e173d5c51fae9bef8051ce632c829eda20f0ae173a77c8caa"
+      },
+      {
+        "name": "20261004192657_admin_evaluation_raw_warning_groups.sql",
+        "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+      },
+      {
+        "name": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+        "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+      }
+    ],
+    "leaderboardContractPreserved": true,
+    "sourceRuntimeSettingsVerified": true,
+    "rollbackExact": true,
+    "rollbackSchemaExact": true,
+    "beforeSchemaSha256": "86483b07893d0869029dbd04bcc92f7c3d5491152ce02eedaa6630f91a00a0d0",
+    "rollbackSchemaSha256": "86483b07893d0869029dbd04bcc92f7c3d5491152ce02eedaa6630f91a00a0d0",
+    "membershipRestored": true,
+    "immutableManifestPreserved": true,
+    "helpersRemovedInApplyingSession": true,
+    "assertionsPassed": 4,
+    "before": {
+      "members": 29,
+      "ownerSet": false,
+      "functions": [
+        {
+          "acl": null,
+          "anon": null,
+          "owner": null,
+          "config": null,
+          "definer": null,
+          "present": false,
+          "service": null,
+          "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+          "bodySha256": null,
+          "authenticated": null
+        },
+        {
+          "acl": null,
+          "anon": null,
+          "owner": null,
+          "config": null,
+          "definer": null,
+          "present": false,
+          "service": null,
+          "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+          "bodySha256": null,
+          "authenticated": null
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner",
+            "authenticated=X/privacy_workflow_owner",
+            "service_role=X/privacy_workflow_owner"
+          ],
+          "anon": false,
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": true,
+          "present": true,
+          "service": true,
+          "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+          "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+          "authenticated": true
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner",
+            "authenticated=X/privacy_workflow_owner",
+            "service_role=X/privacy_workflow_owner"
+          ],
+          "anon": false,
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": true,
+          "present": true,
+          "service": true,
+          "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+          "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+          "authenticated": true
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner",
+            "authenticated=X/privacy_workflow_owner",
+            "service_role=X/privacy_workflow_owner"
+          ],
+          "anon": false,
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": true,
+          "present": true,
+          "service": true,
+          "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+          "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+          "authenticated": true
+        }
+      ],
+      "memberHash": "9c1e331a92054f54c86f69bd693bc0b9981a58cdaa1bef648777ad99e4e214dd",
+      "ownerUsage": false,
+      "leaderboard": {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner",
+          "anon=X/privacy_workflow_owner",
+          "authenticated=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "result": "TABLE(user_id uuid, nickname text, review_count bigint, verified_review_count bigint, total_likes bigint, avg_likes_per_review numeric, quality_score numeric)",
+        "definer": true,
+        "allowlist": [
+          {
+            "grantee": "anon",
+            "function_name": "read_public_profile_leaderboard_page",
+            "function_schema": "public",
+            "source_signature": "public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)",
+            "identity_arguments": "25 23 1700 2950"
+          },
+          {
+            "grantee": "authenticated",
+            "function_name": "read_public_profile_leaderboard_page",
+            "function_schema": "public",
+            "source_signature": "public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)",
+            "identity_arguments": "25 23 1700 2950"
+          }
+        ],
+        "bodySha256": "e8a132569e5ea419609003fdbeb2dcad6c8233d35584e850954e1d4488a62d19"
+      },
+      "manifestHash": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+      "helpersAbsent": true,
+      "postgresSuperuser": false
+    },
+    "after": {
+      "members": 29,
+      "ownerSet": false,
+      "functions": [
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "anon": false,
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": false,
+          "present": true,
+          "service": true,
+          "signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+          "bodySha256": "7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304",
+          "authenticated": false
+        },
+        {
+          "acl": [
+            "postgres=X/postgres",
+            "service_role=X/postgres"
+          ],
+          "anon": false,
+          "owner": "postgres",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": false,
+          "present": true,
+          "service": true,
+          "signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+          "bodySha256": "14961c0de50f8a455af5a4498e89d628c8767e6ef4bbaa8d2db3ace83fc2d5d1",
+          "authenticated": false
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner",
+            "service_role=X/privacy_workflow_owner"
+          ],
+          "anon": false,
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": true,
+          "present": true,
+          "service": true,
+          "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+          "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+          "authenticated": false
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner",
+            "service_role=X/privacy_workflow_owner"
+          ],
+          "anon": false,
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": true,
+          "present": true,
+          "service": true,
+          "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+          "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+          "authenticated": false
+        },
+        {
+          "acl": [
+            "privacy_workflow_owner=X/privacy_workflow_owner",
+            "service_role=X/privacy_workflow_owner"
+          ],
+          "anon": false,
+          "owner": "privacy_workflow_owner",
+          "config": [
+            "search_path=\"\""
+          ],
+          "definer": true,
+          "present": true,
+          "service": true,
+          "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+          "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+          "authenticated": false
+        }
+      ],
+      "memberHash": "9c1e331a92054f54c86f69bd693bc0b9981a58cdaa1bef648777ad99e4e214dd",
+      "ownerUsage": false,
+      "leaderboard": {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner",
+          "anon=X/privacy_workflow_owner",
+          "authenticated=X/privacy_workflow_owner"
+        ],
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "result": "TABLE(user_id uuid, nickname text, review_count bigint, verified_review_count bigint, total_likes bigint, avg_likes_per_review numeric, quality_score numeric)",
+        "definer": true,
+        "allowlist": [
+          {
+            "grantee": "anon",
+            "function_name": "read_public_profile_leaderboard_page",
+            "function_schema": "public",
+            "source_signature": "public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)",
+            "identity_arguments": "25 23 1700 2950"
+          },
+          {
+            "grantee": "authenticated",
+            "function_name": "read_public_profile_leaderboard_page",
+            "function_schema": "public",
+            "source_signature": "public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)",
+            "identity_arguments": "25 23 1700 2950"
+          }
+        ],
+        "bodySha256": "e8a132569e5ea419609003fdbeb2dcad6c8233d35584e850954e1d4488a62d19"
+      },
+      "manifestHash": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4",
+      "helpersAbsent": true,
+      "postgresSuperuser": false
+    },
+    "operatingWrites": false,
+    "userRowsCopied": 0,
+    "limitations": [
+      "Clone reconstruction projections are declared separately.",
+      "This is isolated SQL verification, not hosted application, real user workflow or physical Storage deletion proof."
+    ]
+  },
+  "helperSha256": {
+    "read_bound_snapshot_v3.py": "6a78cf6591c1a6ee6343f24a58c0b99746f7d556fd0ebbe4463ba0b69817c659",
+    "bootstrap-pg17-roles-v3.mjs": "30df905ffe939fe0353cc24c0a4878134ca4d1072e56a5dba25a24f3bd80c0cf",
+    "reconstruct-fresh-pg17-v3.mjs": "cf1f39877febdc1f79ba23bcae60ab3cbaf9b181d2fe8f9dd03119e2a7c65827",
+    "replay-new-rpcs-fresh-20261009.mjs": "e5ce44271ea9c5829284703c76cc799fbb0835003032bf3824c3ac5c295c5d33"
+  },
+  "failedPreparation": [
+    {
+      "code": "ROLE_BOOTSTRAP_DRIFT",
+      "cause": "SHOW-normalized timeout units; restored raw role setting"
+    },
+    {
+      "code": "EXTENSION_RESTORE_DRIFT",
+      "cause": "supautils extension delegation changed two owners; strict comparison preserved"
+    }
+  ],
+  "bootstrapMethod": {
+    "temporaryExtensionDelegationDisabled": true,
+    "ownedVolumePreserved": true,
+    "sourceRuntimeSettingsRestoredBeforeReplay": true
+  },
+  "operatingWrites": false,
+  "userRowsCopied": 0,
+  "hostedApplied": false,
+  "fullGoalComplete": false,
+  "remaining": [
+    "Correct the exact private owner helper execution dependency; do not broaden Data API grants",
+    "Actual schema synthetic valid-user action/idempotency/conflict flows",
+    "Private role ACL matrix against this fresh clone",
+    "Fresh operating preflight immediately before authorized apply",
+    "Policy-safe rollback and protected promotion/deploy/live verification",
+    "All remaining full-goal requirements"
+  ],
+  "privateAclMatrix": {
+    "kind": "fresh-pg17-private-table-acl-matrix",
+    "status": "passed",
+    "rows": [
+      {
+        "rls": true,
+        "role": "anon",
+        "table": "pipeline_control.admin_record_audit",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false
+      },
+      {
+        "rls": true,
+        "role": "authenticated",
+        "table": "pipeline_control.admin_record_audit",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false
+      },
+      {
+        "rls": true,
+        "role": "service_role",
+        "table": "pipeline_control.admin_record_audit",
+        "delete": false,
+        "insert": true,
+        "select": true,
+        "update": false
+      },
+      {
+        "rls": true,
+        "role": "anon",
+        "table": "pipeline_control.admin_record_media_cleanup",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false
+      },
+      {
+        "rls": true,
+        "role": "authenticated",
+        "table": "pipeline_control.admin_record_media_cleanup",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false
+      },
+      {
+        "rls": true,
+        "role": "service_role",
+        "table": "pipeline_control.admin_record_media_cleanup",
+        "delete": true,
+        "insert": true,
+        "select": true,
+        "update": true
+      },
+      {
+        "rls": true,
+        "role": "anon",
+        "table": "pipeline_control.admin_record_operations",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false
+      },
+      {
+        "rls": true,
+        "role": "authenticated",
+        "table": "pipeline_control.admin_record_operations",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false
+      },
+      {
+        "rls": true,
+        "role": "service_role",
+        "table": "pipeline_control.admin_record_operations",
+        "delete": false,
+        "insert": true,
+        "select": true,
+        "update": true
+      }
+    ],
+    "checks": 9,
+    "operatingWrites": false
+  },
+  "status": "structural_pass_with_valid_action_flow_failure",
+  "validActionFlow": {
+    "kind": "fresh-pg17-synthetic-guarded-action-flows",
+    "status": "failed",
+    "fixtureSha256": "e09397cb518c1d03a1e0cf9eebcfee89b3167ec0caabd9acbdd00f7bfa64641a",
+    "operatingWrites": false,
+    "syntheticOnly": true,
+    "transactionRollback": true,
+    "sqlState": "42501",
+    "code": "LOCAL_FLOW_PREREQUISITE_OR_BEHAVIOR_FAILURE"
+  },
+  "privateOwnerGrantProbe": {
+    "kind": "fresh-pg17-private-owner-grant-flow-probe",
+    "status": "failed",
+    "fixtureSha256": "659a524937530f5e384d3cccc8fe55c0bfbd5377b361e6045e31e2c20e7184b8",
+    "operatingWrites": false,
+    "allChangesRolledBack": true,
+    "sqlState": "42501",
+    "code": "FLOW_PREREQUISITE_OR_BEHAVIOR_FAILURE",
+    "frames": [
+      "public.approve_edit_submission_item",
+      "public.admin_record_action"
+    ]
+  },
+  "functionalBlocker": {
+    "firstDeniedHelper": "public.is_user_admin(uuid)",
+    "nextDeniedHelper": "public.canonicalize_youtube_link(text)",
+    "callerOwner": "privacy_workflow_owner",
+    "publicOrServiceHelperGrantNotAuthorizedByThisFix": true,
+    "dependencyAuditPending": true,
+    "missingOwnerHelpers": [
+      "public.canonicalize_youtube_link(text)",
+      "public.extract_youtube_video_id(text)",
+      "public.generate_unique_id(text,text,text)",
+      "public.is_user_admin(uuid)",
+      "public.normalize_restaurant_identity_name(text)",
+      "public.resolve_restaurant_identity_name(text,text,text,text)"
+    ],
+    "grantScopeRequiresG014Change": true,
+    "legacyInactiveActorRiskRequiresVerification": true,
+    "securityReview": {
+      "boundedAstraReview": 1,
+      "extraLegacyRpcCallers": 7,
+      "g014OwnerExceptionSignatures": [
+        "public.extract_youtube_video_id(text)",
+        "public.normalize_restaurant_identity_name(text)",
+        "public.resolve_restaurant_identity_name(text,text,text,text)"
+      ],
+      "activeActorSemanticsRequired": true,
+      "dataApiAllowlistOwnerEntryForbidden": true
+    }
+  },
+  "dependencyAudit": {
+    "schema": "legacy-helper-execution-audit/v1",
+    "observedAt": "2026-10-08T20:50:46.772788+00:00",
+    "source": "owned local full-source PG17 runtime catalog",
+    "database": "tzudong_fresh_pg17_2434703beb8a",
+    "containerId": "3c48c42a4972452a5a132f977b1e21e183ca574413ec9001dcd7bbab7f1b6fb3",
+    "containerName": "tzudong-record-runtime-v3-20261009",
+    "ownerLabel": "01a0f860-10d0-71b0-bb2a-95c2b52e025e",
+    "network": "none",
+    "operatingReads": false,
+    "operatingWrites": false,
+    "localReadOnlyTransaction": true,
+    "mutationsPerformed": false,
+    "scannerSha256": "851c0a7392b9473865c50483343ddb47dfc8a2c100287a83c31bb5703b22ba84",
+    "roots": [
+      {
+        "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+        "owner": "privacy_workflow_owner",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+        "owner": "privacy_workflow_owner",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamp with time zone,text,jsonb,text,text)",
+        "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+        "owner": "privacy_workflow_owner",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      }
+    ],
+    "functions": [
+      {
+        "signature": "extensions.digest(text,text)",
+        "bodySha256": "dab440e06d2ec1df36f3287fec02eac12a47a62063938e1aac6648560f8a6f3e",
+        "owner": "postgres",
+        "definer": false,
+        "config": null,
+        "language": "c",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": true,
+        "serviceExecutable": true,
+        "authenticatedExecutable": true
+      },
+      {
+        "signature": "extensions.similarity(text,text)",
+        "bodySha256": "8cc0e56b16368984eb731cc78a5dc0675919eba98c1db4e1f917fa486b41b5ef",
+        "owner": "supabase_admin",
+        "definer": false,
+        "config": null,
+        "language": "c",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": true,
+        "serviceExecutable": true,
+        "authenticatedExecutable": true
+      },
+      {
+        "signature": "privacy_retention.g041_current_claim_user_id()",
+        "bodySha256": "43f3ff2ed914944802555c4ffe3ff8ecece213e82288e2c1c47ae22efdf81585",
+        "owner": "privacy_workflow_owner",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": false,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "bodySha256": "52d0322d45bd067cf21d82cdb23a4e74b4e379cf8fc2814dfbdd00f72a1d71d0",
+        "owner": "privacy_workflow_owner",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "bodySha256": "d72fabd28c6366917ddda6e34909cc49ef66daec740dea56ad2ef6017dbb745f",
+        "owner": "privacy_workflow_owner",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.canonicalize_youtube_link(text)",
+        "bodySha256": "e1ed32cb1df6cb36ba0645e328f627f360d8b96cd7bd81ef4040bd9c2fd1cdb7",
+        "owner": "postgres",
+        "definer": false,
+        "config": [
+          "search_path=pg_catalog, public, extensions"
+        ],
+        "language": "sql",
+        "ownerExecutable": false,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": false,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.extract_youtube_video_id(text)",
+        "bodySha256": "5ecf7a06fa89265b12773210448acf17fc3b612fe80583346bb217358af11016",
+        "owner": "postgres",
+        "definer": false,
+        "config": [
+          "search_path=pg_catalog, public, extensions"
+        ],
+        "language": "sql",
+        "ownerExecutable": false,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.generate_unique_id(text,text,text)",
+        "bodySha256": "a46cbfa06f4ae74100b04126faefb4e28898adea5ff277d6604472463f8b6182",
+        "owner": "postgres",
+        "definer": false,
+        "config": [
+          "search_path=public"
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": false,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": false,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.is_user_admin(uuid)",
+        "bodySha256": "9f2486a15c285f90ce383bee7daab323f4dce789278f214e85d50b4128c7c44c",
+        "owner": "postgres",
+        "definer": true,
+        "config": [
+          "search_path=public"
+        ],
+        "language": "sql",
+        "ownerExecutable": false,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": false,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamp with time zone,text,jsonb,text,text)",
+        "bodySha256": "99d40fffe7137324925e6f1f93a0096994c9c7264e9fb032855495b6ea2be212",
+        "owner": "privacy_workflow_owner",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "language": "plpgsql",
+        "ownerExecutable": true,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.normalize_restaurant_identity_name(text)",
+        "bodySha256": "706d9005f6978684d01bcd375a6ba0249e3cb51ed46c08e62e4996d5f6f6263a",
+        "owner": "postgres",
+        "definer": false,
+        "config": [
+          "search_path=pg_catalog, public, extensions"
+        ],
+        "language": "sql",
+        "ownerExecutable": false,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      },
+      {
+        "signature": "public.resolve_restaurant_identity_name(text,text,text,text)",
+        "bodySha256": "3a63c3941c3e157bb601a8df0dfebcf800e8d47d98bb9e3533ab10fc82487464",
+        "owner": "postgres",
+        "definer": false,
+        "config": [
+          "search_path=pg_catalog, public, extensions"
+        ],
+        "language": "sql",
+        "ownerExecutable": false,
+        "ownerSchemaUsage": true,
+        "publicExecute": false,
+        "serviceExecutable": true,
+        "authenticatedExecutable": false
+      }
+    ],
+    "staticQualifiedEdges": [
+      {
+        "caller": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "callee": "privacy_retention.g041_current_claim_user_id()",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": true,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.is_user_admin(uuid)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.canonicalize_youtube_link(text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.extract_youtube_video_id(text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.normalize_restaurant_identity_name(text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.resolve_restaurant_identity_name(text,text,text,text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "callee": "extensions.similarity(text,text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": true,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "privacy_retention.g041_current_claim_user_id()",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": true,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.is_user_admin(uuid)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.canonicalize_youtube_link(text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.extract_youtube_video_id(text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.normalize_restaurant_identity_name(text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.resolve_restaurant_identity_name(text,text,text,text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "extensions.similarity(text,text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": true,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.approve_submission_item(uuid,uuid,jsonb)",
+        "callee": "public.generate_unique_id(text,text,text)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamp with time zone,text,jsonb,text,text)",
+        "callee": "privacy_retention.g041_current_claim_user_id()",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": true,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamp with time zone,text,jsonb,text,text)",
+        "callee": "public.is_user_admin(uuid)",
+        "depth": 1,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.canonicalize_youtube_link(text)",
+        "callee": "public.extract_youtube_video_id(text)",
+        "depth": 2,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": false,
+        "schemaUsage": true,
+        "resolution": "unique_argument_count_with_defaults"
+      },
+      {
+        "caller": "public.generate_unique_id(text,text,text)",
+        "callee": "extensions.digest(text,text)",
+        "depth": 2,
+        "effectiveRole": "privacy_workflow_owner",
+        "currentlyExecutable": true,
+        "schemaUsage": true,
+        "resolution": "explicit_text_variable_declaration_and_text_literal"
+      }
+    ],
+    "missingExecutionForPrivacyWorkflowOwner": [
+      "public.canonicalize_youtube_link(text)",
+      "public.extract_youtube_video_id(text)",
+      "public.generate_unique_id(text,text,text)",
+      "public.is_user_admin(uuid)",
+      "public.normalize_restaurant_identity_name(text)",
+      "public.resolve_restaurant_identity_name(text,text,text,text)"
+    ],
+    "unresolvedCalls": [],
+    "dynamicCalls": [],
+    "limitations": [
+      "No functions executed, no grants or DDL applied.",
+      "Static qualified calls only; unqualified calls, trigger execution, table privileges/RLS and dynamic SQL are not proven by this closure.",
+      "Argument-count/default resolution is used for unique signatures. extensions.digest(text,text) additionally binds a declared text variable and text literal. Other overloads are unverified.",
+      "pg_catalog built-ins excluded from custom helper closure.",
+      "Direct/indirect execution requirements respect SECURITY DEFINER owner changes."
+    ],
+    "recommendation": "Grant review is restricted to exact denied signatures reached with effectiveRole privacy_workflow_owner. Preserve PUBLIC/service/authenticated ACL and verify G014, positive fixtures and rollback separately.",
+    "explicitArgumentTypeProofs": [
+      {
+        "caller": "public.generate_unique_id(text,text,text)",
+        "callee": "extensions.digest(text,text)",
+        "firstArgumentDeclaredType": "text",
+        "secondArgument": "text literal",
+        "bodySha256": "a46cbfa06f4ae74100b04126faefb4e28898adea5ff277d6604472463f8b6182"
+      }
+    ],
+    "requiredDirectHelpersByRoot": {
+      "public.approve_edit_submission_item(uuid,uuid,jsonb)": [
+        "extensions.similarity(text,text)",
+        "privacy_retention.g041_current_claim_user_id()",
+        "public.canonicalize_youtube_link(text)",
+        "public.extract_youtube_video_id(text)",
+        "public.is_user_admin(uuid)",
+        "public.normalize_restaurant_identity_name(text)",
+        "public.resolve_restaurant_identity_name(text,text,text,text)"
+      ],
+      "public.approve_submission_item(uuid,uuid,jsonb)": [
+        "extensions.similarity(text,text)",
+        "privacy_retention.g041_current_claim_user_id()",
+        "public.canonicalize_youtube_link(text)",
+        "public.extract_youtube_video_id(text)",
+        "public.generate_unique_id(text,text,text)",
+        "public.is_user_admin(uuid)",
+        "public.normalize_restaurant_identity_name(text)",
+        "public.resolve_restaurant_identity_name(text,text,text,text)"
+      ],
+      "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamp with time zone,text,jsonb,text,text)": [
+        "privacy_retention.g041_current_claim_user_id()",
+        "public.is_user_admin(uuid)"
+      ]
+    },
+    "requiredTransitiveHelpers": [
+      "extensions.digest(text,text)",
+      "public.extract_youtube_video_id(text)"
+    ]
+  }
+}

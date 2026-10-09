@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "actual dual independent local source replay",
+  "runs": [
+    {
+      "run": "run-a",
+      "source": "cca9e6e28b54f1c2c316d5a292b91184d9092f42",
+      "pg": "15.8",
+      "catalogProjectionRows": 1917,
+      "artifactCount": 55,
+      "mismatches": []
+    },
+    {
+      "run": "run-b",
+      "source": "cca9e6e28b54f1c2c316d5a292b91184d9092f42",
+      "pg": "15.8",
+      "catalogProjectionRows": 1917,
+      "artifactCount": 55,
+      "mismatches": []
+    }
+  ],
+  "comparisonVerdict": "passed",
+  "comparisonSha256": "f1d29d6c996039629b6b197330c15173ab111b03ec7b300e3c1b05ea23c8aed6",
+  "pg17HostedMembershipAdmissionProven": false,
+  "newRpcHostedReadbackProven": false,
+  "operatingWrites": 0,
+  "fullGoalComplete": false,
+  "limitations": [
+    "Catalog1917 is the fixed foundational projection, not every new application object.",
+    "PG15 explicit replay windows do not attest PG17 membership options or hosted data.",
+    "Actual new RPC and operating metadata/readback remain required."
+  ]
+}

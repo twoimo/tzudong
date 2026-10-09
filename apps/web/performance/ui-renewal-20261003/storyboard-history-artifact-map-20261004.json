@@ -1,0 +1,16 @@
+{
+  "artifacts": [
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-applied-ledger-checksums-20261004.json",
+      "sha256": "57c057711daae5edeab3dd900df88ca0ec87473a383aecb5096b222c3b904c20"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-history-original-verification.json",
+      "sha256": "0ad3d1f8807e3f05c7ac3e2b7e3e4c65a64db57b3de112879f884d927d0bf7d3"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-history-receipt-verification.json",
+      "sha256": "507918494915923f3dd9d65a7f9047e1538dbc6322a573677a65816669bf4462"
+    }
+  ]
+}

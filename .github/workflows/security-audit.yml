@@ -30,6 +30,15 @@ on:
       - 'backend/bin/schema_mirror_report.py'
       - 'backend/bin/seed_fixture_guard.py'
       - 'backend/bin/tests/**'
+      - 'backend/bin/run_parallel_laaj.py'
+      - 'backend/utils/**'
+      - 'backend/restaurant-evaluation/scripts/**'
+      - 'backend/utils/stage_cache.py'
+      - 'backend/utils/resource-budget.mjs'
+      - 'backend/utils/tests/test_stage_execution.py'
+      - 'backend/utils/tests/test_pipeline_restart_integration.py'
+      - 'backend/utils/tests/resource-budget.test.mjs'
+      - 'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh'
       - 'backend/bin/tests/test_check_deployment_descriptor_set_unittest.py'
       - 'backend/bin/tests/test_metrics_contract_report_unittest.py'
       - 'backend/bin/tests/test_observability_up_unittest.py'
@@ -50,6 +59,18 @@ on:
       - 'backend/supabase/tests/test_g037_reviewed_artifacts.py'
       - 'backend/supabase/g037-readonly-transaction-source-transition.v1.json'
       - 'backend/supabase/migrations/*.sql'
+      - 'backend/supabase/scripts/g014_owner_recovery_plan.py'
+      - 'backend/supabase/scripts/verify_g014_owner_final_replay.py'
+      - 'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
+      - 'backend/supabase/applied-receipts/owner-recovery-20261004/**'
+      - 'backend/supabase/scripts/operational_sql_receipts.py'
+      - 'backend/supabase/tests/test_operational_sql_receipts.py'
+      - 'backend/supabase/scripts/g016_onboarding_identity_correction.py'
+      - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+      - 'backend/supabase/scripts/local_replay_contract.py'
+      - 'backend/supabase/tests/test_g014_owner_final_verifier.py'
+      - 'backend/supabase/tests/test_g014_owner_final_replay.py'
+      - 'backend/supabase/tests/test_local_replay_contract.py'
       - 'backend/supabase/advisor-classification.v1.json'
       - 'backend/supabase/auth-hardening-decision.v1.json'
       - 'backend/supabase/hosted-db-access-decision.v1.json'
@@ -285,6 +306,17 @@ jobs:
       - name: Install focused test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
 
+      - name: Set up pinned pipeline Node runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24.21.0'
+
+      - name: Verify pipeline receipts, review completeness and resource limits
+        run: |
+          command -v jq
+          python -m unittest backend.bin.tests.test_restaurant_review_automation backend.utils.tests.test_stage_execution backend.utils.tests.test_pipeline_restart_integration
+          node --test backend/utils/tests/resource-budget.test.mjs
+
       - name: Install Helm for actual local descriptor rendering
         uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
@@ -418,6 +450,14 @@ jobs:
 
       - name: Verify publication admin route boundary
         run: bun test apps/web/tests-unit/publish-jobs-request-contract.test.ts
+
+      - name: Verify immutable owner stages and read-only PG15 replay bindings
+        run: >-
+          python -m unittest
+          backend.supabase.tests.test_g014_owner_final_verifier.SourceContract
+          backend.supabase.tests.test_g014_owner_final_replay.SourceContract
+          backend.supabase.tests.test_local_replay_contract
+          backend.supabase.tests.test_operational_sql_receipts.SourceContract
 
       - name: Verify Supabase advisor, Auth hardening, and hosted DB access source
         run: |

@@ -1,0 +1,8 @@
+equivalence: 112 cases; old intersection 3; new intersection 3; divergence 0; PASS
+knowledge_graph suite: 113 tests; skipped 8; PASS
+focused predecessor continuity: 4 tests; PASS
+cache reuse: two successful segments; restart and duplicate queue; attempted 0; provider calls 0; evidence bytes unchanged; PASS
+cache fail-closed: missing, duplicate, corrupt, invalid lineage, source, policy, model, input, schema, and rejected predecessor states require readback; PASS
+provider acceptance for implemented 365-byte wire schema: NOT EXECUTED
+production adoption: INCOMPLETE pending an exact provider wire-acceptance receipt
+

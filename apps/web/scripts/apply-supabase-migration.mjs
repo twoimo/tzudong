@@ -6,6 +6,8 @@ import { lstat, readFile, realpath } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { migrationEnvelope, atomicMigrationSql, reconciliationSql, reconciliationOutcome } from './supabase-migration-transaction.mjs';
+
 import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -30,6 +32,35 @@ const operationError = (code) => {
   error.code = code;
   return error;
 };
+const COMPILER_GUARD_CODES = new Set([
+  'MIGRATION_LEDGER_UNAVAILABLE',
+  'MIGRATION_LEDGER_CONTRACT_INSUFFICIENT',
+  'MIGRATION_ALREADY_APPLIED',
+  'MIGRATION_LEDGER_CONFLICT',
+  'MIGRATION_PRIOR_STATE_MISMATCH',
+  'MIGRATION_TERMINAL_READBACK_FAILED',
+  'MIGRATION_LEDGER_READBACK_FAILED',
+]);
+const BOUNDED_APPLY_CODES = new Set([
+  ...COMPILER_GUARD_CODES,
+  'MIGRATION_READBACK_INVALID',
+  'MIGRATION_PSQL_EXECUTION_FAILED',
+  'MIGRATION_PSQL_FAILED',
+]);
+const safeErrorProperty = (error, property) => {
+  try {
+    const value = error?.[property];
+    return typeof value === 'string' ? value : '';
+  } catch { return ''; }
+};
+export function boundedMigrationError(error) {
+  const fixedSqlCode = safeErrorProperty(error, 'fixedSqlCode');
+  if (COMPILER_GUARD_CODES.has(fixedSqlCode)) return operationError(fixedSqlCode);
+  const code = safeErrorProperty(error, 'code');
+  if (BOUNDED_APPLY_CODES.has(code)) return operationError(code);
+  const sqlstate = /^MIGRATION_PSQL_FAILED_([0-9A-Z]{5})(?:_|$)/.exec(code)?.[1];
+  return operationError(sqlstate ? `MIGRATION_PSQL_FAILED_${sqlstate}` : 'MIGRATION_PSQL_FAILED');
+}
 const PROVIDER_RECEIPT_KEYS = Object.freeze([
   'version',
   'provider',
@@ -338,17 +369,65 @@ export function selectDirectDatabaseTransport(environment = process.env) {
   return { databaseUrl };
 }
 
-function runPsql(databaseUrl, query, singleTransaction) {
+export function psqlConnectionEnvironment(databaseUrl, environment = process.env) {
+  let target;
+  try {
+    target = new URL(databaseUrl);
+  } catch {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  if (!['postgres:', 'postgresql:'].includes(target.protocol) || target.hash) {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  const queryKeys = [...target.searchParams.keys()];
+  const sslModes = target.searchParams.getAll('sslmode');
+  if (queryKeys.some(key => key !== 'sslmode') || sslModes.length > 1) {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  let host;
+  let database;
+  let user;
+  let password;
+  try {
+    host = decodeURIComponent(target.hostname);
+    database = decodeURIComponent(target.pathname.slice(1));
+    user = decodeURIComponent(target.username);
+    password = decodeURIComponent(target.password);
+  } catch {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  if (!host || !database) throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+
+  const scoped = { ...environment };
+  for (const key of Object.keys(scoped)) {
+    if (/^PG[A-Z0-9_]+$/.test(key)) delete scoped[key];
+  }
+  scoped.PGHOST = host;
+  scoped.PGDATABASE = database;
+  if (target.port) scoped.PGPORT = target.port;
+  if (user) scoped.PGUSER = user;
+  if (password) scoped.PGPASSWORD = password;
+  if (sslModes[0]) scoped.PGSSLMODE = sslModes[0];
+  return scoped;
+}
+
+export function runPsql(databaseUrl, query, singleTransaction, {
+  environment = process.env,
+  psql = 'psql',
+  spawnImpl = spawnSync,
+} = {}) {
   const args = [
+    '--no-psqlrc',
     '--set=ON_ERROR_STOP=1',
     '--quiet',
     '--tuples-only',
     '--no-align',
   ];
   if (singleTransaction) args.splice(1, 0, '--single-transaction');
-  args.push(databaseUrl);
-  const result = spawnSync('psql', args, {
+  args.push('--file=-');
+  const result = spawnImpl(psql, args, {
     encoding: 'utf8',
+    env: psqlConnectionEnvironment(databaseUrl, environment),
     input: `\\set VERBOSITY verbose\n${query}`,
     maxBuffer: 10 * 1024 * 1024,
   });
@@ -358,23 +437,9 @@ function runPsql(databaseUrl, query, singleTransaction) {
   if (result.status !== 0) {
     const stderr = result.stderr || '';
     const sqlstate = /ERROR:\s+([0-9A-Z]{5}):/m.exec(stderr)?.[1];
-    const undefinedFunction = sqlstate === '42883'
-      ? /function ([a-z_][a-z0-9_.]*\([a-z0-9_., ]*\)) does not exist/i.exec(stderr)?.[1]
-      : null;
-    const undefinedOperator = sqlstate === '42883'
-      ? /operator does not exist:\s*([a-z0-9_[\]. =<>!+-]+)/i.exec(stderr)?.[1]
-      : null;
-    const classifier = (undefinedFunction ?? undefinedOperator)
-      ?.slice(0, 96)
-      .replace(/[^a-z0-9_]+/gi, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '')
-      .toUpperCase();
-    throw operationError(
-      sqlstate
-        ? `MIGRATION_PSQL_FAILED_${sqlstate}${classifier ? `_${classifier}` : ''}`
-        : 'MIGRATION_PSQL_FAILED',
-    );
+    const error = operationError(sqlstate ? `MIGRATION_PSQL_FAILED_${sqlstate}` : 'MIGRATION_PSQL_FAILED');
+    error.fixedSqlCode = /ERROR:\s+(?:[0-9A-Z]{5}:\s*)?(MIGRATION_[A-Z0-9_]{1,96})\b/m.exec(stderr)?.[1];
+    throw error;
   }
   return result.stdout || '';
 }
@@ -428,18 +493,46 @@ export function assertExpectedPriorState(priorState, terminalReadback, migration
   }
 }
 
-function applyMigrationWithTerminalReadback(databaseUrl, migration, query) {
-  const output = runPsql(
-    databaseUrl,
-    `${query.trim()}\n\n${migration.terminalReadback.query.trim()}\n`,
-    true,
-  );
-  const readback = parseReadback(output);
-  return assertExactReadback(
-    readback,
-    migration.terminalReadback.expected,
-    'MIGRATION_TERMINAL_READBACK_FAILED',
-  );
+export function readOriginalStatementVector(migration, bytes) {
+  const path = resolve(REPOSITORY_ROOT, migration.path);
+  const result = spawnSync(process.execPath, [resolve(REPOSITORY_ROOT, 'backend/supabase/scripts/g037_supabase_statement_vector.mjs'),
+    '--source', path, '--version', /\/(\d{14})_/.exec(migration.path)?.[1] ?? '', '--sha256', migration.sha256, '--size', String(bytes.length)],
+  { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  if (result.error || result.status !== 0) throw operationError('MIGRATION_VECTOR_INVALID');
+  try {
+    const value = JSON.parse(result.stdout);
+    if (value.source_sha256 !== migration.sha256 || value.source_size !== bytes.length || !Array.isArray(value.statements)) throw new Error();
+    return value.statements;
+  } catch { throw operationError('MIGRATION_VECTOR_INVALID'); }
+}
+
+export function applyMigrationWithTerminalReadback(databaseUrl, migration, query, {
+  runPsqlImpl = runPsql, readVectorImpl = readOriginalStatementVector,
+} = {}) {
+  const bytes = Buffer.from(query);
+  const plan = migrationEnvelope(bytes, migration, readVectorImpl(migration, bytes));
+  const sql = atomicMigrationSql(plan, migration);
+  const reconcile = reconciliationSql(plan, migration);
+  let output;
+  let commandCompleted = false;
+  try {
+    output = runPsqlImpl(databaseUrl, sql, true);
+    commandCompleted = true;
+    return assertExactReadback(parseReadback(output), migration.terminalReadback.expected, 'MIGRATION_TERMINAL_READBACK_FAILED');
+  }
+  catch (error) {
+    // No resend: a failed/lost COMMIT acknowledgement is not evidence of rollback.
+    const boundedError = boundedMigrationError(error);
+    let value; let disposition = 'unknown';
+    try { value = parseReadback(runPsqlImpl(databaseUrl, reconcile, true)); disposition = reconciliationOutcome(value, migration); } catch { /* bounded unknown */ }
+    if (disposition === 'committed' && boundedError.code === 'MIGRATION_ALREADY_APPLIED') throw operationError('MIGRATION_ALREADY_APPLIED');
+    if (disposition === 'committed' && commandCompleted
+      && ['MIGRATION_READBACK_INVALID', 'MIGRATION_TERMINAL_READBACK_FAILED'].includes(boundedError.code)) {
+      return assertExactReadback(value.terminal, migration.terminalReadback.expected, 'MIGRATION_TERMINAL_READBACK_FAILED');
+    }
+    if (disposition === 'not_applied') throw boundedError;
+    throw operationError(disposition === 'partial_conflict' ? 'MIGRATION_RECONCILIATION_CONFLICT' : 'MIGRATION_OUTCOME_UNCONFIRMED');
+  }
 }
 
 const PROVIDER_OWNED_MIGRATION_IDS = new Set([
@@ -449,7 +542,7 @@ const PROVIDER_OWNED_MIGRATION_IDS = new Set([
 
 export async function main(
   argv = process.argv.slice(2),
-  { environment = process.env } = {},
+  { environment = process.env, runPsqlImpl = runPsql, readVectorImpl = readOriginalStatementVector } = {},
 ) {
   const args = parseArgs(argv);
   const { manifestSha256, migration, query } = await loadReviewedMigration(args.migrationId, {
@@ -489,21 +582,15 @@ export async function main(
 
   if (!args.dryRun) {
     const { databaseUrl } = selectDirectDatabaseTransport(environment);
-    const terminalReadback = parseReadback(
-      runPsql(databaseUrl, migration.terminalReadback.query, false),
-    );
     if (args.verifyTerminalState) {
+      const terminalReadback = parseReadback(runPsqlImpl(databaseUrl, migration.terminalReadback.query, false));
       result.terminal_readback = assertExactReadback(
         terminalReadback,
         migration.terminalReadback.expected,
         'MIGRATION_TERMINAL_READBACK_FAILED',
       );
     } else {
-      const priorState = parseReadback(
-        runPsql(databaseUrl, migration.expectedPriorState.query, false),
-      );
-      assertExpectedPriorState(priorState, terminalReadback, migration);
-      result.terminal_readback = applyMigrationWithTerminalReadback(databaseUrl, migration, query);
+      result.terminal_readback = applyMigrationWithTerminalReadback(databaseUrl, migration, query, { runPsqlImpl, readVectorImpl });
       result.migration_applied = true;
     }
   }

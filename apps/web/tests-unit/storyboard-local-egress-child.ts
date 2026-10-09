@@ -67,7 +67,9 @@ const report: Record<string, unknown> = {};
 // Case B: the adapter must not touch the global fetch implementation.
 {
   const calls: string[] = [];
+  const inferencePaths: string[]=[];
   const model = createServer((req, res) => {
+    inferencePaths.push(req.url ?? "");
     req.resume();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     if (req.url === '/health') return res.end('{"status":"ok"}');
@@ -86,12 +88,14 @@ const report: Record<string, unknown> = {};
   globalThis.fetch = (async (input: unknown) => { calls.push(String(input)); throw new Error('fetch_must_not_be_used'); }) as typeof globalThis.fetch;
 
   const client = new MlxStoryboardClient(new MlxTransport({ origin }));
-  const drafted = await client.draft(request());
-  const generated = await client.image(request(), 'a wooden table');
+  const retiredErrors: string[]=[];
+  for(const operation of [()=>client.draft(request()),()=>client.image(request(),'fixture')]) {
+    try { await operation(); retiredErrors.push('unexpected_success'); }
+    catch(error) { retiredErrors.push(error instanceof Error ? error.message : 'invalid_error'); }
+  }
   report.fetchCalls = calls;
-  report.draftTitle = drafted.draft.title;
-  report.imageBytes = generated.bytes.length;
-  report.imageProvenance = generated.provenance;
+  report.inferencePaths = inferencePaths;
+  report.retiredErrors = retiredErrors;
 }
 
 for (const server of servers) { server.closeAllConnections(); server.close(); }

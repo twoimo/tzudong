@@ -1,0 +1,33 @@
+{
+  "observedAtUtc": "2026-10-09T05:05:44.739850+00:00",
+  "sourceTestVsPreview": {
+    "candidateSha": "56819502aaa6993d847efb8b78a5bcd6a4ecdaf2",
+    "gitPreviewMergeSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+    "sameGitTree": true,
+    "tree": "f4c18d5f74a722947eeb063ec1e304602e588beb",
+    "localTestsNotRerunAsLiveProof": true
+  },
+  "deploymentId": "dpl_He2HgNHEkNsdbQg556dGJsreTEgr",
+  "state": "READY",
+  "httpReadRoutes": 27,
+  "publicAccountRouteInventory": 22,
+  "anonymousAdminApis401": 4,
+  "anonymousAdminPageRedirect307": true,
+  "browserLoginPolicyAndAdminAnonymousDesktopMobile": true,
+  "browserPageErrors": 0,
+  "browserConsoleErrors": 23,
+  "externalBrowserReadsBlocked": 17,
+  "fullMapOrClientDataVerificationClaimed": false,
+  "oauthAdminSessionAvailable": false,
+  "requiredAdminConditions": [
+    "Application Supabase authenticated OAuth session for this preview origin",
+    "is_current_auth_session_active RPC true",
+    "user_roles admin",
+    "user_account_status active"
+  ],
+  "productionAdoptionVerified": false,
+  "authCookiesSecretsPiiExported": false,
+  "deploymentEnvFreezePromotionOperatingWritesModels": 0,
+  "browserExited": true,
+  "localCliAutoLinkRestored": true
+}

@@ -1,0 +1,100 @@
+{
+  "factors": [
+    {
+      "originalBytes": 936,
+      "path": "/properties/summary",
+      "reference": "#/properties/claims",
+      "referenceBytes": 30,
+      "savedBytes": 906
+    },
+    {
+      "originalBytes": 936,
+      "path": "/properties/restaurants/items/properties/menus",
+      "reference": "#/properties/claims",
+      "referenceBytes": 30,
+      "savedBytes": 906
+    },
+    {
+      "originalBytes": 936,
+      "path": "/properties/restaurants/items/properties/claims",
+      "reference": "#/properties/claims",
+      "referenceBytes": 30,
+      "savedBytes": 906
+    },
+    {
+      "originalBytes": 543,
+      "path": "/properties/restaurants/items/properties/evidence",
+      "reference": "#/properties/claims/items/properties/evidence",
+      "referenceBytes": 56,
+      "savedBytes": 487
+    },
+    {
+      "originalBytes": 56,
+      "path": "/properties/coverage/properties/limitations",
+      "reference": "#/properties/uncertainty",
+      "referenceBytes": 35,
+      "savedBytes": 21
+    },
+    {
+      "originalBytes": 56,
+      "path": "/properties/claims/items/properties/uncertainty",
+      "reference": "#/properties/uncertainty",
+      "referenceBytes": 35,
+      "savedBytes": 21
+    },
+    {
+      "originalBytes": 56,
+      "path": "/properties/restaurants/items/properties/uncertainty",
+      "reference": "#/properties/uncertainty",
+      "referenceBytes": 35,
+      "savedBytes": 21
+    },
+    {
+      "originalBytes": 149,
+      "path": "/properties/claims/items/properties/evidence/items/properties/endSeconds",
+      "reference": "#/properties/claims/items/properties/evidence/items/properties/startSeconds",
+      "referenceBytes": 86,
+      "savedBytes": 63
+    }
+  ],
+  "request": {
+    "candidateCanonicalBytes": 4680,
+    "candidateSha256": "bc0ef2b02c0827c6538350d04b8deefc29659f28d4faf40d54937e8a11f5d661",
+    "maxOutputTokens": 65536,
+    "model": "gemini-3.8-flash",
+    "onlyResponseSchemaChanged": true,
+    "originalCanonicalBytes": 8011,
+    "originalSha256": "121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331",
+    "videoProcessing": {
+      "end_offset": "835s",
+      "start_offset": "0s",
+      "type": "static"
+    }
+  },
+  "schema": {
+    "cycles": 0,
+    "defsUsed": false,
+    "expandedCanonicalEqualsOriginal": true,
+    "expandedSha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd",
+    "expandedStats": {
+      "depth": 13,
+      "nodes": 329
+    },
+    "factoredCanonicalBytes": 2004,
+    "factoredSha256": "d72c43afe8d12d0a85a815d8ec70ce107dc40e0bc97d2dfbedfeaf6065846953",
+    "factoredStats": {
+      "depth": 10,
+      "nodes": 127
+    },
+    "localReferencesOnly": true,
+    "originalCanonicalBytes": 5335,
+    "originalSha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd",
+    "originalStats": {
+      "depth": 13,
+      "nodes": 329
+    },
+    "referenceCount": 8,
+    "remainingBeneficialDuplicateGroups": 0,
+    "savedBytes": 3331
+  }
+}

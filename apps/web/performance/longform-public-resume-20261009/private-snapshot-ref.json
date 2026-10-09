@@ -1,0 +1,15 @@
+{
+  "observedAtUtc": "2026-10-09T04:38:52.889855+00:00",
+  "path": "/Users/twoimo/.codex/runtime-cache/longform-public-resume-20261009T043852Z-46217f",
+  "manifestSha256": "de69a2995487e17ee77aa77ad17bd4fc5669d0474e858c54deb45631f9072520",
+  "targets": [
+    "O_hj9Ge-Fdk",
+    "6KDmeK_6qsI",
+    "DZXKCO_REJ4"
+  ],
+  "status": "paused",
+  "pauseReason": "rate-limit",
+  "processCount": 0,
+  "liveLockOwner": false,
+  "allSnapshotFilesMode0600": true
+}

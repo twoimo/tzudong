@@ -1,0 +1,280 @@
+{
+  "checks": {
+    "sevenAlternatingPairs": true,
+    "corpusBeforeAfterExact": true,
+    "allFrameCounts48": true,
+    "allOutputsExactAndNoDuplicates": true,
+    "allThreeProtectedRowsUnchanged": true,
+    "frozenSourceHashes": true,
+    "allArchivedEvaluationValuesExact": true,
+    "evaluationPromptsExact": true,
+    "eventCountsExact": true,
+    "candidateOneProcessCap4": true
+  },
+  "allPassed": true,
+  "scores": {
+    "cold": {
+      "wallMs": {
+        "pairs": 7,
+        "baselineMean": 3223.279725793483,
+        "candidateMean": 2658.7216309271753,
+        "absoluteReductionMean": 564.5580948663077,
+        "relativeReductionMeanPercent": 16.257778134547163,
+        "pairedT95CiAbsoluteReduction": [
+          126.4250262527263,
+          1002.691163479889
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          317.4197737327112,
+          939.9380709842911
+        ],
+        "pairedDifferenceStddev": 473.73637110441837,
+        "baselineCvPercent": 18.292968446057227,
+        "candidateCvPercent": 9.678932152184455,
+        "relativeReductionRatioOfMeansPercent": 17.515020193518236,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false
+      },
+      "cpuMs": {
+        "pairs": 7,
+        "baselineMean": 3648.6305714285713,
+        "candidateMean": 3268.916857142857,
+        "absoluteReductionMean": 379.7137142857142,
+        "relativeReductionMeanPercent": 10.383428605525484,
+        "pairedT95CiAbsoluteReduction": [
+          273.8905628685472,
+          485.53686570288124
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          301.3225714285714,
+          456.96699999999976
+        ],
+        "pairedDifferenceStddev": 114.42248787529223,
+        "baselineCvPercent": 5.205876407105257,
+        "candidateCvPercent": 5.723695423908228,
+        "relativeReductionRatioOfMeansPercent": 10.407020027161654,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false
+      },
+      "peakTreeRssMiB": {
+        "pairs": 7,
+        "baselineMean": 255.49107142857142,
+        "candidateMean": 246.08035714285714,
+        "absoluteReductionMean": 9.410714285714286,
+        "relativeReductionMeanPercent": -2.8671833525098145,
+        "pairedT95CiAbsoluteReduction": [
+          -84.0817031679047,
+          102.90313173933329
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -63.84375,
+          75.88169642857143
+        ],
+        "pairedDifferenceStddev": 101.08974132084927,
+        "baselineCvPercent": 21.419310123788684,
+        "candidateCvPercent": 26.125405347775242,
+        "relativeReductionRatioOfMeansPercent": 3.6833828411672167,
+        "within20PercentCvNoiseBudget": false,
+        "admittedForLivePerformanceClaim": false
+      },
+      "mediaMs": {
+        "pairs": 7,
+        "baselineMean": 771.6493509776358,
+        "candidateMean": 673.1735595967621,
+        "absoluteReductionMean": 98.47579138087374,
+        "relativeReductionMeanPercent": 8.412344383474585,
+        "pairedT95CiAbsoluteReduction": [
+          -93.47763525640553,
+          290.42921801815305
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -22.916898929647036,
+          256.8462556560657
+        ],
+        "pairedDifferenceStddev": 207.5518290458116,
+        "baselineCvPercent": 28.22954658793469,
+        "candidateCvPercent": 8.002759358275936,
+        "relativeReductionRatioOfMeansPercent": 12.761728012355677,
+        "within20PercentCvNoiseBudget": false,
+        "admittedForLivePerformanceClaim": false
+      },
+      "laajMs": {
+        "pairs": 7,
+        "baselineMean": 2346.413880885978,
+        "candidateMean": 1847.6730473006942,
+        "absoluteReductionMean": 498.7408335852836,
+        "relativeReductionMeanPercent": 20.77548721039928,
+        "pairedT95CiAbsoluteReduction": [
+          264.2298250394847,
+          733.2518421310825
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          340.2622090652585,
+          685.0445532971727
+        ],
+        "pairedDifferenceStddev": 253.56769924734283,
+        "baselineCvPercent": 14.531077001849122,
+        "candidateCvPercent": 12.600270674938386,
+        "relativeReductionRatioOfMeansPercent": 21.255450184984635,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false
+      },
+      "transformMs": {
+        "pairs": 7,
+        "baselineMean": 105.21649392986936,
+        "candidateMean": 137.875024029719,
+        "absoluteReductionMean": -32.658530099849614,
+        "relativeReductionMeanPercent": -45.380512452501634,
+        "pairedT95CiAbsoluteReduction": [
+          -105.36512330499582,
+          40.04806310529659
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -83.70929800107011,
+          23.74990417488984
+        ],
+        "pairedDifferenceStddev": 78.61483208597834,
+        "baselineCvPercent": 38.4535582797871,
+        "candidateCvPercent": 41.12614367726074,
+        "relativeReductionRatioOfMeansPercent": -31.039363582688594,
+        "within20PercentCvNoiseBudget": false,
+        "admittedForLivePerformanceClaim": false
+      }
+    },
+    "restart": {
+      "wallMs": {
+        "pairs": 7,
+        "baselineMean": 666.422422476379,
+        "candidateMean": 540.0645119537201,
+        "absoluteReductionMean": 126.35791052265891,
+        "relativeReductionMeanPercent": 17.190995760606874,
+        "pairedT95CiAbsoluteReduction": [
+          13.938283070773124,
+          238.7775379745447
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          42.23399965225586,
+          207.88730923751635
+        ],
+        "pairedDifferenceStddev": 121.55500272666737,
+        "baselineCvPercent": 18.826189245493143,
+        "candidateCvPercent": 15.666295135895908,
+        "relativeReductionRatioOfMeansPercent": 18.960633115122658,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false
+      },
+      "cpuMs": {
+        "pairs": 7,
+        "baselineMean": 477.0795714285714,
+        "candidateMean": 419.0395714285714,
+        "absoluteReductionMean": 58.04000000000001,
+        "relativeReductionMeanPercent": 11.832604106485903,
+        "pairedT95CiAbsoluteReduction": [
+          24.500277356999803,
+          91.57972264300022
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          34.15957142857144,
+          83.10471428571428
+        ],
+        "pairedDifferenceStddev": 36.26520715047228,
+        "baselineCvPercent": 9.676454938399164,
+        "candidateCvPercent": 9.017383466614856,
+        "relativeReductionRatioOfMeansPercent": 12.165685448698738,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false
+      },
+      "peakTreeRssMiB": {
+        "pairs": 7,
+        "baselineMean": 54.66517857142857,
+        "candidateMean": 56.888392857142854,
+        "absoluteReductionMean": -2.2232142857142856,
+        "relativeReductionMeanPercent": -4.571001378831241,
+        "pairedT95CiAbsoluteReduction": [
+          -8.302202027313136,
+          3.855773455884565
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -6.645089285714286,
+          2.1517857142857144
+        ],
+        "pairedDifferenceStddev": 6.5729747398574085,
+        "baselineCvPercent": 8.469344521883183,
+        "candidateCvPercent": 9.7391930389012,
+        "relativeReductionRatioOfMeansPercent": -4.06696610861576,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false
+      },
+      "mediaMs": {
+        "pairs": 7,
+        "baselineMean": 252.57114287731903,
+        "candidateMean": 252.97159528625863,
+        "absoluteReductionMean": -0.4004524089396,
+        "relativeReductionMeanPercent": -4.183289132281811,
+        "pairedT95CiAbsoluteReduction": [
+          -61.68761532142058,
+          60.88671050354138
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -47.951238229870796,
+          42.901166614943314
+        ],
+        "pairedDifferenceStddev": 66.26744300611331,
+        "baselineCvPercent": 26.982144522150442,
+        "candidateCvPercent": 23.627891661298776,
+        "relativeReductionRatioOfMeansPercent": -0.15855034125339926,
+        "within20PercentCvNoiseBudget": false,
+        "admittedForLivePerformanceClaim": false
+      },
+      "laajMs": {
+        "pairs": 7,
+        "baselineMean": 301.27514273460423,
+        "candidateMean": 193.6460893734225,
+        "absoluteReductionMean": 107.6290533611817,
+        "relativeReductionMeanPercent": 35.07296236893906,
+        "pairedT95CiAbsoluteReduction": [
+          71.18318069694118,
+          144.07492602542223
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          80.0924943094807,
+          133.65129131956823
+        ],
+        "pairedDifferenceStddev": 39.40751496417822,
+        "baselineCvPercent": 13.346596171059085,
+        "candidateCvPercent": 13.57725766368945,
+        "relativeReductionRatioOfMeansPercent": 35.72450497716403,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false
+      },
+      "transformMs": {
+        "pairs": 7,
+        "baselineMean": 112.57613686445568,
+        "candidateMean": 93.44682729403887,
+        "absoluteReductionMean": 19.129309570416808,
+        "relativeReductionMeanPercent": 10.63199116223014,
+        "pairedT95CiAbsoluteReduction": [
+          -17.819147145447978,
+          56.077766286281594
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -3.0059761899922575,
+          49.36666074874146
+        ],
+        "pairedDifferenceStddev": 39.95093969480822,
+        "baselineCvPercent": 34.44345416125925,
+        "candidateCvPercent": 6.031348399056026,
+        "relativeReductionRatioOfMeansPercent": 16.99233079338026,
+        "within20PercentCvNoiseBudget": false,
+        "admittedForLivePerformanceClaim": false
+      }
+    }
+  },
+  "paidCalls": 0,
+  "liveEvidenceEligible": false,
+  "fullEndToEndGoalComplete": false,
+  "criticalInterpretation": "Both arms use the same frozen current orchestration and archived provider replay. The replay bypasses Node SDK and real admission/pacing equally. Summed wall-time differences are local orchestration evidence only, not live provider or full-worker speedup.",
+  "resourceInterpretation": "Both arms retain the same process-local maximum of four ffmpeg commands. No media concurrency setting changed. This does not prove a host-wide cap.",
+  "adminInterpretation": "Three synthetic admin-owned transform rows were preserved. This does not establish database CAS or rendered admin preservation.",
+  "statistics": "N=7 same-host alternating pairs. Absolute intervals use paired t(df=6), plus seeded 10000-resample paired percentile bootstrap. Wall is the sum of three separate subprocess measurements, not a timed full-worker graph."
+}

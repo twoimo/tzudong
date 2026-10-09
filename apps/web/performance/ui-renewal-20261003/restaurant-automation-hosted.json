@@ -1,0 +1,22 @@
+{
+  "kind": "hosted-restaurant-review-automation-readback",
+  "migrationVersion": "20261003081915",
+  "migrationSha256": "1cff7056df006070a76b466a2ad04cf386fdb8d6b868fba491f6cb88a56246e0",
+  "policyEnabled": false,
+  "batchSize": 50,
+  "dailyLimit": 50,
+  "runs": 0,
+  "items": 0,
+  "restaurantRows": 1659,
+  "restaurantSha256Before": "559d6f47d2cea418eada61215fc9fb21573205dd1079edb57410bb501693bcc9",
+  "restaurantSha256After": "559d6f47d2cea418eada61215fc9fb21573205dd1079edb57410bb501693bcc9",
+  "rpcFunctions": 5,
+  "serviceAllowed": true,
+  "anonDenied": true,
+  "authenticatedDenied": true,
+  "publicSecurityDefiners": 0,
+  "rlsTables": 4,
+  "registeredFunctions": 5,
+  "deploymentVerified": false,
+  "runtimeWorkerVerified": false
+}

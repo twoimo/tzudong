@@ -1,0 +1,156 @@
+{
+  "cold": {
+    "wallMs": {
+      "pairs": 1,
+      "baselineMean": 7684.755708090961,
+      "candidateMean": 2472.418249119073,
+      "absoluteReductionMean": 5212.337458971888,
+      "relativeReductionMeanPercent": 67.8269766400516,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        5212.337458971888,
+        5212.337458971888
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "cpuMs": {
+      "pairs": 1,
+      "baselineMean": 2201.251,
+      "candidateMean": 3131.479,
+      "absoluteReductionMean": -930.2279999999996,
+      "relativeReductionMeanPercent": -42.25906087038686,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -930.2279999999996,
+        -930.2279999999996
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "peakTreeRssMiB": {
+      "pairs": 1,
+      "baselineMean": 492.71875,
+      "candidateMean": 222.265625,
+      "absoluteReductionMean": 270.453125,
+      "relativeReductionMeanPercent": 54.88996004312805,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        270.453125,
+        270.453125
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "ffmpegCalls": {
+      "pairs": 1,
+      "baselineMean": 12,
+      "candidateMean": 12,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": 0.0,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "evaluationReplayCalls": {
+      "pairs": 1,
+      "baselineMean": 3,
+      "candidateMean": 3,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": 0.0,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    }
+  },
+  "restart": {
+    "wallMs": {
+      "pairs": 1,
+      "baselineMean": 444.18108300305903,
+      "candidateMean": 448.94579192623496,
+      "absoluteReductionMean": -4.764708923175931,
+      "relativeReductionMeanPercent": -1.0726951474300217,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -4.764708923175931,
+        -4.764708923175931
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "cpuMs": {
+      "pairs": 1,
+      "baselineMean": 338.531,
+      "candidateMean": 380.865,
+      "absoluteReductionMean": -42.334,
+      "relativeReductionMeanPercent": -12.505206317885218,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -42.334,
+        -42.334
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "peakTreeRssMiB": {
+      "pairs": 1,
+      "baselineMean": 52.703125,
+      "candidateMean": 63.21875,
+      "absoluteReductionMean": -10.515625,
+      "relativeReductionMeanPercent": -19.952564482656392,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        -10.515625,
+        -10.515625
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "ffmpegCalls": {
+      "pairs": 1,
+      "baselineMean": 0,
+      "candidateMean": 0,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": null,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    },
+    "evaluationReplayCalls": {
+      "pairs": 1,
+      "baselineMean": 0,
+      "candidateMean": 0,
+      "absoluteReductionMean": 0,
+      "relativeReductionMeanPercent": null,
+      "pairedT95CiAbsoluteReduction": null,
+      "pairedBootstrap95CiAbsoluteReduction": [
+        0,
+        0
+      ],
+      "pairedDifferenceStddev": null,
+      "baselineCvPercent": null,
+      "candidateCvPercent": null
+    }
+  }
+}

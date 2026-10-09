@@ -171,8 +171,8 @@ class SupplyChainContractTests(unittest.TestCase):
         lock = json.loads((WEB / "package-lock.json").read_text(encoding="utf-8"))
         for package in ("next", "@next/bundle-analyzer", "eslint-config-next"):
             declared = manifest.get("dependencies", {}).get(package) or manifest["devDependencies"][package]
-            self.assertIn("16.3.6", declared)
-            self.assertEqual(lock["packages"][f"node_modules/{package}"]["version"], "16.3.6")
+            self.assertIn("16.3.8", declared)
+            self.assertEqual(lock["packages"][f"node_modules/{package}"]["version"], "16.3.8")
         dependabot = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
         self.assertNotIn('dependency-name: "next"', dependabot)
         self.assertNotIn('dependency-name: "@next/bundle-analyzer"', dependabot)

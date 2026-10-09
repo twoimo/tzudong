@@ -1,0 +1,32 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/supabase-entrypoint-source.test.ts:
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > only the frozen allowlist of files constructs a Supabase client [0.13ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > each canonical entrypoint constructs exactly its expected primitive from the expected SDK package [0.10ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > canonical entrypoints share one Supabase URL config so Local and Hosted use the same entrypoints [0.06ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > the privileged Storage client keeps only .storage and stays server-only [0.02ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > general server code routes Local_Database access through an entrypoint, not the SDK [0.02ms]
+(pass) Supabase Local_Database access entrypoint source contract (Requirement 9.7) > no first-party source opens a direct Postgres connection that bypasses Supabase [17.01ms]
+
+tests-unit/public-surface-design-contract.test.ts:
+(pass) public surface design contract > page and share transport inventory preserves all 27 surfaces [2.42ms]
+(pass) public surface design contract > loading files use the three-way taxonomy and do not treat null loaders as missing [2.63ms]
+(pass) public surface design contract > error files stay at root plus feed, global-map, and mypage [1.84ms]
+(pass) public surface design contract > AppRuntimeLayout families are exactly the eleven segment layouts [2.10ms]
+(pass) public surface design contract > pins all five CSS owner-to-importer mappings and forbids a sixth Tailwind entry [15.68ms]
+(pass) public surface design contract > freezes each Tailwind owner path and not @source scope [0.43ms]
+(pass) public surface design contract > records dual 404 contexts and keeps not-found a server module [0.18ms]
+(pass) public surface design contract > imports the shared light-mode token partial with per-owner cascade context [0.26ms]
+(pass) public surface design contract > horizontal allowlist enumerates data-horizontal-scroll-owner values only [35.76ms]
+(pass) public surface design contract > family chrome stays Korean-first and legal pages stay chrome-less [0.42ms]
+
+tests-unit/browser-title-source.test.ts:
+(pass) browser title source contracts > normalizes every approved static route title explicitly [0.32ms]
+(pass) browser title source contracts > keeps route title policy explicit without a root metadata template [0.04ms]
+(pass) browser title source contracts > wires dynamic titles through the shared hook and safe state labels [0.78ms]
+(pass) browser title source contracts > centralizes real document.title assignments in the hook [17.62ms]
+
+ 20 pass
+ 0 fail
+ 221 expect() calls
+Ran 20 tests across 3 files. [206.00ms]

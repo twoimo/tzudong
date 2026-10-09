@@ -1,0 +1,1125 @@
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_gdN7C0IQrTGXnlGT'
+}
+✔︎ Opened a new tab and set it active: tabs[0], page → Data Table - shadcn/ui (https://ui.shadcn.com/docs/components/base/data-table)
+# note: interactive (clickable / focusable) elements only.
+- title: "Data Table - shadcn/ui" [url=https://ui.shadcn.com/docs/components/base/data-table]
+- banner:
+  - navigation:
+    - link "Home" [ref=e1]
+    - link "Docs" [ref=e2]
+    - link "Components" [ref=e3]
+    - link "Blocks" [ref=e4]
+    - link "Charts" [ref=e5]
+    - link "Directory" [ref=e6]
+    - link "Typeset" [ref=e7]
+    - link "Create" [ref=e8]
+  - button "Search documentation..." [ref=e9]
+  - link "125k" [ref=e10]
+  - button "Toggle theme" [ref=e11]
+  - link "New" [ref=e12]
+- main:
+  - generic [ref=e13] [scrollable]:
+    - text: "Sections"
+    - link "Introduction" [ref=e14]
+    - link "Components" [ref=e15]
+    - link "Installation" [ref=e16]
+    - link "Theming" [ref=e17]
+    - link "CLI" [ref=e18]
+    - link "Typeset" [ref=e19]
+    - link "Skills" [ref=e20]
+    - link "Registry" [ref=e21]
+    - link "ChangelogNew" [ref=e22]: "Changelog"
+    - text: "Components"
+    - link "Accordion" [ref=e23]
+    - link "Alert" [ref=e24]
+    - link "Alert Dialog" [ref=e25]
+    - link "Aspect Ratio" [ref=e26]
+    - link "Attachment" [ref=e27]
+    - link "Avatar" [ref=e28]
+    - link "Badge" [ref=e29]
+    - link "Breadcrumb" [ref=e30]
+    - link "Bubble" [ref=e31]
+    - link "Button" [ref=e32]
+    - link "Button Group" [ref=e33]
+    - link "Calendar" [ref=e34]
+    - link "Card" [ref=e35]
+    - link "Carousel" [ref=e36]
+    - link "Chart" [ref=e37]
+    - link "Checkbox" [ref=e38]
+    - link "Collapsible" [ref=e39]
+    - link "Combobox" [ref=e40]
+    - link "Command" [ref=e41]
+    - link "Context Menu" [ref=e42]
+    - link "Data Table" [ref=e43]
+    - link "Date Picker" [ref=e44]
+    - link "Dialog" [ref=e45]
+    - link "Direction" [ref=e46]
+    - link "Drawer" [ref=e47]
+    - link "Dropdown Menu" [ref=e48]
+    - link "Empty" [ref=e49]
+    - link "Field" [ref=e50]
+    - link "Hover Card" [ref=e51]
+    - link "Input" [ref=e52]
+    - link "Input Group" [ref=e53]
+    - link "Input OTP" [ref=e54]
+    - link "Item" [ref=e55]
+    - link "Kbd" [ref=e56]
+    - link "Label" [ref=e57]
+    - link "Marker" [ref=e58]
+    - link "Menubar" [ref=e59]
+    - link "Message" [ref=e60]
+    - link "Message Scroller" [ref=e61]
+    - link "Native Select" [ref=e62]
+    - link "Navigation Menu" [ref=e63]
+    - link "Pagination" [ref=e64]
+    - link "Popover" [ref=e65]
+    - link "Progress" [ref=e66]
+    - link "QuestionnaireNew" [ref=e67]: "Questionnaire"
+    - link "Radio Group" [ref=e68]
+    - link "Resizable" [ref=e69]
+    - link "Scroll Area" [ref=e70]
+    - link "Select" [ref=e71]
+    - link "Separator" [ref=e72]
+    - link "Sheet" [ref=e73]
+    - link "Sidebar" [ref=e74]
+    - link "Skeleton" [ref=e75]
+    - link "Slider" [ref=e76]
+    - link "Spinner" [ref=e77]
+    - link "Switch" [ref=e78]
+    - link "Table" [ref=e79]
+    - link "Tabs" [ref=e80]
+    - link "Textarea" [ref=e81]
+    - link "Toast" [ref=e82]
+    - link "Toggle" [ref=e83]
+    - link "Toggle Group" [ref=e84]
+    - link "Tooltip" [ref=e85]
+    - link "Typography" [ref=e86]
+    - text: "Get Started"
+    - link "Installation" [ref=e87]
+    - link "components.json" [ref=e88]
+    - link "Package Imports" [ref=e89]
+    - link "Theming" [ref=e90]
+    - link "Typeset" [ref=e91]
+    - link "Dark Mode" [ref=e92]
+    - link "CLI" [ref=e93]
+    - link "Monorepo" [ref=e94]
+    - link "Skills" [ref=e95]
+    - link "JavaScript" [ref=e96]
+    - link "Figma" [ref=e97]
+    - link "llms.txt" [ref=e98]
+    - link "Legacy Docs" [ref=e99]
+    - text: "@shadcn/react"
+    - link "Message Scroller" [ref=e100]
+    - link "QuestionnaireNew" [ref=e101]: "Questionnaire"
+    - text: "@shadcn/helpers"
+    - link "AI SDK" [ref=e102]
+    - link "TanStack AI" [ref=e103]
+    - text: "Forms"
+    - link "React Hook Form" [ref=e104]
+    - link "TanStack Form" [ref=e105]
+    - link "Formisch" [ref=e106]
+    - text: "Utilities"
+    - link "scroll-fade" [ref=e107]
+    - link "shimmer" [ref=e108]
+    - text: "Registry"
+    - link "Introduction" [ref=e109]
+    - link "Getting Started" [ref=e110]
+    - link "GitHub Registries" [ref=e111]
+    - link "Registry Directory" [ref=e112]
+    - link "Registry HealthNew" [ref=e113]: "Registry Health"
+    - link "Examples" [ref=e114]
+    - link "Namespaces" [ref=e115]
+    - link "Authentication" [ref=e116]
+    - link "Dynamic SearchNew" [ref=e117]: "Dynamic Search"
+    - link "MCP Server" [ref=e118]
+    - link "Open in v0" [ref=e119]
+    - link "API Reference" [ref=e120]
+    - link "registry.json" [ref=e121]
+    - link "registry-item.json" [ref=e122]
+  - heading "Data Table" [level=1]
+  - button "Copy Page" [ref=e123]
+  - button [ref=e124]
+  - link "Previous" [ref=e125]
+  - link "Next" [ref=e126]
+  - text: "Powerful table and datagrids built using TanStack Table."
+  - link "Base UI" [ref=e127]
+  - link "React Aria" [ref=e128]
+  - link "Radix UI" [ref=e129]
+  - textbox "Filter emails..." [ref=e130] [placeholder="Filter emails..."]
+  - button "Columns" [ref=e131]
+  - checkbox "Select all" [ref=e132]
+  - text: "Status"
+  - button "Email" [ref=e133]
+  - text: "Amount"
+  - checkbox "Select row" [ref=e134]
+  - text: "success [redacted-email]$316.00"
+  - button "Open menu" [ref=e135]
+  - checkbox "Select row" [ref=e136]
+  - text: "success [redacted-email]$242.00"
+  - button "Open menu" [ref=e137]
+  - checkbox "Select row" [ref=e138]
+  - text: "processing [redacted-email]$837.00"
+  - button "Open menu" [ref=e139]
+  - checkbox "Select row" [ref=e140]
+  - text: "success [redacted-email]$874.00"
+  - button "Open menu" [ref=e141]
+  - checkbox "Select row" [ref=e142]
+  - text: "failed [redacted-email]$721.00"
+  - button "Open menu" [ref=e143]
+  - text: "0  of  5  row(s) selected."
+  - button "Previous" [ref=e144] [disabled]
+  - button "Next" [ref=e145] [disabled]
+  - heading [level=2]:
+    - link "Introduction" [ref=e146]
+  - text: "Every data table or datagrid I've created has been unique. They all behave differently, have specific sorting and filtering requirements, and work with different data sources.\nIt doesn't make sense to combine all of these variations into a single component. If we do that, we'll lose the flexibility that"
+  - link "headless UI" [ref=e147]
+  - text: "provides.\nSo instead of a data-table component, I thought it would be more helpful to provide a guide on how to build your own.\nWe'll start with the basic <Table /> component and build a complex data table from scratch."
+  - alert: "Tip: If you find yourself using the same table in multiple places in your app, you can always extract it into a reusable component."
+  - heading [level=2]:
+    - link "Table of Contents" [ref=e148]
+  - text: "This guide will show you how to use"
+  - link "TanStack Table" [ref=e149]
+  - text: "and the <Table /> component to build your own custom data table. We'll cover the following topics:"
+  - link "Set up Table Features" [ref=e150]
+  - link "Basic Table" [ref=e151]
+  - link "Row Actions" [ref=e152]
+  - link "Pagination" [ref=e153]
+  - link "Sorting" [ref=e154]
+  - link "Filtering" [ref=e155]
+  - link "Visibility" [ref=e156]
+  - link "Row Selection" [ref=e157]
+  - link "Reusable Components" [ref=e158]
+  - heading [level=2]:
+    - link "Installation" [ref=e159]
+  - text: "Add the <Table /> component to your project:"
+  - generic [ref=e160]:
+    - tablist [ref=e161]:
+      - tab "pnpm" [ref=e162] [selected]
+      - tab "npm" [ref=e163]
+      - tab "yarn" [ref=e164]
+      - tab "bun" [ref=e165]
+    - tabpanel "pnpm" [ref=e166]: "pnpm dlx shadcn@latest add table"
+    - button "Copy" [ref=e167]
+  - text: "Add the @tanstack/react-table  dependency. This guide uses  TanStack Table v9:"
+  - generic [ref=e168]:
+    - tablist [ref=e169]:
+      - tab "pnpm" [ref=e170] [selected]
+      - tab "npm" [ref=e171]
+      - tab "yarn" [ref=e172]
+      - tab "bun" [ref=e173]
+    - tabpanel "pnpm" [ref=e174]: "pnpm add @tanstack/react-table"
+    - button "Copy" [ref=e175]
+  - heading [level=2]:
+    - link "Prerequisites" [ref=e176]
+  - text: "We are going to build a table to show recent payments. Here's what our data looks like:"
+  - generic [ref=e177]:
+    - button "Copy" [ref=e178]
+    - text: "type  Payment = {\n  id: string\n   amount: number\n   status: \"pending\" | \"processing\" | \"success\" | \"failed\"\n  email: string\n}\n \nexport  const  payments: Payment[] = [\n  {\n    id: \"728ed52f\",\n    amount: 100,\n    status: \"pending\",\n    email: \"[redacted-email]\",\n  },\n  {\n    id: \"489e1d42\",\n    amount: 125,\n    status: \"processing\",\n    email: \"[redacted-email]\",\n  },\n  // ...\n]"
+  - heading [level=2]:
+    - link "Project Structure" [ref=e179]
+  - text: "Start by creating the following file structure:"
+  - generic [ref=e180]:
+    - button "Copy" [ref=e181]
+    - text: "app\n└── payments\n    ├── columns.tsx\n    ├── data-table-features.ts\n    ├── data-table.tsx\n    └── page.tsx"
+  - text: "I'm using a Next.js example here but this works for any other React framework.\n\ncolumns.tsx (client component) will contain our column definitions.\ndata-table-features.ts  will contain the shared  features  object that tells TanStack Table which behavior to enable.\ndata-table.tsx (client component) will contain our <DataTable /> component.\npage.tsx (server component) is where we'll fetch data and render our table."
+  - heading [level=2]:
+    - link "Set up Table Features" [ref=e182]
+  - text: "TanStack Table v9 is feature-based: you opt into the behavior you want — sorting, filtering, pagination, and so on — by declaring it with  tableFeatures(). Anything you don't list is tree-shaken out of your bundle. That includes the built-in filter and sort functions: register the ones your columns rely on under  filterFns  and  sortFns (our email filter uses  includesString, and string columns sort with  text / alphanumeric).\napp/payments/data-table-features.ts"
+  - generic [ref=e183] [scrollable]:
+    - button "Copy" [ref=e184]
+    - text: "import {\n  columnFilteringFeature,\n  columnVisibilityFeature,\n  createFilteredRowModel,\n  createPaginatedRowModel,\n  createSortedRowModel,\n  filterFn_includesString,\n  rowPaginationFeature,\n  rowSelectionFeature,\n  rowSortingFeature,\n  sortFn_alphanumeric,\n  sortFn_text,\n  tableFeatures,\n} from \"@tanstack/react-table\"\n \n// New in v9: declare the features this table uses — anything you don't\n// register is tree-shaken out of the bundle.\nexport  const  features = tableFeatures({\n  columnFilteringFeature,\n  columnVisibilityFeature,\n  rowPaginationFeature,\n  rowSelectionFeature,\n  rowSortingFeature,\n  filteredRowModel: createFilteredRowModel(),\n  paginatedRowModel: createPaginatedRowModel(),\n  sortedRowModel: createSortedRowModel(),\n  filterFns: { includesString: filterFn_includesString },\n  sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text },\n})\n \n// Pass this as the first generic argument to `ColumnDef`, `Column`, `Table`,\n// and `Row` so each type knows which feature APIs are available.\nexport  type  DataTableFeatures = typeof  features"
+  - alert: "Note: The core row model is always included, so you never register it yourself. Row models for optional features are created with  create*RowModel() and registered on the features object — there are no more  get*RowModel  table options."
+  - heading [level=2]:
+    - link "Basic Table" [ref=e185]
+  - text: "Let's start by building a basic table."
+  - heading [level=3]:
+    - link "Column Definitions" [ref=e186]
+  - text: "First, we'll define our columns.app/payments/columns.tsx"
+  - generic [ref=e187] [scrollable]:
+    - button "Copy" [ref=e188]
+    - text: "\"use client\"\n \nimport { createColumnHelper } from \"@tanstack/react-table\"\n \nimport { type  DataTableFeatures } from \"./data-table-features\"\n \n// This type is used to define the shape of our data.\n// You can use a Zod schema here if you want.\nexport  type  Payment = {\n  id: string\n   amount: number\n   status: \"pending\" | \"processing\" | \"success\" | \"failed\"\n  email: string\n}\n \n// Use `accessor` for data columns and `display` for columns without one.\nconst  columnHelper = createColumnHelper<DataTableFeatures, Payment>()\n \nexport  const  columns = columnHelper.columns([\n  columnHelper.accessor(\"status\", {\n    header: \"Status\",\n  }),\n  columnHelper.accessor(\"email\", {\n    header: \"Email\",\n  }),\n  columnHelper.accessor(\"amount\", {\n    header: \"Amount\",\n  }),\n])"
+  - alert: "Note: Columns are where you define the core of what your table\nwill look like. They define the data that will be displayed, how it will be\nformatted, sorted and filtered."
+  - heading [level=3]:
+    - link "<DataTable /> component" [ref=e189]
+  - text: "Next, we'll create a <DataTable /> component to render our table.app/payments/data-table.tsx"
+  - generic [ref=e190] [scrollable]:
+    - button "Copy" [ref=e191]
+    - text: "\"use client\"\n \nimport { useTable, type  ColumnDef, type  RowData } from \"@tanstack/react-table\"\n \nimport {\n  Table,\n  TableBody,\n  TableCell,\n  TableHead,\n  TableHeader,\n  TableRow,\n} from \"@/components/ui/table\"\n \nimport { features, type  DataTableFeatures } from \"./data-table-features\"\n \ninterface  DataTableProps<TData  extends  RowData> {\n  columns: ColumnDef<DataTableFeatures, TData>[]\n  data: TData[]\n}\n \nexport  function  DataTable<TData  extends  RowData>({\n  columns,\n  data,\n}: DataTableProps<TData>) {\n  const  table = useTable({\n    features,\n    data,\n    columns,\n  })\n \n  return (\n    <div  className=\"overflow-hidden rounded-md border\">\n      <Table>\n        <TableHeader>\n          {table.getHeaderGroups().map((headerGroup) => (\n            <TableRow  key={headerGroup.id}>\n              {headerGroup.headers.map((header) => {\n                return (\n                  <TableHead  key={header.id}>\n                    {header.isPlaceholder ? null : (\n                      <table.FlexRender  header={header} />\n                    )}\n                  </TableHead>\n                )\n              })}\n            </TableRow>\n          ))}\n        </TableHeader>\n        <TableBody>\n          {table.getRowModel().rows?.length ? (\n            table.getRowModel().rows.map((row) => (\n              <TableRow\n                 key={row.id}\n                data-state={row.getIsSelected() && \"selected\"}\n              >\n                {row.getVisibleCells().map((cell) => (\n                  <TableCell  key={cell.id}>\n                    <table.FlexRender  cell={cell} />\n                  </TableCell>\n                ))}\n              </TableRow>\n            ))\n          ) : (\n            <TableRow>\n              <TableCell  colSpan={columns.length} className=\"h-24 text-center\">\n                No results.\n              </TableCell>\n            </TableRow>\n          )}\n        </TableBody>\n      </Table>\n    </div>\n  )\n}"
+  - alert: "Tip: If you find yourself using <DataTable /> in multiple places, this is the component you could make reusable by extracting it to  components/ui/data-table.tsx.<DataTable columns={columns} data={data} />"
+  - alert: "<table.FlexRender /> vs  flexRender: This guide uses v9's <table.FlexRender header={header} /> and <table.FlexRender cell={cell} /> component, available right on the table instance — no extra import needed. The classic  flexRender(component, context) helper from v8 still works too, if you prefer the function form (or need to render outside the component that owns  table, where you can also import the standalone <FlexRender />)."
+  - heading [level=3]:
+    - link "Render the table" [ref=e192]
+  - text: "Finally, we'll render our table in our page component.app/payments/page.tsx"
+  - generic [ref=e193]:
+    - button "Copy" [ref=e194]
+    - text: "import { columns, Payment } from \"./columns\"\nimport { DataTable } from \"./data-table\"\n \nasync  function  getData(): Promise<Payment[]> {\n  // Fetch data from your API here.\n  return [\n    {\n      id: \"728ed52f\",\n      amount: 100,\n      status: \"pending\",\n      email: \"[redacted-email]\",\n    },\n    // ...\n  ]\n}\n \nexport  default  async  function  DemoPage() {\n  const  data = await  getData()\n \n  return (\n    <div  className=\"container mx-auto py-10\">\n      <DataTable  columns={columns} data={data} />\n    </div>\n  )\n}"
+  - heading [level=2]:
+    - link "Cell Formatting" [ref=e195]
+  - text: "Let's format the amount cell to display the dollar amount. We'll also align the cell to the right."
+  - heading [level=3]:
+    - link "Update columns definition" [ref=e196]
+  - text: "Update the  header  and  cell  definitions for amount as follows:app/payments/columns.tsx"
+  - generic [ref=e197] [scrollable]:
+    - button "Copy" [ref=e198]
+    - text: "export  const  columns = columnHelper.columns([\n  columnHelper.accessor(\"amount\", {\n    header: () => <div  className=\"text-right\">Amount</div>,\n    cell: ({ row }) => {\n      const  amount = parseFloat(row.getValue(\"amount\"))\n      const  formatted = new  Intl.NumberFormat(\"en-US\", {\n        style: \"currency\",\n        currency: \"USD\",\n      }).format(amount)\n \n      return <div  className=\"text-right font-medium\">{formatted}</div>\n    },\n  }),\n])"
+  - text: "You can use the same approach to format other cells and headers."
+  - heading [level=2]:
+    - link "Row Actions" [ref=e199]
+  - text: "Let's add row actions to our table. We'll use a <DropdownMenu /> component for this."
+  - heading [level=3]:
+    - link "Update columns definition" [ref=e200]
+  - text: "Update our columns definition to add a new  actions  column. The  actions  cell returns a <DropdownMenu /> component.app/payments/columns.tsx"
+  - generic [ref=e201] [scrollable]:
+    - button "Copy" [ref=e202]
+    - text: "\"use client\"\n \nimport { createColumnHelper } from \"@tanstack/react-table\"\nimport { MoreHorizontal } from \"lucide-react\"\n \nimport { Button } from \"@/components/ui/button\"\nimport {\n  DropdownMenu,\n  DropdownMenuContent,\n  DropdownMenuItem,\n  DropdownMenuLabel,\n  DropdownMenuSeparator,\n  DropdownMenuTrigger,\n} from \"@/components/ui/dropdown-menu\"\n \nexport  const  columns = columnHelper.columns([\n  // ...\n  columnHelper.display({\n    id: \"actions\",\n    cell: ({ row }) => {\n      const  payment = row.original\n \n       return (\n        <DropdownMenu>\n          <DropdownMenuTrigger\n             render={<Button  variant=\"ghost\" className=\"h-8 w-8 p-0\" />}\n          >\n            <span  className=\"sr-only\">Open menu</span>\n            <MoreHorizontal  className=\"h-4 w-4\" />\n          </DropdownMenuTrigger>\n          <DropdownMenuContent  align=\"end\">\n            <DropdownMenuLabel>Actions</DropdownMenuLabel>\n            <DropdownMenuItem\n               onClick={() => navigator.clipboard.writeText(payment.id)}\n            >\n              Copy payment ID\n            </DropdownMenuItem>\n            <DropdownMenuSeparator />\n            <DropdownMenuItem>View customer</DropdownMenuItem>\n            <DropdownMenuItem>View payment details</DropdownMenuItem>\n          </DropdownMenuContent>\n        </DropdownMenu>\n      )\n    },\n  }),\n  // ...\n])"
+  - text: "You can access the row data using  row.original  in the  cell  function. Use this to handle actions for your row eg. use the  id  to make a DELETE call to your API."
+  - heading [level=2]:
+    - link "Pagination" [ref=e203]
+  - text: "Next, we'll add pagination to our table."
+  - heading [level=3]:
+    - link "Pagination is already enabled" [ref=e204]
+  - text: "Because our features object includes  rowPaginationFeature  and  createPaginatedRowModel(), the table automatically paginates rows into pages of 10 — there's nothing to add to  useTable. See the"
+  - link "pagination docs" [ref=e205]
+  - text: "for more information on customizing page size and implementing manual pagination."
+  - heading [level=3]:
+    - link "Add pagination controls" [ref=e206]
+  - text: "We can add pagination controls to our table using the <Button /> component and the  table.previousPage(), table.nextPage() API methods.app/payments/data-table.tsx"
+  - generic [ref=e207] [scrollable]:
+    - button "Copy" [ref=e208]
+    - text: "import { Button } from \"@/components/ui/button\"\n \nexport  function  DataTable<TData  extends  RowData>({\n  columns,\n  data,\n}: DataTableProps<TData>) {\n  const  table = useTable({\n    features,\n    data,\n    columns,\n  })\n \n  return (\n    <div>\n      <div  className=\"overflow-hidden rounded-md border\">\n        <Table>\n          { // .... }\n        </Table>\n      </div>\n      <div  className=\"flex items-center justify-end space-x-2 py-4\">\n        <Button\n           variant=\"outline\"\n          size=\"sm\"\n          onClick={() => table.previousPage()}\n          disabled={!table.getCanPreviousPage()}\n        >\n          Previous\n        </Button>\n        <Button\n           variant=\"outline\"\n          size=\"sm\"\n          onClick={() => table.nextPage()}\n          disabled={!table.getCanNextPage()}\n        >\n          Next\n        </Button>\n      </div>\n    </div>\n  )\n}"
+  - text: "See"
+  - link "Reusable Components" [ref=e209]
+  - text: "section for a more advanced pagination component."
+  - heading [level=2]:
+    - link "Sorting" [ref=e210]
+  - text: "Let's make the email column sortable.\nThe  rowSortingFeature  and sorted row model are already registered in our features object, so all that's left is wiring up the sorting state."
+  - heading [level=3]:
+    - link "Update <DataTable>" [ref=e211]
+  - text: "app/payments/data-table.tsx"
+  - generic [ref=e212] [scrollable]:
+    - button "Copy" [ref=e213]
+    - text: "\"use client\"\n \nimport * as  React  from \"react\"\nimport {\n  useTable,\n  type  ColumnDef,\n  type  RowData,\n  type  SortingState,\n} from \"@tanstack/react-table\"\n \nexport  function  DataTable<TData  extends  RowData>({\n  columns,\n  data,\n}: DataTableProps<TData>) {\n  const [sorting, setSorting] = React.useState<SortingState>([])\n \n  const  table = useTable({\n    features,\n    data,\n    columns,\n    onSortingChange: setSorting,\n    state: {\n      sorting,\n    },\n  })\n \n  return (\n    <div>\n      <div  className=\"overflow-hidden rounded-md border\">\n        <Table>{ ... }</Table>\n      </div>\n    </div>\n  )\n}"
+  - heading [level=3]:
+    - link "Make header cell sortable" [ref=e214]
+  - text: "We can now update the  email  header cell to add sorting controls.app/payments/columns.tsx"
+  - generic [ref=e215] [scrollable]:
+    - button "Copy" [ref=e216]
+    - text: "\"use client\"\n \nimport { createColumnHelper } from \"@tanstack/react-table\"\nimport { ArrowUpDown } from \"lucide-react\"\n \nexport  const  columns = columnHelper.columns([\n  columnHelper.accessor(\"email\", {\n    header: ({ column }) => {\n      return (\n        <Button\n           variant=\"ghost\"\n          onClick={() => column.toggleSorting(column.getIsSorted() === \"asc\")}\n        >\n          Email\n          <ArrowUpDown  className=\"ml-2 h-4 w-4\" />\n        </Button>\n      )\n    },\n  }),\n])"
+  - text: "This will automatically sort the table (asc and desc) when the user toggles on the header cell."
+  - heading [level=2]:
+    - link "Filtering" [ref=e217]
+  - text: "Let's add a search input to filter emails in our table.\nThe  columnFilteringFeature  and filtered row model are already part of our features object, so we only need to wire up the filter state and render an input."
+  - heading [level=3]:
+    - link "Update <DataTable>" [ref=e218]
+  - text: "app/payments/data-table.tsx"
+  - generic [ref=e219] [scrollable]:
+    - button "Copy" [ref=e220]
+    - text: "\"use client\"\n \nimport * as  React  from \"react\"\nimport {\n  useTable,\n  type  ColumnDef,\n  type  ColumnFiltersState,\n  type  RowData,\n  type  SortingState,\n} from \"@tanstack/react-table\"\n \nimport { Button } from \"@/components/ui/button\"\nimport { Input } from \"@/components/ui/input\"\n \nexport  function  DataTable<TData  extends  RowData>({\n  columns,\n  data,\n}: DataTableProps<TData>) {\n  const [sorting, setSorting] = React.useState<SortingState>([])\n  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(\n    []\n  )\n \n  const  table = useTable({\n    features,\n    data,\n    columns,\n    onSortingChange: setSorting,\n    onColumnFiltersChange: setColumnFilters,\n    state: {\n      sorting,\n      columnFilters,\n    },\n  })\n \n  return (\n    <div>\n      <div  className=\"flex items-center py-4\">\n        <Input\n           placeholder=\"Filter emails...\"\n          value={(table.getColumn(\"email\")?.getFilterValue() as  string) ?? \"\"}\n          onChange={(event) =>\n            table.getColumn(\"email\")?.setFilterValue(event.target.value)\n          }\n          className=\"max-w-sm\"\n        />\n      </div>\n      <div  className=\"overflow-hidden rounded-md border\">\n        <Table>{ ... }</Table>\n      </div>\n    </div>\n  )\n}"
+  - text: "Filtering is now enabled for the  email  column. You can add filters to other columns as well. See the"
+  - link "filtering docs" [ref=e221]
+  - text: "for more information on customizing filters."
+  - heading [level=2]:
+    - link "Visibility" [ref=e222]
+  - text: "Adding column visibility is fairly simple using @tanstack/react-table  visibility API."
+  - heading [level=3]:
+    - link "Update <DataTable>" [ref=e223]
+  - text: "app/payments/data-table.tsx"
+  - generic [ref=e224] [scrollable]:
+    - button "Copy" [ref=e225]
+    - text: "\"use client\"\n \nimport * as  React  from \"react\"\nimport {\n  useTable,\n  type  ColumnDef,\n  type  ColumnFiltersState,\n  type  ColumnVisibilityState,\n  type  RowData,\n  type  SortingState,\n} from \"@tanstack/react-table\"\n \nimport { Button } from \"@/components/ui/button\"\nimport {\n  DropdownMenu,\n  DropdownMenuCheckboxItem,\n  DropdownMenuContent,\n  DropdownMenuTrigger,\n} from \"@/components/ui/dropdown-menu\"\n \nexport  function  DataTable<TData  extends  RowData>({\n  columns,\n  data,\n}: DataTableProps<TData>) {\n  const [sorting, setSorting] = React.useState<SortingState>([])\n  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(\n    []\n  )\n  const [columnVisibility, setColumnVisibility] =\n    React.useState<ColumnVisibilityState>({})\n \n  const  table = useTable({\n    features,\n    data,\n    columns,\n    onSortingChange: setSorting,\n    onColumnFiltersChange: setColumnFilters,\n    onColumnVisibilityChange: setColumnVisibility,\n    state: {\n      sorting,\n      columnFilters,\n      columnVisibility,\n    },\n  })\n \n  return (\n    <div>\n      <div  className=\"flex items-center py-4\">\n        <Input\n           placeholder=\"Filter emails...\"\n          value={table.getColumn(\"email\")?.getFilterValue() as  string}\n          onChange={(event) =>\n            table.getColumn(\"email\")?.setFilterValue(event.target.value)\n          }\n          className=\"max-w-sm\"\n        />\n        <DropdownMenu>\n          <DropdownMenuTrigger  render={<Button  variant=\"outline\" className=\"ml-auto\" />}>\n            Columns\n          </DropdownMenuTrigger>\n          <DropdownMenuContent  align=\"end\">\n            {table\n              .getAllColumns()\n              .filter(\n                (column) => column.getCanHide()\n              )\n              .map((column) => {\n                return (\n                  <DropdownMenuCheckboxItem\n                     key={column.id}\n                    className=\"capitalize\"\n                    checked={column.getIsVisible()}\n                    onCheckedChange={(value) =>\n                      column.toggleVisibility(!!value)\n                    }\n                  >\n                    {column.id}\n                  </DropdownMenuCheckboxItem>\n                )\n              })}\n          </DropdownMenuContent>\n        </DropdownMenu>\n      </div>\n      <div  className=\"overflow-hidden rounded-md border\">\n        <Table>{ ... }</Table>\n      </div>\n    </div>\n  )\n}"
+  - text: "This adds a dropdown menu that you can use to toggle column visibility."
+  - heading [level=2]:
+    - link "Row Selection" [ref=e226]
+  - text: "Next, we're going to add row selection to our table."
+  - heading [level=3]:
+    - link "Update column definitions" [ref=e227]
+  - text: "app/payments/columns.tsx"
+  - generic [ref=e228] [scrollable]:
+    - button "Copy" [ref=e229]
+    - text: "\"use client\"\n \nimport { createColumnHelper } from \"@tanstack/react-table\"\n \nimport { Badge } from \"@/components/ui/badge\"\nimport { Checkbox } from \"@/components/ui/checkbox\"\n \nexport  const  columns = columnHelper.columns([\n  columnHelper.display({\n    id: \"select\",\n    header: ({ table }) => (\n      <Checkbox\n         checked={table.getIsAllPageRowsSelected()}\n        indeterminate={\n          table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()\n        }\n        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}\n        aria-label=\"Select all\"\n      />\n    ),\n    cell: ({ row }) => (\n      <Checkbox\n         checked={row.getIsSelected()}\n        onCheckedChange={(value) => row.toggleSelected(!!value)}\n        aria-label=\"Select row\"\n      />\n    ),\n    enableSorting: false,\n    enableHiding: false,\n  }),\n])"
+  - heading [level=3]:
+    - link "Update <DataTable>" [ref=e230]
+  - text: "app/payments/data-table.tsx"
+  - generic [ref=e231] [scrollable]:
+    - button "Copy" [ref=e232]
+    - text: "export  function  DataTable<TData  extends  RowData>({\n  columns,\n  data,\n}: DataTableProps<TData>) {\n  const [sorting, setSorting] = React.useState<SortingState>([])\n  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(\n    []\n  )\n  const [columnVisibility, setColumnVisibility] =\n    React.useState<ColumnVisibilityState>({})\n  const [rowSelection, setRowSelection] = React.useState({})\n \n  const  table = useTable({\n    features,\n    data,\n    columns,\n    onSortingChange: setSorting,\n    onColumnFiltersChange: setColumnFilters,\n    onColumnVisibilityChange: setColumnVisibility,\n    onRowSelectionChange: setRowSelection,\n    state: {\n      sorting,\n      columnFilters,\n      columnVisibility,\n      rowSelection,\n    },\n  })\n \n  return (\n    <div>\n      <div  className=\"overflow-hidden rounded-md border\">\n        <Table />\n      </div>\n    </div>\n  )\n}"
+  - text: "This adds a checkbox to each row and a checkbox in the header to select all rows."
+  - heading [level=3]:
+    - link "Show selected rows" [ref=e233]
+  - text: "You can show the number of selected rows using the  table.getFilteredSelectedRowModel() API."
+  - generic [ref=e234]:
+    - button "Copy" [ref=e235]
+    - text: "<div  className=\"flex-1 text-sm text-muted-foreground\">\n  {table.getFilteredSelectedRowModel().rows.length} of{\" \"}\n  {table.getFilteredRowModel().rows.length} row(s) selected.\n</div>"
+  - heading [level=2]:
+    - link "Reusable Components" [ref=e236]
+  - text: "Here are some components you can use to build your data tables. This is from the"
+  - link "Tasks" [ref=e237]
+  - text: "demo, which shares its features object (and the matching  TasksTableFeatures  type) across every component via a  data-table-features.ts  module — the same pattern we set up in"
+  - link "Set up Table Features" [ref=e238]
+  - text: "."
+  - heading [level=3]:
+    - link "Column header" [ref=e239]
+  - text: "Make any column header sortable and hideable."
+  - button "Expand" [ref=e240]
+  - button "Expand" [ref=e241]
+  - generic [ref=e242]:
+    - button "Copy" [ref=e243]
+    - text: "export  const  columns = columnHelper.columns([\n  columnHelper.accessor(\"email\", {\n    header: ({ column }) => (\n      <DataTableColumnHeader  column={column} title=\"Email\" />\n    ),\n  }),\n])"
+  - heading [level=3]:
+    - link "Pagination" [ref=e244]
+  - text: "Add pagination controls to your table including page size and selection count."
+  - button "Expand" [ref=e245]
+  - button "Expand" [ref=e246]
+  - generic [ref=e247]:
+    - button "Copy" [ref=e248]
+    - text: "<DataTablePagination  table={table} />"
+  - heading [level=3]:
+    - link "Column toggle" [ref=e249]
+  - text: "A component to toggle column visibility."
+  - button "Expand" [ref=e250]
+  - button "Expand" [ref=e251]
+  - generic [ref=e252]:
+    - button "Copy" [ref=e253]
+    - text: "<DataTableViewOptions  table={table} />"
+  - heading [level=2]:
+    - link "RTL" [ref=e254]
+  - text: "To enable RTL support in shadcn/ui, see the"
+  - link "RTL configuration guide" [ref=e255]
+  - text: "."
+  - combobox "Arabic (العربية)" [ref=e256]
+  - button "Toggle" [ref=e257]
+  - textbox "تصفية البريد الإلكتروني..." [ref=e258] [placeholder="تصفية البريد الإلكتروني..."]
+  - button "الأعمدة" [ref=e259]
+  - checkbox "تحديد الكل" [ref=e260]
+  - text: "الحالة"
+  - button "البريد الإلكتروني" [ref=e261]
+  - text: "المبلغ"
+  - checkbox "تحديد الصف" [ref=e262]
+  - text: "ناجح [redacted-email]‏٣١٦٫٠٠ US$"
+  - button "فتح القائمة" [ref=e263]
+  - checkbox "تحديد الصف" [ref=e264]
+  - text: "ناجح [redacted-email]‏٢٤٢٫٠٠ US$"
+  - button "فتح القائمة" [ref=e265]
+  - checkbox "تحديد الصف" [ref=e266]
+  - text: "قيد المعالجة [redacted-email]‏٨٣٧٫٠٠ US$"
+  - button "فتح القائمة" [ref=e267]
+  - checkbox "تحديد الصف" [ref=e268]
+  - text: "ناجح [redacted-email]‏٨٧٤٫٠٠ US$"
+  - button "فتح القائمة" [ref=e269]
+  - checkbox "تحديد الصف" [ref=e270]
+  - text: "فشل [redacted-email]‏٧٢١٫٠٠ US$"
+  - button "فتح القائمة" [ref=e271]
+  - text: "0  من  5  صف(وف) محدد."
+  - button "السابق" [ref=e272] [disabled]
+  - button "التالي" [ref=e273] [disabled]
+  - link "Context Menu" [ref=e274]
+  - link "Date Picker" [ref=e275]
+  - generic [ref=e276] [scrollable]:
+    - text: "On This Page"
+    - link "Introduction" [ref=e277]
+    - link "Table of Contents" [ref=e278]
+    - link "Installation" [ref=e279]
+    - link "Prerequisites" [ref=e280]
+    - link "Project Structure" [ref=e281]
+    - link "Set up Table Features" [ref=e282]
+    - link "Basic Table" [ref=e283]
+    - link "Column Definitions" [ref=e284]
+    - link "component" [ref=e285]: "<DataTable /> component"
+    - link "Render the table" [ref=e286]
+    - link "Cell Formatting" [ref=e287]
+    - link "Update columns definition" [ref=e288]
+    - link "Row Actions" [ref=e289]
+    - link "Update columns definition" [ref=e290]
+    - link "Pagination" [ref=e291]
+    - link "Pagination is already enabled" [ref=e292]
+    - link "Add pagination controls" [ref=e293]
+    - link "Sorting" [ref=e294]
+    - link "Update" [ref=e295]: "Update <DataTable>"
+    - link "Make header cell sortable" [ref=e296]
+    - link "Filtering" [ref=e297]
+    - link "Update" [ref=e298]: "Update <DataTable>"
+    - link "Visibility" [ref=e299]
+    - link "Update" [ref=e300]: "Update <DataTable>"
+    - link "Row Selection" [ref=e301]
+    - link "Update column definitions" [ref=e302]
+    - link "Update" [ref=e303]: "Update <DataTable>"
+    - link "Show selected rows" [ref=e304]
+    - link "Reusable Components" [ref=e305]
+    - link "Column header" [ref=e306]
+    - link "Pagination" [ref=e307]
+    - link "Column toggle" [ref=e308]
+    - link "RTL" [ref=e309]
+  - text: "Deploy your shadcn/ui app on Vercel Trusted by OpenAI, Sonos, Adobe, and more.Vercel provides tools and infrastructure to deploy apps and features at scale."
+  - button "Deploy Now" [ref=e310]
+  - link "Deploy to Vercel" [ref=e311]
+- region "Notifications alt+T" [ref=e312]
+- region "Notifications" [ref=e313]
+@@ -145,0 +145,5 @@
++  - menu "Columns" [focused]:
++    - group:
++      - menuitemcheckbox "status" [ref=e314] [checked]
++      - menuitemcheckbox "email" [ref=e315] [checked]
++      - menuitemcheckbox "amount" [ref=e316] [checked]
+
+✔︎ Opened a new tab and set it active: tabs[0], page → Sidebar - shadcn/ui (https://ui.shadcn.com/docs/components/base/sidebar)
+# note: interactive (clickable / focusable) elements only.
+- title: "Sidebar - shadcn/ui" [url=https://ui.shadcn.com/docs/components/base/sidebar]
+- banner:
+  - navigation:
+    - link "Home" [ref=e1]
+    - link "Docs" [ref=e2]
+    - link "Components" [ref=e3]
+    - link "Blocks" [ref=e4]
+    - link "Charts" [ref=e5]
+    - link "Directory" [ref=e6]
+    - link "Typeset" [ref=e7]
+    - link "Create" [ref=e8]
+  - button "Search documentation..." [ref=e9]
+  - link "125k" [ref=e10]
+  - button "Toggle theme" [ref=e11]
+  - link "New" [ref=e12]
+- main:
+  - generic [ref=e13] [scrollable]:
+    - text: "Sections"
+    - link "Introduction" [ref=e14]
+    - link "Components" [ref=e15]
+    - link "Installation" [ref=e16]
+    - link "Theming" [ref=e17]
+    - link "CLI" [ref=e18]
+    - link "Typeset" [ref=e19]
+    - link "Skills" [ref=e20]
+    - link "Registry" [ref=e21]
+    - link "ChangelogNew" [ref=e22]: "Changelog"
+    - text: "Components"
+    - link "Accordion" [ref=e23]
+    - link "Alert" [ref=e24]
+    - link "Alert Dialog" [ref=e25]
+    - link "Aspect Ratio" [ref=e26]
+    - link "Attachment" [ref=e27]
+    - link "Avatar" [ref=e28]
+    - link "Badge" [ref=e29]
+    - link "Breadcrumb" [ref=e30]
+    - link "Bubble" [ref=e31]
+    - link "Button" [ref=e32]
+    - link "Button Group" [ref=e33]
+    - link "Calendar" [ref=e34]
+    - link "Card" [ref=e35]
+    - link "Carousel" [ref=e36]
+    - link "Chart" [ref=e37]
+    - link "Checkbox" [ref=e38]
+    - link "Collapsible" [ref=e39]
+    - link "Combobox" [ref=e40]
+    - link "Command" [ref=e41]
+    - link "Context Menu" [ref=e42]
+    - link "Data Table" [ref=e43]
+    - link "Date Picker" [ref=e44]
+    - link "Dialog" [ref=e45]
+    - link "Direction" [ref=e46]
+    - link "Drawer" [ref=e47]
+    - link "Dropdown Menu" [ref=e48]
+    - link "Empty" [ref=e49]
+    - link "Field" [ref=e50]
+    - link "Hover Card" [ref=e51]
+    - link "Input" [ref=e52]
+    - link "Input Group" [ref=e53]
+    - link "Input OTP" [ref=e54]
+    - link "Item" [ref=e55]
+    - link "Kbd" [ref=e56]
+    - link "Label" [ref=e57]
+    - link "Marker" [ref=e58]
+    - link "Menubar" [ref=e59]
+    - link "Message" [ref=e60]
+    - link "Message Scroller" [ref=e61]
+    - link "Native Select" [ref=e62]
+    - link "Navigation Menu" [ref=e63]
+    - link "Pagination" [ref=e64]
+    - link "Popover" [ref=e65]
+    - link "Progress" [ref=e66]
+    - link "QuestionnaireNew" [ref=e67]: "Questionnaire"
+    - link "Radio Group" [ref=e68]
+    - link "Resizable" [ref=e69]
+    - link "Scroll Area" [ref=e70]
+    - link "Select" [ref=e71]
+    - link "Separator" [ref=e72]
+    - link "Sheet" [ref=e73]
+    - link "Sidebar" [ref=e74]
+    - link "Skeleton" [ref=e75]
+    - link "Slider" [ref=e76]
+    - link "Spinner" [ref=e77]
+    - link "Switch" [ref=e78]
+    - link "Table" [ref=e79]
+    - link "Tabs" [ref=e80]
+    - link "Textarea" [ref=e81]
+    - link "Toast" [ref=e82]
+    - link "Toggle" [ref=e83]
+    - link "Toggle Group" [ref=e84]
+    - link "Tooltip" [ref=e85]
+    - link "Typography" [ref=e86]
+    - text: "Get Started"
+    - link "Installation" [ref=e87]
+    - link "components.json" [ref=e88]
+    - link "Package Imports" [ref=e89]
+    - link "Theming" [ref=e90]
+    - link "Typeset" [ref=e91]
+    - link "Dark Mode" [ref=e92]
+    - link "CLI" [ref=e93]
+    - link "Monorepo" [ref=e94]
+    - link "Skills" [ref=e95]
+    - link "JavaScript" [ref=e96]
+    - link "Figma" [ref=e97]
+    - link "llms.txt" [ref=e98]
+    - link "Legacy Docs" [ref=e99]
+    - text: "@shadcn/react"
+    - link "Message Scroller" [ref=e100]
+    - link "QuestionnaireNew" [ref=e101]: "Questionnaire"
+    - text: "@shadcn/helpers"
+    - link "AI SDK" [ref=e102]
+    - link "TanStack AI" [ref=e103]
+    - text: "Forms"
+    - link "React Hook Form" [ref=e104]
+    - link "TanStack Form" [ref=e105]
+    - link "Formisch" [ref=e106]
+    - text: "Utilities"
+    - link "scroll-fade" [ref=e107]
+    - link "shimmer" [ref=e108]
+    - text: "Registry"
+    - link "Introduction" [ref=e109]
+    - link "Getting Started" [ref=e110]
+    - link "GitHub Registries" [ref=e111]
+    - link "Registry Directory" [ref=e112]
+    - link "Registry HealthNew" [ref=e113]: "Registry Health"
+    - link "Examples" [ref=e114]
+    - link "Namespaces" [ref=e115]
+    - link "Authentication" [ref=e116]
+    - link "Dynamic SearchNew" [ref=e117]: "Dynamic Search"
+    - link "MCP Server" [ref=e118]
+    - link "Open in v0" [ref=e119]
+    - link "API Reference" [ref=e120]
+    - link "registry.json" [ref=e121]
+    - link "registry-item.json" [ref=e122]
+  - heading "Sidebar" [level=1]
+  - button "Copy Page" [ref=e123]
+  - button [ref=e124]
+  - link "Previous" [ref=e125]
+  - link "Next" [ref=e126]
+  - text: "A composable, themeable and customizable sidebar component."
+  - link "Base UI" [ref=e127]
+  - link "React Aria" [ref=e128]
+  - link "Radix UI" [ref=e129]
+  - text: "A sidebar that collapses to icons.\nSidebars are one of the most complex components to build. They are central\nto any application and often contain a lot of moving parts.\nWe now have a solid foundation to build on top of. Composable. Themeable.\nCustomizable."
+  - link "Browse the Blocks Library" [ref=e130]
+  - text: "."
+  - heading [level=2]:
+    - link "Installation" [ref=e131]
+  - tablist [ref=e132]:
+    - tab "Command" [ref=e133] [selected]
+    - tab "Manual" [ref=e134]
+  - tabpanel "Command" [ref=e135]:
+    - generic [ref=e136]:
+      - tablist [ref=e137]:
+        - tab "pnpm" [ref=e138] [selected]
+        - tab "npm" [ref=e139]
+        - tab "yarn" [ref=e140]
+        - tab "bun" [ref=e141]
+      - tabpanel "pnpm" [ref=e142]: "pnpm dlx shadcn@latest add sidebar"
+      - button "Copy" [ref=e143]
+  - heading [level=2]:
+    - link "Usage" [ref=e144]
+  - text: "app/layout.tsx"
+  - generic [ref=e145] [scrollable]:
+    - button "Copy" [ref=e146]
+    - text: "import { SidebarProvider, SidebarTrigger } from \"@/components/ui/sidebar\"\nimport { AppSidebar } from \"@/components/app-sidebar\"\n \nexport  default  function  Layout({ children }: { children: React.ReactNode }) {\n  return (\n    <SidebarProvider>\n      <AppSidebar />\n      <main>\n        <SidebarTrigger />\n        {children}\n      </main>\n    </SidebarProvider>\n  )\n}"
+  - text: "components/app-sidebar.tsx"
+  - generic [ref=e147]:
+    - button "Copy" [ref=e148]
+    - text: "import {\n  Sidebar,\n  SidebarContent,\n  SidebarFooter,\n  SidebarGroup,\n  SidebarHeader,\n} from \"@/components/ui/sidebar\"\n \nexport  function  AppSidebar() {\n  return (\n    <Sidebar>\n      <SidebarHeader />\n      <SidebarContent>\n        <SidebarGroup />\n        <SidebarGroup />\n      </SidebarContent>\n      <SidebarFooter />\n    </Sidebar>\n  )\n}"
+  - heading [level=2]:
+    - link "Composition" [ref=e149]
+  - text: "Use the following composition to build a  Sidebar  layout:"
+  - generic [ref=e150]:
+    - button "Copy" [ref=e151]
+    - text: "SidebarProvider\n├── Sidebar\n│   ├── SidebarHeader\n│   ├── SidebarContent\n│   │   ├── SidebarGroup\n│   │   │   ├── SidebarGroupLabel\n│   │   │   ├── SidebarGroupAction\n│   │   │   ├── SidebarGroupContent\n│   │   │   └── SidebarMenu\n│   │   │       ├── SidebarMenuItem\n│   │   │       │   ├── SidebarMenuButton\n│   │   │       │   ├── SidebarMenuAction\n│   │   │       │   └── SidebarMenuBadge\n│   │   │       └── SidebarMenuItem\n│   │   │           ├── SidebarMenuButton\n│   │   │           └── SidebarMenuSub\n│   │   │               ├── SidebarMenuSubItem\n│   │   │               └── SidebarMenuSubItem\n│   │   └── SidebarGroup\n│   │       └── SidebarMenu\n│   │           ├── SidebarMenuItem\n│   │           └── SidebarMenuItem\n│   ├── SidebarFooter\n│   └── SidebarRail\n├── SidebarInset\n└── SidebarTrigger"
+  - heading [level=2]:
+    - link "Structure" [ref=e152]
+  - text: "SidebarProvider — Handles collapsible state and provides sidebar context to child components.\nSidebar — The main collapsible sidebar panel.\nSidebarHeader — Sticky at the top; use for branding, titles, or workspace switchers.\nSidebarFooter — Sticky at the bottom; use for user menus, settings, or actions.\nSidebarContent — Scrollable region between the header and footer.\nSidebarGroup — Groups related navigation with optional label, action, and content areas.\nSidebarMenu / SidebarMenuItem — Menu structure for links, badges, actions, and nested submenus.\nSidebarRail — Resize handle for adjusting sidebar width when applicable.\nSidebarInset — Wraps main content when using the  inset  variant.\nSidebarTrigger — Control that toggles the sidebar open or collapsed.\n\nSidebar Structure"
+  - heading [level=2]:
+    - link "SidebarProvider" [ref=e153]
+  - text: "The  SidebarProvider  component is used to provide the sidebar context to the  Sidebar  component. You should always wrap your application in a  SidebarProvider  component."
+  - heading [level=3]:
+    - link "Props" [ref=e154]
+  - text: "Name Type Description defaultOpen boolean Default open state of the sidebar.open boolean Open state of the sidebar (controlled).onOpenChange(open: boolean) => void Sets open state of the sidebar (controlled)."
+  - heading [level=3]:
+    - link "Width" [ref=e155]
+  - text: "If you have a single sidebar in your application, you can use the  SIDEBAR_WIDTH  and  SIDEBAR_WIDTH_MOBILE  variables in  sidebar.tsx  to set the width of the sidebar.\ncomponents/ui/sidebar.tsx"
+  - generic [ref=e156]:
+    - button "Copy" [ref=e157]
+    - text: "const  SIDEBAR_WIDTH = \"16rem\"\nconst  SIDEBAR_WIDTH_MOBILE = \"18rem\""
+  - text: "For multiple sidebars in your application, you can use the --sidebar-width  and --sidebar-width-mobile  CSS variables in the  style  prop."
+  - generic [ref=e158]:
+    - button "Copy" [ref=e159]
+    - text: "<SidebarProvider\n   style={\n    {\n      \"--sidebar-width\": \"20rem\",\n      \"--sidebar-width-mobile\": \"20rem\",\n    } as  React.CSSProperties\n  }\n>\n  <Sidebar />\n</SidebarProvider>"
+  - heading [level=3]:
+    - link "Keyboard Shortcut" [ref=e160]
+  - text: "To trigger the sidebar, you use the  cmd+b  keyboard shortcut on Mac and  ctrl+b  on Windows.\ncomponents/ui/sidebar.tsx"
+  - generic [ref=e161]:
+    - button "Copy" [ref=e162]
+    - text: "const  SIDEBAR_KEYBOARD_SHORTCUT = \"b\""
+  - heading [level=2]:
+    - link "Sidebar" [ref=e163]
+  - text: "The main  Sidebar  component used to render a collapsible sidebar."
+  - heading [level=3]:
+    - link "Props" [ref=e164]
+  - text: "Property Type Description side left  or  right The side of the sidebar.variant sidebar, floating, or  inset The variant of the sidebar.collapsible offcanvas, icon, or  none Collapsible state of the sidebar.\nProp Description offcanvas A collapsible sidebar that slides in from the left or right.icon A sidebar that collapses to icons.none A non-collapsible sidebar."
+  - alert: "Note: If you use the  inset  variant, remember to wrap your main content\nin a  SidebarInset  component."
+  - generic [ref=e165]:
+    - button "Copy" [ref=e166]
+    - text: "<SidebarProvider>\n  <Sidebar  variant=\"inset\" />\n  <SidebarInset>\n    <main>{children}</main>\n  </SidebarInset>\n</SidebarProvider>"
+  - heading [level=2]:
+    - link "useSidebar" [ref=e167]
+  - text: "The  useSidebar  hook is used to control the sidebar."
+  - generic [ref=e168]:
+    - button "Copy" [ref=e169]
+    - text: "import { useSidebar } from \"@/components/ui/sidebar\"\n \nexport  function  AppSidebar() {\n  const {\n    state,\n    open,\n    setOpen,\n    openMobile,\n    setOpenMobile,\n    isMobile,\n    toggleSidebar,\n  } = useSidebar()\n}"
+  - text: "Property Type Description state expanded  or  collapsed The current state of the sidebar.open boolean Whether the sidebar is open.setOpen(open: boolean) => void Sets the open state of the sidebar.openMobile boolean Whether the sidebar is open on mobile.setOpenMobile(open: boolean) => void Sets the open state of the sidebar on mobile.isMobile boolean Whether the sidebar is on mobile.toggleSidebar() => void Toggles the sidebar. Desktop and mobile."
+  - heading [level=2]:
+    - link "SidebarHeader" [ref=e170]
+  - text: "Use the  SidebarHeader  component to add a sticky header to the sidebar.\ncomponents/app-sidebar.tsx"
+  - generic [ref=e171]:
+    - button "Copy" [ref=e172]
+    - text: "<Sidebar>\n  <SidebarHeader>\n    <SidebarMenu>\n      <SidebarMenuItem>\n        <DropdownMenu>\n          <DropdownMenuTrigger  render={<SidebarMenuButton />}>\n            Select Workspace\n            <ChevronDown  className=\"ml-auto\" />\n          </DropdownMenuTrigger>\n          <DropdownMenuContent>\n            <DropdownMenuItem>\n              <span>Acme Inc</span>\n            </DropdownMenuItem>\n          </DropdownMenuContent>\n        </DropdownMenu>\n      </SidebarMenuItem>\n    </SidebarMenu>\n  </SidebarHeader>\n</Sidebar>"
+  - heading [level=2]:
+    - link "SidebarFooter" [ref=e173]
+  - text: "Use the  SidebarFooter  component to add a sticky footer to the sidebar."
+  - generic [ref=e174]:
+    - button "Copy" [ref=e175]
+    - text: "<Sidebar>\n  <SidebarFooter>\n    <SidebarMenu>\n      <SidebarMenuItem>\n        <SidebarMenuButton>\n          <User2 /> Username\n        </SidebarMenuButton>\n      </SidebarMenuItem>\n    </SidebarMenu>\n  </SidebarFooter>\n</Sidebar>"
+  - heading [level=2]:
+    - link "SidebarContent" [ref=e176]
+  - text: "The  SidebarContent  component is used to wrap the content of the sidebar. This is where you add your  SidebarGroup  components. It is scrollable."
+  - generic [ref=e177]:
+    - button "Copy" [ref=e178]
+    - text: "<Sidebar>\n  <SidebarContent>\n    <SidebarGroup />\n    <SidebarGroup />\n  </SidebarContent>\n</Sidebar>"
+  - heading [level=2]:
+    - link "SidebarGroup" [ref=e179]
+  - text: "Use the  SidebarGroup  component to create a section within the sidebar.\nA  SidebarGroup  has a  SidebarGroupLabel, a  SidebarGroupContent  and an optional  SidebarGroupAction."
+  - generic [ref=e180]:
+    - button "Copy" [ref=e181]
+    - text: "<SidebarGroup>\n  <SidebarGroupLabel>Application</SidebarGroupLabel>\n  <SidebarGroupAction>\n    <Plus /> <span  className=\"sr-only\">Add Project</span>\n  </SidebarGroupAction>\n  <SidebarGroupContent></SidebarGroupContent>\n</SidebarGroup>"
+  - text: "To make a  SidebarGroup  collapsible, wrap it in a  Collapsible."
+  - generic [ref=e182] [scrollable]:
+    - button "Copy" [ref=e183]
+    - text: "<Collapsible  defaultOpen  className=\"group/collapsible\">\n  <SidebarGroup>\n    <SidebarGroupLabel  render={<CollapsibleTrigger />}>\n      Help\n      <ChevronDown  className=\"ml-auto transition-transform group-data-open/collapsible:rotate-180\" />\n    </SidebarGroupLabel>\n    <CollapsibleContent>\n      <SidebarGroupContent />\n    </CollapsibleContent>\n  </SidebarGroup>\n</Collapsible>"
+  - heading [level=2]:
+    - link "SidebarMenu" [ref=e184]
+  - text: "The  SidebarMenu  component is used for building a menu within a  SidebarGroup.\nSidebar Menu"
+  - generic [ref=e185]:
+    - button "Copy" [ref=e186]
+    - text: "<SidebarMenu>\n  {projects.map((project) => (\n    <SidebarMenuItem  key={project.name}>\n      <SidebarMenuButton  render={<a  href={project.url} />}>\n        <project.icon />\n        <span>{project.name}</span>\n      </SidebarMenuButton>\n    </SidebarMenuItem>\n  ))}\n</SidebarMenu>"
+  - heading [level=2]:
+    - link "SidebarMenuButton" [ref=e187]
+  - text: "The  SidebarMenuButton  component is used to render a menu button within a  SidebarMenuItem.\nBy default, the  SidebarMenuButton  renders a button but you can use the  render  prop to render a different component such as a  Link  or an  a  tag.\nUse the  isActive  prop to mark a menu item as active."
+  - generic [ref=e188]:
+    - button "Copy" [ref=e189]
+    - text: "<SidebarMenuButton  render={<a  href=\"#\" />} isActive>\n  Home\n</SidebarMenuButton>"
+  - heading [level=2]:
+    - link "SidebarMenuAction" [ref=e190]
+  - text: "The  SidebarMenuAction  component is used to render a menu action within a  SidebarMenuItem."
+  - generic [ref=e191]:
+    - button "Copy" [ref=e192]
+    - text: "<SidebarMenuItem>\n  <SidebarMenuButton  render={<a  href=\"#\" />}>\n    <Home />\n    <span>Home</span>\n  </SidebarMenuButton>\n  <SidebarMenuAction>\n    <Plus /> <span  className=\"sr-only\">Add Project</span>\n  </SidebarMenuAction>\n</SidebarMenuItem>"
+  - heading [level=2]:
+    - link "SidebarMenuSub" [ref=e193]
+  - text: "The  SidebarMenuSub  component is used to render a submenu within a  SidebarMenu."
+  - generic [ref=e194]:
+    - button "Copy" [ref=e195]
+    - text: "<SidebarMenuItem>\n  <SidebarMenuButton />\n  <SidebarMenuSub>\n    <SidebarMenuSubItem>\n      <SidebarMenuSubButton />\n    </SidebarMenuSubItem>\n  </SidebarMenuSub>\n</SidebarMenuItem>"
+  - heading [level=2]:
+    - link "SidebarMenuBadge" [ref=e196]
+  - text: "The  SidebarMenuBadge  component is used to render a badge within a  SidebarMenuItem."
+  - generic [ref=e197]:
+    - button "Copy" [ref=e198]
+    - text: "<SidebarMenuItem>\n  <SidebarMenuButton />\n  <SidebarMenuBadge>24</SidebarMenuBadge>\n</SidebarMenuItem>"
+  - heading [level=2]:
+    - link "SidebarMenuSkeleton" [ref=e199]
+  - text: "The  SidebarMenuSkeleton  component is used to render a skeleton for a  SidebarMenu."
+  - generic [ref=e200]:
+    - button "Copy" [ref=e201]
+    - text: "<SidebarMenu>\n  {Array.from({ length: 5 }).map((_, index) => (\n    <SidebarMenuItem  key={index}>\n      <SidebarMenuSkeleton />\n    </SidebarMenuItem>\n  ))}\n</SidebarMenu>"
+  - heading [level=2]:
+    - link "SidebarTrigger" [ref=e202]
+  - text: "Use the  SidebarTrigger  component to render a button that toggles the sidebar."
+  - generic [ref=e203]:
+    - button "Copy" [ref=e204]
+    - text: "import { useSidebar } from \"@/components/ui/sidebar\"\n \nexport  function  CustomTrigger() {\n  const { toggleSidebar } = useSidebar()\n \n  return <button  onClick={toggleSidebar}>Toggle Sidebar</button>\n}"
+  - heading [level=2]:
+    - link "SidebarRail" [ref=e205]
+  - text: "The  SidebarRail  component is used to render a rail within a  Sidebar. This rail can be used to toggle the sidebar."
+  - generic [ref=e206]:
+    - button "Copy" [ref=e207]
+    - text: "<Sidebar>\n  <SidebarHeader />\n  <SidebarContent>\n    <SidebarGroup />\n  </SidebarContent>\n  <SidebarFooter />\n  <SidebarRail />\n</Sidebar>"
+  - heading [level=2]:
+    - link "Controlled Sidebar" [ref=e208]
+  - text: "Use the  open  and  onOpenChange  props to control the sidebar."
+  - generic [ref=e209]:
+    - button "Copy" [ref=e210]
+    - text: "export  function  AppSidebar() {\n  const [open, setOpen] = React.useState(false)\n \n  return (\n    <SidebarProvider  open={open} onOpenChange={setOpen}>\n      <Sidebar />\n    </SidebarProvider>\n  )\n}"
+  - heading [level=2]:
+    - link "Theming" [ref=e211]
+  - text: "We use the following CSS variables to theme the sidebar."
+  - generic [ref=e212]:
+    - button "Copy" [ref=e213]
+    - text: "@layer  base {\n  :root {\n    --sidebar-background: 0  0% 98%;\n    --sidebar-foreground: 240  5.3% 26.1%;\n    --sidebar-primary: 240  5.9% 10%;\n    --sidebar-primary-foreground: 0  0% 98%;\n    --sidebar-accent: 240  4.8% 95.9%;\n    --sidebar-accent-foreground: 240  5.9% 10%;\n    --sidebar-border: 220  13% 91%;\n    --sidebar-ring: 217.2  91.2% 59.8%;\n  }\n \n  .dark {\n    --sidebar-background: 240  5.9% 10%;\n    --sidebar-foreground: 240  4.8% 95.9%;\n    --sidebar-primary: 0  0% 98%;\n    --sidebar-primary-foreground: 240  5.9% 10%;\n    --sidebar-accent: 240  3.7% 15.9%;\n    --sidebar-accent-foreground: 240  4.8% 95.9%;\n    --sidebar-border: 240  3.7% 15.9%;\n    --sidebar-ring: 217.2  91.2% 59.8%;\n  }\n}"
+  - heading [level=2]:
+    - link "Styling" [ref=e214]
+  - text: "Here are some tips for styling the sidebar based on different states."
+  - generic [ref=e215]:
+    - button "Copy" [ref=e216]
+    - text: "<Sidebar  collapsible=\"icon\">\n  <SidebarContent>\n    <SidebarGroup  className=\"group-data-[collapsible=icon]:hidden\" />\n  </SidebarContent>\n</Sidebar>"
+  - generic [ref=e217] [scrollable]:
+    - button "Copy" [ref=e218]
+    - text: "<SidebarMenuItem>\n  <SidebarMenuButton />\n  <SidebarMenuAction  className=\"peer-data-[active=true]/menu-button:opacity-100\" />\n</SidebarMenuItem>"
+  - heading [level=2]:
+    - link "RTL" [ref=e219]
+  - text: "To enable RTL support in shadcn/ui, see the"
+  - link "RTL configuration guide" [ref=e220]
+  - text: "."
+  - link "View RTL Sidebar" [ref=e221]
+  - heading [level=2]:
+    - link "Changelog" [ref=e222]
+  - heading [level=3]:
+    - link "RTL Support" [ref=e223]
+  - text: "If you're upgrading from a previous version of the  Sidebar  component, you'll need to apply the following updates to add RTL support:"
+  - heading "Add prop to Sidebar component." [level=3]: "Add  dir  prop to Sidebar component."
+  - text: "Add  dir  to the destructured props and pass it to  SheetContent  for mobile:"
+  - generic [ref=e224]:
+    - button "Copy" [ref=e225]
+    - text: "function Sidebar({\n    side = \"left\",\n    variant = \"sidebar\",\n    collapsible = \"offcanvas\",\n    className,\n    children,\n+   dir,\n    ...props\n  }: React.ComponentProps<\"div\"> & {\n    side?: \"left\" | \"right\"\n    variant?: \"sidebar\" | \"floating\" | \"inset\"\n    collapsible?: \"offcanvas\" | \"icon\" | \"none\"\n  }) {"
+  - text: "Then pass it to  SheetContent  in the mobile view:"
+  - generic [ref=e226]:
+    - button "Copy" [ref=e227]
+    - text: "<Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>\n    <SheetContent\n+     dir={dir}\n      data-sidebar=\"sidebar\"\n      data-slot=\"sidebar\"\n      data-mobile=\"true\""
+  - heading "Add attribute to sidebar container." [level=3]: "Add  data-side  attribute to sidebar container."
+  - text: "Add  data-side={side} to the sidebar container element:"
+  - generic [ref=e228]:
+    - button "Copy" [ref=e229]
+    - text: "<div\n     data-slot=\"sidebar-container\"\n+   data-side={side}\n    className={cn("
+  - heading "Update sidebar container positioning classes." [level=3]
+  - text: "Replace JavaScript ternary conditional classes with CSS data attribute selectors:"
+  - generic [ref=e230] [scrollable]:
+    - button "Copy" [ref=e231]
+    - text: "className={cn(\n-   \"fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex\",\n-   side === \"left\"\n-     ? \"left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]\"\n-     : \"right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]\",\n+   \"fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex data-[side=left]:left-0 data-[side=right]:right-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]\","
+  - heading "Update SidebarRail positioning classes." [level=3]
+  - text: "Update the  SidebarRail  component to use physical positioning for the rail:"
+  - generic [ref=e232] [scrollable]:
+    - button "Copy" [ref=e233]
+    - text: "className={cn(\n-   \"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-end-4 group-data-[side=right]:start-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex\",\n+   \"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 ltr:-translate-x-1/2 rtl:-translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex\","
+  - heading "Add RTL flip to SidebarTrigger icon." [level=3]
+  - text: "Add  className=\"rtl:rotate-180\" to the icon in  SidebarTrigger  to flip it in RTL mode:"
+  - generic [ref=e234]:
+    - button "Copy" [ref=e235]
+    - text: "<Button ...>\n-   <PanelLeftIcon />\n+   <PanelLeftIcon className=\"rtl:rotate-180\" />\n    <span className=\"sr-only\">Toggle Sidebar</span>\n  </Button>"
+  - text: "After applying these changes, you can use the  dir  prop to set the direction:"
+  - generic [ref=e236]:
+    - button "Copy" [ref=e237]
+    - text: "<Sidebar  dir=\"rtl\" side=\"right\">\n  {/* ... */}\n</Sidebar>"
+  - text: "The sidebar will correctly position itself and handle interactions in both LTR and RTL layouts."
+  - link "Sheet" [ref=e238]
+  - link "Skeleton" [ref=e239]
+  - generic [ref=e240] [scrollable]:
+    - text: "On This Page"
+    - link "Installation" [ref=e241]
+    - link "Usage" [ref=e242]
+    - link "Composition" [ref=e243]
+    - link "Structure" [ref=e244]
+    - link "SidebarProvider" [ref=e245]
+    - link "Props" [ref=e246]
+    - link "Width" [ref=e247]
+    - link "Keyboard Shortcut" [ref=e248]
+    - link "Sidebar" [ref=e249]
+    - link "Props" [ref=e250]
+    - link "useSidebar" [ref=e251]
+    - link "SidebarHeader" [ref=e252]
+    - link "SidebarFooter" [ref=e253]
+    - link "SidebarContent" [ref=e254]
+    - link "SidebarGroup" [ref=e255]
+    - link "SidebarMenu" [ref=e256]
+    - link "SidebarMenuButton" [ref=e257]
+    - link "SidebarMenuAction" [ref=e258]
+    - link "SidebarMenuSub" [ref=e259]
+    - link "SidebarMenuBadge" [ref=e260]
+    - link "SidebarMenuSkeleton" [ref=e261]
+    - link "SidebarTrigger" [ref=e262]
+    - link "SidebarRail" [ref=e263]
+    - link "Controlled Sidebar" [ref=e264]
+    - link "Theming" [ref=e265]
+    - link "Styling" [ref=e266]
+    - link "RTL" [ref=e267]
+    - link "Changelog" [ref=e268]
+    - link "RTL Support" [ref=e269]
+  - text: "Deploy your shadcn/ui app on Vercel Trusted by OpenAI, Sonos, Adobe, and more.Vercel provides tools and infrastructure to deploy apps and features at scale."
+  - button "Deploy Now" [ref=e270]
+  - link "Deploy to Vercel" [ref=e271]
+- region "Notifications alt+T" [ref=e272]
+- region "Notifications" [ref=e273]
+- iframe:
+  - button "Acme Inc Enterprise" [ref=f1e1]
+  - generic [ref=f1e2] [scrollable]:
+    - text: "Platform"
+    - button "Playground" [ref=f1e3]
+    - link "History" [ref=f1e4]
+    - link "Starred" [ref=f1e5]
+    - link "Settings" [ref=f1e6]
+    - button "Models" [ref=f1e7]
+    - button "Documentation" [ref=f1e8]
+    - button "Settings" [ref=f1e9]
+    - text: "Projects"
+    - link "Design Engineering" [ref=f1e10]
+    - link "Sales & Marketing" [ref=f1e11]
+    - link "Travel" [ref=f1e12]
+    - button "More" [ref=f1e13]
+  - button "shadcn shadcn [redacted-email]" [ref=f1e14]
+  - button "Toggle Sidebar" [ref=f1e15]
+  - main:
+    - banner:
+      - button "Toggle Sidebar" [ref=f1e16]
+  - region "Notifications alt+T" [ref=f1e17]
+  - region "Notifications" [ref=f1e18]
+✔︎ Opened a new tab and set it active: tabs[0], page → Table - Tremor (https://www.tremor.so/docs/ui/table)
+# note: interactive (clickable / focusable) elements only.
+- title: "Table - Tremor" [url=https://www.tremor.so/docs/ui/table]
+- banner:
+  - link [ref=e1]:
+    - text: "Vercel wordmark Tremor   is joining   Vercel. Read more about our journey"
+    - canvas [ref=e2] [size=1425x48]
+  - link "Tremor Raw Logo and Home Link" [ref=e3]
+  - navigation:
+    - link "Components" [ref=e4]
+    - link "Charts" [ref=e5]
+    - link "Blocks & Templates" [ref=e6]
+    - link "Docs" [ref=e7]
+    - link "Go to GitHub Repository" [ref=e8]
+- generic [ref=e9] [scrollable]:
+  - complementary:
+    - heading [level=4]: "Getting Started"
+    - link "Installation Updated" [ref=e10]
+    - link "Your First Dashboard" [ref=e11]
+    - heading [level=4]: "Visualizations"
+    - link "Area Chart" [ref=e12]
+    - link "Bar Chart" [ref=e13]
+    - link "Combo Chart" [ref=e14]
+    - link "Bar List" [ref=e15]
+    - link "Category Bar" [ref=e16]
+    - link "Donut Chart" [ref=e17]
+    - link "Line Chart" [ref=e18]
+    - link "Progress Bar" [ref=e19]
+    - link "Progress Circle" [ref=e20]
+    - link "Spark Chart" [ref=e21]
+    - link "Tracker" [ref=e22]
+    - heading [level=4]: "Inputs"
+    - link "Calendar" [ref=e23]
+    - link "Checkbox" [ref=e24]
+    - link "Date Picker" [ref=e25]
+    - link "Date Range Picker" [ref=e26]
+    - link "Dropdown Menu" [ref=e27]
+    - link "Input" [ref=e28]
+    - link "Label" [ref=e29]
+    - link "Radio Card Group" [ref=e30]
+    - link "Radio Group" [ref=e31]
+    - link "Select" [ref=e32]
+    - link "Select Native" [ref=e33]
+    - link "Slider" [ref=e34]
+    - link "Switch" [ref=e35]
+    - link "Textarea" [ref=e36]
+    - link "Toggle" [ref=e37]
+    - heading [level=4]: "UI"
+    - link "Accordion" [ref=e38]
+    - link "Badge" [ref=e39]
+    - link "Button" [ref=e40]
+    - link "Callout" [ref=e41]
+    - link "Card" [ref=e42]
+    - link "Dialog" [ref=e43]
+    - link "Divider" [ref=e44]
+    - link "Drawer" [ref=e45]
+    - link "Popover" [ref=e46]
+    - link "Table" [ref=e47]
+    - link "Tabs" [ref=e48]
+    - link "TabNavigation" [ref=e49]
+    - link "Toast" [ref=e50]
+    - link "Tooltip" [ref=e51]
+    - heading [level=4]: "Utilities"
+    - link "chartUtils" [ref=e52]
+    - link "cx" [ref=e53]
+    - link "focusInput" [ref=e54]
+    - link "hasErrorInput" [ref=e55]
+    - link "focusRing" [ref=e56]
+- main:
+  - text: "UI"
+  - heading "Table" [level=1]
+  - text: "Display data efficiently in a column and row format."
+  - link "GitHub" [ref=e57]
+  - button "Preview" [ref=e58]
+  - button "Code" [ref=e59]
+  - button "Switch to Dark Mode" [ref=e60]: "Switch to Light Mode"
+  - text: "Recent invoices.Name Sales ($)Region Status Working Hours (h)Peter McCrown 1,000,000 Region A overperforming 100 Jon Mueller 2,202,000 Region B overperforming 110 Peter Federer 1,505,000 Region C underperforming 90 Maxime Bujet 500,000 Region D overperforming 92 Emma Nelly 600,000 Region E underperforming 95 4,642 497"
+  - heading "Installation" [level=2]
+  - region:
+    - text: "1"
+    - heading "Add component:" [level=3]
+    - text: "Copy and paste the code into your project’s component directory. Do not forget to update the import paths."
+    - button "Show more" [ref=e61]
+    - tabpanel [ref=e62] [scrollable]:
+      - generic "// Tremor Table [v1.0.0] import React from \"react\" import { cx } from \"@/lib/utils\" const TableRoot " [ref=e63] [scrollable]
+      - button "Copy code" [ref=e64]
+  - heading "Example: Table with Badges" [level=2]
+  - button "Preview" [ref=e65]
+  - button "Code" [ref=e66]
+  - button "Switch to Dark Mode" [ref=e67]: "Switch to Light Mode"
+  - heading "Workspaces" [level=3]
+  - text: "Overview of all registered workspaces within your organization."
+  - generic "Workspace Owner Status Region Capacity Costs Last edited sales_by_day_api John Doe Live US-West 1 99" [ref=e68] [scrollable]
+  - heading "API Reference: TableRoot" [level=2]
+  - text: "This component is based on the  div  element and supports all of its props."
+  - heading "API Reference: Table" [level=2]
+  - text: "This component is based on the  table  element and supports all of its props."
+  - heading "API Reference: TableHead" [level=2]
+  - text: "This component is based on the  thead  element and supports all of its props."
+  - heading "API Reference: TableBody" [level=2]
+  - text: "This component is based on the  tbody  element and supports all of its props."
+  - heading "API Reference: TableRow" [level=2]
+  - text: "This component is based on the  tr  element and supports all of its props."
+  - heading "API Reference: TableCell" [level=2]
+  - text: "This component is based on the  td  element and supports all of its props."
+  - heading "API Reference: TableHeaderCell" [level=2]
+  - text: "This component is based on the  th  element and supports all of its props."
+  - heading "API Reference: TableFoot" [level=2]
+  - text: "This component is based on the  tfoot  element and supports all of its props."
+  - heading "API Reference: TableCaption" [level=2]
+  - text: "This component is based on the  caption  element and supports all of its props."
+- contentinfo "Footer":
+  - text: "Footer"
+  - region:
+    - text: "Found a bug? Let us know"
+    - link "here" [ref=e69]
+    - text: "."
+  - text: "© 2025  Tremor Labs, Inc. All rights reserved."
+✔︎ Opened a new tab and set it active: tabs[0], page → Bounce sidebar — Animated React Component | Rare UI (https://www.rareui.com/components/bouncesidebar)
+# note: interactive (clickable / focusable) elements only.
+- title: "Bounce sidebar — Animated React Component | Rare UI" [url=https://www.rareui.com/components/bouncesidebar]
+- button "Close sidebar" [ref=e1]
+- heading "Components" [level=2]
+- navigation "Components" [ref=e3]:
+  - text: "Display"
+  - link "Folder component" [ref=e4]
+  - link "Code Block" [ref=e5]
+  - link "Gravity Letters" [ref=e6]
+  - link "GitHub activity" [ref=e7]
+  - link "Step player" [ref=e8]
+  - link "Animated counter" [ref=e9]
+  - link "Voice note" [ref=e10]
+  - text: "AI kit"
+  - link "Fluid Orb" [ref=e11]
+  - link "Grid Reveal" [ref=e12]
+  - link "Matrix orb" [ref=e13]
+  - text: "Navigation"
+  - link "Bounce sidebar" [ref=e14]
+  - link "Hook Sidebar" [ref=e15]
+  - link "Proximity Sidebar" [ref=e16]
+  - link "Scroll Progress" [ref=e17]
+  - link "Rail TOC" [ref=e18]
+  - link "Gooey nav" [ref=e19]
+  - text: "Inputs"
+  - link "Duration Picker" [ref=e20]
+  - link "OTP Input" [ref=e21]
+  - link "Delete button" [ref=e22]
+  - link "Task list" [ref=e23]
+  - text: "Feedback"
+  - link "Emoji reaction" [ref=e24]
+  - link "Notification bell" [ref=e25]
+- link "ads via Carbon" [ref=e26]
+- link "Secure humans, AI agents, & whatever comes next. Starting building with Auth0 for AI Agents." [ref=e27]
+- link "ads via Carbon" [ref=e28]
+- button "Show install command" [ref=e29]
+- button "Open description" [ref=e30]
+- button "Get code" [ref=e31]
+- button "Toggle theme" [ref=e32]
+- generic [ref=e33] [scrollable]:
+  - heading "Bounce sidebar" [level=1]
+  - text: "A vertical navigation list with a bouncy, spring-animated active indicator."
+  - heading "Dependencies" [level=2]
+  - text: "motion"
+  - heading "Interaction Type" [level=2]
+  - text: "Click any item to spring the bouncing marker over to it."
+  - heading "Props" [level=2]
+  - text: "Options you can pass to customize this component.Prop Type Description items*Array<string | { label: string; href?: string } | { label: string; heading: true }>Rows rendered as the vertical list. A plain string or an object with a label is a nav item, and href turns it into a link. Add heading: true to render a non-selectable group label the marker skips over.value number Active item index for controlled usage. When set, the component won't manage its own state.defaultValue number Initial active index for uncontrolled usage. Ignored when value is provided.onChange(index: number) => void Called with the new index whenever an item is selected.dotColor string Any CSS color for the bouncing active marker (hex, rgb, hsl, var).className string Extra classes merged onto the root <ul> element."
+  - heading "Installation" [level=2]
+  - button "npm" [ref=e34]
+  - button "pnpm" [ref=e35]
+  - button "yarn" [ref=e36]
+  - button "bun" [ref=e37]
+  - text: "npx shadcn@latest add swamimalode07/rare-ui/bounce-sidebar"
+  - button "Copy" [ref=e38]
+  - heading "How to use" [level=2]
+  - button "Copy code" [ref=e39]
+  - region "tsx code" [ref=e40] [scrollable]: "import { BounceSidebar } from \"@/components/ui/bounce-sidebar\"    const  items = [    { label: \"General\", heading: true },    { label: \"Home\", href: \"/\" },    { label: \"About\", href: \"/about\" },  ]    export  function  Demo() {    return <BounceSidebar  items={items} dotColor=\"#FC4C01\" />  }"
+  - heading "Source Code" [level=2]
+  - text: "Click the code icon in the top-right corner to view the source code."
+  - heading "Keep in mind" [level=2]
+  - text: "Most components here are recreations of great work from around the web. I don't claim to be the original creator - this is my attempt to reverse-engineer, replicate, and often add a few extra features. I've tried to credit everyone; if I missed someone, let me know."
+  - heading "Contact" [level=2]
+  - text: "Found a bug or issue? Feel free to drop a DM."
+  - button "Copy email ([redacted-email])" [ref=e41]
+  - link "X — @swamimalode" [ref=e42]
+  - heading "License & Usage" [level=2]
+  - text: "•MIT with the Commons Clause and an attribution requirement. Free to use, modify and ship in personal and commercial projects, closed source included. You own the code once it is in your project.•Credit is required. Any project shipping a Rare UI component must credit Rare UI with a visible link back to rareui.com, in a footer, an about page, a credits screen or a README.•Don't strip the credit or the copyright notice from the source you copied.•Don't sell, sublicense or redistribute the components themselves, on their own, bundled into a template, kit, theme or paid course, or ported to another framework.•Don't republish them. No mirrors, no re-uploads, no listing them as your own work.•Don't repackage the registry as a competing component library.•Don't claim authorship of a component or of Rare UI itself.•The LICENSE file in the repository is the full text and governs. Ask first if your use doesn't fit these rules."
+- text: "Bounce sidebar"
+- button "Copy code" [ref=e43]
+- region "tsx code" [ref=e44]
+- complementary:
+  - text: "Contents"
+  - button "Introduction" [ref=e45]
+  - button "History" [ref=e46]
+  - button "Overview" [ref=e47]
+  - button "Architecture" [ref=e48]
+  - button "References" [ref=e49]
+- generic [ref=e50] [scrollable]:
+  - article:
+    - heading "Rare UI" [level=1]
+    - text: "From Rare UI, the free component encyclopedia"
+    - region:
+      - heading "Introduction" [level=2]
+      - text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+      - heading "Background" [level=3]
+      - text: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+      - heading "Etymology" [level=3]
+      - text: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+    - region:
+      - heading "History" [level=2]
+      - text: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+      - heading "Early period" [level=3]
+      - text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+      - heading "Modern era" [level=3]
+      - text: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    - region:
+      - heading "Overview" [level=2]
+      - text: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+      - heading "Principles" [level=3]
+      - text: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+      - heading "Structure" [level=3]
+      - text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+    - region:
+      - heading "Architecture" [level=2]
+      - text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+      - heading "Components" [level=3]
+      - text: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+      - heading "Data flow" [level=3]
+      - text: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+    - region:
+      - heading "References" [level=2]
+      - text: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+      - heading "Further reading" [level=3]
+      - text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_gdN7C0IQrTGXnlGT'
+}
+[2m[ok | 9518ms][0m

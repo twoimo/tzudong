@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-09T00:33:15.733301+00:00",
+  "ownedProcessesStopped": [
+    4308,
+    4352,
+    4368,
+    4436,
+    4911
+  ],
+  "preexistingDevServerPid": 57309,
+  "scope": "Only owned fixture process trees stopped; root build/deployment/user services untouched"
+}

@@ -1,0 +1,47 @@
+{
+  "status": "passed",
+  "sourceAuthority": "/Users/twoimo/.codex/worktrees/pipeline-review-validation-20261009/tzudong",
+  "sourceHead": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+  "sourceCleanDetachedAfter": true,
+  "sourceHashReadbackExact": true,
+  "serverVersion": "15.8",
+  "runAExit": 0,
+  "runBExit": 0,
+  "compareExit": 0,
+  "comparedArtifacts": 56,
+  "runArtifactCounts": {
+    "run-a": {
+      "files": 56,
+      "manifestEntries": 55
+    },
+    "run-b": {
+      "files": 56,
+      "manifestEntries": 55
+    }
+  },
+  "metadataReadback": {
+    "run-a": {
+      "catalogRows": 1917,
+      "migrationChainSha256": "9175e4189ee6b3b242bf8710df81b9deb054805a954517c83e3d91da9432af19",
+      "initializationInputsSha256": "77159c530a6bc8377e7af315de969d0112094bc09b235246004645cde7c5e221"
+    },
+    "run-b": {
+      "catalogRows": 1917,
+      "migrationChainSha256": "9175e4189ee6b3b242bf8710df81b9deb054805a954517c83e3d91da9432af19",
+      "initializationInputsSha256": "77159c530a6bc8377e7af315de969d0112094bc09b235246004645cde7c5e221"
+    }
+  },
+  "m1AndForward127HashBoundInBothChains": true,
+  "registrationAdmission": "Unchanged adapter source SHA, exact M1 SHA gate, registration anchors and inverse-byte check executed by each generator run.",
+  "generatorCleanup": {
+    "newG014ContainersRemaining": 0,
+    "g014ComposeVolumesRemaining": 0,
+    "allPriorContainerIdsPresent": true,
+    "parentContainerIdUnchangedAndRunning": true
+  },
+  "operatingWrites": false,
+  "sourceEdits": false,
+  "ledgerArchiveOrGateBypass": false,
+  "pg17Evidence": "pg17-evidence-link.json",
+  "limitations": "Canonical source-only PG15 reconstruction; not hosted ledger/application, frontend or operating admission. Private pipeline_control lock helper is guarded by forward127 source-bound migration assertions, not enumerated by the G014 catalog export."
+}

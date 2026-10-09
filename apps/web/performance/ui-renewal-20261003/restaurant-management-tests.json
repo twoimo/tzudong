@@ -1,0 +1,30 @@
+{
+  "kind": "integrated-restaurant-management-verification",
+  "unit": {
+    "pass": 2661,
+    "skip": 9,
+    "fail": 0
+  },
+  "affectedUnitPass": 63,
+  "sourceReplayOrderChecks": 1,
+  "isolatedIdentityPermissionChecks": 10,
+  "hostPermissionDelta": 0,
+  "productionDeploymentVerified": false,
+  "compilerParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2543,
+    "logicalInputNamesSha256": "b153a89f0cfae8ba963678b19e51522a80529de396f7302f5dfd2dd8040366f4",
+    "nonLibraryContentSha256": "1a3a842e317ed26c4563c90dfc8e3078c29ead8b94634bb1df029b9cbea6cea2",
+    "standardLibraryContentSha256": {
+      "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  },
+  "productionBuild": {
+    "next": "16.3.8",
+    "staticPages": 47,
+    "success": true,
+    "scope": "local source build, not deployment"
+  }
+}

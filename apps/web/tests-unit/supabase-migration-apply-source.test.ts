@@ -5,10 +5,12 @@ import {
   RELEASE_MIGRATION_MANIFEST_PATH,
   assertExactReadback,
   assertExpectedPriorState,
+  boundedMigrationError,
   loadReleaseMigrationManifest,
   loadReviewedMigration,
   main,
   resolveReviewedMigration,
+  runPsql,
   selectDirectDatabaseTransport,
   validateReleaseMigrationManifest,
 } from "../scripts/apply-supabase-migration.mjs";
@@ -24,11 +26,9 @@ const migrationScriptSource = readFileSync(
 expect(migrationScriptSource).toContain("input: `\\\\set VERBOSITY verbose\\n${query}`");
 expect(migrationScriptSource).toContain("MIGRATION_PSQL_FAILED_${sqlstate}");
 expect(migrationScriptSource).toContain("const sqlstate = /ERROR:\\s+([0-9A-Z]{5}):/m");
-expect(migrationScriptSource).toContain("function ([a-z_][a-z0-9_.]*\\([a-z0-9_., ]*\\)) does not exist");
-expect(migrationScriptSource).toContain("?.slice(0, 96)");
-expect(migrationScriptSource).toContain(".replace(/[^a-z0-9_]+/gi, '_')");
-expect(migrationScriptSource).toContain("operator does not exist:");
-expect(migrationScriptSource).toContain("undefinedFunction ?? undefinedOperator");
+expect(migrationScriptSource).not.toContain("undefinedFunction");
+expect(migrationScriptSource).not.toContain("undefinedOperator");
+expect(migrationScriptSource).not.toContain("classifier");
 expect(migrationScriptSource).not.toContain("result.stderr.trim()");
 expect(migrationScriptSource).toContain("--verify-terminal-state");
 expect(migrationScriptSource).toContain("MIGRATION_TERMINAL_READBACK_FAILED");
@@ -42,6 +42,42 @@ const canonicalBytes = (document: unknown) =>
   Buffer.from(`${JSON.stringify(document, null, 2)}\n`);
 
 describe("reviewed Supabase migration apply contract", () => {
+  test("bounds transport errors without copying markers, causes, classifiers, or hostile getters", () => {
+    const classified = Object.assign(new Error("provider detail"), {
+      code: "MIGRATION_PSQL_FAILED_42883_FUNCTION_PRIVATE_DETAIL",
+      cause: new Error("credential-shaped cause"),
+      marker: "private-marker",
+    });
+    const bounded = boundedMigrationError(classified) as Error & Record<string, unknown>;
+    expect(bounded.message).toBe("MIGRATION_PSQL_FAILED_42883");
+    expect(bounded.code).toBe("MIGRATION_PSQL_FAILED_42883");
+    expect(bounded.cause).toBeUndefined();
+    expect(bounded.marker).toBeUndefined();
+
+    const knownGuard = boundedMigrationError({
+      code: "MIGRATION_PSQL_FAILED_P0001_PRIVATE_DETAIL",
+      fixedSqlCode: "MIGRATION_LEDGER_UNAVAILABLE",
+      cause: "private-cause",
+    }) as Error & Record<string, unknown>;
+    expect(knownGuard.code).toBe("MIGRATION_LEDGER_UNAVAILABLE");
+    expect(knownGuard.cause).toBeUndefined();
+
+    const unknownGuard = boundedMigrationError({
+      code: "MIGRATION_PSQL_FAILED_P0001_PRIVATE_DETAIL",
+      fixedSqlCode: "MIGRATION_PRIVATE_PROVIDER_DETAIL",
+    }) as Error & Record<string, unknown>;
+    expect(unknownGuard.code).toBe("MIGRATION_PSQL_FAILED_P0001");
+
+    const nonCompilerGuard = boundedMigrationError({ fixedSqlCode: "MIGRATION_READBACK_INVALID" }) as Error & Record<string, unknown>;
+    expect(nonCompilerGuard.code).toBe("MIGRATION_PSQL_FAILED");
+
+    const hostile = {};
+    Object.defineProperty(hostile, "fixedSqlCode", { get() { throw new Error("private getter detail"); } });
+    Object.defineProperty(hostile, "code", { get() { throw new Error("private code detail"); } });
+    const hostileBounded = boundedMigrationError(hostile) as Error & Record<string, unknown>;
+    expect(hostileBounded.code).toBe("MIGRATION_PSQL_FAILED");
+    expect(hostileBounded.cause).toBeUndefined();
+  });
   test("loads only the exact committed external manifest and rejects manifest drift", async () => {
     expect(digest(manifestBytes)).toBe(MANIFEST_SHA256);
     expect(migrationScriptSource).toContain("RELEASE_MIGRATION_MANIFEST_RELATIVE_PATH");
@@ -231,6 +267,53 @@ describe("reviewed Supabase migration apply contract", () => {
       SUPABASE_SERVICE_ROLE_KEY: "service-role",
     })).toThrow("MIGRATION_TRANSPORT_CREDENTIAL_OVERLAP");
     expect(() => selectDirectDatabaseTransport({})).toThrow("MIGRATION_CREDENTIALS_MISSING");
+  });
+  test("psql runner uses stdin as an explicit file and keeps the database URI out of argv", () => {
+    const databaseUrl = "postgresql://postgres:private-password@db.example.invalid:5432/postgres";
+    const invocations: Array<{
+      command: string;
+      args: string[];
+      options: { env: Record<string, string>, input: string };
+    }> = [];
+    const spawnImpl = (command: string, args: string[], options: { env: Record<string, string>, input: string }) => {
+      invocations.push({ command, args, options });
+      return { error: null, status: 0, stderr: "", stdout: "ok" };
+    };
+
+    expect(runPsql(databaseUrl, "SELECT 1;", true, {
+      environment: {
+        SAFE_MARKER: "1",
+        PGHOSTADDR: "203.0.113.7",
+        PGPASSWORD: "stale-password",
+        PGSERVICE: "redirect-service",
+      },
+      psql: "/pinned/psql",
+      spawnImpl,
+    })).toBe("ok");
+    expect(invocations[0].command).toBe("/pinned/psql");
+    expect(invocations[0].args).toContain("--single-transaction");
+    expect(invocations[0].args).toContain("--file=-");
+    expect(invocations[0].args.join(" ")).not.toContain(databaseUrl);
+    expect(invocations[0].args.join(" ")).not.toContain("private-password");
+    expect(invocations[0].options.env).toMatchObject({
+      SAFE_MARKER: "1",
+      PGDATABASE: "postgres",
+      PGHOST: "db.example.invalid",
+      PGPASSWORD: "private-password",
+      PGPORT: "5432",
+      PGUSER: "postgres",
+    });
+    expect(Object.values(invocations[0].options.env)).not.toContain(databaseUrl);
+    expect(invocations[0].options.env.PGHOSTADDR).toBeUndefined();
+    expect(invocations[0].options.env.PGSERVICE).toBeUndefined();
+    expect(invocations[0].options.input).toBe("\\set VERBOSITY verbose\nSELECT 1;");
+
+    expect(runPsql(databaseUrl, "SELECT 2;", false, {
+      environment: {},
+      spawnImpl,
+    })).toBe("ok");
+    expect(invocations[1].args).toContain("--file=-");
+    expect(invocations[1].args).not.toContain("--single-transaction");
   });
   test("requires a manifest-bound provider receipt before G016 terminal verification", async () => {
     await expect(main([

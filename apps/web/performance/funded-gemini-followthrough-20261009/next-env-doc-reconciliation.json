@@ -1,0 +1,43 @@
+{
+  "kind": "installed-next-env-official-doc-reconciliation",
+  "nextVersion": "16.3.8",
+  "node": "v24.21.0",
+  "cases": [
+    {
+      "mode": "test",
+      "inherited": false,
+      "value": "test-local",
+      "loaded": [
+        ".env.test.local",
+        ".env.test",
+        ".env"
+      ],
+      "passed": true
+    },
+    {
+      "mode": "production",
+      "inherited": false,
+      "value": "production-local",
+      "loaded": [
+        ".env.production.local",
+        ".env.local",
+        ".env.production",
+        ".env"
+      ],
+      "passed": true
+    },
+    {
+      "mode": "test",
+      "inherited": true,
+      "value": "inherited",
+      "loaded": [
+        ".env.test.local",
+        ".env.test",
+        ".env"
+      ],
+      "passed": true
+    }
+  ],
+  "sourceConfigurationChanged": false,
+  "syntheticVariablesOnly": true
+}

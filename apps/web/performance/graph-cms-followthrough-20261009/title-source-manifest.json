@@ -1,0 +1,50 @@
+{
+  "sourceHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "files": [
+    {
+      "path": "backend/knowledge_graph/caption_title_enrichment.py",
+      "sha256": "8528c711fcdd14d162499012d4815e8b2f9d18c043db3a13bf8f7873519e2fa8",
+      "bytes": 8292
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_title_enrichment.py",
+      "sha256": "b55b49598b4bb26015cb78ad53ef8edf2347ec34899f2c4b01d2a7c192793e9c",
+      "bytes": 7563
+    },
+    {
+      "path": "backend/knowledge_graph/osk_projection.py",
+      "sha256": "a61120dd1faae686e0721001f84d60b9e06469e86d1fdc33fde940f368d9b3c7",
+      "bytes": 22056
+    },
+    {
+      "path": "backend/knowledge_graph/graph_shards.py",
+      "sha256": "e43f5060e90be9c02751fe75b98eee281b11b8e4ef480cfcc46b4fbdbbef7c10",
+      "bytes": 13747
+    },
+    {
+      "path": "apps/web/types/knowledge-graph.ts",
+      "sha256": "d9adfd90785490c3cdda89cbcc3d1e84270caeb84774962e2bb9b634217ffecc",
+      "bytes": 8466
+    },
+    {
+      "path": "apps/web/lib/admin/knowledge-graph-query.ts",
+      "sha256": "48c04306a7e2848914fe131357f1239b9e3b4240f61050d9e4e04571d352c15c",
+      "bytes": 2634
+    },
+    {
+      "path": "apps/web/lib/admin/knowledge-graph-shards.ts",
+      "sha256": "e6952da7522b587223170b4ee2e44a5d8835ddd772b5d5a4a85a0bb4897659ea",
+      "bytes": 15752
+    },
+    {
+      "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+      "sha256": "4616504d1ee2140bdc1d3c56a0ac9a496340d419ad986fbe4df438678196f925",
+      "bytes": 15143
+    },
+    {
+      "path": "apps/web/tests-unit/admin-knowledge-graph-titles.test.ts",
+      "sha256": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63",
+      "bytes": 3183
+    }
+  ]
+}

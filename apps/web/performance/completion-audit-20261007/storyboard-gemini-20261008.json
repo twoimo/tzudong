@@ -1,0 +1,129 @@
+{
+  "status": "local_verified",
+  "objectiveComplete": false,
+  "sourceBase": "246cd434591d1393b676e629957da26e4b6aad43",
+  "clientDate": "2026-10-08",
+  "sourceHashes": {
+    "apps/web/app/api/admin/storyboard/rag/documents/route.ts": "7af29309ea399d2594377532e19ba8d8493a99545a90a212e59e6ae716d16a9d",
+    "apps/web/app/api/admin/storyboard/rag/search/route.ts": "c76676be558e9a578f457c13b29c4373a5365175b9931003b7524b97248c9b9d",
+    "apps/web/lib/admin/storyboard/backend-agent.ts": "02085ac6cbe7aa43202ca6d237b6622abe25019dc724bddac8a5753276e771d0",
+    "apps/web/lib/admin/storyboard/image-provider.ts": "1ad212579b1cf23083ef08db85a48ffac175fd928b241dad3ba55667f02614c9",
+    "apps/web/lib/admin/storyboard/local-bridge-server.mts": "7e2809a2d06ae3eacde8f917eab9e6e2e5a2914ef028b6bc18f19f428dbe090e",
+    "apps/web/lib/admin/storyboard/mlx-client.ts": "03398824cda7606a0f3644552793116e9d32f85727938e0920d5d742806f4b0f",
+    "apps/web/lib/admin/storyboard/mlx-transport.ts": "6d3d9d1d4437600cfed45240ad203464f95d73a39ffe1b97f461de6c84ec1b25",
+    "apps/web/lib/admin/storyboard/rag-error-status.ts": "d08d139f65f8bec67f6128d644a94c28136d5483eaa237b06ad45da4c8c91b2c",
+    "apps/web/lib/admin/storyboard/rag-service-role-client.ts": "2dd23b11fdbbecfb51c4457018ff419af960c53dc7c50101e0878938a5dc7d0c",
+    "apps/web/lib/admin/storyboard/rag-worker-client.ts": "bf946e4fabe9584737576ff6cdb0617b2f15434b4766ea7a2ab3a069de3711e4",
+    "apps/web/lib/admin/storyboard/rag.ts": "c8a343867600c6092cc1f3f86d264b8bd500de64481223dbd36b809d5680b644",
+    "apps/web/scripts/run-unit-tests.mjs": "b417a10b02370415b24c4f178b4d11c20dc20c8fedeed29dea72b2aba448c783",
+    "apps/web/scripts/storyboard-mlx-live.ts": "5535450c48fff5c6ef4c24268f1fe422d0a5cb48495b5f3cc5012f333b2bbc10",
+    "apps/web/scripts/storyboard-rag-ollama-pull.mjs": "22d0f1d0dbd18f0747680197a7c1f5a6cf929cb93338dcc34b77f8270ee112f9",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "92d15d0f0ec82eec4af3af8693ea76995cb19d5f4c6082d83e3a40979784fb80",
+    "apps/web/tests-unit/admin-storyboard-caption-provenance.test.ts": "dab5062d3f398617075f227b99a757c514679ab4a2b214226c06182c010967eb",
+    "apps/web/tests-unit/admin-storyboard-eight-presets-ultraqa.test.ts": "ca951836e2dbe4014e91158c38a42a91ecc9b1658b9e744533ac593425c20838",
+    "apps/web/tests-unit/admin-storyboard-generator.test.ts": "b308f8003200fa9617f1cb3c229c262b5ddf5f2dbfbf55aada0968478925ae87",
+    "apps/web/tests-unit/admin-storyboard-image-provider.test.ts": "1ed27d88d7af04a377955c969a880294f627108860a45c711d52127438d10ab8",
+    "apps/web/tests-unit/admin-storyboard-langgraph.test.ts": "a9d3a8ceffee72e20e027135551606b905319b68144703585763473d57462fd0",
+    "apps/web/tests-unit/admin-storyboard-local-bridge.test.ts": "74bab166bc7bacaa87e8f93c3d64fa68c226ccf7ffd42c16910c7ebf33c99d7d",
+    "apps/web/tests-unit/admin-storyboard-rag.test.ts": "a999251888df23df16063fa79c36487e7cefa68a69ff452e38a3aca789fad2ff",
+    "apps/web/tests-unit/admin-youtube-thumbnail-generator.test.ts": "843f9313f794129cc210845136681273eccdfec26767ab24d5100f904af602af",
+    "apps/web/tests-unit/storyboard-gemini-rag.test.ts": "3ac231426ca34ca8b62d931e7621aa5c6e7f9dce62f22a6b2e9d80c08228dea0",
+    "apps/web/tests-unit/storyboard-local-egress-child.ts": "e971091b0b303b7775dde477c7b61894df791cb88086b890cb44d7f20f2a39b7",
+    "apps/web/tests-unit/storyboard-local-egress.test.ts": "1a0ef2e7a0b2ab892dc7f60aa2bc85072b5956cdd2a92e302db780351f8319d0",
+    "apps/web/tests-unit/storyboard-mlx-provider.test.ts": "8e57c32804560b1459b17dd86131988795248f90fd29367b72e1134153ca391f",
+    "apps/web/tests-unit/storyboard-retired-cli.test.ts": "b8c44c152a5a64b3202b315f0fdaa339b966c81dde9a9b04da7156fefb3f15d6",
+    "apps/web/tests-unit/support/storyboard-command-fixture.ts": "5c7f0bf3c6c118b441b3065275b4c8974baf13bf335402762e93d71e1a65dcee",
+    "backend/storyboard-agent/README.md": "849838a420e196a83ac4f874c154a315bf982d43447146eaebe95fcc432e6c6d",
+    "backend/storyboard-agent/requirements-rag-worker.txt": "0e18a26f956da6681d6207992cc2d4e710d640a458b59e86e5d64c6ab27966b1",
+    "backend/storyboard-agent/requirements.txt": "96f7761d02603f427e2714e63dd997ff2c3e0cb510c730439cb3b37856a17c5d",
+    "backend/storyboard-agent/scripts/01-bge-embed-and-store-supabase.py": "4c8306fcb44d7ba9b04424441e5fc2f24d9e373debe8bd29e61de714c4f5fbe2",
+    "backend/storyboard-agent/scripts/99-openai-embed-and-store-supabase.py": "4c8306fcb44d7ba9b04424441e5fc2f24d9e373debe8bd29e61de714c4f5fbe2",
+    "backend/storyboard-agent/scripts/run-storyboard-agent.py": "4c8306fcb44d7ba9b04424441e5fc2f24d9e373debe8bd29e61de714c4f5fbe2",
+    "backend/storyboard-agent/scripts/run_rag_worker.py": "7bc692cf14aa3cd94cbf7841f48ce5f4dcbc6ebb4328fbfddd957c1e41f1d2e9",
+    "backend/storyboard-agent/src/rag_worker.py": "1b275ad17101bfc76af39bb05443f0e08a9b0028b19eae030fbabe7bfdb8b973",
+    "backend/storyboard-agent/tests/test_rag_worker_observability.py": "beabc5f5e349a5a93b1fcd4a81bb51a9b6b6edd848317b16e8e7660190efbd6b",
+    "scripts/codex-imagegen-storyboard-provider.py": "cd1f8c36b0631bf660b425bfff366b0370db16db2ed619f184968905a36c8ea0"
+  },
+  "changes": [
+    "Gemini embedding model/configuration fingerprint separates new vectors from preserved BGE documents and vectors. Existing document content remains retrievable through a bounded lexical candidate path.",
+    "RAG worker uses the existing cross-process ProjectBudget, shared cooldown and operation deadlines. No automatic retries or alternative provider fallback.",
+    "The question embedding is reused for candidate reranking; the reranker is Gemini embedding cosine, with no claim of equivalent cross-encoder quality.",
+    "Retired CLI names refuse before credentials, files, sockets or models. Legacy production generators are disabled, while shared thumbnail and pure data/image parsers remain."
+  ],
+  "verification": {
+    "activeWebPaths": {
+      "passed": 74,
+      "failed": 0
+    },
+    "ragWorker": {
+      "passed": 18,
+      "failed": 0,
+      "runtime": "/Users/twoimo/.cache/uv/archive-v0/ndnlhaiCoNYGKgUz/bin/python",
+      "python": "3.12.13",
+      "fastapi": "0.142.4",
+      "pydantic": "2.13.5",
+      "environmentBoundary": "isolated test runtime; original project venv lacks FastAPI and remains unchanged"
+    },
+    "legacyLibraries": {
+      "passed": 143,
+      "failed": 0,
+      "skipped": 8,
+      "kind": "targeted tests; platform prerequisite skips are not passes"
+    },
+    "retiredCliPaths": 8,
+    "productionBuild": {
+      "framework": "Next.js 16.3.8",
+      "compiled": true,
+      "pages": 50
+    },
+    "wholeWeb": {
+      "groups": 19,
+      "run": 3169,
+      "skipped": 9,
+      "failed": 0,
+      "passed": 3160
+    },
+    "typescript": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3266,
+      "logicalInputNamesSha256": "c3f0ad516c8219ad78e2b6bb1b365928ed18ddfec33b13e748bb056a533c2e89",
+      "nonLibraryContentSha256": "2e893599c50b5c0d760070c068440c7c566cd2bcea8b158de31bab7040df0ff1",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    },
+    "cssBoundaries": "passed",
+    "initialWholeWebFailure": {
+      "failures": 8,
+      "obsoleteSourceContract": 1,
+      "moduleMockInterference": 7,
+      "affectedStandalonePassed": 42,
+      "resolution": "RAG mocked module process isolation and current retired source contract"
+    },
+    "eslint": "passed"
+  },
+  "quantitativeScope": {
+    "questionReuse": {
+      "before": 3,
+      "after": 2,
+      "absoluteDifference": -1,
+      "reductionPercent": 33.333333333333336,
+      "scope": "one controlled Gemini-candidate search; identical deterministic rerank order",
+      "confidenceInterval": "not applicable to fixed call counts; no actual latency, quality or monetary saving inferred"
+    }
+  },
+  "externalEffects": {
+    "paidProviderCalls": 0,
+    "modelDownloads": 0,
+    "operatingDbWrites": 0,
+    "billingChanges": 0,
+    "deployment": false
+  },
+  "limitations": [
+    "Real credited-project API/billing, retrieval quality and actual operating workflow remain unverified.",
+    "Legacy document candidate retrieval has a bounded keyword window and differs from prior BGE semantic recall.",
+    "This report does not prove the complete objective."
+  ]
+}

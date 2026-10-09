@@ -1,0 +1,48 @@
+{
+  "schema": "backend-probe-artifact-map/v1",
+  "sourceCommit": "d8942781ad76727176efd87f97ce9b578b522bc7",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 1756,
+      "sha256": "f2579fa00a7ac5234487ec334758c6c41b594a0145cdb2c5bd4ae29161047b7f"
+    },
+    {
+      "path": "isolated-runtime-bindings.json",
+      "bytes": 2242,
+      "sha256": "2549ed5e4cfeff654149fee61277abdc614c2964b925133f2087cedd989cf333"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 3384,
+      "sha256": "ca3f997f4c56760f92df62e47f9630504580230f3bb6b1bb460b07f5f2c667ea"
+    },
+    {
+      "path": "targeted-node-tests-before-model-provenance.tap",
+      "bytes": 2248,
+      "sha256": "5d76d0648029987ad96cd7a2ed7f1010dde714fc3d297d78be61c9ab993f5ffe"
+    },
+    {
+      "path": "targeted-node-tests-isolated.tap",
+      "bytes": 2512,
+      "sha256": "a51f6117e5d5030f51014a449d5d2f04a8d59b30ee8886f56cb77cf0486c5ab5"
+    },
+    {
+      "path": "targeted-node-tests.tap",
+      "bytes": 1430,
+      "sha256": "5ea8d197c6f65ebc34e23b85b28eece71fd4f1def65a047643092db5bd881d24"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "backend/bin/probe_gemini_pipeline.mjs",
+      "sha256": "7589e9dd4068855dde641dd7a771aeaebcdd46f39d6e1d87bad8bf3ac54ba592",
+      "isolatedCopyMatches": true
+    },
+    {
+      "path": "backend/utils/tests/gemini-client.test.mjs",
+      "sha256": "d37442033b861e05a0314a45acfad3e595d1a1190269a916e098b071d82308a9",
+      "isolatedCopyMatches": true
+    }
+  ]
+}

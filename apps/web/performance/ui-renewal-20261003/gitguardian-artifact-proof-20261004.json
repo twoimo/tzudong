@@ -1,0 +1,70 @@
+{
+  "kind": "gitguardian-exact-artifact-false-positive-proof",
+  "source": "apps/web/performance/ui-renewal-20261003/catalog-dual-clean-replay-37121857541.json",
+  "sourceSha256": "fde452d8523ac4c36f907a31e3ad354f21f9c1c7fa145a895c2b65fdaf830ce9",
+  "incidentIds": [
+    "37839896",
+    "37839897"
+  ],
+  "checks": [
+    {
+      "replay": "g024-replay-a",
+      "file": "auth-schema-migrations.expected.tsv",
+      "byteCount": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033",
+      "matches": true
+    },
+    {
+      "replay": "g024-replay-a",
+      "file": "auth-schema-migrations.tsv",
+      "byteCount": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033",
+      "matches": true
+    },
+    {
+      "replay": "g024-replay-a",
+      "file": "platform-auth-schema-migrations.expected.tsv",
+      "byteCount": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1",
+      "matches": true
+    },
+    {
+      "replay": "g024-replay-a",
+      "file": "platform-auth-schema-migrations.manifest.tsv",
+      "byteCount": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1",
+      "matches": true
+    },
+    {
+      "replay": "g024-replay-b",
+      "file": "auth-schema-migrations.expected.tsv",
+      "byteCount": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033",
+      "matches": true
+    },
+    {
+      "replay": "g024-replay-b",
+      "file": "auth-schema-migrations.tsv",
+      "byteCount": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033",
+      "matches": true
+    },
+    {
+      "replay": "g024-replay-b",
+      "file": "platform-auth-schema-migrations.expected.tsv",
+      "byteCount": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1",
+      "matches": true
+    },
+    {
+      "replay": "g024-replay-b",
+      "file": "platform-auth-schema-migrations.manifest.tsv",
+      "byteCount": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1",
+      "matches": true
+    }
+  ],
+  "secretsReadOrPrinted": false,
+  "securityRulesDisabled": false,
+  "operationalKeyChanges": false
+}

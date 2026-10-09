@@ -1,6 +1,12 @@
 import importlib.util
 import unittest
 from pathlib import Path
+import tempfile
+import json
+import sys
+import io
+from contextlib import contextmanager,redirect_stdout
+from unittest.mock import patch
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -13,6 +19,46 @@ spec.loader.exec_module(rule_eval)
 
 
 class RuleEvaluationPrecisionLiftTests(unittest.TestCase):
+    def test_failed_rule_stays_pending_and_successful_negative_is_certified(self):
+        from backend.utils.stage_cache import complete,certified
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);selection=root/'evaluation/selection';selection.mkdir(parents=True)
+            source=selection/'ABCDEFGHIJK.jsonl'
+            source.write_text(json.dumps({'evaluation_target':{'fixture':True},'restaurants':[{'origin_name':'fixture'}]})+'\n')
+            output=root/'evaluation/rule_results/ABCDEFGHIJK.jsonl';output.parent.mkdir(parents=True)
+            receipt=output.parent/'.receipts/ABCDEFGHIJK.json'
+            output.write_text('{"old":true}\n');complete(receipt,'old',[output])
+            previous=(output.read_bytes(),receipt.read_bytes())
+            laaj=root/'evaluation/laaj_results/ABCDEFGHIJK.jsonl';laaj.parent.mkdir()
+            laaj.write_text('{"stale":true}\n')
+            failed={'evaluation_results':{'location_match_TF':[{'eval_value':False,'match_status':'failed'}]}}
+            negative={'evaluation_results':{'location_match_TF':[{'eval_value':False,'match_status':'pending'}]}}
+            with patch.object(sys,'argv',['rule','--channel','tzuyang','--evaluation-path',str(root)]),patch.object(rule_eval,'process_one_line',side_effect=[failed,negative]) as process,redirect_stdout(io.StringIO()):
+                self.assertEqual(1,rule_eval.main())
+                self.assertFalse(output.exists());self.assertFalse(receipt.exists());self.assertFalse(laaj.exists())
+                pending=output.parent/'.pending'/output.name
+                self.assertEqual(failed,json.loads(pending.read_text()))
+                for path,data in zip((output,receipt),previous):
+                    self.assertEqual([data],[item.read_bytes() for item in (path.parent/'.superseded').glob(path.name+'.*')])
+                self.assertEqual(0,rule_eval.main())
+            self.assertEqual(2,process.call_count)
+            self.assertTrue(certified(receipt,[output]))
+            self.assertEqual(negative,json.loads(output.read_text()))
+            self.assertFalse(pending.exists())
+
+    def test_retired_selection_is_reread_after_lock_before_provider_work(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);selection=root/'evaluation/selection';selection.mkdir(parents=True)
+            source=selection/'ABCDEFGHIJK.jsonl';source.write_text(json.dumps({'evaluation_target':{'fixture':True},'restaurants':[{'origin_name':'fixture'}]})+'\n')
+            @contextmanager
+            def admission(receipt):
+                if receipt.parent.parent.name=='rule_results':source.unlink()
+                yield
+            with patch.object(sys,'argv',['rule','--channel','tzuyang','--evaluation-path',str(root)]),patch.object(rule_eval,'stage_lock',admission),patch.object(rule_eval,'process_one_line') as process,redirect_stdout(io.StringIO()):
+                rule_eval.main()
+            process.assert_not_called()
+            self.assertFalse((root/'evaluation/rule_results/ABCDEFGHIJK.jsonl').exists())
+
     def test_build_location_result_requires_two_independent_families(self):
         result = rule_eval.build_location_result(
             origin_name="식당A",

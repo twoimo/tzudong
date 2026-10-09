@@ -1,0 +1,38 @@
+{
+  "kind": "root-final-public-verification",
+  "observedAtUtc": "2026-10-09T00:32:05.727262+00:00",
+  "sourceBaseCommit": "8358f5e749362c99ab44127fd6e70335919d1404",
+  "sourceDirty": true,
+  "sourceFiles": {
+    "apps/web/app/leaderboard/page.tsx": "2fbe9ad3014c237627c886769a3af483458432bc91ff23cb8ff02cdb9a06fcdf",
+    "apps/web/app/stamp/page.tsx": "8cee9ee8c4039cde2d53a13333dd05a6a1eb25e36c9334a8538891f29583b1b6",
+    "apps/web/app/s/[code]/route.ts": "88ca0aab9e39d6452e5f597c005866e83d05df940c92796b10cdf0ad8f12b008",
+    "apps/web/components/auth/AuthModal.tsx": "81381862ee291953a264a24e10bbdf5c34bde7add545be3aa854a73542eb9fcb",
+    "apps/web/components/leaderboard/LeaderboardList.tsx": "cdcb4457a0c4960e5413ee04fc19f786f1c11d0be49d4420c2df966e514c4f3f",
+    "apps/web/lib/motion/scroll-behavior.ts": "ad1cc8a5ba7f791000a7db7fafc7cd9a79c995bf424a60b4b34c9ffdd682c404",
+    "apps/web/lib/share/short-url-read.ts": "a8eaee174aa790b441fb47fcb872db30c1c4462d14767aa14b800f5b926c52ae",
+    "apps/web/lib/share/short-url-response.ts": "d4d3c4cc5b70f80b9dc83841347b5d85aaac29800ea05c9c4ed3e9699b283ae3",
+    "apps/web/public/styles/share-fallback.css": "b858341ee008e743b980cec05a741f0c5dfd91037b0e43f9c799c4b0095b2a42"
+  },
+  "affectedTests": {
+    "passed": 65,
+    "failed": 0,
+    "files": 8
+  },
+  "wholeSourceLint": "passed",
+  "nextBuild": {
+    "version": "16.3.8",
+    "generatedPages": 50,
+    "routeCssBoundaries": "passed",
+    "distDirectory": ".next-final-public-followthrough",
+    "ownTsconfigIncludesRemoved": 2,
+    "tsconfigBytesRestored": true
+  },
+  "operatingWrites": false,
+  "deploymentPerformed": false,
+  "limitations": [
+    "Local build/unit/source verification only.",
+    "Browser scopes and HTTP status evidence are retained separately.",
+    "Authenticated data, live map providers, physical devices and operating redirects remain separate requirements."
+  ]
+}

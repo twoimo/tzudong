@@ -1,0 +1,42 @@
+{
+  "kind": "source-identity-cooldown-and-uncertain-generation-boundaries",
+  "providerCalls": 0,
+  "hostedMutations": false,
+  "python": {
+    "passed": 30,
+    "failed": 0
+  },
+  "webAffected": {
+    "passed": 64,
+    "failed": 0
+  },
+  "postgresql": {
+    "version": "17.6",
+    "originalChainAssertions": 19,
+    "receiptChainAssertions": 19
+  },
+  "sourceIdentity": {
+    "wrongVideoRejectedBeforeCommands": true,
+    "wrongChannelRejected": true,
+    "leasedHistoryVersionSelected": true,
+    "originalFilesWritten": false
+  },
+  "cooldownFixture": {
+    "firstReservationWait": 1,
+    "additionalCooldownWait": 5,
+    "dispatchClock": 6,
+    "statisticalPerformanceClaim": false
+  },
+  "uncertainLease": {
+    "automaticReclaimsAfterExpiration": 0,
+    "repeatedClaimRequests": 3,
+    "jobAttempts": 1,
+    "explicitManualRetryAllowed": true
+  },
+  "sourceSha256": {
+    "backend/bin/run_restaurant_review_automation.py": "0d740fcf423f8e1c150ed71402de02a72ecad41b0d75b073960be0f66c606e57",
+    "backend/utils/request_budget.py": "59438c6b0a261b668bc6c598977e8bea33948ecd045c93632af93a42dd80259c",
+    "backend/supabase/migrations/20261003205335_storyboard_uncertain_lease_recovery.sql": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0",
+    "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx": "0fd81969fe23f24d533fb6163f3275369e00232c3287c1fe9f2fb913b66e0410"
+  }
+}

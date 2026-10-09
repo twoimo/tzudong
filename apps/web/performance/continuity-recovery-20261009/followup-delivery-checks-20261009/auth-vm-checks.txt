@@ -1,0 +1,24 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/privacy-onboarding-route-runtime.test.ts:
+(pass) privacy onboarding full route runtime contracts > password start -> create -> recovery replay (email confirmation false) [207.74ms]
+(pass) privacy onboarding full route runtime contracts > password start -> create -> recovery replay (email confirmation true) [118.19ms]
+(pass) privacy onboarding full route runtime contracts > existing password account confirms and accepts same-challenge replay without creating an account [121.67ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback none [134.28ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback confirmation [82.94ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback eligibility [127.49ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback nonce [83.71ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects tamper before exchanging provider code [106.86ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects expiry before exchanging provider code [77.28ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects origin before exchanging provider code [81.01ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects nonce before exchanging provider code [56.13ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects secret before exchanging provider code [73.14ms]
+(pass) privacy onboarding full route runtime contracts > password rejects tamper, expiry, wrong secret and cross-origin before signup [222.21ms]
+(pass) privacy onboarding full route runtime contracts > password finalization denies confirmation [58.80ms]
+(pass) privacy onboarding full route runtime contracts > password finalization denies eligibility [43.72ms]
+(pass) privacy onboarding full route runtime contracts > under-14 start remains denied before challenge or identity creation [57.55ms]
+
+ 16 pass
+ 0 fail
+ 134 expect() calls
+Ran 16 tests across 1 file. [1.94s]

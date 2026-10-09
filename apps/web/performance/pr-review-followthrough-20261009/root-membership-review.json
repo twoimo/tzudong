@@ -1,0 +1,16 @@
+{
+  "threadId": "PRRT_kwDOQGRyNc6oxtOq",
+  "path": "backend/knowledge_graph/longform_analysis.py",
+  "classification": "addressed",
+  "reason": "Existing strict boolean admission rejects present malformed completion markers before reusable/paid work, while absence remains legacy-compatible.",
+  "sourceSha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+  "testSha256": "c8eb823f3fd51731f5164df7a9d2831d250bd2a2c041cf45f6b8e8cb125689b9",
+  "tests": [
+    "test_membership_completion_is_optional_but_strictly_boolean_when_present",
+    "test_uncertain_current_membership_cannot_reuse_or_readback_a_valid_cache",
+    "test_uncertain_saved_membership_blocks_reuse_and_completion_readback"
+  ],
+  "paidCalls": 0,
+  "threadResolved": false,
+  "observedAtUtc": "2026-10-09T02:14:49.236294+00:00"
+}

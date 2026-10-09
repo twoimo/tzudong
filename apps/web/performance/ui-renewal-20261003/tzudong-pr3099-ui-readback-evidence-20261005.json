@@ -1,0 +1,36 @@
+{
+  "baseHead": "498a91e0",
+  "status": "sourceReady",
+  "changedFiles": {
+    "apps/web/components/admin/AdminUsersPanel.tsx": "ffe5a9a8a87002e28e2898952827f85c467f91ae98a6ece6e25bdfda268f9c40",
+    "apps/web/app/admin/banners/page.tsx": "e206ffb97a4bfe141e1506961c2bc4f4c5eb6cdb23472586bd054055ba9926ce",
+    "apps/web/tests-unit/admin-users-mutation-scope.test.ts": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8",
+    "apps/web/tests-unit/admin-user-management-source.test.ts": "29aef7a8e7bef010ccad070416a35ab2b3e5b6cfc74cd425ed9075d0943b6deb",
+    "apps/web/tests-unit/ad-banner-url-security.test.ts": "418c76d690c75a088978b8c4ba0b3ed86a98360f3feac5a2848804879306fc19"
+  },
+  "reviewFindingsVerified": [
+    "Unresolved banner readback cleared by applyEditor before verification",
+    "User mutation readback accepted target presence without expected field comparison"
+  ],
+  "verification": {
+    "affectedTestsPassed": 25,
+    "affectedTestsFailed": 0,
+    "testFiles": 4,
+    "eslintFiles": 5,
+    "eslintErrors": 0,
+    "diffCheck": "passed"
+  },
+  "regressionCoverage": [
+    "banner pending save: editor/new/discard/delete blocked",
+    "banner pending delete: failed/missing/still-present list remains locked",
+    "banner expected row/deletion verified before unlock",
+    "user profile expectation detached from later editor input; server trimming and null avatar normalization",
+    "user old/partial/reversed role and account status do not confirm",
+    "unknown user response keeps pending result; definitive 4xx response clears failed request"
+  ],
+  "limitations": [
+    "No hosted operations, provider use or commits",
+    "UI appearance unchanged; this follow-up used extracted production-handler behavior tests rather than new browser screenshots",
+    "Final combined typecheck belongs to parent"
+  ]
+}

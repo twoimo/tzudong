@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/ocr-live-verification-cli.test.ts:
+(pass) rejects unknown or incomplete options before reading credentials or contacting the provider [177.95ms]
+(pass) cannot write into the performance root or outside its evidence subdirectories [126.82ms]
+(pass) an existing uncertain receipt remains byte-identical and blocks a new provider attempt [74.96ms]
+
+ 3 pass
+ 0 fail
+ 16 expect() calls
+Ran 3 tests across 1 file. [438.00ms]

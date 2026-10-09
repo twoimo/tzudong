@@ -1,0 +1,197 @@
+{
+  "scope": "00_Scope/tzudong",
+  "nodes": [
+    {
+      "title": "TZ-Menu-QWtvZ6NfNJ8-1-7",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Menu-QWtvZ6NfNJ8-1-3",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-3Z-ngM3DVi0",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim--8wi-fVqTwk-2",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-DNGGl1-jFcU",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Menu-QWtvZ6NfNJ8-1-2",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim--8wi-fVqTwk-3",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-Ck5UrobZuKA",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Menu-QWtvZ6NfNJ8-1-6",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "쯔양 채널 수집·분석 커버리지",
+      "family": "scope_or_coverage",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-Tsy8xRjMpB0",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Menu--8wi-fVqTwk-1-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-xRf_bhPFZrY",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim-QWtvZ6NfNJ8-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Restaurant-QWtvZ6NfNJ8-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim-QWtvZ6NfNJ8-2",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video--C4280KT3S4",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim--8wi-fVqTwk-R1-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "tzudong",
+      "family": "scope_or_coverage",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Video-QWtvZ6NfNJ8",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-F93TnnxCNvY",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Menu-QWtvZ6NfNJ8-1-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Video--8wi-fVqTwk",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Menu-QWtvZ6NfNJ8-1-5",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim--8wi-fVqTwk-4",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Menu-QWtvZ6NfNJ8-1-4",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-BTyT60UWiLc",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim-QWtvZ6NfNJ8-R1-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "YT-tzuyang-Video-zkOBLQUSEr0",
+      "family": "caption_review_nodes",
+      "tzudongMetadataMarker": false,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Restaurant--8wi-fVqTwk-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    },
+    {
+      "title": "TZ-Claim--8wi-fVqTwk-1",
+      "family": "model_nodes",
+      "tzudongMetadataMarker": true,
+      "youtubeMetadataMarker": false
+    }
+  ],
+  "counts": {
+    "model_nodes": 20,
+    "caption_review_nodes": 9,
+    "scope_or_coverage": 2
+  },
+  "otherScopesRead": false
+}

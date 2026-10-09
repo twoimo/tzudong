@@ -1,0 +1,28 @@
+{
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/wire-schema.json",
+      "role": "proposed_top_level_wire_schema",
+      "bytes": 557,
+      "sha256": "f7436e045718bba41bce80873083afd5bfde332e8a5fa5256427b85692fbdca8"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/verify_equivalence.py",
+      "role": "bounded_offline_equivalence_experiment",
+      "bytes": 11602,
+      "sha256": "c5c46b36b946364dbde4ef90c119a71b15fb78987481a597c6f07dbf47e271fe"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/proof.json",
+      "role": "contract_equivalence_and_integration_gap_proof",
+      "bytes": 4355,
+      "sha256": "14ed3ed5dd21e0ba46791dac459c2f0b60ee9c46bf2c6bc8bdecfda847399bb4"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/proposal.md",
+      "role": "reviewable_local_contract_proposal",
+      "bytes": 6502,
+      "sha256": "7fc999ee1be5564a998e60fdb548fbaafdf729c0bf492020096d57812a637b42"
+    }
+  ]
+}

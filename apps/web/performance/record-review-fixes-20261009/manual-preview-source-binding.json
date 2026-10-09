@@ -1,0 +1,10 @@
+{
+  "priorSha256": "62720283cc47a766451a0e483e628e15175bf3038a7ccc0b26444f4bfc4dee52",
+  "afterSha256": "2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1",
+  "snapshotSchemaSha256": "fde46030bf7ac212631fcb02d4dff503e733899e853a7fe42202009aedf364c2",
+  "changes": [
+    "Exacttick candidate predicate including appliedfingerprint and policy-scoped deferred daily-limit exception",
+    "Exacttick applied-approval item accounting since KSTmidnight"
+  ],
+  "metadataPreserved": true
+}

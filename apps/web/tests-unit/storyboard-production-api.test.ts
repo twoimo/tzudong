@@ -166,6 +166,13 @@ describe('worker authentication and proof boundary', () => {
 });
 
 describe('admin/API contracts and bounded failures', () => {
+  test('reads a recovered uncertain job without dropping the project snapshot', async () => {
+    const selected=project();
+    const uncertain={id:jobId,status:'failed',stage:'uncertain',sceneNo:null,errorCode:'worker_lease_lost',attempts:1,lastHeartbeat:new Date().toISOString()};
+    const store=new StoryboardProductionStore({database:{...unusedDb,async rpc(){return {data:{...read(selected),job:uncertain},error:null};}}});
+    const snapshot=await store.get(ownerId,selected.id);
+    expect(snapshot.job?.stage).toBe('uncertain');expect(snapshot.project.id).toBe(selected.id);
+  });
   test('historical restore validates its strict envelope', () => {
     const value = { action: 'restore', revision: 12, targetRevision: 10, requestId: randomUUID() };
     expect(productionActionSchema.safeParse(value).success).toBe(true);

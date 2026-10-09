@@ -1,0 +1,20 @@
+{
+  "kind": "hosted-g016-correction-rollback-preview",
+  "at": "2026-10-04T13:09:53.282886+00:00",
+  "exitCode": 0,
+  "sqlStates": [],
+  "matchedConditions": [],
+  "fixedCodes": [],
+  "assertionContext": [],
+  "forceRollback": true,
+  "ledgerWrite": false,
+  "diagnosticsPrinted": false,
+  "sourceSha256": "b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f",
+  "checks": [
+    "workflow-owner",
+    "public-rpc-allowlist",
+    "definer",
+    "catalog"
+  ],
+  "sampleCount": 1
+}

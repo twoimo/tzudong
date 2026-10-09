@@ -1,0 +1,33 @@
+{
+  "vercel": {
+    "name": "vercel",
+    "version": "0.54.1",
+    "author": {
+      "name": "Vercel Labs",
+      "url": "https://github.com/vercel"
+    },
+    "homepage": "https://vercel.com/",
+    "repository": "https://github.com/vercel/vercel-plugin",
+    "root": "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/vercel/0.54.1"
+  },
+  "supabase": {
+    "name": "supabase",
+    "version": "1.0.0",
+    "author": {
+      "email": "support@supabase.io",
+      "name": "Supabase",
+      "url": "https://supabase.com"
+    },
+    "homepage": "https://supabase.com",
+    "repository": "https://github.com/supabase-community/supabase-plugin",
+    "root": "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/supabase/1.0.0"
+  },
+  "sourceHashes": {
+    "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/vercel/0.54.1/.codex-plugin/plugin.json": "0ac5a01ed5b6f4eed0446c1b9f82c584185a8b8191b923cb7f7fc164dd443b46",
+    "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/vercel/0.54.1/README.md": "fa63a51680acd02e85254cd6fd93c5ccb330bcc88cddaee95b1f2b61c04d2307",
+    "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/vercel/0.54.1/skills/env-vars/SKILL.md": "081d79b5b046276631c10b3db6ff07dbff4a59c057fc9bbc64aa364f82bb3045",
+    "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/supabase/1.0.0/.codex-plugin/plugin.json": "15700b198a08bb86460b5d96f36d0f4be9f627ace56ef5258bc397a7982e1457",
+    "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/supabase/1.0.0/README.md": "ff4b9013468f0fe3d9d86ff5370f3f4f2aeed8647cc8655f1edfe95ad0751fd4",
+    "/Users/twoimo/.codex/plugins/cache/openai-curated-remote/supabase/1.0.0/skills/supabase/SKILL.md": "32e2bb2beb6bffec68d7f3e5140e95cfe8855865d6e166cffd38d6db736222da"
+  }
+}

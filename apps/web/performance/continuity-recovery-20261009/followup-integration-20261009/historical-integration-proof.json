@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "sourceBaseRevision": "4908c5c4a3db30c1d86965c1ac144471f8872858",
+  "sourceBindings": [
+    {
+      "path": ".github/admin-record-sql-successor.v1.json",
+      "bytes": 107260,
+      "sha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26"
+    },
+    {
+      "path": ".github/admin-user-rpc-forward-successor.v1.json",
+      "bytes": 2511,
+      "sha256": "12cb67ed7e30acc7238370f0ad054bbef3d235b85982545e2ba028a7570d3f99"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+      "bytes": 168157,
+      "sha256": "ee59473683402425034c38195fafeccffbbccebc4b66f2f0fa739043b816e78a"
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-client.ts",
+      "bytes": 21592,
+      "sha256": "16b62c3727ea14cb4871bb8521206abe71780bc6ab8f41b91a1242e02210c797"
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-service.ts",
+      "bytes": 8568,
+      "sha256": "a711f7fb05f73b0cf11565d6eeb6af2273cee2454fdebf01bbfd30622d8f8e0c"
+    },
+    {
+      "path": "apps/web/lib/auth/callback-origin.ts",
+      "bytes": 2296,
+      "sha256": "b778714b38528ca343623be455f050d83c2adf05c4e6c3b88b674e1579818582"
+    },
+    {
+      "path": "apps/web/lib/security/same-origin-mutation.ts",
+      "bytes": 4311,
+      "sha256": "b4fd7823c07612a2f4ce00a54680cdfd38edb7c6bb507344fb5a0f30c0f5c4bd"
+    },
+    {
+      "path": "apps/web/scripts/admin-record-sql-successor.mjs",
+      "bytes": 43064,
+      "sha256": "fae1ccd492c1fb9a7ed7165c6f120915cc1cb87c48f5cf24a45cb224ea7b726b"
+    },
+    {
+      "path": "apps/web/scripts/admin-user-rpc-forward-successor.mjs",
+      "bytes": 36614,
+      "sha256": "1011d52377453bf4aec84e6812550053f79cfe7d295e230ff3952359247b4821"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
+      "bytes": 35223,
+      "sha256": "9d3800a03946640a45ac7513b405eeba35ad02f4bd329ecb513bd5e26479e5d7"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-actions.test.ts",
+      "bytes": 26685,
+      "sha256": "0383d3c63881919540559dd091a193f0f5615eb06b0b2816a99de102f02cd12c"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-sql-successor.test.ts",
+      "bytes": 30412,
+      "sha256": "7eae905fc6cf93bd00df860df15eecea9ed82aa2b1b2fa1115ad9372049e42bf"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-user-rpc-forward-successor.test.ts",
+      "bytes": 20226,
+      "sha256": "bfefe995bd9d33dc2f80a84b8402f87263dce86802ba3074030bccdce602f8ee"
+    },
+    {
+      "path": "apps/web/tests-unit/auth-callback-origin.test.ts",
+      "bytes": 4542,
+      "sha256": "ff05f179e4bcdbfbe03638d0121b9275a6c3818321246c4c8ede909505571f82"
+    },
+    {
+      "path": "apps/web/tests-unit/privacy-onboarding-route-runtime.test.ts",
+      "bytes": 23524,
+      "sha256": "36a41cad1b2f7a18bebc91e138930097fc857d53e2232e3620f58abc6625bca0"
+    },
+    {
+      "path": "apps/web/tests-unit/same-origin-mutation.test.ts",
+      "bytes": 11543,
+      "sha256": "d1cbc2027727f8663ae3ca1e122d1824cdcfc30e8276e3243012245f657995f3"
+    },
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "bytes": 96102,
+      "sha256": "cb2770cebccd626b14d58a7623d4fb436aeb5bfc2276698d2b557893e4dc281d"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+      "bytes": 46290,
+      "sha256": "41239cb03d9fd642ef6fe790209f928ba61ee73b269884be60ab133a3fc78093"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 13185,
+      "sha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "bytes": 40392,
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae"
+    },
+    {
+      "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "bytes": 121024,
+      "sha256": "724840e9934ede460266b9637e8ff0b309b363778ba7d40e83e111c83f2cd9f6"
+    },
+    {
+      "path": "backend/supabase/scripts/local_replay_contract.py",
+      "bytes": 18023,
+      "sha256": "151034d849626c4fa4cb46067a39ef6fa7ebd1d080203f12329fad04c4a9afbd"
+    },
+    {
+      "path": "backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py",
+      "bytes": 2750,
+      "sha256": "edf65e557363d16f7c3fcf1359fe880999e275924fcf57d46abd2edb956d9c53"
+    },
+    {
+      "path": "backend/supabase/tests/test_admin_record_private_verification_cleanup.py",
+      "bytes": 22340,
+      "sha256": "ff08604a89ac659dfb65b72c4cc5cc576a594f4535631ab0ade1488a19d69fca"
+    },
+    {
+      "path": "backend/supabase/tests/test_admin_user_management_rpc_forward.py",
+      "bytes": 4779,
+      "sha256": "4953b8ade841ee846ab783f764ccba4835d4f13c52146812d5eeaa57eae8ebde"
+    },
+    {
+      "path": "backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py",
+      "bytes": 5201,
+      "sha256": "34eb946c5cc2195242649ff8ff614c117353339b3ea902bdb01f5c9c518d450b"
+    },
+    {
+      "path": "backend/supabase/tests/test_compare_g024_clean_replays.py",
+      "bytes": 18517,
+      "sha256": "bd3703ea3fe7c9f8563aeffe212ba70eace99c29c60140a52689b308c9a4bd44"
+    },
+    {
+      "path": "backend/utils/tests/test_platform_modernization_reconciliation.py",
+      "bytes": 9285,
+      "sha256": "45d50af1929b4f8063d8936ed77beba3719375a2afb9a70cf79f607debaa1135"
+    }
+  ],
+  "sourceScope": "task-owned current source excluding user files; snapshot before final commit",
+  "tests": [
+    {
+      "kind": "auth-and-cleanup integration",
+      "files": 4,
+      "passed": 64,
+      "failed": 0,
+      "assertions": 470,
+      "command": "bun test auth-callback-origin/same-origin-mutation/admin-record-actions/admin-record-action-client",
+      "log": "auth-and-cleanup-tests.txt"
+    },
+    {
+      "kind": "SQL admission integration",
+      "files": 2,
+      "passed": 23,
+      "failed": 0,
+      "assertions": 216,
+      "command": "bun test admin-record-sql-successor/admin-user-rpc-forward-successor",
+      "log": "sql-admission-tests.txt"
+    }
+  ],
+  "verificationEnvironment": {
+    "bun": "1.4.0",
+    "webRuntime": "Node24.21.0",
+    "storage": "fake transport",
+    "databaseAdmission": "fake private receipt and disposable Git remote"
+  },
+  "initialHarnessPathError": {
+    "beforeTestExecution": true,
+    "code": "output-directory-missing",
+    "corrected": true,
+    "sourceEffect": "only own empty mistakenly nested directories removed"
+  },
+  "operatingWrites": 0,
+  "physicalStorageDeletes": 0,
+  "actualGeminiProviderCalls": 0,
+  "deploymentCompleted": false
+}

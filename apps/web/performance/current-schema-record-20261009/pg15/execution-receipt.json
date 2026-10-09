@@ -1,0 +1,32 @@
+{
+  "sourceHead": "df3b784b5438113bcdb8b29ab0a7224e67c2f8c9",
+  "guardedSqlSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "context": "colima-tzudong-catalog-20261007",
+  "ownership": "Generator-owned mktemp g014-catalog-contract and random g014catalog Compose project only; generator cleanup trap",
+  "steps": [
+    {
+      "stage": "run-a",
+      "command": [
+        "/opt/homebrew/bin/bash",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "--output-dir",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/current-schema-record-20261009/pg15/run-a",
+        "--docker-context",
+        "colima-tzudong-catalog-20261007"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 128.245,
+      "fixedCode": "CANONICAL_STEP_FAIL",
+      "stdoutSha256": "1faadbc6d142e013e2442e8f8c9a660f42b2c186deebd10b5124137f7ae9a7b5",
+      "stderrSha256": "a7d379d6b1e7ad25a617b8aee7337ec3b28d274e6180fcfc76cb8c8e894e5fb3",
+      "diagnostic": [
+        "    out.write(transform(args.source.read_bytes(), args.source.name))",
+        "              ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/supabase/scripts/transform_registration_replay.py\", line 28, in transform",
+        "    raise ValueError('registration_replay_source_drift')",
+        "ValueError: registration_replay_source_drift"
+      ]
+    }
+  ],
+  "hostedOperationExecuted": false
+}

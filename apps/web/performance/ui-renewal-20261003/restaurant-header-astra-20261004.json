@@ -1,0 +1,237 @@
+{
+  "synthetic": true,
+  "hostedWrites": 0,
+  "realProviderCalls": 0,
+  "results": [
+    {
+      "width": 1423,
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 57,
+        "centerY": 40.5
+      },
+      "title": {
+        "x": 232,
+        "y": 28,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 40,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px"
+      },
+      "count": {
+        "x": 298.125,
+        "y": 32,
+        "width": 48.875,
+        "height": 16,
+        "centerY": 40
+      },
+      "parts": [
+        {
+          "x": 232,
+          "y": 28,
+          "width": 115,
+          "height": 24,
+          "centerY": 40
+        },
+        {
+          "x": 355,
+          "y": 20,
+          "width": 144.390625,
+          "height": 40,
+          "centerY": 40
+        },
+        {
+          "x": 507.390625,
+          "y": 24,
+          "width": 68,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "x": 1087.09375,
+          "y": 25,
+          "width": 311.90625,
+          "height": 30,
+          "centerY": 40
+        }
+      ],
+      "automationInstances": 1,
+      "listSlideStatePreserved": true,
+      "viewSwitchRemounts": 0,
+      "previewConfirmReadback": true,
+      "uncertainRunSameRequestId": true,
+      "stopConfirmed": true,
+      "refreshPrimaryHeaderPreserved": true,
+      "dialogOverflow": 0,
+      "actions": [
+        "preview",
+        "start",
+        "preview-run",
+        "run",
+        "run",
+        "preview-stop",
+        "stop"
+      ]
+    },
+    {
+      "width": 834,
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 101,
+        "centerY": 62.5
+      },
+      "title": {
+        "x": 232,
+        "y": 28,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 40,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px"
+      },
+      "count": {
+        "x": 298.125,
+        "y": 32,
+        "width": 48.875,
+        "height": 16,
+        "centerY": 40
+      },
+      "parts": [
+        {
+          "x": 232,
+          "y": 28,
+          "width": 115,
+          "height": 24,
+          "centerY": 40
+        },
+        {
+          "x": 355,
+          "y": 20,
+          "width": 144.390625,
+          "height": 40,
+          "centerY": 40
+        },
+        {
+          "x": 507.390625,
+          "y": 24,
+          "width": 68,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "x": 498.09375,
+          "y": 68,
+          "width": 311.90625,
+          "height": 36,
+          "centerY": 86
+        }
+      ],
+      "automationInstances": 1,
+      "listSlideStatePreserved": true,
+      "viewSwitchRemounts": 0,
+      "previewConfirmReadback": true,
+      "uncertainRunSameRequestId": true,
+      "stopConfirmed": true,
+      "refreshPrimaryHeaderPreserved": true,
+      "dialogOverflow": 0,
+      "actions": [
+        "preview",
+        "start",
+        "preview-run",
+        "run",
+        "run",
+        "preview-stop",
+        "stop"
+      ]
+    },
+    {
+      "width": 390,
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 173,
+        "centerY": 152.5
+      },
+      "title": {
+        "x": 22,
+        "y": 88,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 100,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px"
+      },
+      "count": {
+        "x": 88.125,
+        "y": 92,
+        "width": 48.875,
+        "height": 16,
+        "centerY": 100
+      },
+      "parts": [
+        {
+          "x": 22,
+          "y": 88,
+          "width": 115,
+          "height": 24,
+          "centerY": 100
+        },
+        {
+          "x": 145,
+          "y": 74,
+          "width": 144.390625,
+          "height": 52,
+          "centerY": 100
+        },
+        {
+          "x": 22,
+          "y": 134,
+          "width": 92,
+          "height": 44,
+          "centerY": 156
+        },
+        {
+          "x": 52.09375,
+          "y": 186,
+          "width": 315.90625,
+          "height": 44,
+          "centerY": 208
+        }
+      ],
+      "automationInstances": 1,
+      "listSlideStatePreserved": true,
+      "viewSwitchRemounts": 0,
+      "previewConfirmReadback": true,
+      "uncertainRunSameRequestId": true,
+      "stopConfirmed": true,
+      "refreshPrimaryHeaderPreserved": true,
+      "dialogOverflow": 0,
+      "actions": [
+        "preview",
+        "start",
+        "preview-run",
+        "run",
+        "run",
+        "preview-stop",
+        "stop"
+      ]
+    }
+  ],
+  "pageErrors": 0,
+  "blockedWrites": 0
+}

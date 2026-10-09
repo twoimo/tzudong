@@ -1,0 +1,164 @@
+{
+  "observedAt": "2026-10-09T07:29:48Z",
+  "purpose": "Bind the CodeQL js/redos masking fix to its exact source and independently compare generated SQL with c483542c480225af6830e10d1c29365f2b010989.",
+  "baseCommit": "c483542c480225af6830e10d1c29365f2b010989",
+  "sourceBindings": {
+    "baseHelperSha256": "3ca3608e61ef16601462dc9a517948dc4b224d7acc621244a1e3d79fce6ef08d",
+    "currentHelperSha256": "87c7bb8d6ed772bd3056d2e0f638f28ffd0f354b38e5d7e88ddffdc1841e6946",
+    "currentTestSha256": "3c765e4bbf55770546f9b2788e962de0d140ee38bc083e621d4d0941ae2455a6",
+    "applyScriptSha256": "a5596ae76cfb0a2d23002230d2f21b045e68f9866b5822b32a7474a86208a0c2",
+    "canonicalVectorParserSha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd",
+    "releaseManifestSha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+  },
+  "semanticReview": {
+    "finding": "no_semantic_regression_observed",
+    "baseSingleQuotedMask": "'(?:''|\\\\.|[^'])*'",
+    "currentSingleQuotedMask": "'(?:''|\\\\[\\s\\S]|[^'\\\\])*'",
+    "alternativesMutuallyExclusive": true,
+    "statementScannerPrevalidatesBalancedLiterals": true,
+    "backslashNewlineTreatmentMatchesStatementScanner": true,
+    "maskUsedOnlyForForbiddenKeywordAdmission": true,
+    "admittedQueryReturnedByteIdentical": true,
+    "note": "The new branches classify doubled quotes, backslash-plus-next-character, and ordinary non-quote/non-backslash characters without overlap. Existing valid readback SQL remains unchanged after admission."
+  },
+  "comparison": {
+    "runtime": "Node 24",
+    "method": "Loaded the base helper from git object c483542c480225af6830e10d1c29365f2b010989 and the current helper as separate ES modules, then compared canonical statement vectors, migration plans, atomic SQL, and reconciliation SQL in memory.",
+    "allCasesEqual": true,
+    "sourceFixtureContract": {
+      "scope": "Only the four non-manifest source comparisons",
+      "expectedPriorState": {
+        "query": "SELECT '{\"absent\":true}'::text;",
+        "expected": {
+          "absent": true
+        }
+      },
+      "terminalReadback": {
+        "query": "SELECT '{\"ready\":true}'::text;",
+        "expected": {
+          "ready": true
+        }
+      },
+      "approvalStatus": "fixture_only_not_a_release_manifest_approval"
+    },
+    "cases": [
+      {
+        "group": "source",
+        "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+        "sourceSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+        "sourceBytes": 60166,
+        "statementCount": 39,
+        "vectorSha256": "5038d14ce704d494889562f04d33cacae7bd7a117bf4cd2341752bd3b40f12af",
+        "planEqual": true,
+        "atomicSqlEqual": true,
+        "atomicSqlBytes": 253571,
+        "atomicSqlSha256": "367c584b41a9b7d839ffebd067a50525ef416939240c86b1ab5c888a1098b3b5",
+        "reconciliationSqlEqual": true,
+        "reconciliationSqlBytes": 63363,
+        "reconciliationSqlSha256": "db6a9b991309d4eae9fcec4ed71f3c9815db6065a70addb6d8559d0a4fe98511"
+      },
+      {
+        "group": "source",
+        "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+        "sourceSha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+        "sourceBytes": 13706,
+        "statementCount": 10,
+        "vectorSha256": "082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8",
+        "planEqual": true,
+        "atomicSqlEqual": true,
+        "atomicSqlBytes": 61989,
+        "atomicSqlSha256": "9e995f799031efdd17a6fa64321b7200351ad88629cbd7c31269d028cd88376f",
+        "reconciliationSqlEqual": true,
+        "reconciliationSqlBytes": 14989,
+        "reconciliationSqlSha256": "bb819c98142ec8f78e6e418c2b4e4782c323bd84966d4829d3f4b924b329c730"
+      },
+      {
+        "group": "source",
+        "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+        "sourceSha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+        "sourceBytes": 5957,
+        "statementCount": 4,
+        "vectorSha256": "f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1",
+        "planEqual": true,
+        "atomicSqlEqual": true,
+        "atomicSqlBytes": 30237,
+        "atomicSqlSha256": "30dec1738dc07c49962cb3c060c646f4997b8577ae4102289502a5acee21739e",
+        "reconciliationSqlEqual": true,
+        "reconciliationSqlBytes": 6988,
+        "reconciliationSqlSha256": "bb74e7058f4d42a8fe4eec72554b4794bea798af133159455127a4a6f7e5cb97"
+      },
+      {
+        "group": "source",
+        "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+        "sourceSha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+        "sourceBytes": 7769,
+        "statementCount": 4,
+        "vectorSha256": "ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958",
+        "planEqual": true,
+        "atomicSqlEqual": true,
+        "atomicSqlBytes": 37695,
+        "atomicSqlSha256": "f3c68296cbf0fbfc1419ba6aa674f3a7d2e636ac624bf1999b9b3be8d73cda12",
+        "reconciliationSqlEqual": true,
+        "reconciliationSqlBytes": 8870,
+        "reconciliationSqlSha256": "eccb3b62163c7f5a742f4c6f88165433b7d13a66f39ed797f4df51224536ff94"
+      },
+      {
+        "group": "manifest",
+        "id": "restaurant_refresh_history",
+        "path": "backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql",
+        "sourceSha256": "64201f056af79128975045bb47b521fa99a211b3bdede4d0ea9277a33bceacd3",
+        "sourceBytes": 5600,
+        "statementCount": 27,
+        "vectorSha256": "d0492fe7e69db70d56d38e4ed56733a44b51936207aab19eb9bf7077bc878033",
+        "planEqual": true,
+        "atomicSqlEqual": true,
+        "atomicSqlBytes": 41099,
+        "atomicSqlSha256": "d30ec9cdea34e66ffd6352f9219d1931d3cadb058fa829e6b1ebeec50d5d7987",
+        "reconciliationSqlEqual": true,
+        "reconciliationSqlBytes": 10704,
+        "reconciliationSqlSha256": "785d4c9ac81f4556ed77f949eb46add36f1600156725cfd4029fa1eb6f296431"
+      },
+      {
+        "group": "manifest",
+        "id": "g016_privacy_audit_owner_policy",
+        "path": "backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
+        "sourceSha256": "6e6c4a464d066947a0b89dbca791ed220febd4abde12d89a1b7136240bb2ad78",
+        "sourceBytes": 3100,
+        "statementCount": 15,
+        "vectorSha256": "2a112d3667120cc9cf9e2145081bd3a162587709978451223718b048f8cfe9db",
+        "planEqual": true,
+        "atomicSqlEqual": true,
+        "atomicSqlBytes": 29772,
+        "atomicSqlSha256": "ccdbb43c7b98e7b16af3768293a0ab748a2c6d39c0132591b3fd20f5c48396b2",
+        "reconciliationSqlEqual": true,
+        "reconciliationSqlBytes": 7900,
+        "reconciliationSqlSha256": "1ad1a5283e254fd4eb87dad46addd0453efa1a39de2ee0dad2fb8be1101fd5bf"
+      },
+      {
+        "group": "manifest",
+        "id": "g016_onboarding_confirmation_freshness",
+        "path": "backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+        "sourceSha256": "a116b2d0a71304b0c6cd6ceca05344e198709384381451b250d7145d4fe12d3e",
+        "sourceBytes": 13917,
+        "statementCount": 27,
+        "vectorSha256": "53d220cac8cd0fbd2a745bac1cb3f96483bb388ae8f78afc4888c3412bb6432e",
+        "planEqual": true,
+        "atomicSqlEqual": true,
+        "atomicSqlBytes": 77300,
+        "atomicSqlSha256": "9a83861e556e687a85c9d5a3568f55e67b11e7a4648dc45579632bab6b7def35",
+        "reconciliationSqlEqual": true,
+        "reconciliationSqlBytes": 20599,
+        "reconciliationSqlSha256": "036591017af94391a04b49f003c784a6ff2df4dd225cc2d7a07e0ace1801bb70"
+      }
+    ]
+  },
+  "scopeLimits": {
+    "databaseWrites": false,
+    "manifestModified": false,
+    "manifestApprovalGranted": false,
+    "commitCreated": false,
+    "pushPerformed": false,
+    "mergePerformed": false,
+    "claim": "Local source-equivalence evidence only; no hosted database, deployment, or release proof."
+  }
+}

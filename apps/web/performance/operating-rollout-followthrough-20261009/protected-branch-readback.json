@@ -1,0 +1,14 @@
+{
+  "develop": {
+    "protected": true,
+    "sha": "da4c9be17e54733414cc7e1d2f8365d25bee4d87"
+  },
+  "data": {
+    "protected": true,
+    "sha": "0f3ad0c5521558ea2339789906629c97331eefee"
+  },
+  "main": {
+    "protected": true,
+    "sha": "f31904e6dca2d9b608259cf150c5d0894db0928e"
+  }
+}

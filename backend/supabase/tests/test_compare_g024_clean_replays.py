@@ -1,6 +1,8 @@
 import hashlib
 import importlib.util
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,6 +31,14 @@ GENERATOR_ARTIFACTS = (
     "gotrue-schema-migrations.expected.tsv", "gotrue-schema-migrations.tsv",
     "initialization-inputs.sha256", "migration-chain.txt",
     "platform-auth-schema-migrations.expected.tsv", "platform-auth-schema-migrations.manifest.tsv",
+    "advisor-prerequisite-recovery.json", "advisor-prerequisites.sql", "advisor-replay.sql",
+    "admin-user-ids-overlap-verification.sql", "admin-user-ids-overlap-receipt.json",
+    "admin-management-group-overlap-verification.sql", "admin-management-group-overlap-receipt.json",
+    "admin-user-rpc-forward-overlap-verification.sql", "admin-user-rpc-forward-overlap-receipt.json",
+    "g014-owner-pg15-verification.sql", "g014-owner-pg15-receipt.json",
+    "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
+    "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",
+    "operational-archive-binding.json",
     "postgres-image-00000000000001-auth-schema.sql",
     "pre-20260214-overlap-classification.jsonl",
     "reconstruction-compatibility-exclusions.jsonl",
@@ -37,6 +47,30 @@ GENERATOR_ARTIFACTS = (
     "storage-migration-ledger.tsv", "storage-migration-native-file-ledger.expected.tsv",
     "storage-migration-native-source-map.tsv",
 )
+
+NEW_REPLAY_ARTIFACTS = (
+    "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
+    "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",
+    "operational-archive-binding.json",
+)
+
+
+def write_sums(root):
+    manifest = (root / module.ARTIFACT_MANIFEST).read_text().splitlines()
+    (root / module.SHA256SUMS).write_text(
+        "".join(f"{digest(root / name)}  {name}\n" for name in manifest), encoding="utf-8")
+
+
+def emit_generator_manifest(root):
+    # Run only the generator's real filename-list emission in a private folder.
+    # No Compose, database, network, or full replay is performed by this test.
+    source = SCRIPT.with_name("generate_g014_catalog_contract_baseline.sh").read_text()
+    footer = source.rsplit('  cd -- "$staging_dir"\n', 1)[1]
+    emission = footer.split('  while IFS= read -r artifact;', 1)[0]
+    subprocess.run(["bash", "-euo", "pipefail", "-c", emission], cwd=root,
+                   env={"PATH": os.defpath, "LC_ALL": "C"},
+                   capture_output=True, check=True, timeout=10)
+    write_sums(root)
 
 
 def make_candidate(root, **metadata_changes):
@@ -143,6 +177,55 @@ class CompareG024CleanReplaysTest(unittest.TestCase):
         right_first = module.compare(self.right, self.left, right_output)
         self.assertEqual(left_first, right_first)
         self.assertEqual(left_output.read_bytes(), right_output.read_bytes())
+
+    def test_actual_generator_manifest_repairs_unlisted_replay_outputs(self):
+        # Reproduce the CI failure: new files exist, but the old manifest
+        # and its internally correct SHA256SUMS omit them.
+        manifest = self.right / module.ARTIFACT_MANIFEST
+        names = manifest.read_text().splitlines()
+        manifest.write_text("\n".join(name for name in names if name not in NEW_REPLAY_ARTIFACTS) + "\n")
+        write_sums(self.right)
+        with self.assertRaisesRegex(module.ComparisonError, "omits required comparison invariants"):
+            module.load_candidate(self.right)
+        for directory in (self.left, self.right):
+            emit_generator_manifest(directory)
+            listed = (directory / module.ARTIFACT_MANIFEST).read_text().splitlines()
+            self.assertEqual(listed, sorted((*GENERATOR_ARTIFACTS, "metadata.json", module.ARTIFACT_MANIFEST)))
+            self.assertTrue(set(NEW_REPLAY_ARTIFACTS) <= set(listed))
+        result = module.compare(self.left, self.right, self.root / "repaired.json")
+        self.assertEqual(result["verdict"], "passed")
+
+    def test_operational_binding_cannot_be_omitted_from_both_self_consistent_candidates(self):
+        # Removing the payload, manifest entry and checksum from BOTH sides
+        # must not turn missing custody evidence into an equal replay verdict.
+        name = "operational-archive-binding.json"
+        for directory in (self.left, self.right):
+            (directory / name).unlink()
+            manifest = directory / module.ARTIFACT_MANIFEST
+            manifest.write_text("\n".join(entry for entry in manifest.read_text().splitlines() if entry != name) + "\n")
+            write_sums(directory)
+        output = self.root / "omitted.json"
+        with self.assertRaisesRegex(module.ComparisonError, "omits required comparison invariants"):
+            module.compare(self.left, self.right, output)
+        self.assertFalse(output.exists())
+
+    def test_each_new_replay_artifact_is_required_by_manifest_and_hash_bound(self):
+        for name in NEW_REPLAY_ARTIFACTS:
+            with self.subTest(artifact=name):
+                original = (self.right / name).read_bytes()
+                (self.right / name).unlink()
+                with self.assertRaisesRegex(module.ComparisonError, "root entries do not exactly match"):
+                    module.load_candidate(self.right)
+                (self.right / name).write_bytes(original + b"changed\n")
+                with self.assertRaisesRegex(module.ComparisonError, "SHA256SUMS mismatch"):
+                    module.load_candidate(self.right)
+                # Correcting the checksum does not hide different evidence in
+                # two clean replays: the strict comparison must still reject.
+                write_sums(self.right)
+                with self.assertRaises(module.ComparisonError):
+                    module.compare(self.left, self.right, self.root / "drift.json")
+                (self.right / name).write_bytes(original)
+                write_sums(self.right)
 
     def test_rejects_reordered_sha256sums_entries(self):
         sums_path = self.right / "SHA256SUMS"

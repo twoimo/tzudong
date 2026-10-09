@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "31db4bed6c5cdb57e0ccbb9d1a641497b0090841",
+  "baseRevision": "4908c5c4a3db30c1d86965c1ac144471f8872858",
+  "sourceOnly": true,
+  "operatingWrites": 0,
+  "personalRowsCopied": 0,
+  "rawFileCount": 121,
+  "catalogRowsPerReplay": 1917,
+  "replayCount": 2,
+  "manifestEntriesPerReplay": 57,
+  "missingOrUnlistedArtifacts": 0,
+  "comparatorPassed": true,
+  "historicalM5Sha256": "03c8ebabaaf7255e1c5ab5dedf59a95782b78dbc960668870ea80fc8780ab3af",
+  "currentM5Evidence": false,
+  "sourcePatchSha256": "364dc1787e8e6d82f76d0adef6496d124b3e578f69eae10258bd8b9c580b2a78",
+  "rawArchiveSha256": "86d9e620f39c9814e701486caff80d410c20eac6035ea20e4df05be1f4378b26",
+  "comparatorReceiptSha256": "b42fc10db766bd9b36c384c1402dbff7ea7df4b915095cbd1ee7cdca20e06fb2",
+  "secretPatternScan": "no credential URI/JWT/private-key/Google-key matches in raw text and nested source archives; not a general privacy certification"
+}

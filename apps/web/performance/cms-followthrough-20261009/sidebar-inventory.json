@@ -1,0 +1,77 @@
+[
+  {
+    "module": "overview",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "restaurants",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "submissions",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "reviews",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "users",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "banners",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "insights",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "pipeline",
+    "sidebar": true,
+    "legacy_hydration_target": false
+  },
+  {
+    "module": "knowledge-graph",
+    "sidebar": true,
+    "legacy_hydration_target": false
+  },
+  {
+    "module": "sentry",
+    "sidebar": true,
+    "legacy_hydration_target": false
+  },
+  {
+    "module": "youtube-thumbnail-generator",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "storyboard",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "routes",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "llm",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  },
+  {
+    "module": "audit",
+    "sidebar": true,
+    "legacy_hydration_target": true
+  }
+]

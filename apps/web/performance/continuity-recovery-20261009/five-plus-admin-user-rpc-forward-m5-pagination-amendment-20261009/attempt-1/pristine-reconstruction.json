@@ -1,0 +1,123 @@
+{
+  "kind": "fresh-bound-pg17-schema-contract-reconstruction",
+  "status": "passed",
+  "observedAt": "2026-10-09T12:35:13.128Z",
+  "snapshotSourceCommit": "5e3d5e37fb2733bb989c39946f21f8734d13f228",
+  "snapshotManifestSha256": "ccd0373d1138301a586b75ab07f01ddcd061765d22e22da646e774cfc1e92563",
+  "inputs": {
+    "pg17-hosted-schema-private.sql": {
+      "bytes": 2043143,
+      "sha256": "fde46030bf7ac212631fcb02d4dff503e733899e853a7fe42202009aedf364c2"
+    },
+    "pg17-hosted-contract-private.sql": {
+      "bytes": 815804,
+      "sha256": "44e840d04c5d9ad02055d470da1cae261273043fb9a48cc1e660f7d704bb055c"
+    },
+    "pg17-hosted-role-metadata-private.json": {
+      "bytes": 16186,
+      "sha256": "70d3b0a79b7f4023d97e8cbdbd55aae7b8055798865f12379643399afa824789"
+    },
+    "pg17-hosted-extensions-private.json": {
+      "bytes": 1289,
+      "sha256": "dfd07cb81ddce437cfe06820ad5e9c339e95f4ee5a3f7144a4ce7a713b309be4"
+    },
+    "pg17-hosted-attributes-private.json": {
+      "bytes": 2160,
+      "sha256": "5930f5c777d391c9fb7664669dd85da93d6148c6ae89dab465bf83df94f32f4b"
+    },
+    "pg17-hosted-platform-settings-private.json": {
+      "bytes": 1007,
+      "sha256": "232cf874e2e7ac9b6c8be9a2f515497445cac41fcb8fd0d153ecc5caa386c6ad"
+    },
+    "pg17-hosted-boundary-private.json": {
+      "bytes": 2839,
+      "sha256": "13e4d269164e41ff64668ee7a23b3be55820a4733f27c3f9441155d754a296b9"
+    }
+  },
+  "helperSha256": "2d7f5478fa81a555c00d3b32b0fc9af889c9d3cbd693ef7ff7121db24d4df4d1",
+  "container": {
+    "id": "6817456d2498a449f9eff93e68f279b0c0cba46862830b5514e53f1f62a61f0c",
+    "imageId": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "name": "tzudong-five-forward-amendment-98309964cc3b5932471caec6",
+    "owner": "five-forward-amendment-98309964cc3b5932471caec6",
+    "network": "none",
+    "ports": 0
+  },
+  "database": "tzudong_fresh_pg17_c2a9235915ab",
+  "metadata": {
+    "ownerSet": false,
+    "assertions": [
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner"
+        ],
+        "name": "assert_g014_catalog_contract",
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "bodySha256": "8e9101ecdbb506e25a9ace2a40f7de9cc0dcf3f06d80cc1a75fe07a55effbeab"
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner"
+        ],
+        "name": "assert_g014_definer_contract",
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "bodySha256": "a5fff8ca63e34d41fc7c56e5a646023d44645750a7abf9ae0c0efc35818aa964"
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner"
+        ],
+        "name": "assert_g014_public_rpc_allowlist",
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "bodySha256": "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef"
+      },
+      {
+        "acl": [
+          "privacy_workflow_owner=X/privacy_workflow_owner"
+        ],
+        "name": "assert_g014_workflow_owner_contract",
+        "owner": "privacy_workflow_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "bodySha256": "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d"
+      }
+    ],
+    "nestedRows": 45,
+    "ownerUsage": false,
+    "booleanCases": 27,
+    "manifestRows": 1963,
+    "allowlistRows": 132,
+    "booleanMismatches": 0,
+    "postgresSuperuser": false
+  },
+  "assertionsPassed": 4,
+  "bootstrapExtensionDelegationTemporarilyDisabled": true,
+  "requiresSourceRuntimeSettingsBeforeReplay": true,
+  "projections": {
+    "argumentOidRows": 8,
+    "droppedColumnPositions": 7,
+    "booleanAssociativityRows": 1,
+    "cloneOnly": true
+  },
+  "immutableTriggerDisabled": false,
+  "assertionCodeChanged": false,
+  "temporaryRestoreSuperuserReverted": true,
+  "hostedLedgerCountObserved": 80,
+  "ledgerRowsCopied": 0,
+  "userRowsCopied": 0,
+  "operatingWrites": false,
+  "limitations": [
+    "Clone-only physical OID/attnum and proven Boolean regrouping projections.",
+    "No hosted application, deployment, user workflow, physical Storage deletion or performance proof."
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "cliVersion": "56.5.0",
+  "command": "vercel project inspect --non-interactive",
+  "unexpectedAction": "automatic local link to stale web project",
+  "projectId": "prj_VNiOfUYoewichwriRiP9IMJMev8d",
+  "exactRequestedProjectUsed": false,
+  "birthTimeVerified": "2026-10-09T04:33:18.87Z",
+  "onlyNewOwnedFilesRemoved": [
+    {
+      "file": "project.json",
+      "sha256": "e1ecfac112952510c65e38b296495a3827319fe32329fd51632c0b95fab9a852",
+      "createdByThisInspect": true
+    },
+    {
+      "file": "README.txt",
+      "sha256": "f5d1ed0f5032ae128931f46459b5faa1af6319fc2dfb3e7a5fe54a84bf93dbd6",
+      "createdByThisInspect": true
+    }
+  ],
+  "recoveryBackup": "/Users/twoimo/.codex/runtime-cache/vercel-inspect-autolink-recovery-20261009",
+  "localOriginalUnlinkedStateRestored": true,
+  "gitignoreChanged": false,
+  "noExplicitRemoteSettingsOrDeploymentWrite": true
+}

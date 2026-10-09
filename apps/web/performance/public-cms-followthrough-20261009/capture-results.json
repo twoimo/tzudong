@@ -1,0 +1,1479 @@
+{
+  "head": "b085e1d36ad8a8bc5626738b9921b194f50324a1",
+  "scope": "anonymous-local-with-synthetic-read-outages",
+  "productionEvidence": false,
+  "captures": [
+    {
+      "index": 1,
+      "routePattern": "/auth/required",
+      "viewport": "desktop",
+      "path": "/auth/required",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/01-desktop.png"
+    },
+    {
+      "index": 2,
+      "routePattern": "/auth/reset-password",
+      "viewport": "desktop",
+      "path": "/auth/reset-password",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/reset-password",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/02-desktop.png"
+    },
+    {
+      "index": 3,
+      "routePattern": "/data-deletion",
+      "viewport": "desktop",
+      "path": "/data-deletion",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/data-deletion",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 4,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 154,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/03-desktop.png"
+    },
+    {
+      "index": 4,
+      "routePattern": "/feed",
+      "viewport": "desktop",
+      "path": "/feed",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/feed",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 0,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/04-desktop.png"
+    },
+    {
+      "index": 5,
+      "routePattern": "/global-map",
+      "viewport": "desktop",
+      "path": "/global-map",
+      "status": 200,
+      "errorCount": 1,
+      "actualPath": "/global-map",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/05-desktop.png"
+    },
+    {
+      "index": 6,
+      "routePattern": "/home-frame",
+      "viewport": "desktop",
+      "path": "/home-frame",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/home-frame",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 3,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/06-desktop.png"
+    },
+    {
+      "index": 7,
+      "routePattern": "/insights",
+      "viewport": "desktop",
+      "path": "/insights",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 3,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/07-desktop.png"
+    },
+    {
+      "index": 8,
+      "routePattern": "/leaderboard",
+      "viewport": "desktop",
+      "path": "/leaderboard",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/?panel=leaderboard",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 2,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": [
+          {
+            "height": 65,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/08-desktop.png"
+    },
+    {
+      "index": 9,
+      "routePattern": "/mypage/bookmarks",
+      "viewport": "desktop",
+      "path": "/mypage/bookmarks",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fbookmarks",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/09-desktop.png"
+    },
+    {
+      "index": 10,
+      "routePattern": "/mypage",
+      "viewport": "desktop",
+      "path": "/mypage",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/10-desktop.png"
+    },
+    {
+      "index": 11,
+      "routePattern": "/mypage/profile",
+      "viewport": "desktop",
+      "path": "/mypage/profile",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fprofile",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/11-desktop.png"
+    },
+    {
+      "index": 12,
+      "routePattern": "/mypage/reviews",
+      "viewport": "desktop",
+      "path": "/mypage/reviews",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Freviews",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/12-desktop.png"
+    },
+    {
+      "index": 13,
+      "routePattern": "/mypage/submissions/edit",
+      "viewport": "desktop",
+      "path": "/mypage/submissions/edit",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Fedit",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/13-desktop.png"
+    },
+    {
+      "index": 14,
+      "routePattern": "/mypage/submissions/new",
+      "viewport": "desktop",
+      "path": "/mypage/submissions/new",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Fnew",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/14-desktop.png"
+    },
+    {
+      "index": 15,
+      "routePattern": "/mypage/submissions/recommend",
+      "viewport": "desktop",
+      "path": "/mypage/submissions/recommend",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Frecommend",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/15-desktop.png"
+    },
+    {
+      "index": 16,
+      "routePattern": "/",
+      "viewport": "desktop",
+      "path": "/",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 3,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/16-desktop.png"
+    },
+    {
+      "index": 17,
+      "routePattern": "/privacy/onboarding",
+      "viewport": "desktop",
+      "path": "/privacy/onboarding",
+      "status": 200,
+      "errorCount": 1,
+      "actualPath": "/?auth=login&reason=privacy_onboarding",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 4,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/17-desktop.png"
+    },
+    {
+      "index": 18,
+      "routePattern": "/privacy",
+      "viewport": "desktop",
+      "path": "/privacy",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/privacy",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 154,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/18-desktop.png"
+    },
+    {
+      "index": 19,
+      "routePattern": "/s/[code]",
+      "viewport": "desktop",
+      "path": "/s/audit-invalid-code",
+      "status": 200,
+      "errorCount": 1,
+      "actualPath": "/s/audit-invalid-code",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/19-desktop.png"
+    },
+    {
+      "index": 20,
+      "routePattern": "/stamp",
+      "viewport": "desktop",
+      "path": "/stamp",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/?panel=stamp",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 2,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 65,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/20-desktop.png"
+    },
+    {
+      "index": 21,
+      "routePattern": "/submissions",
+      "viewport": "desktop",
+      "path": "/submissions",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/21-desktop.png"
+    },
+    {
+      "index": 22,
+      "routePattern": "/user/[userId]",
+      "viewport": "desktop",
+      "path": "/user/00000000-0000-4000-8000-000000000009",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/user/00000000-0000-4000-8000-000000000009",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": [
+          {
+            "height": 61,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/22-desktop.png"
+    },
+    {
+      "index": 1,
+      "routePattern": "/auth/required",
+      "viewport": "tablet",
+      "path": "/auth/required",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/01-tablet.png"
+    },
+    {
+      "index": 2,
+      "routePattern": "/auth/reset-password",
+      "viewport": "tablet",
+      "path": "/auth/reset-password",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/reset-password",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/02-tablet.png"
+    },
+    {
+      "index": 3,
+      "routePattern": "/data-deletion",
+      "viewport": "tablet",
+      "path": "/data-deletion",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/data-deletion",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 4,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 173,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/03-tablet.png"
+    },
+    {
+      "index": 4,
+      "routePattern": "/feed",
+      "viewport": "tablet",
+      "path": "/feed",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/feed",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 87,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/04-tablet.png"
+    },
+    {
+      "index": 5,
+      "routePattern": "/global-map",
+      "viewport": "tablet",
+      "path": "/global-map",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/global-map",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/05-tablet.png"
+    },
+    {
+      "index": 6,
+      "routePattern": "/home-frame",
+      "viewport": "tablet",
+      "path": "/home-frame",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/home-frame",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/06-tablet.png"
+    },
+    {
+      "index": 7,
+      "routePattern": "/insights",
+      "viewport": "tablet",
+      "path": "/insights",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/07-tablet.png"
+    },
+    {
+      "index": 8,
+      "routePattern": "/leaderboard",
+      "viewport": "tablet",
+      "path": "/leaderboard",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/leaderboard",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 87,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/08-tablet.png"
+    },
+    {
+      "index": 9,
+      "routePattern": "/mypage/bookmarks",
+      "viewport": "tablet",
+      "path": "/mypage/bookmarks",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fbookmarks",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/09-tablet.png"
+    },
+    {
+      "index": 10,
+      "routePattern": "/mypage",
+      "viewport": "tablet",
+      "path": "/mypage",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/10-tablet.png"
+    },
+    {
+      "index": 11,
+      "routePattern": "/mypage/profile",
+      "viewport": "tablet",
+      "path": "/mypage/profile",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fprofile",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/11-tablet.png"
+    },
+    {
+      "index": 12,
+      "routePattern": "/mypage/reviews",
+      "viewport": "tablet",
+      "path": "/mypage/reviews",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Freviews",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/12-tablet.png"
+    },
+    {
+      "index": 13,
+      "routePattern": "/mypage/submissions/edit",
+      "viewport": "tablet",
+      "path": "/mypage/submissions/edit",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Fedit",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/13-tablet.png"
+    },
+    {
+      "index": 14,
+      "routePattern": "/mypage/submissions/new",
+      "viewport": "tablet",
+      "path": "/mypage/submissions/new",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Fnew",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/14-tablet.png"
+    },
+    {
+      "index": 15,
+      "routePattern": "/mypage/submissions/recommend",
+      "viewport": "tablet",
+      "path": "/mypage/submissions/recommend",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Frecommend",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/15-tablet.png"
+    },
+    {
+      "index": 16,
+      "routePattern": "/",
+      "viewport": "tablet",
+      "path": "/",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/16-tablet.png"
+    },
+    {
+      "index": 17,
+      "routePattern": "/privacy/onboarding",
+      "viewport": "tablet",
+      "path": "/privacy/onboarding",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/?auth=login&reason=privacy_onboarding",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 2,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/17-tablet.png"
+    },
+    {
+      "index": 18,
+      "routePattern": "/privacy",
+      "viewport": "tablet",
+      "path": "/privacy",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/privacy",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 154,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/18-tablet.png"
+    },
+    {
+      "index": 19,
+      "routePattern": "/s/[code]",
+      "viewport": "tablet",
+      "path": "/s/audit-invalid-code",
+      "status": 200,
+      "errorCount": 1,
+      "actualPath": "/s/audit-invalid-code",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/19-tablet.png"
+    },
+    {
+      "index": 20,
+      "routePattern": "/stamp",
+      "viewport": "tablet",
+      "path": "/stamp",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/stamp",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": [
+          {
+            "height": 87,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/20-tablet.png"
+    },
+    {
+      "index": 21,
+      "routePattern": "/submissions",
+      "viewport": "tablet",
+      "path": "/submissions",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/21-tablet.png"
+    },
+    {
+      "index": 22,
+      "routePattern": "/user/[userId]",
+      "viewport": "tablet",
+      "path": "/user/00000000-0000-4000-8000-000000000009",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/user/00000000-0000-4000-8000-000000000009",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 820,
+        "viewportHeight": 1180,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": [
+          {
+            "height": 61,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/22-tablet.png"
+    },
+    {
+      "index": 1,
+      "routePattern": "/auth/required",
+      "viewport": "mobile",
+      "path": "/auth/required",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/01-mobile.png"
+    },
+    {
+      "index": 2,
+      "routePattern": "/auth/reset-password",
+      "viewport": "mobile",
+      "path": "/auth/reset-password",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/reset-password",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/02-mobile.png"
+    },
+    {
+      "index": 3,
+      "routePattern": "/data-deletion",
+      "viewport": "mobile",
+      "path": "/data-deletion",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/data-deletion",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 4,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 192,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/03-mobile.png"
+    },
+    {
+      "index": 4,
+      "routePattern": "/feed",
+      "viewport": "mobile",
+      "path": "/feed",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/feed",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 74,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/04-mobile.png"
+    },
+    {
+      "index": 5,
+      "routePattern": "/global-map",
+      "viewport": "mobile",
+      "path": "/global-map",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/global-map",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/05-mobile.png"
+    },
+    {
+      "index": 6,
+      "routePattern": "/home-frame",
+      "viewport": "mobile",
+      "path": "/home-frame",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/home-frame",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/06-mobile.png"
+    },
+    {
+      "index": 7,
+      "routePattern": "/insights",
+      "viewport": "mobile",
+      "path": "/insights",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/07-mobile.png"
+    },
+    {
+      "index": 8,
+      "routePattern": "/leaderboard",
+      "viewport": "mobile",
+      "path": "/leaderboard",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/leaderboard",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 74,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/08-mobile.png"
+    },
+    {
+      "index": 9,
+      "routePattern": "/mypage/bookmarks",
+      "viewport": "mobile",
+      "path": "/mypage/bookmarks",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fbookmarks",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/09-mobile.png"
+    },
+    {
+      "index": 10,
+      "routePattern": "/mypage",
+      "viewport": "mobile",
+      "path": "/mypage",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/10-mobile.png"
+    },
+    {
+      "index": 11,
+      "routePattern": "/mypage/profile",
+      "viewport": "mobile",
+      "path": "/mypage/profile",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fprofile",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/11-mobile.png"
+    },
+    {
+      "index": 12,
+      "routePattern": "/mypage/reviews",
+      "viewport": "mobile",
+      "path": "/mypage/reviews",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Freviews",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/12-mobile.png"
+    },
+    {
+      "index": 13,
+      "routePattern": "/mypage/submissions/edit",
+      "viewport": "mobile",
+      "path": "/mypage/submissions/edit",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Fedit",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/13-mobile.png"
+    },
+    {
+      "index": 14,
+      "routePattern": "/mypage/submissions/new",
+      "viewport": "mobile",
+      "path": "/mypage/submissions/new",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Fnew",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/14-mobile.png"
+    },
+    {
+      "index": 15,
+      "routePattern": "/mypage/submissions/recommend",
+      "viewport": "mobile",
+      "path": "/mypage/submissions/recommend",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage%2Fsubmissions%2Frecommend",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/15-mobile.png"
+    },
+    {
+      "index": 16,
+      "routePattern": "/",
+      "viewport": "mobile",
+      "path": "/",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/16-mobile.png"
+    },
+    {
+      "index": 17,
+      "routePattern": "/privacy/onboarding",
+      "viewport": "mobile",
+      "path": "/privacy/onboarding",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/?auth=login&reason=privacy_onboarding",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 2,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/17-mobile.png"
+    },
+    {
+      "index": 18,
+      "routePattern": "/privacy",
+      "viewport": "mobile",
+      "path": "/privacy",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/privacy",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 173,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/18-mobile.png"
+    },
+    {
+      "index": 19,
+      "routePattern": "/s/[code]",
+      "viewport": "mobile",
+      "path": "/s/audit-invalid-code",
+      "status": 200,
+      "errorCount": 1,
+      "actualPath": "/s/audit-invalid-code",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/19-mobile.png"
+    },
+    {
+      "index": 20,
+      "routePattern": "/stamp",
+      "viewport": "mobile",
+      "path": "/stamp",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/stamp",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 1,
+        "headers": [
+          {
+            "height": 74,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/20-mobile.png"
+    },
+    {
+      "index": 21,
+      "routePattern": "/submissions",
+      "viewport": "mobile",
+      "path": "/submissions",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/auth/required?reason=mypage&next=%2Fmypage",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": []
+      },
+      "screenshot": "screenshots/21-mobile.png"
+    },
+    {
+      "index": 22,
+      "routePattern": "/user/[userId]",
+      "viewport": "mobile",
+      "path": "/user/00000000-0000-4000-8000-000000000009",
+      "status": 200,
+      "errorCount": 0,
+      "actualPath": "/user/00000000-0000-4000-8000-000000000009",
+      "metrics": {
+        "documentOverflowX": 0,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "visibleHeadingCount": 1,
+        "bodyHasVisibleText": true,
+        "unnamedVisibleControls": 0,
+        "reducedMotionAnimatedElements": 0,
+        "verticalScrollOwners": 0,
+        "headers": [
+          {
+            "height": 61,
+            "compact": null
+          }
+        ]
+      },
+      "screenshot": "screenshots/22-mobile.png"
+    }
+  ],
+  "mutationAttemptsBlocked": 35
+}

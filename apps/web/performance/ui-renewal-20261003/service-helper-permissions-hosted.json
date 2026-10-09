@@ -1,0 +1,13 @@
+{
+  "kind": "service-identity-helper-permissions-readback",
+  "migrationVersion": "20261003095444",
+  "migrationSha256": "bc4ffbde4062f9d3c0bd9b9bf09960dcd681aa39c5df5589779b06929b258aeb",
+  "helperCount": 3,
+  "serviceAllowed": true,
+  "browserDenied": true,
+  "aclDigestBefore": "464bd30c9e382b19dd7a638cc3b626a2",
+  "aclDigestAfter": "464bd30c9e382b19dd7a638cc3b626a2",
+  "hostedAclDelta": 0,
+  "sourceReplayStillPending": true,
+  "purpose": "Reconstruct previously revoked pure helper grants for current service-invoker reads and review."
+}

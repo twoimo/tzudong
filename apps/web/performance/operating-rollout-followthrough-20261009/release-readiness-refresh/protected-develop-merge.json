@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-09T05:13:28.947703+00:00",
+  "pr": "https://github.com/twoimo/tzudong/pull/3099",
+  "state": "MERGED",
+  "mergedAt": "2026-10-09T04:31:19Z",
+  "headBeforeMerge": "56819502aaa6993d847efb8b78a5bcd6a4ecdaf2",
+  "mergeSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "base": "develop",
+  "requiredChecks": {
+    "Release": "SUCCESS",
+    "Promotion Path": "SUCCESS"
+  },
+  "requiredReviews": 0,
+  "adminBypassUsed": false,
+  "candidateToMergeTreeDiff": 0,
+  "sourceProgressOnly": true,
+  "dataOrMainPromoted": false,
+  "operatingMigrationsApplied": false,
+  "productionDeployed": false
+}

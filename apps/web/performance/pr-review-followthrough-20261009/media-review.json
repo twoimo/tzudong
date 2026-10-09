@@ -1,0 +1,407 @@
+{
+  "schema": "pr3099-media-review/v1",
+  "observedAtUtc": "2026-10-09T02:15:18.771515+00:00",
+  "reviewExportPath": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/pr-3099-review-current-20261009.json",
+  "reviewExportSha256": "77db26b5e60b785ca20280e2f7a2a8c221acbdd9d3fc3ec098890530b1746e70",
+  "reviewExportHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "candidateHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "exportThreads": 48,
+  "exportHasNextPage": false,
+  "scope": "media/frame/cache/pipeline worker/run_parallel + thumbnail and chunk cache fingerprints; excludes Supabase and provider/Gemini response/security evaluation",
+  "counts": {
+    "addressed": 0,
+    "unaddressed": 8,
+    "obsolete": 0
+  },
+  "threads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pzgnD",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+      "reviewOriginalLine": 1100,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4204339787",
+      "fixedDiagnosis": "run-local source 부재 때문에 완료 frame이 재선택됨",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+          "line": 1105,
+          "sha256": "bbbd72b4fb760efa8271d3dba558ad3c4f4c78a18f55df354cb912cb1269d0ef",
+          "reason": "shouldCollect는 VIDEO_CACHE_DIR 후보만 검색한다. video가 없으면 receipt를 확인하기 전 true 반환"
+        },
+        {
+          "path": "backend/pipeline_control/media_cache.py",
+          "line": 43,
+          "sha256": "b07b8660bb080a01cdc1de82a4b710d666012b0bbe7cf83b4c84774dca750f0f",
+          "reason": "persistent shared cache 환경값을 제공하지만 shouldCollect는 이를 사용하지 않음"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js",
+        "backend/utils/tests/frame-receipt.test.mjs"
+      ],
+      "testEvidenceBoundary": "기존 receipt/실제 FFmpeg reuse 검증은 local video가 있을 때만 유효하며 새 run cache가 비고 shared copy만 남는 admission case는 검증하지 않는다.",
+      "proposedChange": "shouldCollect의 validated source 후보에 persistent shared cache를 포함한다. 실제 source/config/output hash를 유지하고 빈 run cache+완료 receipt+shared source일 때 live cap을 소비하지 않는 테스트를 추가한다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+        "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pz8hv",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+      "reviewOriginalLine": 1633,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4204517882",
+      "fixedDiagnosis": "거부된 동일 이름 run-cache 파일을 shared copy가 복구하지 못함",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+          "line": 1605,
+          "sha256": "bbbd72b4fb760efa8271d3dba558ad3c4f4c78a18f55df354cb912cb1269d0ef",
+          "reason": "copyDownloadedVideoToCache는 destination 존재 시 복사하지 않음"
+        },
+        {
+          "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+          "line": 1641,
+          "sha256": "bbbd72b4fb760efa8271d3dba558ad3c4f4c78a18f55df354cb912cb1269d0ef",
+          "reason": "shared 후보를 찾은 뒤 기존 destination 경로를 재검증 없이 반환"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js"
+      ],
+      "testEvidenceBoundary": "오디오-only/유효 후보 선택 테스트는 있으나 rejected destination과 valid shared source가 같은 basename인 resume 조합은 다루지 않는다.",
+      "proposedChange": "정확한 run-owned destination의 rejected bytes를 보존하고 atomic copy/replace 후 재검증한다. shared/user cache 및 unrelated sentinel은 손대지 않는 회귀 테스트가 필요하다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+        "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pz8hy",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+      "reviewOriginalLine": 1043,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4204517884",
+      "fixedDiagnosis": "실제 web fallback 모델이 stage fingerprint에서 누락됨",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+          "line": 273,
+          "sha256": "c5cb2bed8e2929f5254e0bb18437788ebdb95028f0a3575b10410050e92f8fcd",
+          "reason": "fallback은 WEB_GEMINI_MODEL 또는 gemini-3.7-flash를 실제로 선택"
+        },
+        {
+          "path": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+          "line": 1042,
+          "sha256": "c5cb2bed8e2929f5254e0bb18437788ebdb95028f0a3575b10410050e92f8fcd",
+          "reason": "cache_args setting은 primary/API fallback과 thinking만 포함"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/restaurant-crawling/scripts/tests/test_chunk_download_retry.py"
+      ],
+      "testEvidenceBoundary": "fallback 경로 테스트와 sampling 수정은 모델별 stage invalidation 증거가 아니다.",
+      "proposedChange": "실제 resolved web model과 FORCE_WEB_FALLBACK routing을 fingerprint에 결속하고 서로 다른 모델/routing 및 동일 설정 재사용을 검증한다. provider/Gemini 담당자와 경계 조율하며 모델 기본값은 유지한다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+        "backend/restaurant-crawling/scripts/tests/test_chunk_download_retry.py"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B33",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/bin/run_parallel_laaj.py",
+      "reviewOriginalLine": 84,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4205365789",
+      "fixedDiagnosis": "fallback마다 새 shell에서 health check가 반복됨",
+      "sourceEvidence": [
+        {
+          "path": "backend/bin/run_parallel_laaj.py",
+          "line": 84,
+          "sha256": "132618d55cdfc9e880d2540c0403ad9a1b713650eafcbea4ff9db99ec2522744",
+          "reason": "fallback=True마다 LAAJ_SKIP_HEALTH_CHECK=0이고 각 video별 새 shell 실행"
+        },
+        {
+          "path": "backend/bin/run_parallel_laaj.py",
+          "line": 178,
+          "sha256": "132618d55cdfc9e880d2540c0403ad9a1b713650eafcbea4ff9db99ec2522744",
+          "reason": "lock 안 deferred loop가 runner를 video별 호출"
+        },
+        {
+          "path": "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
+          "line": 447,
+          "sha256": "d5708e5ab72b96e9769a847e230ad8e3f410bf7d843d6ef500f963a6ad0994d4",
+          "reason": "HEALTH_CHECK_DONE은 새 shell마다 false"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/utils/tests/test_pipeline_restart_integration.py"
+      ],
+      "testEvidenceBoundary": "기존 serialized fallback/mock orchestration 테스트는 실제 per-child health command 개수를 고유 batch1회로 검증하지 않는다. actual FFmpeg38개도 해당 provider 경로를 호출하지 않았다.",
+      "proposedChange": "fallback lock 아래 batch health 성공을 한번 검증한 뒤 남은 child health를 생략한다. 실패한 health는 성공으로 캐시하지 않으며 실패/재시작·N health1+N evaluation 정확한 command count를 offline fixture로 확인한다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/bin/run_parallel_laaj.py",
+        "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
+        "backend/utils/tests/test_pipeline_restart_integration.py"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQpu",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+      "reviewOriginalLine": 1039,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4224919932",
+      "fixedDiagnosis": "visual-location 입력이 chunk receipt에서 누락됨",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+          "line": 869,
+          "sha256": "c5cb2bed8e2929f5254e0bb18437788ebdb95028f0a3575b10410050e92f8fcd",
+          "reason": "merge가 optional visual-location JSONL을 실제로 읽음"
+        },
+        {
+          "path": "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+          "line": 1035,
+          "sha256": "c5cb2bed8e2929f5254e0bb18437788ebdb95028f0a3575b10410050e92f8fcd",
+          "reason": "cache_args에 그 input 또는 absence sentinel 없음"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/restaurant-crawling/scripts/tests/test_visual_location.py",
+        "backend/utils/tests/test_pipeline_restart_integration.py"
+      ],
+      "testEvidenceBoundary": "visual OCR/merge 자체와 generic stage invalidation 테스트는 이 shell receipt의 optional-file 변화 연결을 입증하지 않는다.",
+      "proposedChange": "optional visual-location bytes/absence를 fingerprint에 넣고 absent→present, changed, removed 각각 재실행·동일 입력 reuse를 검증한다. 모델 호출은 mock/fail-closed로 유지한다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
+        "backend/utils/tests/test_pipeline_restart_integration.py"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQqB",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/pipeline_control/media_cache.py",
+      "reviewOriginalLine": 49,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4224919956",
+      "fixedDiagnosis": "terminal Failed/Cancelled owned cache가 영구 보존됨",
+      "sourceEvidence": [
+        {
+          "path": "backend/pipeline_control/media_cache.py",
+          "line": 47,
+          "sha256": "b07b8660bb080a01cdc1de82a4b710d666012b0bbe7cf83b4c84774dca750f0f",
+          "reason": "completed callback만 owned directory를 제거하고 그 외 모든 종료는 보존"
+        },
+        {
+          "path": "backend/pipeline_control/worker.py",
+          "line": 561,
+          "sha256": "319d742b675e5c07a035ab812e725f1bb9afb1cb04067d1075cbf4ca48198a79",
+          "reason": "worker는 Succeeded에만 media_completed 호출"
+        },
+        {
+          "path": "backend/pipeline_control/state_machine.py",
+          "line": 83,
+          "sha256": "1a6d1becf45939d7db9b882d8941aded6aa0664d3b14b7fd74bb9f022f351e84",
+          "reason": "source can_resume은 Paused만 허용"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/utils/tests/test_pipeline_performance.py"
+      ],
+      "testEvidenceBoundary": "existing test_success_cleans_only_owned_run_and_failure_preserves_resume는 실제 run status를 결속하지 않는다. source의 terminal 상태와 generic context 재진입은 다른 계약이다.",
+      "proposedChange": "outcome-aware cleanup을 exact owner/containment 조건으로 추가해 Failed/Cancelled는 제거하고 Paused는 유지한다. configured/user/shared cache는 no-op; success cleanup deferred 계약은 유지한다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/pipeline_control/media_cache.py",
+        "backend/pipeline_control/worker.py",
+        "backend/utils/tests/test_pipeline_performance.py",
+        "backend/pipeline_control/tests/test_adapter_profiles.py"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qlQqH",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/pipeline_control/worker.py",
+      "reviewOriginalLine": 551,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4224919962",
+      "fixedDiagnosis": "cache context 진입 OSError가 claimed run 실패 처리 밖으로 유출됨",
+      "sourceEvidence": [
+        {
+          "path": "backend/pipeline_control/media_cache.py",
+          "line": 22,
+          "sha256": "b07b8660bb080a01cdc1de82a4b710d666012b0bbe7cf83b4c84774dca750f0f",
+          "reason": "env 파일 검사/read, mkdir, owner write는 context yield 전 수행"
+        },
+        {
+          "path": "backend/pipeline_control/worker.py",
+          "line": 551,
+          "sha256": "319d742b675e5c07a035ab812e725f1bb9afb1cb04067d1075cbf4ca48198a79",
+          "reason": "owned_media_cache 진입이 try 영역이지만 outer handler는 OSError를 포함하지 않음"
+        },
+        {
+          "path": "backend/pipeline_control/worker.py",
+          "line": 573,
+          "sha256": "319d742b675e5c07a035ab812e725f1bb9afb1cb04067d1075cbf4ca48198a79",
+          "reason": "bounded exceptions만 finish_failed/manifest를 수행"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/pipeline_control/tests/test_adapter_profiles.py"
+      ],
+      "testEvidenceBoundary": "test_success_is_persisted_before_a_failed_media_cache_purge는 callback 이후 성공 cleanup 오류이며 context 진입 실패를 검증하지 않는다.",
+      "proposedChange": "cache setup I/O를 fixed AdapterGraphError로 변환하거나 scoped worker handler로 처리한다. mkdir/read/owner-write failures에 claimed run Failed+manifest, secret diagnostics 부재, 별도 성공 cleanup outcome 보존을 확인한다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/pipeline_control/media_cache.py",
+        "backend/pipeline_control/worker.py",
+        "backend/pipeline_control/tests/test_adapter_profiles.py"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qTx83",
+      "status": "unaddressed",
+      "exportIsResolved": false,
+      "exportIsOutdated": false,
+      "reviewPath": "backend/restaurant-crawling/scripts/02-collect-meta.py",
+      "reviewOriginalLine": 907,
+      "reviewUrl": "https://github.com/twoimo/tzudong/pull/3099#discussion_r4217712699",
+      "fixedDiagnosis": "thumbnail backfill 실패에도 metadata checkpoint 완료 처리됨",
+      "sourceEvidence": [
+        {
+          "path": "backend/restaurant-crawling/scripts/02-collect-meta.py",
+          "line": 663,
+          "sha256": "767f4b0fd7a2161e644d10cd1bacfc25b50473c2ce9f6513800bfde8b17b2341",
+          "reason": "save_thumbnail_file은 download/validation/link 실패를 조용히 return"
+        },
+        {
+          "path": "backend/restaurant-crawling/scripts/02-collect-meta.py",
+          "line": 907,
+          "sha256": "767f4b0fd7a2161e644d10cd1bacfc25b50473c2ce9f6513800bfde8b17b2341",
+          "reason": "backfill 결과/실제 thumbnail 존재 여부와 무관하게 recipe_completed.add"
+        },
+        {
+          "path": "backend/restaurant-crawling/scripts/02-collect-meta.py",
+          "line": 965,
+          "sha256": "767f4b0fd7a2161e644d10cd1bacfc25b50473c2ce9f6513800bfde8b17b2341",
+          "reason": "recipe_completed인 metadata가 same-day checkpoint로 저장됨"
+        }
+      ],
+      "relatedTestPaths": [
+        "backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py"
+      ],
+      "testEvidenceBoundary": "기존 thumbnail containment/validation 테스트는 실패 후 collect_all_metadata recipe checkpoint 및 same-day restart를 다루지 않는다.",
+      "proposedChange": "thumbnail 성공 결과와 검증된 파일 존재를 recipe 완료에 연결한다. 실패 원문 없이 실패/재시도 checkpoint case와 다음 restart 성공, 이미 존재하는 검증된 썸네일 유지 테스트를 추가한다.",
+      "proposedOwnershipOnlyNotAuthorized": [
+        "backend/restaurant-crawling/scripts/02-collect-meta.py",
+        "backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py"
+      ],
+      "sourceChanged": false,
+      "testExecutionThisReview": false
+    }
+  ],
+  "excludedThreadIds": [
+    "PRRT_kwDOQGRyNc6ouwJC",
+    "PRRT_kwDOQGRyNc6ouwJG",
+    "PRRT_kwDOQGRyNc6oxVfH",
+    "PRRT_kwDOQGRyNc6oxVfM",
+    "PRRT_kwDOQGRyNc6oxXry",
+    "PRRT_kwDOQGRyNc6oxXr1",
+    "PRRT_kwDOQGRyNc6oxXr3",
+    "PRRT_kwDOQGRyNc6oxtOq",
+    "PRRT_kwDOQGRyNc6oxtOt",
+    "PRRT_kwDOQGRyNc6oxtOv",
+    "PRRT_kwDOQGRyNc6ozOtb",
+    "PRRT_kwDOQGRyNc6o0iU5",
+    "PRRT_kwDOQGRyNc6o0iU8",
+    "PRRT_kwDOQGRyNc6o0iU-",
+    "PRRT_kwDOQGRyNc6o1c8T",
+    "PRRT_kwDOQGRyNc6o1c8W",
+    "PRRT_kwDOQGRyNc6o1c8X",
+    "PRRT_kwDOQGRyNc6pyg6w",
+    "PRRT_kwDOQGRyNc6pyg62",
+    "PRRT_kwDOQGRyNc6pzgm5",
+    "PRRT_kwDOQGRyNc6pzgnM",
+    "PRRT_kwDOQGRyNc6pz8hq",
+    "PRRT_kwDOQGRyNc6pz8ht",
+    "PRRT_kwDOQGRyNc6p2B3h",
+    "PRRT_kwDOQGRyNc6p2B3s",
+    "PRRT_kwDOQGRyNc6p2B30",
+    "PRRT_kwDOQGRyNc6qTx8x",
+    "PRRT_kwDOQGRyNc6qTx9B",
+    "PRRT_kwDOQGRyNc6qTx9K",
+    "PRRT_kwDOQGRyNc6qjvAp",
+    "PRRT_kwDOQGRyNc6qlQp4",
+    "PRRT_kwDOQGRyNc6qmBxR",
+    "PRRT_kwDOQGRyNc6qme8W",
+    "PRRT_kwDOQGRyNc6qm-hc",
+    "PRRT_kwDOQGRyNc6qm-hm",
+    "PRRT_kwDOQGRyNc6qm-ht",
+    "PRRT_kwDOQGRyNc6qnYiv",
+    "PRRT_kwDOQGRyNc6qnYiz",
+    "PRRT_kwDOQGRyNc6qnYi2",
+    "PRRT_kwDOQGRyNc6qnYi8"
+  ],
+  "sharedCapFrozenSourceReadback": [
+    {
+      "path": "backend/utils/resource-budget.mjs",
+      "sameSha256": true
+    },
+    {
+      "path": "backend/utils/media_lease_exec.py",
+      "sameSha256": true
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+      "sameSha256": true
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/split_video_chunks.mjs",
+      "sameSha256": true
+    },
+    {
+      "path": "backend/utils/tests/resource-budget.test.mjs",
+      "sameSha256": true
+    },
+    {
+      "path": "backend/utils/tests/test_media_shared_lease.py",
+      "sameSha256": true
+    },
+    {
+      "path": "backend/utils/MEDIA_RESOURCE_BUDGET.md",
+      "sameSha256": true
+    }
+  ],
+  "sharedCapEvidenceDoesNotAddressTheseThreads": true,
+  "remoteReviewStateQueried": false,
+  "resolveOrPostPerformed": false,
+  "sourceEdits": false,
+  "providerCalls": 0,
+  "operatingWrites": 0,
+  "proposalsRequireRootReviewBeforeOwnershipOrSourceEdits": true
+}

@@ -1,0 +1,18 @@
+/* Standalone HTTP transport notice; values match styles/light-root-tokens.css. */
+:root { color-scheme: light; --background: 220 27% 98%; --foreground: 218 15% 15%; --card: 0 0% 100%; --muted-foreground: 218 9% 42%; --border: 220 18% 90%; --ring: 352 74% 42%; }
+* { box-sizing: border-box; }
+body { margin: 0; background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, sans-serif; }
+main { display: flex; min-height: 100vh; min-height: 100dvh; align-items: center; justify-content: center; padding: 2rem 1rem; }
+section { width: 100%; max-width: 360px; border: 1px solid hsl(var(--border)); border-radius: 1rem; background: hsl(var(--card)); padding: 1.5rem; text-align: center; box-shadow: 0 18px 60px hsl(24 10% 10% / .1); }
+img { display: block; margin: 0 auto 1rem; object-fit: contain; }
+h1 { margin: 0; font-size: 1.125rem; line-height: 1.5; font-weight: 600; letter-spacing: -.01em; }
+p { margin: .5rem 0 0; color: hsl(var(--muted-foreground)); font-size: .875rem; line-height: 1.5; }
+nav { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin-top: 1.5rem; }
+a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border: 1px solid hsl(var(--border)); border-radius: .5rem; padding: .5rem .75rem; color: inherit; font-size: .875rem; font-weight: 500; text-decoration: none; }
+a:hover { background: hsl(var(--background)); }
+a:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --background: 220 18% 9%; --foreground: 220 20% 96%; --card: 220 16% 12%; --muted-foreground: 220 12% 70%; --border: 220 13% 24%; --ring: 352 78% 62%; }
+}

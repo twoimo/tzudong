@@ -1,0 +1,174 @@
+{
+  "environment": "Bun 1.4.0, local in-process synthetic client; no SQL/PostgREST/network/provider execution",
+  "kind": "deterministic request and compact JSON response byte accounting; not latency/CPU/RSS or operating performance",
+  "pairs": 7,
+  "rows": 1000,
+  "targets": 200,
+  "equivalent": true,
+  "sourceSha256": {
+    "lib/admin/evaluation-page-server.ts": "04933165d80cd1cac653a6b1d1d31c7ffffc18a858365790485772789b4d0620",
+    "lib/admin/evaluation-warning-adaptive-codec.ts": "9872f35d53c059be7f547b6d9bc11898e6fedf69158cf6e57920f367970c3b88",
+    "lib/admin/evaluation-warning-raw-groups.ts": "a79a1a922fad44a906ebdad24efd12e788cf300568d22b0091635af527798dc8",
+    "lib/admin/evaluation-warning-stream.ts": "3a5495a38e262ce93e5ce36b942465a004506a1e378e4e0ed9bc9ced28929044",
+    "lib/admin-same-video-duplicate-warning.ts": "7904013149561b7fc7662cb5d05e56213147b45148e86242c82064a5529cbcb1",
+    "lib/admin-restaurant-identity-warning.ts": "32e8283f6d1b394ea3ba3c113f05a4325ac18f4cebfef2113f1547f574e2b4ba",
+    "lib/admin/normalize-evaluation-record.ts": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
+    "scripts/measure-evaluation-warning-default.ts": "74ae61bc18386d8cf8be04b224698b7ba13ff533efdac82e010089fdcce1e41f"
+  },
+  "observations": [
+    {
+      "pair": 0,
+      "mode": "stream",
+      "warningReadPath": "WARNING_STREAM",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 6,
+      "warningResponseBytes": 539007,
+      "totalCalls": 8,
+      "totalResponseBytes": 647083,
+      "maxWarningResponseBytes": 107801
+    },
+    {
+      "pair": 0,
+      "mode": "auto",
+      "warningReadPath": "WARNING_RAW_GROUPS",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 1,
+      "warningResponseBytes": 25241,
+      "totalCalls": 3,
+      "totalResponseBytes": 133317,
+      "maxWarningResponseBytes": 25241
+    },
+    {
+      "pair": 1,
+      "mode": "auto",
+      "warningReadPath": "WARNING_RAW_GROUPS",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 1,
+      "warningResponseBytes": 25241,
+      "totalCalls": 3,
+      "totalResponseBytes": 133317,
+      "maxWarningResponseBytes": 25241
+    },
+    {
+      "pair": 1,
+      "mode": "stream",
+      "warningReadPath": "WARNING_STREAM",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 6,
+      "warningResponseBytes": 539007,
+      "totalCalls": 8,
+      "totalResponseBytes": 647083,
+      "maxWarningResponseBytes": 107801
+    },
+    {
+      "pair": 2,
+      "mode": "stream",
+      "warningReadPath": "WARNING_STREAM",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 6,
+      "warningResponseBytes": 539007,
+      "totalCalls": 8,
+      "totalResponseBytes": 647083,
+      "maxWarningResponseBytes": 107801
+    },
+    {
+      "pair": 2,
+      "mode": "auto",
+      "warningReadPath": "WARNING_RAW_GROUPS",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 1,
+      "warningResponseBytes": 25241,
+      "totalCalls": 3,
+      "totalResponseBytes": 133317,
+      "maxWarningResponseBytes": 25241
+    },
+    {
+      "pair": 3,
+      "mode": "auto",
+      "warningReadPath": "WARNING_RAW_GROUPS",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 1,
+      "warningResponseBytes": 25241,
+      "totalCalls": 3,
+      "totalResponseBytes": 133317,
+      "maxWarningResponseBytes": 25241
+    },
+    {
+      "pair": 3,
+      "mode": "stream",
+      "warningReadPath": "WARNING_STREAM",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 6,
+      "warningResponseBytes": 539007,
+      "totalCalls": 8,
+      "totalResponseBytes": 647083,
+      "maxWarningResponseBytes": 107801
+    },
+    {
+      "pair": 4,
+      "mode": "stream",
+      "warningReadPath": "WARNING_STREAM",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 6,
+      "warningResponseBytes": 539007,
+      "totalCalls": 8,
+      "totalResponseBytes": 647083,
+      "maxWarningResponseBytes": 107801
+    },
+    {
+      "pair": 4,
+      "mode": "auto",
+      "warningReadPath": "WARNING_RAW_GROUPS",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 1,
+      "warningResponseBytes": 25241,
+      "totalCalls": 3,
+      "totalResponseBytes": 133317,
+      "maxWarningResponseBytes": 25241
+    },
+    {
+      "pair": 5,
+      "mode": "auto",
+      "warningReadPath": "WARNING_RAW_GROUPS",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 1,
+      "warningResponseBytes": 25241,
+      "totalCalls": 3,
+      "totalResponseBytes": 133317,
+      "maxWarningResponseBytes": 25241
+    },
+    {
+      "pair": 5,
+      "mode": "stream",
+      "warningReadPath": "WARNING_STREAM",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 6,
+      "warningResponseBytes": 539007,
+      "totalCalls": 8,
+      "totalResponseBytes": 647083,
+      "maxWarningResponseBytes": 107801
+    },
+    {
+      "pair": 6,
+      "mode": "stream",
+      "warningReadPath": "WARNING_STREAM",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 6,
+      "warningResponseBytes": 539007,
+      "totalCalls": 8,
+      "totalResponseBytes": 647083,
+      "maxWarningResponseBytes": 107801
+    },
+    {
+      "pair": 6,
+      "mode": "auto",
+      "warningReadPath": "WARNING_RAW_GROUPS",
+      "outputSha256": "bca73cb61f1d15692fb9186ccd643411dcfae5e25e33b40ba83b1eb438318885",
+      "warningCalls": 1,
+      "warningResponseBytes": 25241,
+      "totalCalls": 3,
+      "totalResponseBytes": 133317,
+      "maxWarningResponseBytes": 25241
+    }
+  ]
+}

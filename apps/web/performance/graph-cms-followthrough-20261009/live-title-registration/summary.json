@@ -1,0 +1,30 @@
+{
+  "observedAtUtc": "2026-10-09T02:00:37.608616+00:00",
+  "evidenceClass": "actual-local-OSK-title-CAS-and-candidate-canonical-reader",
+  "planSha256": "4aba5bb9c4c257d49b1c37f2a323cdc44b71e52ef91434dbc7f90d99a156f4cb",
+  "targetCount": 9,
+  "privateByteBackups": 9,
+  "prefixBodyAndOriginalMetadataPreserved": true,
+  "beforeRevision": "f519c027d4cbd815146d8f6f4c4d47baa4578af903e7073c7c2fde3723ac410a",
+  "afterRevision": "285ba23b0eacb4a7069205b90e772b613daeadc6f34bbc18f0ad73afb3da6150",
+  "nodes": 30,
+  "edges": 88,
+  "actualTitledNodes": 9,
+  "captionStagesPreserved": true,
+  "titleSearchAndSelectedDetailPassed": true,
+  "analyzedCount": 0,
+  "providerCalls": 0,
+  "operatingDatabaseWrites": 0,
+  "deployed": false,
+  "independentCompletionsAdded": 0,
+  "rootTests": {
+    "captionTitleAndV1Python": 9,
+    "knowledgeGraphWeb": 29
+  },
+  "firstReadbackAttempt": {
+    "code": "knowledge_query_invalid",
+    "cause": "root verification used selected instead of supported node query key; strict input rejection preserved",
+    "mutationResent": false
+  },
+  "recovery": "Exact nine before files and CAS plan remain outside Git, 0600. Original v1 records preserved; old v1 apply cannot overwrite enriched nodes."
+}

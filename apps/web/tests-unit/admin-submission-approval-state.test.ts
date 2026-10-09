@@ -165,8 +165,7 @@ describe('submission approval state contract', () => {
     expect(listSource).toContain('browser-local-search-evidence:not-backend-truth');
     expect(listSource).toContain('buildApprovalAuditNote()');
     expect(pageSource).not.toContain('void forceApprove');
-    expect(pageSource).toContain('admin_notes: approvalAuditNote');
-    expect(pageSource).toContain('forceApprove=true');
-    expect(pageSource).toContain('itemRejectionError');
+    expect(pageSource).toContain('recordActions.run(submissionApprovalInput(input))');
+    expect(pageSource).not.toContain('approve_submission_item');
   });
 });

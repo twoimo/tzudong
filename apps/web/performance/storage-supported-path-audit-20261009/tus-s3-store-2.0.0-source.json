@@ -1,0 +1,10 @@
+{
+  "version": "2.0.0",
+  "gitHead": "1abc10049de770cfc2a6c18db9e7b57356b667cb",
+  "repository": {
+    "url": "git+https://github.com/tus/tus-node-server.git",
+    "type": "git"
+  },
+  "tarball": "https://registry.npmjs.org/@tus/s3-store/-/s3-store-2.0.0.tgz",
+  "tarballSha256": "b3bd0d83e65a62bd24a5f9fe35f6d439a2c3b2fa0768b0227690c8f14e63f6fa"
+}

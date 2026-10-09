@@ -1,0 +1,11 @@
+{
+  "pairs": 1,
+  "observations": 4,
+  "originalCorpusUnchanged": true,
+  "sourceUnchanged": true,
+  "exactOutputsAllEqual": true,
+  "duplicates": 0,
+  "candidatePeakFfmpeg": 4,
+  "liveEvidenceEligible": false,
+  "fullEndToEndGoalComplete": false
+}

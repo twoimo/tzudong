@@ -1,0 +1,54 @@
+{
+  "head": "8571b65b5e8079d2f238389aaf68f41740aa170e",
+  "sourceManifest": "sql-review-delivery-source-manifest.json",
+  "fixedDiscussionIds": [
+    4227745935,
+    4227745944,
+    4227745952,
+    4227745960,
+    4227824954,
+    4227824964,
+    4227824969,
+    4227824976,
+    4227824987
+  ],
+  "results": [
+    {
+      "id": "PRRT_kwDOQGRyNc6qsBNG",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsBNN",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsBNS",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsBNa",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsNwE",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsNwI",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsNwN",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsNwT",
+      "isResolved": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsNwZ",
+      "isResolved": true
+    }
+  ],
+  "commentsSent": 0
+}

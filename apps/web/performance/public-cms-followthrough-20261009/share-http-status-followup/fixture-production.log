@@ -1,0 +1,28 @@
+▲ Next.js 16.3.8 (webpack)
+✓ Running next.config.mjs took 9ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.3s
+  Running TypeScript ...
+  Finished TypeScript in 2ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/1) ...
+✓ Generating static pages using 7 workers (1/1) in 261ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /legacy/[code]
+├ ƒ /notice/[code]
+└ ƒ /s/[code]
+
+
+ƒ  (Dynamic)  server-rendered on demand
+
+▲ Next.js 16.3.8
+- Local:         http://127.0.0.1:20371
+- Network:       http://127.0.0.1:20371
+✓ Ready in 165ms
+✓ Running next.config.mjs took 10ms

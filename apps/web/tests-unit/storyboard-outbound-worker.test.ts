@@ -6,8 +6,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import sharp from 'sharp';
-import { MlxStoryboardClient, type MlxModel } from '../lib/admin/storyboard/mlx-client';
-import { MlxTransport } from '../lib/admin/storyboard/mlx-transport';
+import { GoogleGenAI } from '@google/genai';
+import { GeminiStoryboardClient } from '../lib/admin/storyboard/gemini-client';
+import type { ProductionModel as MlxModel } from '../lib/admin/storyboard/production-worker-auth';
 import {
   OutboundStoryboardWorker, StoryboardWorkerApiError, StoryboardWorkerTransport,
   readStoryboardWorkerToken, type StoryboardWorkerApi,
@@ -19,9 +20,9 @@ import {
 } from '../lib/admin/storyboard/production-contract';
 
 const proof = (kind: 'text' | 'image'): StoryboardProductionProvenance => ({
-  providerId: 'local-mlx', model: `installed-${kind}`, verification: 'local-worker',
+  providerId: 'gemini-api', model: kind === 'text' ? 'gemini-3.8-flash' : 'gemini-3.1-flash-image', verification: 'official-api',
   generatedAt: new Date().toISOString(), requestId: randomUUID(), responseId: null,
-  responseModel: null, modelEvidence: 'installed-catalog-and-request',
+  responseModel: kind === 'text' ? 'gemini-3.8-flash' : 'gemini-3.1-flash-image', modelEvidence: 'response',
 });
 const draft = (): StoryboardDraft => ({ title: '워커 단위 테스트', logline: '실제 모델 결과가 아닌 테스트 픽스처',
   scenes: Array.from({ length: 5 }, (_, index) => ({ sceneNo: index + 1, title: `장면 ${index + 1}`,
@@ -29,14 +30,14 @@ const draft = (): StoryboardDraft => ({ title: '워커 단위 테스트', loglin
     productionNotes: ['고정 카메라'], imagePrompt: `scene ${index + 1}`, sourceIds: [],
   })),
 });
-const models: MlxModel[] = ['text', 'image'].map((kind) => ({ id: `installed-${kind}`, owned_by: 'mlx-serve',
-  capabilities: [kind === 'text' ? 'chat' : 'image'], loaded: true, bytes_on_disk: 100, bytes_resident: 100 }));
+const models: MlxModel[] = ['text', 'image'].map((kind) => ({ id: kind === 'text' ? 'gemini-3.8-flash' : 'gemini-3.1-flash-image', owned_by: 'gemini-api',
+  capabilities: [kind === 'text' ? 'chat' : 'image'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 }));
 const fixturePixels = sharp({ create: { width: 128, height: 72, channels: 3, background: '#dddddd' } }).png().toBuffer();
 function job(): ClaimedStoryboardJob {
   return { id: randomUUID(), projectId: randomUUID(), revision: 0, kind: 'generate', sceneNo: null, leaseToken: randomUUID(),
     document: null, request: storyboardProductionRequestSchema.parse({ workflow: STORYBOARD_WORKFLOW, requestId: randomUUID(),
-      sceneCount: 5, prompt: '테스트', providers: { externalAI: false,
-        text: { id: 'local-mlx', model: 'installed-text' }, image: { id: 'local-mlx', model: 'installed-image' } } }) };
+      sceneCount: 5, prompt: '테스트', providers: { externalAI: true,
+        text: { id: 'gemini-api', model: 'gemini-3.8-flash' }, image: { id: 'gemini-api', model: 'gemini-3.1-flash-image' } } }) };
 }
 function savedJob(): ClaimedStoryboardJob {
   const value = job();
@@ -58,7 +59,7 @@ function fixture(value: ClaimedStoryboardJob | null = job()) {
     },
     async image(lease, sceneNo) { calls.push({ action: 'image', ...lease, sceneNo }); },
   };
-  const mlx: Pick<MlxStoryboardClient, 'models' | 'draft' | 'image'> = {
+  const mlx: Pick<GeminiStoryboardClient, 'models' | 'draft' | 'image'> = {
     async models() { return models; },
     async draft() { drafts++; return { draft: draft(), provenance: proof('text') }; },
     async image(_request, prompt) { generated.push(prompt); return { bytes: await fixturePixels, provenance: proof('image') }; },
@@ -116,15 +117,12 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
     expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('completed');
     expect(f.generated).toEqual(['scene 2', 'scene 4']); expect(f.draftCalls()).toBe(0);
   });
-  test('manual text/local images and local text/manual images stay independent', async () => {
-    const imported = savedJob(); imported.request.providers.text = { id: 'manual', model: '' };
-    const a = fixture(imported);
-    expect(await new OutboundStoryboardWorker(a).runOnce()).toBe('completed');
-    expect(a.draftCalls()).toBe(0); expect(a.generated).toHaveLength(5);
-    const local = job(); local.request.providers.image = { id: 'manual', model: '' };
-    const b = fixture(local);
-    expect(await new OutboundStoryboardWorker(b).runOnce()).toBe('completed');
-    expect(b.draftCalls()).toBe(1); expect(b.generated).toEqual([]);
+  test('rejects non-Gemini execution before any provider call while preserving saved data', async () => {
+    const old = savedJob(); old.request.providers.text = { id: 'manual', model: '' };
+    const a = fixture(old);
+    expect(await new OutboundStoryboardWorker(a).runOnce()).toBe('failed');
+    expect(a.draftCalls()).toBe(0); expect(a.generated).toEqual([]);
+    expect(old.document?.scenes).toHaveLength(5);
   });
   test('corrupt scene failure preserves other scenes and does not report completion', async () => {
     const f = fixture(); const generate = f.mlx.image;
@@ -172,7 +170,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
     for (const lateResult of [false, true]) {
       test(`polling survives lease loss during ${stage}, late result=${lateResult}`, async () => {
         const first = stage === 'draft' ? job() : savedJob();
-        const next = job(); next.request.providers.image = { id: 'manual', model: '' };
+        const next = job();
         const f = fixture(first); const call = f.api.operation;
         const queue = [first, next]; const stop = new AbortController();
         let generating = false; let aborted = false;
@@ -198,7 +196,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
           return generateDraft(request, signal);
         };
         const generateImage = f.mlx.image;
-        f.mlx.image = async (...args) => { await waitForCancellation(args[2]); return generateImage(...args); };
+        f.mlx.image = async (...args) => { if (args[0].requestId === first.request.requestId) await waitForCancellation(args[2]); return generateImage(...args); };
         const events: string[] = [];
         const worker = new OutboundStoryboardWorker({ ...f, heartbeatMs: 5, onEvent(event) {
           events.push(event.event);
@@ -215,7 +213,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
   }
   for (const stage of ['draft', 'image', 'scene-error', 'finish'] as const) {
     test(`a rejected ${stage} checkpoint drops this lease and permits the next claim`, async () => {
-      const first = job(); const next = job(); next.request.providers.image = { id: 'manual', model: '' };
+      const first = job(); const next = job();
       const f = fixture(first); const call = f.api.operation; const queue = [first, next];
       const stop = new AbortController();
       f.api.operation = async (payload) => {
@@ -225,10 +223,11 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
         }
         return call(payload);
       };
-      if (stage === 'image') f.api.image = async (lease, sceneNo) => {
-        f.calls.push({ action: 'image', ...lease, sceneNo }); throw new StoryboardWorkerApiError('worker_lease_lost');
-      };
-      if (stage === 'scene-error') f.mlx.image = async () => ({ bytes: Buffer.from('corrupt'), provenance: proof('image') });
+      if (stage === 'image') { const good = f.api.image; f.api.image = async (lease, ...args) => {
+        if (lease.jobId !== first.id) return good(lease, ...args);
+        f.calls.push({ action: 'image', ...lease, sceneNo: args[0] }); throw new StoryboardWorkerApiError('worker_lease_lost');
+      }; }
+      if (stage === 'scene-error') { const good = f.mlx.image; f.mlx.image = async (...args) => args[0].requestId === first.request.requestId ? { bytes: Buffer.from('corrupt'), provenance: proof('image') } : good(...args); }
       const worker = new OutboundStoryboardWorker({ ...f, onEvent(event) {
         if (event.event === 'finished' && event.jobId === next.id) stop.abort();
       } });
@@ -240,7 +239,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
     });
   }
   test('cancellation while reporting a provider failure still permits the next job', async () => {
-    const first = job(); const next = job(); next.request.providers.image = { id: 'manual', model: '' };
+    const first = job(); const next = job();
     const f = fixture(first); const call = f.api.operation; const generateDraft = f.mlx.draft;
     const queue = [first, next]; const stop = new AbortController();
     f.mlx.draft = async (request, signal) => {
@@ -438,7 +437,7 @@ describe('worker credentials and actual HTTP boundaries', () => {
       expect(calls).toBe(4);
     } finally { await close(server); }
   });
-  test('real sockets carry auth only to the app and valid multipart pixels; MLX receives no token', async () => {
+  test('real sockets carry auth only to the app and valid multipart pixels; the Gemini endpoint receives no worker token', async () => {
     const value = job(); const paths: string[] = []; const destinations: WorkerDestination[] = [];
     const token = randomBytes(32).toString('base64url');
     const image = await sharp({ create: { width: 128, height: 72, channels: 3, background: '#dddddd' } }).png().toBuffer();
@@ -446,10 +445,10 @@ describe('worker credentials and actual HTTP boundaries', () => {
     const mlxServer = createServer((req, res) => {
       authorizationLeak ||= req.headers.authorization !== undefined;
       req.resume(); res.writeHead(200, { 'Content-Type': 'application/json' });
-      if (req.url === '/health') res.end(JSON.stringify({ status: 'ok' }));
-      else if (req.url === '/v1/models') res.end(JSON.stringify({ data: models }));
-      else if (req.url === '/v1/chat/completions') res.end(JSON.stringify({ model: 'installed-text', choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(draft()) } }] }));
-      else res.end(JSON.stringify({ model: 'installed-image', data: [{ b64_json: image.toString('base64') }] }));
+      const model = decodeURIComponent((req.url ?? '').match(/models\/([^:?]+)/)?.[1] ?? '');
+      if (!req.url?.includes(':generateContent')) res.end(JSON.stringify({ name: `models/${model}` }));
+      else res.end(JSON.stringify({ modelVersion: model, candidates: [{ content: { parts: model === 'gemini-3.8-flash'
+        ? [{ text: JSON.stringify(draft()) }] : [{ inlineData: { mimeType: 'image/png', data: image.toString('base64') } }] } }] }));
     });
     const appServer = createServer(async (req, res) => {
       paths.push(req.url!); expect(req.headers.authorization).toBe(`Bearer ${token}`);
@@ -461,7 +460,7 @@ describe('worker credentials and actual HTTP boundaries', () => {
         expect(form.get('jobId')).toBe(value.id); expect(form.get('leaseToken')).toBe(value.leaseToken);
         const file = form.get('file') as File;
         expect(file.type).toBe('image/png'); expect(Buffer.from(await file.arrayBuffer()).equals(image)).toBe(true);
-        expect(JSON.parse(String(form.get('provenance'))).model).toBe('installed-image'); uploads++;
+        expect(JSON.parse(String(form.get('provenance'))).model).toBe('gemini-3.1-flash-image'); uploads++;
         res.end('{"ok":true}');
       } else {
         const body = JSON.parse(bytes.toString());
@@ -471,7 +470,7 @@ describe('worker credentials and actual HTTP boundaries', () => {
     });
     try {
       const api = new StoryboardWorkerTransport({ origin: await listen(appServer), token, onDestination: (r) => destinations.push(r) });
-      const mlx = new MlxStoryboardClient(new MlxTransport({ origin: await listen(mlxServer) }));
+      const mlx = new GeminiStoryboardClient({ client: new GoogleGenAI({ apiKey: 'synthetic', httpOptions: { baseUrl: await listen(mlxServer), retryOptions: { attempts: 1 } } }) });
       expect(await new OutboundStoryboardWorker({ api, mlx, admitMemory: () => true }).runOnce()).toBe('completed');
       expect(uploads).toBe(5); expect(authorizationLeak).toBe(false);
       expect(paths.every((p) => ['/api/storyboard-worker', '/api/storyboard-worker/images'].includes(p))).toBe(true);

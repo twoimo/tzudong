@@ -37,10 +37,10 @@ const STAGE_INFO: Record<StoryboardRagFailureStage, {
     ],
   },
   bge_embedding: {
-    label: 'BGE 임베딩',
-    message: 'BGE-M3 임베딩 단계에서 필수 dense/sparse 결과 검증이 실패해 중단했어요.',
+    label: 'Gemini 임베딩',
+    message: 'Gemini 임베딩 단계에서 벡터/설정 지문 검증이 실패해 중단했어요.',
     nextActions: [
-      'BAAI/bge-m3 모델이 Python worker 환경에 설치되어 있는지 확인해 주세요.',
+      'Gemini worker API 인증과 embedding 설정 지문을 확인해 주세요.',
       'worker 로그에서 /embed 요청과 모델 로딩 오류를 확인해 주세요.',
       '첫 로딩 시간이 길면 worker를 미리 예열하거나 타임아웃을 늘려 주세요.',
     ],
@@ -56,28 +56,28 @@ const STAGE_INFO: Record<StoryboardRagFailureStage, {
   },
   reranker: {
     label: 'reranker',
-    message: 'bge-reranker-v2-m3 재정렬 단계에서 필수 결과 검증이 실패해 중단했어요.',
+    message: 'Gemini embedding cosine 재정렬 단계에서 필수 결과 검증이 실패해 중단했어요.',
     nextActions: [
-      'BAAI/bge-reranker-v2-m3 모델이 Python worker 환경에 설치되어 있는지 확인해 주세요.',
+      'Gemini worker API 인증과 후보 임베딩 응답을 확인해 주세요.',
       'worker 로그에서 /rerank 요청과 후보 문서 수를 확인해 주세요.',
-      'GPU/메모리 부족이나 모델 첫 로딩 지연이면 worker를 예열하거나 타임아웃을 늘려 주세요.',
+      '응답 유실 시 결과 상태를 확인한 뒤 명시적으로 재시도해 주세요.',
     ],
   },
   llava_caption: {
-    label: 'LLaVA caption',
-    message: 'LLaVA-NeXT-Video-7B-hf 캡션 단계에서 필수 모델 실행이 실패해 중단했어요.',
+    label: 'Gemini caption',
+    message: 'Gemini 프레임 캡션 단계에서 필수 모델 실행이 실패해 중단했어요.',
     nextActions: [
-      'llava-hf/LLaVA-NeXT-Video-7B-hf 모델 파일이 다운로드됐는지 확인해 주세요.',
-      '프레임 이미지 경로와 GPU/메모리 여유를 확인해 주세요.',
-      '영상 캡션 첫 실행이 길면 worker를 예열하거나 타임아웃을 늘려 주세요.',
+      'Gemini worker 인증과 프레임 입력을 확인해 주세요.',
+      '프레임 이미지 경로와 크기 제한을 확인해 주세요.',
+      '응답 유실 시 자동 재호출하지 않고 명시적으로 복구해 주세요.',
     ],
   },
   judge: {
     label: 'judge',
-    message: 'Gemini/OpenAI/Ollama judge 또는 planning 모델 단계에서 필수 provider 확인이 실패해 중단했어요.',
+    message: 'Gemini judge 또는 planning 모델 단계에서 필수 provider 확인이 실패해 중단했어요.',
     nextActions: [
-      'Gemini/OpenAI OAuth 파일과 권한이 유효한지 확인해 주세요.',
-      'Ollama가 실행 중인지 확인하고 필요한 judge 모델을 다운로드해 주세요.',
+      'Gemini worker API 인증과 권한을 확인해 주세요.',
+      '응답 유실 시 기존 결과를 확인한 뒤 명시적으로 재시도해 주세요.',
       'provider quota·네트워크·타임아웃 설정을 확인해 주세요.',
     ],
   },

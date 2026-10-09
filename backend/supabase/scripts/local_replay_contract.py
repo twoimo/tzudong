@@ -53,6 +53,67 @@ _CONTRACTS = {'backend/supabase/migrations/20260906040116_admin_user_ids_catalog
                                                                                       'sql_sha256': '3a95ed40845582f62d8f404c509539eb35f2f82f841c6c91830a9c6a8921fb69'}}
 
 
+_CONTRACTS['backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql'] = {
+    'source': 'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql',
+    'bindings': {
+        'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql': '2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae',
+        'backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql': '4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00',
+        'backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql': 'b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf',
+        'backend/supabase/scripts/admin_management_group_plan.py': 'c640778e56ed2e2399fe5c26b35e8fe96a2ee3a02418eb371ac634a5199a5bf9',
+        'backend/supabase/scripts/advisor_successor_plan.py': 'cb5d84b85d09b8c89a1d88abdd142551930b33445bfda178b30f982015d83813',
+        'backend/supabase/scripts/g037_supabase_statement_vector.mjs': '398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd',
+        'backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py': 'edf65e557363d16f7c3fcf1359fe880999e275924fcf57d46abd2edb956d9c53',
+    },
+    'disposition': 'verified-existing',
+    'receipt': {
+        'schema': 'admin-user-rpc-forward-source-replay-v1',
+        'source_sha256': '2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae',
+        'accepted_source_sha256': '4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00',
+        'predecessor_sha256': 'b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf',
+        'disposition': 'already-present-contract-verified',
+        'read_only': True,
+        'operating_sql_executed': False,
+        'required_operating_server_version_num': 170006,
+        'required_operating_ledger_count': 85,
+    },
+    'sql_sha256': 'd40a19e1a3564a6a22b92d857e6aece7968a097311cf37a8a7782d917266dbb7',
+}
+
+
+_CONTRACTS['backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql'] = {'source': 'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql',
+ 'bindings': {'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql': 'a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545',
+              'backend/supabase/scripts/verify_g014_owner_final_replay.py': 'e2bf725020498cea26b18ae131f09c7b0f1ffed6918ce9302ff1d39ebdf7efef',
+              'backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql': '8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483',
+              'backend/supabase/scripts/verify_g014_pg17_owner_replay.py': '8b8ac9857b5931d2e7609280f85a95264fb854ef374d969d25d1f7c3ead3b2c0'},
+ 'disposition': 'legacy-contract-preserved',
+ 'receipt': {'schema': 'g014-owner-final-pg15-replay-v1',
+             'read_only': True,
+             'disposition': 'legacy-contract-preserved',
+             'source_sha256': 'a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545',
+             'predecessor_sha256': '8196f4fd81f2059e0da427d7022f5b7f768a945f7adbe7188f5409b540d25483',
+             'hosted_final_verifier_executed': False,
+             'hosted_ledger_admission_verified': False,
+             'required_hosted_pg_major': 17,
+             'required_hosted_ledger_count': 77},
+ 'sql_sha256': '152ad5d6ad561667857bf6f14bf0786678b7ea86ec987c8ea899684aa55df73b'}
+
+_CONTRACTS['backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql'] = {'source': 'backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql',
+ 'bindings': {'backend/supabase/applied-receipts/owner-recovery-20261004/20261004123034_g016_onboarding_allowlist_identity_correction.sql': 'b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f',
+              'backend/supabase/scripts/verify_g016_identity_correction_replay.py': '61e232b874aee9f75cb132765919903d5b43f5fbe38d4c4d5390b0d8df9055ca',
+              'backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql': '2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3'},
+ 'disposition': 'verified-existing',
+ 'receipt': {'schema': 'g016-identity-pg15-replay-v1',
+             'read_only': True,
+             'disposition': 'verified-existing',
+             'source_sha256': 'b8ca1f397f2645682c0a7fd8a0250027bb5978b34195ea69046a6d8984d9108f',
+             'predecessor_sha256': '2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3',
+             'hosted_identity_correction_executed': False,
+             'hosted_ledger_admission_verified': False,
+             'required_hosted_pg_major': 17,
+             'required_hosted_ledger_count': 76},
+ 'sql_sha256': 'c76f00dc5841e8700f7f3b9a96358de66ecf068213ee4f752febb3ebed33f838'}
+
+
 class ReplayContractError(ValueError):
     """Bounded code, without raw SQL, provider output or arbitrary input."""
 

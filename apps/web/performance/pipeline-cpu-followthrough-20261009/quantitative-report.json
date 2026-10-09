@@ -1,0 +1,216 @@
+{
+  "scope": "same-host frozen current before/after local media/LAAJ/transform replay; deterministic archived provider responses, zero real provider/API/operational calls",
+  "pairsPerPhase": 7,
+  "observations": 28,
+  "metrics": {
+    "cold": {
+      "cpuMs": {
+        "pairs": 7,
+        "baselineMean": 3648.6305714285713,
+        "candidateMean": 3268.916857142857,
+        "absoluteReductionMean": 379.7137142857142,
+        "relativeReductionMeanPercent": 10.383428605525484,
+        "pairedT95CiAbsoluteReduction": [
+          273.8905628685472,
+          485.53686570288124
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          301.3225714285714,
+          456.96699999999976
+        ],
+        "pairedDifferenceStddev": 114.42248787529223,
+        "baselineCvPercent": 5.205876407105257,
+        "candidateCvPercent": 5.723695423908228,
+        "relativeReductionRatioOfMeansPercent": 10.407020027161654,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false,
+        "pairedBootstrap95CiRatioOfMeansReductionPercent": [
+          8.463341714984164,
+          12.588949050059597
+        ]
+      },
+      "wallMs": {
+        "pairs": 7,
+        "baselineMean": 3223.279725793483,
+        "candidateMean": 2658.7216309271753,
+        "absoluteReductionMean": 564.5580948663077,
+        "relativeReductionMeanPercent": 16.257778134547163,
+        "pairedT95CiAbsoluteReduction": [
+          126.4250262527263,
+          1002.691163479889
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          317.4197737327112,
+          939.9380709842911
+        ],
+        "pairedDifferenceStddev": 473.73637110441837,
+        "baselineCvPercent": 18.292968446057227,
+        "candidateCvPercent": 9.678932152184455,
+        "relativeReductionRatioOfMeansPercent": 17.515020193518236,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false,
+        "pairedBootstrap95CiRatioOfMeansReductionPercent": [
+          10.536714164870135,
+          25.682379737178994
+        ]
+      },
+      "peakTreeRssMiB": {
+        "pairs": 7,
+        "baselineMean": 255.49107142857142,
+        "candidateMean": 246.08035714285714,
+        "absoluteReductionMean": 9.410714285714286,
+        "relativeReductionMeanPercent": -2.8671833525098145,
+        "pairedT95CiAbsoluteReduction": [
+          -84.0817031679047,
+          102.90313173933329
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -63.84375,
+          75.88169642857143
+        ],
+        "pairedDifferenceStddev": 101.08974132084927,
+        "baselineCvPercent": 21.419310123788684,
+        "candidateCvPercent": 26.125405347775242,
+        "relativeReductionRatioOfMeansPercent": 3.6833828411672167,
+        "within20PercentCvNoiseBudget": false,
+        "admittedForLivePerformanceClaim": false,
+        "pairedBootstrap95CiRatioOfMeansReductionPercent": [
+          -27.736432985209024,
+          26.32878663549521
+        ]
+      }
+    },
+    "restart": {
+      "cpuMs": {
+        "pairs": 7,
+        "baselineMean": 477.0795714285714,
+        "candidateMean": 419.0395714285714,
+        "absoluteReductionMean": 58.04000000000001,
+        "relativeReductionMeanPercent": 11.832604106485903,
+        "pairedT95CiAbsoluteReduction": [
+          24.500277356999803,
+          91.57972264300022
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          34.15957142857144,
+          83.10471428571428
+        ],
+        "pairedDifferenceStddev": 36.26520715047228,
+        "baselineCvPercent": 9.676454938399164,
+        "candidateCvPercent": 9.017383466614856,
+        "relativeReductionRatioOfMeansPercent": 12.165685448698738,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false,
+        "pairedBootstrap95CiRatioOfMeansReductionPercent": [
+          7.34399270731529,
+          17.062242005989415
+        ]
+      },
+      "wallMs": {
+        "pairs": 7,
+        "baselineMean": 666.422422476379,
+        "candidateMean": 540.0645119537201,
+        "absoluteReductionMean": 126.35791052265891,
+        "relativeReductionMeanPercent": 17.190995760606874,
+        "pairedT95CiAbsoluteReduction": [
+          13.938283070773124,
+          238.7775379745447
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          42.23399965225586,
+          207.88730923751635
+        ],
+        "pairedDifferenceStddev": 121.55500272666737,
+        "baselineCvPercent": 18.826189245493143,
+        "candidateCvPercent": 15.666295135895908,
+        "relativeReductionRatioOfMeansPercent": 18.960633115122658,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false,
+        "pairedBootstrap95CiRatioOfMeansReductionPercent": [
+          6.955483790308346,
+          28.737155859472562
+        ]
+      },
+      "peakTreeRssMiB": {
+        "pairs": 7,
+        "baselineMean": 54.66517857142857,
+        "candidateMean": 56.888392857142854,
+        "absoluteReductionMean": -2.2232142857142856,
+        "relativeReductionMeanPercent": -4.571001378831241,
+        "pairedT95CiAbsoluteReduction": [
+          -8.302202027313136,
+          3.855773455884565
+        ],
+        "pairedBootstrap95CiAbsoluteReduction": [
+          -6.645089285714286,
+          2.1517857142857144
+        ],
+        "pairedDifferenceStddev": 6.5729747398574085,
+        "baselineCvPercent": 8.469344521883183,
+        "candidateCvPercent": 9.7391930389012,
+        "relativeReductionRatioOfMeansPercent": -4.06696610861576,
+        "within20PercentCvNoiseBudget": true,
+        "admittedForLivePerformanceClaim": false,
+        "pairedBootstrap95CiRatioOfMeansReductionPercent": [
+          -12.889277134745575,
+          3.9561702302294104
+        ]
+      }
+    }
+  },
+  "historicalColdCpuRegressionPreserved": 48.36,
+  "historicalScope": "e6c7c97c four-component legacy baseline versus previous candidate; different baseline from current before/after experiment; not pooled",
+  "historicalRegressionStageBreakdownMs": {
+    "media": 71.43900000000008,
+    "laaj": 1116.6944285714287,
+    "transform": 16.774571428571427
+  },
+  "changes": [
+    "One prepare CLI invocation replaces check plus repeated fingerprint; rule certification, producer locks, complete-time rehash and receipt schema remain.",
+    "Bash >=4.2 builtin timestamp replaces external date per log; older Bash retains date fallback and stdout/stderr/log formatting."
+  ],
+  "checks": {
+    "stageExecutionTests": 8,
+    "laajRestartTests": 11,
+    "sharedStagePerformanceTests": 14,
+    "shellSyntax": true,
+    "independentReplayChecks": {
+      "sevenAlternatingPairs": true,
+      "corpusBeforeAfterExact": true,
+      "allFrameCounts48": true,
+      "allOutputsExactAndNoDuplicates": true,
+      "allThreeProtectedRowsUnchanged": true,
+      "frozenSourceHashes": true,
+      "allArchivedEvaluationValuesExact": true,
+      "evaluationPromptsExact": true,
+      "eventCountsExact": true,
+      "candidateOneProcessCap4": true
+    }
+  },
+  "noiseBudgets": {
+    "maxCvPercent": 20,
+    "minimumAbsoluteReductionMs": 50,
+    "minimumRelativeReductionPercent": 5
+  },
+  "limitations": [
+    "N=7 one shared host; no multiple-comparison correction.",
+    "Profiler Python wrappers add overhead; tool CPU counts diagnose overhead, not performance rates.",
+    "Cold sampled RSS CV exceeds20%; restart RSS mean increased and CI crosses zero. No memory improvement claim.",
+    "Mocked provider latency/pacing is not real supplier performance, billed token cost, deployed queue or whole worker proof.",
+    "Three protected transform fixture rows do not prove hosted DB/CAS or rendered admin protection.",
+    "Original source videos absent; retained synthetic 640x360 8fps video is used.",
+    "Other-agent Gemini source modifications are frozen identically in both arms and are outside edit ownership."
+  ],
+  "measuredOutputReadback": {
+    "framesPerObservation": 48,
+    "exactFramesEvaluationPromptsTraceAndTransform": true,
+    "duplicateTraceIds": 0,
+    "protectedRows": 3,
+    "faultProbes": 5,
+    "ffmpegCapPerNodeProcess": 4,
+    "sourceDifferencePaths": [
+      "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
+      "backend/utils/stage_cache.py"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "production-gemini-routing-readback",
+  "project": "tzudong",
+  "variable": "GEMINI_CREDITS_API_KEY",
+  "vaultSourceMatchesFundedKey": true,
+  "verified": false,
+  "deploymentPerformed": false,
+  "valuesLogged": false,
+  "configured": true,
+  "metadataReadback": true,
+  "valueMasked": true,
+  "remaining": "Verify actual deployed Gemini response; sensitive env values are intentionally masked."
+}

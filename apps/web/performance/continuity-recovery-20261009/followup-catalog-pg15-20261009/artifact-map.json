@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-catalog-pg15-20261009/catalog-manifest-fix.patch",
+      "bytes": 2981,
+      "sha256": "364dc1787e8e6d82f76d0adef6496d124b3e578f69eae10258bd8b9c580b2a78"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-catalog-pg15-20261009/g024-dual-clean-replay.json",
+      "bytes": 6135,
+      "sha256": "b42fc10db766bd9b36c384c1402dbff7ea7df4b915095cbd1ee7cdca20e06fb2"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-catalog-pg15-20261009/proof.json",
+      "bytes": 951,
+      "sha256": "4bdd1e42c485fa2b0849f5e13cfe8d584e4791892c686d60999813ff9b57bb5d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/followup-catalog-pg15-20261009/source-only-pg15-raw.tar.gz",
+      "bytes": 430875,
+      "sha256": "86d9e620f39c9814e701486caff80d410c20eac6035ea20e4df05be1f4378b26"
+    }
+  ]
+}

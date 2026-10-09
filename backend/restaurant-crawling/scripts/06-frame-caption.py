@@ -85,13 +85,15 @@ def frame_sort_key(path: Path) -> tuple[int, str]:
 
 def list_frame_files(segment_path: Path) -> list[Path]:
     """Return frame files from legacy direct layout or nested quality/format layout."""
-    frame_files = [
-        *segment_path.rglob("*.webp"),
-        *segment_path.rglob("*.jpg"),
-        *segment_path.rglob("*.jpeg"),
-        *segment_path.rglob("*.png"),
-    ]
-    return sorted({f.resolve() for f in frame_files if f.is_file()}, key=frame_sort_key)
+    active = []
+    for directory,folders,files in os.walk(segment_path,followlinks=False):
+        folders[:]=[name for name in folders if not name.startswith('.')]
+        for name in files:
+            frame=Path(directory)/name
+            if name.startswith('.') or frame.suffix not in {'.webp','.jpg','.jpeg','.png'}:
+                continue
+            if frame.is_file() and not frame.is_symlink():active.append(frame.resolve())
+    return sorted(set(active), key=frame_sort_key)
 
 
 def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:

@@ -1,0 +1,22 @@
+{
+  "fixtureSession": 44627,
+  "devSession": 64202,
+  "browserRunnerSession": 28393,
+  "exitCodes": [
+    0,
+    0,
+    0
+  ],
+  "ownedPorts": [
+    20382,
+    20383,
+    20384
+  ],
+  "ownedListenersAfterStop": 0,
+  "preexistingDevPidPreserved": 57309,
+  "browserClosedInFinally": true,
+  "generatedDist": ".next-graph-followthrough",
+  "generatedDistPreservedNotEvidence": true,
+  "compilerAddedIncludesRemoved": true,
+  "sharedGeneratedClaudeBlockPreservedForRootReview": true
+}

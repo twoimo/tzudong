@@ -1,0 +1,8 @@
+{
+  "mode": "production",
+  "port": 20371,
+  "childPid": 15677,
+  "controllerPid": 15116,
+  "databasePort": 62014,
+  "scope": "owned synthetic local fixture; no operating credentials or data"
+}

@@ -1,0 +1,30 @@
+{
+  "deploymentId": "dpl_He2HgNHEkNsdbQg556dGJsreTEgr",
+  "gitSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "httpStatus": 200,
+      "loginModalRendered": true,
+      "brandTitleAndLogo": true,
+      "modalWithinViewport": true,
+      "credentialsEntered": false,
+      "oauthAttempted": false,
+      "privacyPageRendered": true
+    }
+  ],
+  "pageErrorNames": [],
+  "consoleErrorCount": 28,
+  "blockedExternalReads": 21,
+  "blockedWriteIntents": 0,
+  "forwardedWrites": 0,
+  "appOAuthStarted": false,
+  "authStateExported": false,
+  "failure": {
+    "phase": "admin-anonymous-desktop",
+    "name": "Error",
+    "assertion": "expect(page).toHaveURL(expected) failed"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "kind": "query-model-functional-artifact-map",
+  "operationalChanges": false,
+  "performanceClaim": false,
+  "files": [
+    {
+      "path": ".github/workflows/security-audit.yml",
+      "sha256": "e739d0bf355721e857052e1df27b9d87c826c1dea452a4e453bb6fd9e8191cea"
+    },
+    {
+      "path": "apps/web/app/admin/evaluations/page.tsx",
+      "sha256": "2bf4440d6a9fa59ef7a5b3f371aed384641c8be4fcc1093d4babac90ceaa29a5"
+    },
+    {
+      "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "sha256": "298f1ca2d05a79424b90e7760e14a9a77c211bef44922e5d2a7b418fb1da7c2d"
+    },
+    {
+      "path": "apps/web/scripts/verify-admin-query-model-browser.ts",
+      "sha256": "c89b0ad220a37fc2cb08d7ebe83091f9c6f1ed1337ebb117dd93ef37ca69080f"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/query-model-capability-20261004.json",
+      "sha256": "55abd457c42f13370efc086ac16c3a936bbd69485cb540b08d7b3232328f3afd"
+    }
+  ]
+}

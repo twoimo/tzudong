@@ -1,0 +1,167 @@
+{
+  "schema": "pr3150-sql-correctness-five-stage/v1",
+  "observedAt": "2026-10-09T09:38:05.991Z",
+  "checkout": {
+    "head": "8571b65b5e8079d2f238389aaf68f41740aa170e",
+    "branch": "codex/pipeline-continuity-20261009",
+    "operatingDatabaseWrites": false,
+    "commitCreated": false,
+    "pushPerformed": false,
+    "hostedWrites": false
+  },
+  "reviews": {
+    "4228496136": {
+      "disposition": "valid_fixed",
+      "behavior": "One lexical pass tracks BEGIN ATOMIC END and parenthesis nesting; inner semicolons remain inside the pinned G037 statement.",
+      "regression": "Local statement vector equals the pinned Supabase CLI v2.109.1 parser vector."
+    },
+    "4228496176": {
+      "disposition": "valid_fixed",
+      "behavior": "A committed reconciliation may confirm only exit-zero raw psql completion followed by local malformed or mismatched stdout. A server terminal guard error remains unconfirmed after a matching external commit.",
+      "resendCount": 0,
+      "reconciliationCount": 1
+    },
+    "4228496198": {
+      "disposition": "valid_fixed",
+      "behavior": "Single and bundle reconciliation set standard_conforming_strings=on inside the read-only transaction.",
+      "actualOffVector": "Backslash JSON plus BEGIN ATOMIC exercised in PostgreSQL 17 fixtures."
+    }
+  },
+  "fiveStageSuccessor": {
+    "order": [
+      "20261004190259_admin_record_guarded_actions",
+      "20261004192657_admin_evaluation_raw_warning_groups",
+      "20261004194715_admin_evaluation_raw_warning_invoker_contract",
+      "20261009022915_restaurant_review_manual_preview_eligibility",
+      "20261009091342_admin_record_private_verification_cleanup"
+    ],
+    "finalForward": {
+      "bytes": 11649,
+      "sha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065",
+      "statementCount": 13,
+      "statementVectorSha256": "efd37cbc628681232e53d3b404a90cb52fe57e659b67214826fb475f90a79143",
+      "contract": "verification always emits private and public jobs; food emits one public job; snapshot, CAS, fence, claim and readback are bucket plus object name scoped"
+    },
+    "sourceRoot": "3b35eca263d8f257b9d4dbaa07e1a4cdfa2ff538542180a5733b4eba44c4d48d",
+    "suffixRoot": "264191a36996f815a40a19155666cd18cd7b007b4cdf6638c03ee4b696cb3593",
+    "launchPolicy": {
+      "state": "held",
+      "code": "SUCCESSOR_LAUNCH_HELD",
+      "reason": "protected-release-and-fresh-admission-required"
+    },
+    "preservedContracts": {
+      "historicalFourStageApiExact": true,
+      "legacyManifestCount": 3,
+      "genericG016Expanded": false,
+      "g037FreezeChanged": false
+    },
+    "execution": {
+      "freshAdmissionRequired": true,
+      "exactDetachedRevisionRequired": true,
+      "oneShotJournal": true,
+      "oneOuterTransaction": true,
+      "readOnlyReconciliation": true,
+      "automaticResend": false
+    }
+  },
+  "checks": {
+    "targetedBun": {
+      "passed": 48,
+      "failed": 0,
+      "assertions": 405
+    },
+    "eslint": "pass",
+    "nodeSyntax": "pass",
+    "diffCheck": "pass",
+    "exactPostgres176": {
+      "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+      "fixtureId": "2d880e2853adbcd179283cac",
+      "passed": 1,
+      "assertions": 42,
+      "scope": "four-stage compatibility, five-stage stage-5 rollback, final-readback rollback, five-stage success, bundle standard_conforming_strings off, BEGIN ATOMIC",
+      "residualObjects": 0,
+      "containerRemoved": true,
+      "networkRemoved": true
+    },
+    "postgres1711Amendment": {
+      "fixtureId": "e461b0d503f4551fa40ed7e6",
+      "passed": 1,
+      "assertions": 45,
+      "scope": "Adds single reconciliation standard_conforming_strings off and backslash JSON to the prior bundle matrix",
+      "residualObjects": 0,
+      "clusterStopped": true,
+      "directoryRemoved": true
+    },
+    "exact176RerunAttempt": {
+      "status": "not_started",
+      "reason": "The exact image was absent locally and Docker failed before container creation because containerd had no free space.",
+      "repeated": false
+    },
+    "forwardOwnedVerification": {
+      "exactPostgres176": "4 affected tests passed, 5 imported tests skipped",
+      "sourceSha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065"
+    }
+  },
+  "sourceBindings": [
+    {
+      "path": ".github/admin-record-sql-successor.v1.json",
+      "bytes": 105556,
+      "sha256": "b88e6f9814a179c66aac344e65ae651653ccf02f8786a380eb5a11d0ced615b3"
+    },
+    {
+      "path": "apps/web/scripts/admin-record-sql-successor.mjs",
+      "bytes": 32664,
+      "sha256": "4e5771efa2173bb9a02a44acd5d854a7cc5e7588935e0bcc7077683b2d28619a"
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "bytes": 12236,
+      "sha256": "fdc6c175fe77cc11b6252c6d9b326061d67639c6e7fff728e94e70a85f25c5b6"
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "bytes": 14804,
+      "sha256": "82e35949f693e54c0629fd2f98935b4c4b5b79227c66d6bc6dccb0584b5493f0"
+    },
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "bytes": 20613,
+      "sha256": "b86ebb0e1194c4b164f57467475e09afa3ef03655968732bd0d6c57e37789a0e"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "bytes": 7626,
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 11649,
+      "sha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-sql-successor.test.ts",
+      "bytes": 16813,
+      "sha256": "6cde3fb110481c6924a41fdac88fc7c5a57d9f0fdc72dcba6faf0f797da6a037"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle.test.ts",
+      "bytes": 16821,
+      "sha256": "e6bebd3dd3d467df71591af6ecaeb981df05897ef5b67cf63471db0f05d3e357"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-transaction.test.ts",
+      "bytes": 13593,
+      "sha256": "4bd32dd8de2cdde2305f5c0f45fa9a920372108589df965400c0483eec3469c3"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts",
+      "bytes": 19005,
+      "sha256": "def6fffff229a7fb4bdbe9abb4922cd3838479a5403d0e1d115e5c41449382bb"
+    }
+  ],
+  "limitations": [
+    "Launch remains held; no operating database apply, protected promotion, deployment or PR-thread write occurred.",
+    "The controller consumes fresh operator evidence for dashboard, direct-SQL, provider and browser writer fences; repository code cannot independently stop those external writers.",
+    "The exact PostgreSQL 17.6 proof predates only the added single-path actual-off case; that added case passed PostgreSQL 17.11. No claim is made that the 17.11 amendment is an exact 17.6 rerun."
+  ]
+}

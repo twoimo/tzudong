@@ -28,15 +28,28 @@ const assert = (label: string, condition: boolean) => expect(condition, label).t
 const approvedSources = new Set([
   'lib/privacy/onboarding.ts', 'lib/privacy/eligibility.ts', 'lib/privacy/policy.ts',
   'lib/privacy/processing-inventory.ts', 'lib/security/bounded-json-request.ts',
-  'lib/security/same-origin-mutation.ts', 'lib/auth/auth-redirect.ts',
+  'lib/security/same-origin-mutation.ts', 'lib/auth/auth-redirect.ts', 'lib/auth/callback-origin.ts',
   'lib/auth/callback-session.ts', 'lib/profile-mutation.ts',
   'app/api/privacy/onboarding/route.ts', 'app/auth/callback/route.ts',
 ]);
 
-function fixture(settings: { emailConfirmation?: boolean; denyEligibility?: boolean; denyConfirm?: boolean } = {}) {
+function fixture(settings: {
+  emailConfirmation?: boolean;
+  denyEligibility?: boolean;
+  denyConfirm?: boolean;
+  origin?: string;
+  vercelUrl?: string;
+  vercelBranchUrl?: string;
+} = {}) {
   const secret = crypto.randomBytes(48).toString('hex');
+  const runtimeOrigin = settings.origin ?? origin;
+  const preview = Boolean(settings.vercelUrl || settings.vercelBranchUrl);
   const env = {
-    NODE_ENV: 'test', NEXT_PUBLIC_SITE_URL: origin,
+    NODE_ENV: preview ? 'production' : 'test',
+    NEXT_PUBLIC_SITE_URL: preview ? 'https://www.tzudong.app' : runtimeOrigin,
+    VERCEL_ENV: preview ? 'preview' : undefined,
+    VERCEL_URL: settings.vercelUrl,
+    VERCEL_BRANCH_URL: settings.vercelBranchUrl,
     PRIVACY_ONBOARDING_COOKIE_SECRET: secret,
     NEXT_PUBLIC_SUPABASE_URL: 'https://fixture.invalid', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'fixture-only',
   };
@@ -157,7 +170,7 @@ function fixture(settings: { emailConfirmation?: boolean; denyEligibility?: bool
   const lib = load('lib/privacy/onboarding.ts');
   const route = load('app/api/privacy/onboarding/route.ts');
   const callback = load('app/auth/callback/route.ts');
-  const post = (body, cookies = [], requestOrigin = origin) => new next.NextRequest(`${origin}/api/privacy/onboarding`, {
+  const post = (body, cookies = [], requestOrigin = runtimeOrigin) => new next.NextRequest(`${runtimeOrigin}/api/privacy/onboarding`, {
     method: 'POST', headers: { origin: requestOrigin, 'content-type': 'application/json',
       ...(cookies.length ? { cookie: cookies.map(c => `${c.name}=${c.value}`).join('; ') } : {}) },
     body: JSON.stringify(body),
@@ -167,7 +180,7 @@ function fixture(settings: { emailConfirmation?: boolean; denyEligibility?: bool
     return { response, cookie: response.cookies.get(lib.ONBOARDING_CHALLENGE_COOKIE) };
   };
   const signup = () => ({ action: 'password_signup', email: 'fixture@example.invalid', password: crypto.randomBytes(8).toString('hex'), nickname: 'fixture' });
-  return { state, lib, route, callback, policy, env, post, start, signup };
+  return { state, lib, route, callback, policy, env, origin: runtimeOrigin, post, start, signup };
 }
 
 describe('privacy onboarding full route runtime contracts', () => {
@@ -235,6 +248,29 @@ describe('privacy onboarding full route runtime contracts', () => {
     }
     assert('OAuth does not mutate identities', f.state.signupCalls === 0 && f.state.simulatedIdentityMutations === 0);
     assert('no network attempts', f.state.blockedExternalCalls === 0);
+  });
+
+  test('preview branch alias preserves cookie POST and OAuth callback redirect origin', async () => {
+    const branchHost = 'tzudong-git-fix-preview-twoimos-projects.vercel.app';
+    const f = fixture({
+      origin: `https://${branchHost}`,
+      vercelUrl: 'tzudong-fi9s0ycyh-twoimos-projects.vercel.app',
+      vercelBranchUrl: branchHost,
+    });
+    const { response: issued, cookie } = await f.start('oauth');
+    assert('branch-origin challenge issued', issued.status === 201 && Boolean(cookie));
+    const response = await f.callback.GET(new Request(
+      `${f.origin}/auth/callback?code=fixture&next=%2Fmypage%2Freviews`,
+      { headers: { cookie: `${cookie.name}=${cookie.value}` } },
+    ));
+    const location = new URL(response.headers.get('location'));
+    assert(
+      'branch callback keeps session host',
+      response.status === 307
+        && location.origin === f.origin
+        && location.pathname === '/mypage/reviews'
+        && traceContainsInOrder(f.state.events, ['exchange', 'getUser', 'confirm_privacy_onboarding']),
+    );
   });
 
   for (const control of ['tamper', 'expiry', 'origin', 'nonce', 'secret']) test(`OAuth rejects ${control} before exchanging provider code`, async () => {

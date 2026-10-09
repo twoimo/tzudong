@@ -1,0 +1,128 @@
+{
+  "observedAtUtc": "2026-10-09T05:06:50.760807+00:00",
+  "videoId": "-D43ezc57z8",
+  "durationSeconds": 835,
+  "batchId": "one-full-D43ezc57z8-20261009T045604Z",
+  "model": "gemini-3.8-flash",
+  "engine": "gemini_via_claude_video",
+  "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+  "protocol": 2,
+  "processing": "static_segment",
+  "fundingKeyProjectMatchVerified": true,
+  "keyCopiedOrPersisted": false,
+  "liveHandle": {
+    "pid": 30788,
+    "toolSessionId": 22894,
+    "state": "completed",
+    "exitCode": 3,
+    "processAlive": false
+  },
+  "operations": {
+    "countTokensAttempts": 1,
+    "countTokensSucceeded": true,
+    "countedInputTokens": 86492,
+    "generationAttempts": 1,
+    "generationHttpOutcome": "http_rejected",
+    "exactHttpStatusRetained": false,
+    "responseIdPresent": false,
+    "automaticRetransmission": false,
+    "providerReadbackCalls": 0
+  },
+  "result": {
+    "succeeded": false,
+    "segmentState": "rejected",
+    "code": "WATCH_HTTP_REJECTED",
+    "elapsedSeconds": 76.266013,
+    "cachedState": "readback_required",
+    "localReadback": {
+      "phase": "readback",
+      "recovered": 0,
+      "unresolved": 1,
+      "readbackCalls": 0
+    },
+    "analysisOutputExists": false,
+    "fullVideoOutputExists": false,
+    "watchedVideoResultFormatValidated": false,
+    "reason": "Provider returned HTTP4xx without a retained response ID or generated analysis; existing adapter saves fixed rejection, not exact status/diagnostic. There is no output to validate."
+  },
+  "reservations": {
+    "maxVideos": 1,
+    "maxCalls": 2,
+    "maxInputTokens": 1048576,
+    "reservedCalls": 2,
+    "reservedInputTokens": 1048576,
+    "reservedOutputTokens": 65536,
+    "remainingCalls": 0,
+    "concurrency": 1,
+    "requestsPerMinute": 1
+  },
+  "usage": {
+    "cachedTokens": null,
+    "cost": null,
+    "costVerified": false,
+    "inputTokens": null,
+    "outputTokens": null,
+    "rawUsageFields": {},
+    "thinkingTokens": null,
+    "toolTokens": null,
+    "totalTokens": null,
+    "usageCompleteness": "unavailable"
+  },
+  "cost": {
+    "generationStandardPriceUpperUsd": 1.032192,
+    "verified": false,
+    "billedCost": null,
+    "creditAttribution": null,
+    "countTokensUtilityInterpretation": "Official unbilled GetTokens treated as token counting utility; direct REST zero-charge and actual bill not asserted."
+  },
+  "hashes": [
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/videos/-D43ezc57z8/dc32ec3f589965237ef501f6f0c716d325da8750dcd00c2b358cf7e03fc19ed0.receipt.json",
+      "sha256": "6c55799a1a7197e5c16d679208975102c24339cd6f73c9630e333df1b0f10a09"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/videos/-D43ezc57z8/segments/00317c9d54d01ca9a29250ddd86744c917a46f4f2c77282786cf1e4cf3e6aec7/c34b9faba9a3c1370d5a6cfb7dc1dbe960744a658b0acbf466ca0744cc1af6f4.receipt.json",
+      "sha256": "714346f741fb23976868465aea63a97127d4ebde3e116671ed99df3eb5f5f78c"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/videos/-D43ezc57z8/segments/00317c9d54d01ca9a29250ddd86744c917a46f4f2c77282786cf1e4cf3e6aec7/c34b9faba9a3c1370d5a6cfb7dc1dbe960744a658b0acbf466ca0744cc1af6f4.observation.json",
+      "sha256": "31a8fd326bb7a5ba0ce60aeaf50539ab33054cee0889af87bb88227cc770e293"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-analysis-20261004/batches/one-full-D43ezc57z8-20261009T045604Z.json",
+      "sha256": "735ab627ab5cb51f1b3b746741cdf3b6550150a409945ac6f34068ead6083f1d"
+    }
+  ],
+  "sourceAndOriginalStateHashesUnchanged": true,
+  "newStateSnapshotsPrivate0600": true,
+  "preservation": {
+    "collectorStatus": "paused",
+    "collectorPauseReason": "rate-limit",
+    "newKeysAccountsModelQuotaLimitsChanges": 0,
+    "sharedVaultPublication": false,
+    "independentVisualOrAudioCompletion": false
+  },
+  "nextTechnicalBoundary": "Retain this spent batch and rejected receipt; diagnose request/API contract offline before any separately instructed new provider operation. No response ID exists for original-ID GET recovery.",
+  "sourceEngineHashes": [
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/longform_analysis.py",
+      "sha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86"
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/backend/knowledge_graph/claude_video_adapter.py",
+      "sha256": "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42/skills/watch/scripts/gemini.py",
+      "sha256": "e0f29cdfc1f64b6535b6c01a6f21e33493abc240ab18aeac2c85f2f24d3c850e"
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42/skills/watch/scripts/runtime.py",
+      "sha256": "70f9741d7b863380840da602f9311eb118572c33e083cfdea99524bd282eadbd"
+    }
+  ],
+  "offlineContractReference": {
+    "url": "https://ai.google.dev/api/interactions-api",
+    "finding": "The official schema permits text response_format object or array; the generic HTTP4xx receipt does not identify a particular request field as the cause. No guessed request patch or resend was performed."
+  }
+}

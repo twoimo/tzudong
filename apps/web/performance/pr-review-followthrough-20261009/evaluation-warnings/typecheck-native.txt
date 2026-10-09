@@ -1,0 +1,8 @@
+
+> web@1.2.4 typecheck:native
+> node scripts/run-typecheck.mjs --compiler native
+
+components/admin/pipeline/AdminPipelineDashboard.tsx(108,36): error TS18048: 'snapshot' is possibly 'undefined'.
+components/admin/pipeline/AdminPipelineDashboard.tsx(108,68): error TS18048: 'snapshot' is possibly 'undefined'.
+components/admin/storyboard/LocalStoryboardWorkspace.tsx(332,46): error TS2304: Cannot find name 'isAllowedStoryboardGeminiModel'.
+scripts/measure-evaluation-warning-default.ts(1,22): error TS2307: Cannot find module 'bun:test' or its corresponding type declarations.

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { adminReviewModerationStatus, selectAdminModerationRows, type AdminModerationFilter, type AdminModerationSort } from '../lib/admin/submission-list-view-model';
 import {
   adminSubmissionQueueSummaryMatchesFilter,
   ADMIN_SUBMISSION_QUEUE_REASON_FILTERS,
@@ -117,7 +118,7 @@ describe('admin submission queue safety badges', () => {
 
     const filterMarkup = listSource.slice(
       listSource.indexOf('data-admin-submission-queue-reason-filter="true"'),
-      listSource.indexOf('{filteredSubmissions.length === 0 ?'),
+      listSource.indexOf('data-admin-moderation-list'),
     );
 
     expect(helperSource).toContain('validateRestaurantSubmission(mode, formData)');
@@ -130,5 +131,43 @@ describe('admin submission queue safety badges', () => {
     expect(filterMarkup).not.toContain('onApprove');
     expect(filterMarkup).not.toContain('onReject');
     expect(filterMarkup).not.toContain('fetch(');
+  });
+});
+
+
+describe('admin moderation list selection', () => {
+  const rows = [
+    { id: 'partial', created_at: '2026-10-02T00:00:00Z', name: '가게 나', state: 'partially_approved', nickname: 'Tester', duplicate: false },
+    { id: 'approved', created_at: '2026-10-03T00:00:00Z', name: '가게 가', state: 'approved', nickname: '작성자', duplicate: true },
+    { id: 'pending', created_at: '2026-10-01T00:00:00Z', name: '가게 다', state: 'pending', nickname: 'tester', duplicate: false },
+    { id: 'unknown', created_at: 'invalid', name: '가게 라', state: 'FutureState', nickname: '', duplicate: false },
+  ];
+  const project = (row: typeof rows[number]) => ({ name: row.name, status: row.state, duplicate: row.duplicate, search: [row.name, row.nickname, null, undefined] });
+  const select = (query = '', status: AdminModerationFilter = 'all', sort: AdminModerationSort = 'priority') => selectAdminModerationRows(rows, { query, status, sort }, project).map(row => row.id);
+
+  test('combines trimmed case-insensitive search, processing state and duplicate filters on loaded rows', () => {
+    expect(select('  TESTER  ', 'pending')).toEqual(['pending', 'partial']);
+    expect(select('', 'partially_approved')).toEqual(['partial']);
+    expect(select('', 'duplicate')).toEqual(['approved']);
+    expect(select('작성자', 'pending')).toEqual([]);
+    expect(select('', 'unknown')).toEqual(['unknown']);
+    expect(selectAdminModerationRows([], { query: '', status: 'all', sort: 'priority' }, project)).toEqual([]);
+  });
+  test('sorts deterministically without changing the input or promoting invalid dates', () => {
+    const before = structuredClone(rows);
+    expect(select()).toEqual(['pending', 'partial', 'approved', 'unknown']);
+    expect(select('', 'all', 'newest')).toEqual(['approved', 'partial', 'pending', 'unknown']);
+    expect(select('', 'all', 'oldest')).toEqual(['pending', 'partial', 'approved', 'unknown']);
+    expect(select('', 'all', 'name')).toEqual(['approved', 'partial', 'pending', 'unknown']);
+    const tied = [{ ...rows[0], id: 'b' }, { ...rows[0], id: 'a' }];
+    expect(selectAdminModerationRows(tied, { query: '', status: 'all', sort: 'newest' }, project).map(row => row.id)).toEqual(['a', 'b']);
+    expect(rows).toEqual(before);
+    expect(selectAdminModerationRows(rows, { query: '', status: 'pending', sort: 'priority' }, project)[0]).toBe(rows[2]);
+  });
+  test('review status preserves verified precedence and the existing rejection-note contract', () => {
+    expect(adminReviewModerationStatus({ is_verified: true, admin_note: '거부 후 재승인' })).toBe('approved');
+    expect(adminReviewModerationStatus({ is_verified: false, admin_note: '거부: 중복 확인' })).toBe('rejected');
+    expect(adminReviewModerationStatus({ is_verified: false, admin_note: null })).toBe('pending');
+    expect(adminReviewModerationStatus({ is_verified: false, admin_note: '검토 중' })).toBe('pending');
   });
 });

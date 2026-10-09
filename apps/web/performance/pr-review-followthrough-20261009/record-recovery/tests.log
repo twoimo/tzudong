@@ -1,0 +1,58 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-record-action-follow-up.test.ts:
+(pass) definite duplicate conflict offers the actual restaurant review route, closes the failed operation, and offers no apply or uncertain readback [3.67ms]
+(pass) uncertain and other definite failures do not expose a duplicate-review navigation action [0.83ms]
+(pass) preview renders every group-edit and merge payload value with Korean labels, retaining IDs and empty selections [2.96ms]
+
+tests-unit/admin-restaurant-guarded-ui.test.ts:
+(pass) actual restaurant edit handlers > save keeps editable fields and coordinates, with one guarded request and receipt-gated refresh [3.36ms]
+(pass) actual restaurant edit handlers > changed address, busy operation and identity warning cannot emit writes [0.60ms]
+(pass) actual restaurant edit handlers > approval retains draft changes; same canonical video duplicate blocks instead of writing diagnostics [0.89ms]
+(pass) actual restaurant edit handlers > eligible duplicate cleanup still requires a guarded delete preview; blocked collision cannot mutate [0.62ms]
+(pass) actual restaurant edit handlers > lost apply remains pending until the original operation GET returns an audited receipt [2.94ms]
+(pass) actual multi-video editor and missing/conflict handlers > group edit includes primary and children, removals, per-video changes and additions in one valid action [1.12ms]
+(pass) actual multi-video editor and missing/conflict handlers > public video metadata keeps nested ad fields while provider diagnostics stay outside the DTO [0.28ms]
+(pass) actual multi-video editor and missing/conflict handlers > creation carries every entered video and deletion uses guarded reason/confirmation [1.09ms]
+(pass) actual multi-video editor and missing/conflict handlers > missing registration and merge preserve edited review/category and coordinates without actor overrides [0.76ms]
+(pass) actual multi-video editor and missing/conflict handlers > conflict merge and hold share guarded client, with busy and empty-reason guards [0.74ms]
+(pass) each evaluation modal reads current data after receipt and retains a retry-only lock on missing/malformed current data [1.11ms]
+(pass) actual close handlers protect dirty forms and block close while saving/readback [0.50ms]
+(pass) actual grouped current-row readback rejects malformed states and keeps the replacement primary and added video [1.08ms]
+(pass) partial evaluation edits preserve untouched legacy link, empty categories and incomplete geocoding [0.34ms]
+(pass) partial grouped edits preserve unchanged incomplete legacy videos and send only explicit video edits [1.00ms]
+(pass) approval includes the visible resolved name and category while partial saves leave unrelated data alone [0.26ms]
+(pass) actual slide approval keeps the selected candidate while confirmation/readback is pending [0.08ms]
+(pass) slide pointer and touch gestures preserve interactive clicks while ordinary swipes still navigate [0.24ms]
+
+tests-unit/admin-record-action-client.test.ts:
+(pass) guarded record action client over real loopback HTTP > preview, exact confirmation, single immutable apply, GET audit readback; concurrent calls cannot replace identity [8.97ms]
+(pass) guarded record action client over real loopback HTTP > cancel pending preview ignores late result, sends no apply, and cannot populate a new review [35.23ms]
+(pass) guarded record action client over real loopback HTTP > lost preview ACK only reads original UUID before presenting confirmable receipt [7.40ms]
+(pass) guarded record action client over real loopback HTTP > lost apply ACK recovers committed audit using GET without replay [7.51ms]
+(pass) guarded record action client over real loopback HTTP > indeterminate apply forbids cancel/new UUID/apply; reload resumes only GET with no payload stored [8.41ms]
+(pass) guarded record action client over real loopback HTTP > CAS conflict never reports success and cannot repeat apply under the old preview [7.14ms]
+(pass) guarded record action client over real loopback HTTP > apply in flight cannot be cancelled or sent twice [8.54ms]
+(pass) guarded record action client over real loopback HTTP > mismatched ID/hash/targets/audit or malformed status stays uncertain, never healthy [35.31ms]
+(pass) guarded record action client over real loopback HTTP > authentication failures use a bounded message without claiming an uncertain mutation or exposing prose [2.20ms]
+(pass) guarded record action client over real loopback HTTP > expired preview never applies; invalid UUID/fields fail before HTTP [6.98ms]
+(pass) guarded record action client over real loopback HTTP > review delete cleanup starts only after applied GET and uncertain cleanup never repeats [8.39ms]
+(pass) apply invalidates before transport; STALE and failed readback cannot publish applied, then original GET recovers [15.59ms]
+(pass) created receipt contains every unique requested new row, bounded at 25, without rewriting original empty targets [57.12ms]
+(pass) another modal cannot replace a stored pending identity or apply a pre-existing preview [20.90ms]
+(pass) a new client with pending storage only performs original-ID GET; malformed persisted identity stays closed [14.79ms]
+(pass) revised duplicate-review and retired-media codes are definite bounded failures, never success or repeat apply [15.81ms]
+(pass) unmanaged media is not a pending job and never triggers cleanup by itself; both states can coexist [31.96ms]
+(pass) HTTP423 maintenance is a definite no-apply failure, never an uncertain operation or retry [7.81ms]
+(pass) logout and actor change detach pending work; only its original actor recovers its UUID [14.96ms]
+(pass) actor switch during apply ignores late ACK and preserves original pending for reload [13.97ms]
+(pass) recovered unattempted cleanup starts once; lost ACK/pending GET survives stop and reload without replay [10.92ms]
+(pass) unbound old v1 identity is retained on forbidden GET; pending cleanup never guesses an unattempted POST [9.22ms]
+(pass) two reload clients cannot each start the same unattempted cleanup [9.62ms]
+(pass) definite cleanup admission stops resume only on explicit recovery after hold release, preserving DB audit identity [17.98ms]
+(pass) 403, timeout, malformed admission status and unknown cleanup ACK never become resumable [34.43ms]
+
+ 46 pass
+ 0 fail
+ 507 expect() calls
+Ran 46 tests across 3 files. [546.00ms]

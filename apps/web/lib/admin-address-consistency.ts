@@ -3,6 +3,7 @@ import type { EvaluationRecord, LocationMatchResult } from '@/types/evaluation';
 export type AddressConsistencyStatus = 'true' | 'false' | 'failed' | 'review' | 'candidate' | 'not_applicable' | 'unknown';
 
 interface AddressConsistencyInput {
+  read_summary?: EvaluationRecord['read_summary'];
   geocoding_success?: boolean | null;
   geocoding_false_stage?: number | null;
   status?: string | null;
@@ -143,6 +144,7 @@ export function getAddressConsistencyStatus(record: AddressConsistencyInput): Ad
     || record.is_not_selected === true
     || record.is_missing === true
   ) return 'not_applicable';
+  if (record.read_summary) return record.read_summary.address_consistency;
   if (hasUnconfirmedPublicMapLocation(record)) return 'review';
   if (record.geocoding_success === true) return 'true';
   if (record.geocoding_success === false && record.geocoding_false_stage === null) return 'failed';

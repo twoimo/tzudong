@@ -1,0 +1,31 @@
+{
+  "kind": "hosted-storyboard-schema-readback",
+  "recordedAt": "2026-10-03T00:13:26.138Z",
+  "versions": [
+    {
+      "name": "storyboard_production_foundation",
+      "version": "20261003000711"
+    },
+    {
+      "name": "storyboard_historical_restore",
+      "version": "20261003000811"
+    },
+    {
+      "name": "storyboard_gemini_only",
+      "version": "20261003000812"
+    }
+  ],
+  "projectRows": 0,
+  "workerRows": 0,
+  "privateBucket": true,
+  "browserCanExecute": false,
+  "serviceCanExecute": true,
+  "publicEntryDefiners": 0,
+  "authTableGrantsUnchanged": true,
+  "geminiTextAccepted": true,
+  "legacyModelRejected": true,
+  "productionDataSeeded": false,
+  "limitations": [
+    "Schema and permission readback; no production worker generation or deployment yet."
+  ]
+}

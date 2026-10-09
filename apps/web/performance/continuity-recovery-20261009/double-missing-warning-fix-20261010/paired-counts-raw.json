@@ -1,0 +1,61 @@
+{
+  "environment": "local deterministic PostgREST replay; zero network; 1659 synthetic rows",
+  "pairs": [
+    {
+      "pair": 0,
+      "beforeCalls": 13,
+      "afterCalls": 14,
+      "equalWarnings": true,
+      "warningCount": 1658,
+      "actualNetworkCalls": 0
+    },
+    {
+      "pair": 1,
+      "beforeCalls": 13,
+      "afterCalls": 14,
+      "equalWarnings": true,
+      "warningCount": 1658,
+      "actualNetworkCalls": 0
+    },
+    {
+      "pair": 2,
+      "beforeCalls": 13,
+      "afterCalls": 14,
+      "equalWarnings": true,
+      "warningCount": 1658,
+      "actualNetworkCalls": 0
+    },
+    {
+      "pair": 3,
+      "beforeCalls": 13,
+      "afterCalls": 14,
+      "equalWarnings": true,
+      "warningCount": 1658,
+      "actualNetworkCalls": 0
+    },
+    {
+      "pair": 4,
+      "beforeCalls": 13,
+      "afterCalls": 14,
+      "equalWarnings": true,
+      "warningCount": 1658,
+      "actualNetworkCalls": 0
+    },
+    {
+      "pair": 5,
+      "beforeCalls": 13,
+      "afterCalls": 14,
+      "equalWarnings": true,
+      "warningCount": 1658,
+      "actualNetworkCalls": 0
+    },
+    {
+      "pair": 6,
+      "beforeCalls": 13,
+      "afterCalls": 14,
+      "equalWarnings": true,
+      "warningCount": 1658,
+      "actualNetworkCalls": 0
+    }
+  ]
+}

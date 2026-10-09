@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-08T23:11:41.371154+00:00",
+  "ownedHarnessProcessesRemaining": 0,
+  "preexistingDevServerPid": 57309,
+  "preexistingDevServerPort": 19872,
+  "preexistingDevServerStillRunning": true,
+  "devDistDir": ".next-local-18080",
+  "devServerStartedOrStoppedByHelper": false,
+  "browserLifecycle": "All custom harnesses close browser in finally. Playwright fixture teardown completed on failed and passed executions. No existing user tabs, profiles or storage states adopted."
+}

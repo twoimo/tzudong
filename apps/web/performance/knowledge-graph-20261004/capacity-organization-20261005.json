@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "kind": "graph-capacity-and-organization-contract",
+  "scope": "local synthetic and isolated OSK vaults only",
+  "actualVaultWrites": 0,
+  "providerCalls": 0,
+  "commits": 0,
+  "actualVideoCompletionClaim": false,
+  "status": "source-ready; whole-worktree parity blocked by unrelated Bun global errors",
+  "files": {
+    "backend/knowledge_graph/graph_shards.py": "5035cacd8a6b1ce03f9af22cfebe3df39949707fd3dff713a4e7c22dc80caa0a",
+    "backend/knowledge_graph/osk_projection.py": "e05282ec8650b5a69b8841dc3c4490fae36792168c97e1aa4f645e8a0007ceb8",
+    "backend/knowledge_graph/osk_publication.py": "c27308a8b01ef7de2aa080ce4b66878c8b079b6968b40bcccaaf8a82ef53f3c5",
+    "backend/knowledge_graph/publication_pages.py": "fca4b0d87ff26ea79fb3b8329179d882757d807c90819f9076b9f75beade20bf",
+    "backend/knowledge_graph/publication_checkpoint.py": "37813ce9e8fea70174ba3b8f321b99e86e7445a3b22a96ef3ec1f6bebf4a0156",
+    "backend/knowledge_graph/OSK_PUBLICATION.md": "caeb8e3c6ebce085c4825cb8049f00c925f5a66003d74742b7685b889de241f2",
+    "backend/knowledge_graph/tests/test_graph_shards.py": "a215a3a937571b3883febc28403ae4668a69cbd1c05964c3fea9022c4451a729",
+    "backend/knowledge_graph/tests/test_publication_pages.py": "2390f8773ea4393e39bee7f97600ca0e1cbedde294fadf7323050320da6ab9d6",
+    "backend/knowledge_graph/tests/test_publication_checkpoint.py": "a1b8ffd90a0e15fd3bf2b463621331d9fc5b12fb07d0063d85475c12752b0897",
+    "backend/knowledge_graph/tests/test_osk_publication.py": "91a24797e57cc14111fa9a0dadf1d553bfc759ece878b846ea6bba72c395520c",
+    "apps/web/lib/admin/knowledge-graph-shards.ts": "a6795359e37ee11e736a5b70cdf7869a102833d310dc93ec05d0ceb9dc41ec6f",
+    "apps/web/lib/admin/knowledge-graph-local.ts": "947f9e7132dd4486c346a371d3a67ee160933dac44dddd16412609f725595344",
+    "apps/web/types/knowledge-graph.ts": "b64edddcb6441da92b8a4264740252a34590c0efb08449f8b086b71b082a65dc",
+    "apps/web/tests-unit/admin-knowledge-graph-shards.test.ts": "beee9a9248cfb9528d467db65875a2f93f92bad8ee66ba12da56a479e74c37c3"
+  },
+  "validation": {
+    "pythonTestsPassed": 54,
+    "pythonDetails": {
+      "firstCombinedRun": 53,
+      "subsequentPublicationRunAfterClusterMoveExtension": 18,
+      "publicationTestsReplaced": 17
+    },
+    "webTestsPassed": 26,
+    "webExpectations": 1472,
+    "targetedEslint": "passed",
+    "gitDiffCheck": "passed",
+    "typecheckParity": "failed at final worktree state",
+    "typecheckErrors": [
+      {
+        "path": "apps/web/scripts/audit-admin-record-action-payloads.ts",
+        "lines": [
+          7,
+          35,
+          47
+        ],
+        "code": "TS2868",
+        "reason": "Cannot find name Bun; outside this task ownership"
+      }
+    ],
+    "earlierParityBeforeConcurrentScript": "passed with 0 diagnostics"
+  },
+  "reachableProducerFixture": {
+    "parserAndCompletedReceiptAdmission": true,
+    "watchReportBytes": 766435,
+    "analysisSourceBytes": 1245604,
+    "nodesPerVideo": 10382,
+    "nodesAt1069IncludingRoot": 11098359,
+    "rootLinksReservedBytes1069": 56657,
+    "sourceRoundtrip": "exact canonical bytes",
+    "allEvidenceRetained": true
+  },
+  "fullAllowedBound": {
+    "basis": "Conservative union of admitted legacy and aggregate schemas; individual extrema need not be simultaneously realizable under report/document byte caps",
+    "restaurants": 10000,
+    "summaryFacts": 10000,
+    "globalClaims": 10000,
+    "menusAndClaimsPerRetainedRestaurantEach": 100,
+    "evidencePerFactOrRestaurant": 100,
+    "ordinaryNodesPerVideoUpper": 2020001,
+    "extraEvidencePagesPerVideoUpper": 12182499,
+    "extraContentPagesPerVideoUpper": 50254885,
+    "sourcePagesPerVideoUpper": 2048,
+    "totalStorageNodesPerVideoUpper": 132958870,
+    "nodes1069IncludingRootUpper": 142133032031,
+    "edges1069Upper": 19330092356216,
+    "exactIntegerMaximum": 9007199254740991,
+    "manifestFanout": 256,
+    "manifestMaxIndexDepth": 8,
+    "perLeafNodes": 5000,
+    "perLeafEdges": 20000,
+    "perFileBytes": 4194304,
+    "perSourceBytes": 131072,
+    "evidencePerProjectedNode": 16,
+    "checkpointPageBytes": 1048576,
+    "checkpointNodePageItems": 2000,
+    "checkpointFanout": 128,
+    "checkpointMaxIndexDepth": 8,
+    "limits": "Wire/page capacity proof, not RAM/disk/runtime feasibility. Existing manually authored scope bytes/links require fresh preflight."
+  },
+  "millionEdgeReadback": {
+    "synthetic": true,
+    "actualVideoCompletionEvidence": false,
+    "schemaVersion": 3,
+    "nodeShards": 1,
+    "edgeShards": 51,
+    "files": 52,
+    "totalBytes": 82904754,
+    "maxFileBytes": 1640142,
+    "pythonRoundtrip": true,
+    "webReadback": {
+      "valid": true,
+      "totalNodes": 2001,
+      "totalEdges": 1000001,
+      "returnedNodes": 1,
+      "omittedEdges": 1000001
+    }
+  },
+  "organization": {
+    "newIsolatedLayoutMissingAndBypass": 0,
+    "verifiedVia": "Pinned MCP create/read/update/move_nodes/move_cluster plus public osk.cli organization plan --preview",
+    "legacyNamesIdsBodiesAndRootLinksPreserved": true,
+    "legacyBranchBypassMayRemain": true,
+    "pinsRespected": true,
+    "moveAndUpdateBudgetOneResume": true,
+    "clusterGrowthMoveVerified": true,
+    "fullOrganizationReviewCompletionClaim": false,
+    "remainingApiLimitation": "Official public move APIs have no atomic hash/path CAS; immediate pre-read and exact post-read plus single-writer/publisher lock preserved."
+  },
+  "preservedRootArtifacts": [
+    "apps/web/data/knowledge-graph/tzudong.json",
+    "apps/web/data/knowledge-graph/shards/",
+    "apps/web/tests-unit/fixtures/knowledge-graph-v1-20261004.json"
+  ],
+  "dependencyHashes": {
+    "backend/knowledge_graph/longform_analysis.py": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+    "backend/knowledge_graph/claude_video_adapter.py": "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c"
+  }
+}

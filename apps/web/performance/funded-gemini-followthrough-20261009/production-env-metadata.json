@@ -1,0 +1,41 @@
+{
+  "status": "metadata_read",
+  "variables": 24,
+  "selected": [
+    {
+      "id": null,
+      "key": "GEMINI_CREDITS_API_KEY",
+      "type": "sensitive",
+      "target": [
+        "production"
+      ],
+      "gitBranch": null
+    },
+    {
+      "id": null,
+      "key": "GEMINI_API_KEY",
+      "type": "sensitive",
+      "target": [
+        "production"
+      ],
+      "gitBranch": null
+    },
+    {
+      "id": null,
+      "key": "GEMINI_OCR_YEON",
+      "type": "sensitive",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "gitBranch": null
+    }
+  ],
+  "kind": "vercel-production-funded-key-presence-only",
+  "projectVerified": true,
+  "project": "tzudong",
+  "decryptedValuesRead": false,
+  "productionCredentialMatchUnverified": true,
+  "operatingWrites": false,
+  "mcpListAttempt": "failed_supported_cli_fallback_succeeded"
+}

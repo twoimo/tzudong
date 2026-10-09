@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "scope": "implemented wire schema, predecessor-cache continuity, and offline verification",
+  "providerAcceptance": "not_executed",
+  "artifacts": [
+    {
+      "path": "backend/knowledge_graph/claude_video_adapter.py",
+      "role": "wire schema and exact predecessor request reconstruction",
+      "bytes": 16271,
+      "sha256": "f7a7d57c9e2318c09b24a9e437b266698a0c52faa8fb1a54e84e4a2568a44676"
+    },
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "role": "predecessor identity and fail-closed cache continuity",
+      "bytes": 82971,
+      "sha256": "8685e89c84a106b983f4db2fdec8e6b54868185c21bdfec9ede2de1f00cc09e0"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_claude_video_adapter.py",
+      "role": "wire request and predecessor reconstruction tests",
+      "bytes": 17541,
+      "sha256": "1d4e189b92666af9747be2c81c190948a5dfbbead239e0b5cb691db56c259a40"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_analysis.py",
+      "role": "config identity and drift tests",
+      "bytes": 35703,
+      "sha256": "b9735bc77c700bc08a48e4fbad9123d4f74c65dc051ea21fefbd7d3f9e903646"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+      "role": "restart, duplicate queue, no-write, no-call, and fail-closed cache tests",
+      "bytes": 28564,
+      "sha256": "3acf77e6a455ab2e1c21561e73a9262a0c5d9e98cd400ab351a0baae592bdb3f"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/wire-schema.json",
+      "role": "365-byte canonical wire contract source",
+      "bytes": 557,
+      "sha256": "f7436e045718bba41bce80873083afd5bfde332e8a5fa5256427b85692fbdca8"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/verify_equivalence.py",
+      "role": "bounded offline equivalence experiment",
+      "bytes": 11602,
+      "sha256": "c5c46b36b946364dbde4ef90c119a71b15fb78987481a597c6f07dbf47e271fe"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/proof.json",
+      "role": "preserved 112-case structural proof and experiment",
+      "bytes": 4355,
+      "sha256": "14ed3ed5dd21e0ba46791dac459c2f0b60ee9c46bf2c6bc8bdecfda847399bb4"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/implementation-proof.json",
+      "role": "implementation, cache, and external-effect receipt",
+      "bytes": 3577,
+      "sha256": "d9fad0e141dd839ef88febda5a7a573a1dfd9591991e631379e86fbd94be1706"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/implementation-checks.txt",
+      "role": "sanitized check summary",
+      "bytes": 620,
+      "sha256": "f4316b247e177de28997942d7f2aaef49cc31059c6c76b598b0aa3cecd7e5449"
+    }
+  ]
+}

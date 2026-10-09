@@ -1,0 +1,29 @@
+{
+  "head": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "files": [
+    {
+      "path": "components/admin/AdminKnowledgeGraphPanel.tsx",
+      "sha256": "925e22dfda4e433291f59766fc7864f6589d7cc65e1429e0f99271a5c45770b2"
+    },
+    {
+      "path": "types/knowledge-graph.ts",
+      "sha256": "b64edddcb6441da92b8a4264740252a34590c0efb08449f8b086b71b082a65dc"
+    },
+    {
+      "path": "lib/admin/knowledge-graph-local.ts",
+      "sha256": "947f9e7132dd4486c346a371d3a67ee160933dac44dddd16412609f725595344"
+    },
+    {
+      "path": "lib/admin/knowledge-graph-shards.ts",
+      "sha256": "a6795359e37ee11e736a5b70cdf7869a102833d310dc93ec05d0ceb9dc41ec6f"
+    },
+    {
+      "path": "lib/admin/knowledge-graph-query.ts",
+      "sha256": "0a38a21c7dd95e1eb732853a6a37e0c70a2377478b0fc64773d03c494faa91a7"
+    },
+    {
+      "path": "data/knowledge-graph/tzudong.json",
+      "sha256": "805c9df6aa282fef0eaa4a3a3844db48e3830af606e8fb8b8c2735d2aafada75"
+    }
+  ]
+}

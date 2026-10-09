@@ -1,0 +1,67 @@
+{
+  "buildExit": 0,
+  "cssExit": 0,
+  "tsconfigPreserved": true,
+  "sourceTsconfigSha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17",
+  "distDir": ".next-continuity-final-build",
+  "node": "24.21.0",
+  "hostedDeployment": false,
+  "cssInitialAttempt": {
+    "exit": 1,
+    "code": "DEFAULT_DISTDIR_MANIFEST_ABSENT"
+  },
+  "cssBoundaries": {
+    "homeBytes": 194468,
+    "generalAppBytes": 368253,
+    "adminBytes": 381016,
+    "deferredBytes": 194468,
+    "homeTransferBytes": 46277,
+    "generalAppTransferBytes": 68083,
+    "adminTransferBytes": 71105,
+    "deferredTransferBytes": 46277,
+    "sharedAssetPaths": [
+      "static/css/2c51162548402e22.css",
+      "static/css/591091c27525f55d.css",
+      "static/css/a569e2016bc29536.css",
+      "static/css/e724b53714374078.css",
+      "static/css/fe3cf1d79cde5d21.css"
+    ],
+    "exclusiveAssetPaths": {
+      "home": [],
+      "generalApp": [],
+      "admin": [
+        "static/css/cee4ff2d86da1d55.css",
+        "static/css/f54a2be7094b25e4.css"
+      ],
+      "deferred": []
+    }
+  },
+  "next": "16.3.8",
+  "sourceFiles": [
+    {
+      "path": "apps/web/app/auth/callback/route.ts",
+      "sha256": "d2cbe66c89c2961c362bda29241c0a540c3edf6e6d73981bc043cad7d39127d9"
+    },
+    {
+      "path": "apps/web/lib/auth/callback-origin.ts",
+      "sha256": "ac03bcf4cd7fef2b768685f2d26e2c21b1ff091d02e73f55d484382349074109"
+    },
+    {
+      "path": "apps/web/lib/security/same-origin-mutation.ts",
+      "sha256": "f2a29de2b838275e905e00738de21543c2611b5f220c99fd9f2b0178bfce6b75"
+    },
+    {
+      "path": "apps/web/app/api/admin/pipeline/route.ts",
+      "sha256": "2423f7cf0893cbb0e70b2df9ab79ed9555f0ebaded9eb03e469883a4aa8cdae5"
+    },
+    {
+      "path": "apps/web/app/admin/banners/page.tsx",
+      "sha256": "e1135a027486da998b689f2a86dd25ea292dd6500b5491acca6158a19714d972"
+    },
+    {
+      "path": "apps/web/components/admin/AdminConsoleOverview.tsx",
+      "sha256": "7eca9f9feaf3228699fb69242924a11a6c97ecda0cbe0237a19ceb864afba883"
+    }
+  ],
+  "meaning": "local production bundle and CSS boundaries, not hosted flow proof"
+}

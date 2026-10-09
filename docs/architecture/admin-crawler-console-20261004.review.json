@@ -1,0 +1,47 @@
+{
+  "kind": "archify-perceptual-review",
+  "observedAt": "2026-10-04T10:00:51.479842+00:00",
+  "status": "pass",
+  "artifact": {
+    "path": "docs/architecture/admin-crawler-console-20261004.html",
+    "sha256": "924d0f5a5fe53f84c08e08efb321342dbc44e8b93f4a743f09ab6429bc5a74cd"
+  },
+  "specification": {
+    "path": "docs/architecture/admin-crawler-console-20261004.dataflow.json",
+    "sha256": "c62ece7848973ea7776fee4c29485a456ee0ebcfdaf1abf1465a95a1ff2b1529"
+  },
+  "automatedReceipt": "admin-crawler-console-20261004.visual-check.json",
+  "inspectedScreenshots": [
+    {
+      "path": "admin-crawler-console-20261004.visual-check.1440x900.dark.png",
+      "sha256": "6002f76a87a53ce4b57ff9d81df664580fad1e3c964c493eb9c38bdbf846a0e4"
+    },
+    {
+      "path": "admin-crawler-console-20261004.visual-check.1440x900.light.png",
+      "sha256": "cff2f9f482df8dddf3334a368b1927c3df72fac54c73967d7d4f90c1c32e99d0"
+    },
+    {
+      "path": "admin-crawler-console-20261004.visual-check.2048x1320.dark.png",
+      "sha256": "ca7fdb4eb18083accaf0244e9abef08252075d6913962293dff14259cc2d8810"
+    },
+    {
+      "path": "admin-crawler-console-20261004.visual-check.2048x1320.light.png",
+      "sha256": "5bdc2f3466a93700b197c768060dcdfe37ca11a4b0aaa4a9c3f3a5fc9a36ac57"
+    }
+  ],
+  "findings": [
+    "All eight stages and their branches are visible in light and dark captures.",
+    "Node labels, edge labels, legend and cards do not collide or clip in inspected captures.",
+    "The document graph has the same eight nodes and eight edges as the tested application topology."
+  ],
+  "limits": [
+    "Static document, not operational runtime evidence.",
+    "Viewer controls remain English in the installed renderer; Korean content is preserved."
+  ],
+  "tool": {
+    "installedVersion": "2.17.0-dev.1",
+    "updateAvailable": "3.0.1",
+    "updateNoticeShown": true,
+    "installationChanged": false
+  }
+}

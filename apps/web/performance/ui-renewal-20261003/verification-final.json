@@ -1,0 +1,24 @@
+{
+  "kind": "canonical-unit-verification",
+  "command": "Node 24 / scripts/run-unit-tests.mjs; Bun 1.4",
+  "lanes": [
+    "2504 pass",
+    "1 skip",
+    "0 fail",
+    "Ran 2505 tests across 342 files. [97.47s]",
+    "143 pass",
+    "8 skip",
+    "0 fail",
+    "Ran 151 tests across 9 files. [5.74s]"
+  ],
+  "passed": true,
+  "totalPass": 2647,
+  "totalSkip": 9,
+  "totalFail": 0,
+  "rawLogSha256": "6cbb98d6576fc8662ed311f320ded841cc570d32b9eda12e1cd0d8d5f22c89b1",
+  "thumbnailTransportByteIdentical": true,
+  "thumbnailTransportSha256": "18df50a5e48a258abef2bb32e474047f7d872f1b2bafc2169cd9f1a2f2dfa601",
+  "limitations": [
+    "Local verification, not production deployment readback."
+  ]
+}

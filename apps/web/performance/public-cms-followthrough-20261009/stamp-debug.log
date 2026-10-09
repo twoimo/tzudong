@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+(node:75142) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] tests/public-cms-readonly.spec.ts:108:3 › stamp list and search failures stay distinct from empty success at tablet
+  1) tests/public-cms-readonly.spec.ts:108:3 › stamp list and search failures stay distinct from empty success at tablet 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' }) with timeout 15000ms
+      - waiting for getByRole('alert').filter({ hasText: '도장 맛집을 불러오지 못했습니다' })
+
+
+      132 |     await search.fill('합성읽기검증');
+      133 |     await expect.poll(() => readStates.some(read => read.search && read.outage), { timeout: 15_000 }).toBe(true);
+    > 134 |     await expect(error).toBeVisible({ timeout: 15_000 });
+          |                         ^
+      135 |     await testInfo.attach('sanitized-read-states', { body: JSON.stringify(readStates), contentType: 'application/json' });
+      136 |     await page.screenshot({ path: testInfo.outputPath('stamp-search-read-error.png') });
+      137 |     outage = false;
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:134:25
+
+    Error Context: performance/public-cms-followthrough-20261009/stamp-debug-run-output/public-cms-readonly-stamp--96b99-rom-empty-success-at-tablet/error-context.md
+
+
+  1 failed
+    tests/public-cms-readonly.spec.ts:108:3 › stamp list and search failures stay distinct from empty success at tablet 

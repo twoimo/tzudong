@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 import { CenteredErrorState } from '@/components/layout/CenteredErrorState';
 
@@ -16,6 +17,7 @@ export default function RootError({
     reset: () => void;
 }) {
     useEffect(() => {
+        Sentry.captureException(error);
         console.error('[RootError]');
     }, [error]);
 

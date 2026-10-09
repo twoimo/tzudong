@@ -1,0 +1,48 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-evaluation-page-api.test.ts:
+(pass) admin paginated HTTP read contract > denies browser/non-admin calls before privileged work [0.50ms]
+(pass) admin paginated HTTP read contract > cold and repeated pages never read the full catalog, and remain private [4.44ms]
+(pass) admin paginated HTTP read contract > keeps the compatibility response and fixed invalid-query code [0.37ms]
+[admin/evaluations] failed
+(pass) admin paginated HTTP read contract > raw read errors remain fixed private failures without a silent stream fallback [0.40ms]
+(pass) 100 adaptive handler reads retain exact codes, query guards and explicit mode [7.64ms]
+
+tests-unit/admin-evaluation-page-server.test.ts:
+(pass) DB-backed bounded evaluation pages > pins normalization and default ordering rather than silently accepting runtime drift [0.03ms]
+(pass) DB-backed bounded evaluation pages > reads only the page and bounded database warning aggregates across the page boundary [1.39ms]
+(pass) DB-backed bounded evaluation pages > explicit compatibility stream does not depend on RPC admission [2.15ms]
+(pass) DB-backed bounded evaluation pages > defaults to bounded raw groups without the runtime normalization gate [2.09ms]
+(pass) DB-backed bounded evaluation pages > only exact SQL Unicode/capacity admission failures use the complete existing stream [4.14ms]
+(pass) DB-backed bounded evaluation pages > does not hide transport, DB, malformed, unknown or stale RPC failures [0.46ms]
+(pass) DB-backed bounded evaluation pages > stream failures remain errors after an admission refusal [0.17ms]
+(pass) DB-backed bounded evaluation pages > refuses source mutation during warnings and does not pass partial statistics [0.52ms]
+(pass) DB-backed bounded evaluation pages > rejects malformed UUID/cross-filter cursors and duplicate row IDs [0.49ms]
+(pass) DB-backed bounded evaluation pages > coalesces 100 cold reads, reuses summaries, and refreshes after a revision or TTL change [1.57ms]
+(pass) DB-backed bounded evaluation pages > old database compatibility is revision scoped and never sticks after RPC availability changes [0.72ms]
+(pass) DB-backed bounded evaluation pages > never caches a failed or inconsistent load [0.28ms]
+(pass) DB-backed bounded evaluation pages > evicts older queries rather than retaining an unbounded catalog of pages [4.24ms]
+(pass) raw warning server transport > raw RPC preserves unsupported Unicode and deleted union without the SQL ICU gate [2.39ms]
+(pass) raw warning server transport > default preserves all Unicode/deleted warnings when the old database has no raw RPC [2.09ms]
+(pass) raw warning server transport > automatic raw never disguises errors or disappearance after a partial batch [3.00ms]
+(pass) raw warning server transport > default full warning output equals stream on the Unicode fixture [1.01ms]
+(pass) raw warning server transport > advances bound cursor and restarts complete stream only on exact capacity refusal after a partial batch [1.62ms]
+(pass) raw warning server transport > raw transport, unknown, permission, malformed and stale failures never trigger stream fallback [1.25ms]
+
+tests-unit/admin-evaluation-raw-warning-groups.test.ts:
+(pass) four samples preserve top three with self both inside and outside samples [0.39ms]
+(pass) cursor offsets cover exactly the same groups and rows across batches [0.11ms]
+(pass) rejects wrong revision, totals, cursor, membership, duplicate samples and extra raw attrs [0.28ms]
+(pass) rejects a missing last self even when fabricated row and group totals agree [0.10ms]
+(pass) UTF16 similarity and locale-equivalent display ties retain exact stream order [0.29ms]
+(pass) a self-containing first group cannot displace the next three groups on a display tie [0.18ms]
+(pass) adaptive flat decoder rejects incomplete, switched and malformed continuations [3.61ms]
+
+tests-unit/admin-evaluation-warning-stream.test.ts:
+(pass) bounded warning streams > matches whole-video counts, first evidence and top candidates across all page boundaries [35.97ms]
+(pass) bounded warning streams > deleted targets keep every warning empty [0.11ms]
+
+ 33 pass
+ 0 fail
+ 714 expect() calls
+Ran 33 tests across 4 files. [207.00ms]

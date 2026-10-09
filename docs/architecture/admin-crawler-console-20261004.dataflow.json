@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "쯔동 크롤러 데이터 흐름",
+    "output": "docs/architecture/admin-crawler-console-20261004.html",
+    "viewBox": [
+      1080,
+      600
+    ],
+    "quality_profile": "showcase"
+  },
+  "stages": [
+    {
+      "label": "수집"
+    },
+    {
+      "label": "영상 · 자막"
+    },
+    {
+      "label": "추출 · 선정"
+    },
+    {
+      "label": "평가"
+    },
+    {
+      "label": "저장 · 검수"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "collect",
+      "type": "external",
+      "label": "수집 대상",
+      "sublabel": "URL · metadata",
+      "stage": 0,
+      "row": 1
+    },
+    {
+      "id": "media",
+      "type": "backend",
+      "label": "영상 처리",
+      "sublabel": "frames · caption",
+      "stage": 1,
+      "row": 0
+    },
+    {
+      "id": "transcript",
+      "type": "backend",
+      "label": "자막 수집",
+      "sublabel": "transcript JSONL",
+      "stage": 1,
+      "row": 2
+    },
+    {
+      "id": "extract",
+      "type": "backend",
+      "label": "식당 추출",
+      "sublabel": "chunk multimodal",
+      "stage": 2,
+      "row": 0
+    },
+    {
+      "id": "select",
+      "type": "backend",
+      "label": "선정 · 주소",
+      "sublabel": "target · rule",
+      "stage": 2,
+      "row": 2
+    },
+    {
+      "id": "evaluate",
+      "type": "backend",
+      "label": "Gemini 평가",
+      "sublabel": "laaj_evaluation",
+      "stage": 3,
+      "row": 2
+    },
+    {
+      "id": "persist",
+      "type": "database",
+      "label": "변환 · 저장",
+      "sublabel": "transform · insert",
+      "stage": 4,
+      "row": 2
+    },
+    {
+      "id": "review",
+      "type": "frontend",
+      "label": "관리자 검수",
+      "sublabel": "승인 · 보류",
+      "stage": 4,
+      "row": 0
+    }
+  ],
+  "flows": [
+    {
+      "id": "collect-media",
+      "from": "collect",
+      "to": "media",
+      "label": "영상"
+    },
+    {
+      "id": "collect-transcript",
+      "from": "collect",
+      "to": "transcript",
+      "label": "자막"
+    },
+    {
+      "id": "media-extract",
+      "from": "media",
+      "to": "extract",
+      "label": "시각 근거",
+      "route": "straight"
+    },
+    {
+      "id": "transcript-extract",
+      "from": "transcript",
+      "to": "extract",
+      "label": "발화 근거"
+    },
+    {
+      "id": "extract-select",
+      "from": "extract",
+      "to": "select",
+      "label": "식당 후보",
+      "labelAt": [
+        530,
+        200
+      ]
+    },
+    {
+      "id": "select-evaluate",
+      "from": "select",
+      "to": "evaluate",
+      "label": "평가 대상"
+    },
+    {
+      "id": "evaluate-persist",
+      "from": "evaluate",
+      "to": "persist",
+      "label": "평가 결과"
+    },
+    {
+      "id": "persist-review",
+      "from": "persist",
+      "to": "review",
+      "label": "검수 데이터"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "실행과 근거",
+      "items": [
+        "앱의 8개 단계와 연결을 공유하는 데이터 흐름이며 실행 순서표는 아닙니다.",
+        "단계 상태와 소요 시간은 manifest stepEvents로 확인합니다.",
+        "제어 서버 실행 목록과 manifest는 별도 조회 자료입니다."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "판정 경계",
+      "items": [
+        "기록이 없는 단계는 완료가 아니라 미확인입니다.",
+        "dry-run은 실제 저장 성공의 증거가 아닙니다.",
+        "최종 승인과 보호 필드는 관리자 검수에 속합니다."
+      ]
+    }
+  ]
+}

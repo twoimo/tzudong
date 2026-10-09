@@ -1,0 +1,25 @@
+{
+  "homeBytes": 193326,
+  "generalAppBytes": 370032,
+  "adminBytes": 374310,
+  "deferredBytes": 193326,
+  "homeTransferBytes": 46125,
+  "generalAppTransferBytes": 68181,
+  "adminTransferBytes": 69365,
+  "deferredTransferBytes": 46125,
+  "sharedAssetPaths": [
+    "static/css/6483f0ac0a988a4d.css",
+    "static/css/6a19c493016ac644.css",
+    "static/css/a11e8d25adec0c48.css",
+    "static/css/a569e2016bc29536.css",
+    "static/css/a9856b665b4e4a0c.css"
+  ],
+  "exclusiveAssetPaths": {
+    "home": [],
+    "generalApp": [],
+    "admin": [
+      "static/css/7e063ea2b5667c39.css"
+    ],
+    "deferred": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "vercel",
+    "inspect",
+    "www.tzudong.app",
+    "--scope",
+    "twoimos-projects",
+    "--format",
+    "json",
+    "--non-interactive"
+  ],
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "deploymentId": "dpl_HXG5n1x3k4E2PBA4Vf4pEvXcqfye",
+  "url": "tzudong-niao9yn3r-twoimos-projects.vercel.app",
+  "readyState": "READY",
+  "target": "production",
+  "gitSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "gitRef": "main",
+  "observedAlias": "www.tzudong.app",
+  "sourceBindingMethod": "Exact alias-resolved deployment URL joined to fresh READY production list of verified tzudong project"
+}

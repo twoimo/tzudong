@@ -1,0 +1,20 @@
+{
+  "kind": "isolated-service-invoker-replay-verification",
+  "runtime": "PostgreSQL 17.6 / Python 3.14.7 / owned Unix socket",
+  "sourceSha256": "527286d204fc8a5b07891763535fcb27ce6e28a0e2489c27796a63bc306b6f9c",
+  "bundleSha256": "15c849887cf3cd9641181545146bbf1226b3c0a2dc45f84d892022dd9041f5a5",
+  "relatedTestsPassed": 10,
+  "generatorAndReconstructionTestsPassed": 9,
+  "shellSyntaxPassed": true,
+  "checks": [
+    "immutable source and bundle hash binding",
+    "one role lease inside original transaction",
+    "existing function bodies preserved",
+    "role memberships restored on commit and rollback",
+    "source and membership bundle mutation rejected"
+  ],
+  "canonicalPg15FullReplay": "pending CI",
+  "operationalMigrationReapplied": false,
+  "hostedRoleChanges": 0,
+  "failedTaskFixtureDatabasesRemoved": 4
+}

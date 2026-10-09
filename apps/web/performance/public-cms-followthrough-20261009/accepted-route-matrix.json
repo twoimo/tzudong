@@ -1,0 +1,266 @@
+[
+  {
+    "step": 1,
+    "routePattern": "/auth/required",
+    "source": "app/auth/required/page.tsx",
+    "currentEvidence": "익명 접근 안내",
+    "screenshots": {
+      "desktop": "screenshots/01-desktop.png",
+      "tablet": "screenshots/01-tablet.png",
+      "mobile": "screenshots/01-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 2,
+    "routePattern": "/auth/reset-password",
+    "source": "app/auth/reset-password/page.tsx",
+    "currentEvidence": "복구 권한 없는 상태 안내",
+    "screenshots": {
+      "desktop": "screenshots/02-desktop.png",
+      "tablet": "screenshots/02-tablet.png",
+      "mobile": "screenshots/02-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 3,
+    "routePattern": "/data-deletion",
+    "source": "app/data-deletion/page.tsx",
+    "currentEvidence": "공개 안내·스크롤·링크 검증",
+    "screenshots": {
+      "desktop": "screenshots/03-desktop.png",
+      "tablet": "screenshots/03-tablet.png",
+      "mobile": "screenshots/03-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 4,
+    "routePattern": "/feed",
+    "source": "app/feed/page.tsx",
+    "currentEvidence": "합성 읽기 실패 상태",
+    "screenshots": {
+      "desktop": "stable-4-desktop.png",
+      "tablet": "stable-4-tablet.png",
+      "mobile": "stable-4-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 5,
+    "routePattern": "/global-map",
+    "source": "app/global-map/page.tsx",
+    "currentEvidence": "외부 지도 차단 상태",
+    "screenshots": {
+      "desktop": "screenshots/05-desktop.png",
+      "tablet": "screenshots/05-tablet.png",
+      "mobile": "screenshots/05-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 6,
+    "routePattern": "/home-frame",
+    "source": "app/home-frame/page.tsx",
+    "currentEvidence": "홈 지도 차단 상태",
+    "screenshots": {
+      "desktop": "screenshots/06-desktop.png",
+      "tablet": "screenshots/06-tablet.png",
+      "mobile": "screenshots/06-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 7,
+    "routePattern": "/insights",
+    "source": "app/insights/page.tsx",
+    "currentEvidence": "익명 사용자는 홈으로 이동",
+    "screenshots": {
+      "desktop": "screenshots/07-desktop.png",
+      "tablet": "screenshots/07-tablet.png",
+      "mobile": "screenshots/07-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 8,
+    "routePattern": "/leaderboard",
+    "source": "app/leaderboard/page.tsx",
+    "currentEvidence": "합성 기간 읽기·오류·회복 검증",
+    "screenshots": {
+      "desktop": "stable-8-desktop.png",
+      "tablet": "stable-8-tablet.png",
+      "mobile": "stable-8-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 9,
+    "routePattern": "/mypage/bookmarks",
+    "source": "app/mypage/bookmarks/page.tsx",
+    "currentEvidence": "익명 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/09-desktop.png",
+      "tablet": "screenshots/09-tablet.png",
+      "mobile": "screenshots/09-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 10,
+    "routePattern": "/mypage",
+    "source": "app/mypage/page.tsx",
+    "currentEvidence": "익명 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/10-desktop.png",
+      "tablet": "screenshots/10-tablet.png",
+      "mobile": "screenshots/10-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 11,
+    "routePattern": "/mypage/profile",
+    "source": "app/mypage/profile/page.tsx",
+    "currentEvidence": "익명 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/11-desktop.png",
+      "tablet": "screenshots/11-tablet.png",
+      "mobile": "screenshots/11-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 12,
+    "routePattern": "/mypage/reviews",
+    "source": "app/mypage/reviews/page.tsx",
+    "currentEvidence": "익명 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/12-desktop.png",
+      "tablet": "screenshots/12-tablet.png",
+      "mobile": "screenshots/12-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 13,
+    "routePattern": "/mypage/submissions/edit",
+    "source": "app/mypage/submissions/edit/page.tsx",
+    "currentEvidence": "익명 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/13-desktop.png",
+      "tablet": "screenshots/13-tablet.png",
+      "mobile": "screenshots/13-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 14,
+    "routePattern": "/mypage/submissions/new",
+    "source": "app/mypage/submissions/new/page.tsx",
+    "currentEvidence": "익명 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/14-desktop.png",
+      "tablet": "screenshots/14-tablet.png",
+      "mobile": "screenshots/14-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 15,
+    "routePattern": "/mypage/submissions/recommend",
+    "source": "app/mypage/submissions/recommend/page.tsx",
+    "currentEvidence": "익명 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/15-desktop.png",
+      "tablet": "screenshots/15-tablet.png",
+      "mobile": "screenshots/15-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 16,
+    "routePattern": "/",
+    "source": "app/page.tsx",
+    "currentEvidence": "홈 지도 차단 상태",
+    "screenshots": {
+      "desktop": "screenshots/16-desktop.png",
+      "tablet": "screenshots/16-tablet.png",
+      "mobile": "screenshots/16-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 17,
+    "routePattern": "/privacy/onboarding",
+    "source": "app/privacy/onboarding/page.tsx",
+    "currentEvidence": "안내 오표현 수정·미완료 폼",
+    "screenshots": {
+      "desktop": "stable-17-desktop.png",
+      "tablet": "stable-17-tablet.png",
+      "mobile": "stable-17-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 18,
+    "routePattern": "/privacy",
+    "source": "app/privacy/page.tsx",
+    "currentEvidence": "공개 문서·스크롤·링크 검증",
+    "screenshots": {
+      "desktop": "screenshots/18-desktop.png",
+      "tablet": "screenshots/18-tablet.png",
+      "mobile": "screenshots/18-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 19,
+    "routePattern": "/s/[code]",
+    "source": "app/s/[code]/page.tsx",
+    "currentEvidence": "무효 링크 fallback; TypeError 남음",
+    "screenshots": {
+      "desktop": "screenshots/19-desktop.png",
+      "tablet": "screenshots/19-tablet.png",
+      "mobile": "screenshots/19-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 20,
+    "routePattern": "/stamp",
+    "source": "app/stamp/page.tsx",
+    "currentEvidence": "합성 읽기·검색 오류/회복 검증",
+    "screenshots": {
+      "desktop": "stable-20-desktop.png",
+      "tablet": "stable-20-tablet.png",
+      "mobile": "stable-20-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 21,
+    "routePattern": "/submissions",
+    "source": "app/submissions/page.tsx",
+    "currentEvidence": "마이페이지 경유 로그인 가드",
+    "screenshots": {
+      "desktop": "screenshots/21-desktop.png",
+      "tablet": "screenshots/21-tablet.png",
+      "mobile": "screenshots/21-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  },
+  {
+    "step": 22,
+    "routePattern": "/user/[userId]",
+    "source": "app/user/[userId]/page.tsx",
+    "currentEvidence": "합성 프로필 조회 실패 상태",
+    "screenshots": {
+      "desktop": "stable-22-desktop.png",
+      "tablet": "stable-22-tablet.png",
+      "mobile": "stable-22-mobile.png"
+    },
+    "operatingAuthenticatedDataVerified": false
+  }
+]

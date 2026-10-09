@@ -1,0 +1,22 @@
+{
+  "scope": "anonymous-local-read-only-auth-ui",
+  "operatingAuthEvidence": false,
+  "cases": [
+    {
+      "viewport": "desktop",
+      "failure": "expect(locator).toBeVisible() failed"
+    },
+    {
+      "viewport": "tablet",
+      "failure": "expect(locator).toBeVisible() failed"
+    },
+    {
+      "viewport": "mobile",
+      "failure": "expect(locator).toBeVisible() failed"
+    },
+    {
+      "viewport": "short-mobile",
+      "failure": "expect(locator).toBeVisible() failed"
+    }
+  ]
+}

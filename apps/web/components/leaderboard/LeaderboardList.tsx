@@ -36,6 +36,17 @@ export function LeaderboardList({
 }: LeaderboardListProps) {
     return (
         <div className="divide-y divide-border">
+            {isError && users.length > 0 && (
+                <div role="alert" className="space-y-2 px-4 py-3 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">랭킹 목록을 갱신하지 못했습니다</p>
+                    <p>이전에 조회한 결과를 표시합니다.</p>
+                    {onRetry && (
+                        <button type="button" onClick={onRetry} className="rounded-md border border-border px-3 py-1.5 font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            다시 시도
+                        </button>
+                    )}
+                </div>
+            )}
             {users.map((user, index) => {
                 const isCurrentUser = currentUserId === user.id;
                 const tier = getUserTier(user.qualityScore);

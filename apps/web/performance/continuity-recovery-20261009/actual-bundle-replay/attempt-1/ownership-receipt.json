@@ -1,0 +1,24 @@
+{
+  "kind": "actual-four-bundle-owned-cluster",
+  "status": "unconfirmed",
+  "nonce": "a7133f2e9663b09f1b89e41d",
+  "container": "tzudong-actual-bundle-a7133f2e9663b09f1b89e41d",
+  "volume": "tzudong-actual-bundle-a7133f2e9663b09f1b89e41d",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "owner": "actual-bundle-a7133f2e9663b09f1b89e41d",
+  "network": "none",
+  "publishedPorts": 0,
+  "operatingWrites": false,
+  "hostedWrites": false,
+  "cleanup": {
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  },
+  "failure": {
+    "code": "OWNED_COMMAND_FAILED",
+    "fixedCode": "BOOTSTRAP_PLATFORM_SETTINGS_DRIFT",
+    "exitCode": 2
+  },
+  "completedAt": "2026-10-09T08:33:33.121Z"
+}

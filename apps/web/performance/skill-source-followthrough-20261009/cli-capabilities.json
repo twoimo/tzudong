@@ -1,0 +1,80 @@
+{
+  "codex --version": {
+    "exitCode": 0,
+    "result": "codex-cli 0.159.2\n"
+  },
+  "codex plugin --help": {
+    "exitCode": 0,
+    "result": "Manage Codex plugins\n\nUsage: codex plugin [OPTIONS] <COMMAND>\n\nCommands:\n  add          Install a plugin from a configured or remote marketplace\n  list         List plugins available from configured and remote marketplaces\n  marketplace  Add, list, upgrade, or remove configured plugin marketplaces\n  remove       Uninstall a plugin and remove its local cache\n  help         Print this message or the help of the given subcommand(s)\n\nOptions:\n  -c, --config <key=value>\n          Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.\n          Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed\n          as TOML. If it fails to parse as TOML, the raw string is used as a literal.\n          \n          Examples: - `-c model=\"o3\"` - `-c 'sandbox_permissions=[\"disk-full-read-access\"]'` - `-c\n          shell_environment_policy.inherit=all`\n\n      --enable <FEATURE>\n          Enable a feature (repeatable). Equivalent to `-c features.<name>=true`\n\n      --disable <FEATURE>\n          Disable a feature (repeatable). Equivalent to `-c features.<name>=false`\n\n  -h, --help\n          Print help (see a summary with '-h')\n"
+  },
+  "codex plugin marketplace upgrade --help": {
+    "exitCode": 0,
+    "result": "Refresh configured Git marketplace snapshots.\n\nOmit MARKETPLACE_NAME to upgrade all configured Git marketplaces.\n\nUsage: codex plugin marketplace upgrade [OPTIONS] [MARKETPLACE_NAME]\n\nArguments:\n  [MARKETPLACE_NAME]\n          Optional configured marketplace name to upgrade. Omit to upgrade all Git marketplaces\n\nOptions:\n  -c, --config <key=value>\n          Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.\n          Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed\n          as TOML. If it fails to parse as TOML, the raw string is used as a literal.\n          \n          Examples: - `-c model=\"o3\"` - `-c 'sandbox_permissions=[\"disk-full-read-access\"]'` - `-c\n          shell_environment_policy.inherit=all`\n\n      --json\n          Output upgrade result as JSON\n\n      --enable <FEATURE>\n          Enable a feature (repeatable). Equivalent to `-c features.<name>=true`\n\n      --disable <FEATURE>\n          Disable a feature (repeatable). Equivalent to `-c features.<name>=false`\n\n  -h, --help\n          Print help (see a summary with '-h')\n\nExamples:\n  codex plugin marketplace upgrade\n  codex plugin marketplace upgrade debug\n"
+  },
+  "codex plugin add --help": {
+    "exitCode": 0,
+    "result": "Install a plugin from a configured or remote marketplace.\n\nPass either `PLUGIN@MARKETPLACE` or pass `PLUGIN` with `--marketplace MARKETPLACE`.\n\nUsage: codex plugin add [OPTIONS] <PLUGIN[@MARKETPLACE]>\n\nArguments:\n  <PLUGIN[@MARKETPLACE]>\n          Plugin selector to install: either PLUGIN@MARKETPLACE or PLUGIN with --marketplace\n\nOptions:\n  -c, --config <key=value>\n          Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.\n          Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed\n          as TOML. If it fails to parse as TOML, the raw string is used as a literal.\n          \n          Examples: - `-c model=\"o3\"` - `-c 'sandbox_permissions=[\"disk-full-read-access\"]'` - `-c\n          shell_environment_policy.inherit=all`\n\n  -m, --marketplace <MARKETPLACE>\n          Marketplace name to use when PLUGIN does not include @MARKETPLACE\n\n      --enable <FEATURE>\n          Enable a feature (repeatable). Equivalent to `-c features.<name>=true`\n\n      --json\n          Output install result as JSON\n\n      --disable <FEATURE>\n          Disable a feature (repeatable). Equivalent to `-c features.<name>=false`\n\n  -h, --help\n          Print help (see a summary with '-h')\n\nExamples:\n  codex plugin add sample@debug\n  codex plugin add sample --marketplace debug\n"
+  },
+  "codex plugin list --marketplace openai-curated-remote --json": {
+    "exitCode": 0,
+    "result": {
+      "installed": [
+        {
+          "pluginId": "supabase@openai-curated-remote",
+          "name": "supabase",
+          "marketplaceName": "openai-curated-remote",
+          "version": "1.0.0",
+          "installed": true,
+          "enabled": true,
+          "source": {
+            "source": "remote",
+            "id": "plugin_asdk_app_69d3e5ee6a708191baa733f7b8931995"
+          },
+          "installPolicy": "AVAILABLE",
+          "authPolicy": "ON_INSTALL"
+        },
+        {
+          "pluginId": "vercel@openai-curated-remote",
+          "name": "vercel",
+          "marketplaceName": "openai-curated-remote",
+          "version": "0.54.1",
+          "installed": true,
+          "enabled": true,
+          "source": {
+            "source": "remote",
+            "id": "plugin_connector_690a90ec05c881918afb6a55dc9bbaa1"
+          },
+          "installPolicy": "AVAILABLE",
+          "authPolicy": "ON_INSTALL"
+        }
+      ]
+    }
+  },
+  "codex plugin marketplace list --json": {
+    "exitCode": 0,
+    "result": {
+      "marketplaces": [
+        {
+          "name": "personal",
+          "root": "/Users/twoimo"
+        },
+        {
+          "name": "openai-primary-runtime",
+          "root": "/Users/twoimo/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime",
+          "marketplaceSource": {
+            "sourceType": "local",
+            "source": "/Users/twoimo/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+          }
+        },
+        {
+          "name": "openai-bundled",
+          "root": "/Users/twoimo/.codex/.tmp/bundled-marketplaces/openai-bundled",
+          "marketplaceSource": {
+            "sourceType": "local",
+            "source": "/Users/twoimo/.codex/.tmp/bundled-marketplaces/openai-bundled"
+          }
+        }
+      ]
+    }
+  }
+}

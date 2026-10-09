@@ -1,0 +1,30 @@
+{
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/acceptance-probe-20261009/root-admission.json",
+      "role": "pre_request_admission",
+      "bytes": 1499,
+      "fileSha256": "62edb4187607b027aeddcac84b7b9ba8da59c22795ad3f3172a3d3bf2759d10c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/acceptance-probe-20261009/proof.json",
+      "role": "sanitized_request_outcome",
+      "bytes": 603,
+      "fileSha256": "6cb0a6984519a0aaf37619cbf31aa521be93147dac36feba3bfb6cc4b0579489"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/fixture/factored-schema.json",
+      "role": "submitted_schema_fixture",
+      "bytes": 3878,
+      "fileSha256": "861a312fc9ac30951a1faaf0fa4a3159b87841dd58877c9899c33da5958e385b",
+      "canonicalBytes": 2004,
+      "canonicalSha256": "d72c43afe8d12d0a85a815d8ec70ce107dc40e0bc97d2dfbedfeaf6065846953"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/proofs/proof.json",
+      "role": "offline_expansion_equality_proof",
+      "bytes": 2973,
+      "fileSha256": "9531de8f760678196323b839d2403f701286de73d84227aeeb53669a5d89df69"
+    }
+  ]
+}

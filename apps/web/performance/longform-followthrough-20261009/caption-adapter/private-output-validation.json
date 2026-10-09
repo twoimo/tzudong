@@ -1,0 +1,78 @@
+{
+  "privateArtifacts": [
+    {
+      "basename": "registration-plan.private.json",
+      "sha256": "9e5f7b891021384638c2d488df47dceb13c3cd8c97deeb016040996e8e2376d3",
+      "mode": "0600",
+      "sameBytes": true,
+      "removedFromRepository": true
+    },
+    {
+      "basename": "live-node-preimages.private.json",
+      "sha256": "9d18508219cac75a3b15f6c0f83e98918e30f9bedd2719172a86f2c25219679f",
+      "mode": "0600",
+      "sameBytes": true,
+      "removedFromRepository": true
+    }
+  ],
+  "targetIds": [
+    {
+      "videoId": "F93TnnxCNvY",
+      "nodeId": "261006-1dn0-hdeh43wq"
+    },
+    {
+      "videoId": "3Z-ngM3DVi0",
+      "nodeId": "261006-1dn0-bhr7lw23"
+    },
+    {
+      "videoId": "BTyT60UWiLc",
+      "nodeId": "261006-1dn0-q20wgonz"
+    },
+    {
+      "videoId": "-C4280KT3S4",
+      "nodeId": "261006-1gn2-vuz3x3nu"
+    },
+    {
+      "videoId": "Tsy8xRjMpB0",
+      "nodeId": "261006-1gn2-s5yq4t2q"
+    },
+    {
+      "videoId": "xRf_bhPFZrY",
+      "nodeId": "261006-1gn2-3lve41rq"
+    },
+    {
+      "videoId": "zkOBLQUSEr0",
+      "nodeId": "261006-1i3c-jib191x8"
+    },
+    {
+      "videoId": "DNGGl1-jFcU",
+      "nodeId": "261006-1i3c-k0l3q5eb"
+    },
+    {
+      "videoId": "Ck5UrobZuKA",
+      "nodeId": "261006-1i3c-axw2mngb"
+    }
+  ],
+  "sharedVaultExecute": false,
+  "writerTests": {
+    "exactMode": "0600",
+    "umasks": [
+      "000",
+      "777"
+    ],
+    "overwriteRejected": true,
+    "symlinkRejected": true
+  },
+  "sourceHashes": {
+    "backend/knowledge_graph/caption_osk_adapter.py": "83cec891cb5ee1453da591b519e8f54cb50ff10dbb07ca3aabd2e07e0aa0664d",
+    "backend/knowledge_graph/tests/test_caption_osk_adapter.py": "00efa1e03b3e02cf8e080dc32fe25995c78ed94979d9b876b53ff0cba0cf47fc",
+    "backend/knowledge_graph/CAPTION_OSK_ADAPTER.md": "62b48bf0adb10617f3f045ea6f6282f8c121d10aa88ad9bd898e65c139aed45f"
+  },
+  "finalTests": {
+    "count": 5,
+    "seconds": 2.404,
+    "exitCode": 0,
+    "result": "OK",
+    "sharedVaultWrites": 0
+  }
+}

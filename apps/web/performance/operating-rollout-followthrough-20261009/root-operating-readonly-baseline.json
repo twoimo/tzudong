@@ -1,0 +1,27 @@
+{
+  "observedAtUtc": "2026-10-09T00:27:08.728Z",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "readOnly": true,
+  "operatingWrites": false,
+  "reviewRuns": 0,
+  "ledgerCount": 80,
+  "reviewItems": 0,
+  "latestLedger": "20261008124858",
+  "restaurantCount": 1659,
+  "activeReviewItems": 0,
+  "guardedRpcPresent": false,
+  "pendingGuardedApplied": false,
+  "reviewAutomationPolicy": {
+    "enabled": false,
+    "version": 1,
+    "batchSize": 50,
+    "lastRunAt": null,
+    "dailyLimit": 50
+  },
+  "parallelReviewMigrationsApplied": 0,
+  "priorPreparationAttempt": {
+    "status": "failed_before_result",
+    "reason": "query_used_nonexistent_run_status_column",
+    "databaseWrites": false
+  }
+}

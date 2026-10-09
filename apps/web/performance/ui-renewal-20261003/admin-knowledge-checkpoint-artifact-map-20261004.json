@@ -1,0 +1,468 @@
+{
+  "kind": "admin-knowledge-local-source-checkpoint-artifact-map",
+  "observedAt": "2026-10-04T10:09:50.450955+00:00",
+  "formalPerformanceClaim": "not_established",
+  "artifactCount": 91,
+  "entries": [
+    {
+      "path": "apps/web/performance/knowledge-graph-20261004/cached-restarts.json",
+      "bytes": 1293,
+      "sha256": "9e81b5d8b21a5c0373053b2b31f0fc8ea654b8a75b60be79799de1e9a921a064"
+    },
+    {
+      "path": "apps/web/performance/knowledge-graph-20261004/inventory.json",
+      "bytes": 579813,
+      "sha256": "867d451d8586ed4d075e21d84c825ee5a1086f944d92597a0a249b7cc33834ad"
+    },
+    {
+      "path": "apps/web/performance/knowledge-graph-20261004/model-evidence.json",
+      "bytes": 376,
+      "sha256": "a711f96edc01354d76202608582d2f4b61a6e82fd9eaeeda715fda581abe8c8f"
+    },
+    {
+      "path": "apps/web/performance/knowledge-graph-20261004/pilot-node-inputs.json",
+      "bytes": 9522,
+      "sha256": "ab17986c2862b36c379f0c6d6859b5cc7ef288e62f2ce82bddb6ed0819de5223"
+    },
+    {
+      "path": "apps/web/performance/knowledge-graph-20261004/publication-readback-20261004.json",
+      "bytes": 2994,
+      "sha256": "59b0e884bcef19196655b4189df633ab4fa1d69c8116c652b6d7dfa15f0f1303"
+    },
+    {
+      "path": "apps/web/performance/knowledge-graph-20261004/real-pilot.json",
+      "bytes": 999,
+      "sha256": "936f021b3cd07cd0d26e8e4ee8abcc2c14507f8395e862f5f0afe29cccdc6be3"
+    },
+    {
+      "path": "apps/web/performance/knowledge-graph-20261004/recovery-browser-20261004.json",
+      "bytes": 8192,
+      "sha256": "fcfcd62c4528cea78be84d2fda2935d16f32a31aabc9cd9ffe00eee9b24e718a"
+    },
+    {
+      "path": "apps/web/performance/pipeline-20261002/transform-final-followup-20261004-raw.json",
+      "bytes": 13219,
+      "sha256": "f6c28177e2d8a151946f8bae389ce1643fd7e7e2d7ad179a1e614838e62a14e4"
+    },
+    {
+      "path": "apps/web/performance/pipeline-20261002/transform-final-followup-20261004-summary.json",
+      "bytes": 12551,
+      "sha256": "99e3c81e8e00772e4c4a77388ae5f7c6569d67039f485187e67e21e848fa44d4"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-name-and-warning-conformance-20261004.json",
+      "bytes": 788,
+      "sha256": "b10598838076e263c8548753b7911e002f43578c5097db60bbc054f88f11066c"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-read-normalization-conformance-20261004.json",
+      "bytes": 537,
+      "sha256": "eda11011bac9474f33ee70a950bd2038c395f03daa001977f93cd93568cc8ec2"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-banner-semantics-fixed.json",
+      "bytes": 169030,
+      "sha256": "2095764013ff597d2a5f587a2abe68d080c3f6e6109013906eb8e33ef75743a0"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-banner-semantics.json",
+      "bytes": 168355,
+      "sha256": "1f4e016e8103ff89c99731c4ac4275f4bee85c25f974cf7953bf8938fc1c98a9"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-final-affected.json",
+      "bytes": 244504,
+      "sha256": "5231fb0f531e60b5a0ad55be1154ebedd58704fe611cc0a6c366fb054165ac5b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-final-graph-mobile.json",
+      "bytes": 172221,
+      "sha256": "ad01277f9e6c2df63766b3a4e89d598c3a6e74b288a3d26c42607cd4b4be83a3"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-final-insights.json",
+      "bytes": 170144,
+      "sha256": "566af5345b530eae9a06f78b5ad4e7ed84aa8bbc7fd1069e2614253f0b0b63a4"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-final-mobile-navigation.json",
+      "bytes": 172493,
+      "sha256": "edcbcce1cdb0111205125a3089b72651cc2c385b3098b5a8c8eb77b204bd6205"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-final-mobile-scroll-reveal.json",
+      "bytes": 178498,
+      "sha256": "56aec33f347f6e1c2ba5f1f124efe8e8bd8bcc58fcdaa26e9b255b265d54363b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-fixture-auth-probe.json",
+      "bytes": 83924,
+      "sha256": "b64cf5675f0cb3d0c69a1c557da21f6be0aa9050a6fa66298328d69d7cfa60d3"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-header-probe.json",
+      "bytes": 77425,
+      "sha256": "a189f4bda653b96ad74091259c4bc2f5f87ab104c98bb4728a790848fa4e50b1"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-preflight.json",
+      "bytes": 100460,
+      "sha256": "d4d82442c0efc49418ac3a38869b94db4b1d62165f4b666c65ac806f3f364f7b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-reconciled.json",
+      "bytes": 320183,
+      "sha256": "06f92e0abd70bce17177c2513571842f3e8de6662d6c446de4b99fe4d18f2111"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-routes-fixed.json",
+      "bytes": 107459,
+      "sha256": "fd683cf94f2b1d3a62335798cbae1a74154eef58b7d4fa10a455faff3a024b5c"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-routes-navigation-fixed.json",
+      "bytes": 80045,
+      "sha256": "a41b3279cdeaadcc37dbd4aa7ec84ca91caec6f77886ffda1bbf641320344a96"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004-summary.json",
+      "bytes": 328689,
+      "sha256": "8686a46a6fbc2255c27d176a3245940ce6b2d9ab0df3772b40d38071c9eeb863"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-20261004.json",
+      "bytes": 314715,
+      "sha256": "484a7afb2b11bf1355476e0db4b66a1991c72fa86d31aea4f5732a51039e1af5"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/admin-sidebar-pages-browser-pipeline-20261004.json",
+      "bytes": 179597,
+      "sha256": "4c613abd6d0bbb29c2679c13911ce30286d39b036a7303cdc05ac7ad57dc691d"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-engagementRate-1423-20261004.png",
+      "bytes": 51359,
+      "sha256": "f066f8e5ddea27c73769635b9c26e67cedd9e3902ecd7e52bcca1afa62df7522"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-engagementRate-390-20261004.png",
+      "bytes": 51060,
+      "sha256": "0fcd488ac19887edbda5474843051873a3dc1253cc29a05f6aa3efe22fe7f0e7"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-engagementRate-834-20261004.png",
+      "bytes": 41283,
+      "sha256": "c03493bdb340a6696368356f0ffd6efceae6814e499793508bb3303ae32fcbcb"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-headers-after-20261004.json",
+      "bytes": 2951,
+      "sha256": "8b591bd55121026159d32f6c8f34109acdf70721b41b3253ba0432d3d72b9a39"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-headers-before-20261004.json",
+      "bytes": 1287,
+      "sha256": "fb3ca0bad6a72981c0a7709d790ac774e722cde2e881d78f2cb171122e814b8c"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-kpi-1423-20261004.png",
+      "bytes": 242450,
+      "sha256": "ab2ae72c0fd5a78ef6509a58252e137ac757c23a052bfb41dcfba1b854109474"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-kpi-390-20261004.png",
+      "bytes": 66227,
+      "sha256": "6ec9550b9dee000856b0c3f7b98432b2f9fef7ae59189ea7fabcfe5cc39a3807"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-kpi-834-20261004.png",
+      "bytes": 122355,
+      "sha256": "b36f5533003c32435663c23486376d795835ff5b4489759cc0248d8860a3a681"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-kpi-headers-after-20261004.json",
+      "bytes": 4802,
+      "sha256": "e63f8efb8a773a16459726452132941236b950795264b5fe339c472d75db4a63"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-kpi-headers-before-20261004.json",
+      "bytes": 2159,
+      "sha256": "0447c6e8a9da34654d55bf1f4219d63d2a75ff60f152f2a7cab273eccacc75fb"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-topContent-1423-20261004.png",
+      "bytes": 41615,
+      "sha256": "078252b87016c2973fdc5a1c4be2fd13afa00f30f60fdb12219b4f78fa266f36"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-topContent-390-20261004.png",
+      "bytes": 1184,
+      "sha256": "7d8518b751979f14b9ceeda6fa7f62fb83d4bfa81798075e00fd880875db2ce8"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/dashboard-topContent-834-20261004.png",
+      "bytes": 1110,
+      "sha256": "fe495f6264623b6f228f5e23883731e6e1f1534aef3109668e47d3001799cd8b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/density-review-final-20261004.json",
+      "bytes": 1404,
+      "sha256": "a54ca73af4647da6bea689a24684ccabc0555e1dc3948a284c41c1e16de1c1ad"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/gemini-3.8-compatibility-20261004.json",
+      "bytes": 3171,
+      "sha256": "d2b10e622053f10b10a6055fbddbf7acbcbca20278831777e5ab8322b59b07fa"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/gitguardian-artifact-proof-20261004.json",
+      "bytes": 2277,
+      "sha256": "3747d9a54eed5c1b5a15e7d9b86cc68f81424c287826679e5128a51e0a071ab8"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/imagegen-artifact-hash-review-20261004.json",
+      "bytes": 619,
+      "sha256": "1b754c31540d08f0b5a991b96f2d044728d3bebb94df2d8070f17bd3e22b38d0"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/layout-followup-20261004.json",
+      "bytes": 554,
+      "sha256": "f45d6a831ff9dea7abd369b02fb2544fc623f7767330e5979fa2472879c1ae12"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-boundary-review-20261004.json",
+      "bytes": 1621,
+      "sha256": "cc7beb4680cc4d24a0e825bbf11015b9e830d4632c3a92b9e4b4a4204167eb80"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-1423-dark.png",
+      "bytes": 141746,
+      "sha256": "aa6256d2a569ea4961fec8b020ff2c6b15fd8c2199cf6eaf35b63d21ac5ebc55"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-1423-light.png",
+      "bytes": 141822,
+      "sha256": "f8eb898997f3694cbc7b45a4277ed7b72c134d761fd6ed7b9f176d7d773a3425"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-390-dark.png",
+      "bytes": 66800,
+      "sha256": "fa716120c1faec9a41608b9efc0513133096a03d918db7424bdca548d27e65b4"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-390-light.png",
+      "bytes": 67112,
+      "sha256": "c320306c2822b013d7d25195ab28c1f17d41c7418270cfe24bfbc142f681da69"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-834-dark.png",
+      "bytes": 118352,
+      "sha256": "cc392cb47fbb793b9677f73f6cc7898665aa5d8a838c332ade6953ef62c1406b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-834-light.png",
+      "bytes": 118743,
+      "sha256": "53f430ffc4bcccb599067777e126a89b14c2ca4f5503c99524abedde55bb8885"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-browser-20261004.json",
+      "bytes": 5692,
+      "sha256": "3c172d3bc62c9f32c6bc6e0afc89536cf7fcb047a8f0ee3f43e19ccf9e741633"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-console-probe-20261004.json",
+      "bytes": 2888,
+      "sha256": "dcc2b54e3d1c4745af722705b298e1d053d04a648bd11b8c023d88142a5dfd0b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-delivery-20261004.json",
+      "bytes": 6149,
+      "sha256": "7b023efb8e3e7dd37aad50c7b1dc257ffc422a96bd48f1a3be66eb94db7f7664"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-render-20261004.json",
+      "bytes": 5184,
+      "sha256": "3d5e0bb6a2c7c98774449faaa82cb51a80f7a2ed031613f45208869d67d60a9b"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/pipeline-console-states-20261004.json",
+      "bytes": 2899,
+      "sha256": "37f7f77741d37d508e29015a711d92f470fb7a61bf36d84b5388a7cf5748a260"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/production-preflight-20261004.json",
+      "bytes": 1048,
+      "sha256": "c23807d4a8428d94427be73ea8c4ef515758720b6c859b8f9aa1862144ef230e"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/query-model-artifact-map-20261004.json",
+      "bytes": 968,
+      "sha256": "2193ead87a1a5e631508605af643e2cf8bd7171833628c8d777cb0810fe9d980"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/query-model-capability-20261004.json",
+      "bytes": 1553,
+      "sha256": "55abd457c42f13370efc086ac16c3a936bbd69485cb540b08d7b3232328f3afd"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/restaurant-automation-stop-capacity-local-20261004.json",
+      "bytes": 3965,
+      "sha256": "a922d8942d90f81c1e8bb99f281d35e46cf766b8cd47dedd8aa4f0731b9848c4"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/restaurant-header-1423-20261004.png",
+      "bytes": 177183,
+      "sha256": "a11182b1724d4b21d17ecc073cd91ccb59c0a060afda16b779bb8584dcacf19e"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/restaurant-header-390-20261004.png",
+      "bytes": 57122,
+      "sha256": "78b120f800f63196eee3b4aaa2f944232983896d357fcf96302c2c27c0218f40"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/restaurant-header-834-20261004.png",
+      "bytes": 110712,
+      "sha256": "b7b6233e378f3a1549b61f031f06fd6e30c0766b994cc3305bee5e57e4e5dd40"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/restaurant-header-astra-20261004.json",
+      "bytes": 4875,
+      "sha256": "1e3d4ead41276e67980107f4b6c03e1553b32e47e5a98c91828d77fa512ef4ec"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-request-id-20261004.json",
+      "bytes": 1094,
+      "sha256": "c3d93c9fa904f667a0dc1f235489c81416c440622f135de1d6d022d04bfb14f2"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-1440-20261004.png",
+      "bytes": 148879,
+      "sha256": "bea199580b2ee1c507fbd931fddb300bf3b4991fb3da94fe44662e6321de5a84"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-390-20261004.png",
+      "bytes": 52838,
+      "sha256": "0346c335951bd5c72a2b6ee428ce6fe6340705ea37952455a5b5f1cedf56976a"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-automation-uncertain-834-20261004.png",
+      "bytes": 94503,
+      "sha256": "89d2e0f1fa0a0979ad78aa4b86478622a65d55821ca96196de1d92a6e7edc498"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-fixes-artifact-map-20261004.json",
+      "bytes": 1687,
+      "sha256": "4cb7a6c21bbb5add6c2c80118bd226844bae10daac51132e05b19af37ee0d143"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-gemini-real-smoke-20261004.json",
+      "bytes": 929,
+      "sha256": "8d7935c6419e13b764953a20c7e57e2bbe32c96f515839572ce45fdb56604bf7"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-judgment-browser-20261004.json",
+      "bytes": 13880,
+      "sha256": "a2246c728c3e5126a3175a189e8b151b171a172ef4e57f059d5a34a47108ce2c"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/review-judgment-browser-attempt1-20261004.json",
+      "bytes": 4521,
+      "sha256": "a6daf0a9c07ff0d99e87a136be48d11f051dc906347afa8d18dddc8a2209febd"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-applied-ledger-checksums-20261004.json",
+      "bytes": 549,
+      "sha256": "57c057711daae5edeab3dd900df88ca0ec87473a383aecb5096b222c3b904c20"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-original-20261004.json",
+      "bytes": 2744,
+      "sha256": "660eca5746ba9cad03533bb4d7ccf35bf6da0417786ca1f585ff32606bb43ae7"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-claim-capability-receipt-20261004.json",
+      "bytes": 2755,
+      "sha256": "bce7b756a72cb210bee60a767182ab4654430a76932a3a201635707e3015a0f1"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-history-artifact-map-20261004.json",
+      "bytes": 627,
+      "sha256": "893d7c96708faf7d03fa6cbcef43d18e763a5e9a64410bbb1c5f900cfd3ee5bf"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/storyboard-input-gates-20261004.json",
+      "bytes": 654,
+      "sha256": "716fc734d77babb81d8ca5b8e3d26f7fc04f2e1ad6240efb647e18088f719282"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/uncertain-generation-and-source-review-20261004.json",
+      "bytes": 1408,
+      "sha256": "1a045263b8cca9d598a5de7df608ed47f1ae05c43bc2f04987dd681ff9832249"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/upstream-integration-20261004.json",
+      "bytes": 1214,
+      "sha256": "b6aeb198502cf5ac9f49b1b1304455d01cb9885ed821387761558bd83815f742"
+    },
+    {
+      "path": "apps/web/performance/ui-renewal-20261003/users-banners-astra-20261004.json",
+      "bytes": 4185,
+      "sha256": "e497b11e1537c2127483a314e17f8ea6fb27e43e2e24a93607792732ae8b56c4"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.dataflow.json",
+      "bytes": 3631,
+      "sha256": "c62ece7848973ea7776fee4c29485a456ee0ebcfdaf1abf1465a95a1ff2b1529"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.delivery.json",
+      "bytes": 791,
+      "sha256": "86dd67db1d93c454d0c49c4787b29d6fe66879930ff18fbe791b28cd697a531d"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.html",
+      "bytes": 808019,
+      "sha256": "924d0f5a5fe53f84c08e08efb321342dbc44e8b93f4a743f09ab6429bc5a74cd"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.review.json",
+      "bytes": 1905,
+      "sha256": "28291f8b18f84dd980722da77cacacc78afbc40cbbc56b291ab1f14d4d4f3e07"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.visual-check.1440x900.dark.png",
+      "bytes": 111077,
+      "sha256": "6002f76a87a53ce4b57ff9d81df664580fad1e3c964c493eb9c38bdbf846a0e4"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.visual-check.1440x900.light.png",
+      "bytes": 108384,
+      "sha256": "cff2f9f482df8dddf3334a368b1927c3df72fac54c73967d7d4f90c1c32e99d0"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.visual-check.2048x1320.dark.png",
+      "bytes": 141567,
+      "sha256": "ca7fdb4eb18083accaf0244e9abef08252075d6913962293dff14259cc2d8810"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.visual-check.2048x1320.light.png",
+      "bytes": 139232,
+      "sha256": "5bdc2f3466a93700b197c768060dcdfe37ca11a4b0aaa4a9c3f3a5fc9a36ac57"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.visual-check.html",
+      "bytes": 2024,
+      "sha256": "37f502e5222c606fe051e77af127606c45d6c33f08d3fc68deb068b8a4ac2d17"
+    },
+    {
+      "path": "docs/architecture/admin-crawler-console-20261004.visual-check.json",
+      "bytes": 17116,
+      "sha256": "23390c04f08861b6733c5e2bd5805a2275cbf323698bc33b3b69a909822d9ee5"
+    }
+  ],
+  "limitations": [
+    "Composed historical and targeted local observations; not a single frozen 90-case deployment run",
+    "Actual provider smoke is one synthetic case",
+    "Full goal, operating deployment and full longform analysis remain incomplete"
+  ]
+}

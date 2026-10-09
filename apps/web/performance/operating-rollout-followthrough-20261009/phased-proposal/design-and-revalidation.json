@@ -1,0 +1,58 @@
+{
+  "schema": "record-phased-compatibility-design-v1",
+  "adopted": false,
+  "canonicalM1Sha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "proposedM1Sha256": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+  "phaseA": {
+    "sqlOrder": [
+      "M1-additive",
+      "M2-raw-warning",
+      "M3-invoker-registration"
+    ],
+    "legacyAcl": "All three authenticated EXECUTE grants and authallowlist rows remain exactly unchanged; fullpg_proc metadata includingproacl is verified in M1. Newrecord/rawRPCs remainserviceonly.",
+    "g014": "Existing oldACL/allowlist consistency stays intact; M1 still registers newrecord and M3 still registersraw with the same exact sourcepreimage/anchor/owner checks. PersistentG014body rewrites are structurally identical to currentM1/M3; this is static reasoning, not a newreplay receipt.",
+    "compatibilityRisk": "Oldbrowser calls remain authorized through phaseA; newruntimehold does not protect them. Existing legacyadmin paths are retained during an explicit compatibility window, not silently upgraded to guarded semantics."
+  },
+  "phaseB": {
+    "source": "auth-retirement.proposal.sql.txt",
+    "operation": "Exact3authenticated grants revoked and exact3authallowlist rows deleted; serviceACLs/functionbodies/owner/config preserved. AllfourG014checks before and after, temporaryhelper/rolegrant constraints preserved.",
+    "preimages": "Legacybody hashes from currentPG17source clone evidence are pinned but need actualtargetreadback. PostadditivePG17definer/catalog hashes and externalcutoverreceipt remain explicitunfilled failclosed pins.",
+    "transitionEvidence": [
+      "Exactnewfrontend deployment/aliasSHA and guardedroute source bindings",
+      "Runtimehold denial tested on each deployedinstance cohort beforeunhold; no implication of envmetadatahotreload",
+      "Namedoperator/oldconsumer migration and drain attestation; no oldcached RPCclient/inflight permission use expected atretirement",
+      "Actualauthenticated newfront\u2192newserviceRPC successfulreadback withguarded/auditbinding; separatelyauthorizedwrite scope",
+      "Immutablecatalog/memberpreimage and no extraacl/allowlist drift"
+    ],
+    "externalReceiptBoundary": "DatabaseexpectedPriorState alone cannot proveVercel/consumer migration. Trustedreviewed executor must verify the externalcutoverartifact before connecting/applying and bind its SHA; a matchingGUCis bindingdata only, not authority. ExistingapplyCLI doesnot implementthis newexternalcheck yet."
+  },
+  "manifestBindings": {
+    "source": "release-manifest-entries.proposal.json",
+    "mode": "ExactfileSHA + phase-specific expectedPriorState trueflags + terminalReadback trueflags; placeholders deliberately fail untilfreshcurrentPG17source roots are pinned.",
+    "M1": "ProposedM1SHA must replace current04d993 source binding only onrootadoption. PriorlegacyAuth+service+body/owner/config/allowlist and absence; terminallegacyACLsame and newserviceRPC plus exactG014postimage.",
+    "M2": "PriorM1terminal plusrawabsent; terminalrawserviceonly/unregistered/index/sourceorder and exactrevisionpre+1, rootsunchanged. Do not runallG014checks in this deliberateM2\u2192M3registrygap.",
+    "M3": "PriorM2terminal, terminalexactrawallowlist registration and exactG014postrecord+rawbody hashes. Requireallfourassertions afterward.",
+    "M4": "Separatefuturemanifestentry binds actualrootcreated migrationSHA, phaseAterminal, exactpostadditiveG014/legacyfunctionpreimages and cutoverartifactSHA; terminalauthfalse/serviceTrue/authallowlist0, unchangedfunctionmetadata and member/catalogroots, allfourassertions. Not in the active manifest."
+  },
+  "reverificationRequired": [
+    "Rootreview/adopt onlyunappliedM1patch; regenerateexactPG15registration-adapter SHA and frozeninputmaps, neverweakenanchors/inverse-byte tests",
+    "Fresh actual-catalog PG17 source replay: phaseA allfourG014 + oldauthenticated3RPCpositives + serviceguarded flows + rollbackexactschema/membership/catalog + denial/authvariants",
+    "Postretirement PG17 replay: oldAuth3denied/newguardedpositive/serviceACLretained; wronglegacybody/G014postimage/missingcutoverpins reject and entiretransactionrollsback; no partialgrant/membership/helper residue",
+    "Canonical PG15 replay strategy for the newPG17-only retirement must be separatelyreviewed and hash-bound; currentcanonical receipts do not coveradditiveM1 or M4",
+    "Both migrationphase immutablemanifest/role/schema/membership readbacks and actualledgerstatementvectors; no inventedledgerrows",
+    "Hold/inflight/publicreadstop/profile/user/queue semantics verified independently; oldf319 directRPCnotblocked byhold",
+    "Media evidencehash must be regenerated for proposedM1SHA and tested actualStorage/catalog/endpoint; do notenablephysicalcleanup usingold1529/04d993localproof",
+    "Protecteddevelop\u2192data\u2192main CI/source promotion and actualproductionaliasreadback; Gemini-only fixforward/rollback target, not rawBAAI f319"
+  ],
+  "freezeProtocol": {
+    "currentObserved": "G037_WRITE_FREEZE active",
+    "supportedNow": [
+      "Commit/review sourcehold and proposals",
+      "Existingreviewed readonly validate/preflight/readback procedures with their realauthority/custodyrequirements",
+      "Only two existingG016 exceptions are recognized in currentmigrationapplyworkflow; none coversphaseASQL3"
+    ],
+    "supportedLater": "Complete the real G037/G038successor/freezereadback path onits ownconditions and preservecontinuousfreeze as required. Obtain its actual supportedexit/authorization evidence before an adoptedphaseAapply lane can execute. Do not clearrepo var/addnewexception/relabelphaseSQL asG016.",
+    "remaining": "No newfreezeexit evidence or phaseAapplyauthority was generated."
+  },
+  "rollback": "PhaseA improves RPC compatibility before retirement but never makesf319Gemini-only. PostM4fixforward keepsguards/Gemini-only/sql/audit/fences; do notrestoreauthgrants or dropappliedSQL/audit/cleanup queues to makeoldUIwork. Alreadyappliedbusiness changes/physicaldeletion requireseparate recoveryevidence."
+}
