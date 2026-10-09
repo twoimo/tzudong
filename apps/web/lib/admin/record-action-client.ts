@@ -15,6 +15,7 @@ export type RecordActionClientState = {
   nextAction: 'review-duplicates' | null;
 };
 const messages: Record<string, string> = {
+  RECORD_ACTION_MAINTENANCE: '관리자 변경이 일시 중지되어 있습니다. 유지보수가 끝난 뒤 새로 검토하세요.',
   RECORD_ACTION_PENDING: '이전 작업의 결과를 먼저 확인하세요.',
   RECORD_ACTION_FORBIDDEN: '관리자 권한을 확인한 뒤 다시 시도하세요.',
   RECORD_ACTION_NOT_FOUND: '대상 또는 작업을 찾지 못했습니다. 목록을 새로 조회하세요.',

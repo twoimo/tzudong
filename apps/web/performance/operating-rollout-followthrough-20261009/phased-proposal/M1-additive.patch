@@ -1,0 +1,30 @@
+--- a/backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql
++++ b/backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql
+@@ -601,22 +601,20 @@
+   END LOOP;
+   INSERT INTO privacy_retention.g014_public_rpc_allowlist(function_schema,function_name,identity_arguments,grantee,source_signature)
+    SELECT n.nspname,p.proname,p.proargtypes::text,'service_role',signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.oid=to_regprocedure(signature);
+-  -- Retire the three browser-admin RPC entrances now covered by this server contract.
+-  -- Preserve service ACLs for legacy compatibility; the atomic path does not call them.
++  -- Additive phase: preserve the three exact legacy browser-admin entrances.
++  -- Authenticated retirement follows only a separately reviewed consumer cutover.
+   FOREACH signature IN ARRAY ARRAY[
+    'public.approve_submission_item(uuid,uuid,jsonb)',
+    'public.approve_edit_submission_item(uuid,uuid,jsonb)',
+    'public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)'] LOOP
+    target:=to_regprocedure(signature);
+-   SELECT to_jsonb(p)-'proacl' INTO metadata FROM pg_proc p WHERE oid=target AND proowner='privacy_workflow_owner'::regrole
++   SELECT to_jsonb(p) INTO metadata FROM pg_proc p WHERE oid=target AND proowner='privacy_workflow_owner'::regrole
+     AND prosecdef AND proconfig=ARRAY['search_path=""']::text[];
+    IF metadata IS NULL OR NOT has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
+     OR (SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=signature AND grantee='authenticated')<>1
+     THEN RAISE EXCEPTION 'RECORD_ACTION_LEGACY_RPC_DRIFT'; END IF;
+-   EXECUTE 'REVOKE EXECUTE ON FUNCTION '||signature||' FROM authenticated';
+-   DELETE FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=signature AND grantee='authenticated';
+-   IF (SELECT to_jsonb(p)-'proacl' FROM pg_proc p WHERE oid=target) IS DISTINCT FROM metadata
+-    OR has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
++   IF (SELECT to_jsonb(p) FROM pg_proc p WHERE oid=target) IS DISTINCT FROM metadata
++    OR NOT has_function_privilege('authenticated',target,'EXECUTE') OR NOT has_function_privilege('service_role',target,'EXECUTE')
+     THEN RAISE EXCEPTION 'RECORD_ACTION_LEGACY_RPC_DRIFT'; END IF;
+   END LOOP;
+   -- No owner/ACL/lookup-path changes to either assertion. Their actual bodies remain authoritative.

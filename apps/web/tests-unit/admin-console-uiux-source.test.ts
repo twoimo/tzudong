@@ -7778,27 +7778,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardImageWrapperSource).toContain(
       "does not read or use OPENAI_API_KEY",
     );
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_COMMAND");
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_ROOT=");
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_PYTHON");
-    expect(envExampleSource).toContain(
-      "STORYBOARD_AGENT_RUNTIME=codex_cli_oauth",
-    );
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_CODEX_EFFORT=low");
-    expect(envExampleSource).toContain(
-      "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
-    );
-    expect(envExampleSource).toContain("셸 메타문자/인자는 허용하지 않는다");
-    expect(envExampleSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS=120000");
-    expect(envExampleSource).toContain("Remote service bridge");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_COMMAND");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_ROOT=");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_CODEX_MODEL=gpt-5.5");
-    expect(readmeSource).toContain("STORYBOARD_AGENT_CODEX_EFFORT=low");
-    expect(readmeSource).toContain(
-      "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
-    );
-    expect(readmeSource).toContain("Remote service bridge");
+    expect(envExampleSource).toContain("storyboard:gemini-worker");
+    expect(envExampleSource).toContain("GEMINI_CREDITS_API_KEY=");
+    expect(envExampleSource).toContain("STORYBOARD_GEMINI_API_KEY=");
+    expect(envExampleSource).toContain("STORYBOARD_RAG_WORKER_URL=");
+    const activeExampleKeys = envExampleSource.split("\n")
+      .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line))
+      .map((line) => line.split("=", 1)[0]);
+    expect(activeExampleKeys.some((key) => /^(NVIDIA_NIM_|STORYBOARD_AGENT_|STORYBOARD_BGE_)/.test(key))).toBe(false);
+    expect(readmeSource).toContain("storyboard:gemini-worker");
+    expect(readmeSource).toContain("producers are retired and refuse execution");
+    expect(readmeSource).toContain("STORYBOARD_RAG_WORKER_URL=");
+    expect(readmeSource).toContain("gemini-embedding-001:1024:retrieval:l2:v1");
+    const activeReadmeKeys = readmeSource.split("\n")
+      .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line))
+      .map((line) => line.split("=", 1)[0]);
+    expect(activeReadmeKeys.some((key) => /^(NVIDIA_NIM_|STORYBOARD_AGENT_|STORYBOARD_BGE_)/.test(key))).toBe(false);
     for (const preserved of ["normalizeStoryboardBackendAgentOutput", "isCasualStoryboardChatMessage", "__runStoryboardAgentCommandForTests", "UNSAFE_COMMAND_PATTERN", "STORYBOARD_WORKFLOW_RETIRED"]) expect(backendAgentSource).toContain(preserved);
     const productionGenerator = backendAgentSource.slice(backendAgentSource.indexOf("export async function generateStoryboardWithBackendAgent"), backendAgentSource.indexOf("export function normalizeStoryboardBackendAgentOutput"));
     expect(productionGenerator).toContain("STORYBOARD_WORKFLOW_RETIRED");
@@ -9082,4 +9077,34 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(backendAgentSource).toContain("rag|r\\.a\\.g");
     expect(chatRouteSource).toContain("retiredStoryboardApi");
   });
+});
+
+// Resolve the actual public example through the runtime parsers, with no real credentials or calls.
+test("Gemini environment example preserves OCR defaults and leaves paid workers unconfigured", async () => {
+  const { parse } = await import("dotenv");
+  const { resolveOcrAiRuntimeConfig } = await import("../lib/ocr/runtime-config");
+  const { getGeminiOcrDefaultModel, getGeminiOcrThinkingLevel } = await import("../lib/ocr/gemini");
+  const { resolveStoryboardGeminiKey } = await import("../lib/admin/storyboard/gemini-client");
+  const env = parse(source(".env.example"));
+  const readmeEnvBlock = source("README.md").match(/```env\n([\s\S]*?)\n```/)?.[1];
+  expect(readmeEnvBlock).toBeDefined();
+  const readmeEnv = parse(readmeEnvBlock!);
+  for (const key of ["GEMINI_CREDITS_API_KEY", "GEMINI_OCR_API_KEY", "STORYBOARD_GEMINI_API_KEY", "GEMINI_API_KEY", "STORYBOARD_RAG_WORKER_URL", "GEMINI_OCR_DEFAULT_MODEL", "GEMINI_OCR_THINKING_LEVEL"]) {
+    expect(readmeEnv[key]).toBe(env[key]);
+  }
+  for (const key of ["GEMINI_CREDITS_API_KEY", "GEMINI_OCR_API_KEY", "STORYBOARD_GEMINI_API_KEY", "GEMINI_API_KEY", "STORYBOARD_RAG_WORKER_URL"]) {
+    expect(env[key]).toBe("");
+  }
+  const ocr = await resolveOcrAiRuntimeConfig(env);
+  expect(ocr.provider).toBe("gemini");
+  expect(ocr.model).toBe(getGeminiOcrDefaultModel({}));
+  expect(getGeminiOcrThinkingLevel(env)).toBe(getGeminiOcrThinkingLevel({}));
+  expect(ocr.apiKey).toBeNull();
+  expect(ocr.fallbackCandidates).toEqual([]);
+  expect(resolveStoryboardGeminiKey(env)).toBeNull();
+  const configured = { ...env, GEMINI_CREDITS_API_KEY: "synthetic-funded", GEMINI_API_KEY: "synthetic-other" };
+  expect((await resolveOcrAiRuntimeConfig(configured)).credentialCandidates).toHaveLength(1);
+  expect((await resolveOcrAiRuntimeConfig(configured)).apiKey).toBe("synthetic-funded");
+  expect(resolveStoryboardGeminiKey(configured)).toBe("synthetic-funded");
+  for (const key of ["GEMINI_BUDGET_PROJECT", "GEMINI_BUDGET_PATH", "GEMINI_REQUESTS_PER_MINUTE", "GEMINI_MAX_INFLIGHT"]) expect(env).not.toHaveProperty(key);
 });

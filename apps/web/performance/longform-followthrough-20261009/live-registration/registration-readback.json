@@ -1,0 +1,69 @@
+{
+  "code": "CAPTION_REGISTRATION_READBACK",
+  "results": [
+    {
+      "name": "YT-tzuyang-Video-F93TnnxCNvY",
+      "afterHash": "sha256:1ceee3ad88524a6753cfcdc02fb97ca52011202925073a7c246970e02d9fa560",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-3Z-ngM3DVi0",
+      "afterHash": "sha256:7a66c69dd08c6868b9ceebf2dbd2eb41182b39c53187aac0cb6ae5b83f2741a4",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-BTyT60UWiLc",
+      "afterHash": "sha256:9df48a2a185562fe6604d25b301a5c88c0dda78924bc6b5947bbd63ee577af11",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video--C4280KT3S4",
+      "afterHash": "sha256:d908cc2e366dea36d6c0041389338a835b664cb53213b82e4f77c4e8093dffd7",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-Tsy8xRjMpB0",
+      "afterHash": "sha256:1455fd3e65e6e40e805bce5e39e2084552ff7ddc5603590d8ddae8576a4296b3",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-xRf_bhPFZrY",
+      "afterHash": "sha256:4880d1e28a25b34098478bb5bdb30b4653bf7808339dacfa7868892d808e1be4",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-zkOBLQUSEr0",
+      "afterHash": "sha256:7c1e8c45821e821b5d3497ddba84117fdd01b59376faf5c4e73d8fd8ff297218",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-DNGGl1-jFcU",
+      "afterHash": "sha256:3bbaf252a8c490a090b6092ecdff7dac94637457eb6d0e822df6d34e421a14aa",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-Ck5UrobZuKA",
+      "afterHash": "sha256:551417d082e9b5d6aee4e2c8b85a8e0967514ad01583c8bb48c3a0ed241bd288",
+      "reused": false
+    }
+  ],
+  "providerCalls": 0,
+  "independentVideoCompletion": false,
+  "coverageRevision": {
+    "schema": "caption-membership-revision/v1",
+    "eligibleCount": 1071,
+    "inputs": [
+      {
+        "tab": "streams",
+        "sha256": "619512bd137e62318ad443d9357efbfd6829c9bbe0acc4374fa473c812e5bfc5",
+        "entryCount": 18
+      },
+      {
+        "tab": "videos",
+        "sha256": "0bfc95e7dbcd45f02205ca4bd61b69145fb7196ab52052178a8c01006bfe7cbb",
+        "entryCount": 1053
+      }
+    ],
+    "revision": "b7e45f13e0a856eace4819789894398c32827a8056f850acdb10250bbdb82c71"
+  }
+}

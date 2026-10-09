@@ -22,6 +22,21 @@ pilot 제목과 `Tzudong graph metadata` schema를 유지한다. 기존 노드�
 모델 관찰은 `unverified`, 영상은 `analysisStatus: pending`이다. publication
 checkpoint의 `complete`는 OSK 저장 확인이며 독립 검증 완료를 뜻하지 않는다.
 
+publication은 공식 **v4.1.8 runtime Python 54개 전체**의 digest
+`790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358`만 허용한다.
+projection의 4개 read API pin과 달리 MCP·writer뿐 아니라 쓰기 후 recheck/eviction
+dependency도 포함한다. 이전 pin은 v4.1.3 당시 engine이며 public 함수 signature가
+같아도 전체 digest 차이는 검토 없이 허용하지 않는다. 현재 pin은 공식 tag의 모든
+runtime 파일과 바이트 일치 및 임시 vault의 실제 API 저장·재개·CAS·scope·출처
+보존 검증을 거쳤다. 기존 원본 vault의 release baseline/보호 상태를 새로 인증하거나
+publication 실행을 승인하는 것은 아니다.
+
+공식 최신 v5.0.0은 별도 이행 범위다. [공식 이행 안내](https://github.com/lpaiu-cs/osk-system/blob/v5.0.0/docs/UPGRADING.md)는
+`cite_round/read_cited` 도구 변경과 모든 기기의 일치된 업데이트를 요구한다.
+이 adapter가 v5를 지원한다고 주장하지 않으며 공유 engine·client 설정을 자동
+업데이트하지 않는다. v4.1.8의 exact pin 변경 증빙은
+`apps/web/performance/longform-followthrough-20261009/publication-compatibility.md`에 있다.
+
 영상별 checkpoint와 vault 공통 publisher 잠금을 사용한다. OSK 자체 잠금과
 본문 CAS도 적용한다. 모든 쓰기는 ACK와 무관하게 readback하며, 중단 후 같은
 인자로 재실행하면 저장된 노드를 재사용한다. 수동 수정, 다른 scope의 같은 제목,

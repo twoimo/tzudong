@@ -83,6 +83,44 @@ class PublicationTests(unittest.TestCase):
         self.run_case("updates")
 
 
+class PublicationEngineAdmissionTests(unittest.TestCase):
+    def test_changed_post_write_dependency_or_added_runtime_is_rejected_before_import(self):
+        source = os.getenv("OSK_TEST_ENGINE")
+        if not source:
+            self.skipTest("OSK_TEST_ENGINE required")
+        source = Path(source)
+        self.assertEqual(p.engine_digest(source), p.ENGINE_SHA256)
+        with tempfile.TemporaryDirectory(prefix="tzudong-engine-admission-") as temp:
+            root = Path(temp)
+            engine, vault = root / "engine", root / "vault"
+            vault.mkdir()
+            for path in source.rglob("*.py"):
+                if any(part in {"tests", "__pycache__", ".venv", "venv", ".git", ".pytest_cache"}
+                       for part in path.relative_to(source).parts):
+                    continue
+                target = engine / path.relative_to(source)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(path.read_bytes())
+            rechecks = engine / "osk/rechecks.py"
+            original = rechecks.read_bytes()
+            for change in ("post_write_dependency", "added_runtime"):
+                with self.subTest(change=change):
+                    if change == "post_write_dependency":
+                        rechecks.write_bytes(original + b"\n# changed dependency\n")
+                    else:
+                        rechecks.write_bytes(original)
+                        (engine / "unexpected.py").write_text("# unreviewed runtime\n")
+                    # Projection's four read pins still match. Publication must
+                    # reject the broader write graph before importing any API.
+                    for relative, digest in projection.ENGINE_API_SHA256.items():
+                        self.assertEqual(hashlib.sha256((engine / relative).read_bytes()).hexdigest(), digest)
+                    with patch.object(projection, "_load_engine") as loader:
+                        with self.assertRaisesRegex(p.PublicationError, "^OSK_ENGINE_UNSUPPORTED$"):
+                            p.Engine(vault, engine)
+                        loader.assert_not_called()
+                    self.assertEqual(list(vault.iterdir()), [])
+
+
 def hub_fixture(vault, title="tzudong", scope="tzudong", identity="261004-0001-00000001", kind="hub"):
     path = vault / "00_Scope" / scope / (title + ".md")
     path.parent.mkdir(parents=True, exist_ok=True)

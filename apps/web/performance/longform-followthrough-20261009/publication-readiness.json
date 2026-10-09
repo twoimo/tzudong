@@ -1,0 +1,75 @@
+{
+  "observedAtUtc": "2026-10-09T00:49:25.041492+00:00",
+  "checkpoints": [
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-osk-publication-20261004/QWtvZ6NfNJ8.json",
+      "fileSha256": "543ccd6d4426c1e271d2d571a3dec88c9afd416aacb45d3dd3537547a310dfdd",
+      "videoId": "QWtvZ6NfNJ8",
+      "state": "complete",
+      "nodeCount": 12,
+      "source": {
+        "evidenceSha256": "954ac9e1aa42226e016d691b687791050a215491858ded0ce842ea650ad26359",
+        "identity": {
+          "configSha256": "d65888483dfc70791b71430a02678c1a0c0457d24762fa19f52025d194718733",
+          "inputSha256": "ad0273045e68ce015ec561d3fc9f0fcd0d8c6b41eb88675f8e13d38f5e0cd90f",
+          "videoId": "QWtvZ6NfNJ8"
+        },
+        "model": "gemini-3.8-flash",
+        "modelEvidenceSha256": "f5001bba8f40b35d52259a8cefeda797ac61a1ca0756d64409e4b240370ce24a",
+        "receiptSha256": "c2c58c94262c5ec9182d3e41d8ffcdf2176bb774f60cbdd65d2db47ae227dc93",
+        "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+        "writer": "tzudong-longform-publication/v1"
+      }
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-osk-publication-20261005/-8wi-fVqTwk.json",
+      "fileSha256": "1ccc133eaef9944a56269767466f3c88dd6f6c3ec30d6f0cb5c267201e54e73b",
+      "videoId": "-8wi-fVqTwk",
+      "state": "complete",
+      "nodeCount": 8,
+      "source": {
+        "evidenceSha256": "5b95b19062e76962a95a63a191e33e8dfe1fe2801384d3086cee2997fcb56764",
+        "identity": {
+          "configSha256": "d65888483dfc70791b71430a02678c1a0c0457d24762fa19f52025d194718733",
+          "inputSha256": "25c7488d45a6238f741220f5626d63802990005daf348958c0d6c9146e50ee1e",
+          "videoId": "-8wi-fVqTwk"
+        },
+        "model": "gemini-3.8-flash",
+        "modelEvidenceSha256": "f5001bba8f40b35d52259a8cefeda797ac61a1ca0756d64409e4b240370ce24a",
+        "receiptSha256": "427678f940a3c08cfd5aeb51398388efbfbd7f374c70f90b0bc2c1ef5da79716",
+        "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+        "writer": "tzudong-longform-publication/v1"
+      }
+    },
+    {
+      "path": "/Users/twoimo/.codex/runtime-cache/tzudong-osk-publication-20261005/QWtvZ6NfNJ8.json",
+      "fileSha256": "39f066633bd5604e2fe0032c05fe4bbe17b1029a772f0d1ecdf4f982cf553ce0",
+      "videoId": "QWtvZ6NfNJ8",
+      "state": "complete",
+      "nodeCount": 12,
+      "source": {
+        "evidenceSha256": "954ac9e1aa42226e016d691b687791050a215491858ded0ce842ea650ad26359",
+        "identity": {
+          "configSha256": "d65888483dfc70791b71430a02678c1a0c0457d24762fa19f52025d194718733",
+          "inputSha256": "ad0273045e68ce015ec561d3fc9f0fcd0d8c6b41eb88675f8e13d38f5e0cd90f",
+          "videoId": "QWtvZ6NfNJ8"
+        },
+        "model": "gemini-3.8-flash",
+        "modelEvidenceSha256": "f5001bba8f40b35d52259a8cefeda797ac61a1ca0756d64409e4b240370ce24a",
+        "receiptSha256": "c2c58c94262c5ec9182d3e41d8ffcdf2176bb774f60cbdd65d2db47ae227dc93",
+        "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+        "writer": "tzudong-longform-publication/v1"
+      }
+    }
+  ],
+  "completeMeaning": "OSK persistence readback, not independent verification",
+  "engine": {
+    "path": "/Users/twoimo/Documents/osk-vault/_governance/_engine",
+    "publicationExpectedSha256": "fb25fd8c29688d5672795cc1bb84a8bfc0fb2752bdcf887f42032fad6bd2eed5",
+    "actualSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "publicationPinMatches": false,
+    "projectionFourApiPinsMatch": true,
+    "installedGitHead": "627f2bfaa9d7fa774daf152cada1c50d0b4b0ef9"
+  },
+  "admission": "OSK_ENGINE_UNSUPPORTED; reviewed publisher-compatible pin/runtime required; do not weaken gate"
+}

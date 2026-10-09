@@ -1,3 +1,4 @@
+import { isRecordMutationAdmitted } from '../lib/admin/record-action-admission';
 import {describe,expect,test} from 'bun:test';
 import {parseRecordActionRequest,RECORD_ACTION_CONFIRMATION,type RecordActionReceipt} from '../lib/admin/record-action-contract';
 import {runRecordAction,readRecordAction,resumeRecordMediaCleanup,createRecordMediaTransport,type RecordActionRpc} from '../lib/admin/record-action-service';
@@ -79,12 +80,12 @@ describe('admin action boundary',()=>{
 import {readFileSync} from 'node:fs';
 import {RecordActionError} from '../lib/admin/record-action-service';
 const routeSource=readFileSync(new URL('../app/api/admin/record-actions/route.ts',import.meta.url),'utf8');
-function routeFixture(authorized=true,origin=true,body:unknown=request) {
+function routeFixture(authorized=true,origin=true,body:unknown=request,admission:()=>boolean=()=>isRecordMutationAdmitted({ADMIN_RECORD_MUTATIONS_HOLD:'cleared'})) {
  let reads=0,clients=0,calls=0;
  const executable=routeSource.replace(/^import .*\n/gm,'').replace(/^export const runtime=.*\n/gm,'').replaceAll('export async function','async function');
- const make=new Function('NextResponse','requireAdmin','createSupabaseServiceRoleClient','readBoundedJsonRequest','isTrustedSameOriginMutation','parseRecordActionRequest','RecordActionError','readRecordAction','runRecordAction',
+ const make=new Function('NextResponse','requireAdmin','createSupabaseServiceRoleClient','readBoundedJsonRequest','isTrustedSameOriginMutation','parseRecordActionRequest','RecordActionError','readRecordAction','runRecordAction','isRecordMutationAdmitted',
   new Bun.Transpiler({loader:'ts'}).transformSync(executable+'\nreturn {POST,GET};'));
- const routes=make({json:Response.json},async()=>authorized?{ok:true,userId:actor}:{ok:false,response:Response.json({code:'FORBIDDEN'},{status:403})},()=>{clients++;return {rpc:async()=>{calls++;return {data:receipt,error:null};}};},async()=>{reads++;return {ok:true,value:body};},()=>origin,parseRecordActionRequest,RecordActionError,readRecordAction,runRecordAction) as {POST:(r:Request)=>Promise<Response>;GET:(r:Request)=>Promise<Response>};
+ const routes=make({json:Response.json},async()=>authorized?{ok:true,userId:actor}:{ok:false,response:Response.json({code:'FORBIDDEN'},{status:403})},()=>{clients++;return {rpc:async()=>{calls++;return {data:receipt,error:null};}};},async()=>{reads++;return {ok:true,value:body};},()=>origin,parseRecordActionRequest,RecordActionError,readRecordAction,runRecordAction,admission) as {POST:(r:Request)=>Promise<Response>;GET:(r:Request)=>Promise<Response>};
  return {routes,counts:()=>({reads,clients,calls})};
 }
 test('real route denies authentication/origin before body or privileged transport',async()=>{
@@ -147,8 +148,39 @@ const mediaRouteSource=readFileSync(new URL('../app/api/admin/record-actions/med
 test('actual media route rejects unadmitted deployment before creating a privileged client',async()=>{
  let clients=0;
  const executable=mediaRouteSource.replace(/^import .*\n/gm,'').replace(/^export const runtime=.*\n/gm,'').replaceAll('export async function','async function');
- const make=new Function('NextResponse','z','requireAdmin','createSupabaseServiceRoleClient','readBoundedJsonRequest','isTrustedSameOriginMutation','RecordActionError','resumeRecordMediaCleanup','createRecordMediaTransport','admitRecordMediaCleanup',new Bun.Transpiler({loader:'ts'}).transformSync(executable+'\nreturn POST;'));
- const post=make({json:Response.json},z,async()=>({ok:true,userId:actor}),()=>{clients++;throw Error('must not initialize');},async()=>({ok:true,value:{operationId}}),()=>true,RecordActionError,resumeRecordMediaCleanup,createRecordMediaTransport,()=>admitRecordMediaCleanup(unitEnvironment)) as (request:Request)=>Promise<Response>;
+ const make=new Function('NextResponse','z','requireAdmin','createSupabaseServiceRoleClient','readBoundedJsonRequest','isTrustedSameOriginMutation','RecordActionError','resumeRecordMediaCleanup','createRecordMediaTransport','admitRecordMediaCleanup','isRecordMutationAdmitted',new Bun.Transpiler({loader:'ts'}).transformSync(executable+'\nreturn POST;'));
+ const post=make({json:Response.json},z,async()=>({ok:true,userId:actor}),()=>{clients++;throw Error('must not initialize');},async()=>({ok:true,value:{operationId}}),()=>true,RecordActionError,resumeRecordMediaCleanup,createRecordMediaTransport,()=>admitRecordMediaCleanup(unitEnvironment),()=>isRecordMutationAdmitted({ADMIN_RECORD_MUTATIONS_HOLD:'cleared'})) as (request:Request)=>Promise<Response>;
  const response=await post(new Request('http://localhost',{method:'POST'}));
  expect(response.status).toBe(503);expect(response.headers.get('cache-control')).toBe('no-store');expect(await response.json()).toEqual({success:false,code:'RECORD_ACTION_MEDIA_NOT_ADMITTED'});expect(clients).toBe(0);
+});
+
+
+test('runtime record hold fails closed and rechecks every call without exposing its value',()=>{
+ const env:NodeJS.ProcessEnv={};
+ for(const value of [undefined,'active','',' cleared ','CLEARED','unbounded-fixture'.repeat(1000)]) {
+  env.ADMIN_RECORD_MUTATIONS_HOLD=value;expect(isRecordMutationAdmitted(env)).toBe(false);
+ }
+ env.ADMIN_RECORD_MUTATIONS_HOLD='cleared';expect(isRecordMutationAdmitted(env)).toBe(true);
+ env.ADMIN_RECORD_MUTATIONS_HOLD='active';expect(isRecordMutationAdmitted(env)).toBe(false);
+});
+test('held preview and apply never parse a body or create privilege; existing readback remains available',async()=>{
+ for(const phase of ['preview','apply'] as const) {
+  const f=routeFixture(true,true,{...request,phase},()=>isRecordMutationAdmitted({}));
+  const blocked=await f.routes.POST(new Request('http://localhost',{method:'POST'}));
+  expect(blocked.status).toBe(423);expect(blocked.headers.get('cache-control')).toBe('no-store');
+  expect(await blocked.json()).toEqual({success:false,code:'RECORD_ACTION_MAINTENANCE'});
+  expect(f.counts()).toEqual({reads:0,clients:0,calls:0});
+  const read=await f.routes.GET(new Request(`http://localhost?operationId=${operationId}`));
+  expect(read.status).toBe(200);expect(await read.json()).toEqual({success:true,receipt});
+  expect(f.counts()).toEqual({reads:0,clients:1,calls:1});
+ }
+});
+test('held media cleanup stops before body, proof admission, privileged client or Storage work',async()=>{
+ let bodyReads=0,proofReads=0,clients=0,cleanupCalls=0;
+ const executable=mediaRouteSource.replace(/^import .*\n/gm,'').replace(/^export const runtime=.*\n/gm,'').replaceAll('export async function','async function');
+ const make=new Function('NextResponse','z','requireAdmin','createSupabaseServiceRoleClient','readBoundedJsonRequest','isTrustedSameOriginMutation','RecordActionError','resumeRecordMediaCleanup','createRecordMediaTransport','admitRecordMediaCleanup','isRecordMutationAdmitted',new Bun.Transpiler({loader:'ts'}).transformSync(executable+'\nreturn POST;'));
+ const post=make({json:Response.json},z,async()=>({ok:true,userId:actor}),()=>{clients++;throw Error('forbidden privilege');},async()=>{bodyReads++;return {ok:true,value:{operationId}};},()=>true,RecordActionError,()=>{cleanupCalls++;},()=>{cleanupCalls++;},()=>{proofReads++;return unitAdmission;},()=>isRecordMutationAdmitted({ADMIN_RECORD_MUTATIONS_HOLD:'active'})) as (request:Request)=>Promise<Response>;
+ const response=await post(new Request('http://localhost',{method:'POST'}));
+ expect(response.status).toBe(423);expect(await response.json()).toEqual({success:false,code:'RECORD_ACTION_MAINTENANCE'});
+ expect([bodyReads,proofReads,clients,cleanupCalls]).toEqual([0,0,0,0]);
 });

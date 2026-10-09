@@ -1,3 +1,4 @@
+import { isRecordMutationAdmitted } from '@/lib/admin/record-action-admission';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/require-admin';
@@ -12,6 +13,7 @@ export async function POST(request:Request) {
  try {
   const auth=await requireAdmin(); if(!auth.ok) {auth.response.headers.set('Cache-Control','no-store');return auth.response;}
   if(!isTrustedSameOriginMutation(request)) return response({success:false,code:'RECORD_ACTION_FORBIDDEN'},403);
+  if(!isRecordMutationAdmitted()) return response({success:false,code:'RECORD_ACTION_MAINTENANCE'},423);
   const body=await readBoundedJsonRequest(request,1024);
   const input=z.strictObject({operationId:z.uuid()}).safeParse(body.ok?body.value:null);
   if(!input.success) return response({success:false,code:'RECORD_ACTION_INVALID_PAYLOAD'},400);

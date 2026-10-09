@@ -11,24 +11,24 @@
 
 | 우선순위 | 작업 | 현재 상태 / 다음 조치 |
 | --- | --- | --- |
-| 1 | 관리자 저장·물리 파일 삭제·실패 복구 | 격리 provider 수정으로 실제 Storage/S3 8개 시나리오 통과. 공식/운영 런타임 적용은 미완료 |
+| 1 | 관리자 저장·물리 파일 삭제·실패 복구 | 현재 스키마 atomic 승인·2연결 경합 검증 통과. Storage 8개 격리 시나리오 통과; managed 물리 삭제 admission은 미완료 |
 | 1 | 현재 운영 DB·배포·작업 큐·롤백 기준선 | 현재 운영 읽기 preflight 확인: ledger 80, 맛집 1,659건/해시 유지, 자동 검수 꺼짐, 대기 RPC 부재. 대기 SQL 3개 적용·배포·롤백 확인 필요 |
 | 1 | 크롤링→미디어→추출→평가→저장 최적화 | 증분·캐시·쿼터·병렬·배치 소스와 부분 측정 있음. 전체 공급자/운영 관측·품질 검증 필요 |
 | 1 | 검수 검색·페이지·전체 통계·상세·중복 경고 | 소스/로컬 증빙 있음. 운영 DB·실제 서비스에서 전체 의미 보존 확인 필요 |
 | 1 | Gemini 자동 분류·재검수·조건부 승인·자동 승인·보류 | 정책·원문·수동 수정·CAS·frozen target·중지/재개와 독립 정답 검증 필요 |
-| 2 | 공개 프로젝트 전체 CMS/디자인 리뉴얼 | 전체 경로 inventory와 현재 desktop/tablet/mobile 동작을 대조 |
-| 2 | 관리자 전 메뉴 CMS/기능 정상화 | 제보·리뷰·사용자·배너·영상 분석·파이프라인·지식 그래프·오류·썸네일·스토리보드·동선·운영 보조·감사 로그를 전수 확인 |
-| 2 | 공통 헤더·한 줄 KPI·맛집 최신화·테이블 색 | 공통 패턴·제목 오른쪽 건수·통합 자동 운영·검색/필터 행동을 화면에서 확인 |
-| 2 | 로그인 브랜드·스크롤 애니메이션·접근성 | 세션/권한을 보존하고 reduced-motion·키보드·명암·반응형을 검증 |
+| 2 | 공개 프로젝트 전체 CMS/디자인 리뉴얼 | 공개 22개 경로/3폭 캡처와 읽기 10개 흐름 검증. 오류·재시도·HTTP 상태 수정 완료; 실제 인증/지도/운영 전수 확인 남음 |
+| 2 | 관리자 전 메뉴 CMS/기능 정상화 | 16개 경로/하위 흐름의 로컬 브라우저 검증. 운영 저장·외부 공급자·실제 권한/데이터 검증 남음 |
+| 2 | 공통 헤더·한 줄 KPI·맛집 최신화·테이블 색 | 소스·합성 화면 증빙 있음. 현재 운영 의미·모바일 행동과 12개 레퍼런스 채택 근거를 대조 중 |
+| 2 | 로그인 브랜드·스크롤 애니메이션·접근성 | 익명 로그인 문구·reduced-motion·키보드/포커스 수정 및 관련 검사 통과. 실제 인증/실기기 전수 확인 남음 |
 | 2 | 파이프라인·지식 그래프 중심 시각화 | 기본 화면을 그래프 중심으로 유지하고 실제 상태·출처·선택 상세를 검증 |
-| 2 | 영수증 OCR | 현행 모델 sampling 요청 수정/관련 29개 테스트 통과. Gemini 실제 OCR·정답셋·금액·정정/저장·비용·화면 검증 필요 |
-| 2 | 스토리보드 Gemini-only | producer/RAG 전환과 비Gemini 은퇴 소스/로컬 검증 있음. 실제 모델 metadata 확인; 생성·품질·자산·복구·청구는 미확인 |
-| 2 | 쯔양 전체 롱폼 claude-video + OSK | Shorts 제외 최신 전체 inventory·영상별 시각 분석·독립 검증·출처 그래프 완료 필요 |
-| 2 | Sentry + 관리자 오류 메뉴 | 실제 계정·DSN·이벤트 수집과 조회까지 확인 필요 |
-| 2 | 리딤 크레딧·사용 한도·카드 0488 삭제 | 이미 수행한 1만원 충전 재실행 금지. 실제 워크플로 청구 확인 및 삭제의 유효 대체 수단 제약 재확인 |
+| 2 | 영수증 OCR | 현재 helper의 Gemini 3.6 실제 합성 영수증 1건 성공/1,888 tokens. 독립 정답셋·정정/저장·UI·해당 호출 청구 확인 남음 |
+| 2 | 스토리보드 Gemini-only | producer/RAG 전환 및 비Gemini 은퇴 소스 검증. 10월2일 Flash/Nano/Pro 실호출 증빙은 제한적으로 재사용; 현재 전체 worker·품질·복구·청구 확인 남음 |
+| 2 | 쯔양 전체 롱폼 claude-video + OSK | 최신 1,071편/337.81시간, 재사용 모델 보고서2편, 독립 전체 시각·음성 완료 증거0편. publication engine pin 호환성 확인 중 |
+| 2 | Sentry + 관리자 오류 메뉴 | SDK·사이드바·권한·산이타이저 구현. 실제 조직/프로젝트/지역 응답 대기; DSN·이벤트 ingestion/readback 남음 |
+| 2 | 리딤 크레딧·사용 한도·카드 0488 삭제 | paid Tier1/prepay10,000원/auto-reload OFF 재확인, 추가 결제 없음. 0488 삭제는 유효 대체 수단 요구로 미완료 |
 | 3 | 관련 스킬·공식 문서 정본 개선 | 프로젝트 핀 보존, 공식 설치 동작 대조, managed cache 직접 수정 금지 |
-| 3 | 수학적 전후 측정·95% CI·악화/한계 보고 | 부분 성과를 전체 운영 성과로 확장하지 않고 실제 시간/토큰/비용/자원·독립 품질을 측정 |
-| 3 | 보호 승격·운영 DB 적용·배포·실제 서비스·롤백 | develop→data→main 필수 절차와 현재 rollback SHA, 배포 SHA·저장 readback을 연결 |
+| 3 | 수학적 전후 측정·95% CI·악화/한계 보고 | CPU 7쌍 cold -10.41%/restart -12.17% 및 CI 보존. 전체 운영 성과·실제 비용·독립 품질과 G003 관측은 미완료 |
+| 3 | 보호 승격·운영 DB 적용·배포·실제 서비스·롤백 | PR #3099; 운영 f31904e6 유지. G037 active 보존, 관리자 HTTP runtime hold 구현 및 additive/은퇴 phase 검토 중 |
 | 상시 | 다중 관점 검토·모델 쿼타 절약 | 일반 작업은 GPT-6.1 Sol. Astra는 복잡한 문제에서 필요한 사유·범위를 밝힌 경우만 사용 |
 
 원문 274개 조항은 아래 추적 장부에 보존했다. 작업 원칙·공식·보고 형식 조항까지 포함한 수이며, 274개의 독립 제품 기능이나 완료율 분모를 뜻하지 않는다.
@@ -546,3 +546,24 @@ CPU 실제 후속: frozen source/동일 호스트/동일 local workload의 7쌍�
 공개 후속 최종 source 검사: 관련65개/8파일, 전체 lint, Next16.3.8 production build/50pages/route CSS가 모두 통과했다. 별도 distDir를 사용하고 compiler의 own include2개만 검사 후 제거해 원래 tsconfig bytes를 복원했다. 공유 transport를404/503/307로 구분하며 provider diagnostics는 전달하지 않는다. 실제 운영 redirect/인증/지도/기기·배포는 미완료다.
 
 운영 준비 fresh 확인: ledger80/latest20261008124858, 맛집1659, 자동검수OFF/version1/batch50/daily50, runs/items/active items 모두0, guarded RPC 및 준비·병행SQL 미적용을 read-only로 확인했다. 현재 G037_WRITE_FREEZE=active 선언과 data publication 변수 부재도 확인했으며 기존 제한을 변경하지 않았다. source/앱/DDL compatibility와 policy-safe rollback 감사는 별도 증빙으로 이어간다. 공개 HTTP transport source는23eb6750, exact raw 보완은8ce4d110에 commit/push됐다. 실제 운영 적용·배포는 아직 아니다.
+
+## 현재 실행 Todo — 운영 전환·Gemini 설정·롱폼
+
+아래는 최종 완료 체크와 별개인 현재 실행 단위다. 독립 작업은 Sol로 분담하며 Astra를 새로 사용하지 않았다.
+
+- [x] 19개 실행 묶음의 현재 상태를 기존 원문/추가 요구에 연결해 갱신한다. 274개 조항과 추가20개 추적 ID는 보존한다.
+- [x] 새 관리자 preview/apply/media-cleanup POST에 server-only hold를 구현하고 auth/origin 다음, body/privileged client 전에 검사한다. 미설정과 잘못된 값은423, 기존 GET readback은 유지한다. 관련37개 테스트/267 assertions와 targeted ESLint, native/compat parity가 통과했다.
+- [ ] 운영 환경의 hold를 실제 배포/인스턴스에 반영하고 조회·보류·재개를 확인한다. 소스의 process.env 재확인은 이미 실행 중인 SQL·구버전 browser RPC·별도 worker 또는 외부 writes 중지를 증명하지 않는다.
+- [ ] 먼저 additive SQL/신규 앱 전환, 이후 기존 RPC 은퇴로 분리하는 절차와 각 G014/readback·release manifest를 검증한다. active G037 또는 보호 브랜치를 우회하지 않는다.
+- [x] 오래된 NVIDIA OCR/GPT storyboard/BGE 환경 예시와 Hosted README를 실제 Gemini-only caller와 맞추고 관련 계약을 검증한다. 실제 키·모델·한도·운영 env는 변경하지 않았다.
+- [x] 현재 공개 롱폼1,071편/337.81시간을 ID별 단계 장부로 기록한다. metadata611, caption612, 1차caption검토9, 재사용model보고서2이며 독립 전체 시각/음성 완료 증거는 각각0이다.
+- [x] OSK publication의 전체 engine exact pin을 공식v4.1.8 54개 runtime 파일과 대조해 수정한다. 실제 API를 사용하는 임시 vault 격리19개 테스트가 통과했고 공유 engine은 변경하지 않았다. v5 지원/실제 publication 완료로 계산하지 않는다.
+- [x] caption9개 typed projection·출처/hash/불확실성을 보존하는 adapter를 구현하고 실제 OSK9노드/CAS/readback과 최신 hub coverage를 갱신한다. 노드21→30, 관계79→88, candidate fixed reader의 누락됐던 영상 검색1건을 확인했다. 전체 영상 독립 검증 완료는0으로 유지했다. 관련 graph26개 검사 통과, adapter5개 격리 검사와 exclusive0600 원문 출력도 검증했다. 운영 viewer 배포는 남았다.
+- [ ] 사용자 제공12개 디자인 레퍼런스의 현재 탐색/채택 근거를 dense CMS의 실제 UI와 연결한다.
+- [ ] 배치로 소스·증빙을 PR에 반영하고 현재 commit의 필수 CI, 보호 승격·운영 SQL·배포·live readback을 이어간다.
+
+Sentry 조직/프로젝트/지역 질문은 아직 응답 대기다. 0488 삭제는 현재 유효 대체 수단 요구 때문에 미완료이며, 추가 카드·결제·서비스 해제는 수행하지 않는다. 이번 실행의 새 유료 모델 호출·운영 DB 쓰기·배포는0건이다.
+
+후속 전체 웹 묶음은3,192 pass/9 skip/0 fail로 끝났다. 최초 실행은 share transport의 변경된 검사명을 참조하던 기존 owner assertion1개가 실패했고, 27개 page/HTTP transport inventory를 유지하도록 수정한 뒤 재실행했다. 이후 Hosted README/기존 source assertion의 focused7개 및 graph26개 검사가 통과했다. 이 결과는 로컬 소스/실제 로컬 그래프 저장 증빙이며 운영 배포·전체 롱폼 분석 완료가 아니다. 원문 노드/preimage와 복구본은 repository 밖 private0600으로 보관했다.
+
+실제 그래프 후속: `apps/web/performance/longform-followthrough-20261009/live-registration/`. 초기 읽기 감사와 미적용 adapter 계획의 이전 증빙은 각 관측 시점 그대로 보존했다.

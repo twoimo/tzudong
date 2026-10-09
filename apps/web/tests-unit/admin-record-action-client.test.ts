@@ -9,7 +9,7 @@ function preview(body: RecordActionRequest): RecordActionReceipt {
   return { operationId: body.operationId, action: body.action, state: 'preview', previewHash: 'a'.repeat(64), targetIds: body.targetIds, auditId: null,
     expiresAt: new Date(Date.now() + 900000).toISOString(), readback: [{ id: target, kind: body.action.split('.')[0], status: 'pending', fingerprint: 'b'.repeat(64) }], mediaCleanupPending: false };
 }
-function fixture(options: { fixedCode?: string; lostPreview?: boolean; lostApply?: boolean; conflict?: boolean; pendingGet?: boolean; failedGet?: boolean; delayPreview?: Promise<void>; delayApply?: Promise<void>; mutateReceipt?: (r: RecordActionReceipt) => unknown; media?: boolean; denied?: number; resultIds?: string[] } = {}) {
+function fixture(options: { fixedCode?: string; maintenancePhase?: 'preview' | 'apply'; lostPreview?: boolean; lostApply?: boolean; conflict?: boolean; pendingGet?: boolean; failedGet?: boolean; delayPreview?: Promise<void>; delayApply?: Promise<void>; mutateReceipt?: (r: RecordActionReceipt) => unknown; media?: boolean; denied?: number; resultIds?: string[] } = {}) {
   const calls: Array<{ method: string; path: string; operationId?: string; body?: RecordActionRequest }> = [];
   let receipt: RecordActionReceipt | null = null;
   const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
@@ -24,6 +24,7 @@ function fixture(options: { fixedCode?: string; lostPreview?: boolean; lostApply
     const body = await request.json() as RecordActionRequest;
     calls.push({ method: 'POST', path: url.pathname, operationId: body.operationId, body });
     if (url.pathname.endsWith('/media-cleanup')) return Response.json({ code: 'RECORD_ACTION_UNCERTAIN' }, { status: 503 });
+    if (body.phase === options.maintenancePhase) return Response.json({ success: false, code: 'RECORD_ACTION_MAINTENANCE' }, { status: 423 });
     if (body.phase === 'preview') {
       receipt = preview(body); if (body.action === 'restaurant.create') receipt.readback = []; await options.delayPreview;
       if (options.lostPreview) return Response.json({ code: 'RECORD_ACTION_UNCERTAIN' }, { status: 503 });
@@ -240,4 +241,21 @@ test('unmanaged media is not a pending job and never triggers cleanup by itself;
       expect(recordActionMediaNotice({ ...receipt, action: 'restaurant.delete' })).toBe('');
     } finally { f.close(); }
   }
+});
+
+
+test('HTTP423 maintenance is a definite no-apply failure, never an uncertain operation or retry',async()=>{
+ for(const heldPhase of ['preview','apply'] as const) {
+  const f=fixture({maintenancePhase:heldPhase});
+  try {
+   const done=f.client.run(input).catch(error=>error.code);
+   if(heldPhase==='apply') {await phase(f.client,'confirming');await f.client.apply(RECORD_ACTION_CONFIRMATION);}
+   expect(await done).toBe('RECORD_ACTION_MAINTENANCE');
+   expect(f.client.getSnapshot().phase).toBe('failed');
+   expect(f.client.getSnapshot().message).toContain('일시 중지');
+   expect(f.calls.map(call=>call.method)).toEqual(heldPhase==='preview'?['POST']:['POST','POST']);
+   const calls=f.calls.length;await f.client.apply(RECORD_ACTION_CONFIRMATION);expect(f.calls).toHaveLength(calls);
+   expect(f.events).not.toContain('applied');expect(f.storage.size).toBe(0);
+  } finally {f.close();}
+ }
 });

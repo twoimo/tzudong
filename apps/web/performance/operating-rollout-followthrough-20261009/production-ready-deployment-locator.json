@@ -1,0 +1,45 @@
+{
+  "deployments": [
+    {
+      "name": "tzudong",
+      "url": "tzudong-niao9yn3r-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+      "gitRef": "main"
+    },
+    {
+      "name": "tzudong",
+      "url": "tzudong-c8512a9p8-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "ae1771af10df0ffe96ed09817d902e7aab9e8053",
+      "gitRef": "main"
+    },
+    {
+      "name": "tzudong",
+      "url": "tzudong-cgudaaiqp-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "ca1fcf4440ffd564c425422cdd373b1d4a233daa",
+      "gitRef": "main"
+    },
+    {
+      "name": "tzudong",
+      "url": "tzudong-mi3oukryz-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "b90154e22e6b4ba089275c7ae6d53e7274feae98",
+      "gitRef": "main"
+    },
+    {
+      "name": "tzudong",
+      "url": "tzudong-jc5pr8vn4-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "ca235e250957c4360ad713ffd29e118c11cc5b7c",
+      "gitRef": "main"
+    }
+  ],
+  "listIsNotCurrentAliasProof": true
+}

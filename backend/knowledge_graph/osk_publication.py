@@ -25,9 +25,11 @@ SPACE = "00_Scope/tzudong"
 SESSION = "tzudong"
 WRITER = "tzudong-longform-publication/v1"
 SOURCE_HEADING = "## Tzudong publication receipt"
-# All 54 runtime Python files of the installed official engine; excludes tests,
-# virtualenvs and bytecode. The MCP entrypoint/write path are included.
-ENGINE_SHA256 = "fb25fd8c29688d5672795cc1bb84a8bfc0fb2752bdcf887f42032fad6bd2eed5"
+# Exact official v4.1.8: all 54 runtime Python files, including MCP, writer,
+# post-write eviction/recheck paths. Excludes tests, virtualenvs and bytecode.
+# Verified against the publisher tag and exercised in isolated real-API vaults;
+# this is not admission of a version range or the newer v5 engine.
+ENGINE_SHA256 = "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358"
 
 
 class PublicationError(Exception):
