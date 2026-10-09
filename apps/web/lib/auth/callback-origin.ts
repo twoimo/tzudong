@@ -70,6 +70,9 @@ export function getTrustedAuthCallbackOrigin(
 
   const configuredSiteUrl = env.NEXT_PUBLIC_SITE_URL?.trim();
   if (configuredSiteUrl) {
+    if (env.NODE_ENV === 'production' || env.VERCEL_ENV === 'production') {
+      return parseExactHttpsOrigin(configuredSiteUrl) ?? DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
+    }
     try {
       return new URL(configuredSiteUrl).origin;
     } catch {

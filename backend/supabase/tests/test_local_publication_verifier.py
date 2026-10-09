@@ -1085,11 +1085,11 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_126_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 126)
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 126)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 126)
-        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 126)
+    def test_publication_uses_the_current_129_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 129)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 129)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 129)
+        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 129)
 
     def test_rejects_missing_or_extra_manifest_units_with_recomputed_chain(self) -> None:
         manifest = local_migrate.verify_manifest()
@@ -1122,7 +1122,7 @@ complete_lifecycle_stage
             summary = payloads["local-migration-summary.json"]
             manifest = payloads["local-migration-manifest.json"]
             proofs = summary["replay_proofs"]
-            first, second, _ = sorted(proofs)
+            first, second, *_ = sorted(proofs)
             cases = [None, {}, {key: value for key, value in proofs.items() if key != first},
                      {**proofs, "unrecognized.sql": proofs[first]},
                      {**proofs, first: proofs[second]},

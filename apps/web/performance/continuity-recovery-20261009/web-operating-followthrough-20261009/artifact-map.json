@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "artifacts": {
+    "auth-live-readback.json": {
+      "bytes": 1308,
+      "sha256": "936c39b098200e787925ba6d5e9602ec8053fea86acbb9c95861da468ef90fc1"
+    },
+    "auth-url-setting.jpg": {
+      "bytes": 91325,
+      "sha256": "6ef49340cd2442538114c20bc65963fbdc2fda66a06575adaaf2399c76686301"
+    },
+    "preview-deployment-readback.json": {
+      "bytes": 270,
+      "sha256": "2264a8819327965e1cb11ac5143c30b11c544245dc2754ca96bb34ddf53e610b"
+    },
+    "publication-fix-proof.json": {
+      "bytes": 8357,
+      "sha256": "721b27986def168b9208eec33f5203877375cd453cfdb4af022c1b148e42fd7f"
+    },
+    "publication-fix-source-bindings.json": {
+      "bytes": 4220,
+      "sha256": "e434174694d72533f4077243a2865c2705b5a50270966aca3c60c1dc9890433e"
+    },
+    "summary.json": {
+      "bytes": 3562,
+      "sha256": "51a2e139f02b79c550d910cc5b9e5d7b72ef01aa864da8ff77a1c1dd168116ca"
+    },
+    "web-auth-promotion-review.md": {
+      "bytes": 6375,
+      "sha256": "dc051d0c92e87c81f204948a995c3ca6fba0ffb9f2835e353f3afe39edd484b3"
+    },
+    "web-cleanup-review.md": {
+      "bytes": 9547,
+      "sha256": "5c9ec70955dafcafee693ca2889a03048df5a599456cbe367dc7654137da3f24"
+    },
+    "web-validation-summary.json": {
+      "bytes": 2737,
+      "sha256": "2951ebcaed2ad60611f6720a9198fe780edd8c7fc6861f5e1c9cb8da490fe261"
+    }
+  }
+}

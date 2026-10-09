@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import importlib.util
 import copy
+import hashlib
+import importlib.util
 import json
 import re
 import stat
@@ -81,7 +82,7 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
 
     def test_admission_accepts_exact_current_source_replay_dispositions(self):
         snapshot, bindings = self._migration_admission_fixture()
-        self.assertEqual(len(snapshot["ledger"]), 101)
+        self.assertEqual(len(snapshot["ledger"]), 129)
         self.assertEqual([row["status"] for row in snapshot["ledger"] if row["replayProof"]],
                          ["verified-existing", "verified-existing", "legacy-contract-preserved",
                           "verified-existing"])
@@ -397,7 +398,15 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
 
     def test_frozen_source_closure_candidate_receipt_is_exact(self):
         candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
-        self.assertEqual(len(candidates), 48)
+        self.assertEqual(len(candidates), 107)
+        self.assertEqual(
+            hashlib.sha256(
+                json.dumps(
+                    candidates, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                ).encode("ascii")
+            ).hexdigest(),
+            "d42754ee0c8e79c7f970072c87dbf96831ba505ff22441e298ca56b211c74884",
+        )
         target = [
             item for item in candidates
             if item["name"] == "public.approve_submission_item"
