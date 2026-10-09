@@ -167,7 +167,7 @@
     },
     {
       "path": "apps/web/scripts/supabase-migration-transaction.mjs",
-      "sha256": "9268c882d1cb128d798f65faeb87ac3b1cc1fc3d52e843f8695b0c2ab3aa5b53"
+      "sha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26"
     },
     {
       "path": "apps/web/scripts/apply-supabase-migration.mjs",

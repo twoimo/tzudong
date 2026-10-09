@@ -14,6 +14,8 @@
 - 운영 SQL은 1회 시도 후 클라이언트 오류로 종료됐고 변경 미반영을 재조회했다. 같은 시간대 로그에는 `MIGRATION_TERMINAL_READBACK_FAILED`가 있으며 caller·단계 상관관계는 추가 확인 중이다. 장부 80, 대상 SQL 0, schema/ledger roots와 7개 업무 테이블 1,742행의 전체 hash가 보존됐다. Forward는 실행하지 않았고 자동 재전송하지 않았다. 전체 compiled 적용기 재생으로 원인을 조사 중이다. 데이터 보존 확인 후 다른 작업의 중지는 해제했으며 관리자 저장 차단은 유지한다.
 - 기존 수정/untracked 파일, 사용 한도, 충전 범위와 중지된 큐를 보존했다. 이 갱신은 전체 Todo 완료 표시가 아니다.
 
+- 전체 compiled 경로의 첫 terminal guard가 장부 기록 전 81건을 기대하던 순서 결함을 재현·수정했다. 수정 소스 64 tests 및 PG17.6 five 정상85/강제실패80 rollback, forward 정상86/강제실패85 rollback이 통과했다. 운영 적용 완료는 아니며 수정 source 보호 승격과 새 writer-pause 확인이 남았다.
+
 현재 증빙: [운영 배포·적용 검증](operating-release-20261010.md), `apps/web/performance/operating-release-20261010/`.
 
 ## 2026-10-09 현재 실행 갱신

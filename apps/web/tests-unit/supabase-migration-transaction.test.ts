@@ -98,10 +98,11 @@ test('comment-separated prepared transactions remain denied',()=>{
   const sql="BEGIN;PREPARE/* reviewed comment */TRANSACTION 'fixture';COMMIT;";
   expect(()=>migrationEnvelope(Buffer.from(sql),{...migration,sha256:sha(sql)},vector(sql))).toThrow('TRANSACTION_CONTROL_DENIED');
 });
-test('server guards precede ledger and no source transaction boundary reaches payload',()=>{
+test('terminal state is checked after exact ledger insertion and no source transaction boundary reaches payload',()=>{
   const sql=atomicMigrationSql(plan(),migration);
   expect(sql).toContain('INTO STRICT');expect(sql).toContain('IS DISTINCT FROM');expect(sql).toContain('MIGRATION_PRIOR_STATE_MISMATCH');
-  expect(sql.indexOf('MIGRATION_TERMINAL_READBACK_FAILED')).toBeLessThan(sql.indexOf('INSERT INTO supabase_migrations.schema_migrations'));
+  expect(sql.indexOf('INSERT INTO supabase_migrations.schema_migrations')).toBeLessThan(sql.indexOf('MIGRATION_LEDGER_READBACK_FAILED'));
+  expect(sql.indexOf('MIGRATION_LEDGER_READBACK_FAILED')).toBeLessThan(sql.indexOf('MIGRATION_TERMINAL_READBACK_FAILED'));
   expect(sql).toContain(JSON.stringify(vector(source)).replaceAll("'","''"));
   expect(statementSpans(sql).some((s:{token:string})=>/^(BEGIN|COMMIT)\b/i.test(s.token))).toBe(false);
 });

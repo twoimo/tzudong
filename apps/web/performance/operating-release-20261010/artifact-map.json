@@ -8,9 +8,21 @@
       "bytes": 375,
       "sha256": "30fb8ac65a4067d61e314164f1c23824aed49af0075a20d21adfb683ee62c965"
     },
+    "candidate-full-compiled-local-success.json": {
+      "bytes": 2794,
+      "sha256": "ba7b611a4fe5521a5eed593b0cf7c0afe79acf5b43eebf01d812906c80b5f228"
+    },
+    "diagnosis-summary.json": {
+      "bytes": 6812,
+      "sha256": "d5ff64775718b48605dc39bf75c1f59698e373c4869df01674fa08b80935aab8"
+    },
     "final-source-validation.json": {
       "bytes": 577,
       "sha256": "4e7fb3e2febc100179f3d3e53608860b4908d9ae54d6f8465e6a4ff30c5b6488"
+    },
+    "full-compiled-local-reproduction.json": {
+      "bytes": 3069,
+      "sha256": "de8de44cb2fc89dd800079a27388f698cf8a6a2958e95b8aa0ed11ef147c40e1"
     },
     "guard-error-safe.json": {
       "bytes": 809,
@@ -28,12 +40,20 @@
       "bytes": 676,
       "sha256": "9133dc450bf0d50ec0eb70c79f141799ad1cef79d88161c77987ce84ca949e99"
     },
+    "runtime-validation.json": {
+      "bytes": 3574,
+      "sha256": "97773432fc9d358c2ee434a8bffb8d62945232798a5781111c34a1810781c2fb"
+    },
     "sidebar-navigation.json": {
       "bytes": 4953,
       "sha256": "21da064b0dd70f6683c357de9c3121b5b2086a921247e1a4593bdcbe46b2a933"
+    },
+    "source-fix-summary.json": {
+      "bytes": 2735,
+      "sha256": "8d4bbd4fa46549ae8bd221b649cb966aebf396e1e2290aeb150ea8b37665c333"
     }
   },
   "kind": "operating-release-safe-artifact-map",
   "schemaVersion": 1,
-  "scope": "deployment and failed SQL attempt; no operating success or performance claim"
+  "scope": "production UI, failed operating attempt and locally validated compiler fix; no operating DB success or performance claim"
 }

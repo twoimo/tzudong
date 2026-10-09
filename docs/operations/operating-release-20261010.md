@@ -38,3 +38,13 @@ PG17.6에서 운영 schema/ledger/비개인 계약을 복제한 6단계 재생�
 개선 전후 screenshot은 viewport가 달라 정량 밀도 비교에 쓰지 않았다. 실제 공급자 생성, 24시간 관측, G003 scorer, 자동 승인 독립 정확도, 실제 청구 절감은 미완료다.
 
 증빙: `apps/web/performance/operating-release-20261010/`. 원래 운영 DB export, private admission, process 환경, 개인 record rows와 원문 로그는 Git에 포함하지 않는다.
+
+## 전체 compiled 적용기의 실패 재현과 최소 보정
+
+Exact stage0의 PG17.6 로컬 복제에서 운영에 전달한 2,464,084-byte compiled plan 자체를 실행했다. 입력 886행의 첫 migration terminal guard가 `P0001 / MIGRATION_TERMINAL_READBACK_FAILED`로 실패했고 전체 트랜잭션은 exact stage0로 돌아왔다. 원인은 `migration 실행 → terminal guard → ledger insert → ledger guard` 순서다. 첫 guard가 기대하는 장부는 81건이지만 그 시점에는 아직 80건이다.
+
+Private 보정 후보는 `migration 실행 → ledger insert → exact ledger guard → terminal guard` 순서만 바꿨다. Expected roots, SQL, ACL/owner/function 검사를 바꾸지 않았다. 후보의 전체 compiled 재생은 5개 stage guard와 final guard를 통과해 exact85에 도달했다. Protected source 구현·관련 회귀 검사·보호 승격을 진행하며, 이 로컬 결과를 운영 적용 완료로 주장하지 않는다.
+
+직접 spawnSync와 8MiB 조기 종료 재현에서는 EPIPE가 SQLSTATE를 가렸다. 이는 guard 실패의 원인과 별개의 transport 오류 분류 문제다. 새로운 bounded stdin adapter는 로컬 검사 후에만 사용한다.
+
+최소 순서 보정을 source에 구현하고 관련 단위 계약 64개를 통과했다. 수정 소스의 PG17.6 전체 compiled 실행에서 five 2,464,084 bytes는 exact85에, forward 331,318 bytes는 exact86에 도달했다. 각각 의도적 terminal mismatch는 장부와 DDL을 exact80/exact85로 롤백했다. sourceRoot, 원문 SQL, expected stage roots, immutable legacy manifest와 권한 검사는 그대로다. source 보호 승격과 새 운영 window는 별도 남아 있다.
