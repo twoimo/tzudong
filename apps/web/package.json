@@ -117,7 +117,7 @@
     "react-resizable-panels": "^4.13.3",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "supercluster": "^9.1.0",
     "swr": "^2.5.1",
     "tailwind-merge": "^3.7.0",
@@ -160,7 +160,8 @@
     },
     "postcss": "$postcss",
     "sharp": "$sharp",
-    "braces": "$braces"
+    "braces": "$braces",
+    "source-map-js": "1.2.2"
   },
   "patchedDependencies": {
     "minimatch@3.1.5": "patches/minimatch@3.1.5.patch"

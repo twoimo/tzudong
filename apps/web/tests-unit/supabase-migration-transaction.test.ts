@@ -12,6 +12,19 @@ const source='-- fixture\nBEGIN;\nCREATE TABLE fixture_atomic(id int);\nCOMMIT;\
 const migration={id:'fixture_atomic',path:'backend/supabase/migrations/20261009120000_fixture_atomic.sql',sha256:sha(source),expectedPriorState:{query:"SELECT '{\"absent\":true}'::text;",expected:{absent:true}},terminalReadback:{query:"SELECT '{\"ready\":true}'::text;",expected:{ready:true}}};
 const vector=(sql:string)=>statementSpans(sql).map((s:{token:string})=>s.token);
 const plan=()=>migrationEnvelope(Buffer.from(source),migration,vector(source));
+const pinnedVector=(sql:string,version='20261009123000')=>{
+  const directory=mkdtempSync(join(tmpdir(),'tzudong-begin-atomic-'));
+  const path=join(directory,`${version}_begin_atomic_fixture.sql`);
+  try{
+    writeFileSync(path,sql);
+    const result=spawnSync(process.execPath,[
+      fileURLToPath(new URL('../../../backend/supabase/scripts/g037_supabase_statement_vector.mjs',import.meta.url)),
+      '--source',path,'--version',version,'--sha256',sha(sql),'--size',String(Buffer.byteLength(sql)),
+    ],{encoding:'utf8'});
+    expect(result.status).toBe(0);
+    return JSON.parse(result.stdout).statements as string[];
+  }finally{rmSync(directory,{force:true,recursive:true});}
+};
 
 test('four exact source envelopes agree with pinned provider-source parser and preserve body bytes',()=>{
   for(const name of ['20261004190259_admin_record_guarded_actions.sql','20261004192657_admin_evaluation_raw_warning_groups.sql','20261004194715_admin_evaluation_raw_warning_invoker_contract.sql','20261009022915_restaurant_review_manual_preview_eligibility.sql']){
@@ -42,21 +55,38 @@ BEGIN ATOMIC
 END;
 SELECT (2 + (3));
 `;
-  const directory=mkdtempSync(join(tmpdir(),'tzudong-begin-atomic-'));
-  const path=join(directory,'20261009123000_begin_atomic_fixture.sql');
-  try{
-    writeFileSync(path,sql);
-    const result=spawnSync(process.execPath,[
-      fileURLToPath(new URL('../../../backend/supabase/scripts/g037_supabase_statement_vector.mjs',import.meta.url)),
-      '--source',path,'--version','20261009123000','--sha256',sha(sql),'--size',String(Buffer.byteLength(sql)),
-    ],{encoding:'utf8'});
-    expect(result.status).toBe(0);
-    const pinned=JSON.parse(result.stdout).statements;
+  const pinned=pinnedVector(sql);
+  const observed=vector(sql);
+  expect(observed).toEqual(pinned);
+  expect(observed).toHaveLength(2);
+  expect(observed[0]).toContain('SELECT (x + (1));');
+});
+test('CASE nesting and END identifier suffixes cannot terminate a BEGIN ATOMIC body',()=>{
+  for(const body of [
+    `CREATE FUNCTION public.case_fixture(x integer) RETURNS integer LANGUAGE SQL\nBEGIN ATOMIC\n  SELECT CASE WHEN x > 0 THEN x ELSE 0 END;\nEND;`,
+    `CREATE FUNCTION public.nested_case_fixture(x integer) RETURNS integer LANGUAGE SQL\nBEGIN ATOMIC\n  SELECT CASE WHEN x > 0 THEN CASE WHEN x > 1 THEN 2 ELSE 1 END ELSE 0 END;\nEND;`,
+    `CREATE FUNCTION public.identifier_fixture(weekend text) RETURNS text LANGUAGE SQL\nBEGIN ATOMIC\n  SELECT weekend;\n  SELECT weekend;\nEND;`,
+  ]){
+    const sql=`${body}\nSELECT 2;`;
     const observed=vector(sql);
-    expect(observed).toEqual(pinned);
-    expect(observed).toHaveLength(2);
-    expect(observed[0]).toContain('SELECT (x + (1));');
-  }finally{rmSync(directory,{force:true,recursive:true});}
+    expect(observed).toEqual([body.slice(0,-1),'SELECT 2']);
+    expect(sql.slice(0,statementSpans(sql)[0].end-1)).toBe(body.slice(0,-1));
+  }
+});
+test('comments between BEGIN and ATOMIC are whitespace to PostgreSQL but exceed the pinned provider vector',()=>{
+  const body=`CREATE FUNCTION public.comment_fixture() RETURNS integer LANGUAGE SQL\nBEGIN /* reviewed gap */ ATOMIC\n  SELECT 1;\nEND;`;
+  const sql=`${body}\nSELECT 2;`;
+  const observed=vector(sql);
+  const pinned=pinnedVector(sql,'20261009123001');
+  expect(observed).toEqual([body.slice(0,-1),'SELECT 2']);
+  expect(pinned).toEqual([
+    body.slice(0,body.indexOf(';')),
+    'END',
+    'SELECT 2',
+  ]);
+  expect(observed).not.toEqual(pinned);
+  const pinnedMigration={...migration,path:'backend/supabase/migrations/20261009123001_begin_atomic_fixture.sql',sha256:sha(sql)};
+  expect(()=>migrationEnvelope(Buffer.from(sql),pinnedMigration,pinned)).toThrow('MIGRATION_VECTOR_MISMATCH');
 });
 test('standard strings keep backslashes literal while escape strings may quote with backslashes',()=>{
   const ordinary=String.raw`SELECT 'C:\';`;

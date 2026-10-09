@@ -109,11 +109,14 @@ END $$;
 DO $admin_private_cleanup$
 DECLARE
   target regprocedure; definition text; source text; patched text; metadata jsonb;
-  old_text text; new_text text; occurrences integer;
+  argument_defaults text; old_text text; new_text text; occurrences integer;
 BEGIN
   target := 'pipeline_control.admin_record_snapshot(text,uuid[])'::regprocedure;
-  SELECT pg_get_functiondef(p.oid), p.prosrc, to_jsonb(p) - 'prosrc'
-    INTO definition, source, metadata FROM pg_proc p WHERE p.oid = target;
+  SELECT pg_get_functiondef(p.oid), p.prosrc,
+         to_jsonb(p) - ARRAY['prosrc', 'proargdefaults'],
+         pg_get_expr(p.proargdefaults, 0)
+    INTO definition, source, metadata, argument_defaults
+    FROM pg_proc p WHERE p.oid = target;
   IF encode(sha256(convert_to(source, 'UTF8')), 'hex') <>
       'ad8d49c2b067bd2d507ac9b2773bf852a8bdd1cc44d864d55a23cc0a4e2296a3' THEN
     RAISE EXCEPTION 'ADMIN_PRIVATE_CLEANUP_SNAPSHOT_SOURCE_DRIFT';
@@ -129,14 +132,20 @@ BEGIN
   IF occurrences <> 1 THEN RAISE EXCEPTION 'ADMIN_PRIVATE_CLEANUP_SNAPSHOT_ANCHOR_DRIFT'; END IF;
   patched := replace(source, old_text, new_text);
   EXECUTE replace(definition, source, patched);
-  IF (SELECT to_jsonb(p) - 'prosrc' FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM metadata
+  IF (SELECT to_jsonb(p) - ARRAY['prosrc', 'proargdefaults']
+        FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM metadata
+    OR (SELECT pg_get_expr(p.proargdefaults, 0)
+        FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM argument_defaults
     OR (SELECT p.prosrc FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM patched THEN
     RAISE EXCEPTION 'ADMIN_PRIVATE_CLEANUP_SNAPSHOT_METADATA_DRIFT';
   END IF;
 
   target := 'public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)'::regprocedure;
-  SELECT pg_get_functiondef(p.oid), p.prosrc, to_jsonb(p) - 'prosrc'
-    INTO definition, source, metadata FROM pg_proc p WHERE p.oid = target;
+  SELECT pg_get_functiondef(p.oid), p.prosrc,
+         to_jsonb(p) - ARRAY['prosrc', 'proargdefaults'],
+         pg_get_expr(p.proargdefaults, 0)
+    INTO definition, source, metadata, argument_defaults
+    FROM pg_proc p WHERE p.oid = target;
   IF encode(sha256(convert_to(source, 'UTF8')), 'hex') <>
       'a6e469b2b498e038d8cbbd30b96abd245a114137becd931ad9abf5432fd9492a' THEN
     RAISE EXCEPTION 'ADMIN_PRIVATE_CLEANUP_ACTION_SOURCE_DRIFT';
@@ -192,7 +201,10 @@ BEGIN
   patched := replace(patched, old_text, new_text);
 
   EXECUTE replace(definition, source, patched);
-  IF (SELECT to_jsonb(p) - 'prosrc' FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM metadata
+  IF (SELECT to_jsonb(p) - ARRAY['prosrc', 'proargdefaults']
+        FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM metadata
+    OR (SELECT pg_get_expr(p.proargdefaults, 0)
+        FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM argument_defaults
     OR (SELECT p.prosrc FROM pg_proc p WHERE p.oid = target) IS DISTINCT FROM patched THEN
     RAISE EXCEPTION 'ADMIN_PRIVATE_CLEANUP_ACTION_METADATA_DRIFT';
   END IF;

@@ -45,6 +45,7 @@ relevant_sources=(
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
   'backend/supabase/scripts/verify_admin_management_group_replay.py'
+  'backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py'
   'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
   'backend/supabase/scripts/verify_g014_owner_final_replay.py'
   'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
@@ -1468,6 +1469,28 @@ for migration in "${effective_migrations[@]}"; do
       jq -e '.schema == "admin-management-group-source-overlap-v1" and .read_only == true and .already_present_contract_verified == true' \
         "$staging_dir/admin-management-group-overlap-receipt.json" >/dev/null
       g026_chain_apply "admin-management-group-source-overlap-receipt" "$staging_dir/admin-management-group-overlap-receipt.json"
+      ;;
+    20261009101645_admin_user_management_rpc_forward.sql)
+      admin_rpc_forward_verification="$staging_dir/admin-user-rpc-forward-overlap-verification.sql"
+      g026_chain_apply "admin-user-rpc-forward-source-overlap-verifier" \
+        "$script_dir/verify_admin_user_management_rpc_forward_replay.py"
+      python3 "$script_dir/verify_admin_user_management_rpc_forward_replay.py" \
+        --source "$migration" \
+        --predecessor "$backend_migrations_dir/20260906053936_admin_management_group_catalog_slice.sql" \
+        --output "$admin_rpc_forward_verification"
+      g026_chain_apply "admin-user-rpc-forward-source-overlap-verification" "$admin_rpc_forward_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$admin_rpc_forward_verification" >"$staging_dir/admin-user-rpc-forward-overlap-receipt.json"
+      jq -e '.schema == "admin-user-rpc-forward-source-replay-v1" and
+        .source_sha256 == "b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26" and
+        .accepted_source_sha256 == "4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00" and
+        .predecessor_sha256 == "b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf" and
+        .disposition == "already-present-contract-verified" and .read_only == true and
+        .operating_sql_executed == false and .required_operating_server_version_num == 170006 and
+        .required_operating_ledger_count == 85' \
+        "$staging_dir/admin-user-rpc-forward-overlap-receipt.json" >/dev/null
+      g026_chain_apply "admin-user-rpc-forward-source-overlap-receipt" \
+        "$staging_dir/admin-user-rpc-forward-overlap-receipt.json"
       ;;
     20260906040116_admin_user_ids_catalog_slice.sql)
       admin_ids_verification="$staging_dir/admin-user-ids-overlap-verification.sql"

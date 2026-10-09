@@ -1,0 +1,123 @@
+{
+  "schema": "admin-private-cleanup-default-normalization-v1",
+  "capturedAt": "2026-10-09T10:52:18Z",
+  "head": "c90544c813a89b077084953e42fb1431a4b1efed",
+  "ciFailure": {
+    "run": 37917774396,
+    "job": 113778056807,
+    "terminalCode": "ADMIN_PRIVATE_CLEANUP_ACTION_METADATA_DRIFT",
+    "image": "supabase/postgres:15.8.1.085",
+    "imageDigest": "sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b"
+  },
+  "postgres15MetadataProbe": {
+    "runtime": "/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-15.8/installed/bin",
+    "serverVersion": "15.8",
+    "serverVersionNum": 150008,
+    "operation": "CREATE OR REPLACE using pg_get_functiondef on a seven-argument function with the same four default types as public.admin_record_action",
+    "changedRawCatalogKeys": [
+      "proargdefaults"
+    ],
+    "rawDefaultNodeLocationsBefore": [
+      100,
+      128,
+      165,
+      205
+    ],
+    "rawDefaultNodeLocationsAfter": [
+      114,
+      147,
+      185,
+      226
+    ],
+    "deparsedDefaultsBefore": "NULL::text, '{}'::uuid[], '{}'::jsonb, NULL::text",
+    "deparsedDefaultsAfter": "NULL::text, '{}'::uuid[], '{}'::jsonb, NULL::text",
+    "deparsedDefaultsEqual": true,
+    "metadataWithoutProsrcAndProargdefaultsEqual": true,
+    "cause": "PostgreSQL 15 stores parser source locations inside the internal pg_node_tree representation of proargdefaults. Reconstructing identical defaults changes those locations while pg_get_expr returns identical SQL semantics."
+  },
+  "correction": {
+    "migration": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+    "comparison": "Compare pg_get_expr(proargdefaults, 0) separately and compare every remaining pg_proc field except prosrc and the internal proargdefaults representation; continue to compare prosrc with the exact patched body.",
+    "droppedContracts": [],
+    "preservedContracts": [
+      "argument default semantics",
+      "owner",
+      "ACL",
+      "return and argument types",
+      "security mode",
+      "language",
+      "volatility",
+      "parallel and leakproof flags",
+      "configuration including search_path",
+      "exact patched function source"
+    ]
+  },
+  "verification": {
+    "preimagePostgres15": {
+      "runtime": "/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-15.8/installed/bin",
+      "serverVersion": "15.8",
+      "serverVersionNum": 150008,
+      "migrationSha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065",
+      "result": "expected_failure",
+      "error": "ADMIN_PRIVATE_CLEANUP_ACTION_METADATA_DRIFT",
+      "testsRun": 0
+    },
+    "postgres15": {
+      "runtime": "/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-15.8/installed/bin",
+      "serverVersion": "15.8",
+      "serverVersionNum": 150008,
+      "focusedRuntimeTests": 4,
+      "result": "passed"
+    },
+    "postgres17": {
+      "runtime": "/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6/installed/bin",
+      "serverVersion": "17.6",
+      "serverVersionNum": 170006,
+      "focusedRuntimeTests": 4,
+      "result": "passed"
+    },
+    "sourceContractTests": 1,
+    "sourceContractResult": "passed",
+    "exactCiImageLocalAttempt": {
+      "result": "blocked",
+      "exitCode": 125,
+      "error": "failed to create prepare snapshot dir: no space left on device",
+      "sharedDockerStateModified": false
+    }
+  },
+  "bindings": {
+    "migrationPreimage": {
+      "commit": "c90544c8",
+      "bytes": 11649,
+      "sha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065",
+      "statementCount": 13,
+      "statementVectorSha256": "b63d52a0a5196ff3713527db8838b2d4eabc9c90a3f2b317239a662ff017118d"
+    },
+    "migrationFinal": {
+      "bytes": 12195,
+      "sha256": "03c8ebabaaf7255e1c5ab5dedf59a95782b78dbc960668870ea80fc8780ab3af",
+      "statementCount": 13,
+      "statementVectorSha256": "4a43888dd3a94f92c97fee0b5e7ae0f34c5e9ace0536b527a986dc5f1ec26013"
+    },
+    "testPreimage": {
+      "commit": "c90544c8",
+      "bytes": 16394,
+      "sha256": "8f1c4c61ec85558fa023668cecf297885a5c83c5da5fd4506186f352133eff04"
+    },
+    "testFinal": {
+      "bytes": 18195,
+      "sha256": "d0b5a6991809f5707285b6465b6f0af5b02ef5ab9484a91c934e3746b5b68d08"
+    }
+  },
+  "scope": {
+    "hostedWrites": 0,
+    "secretReads": 0,
+    "keyReads": 0,
+    "commits": 0,
+    "pushes": 0,
+    "packageEdits": 0,
+    "appliedMigrationEdits": 0,
+    "sharedContainerMutations": 0
+  },
+  "remainingGate": "The root task must regenerate and replay the final five-stage proof against this final source and statement vector before deployment."
+}

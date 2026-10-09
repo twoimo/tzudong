@@ -10,6 +10,7 @@ import {
   loadReviewedMigration,
   main,
   resolveReviewedMigration,
+  runPsql,
   selectDirectDatabaseTransport,
   validateReleaseMigrationManifest,
 } from "../scripts/apply-supabase-migration.mjs";
@@ -266,6 +267,53 @@ describe("reviewed Supabase migration apply contract", () => {
       SUPABASE_SERVICE_ROLE_KEY: "service-role",
     })).toThrow("MIGRATION_TRANSPORT_CREDENTIAL_OVERLAP");
     expect(() => selectDirectDatabaseTransport({})).toThrow("MIGRATION_CREDENTIALS_MISSING");
+  });
+  test("psql runner uses stdin as an explicit file and keeps the database URI out of argv", () => {
+    const databaseUrl = "postgresql://postgres:private-password@db.example.invalid:5432/postgres";
+    const invocations: Array<{
+      command: string;
+      args: string[];
+      options: { env: Record<string, string>, input: string };
+    }> = [];
+    const spawnImpl = (command: string, args: string[], options: { env: Record<string, string>, input: string }) => {
+      invocations.push({ command, args, options });
+      return { error: null, status: 0, stderr: "", stdout: "ok" };
+    };
+
+    expect(runPsql(databaseUrl, "SELECT 1;", true, {
+      environment: {
+        SAFE_MARKER: "1",
+        PGHOSTADDR: "203.0.113.7",
+        PGPASSWORD: "stale-password",
+        PGSERVICE: "redirect-service",
+      },
+      psql: "/pinned/psql",
+      spawnImpl,
+    })).toBe("ok");
+    expect(invocations[0].command).toBe("/pinned/psql");
+    expect(invocations[0].args).toContain("--single-transaction");
+    expect(invocations[0].args).toContain("--file=-");
+    expect(invocations[0].args.join(" ")).not.toContain(databaseUrl);
+    expect(invocations[0].args.join(" ")).not.toContain("private-password");
+    expect(invocations[0].options.env).toMatchObject({
+      SAFE_MARKER: "1",
+      PGDATABASE: "postgres",
+      PGHOST: "db.example.invalid",
+      PGPASSWORD: "private-password",
+      PGPORT: "5432",
+      PGUSER: "postgres",
+    });
+    expect(Object.values(invocations[0].options.env)).not.toContain(databaseUrl);
+    expect(invocations[0].options.env.PGHOSTADDR).toBeUndefined();
+    expect(invocations[0].options.env.PGSERVICE).toBeUndefined();
+    expect(invocations[0].options.input).toBe("\\set VERBOSITY verbose\nSELECT 1;");
+
+    expect(runPsql(databaseUrl, "SELECT 2;", false, {
+      environment: {},
+      spawnImpl,
+    })).toBe("ok");
+    expect(invocations[1].args).toContain("--file=-");
+    expect(invocations[1].args).not.toContain("--single-transaction");
   });
   test("requires a manifest-bound provider receipt before G016 terminal verification", async () => {
     await expect(main([

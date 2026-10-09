@@ -32,6 +32,10 @@ class AdminRecordPrivateCleanupSourceContract(unittest.TestCase):
         self.assertIn("pipeline_control.admin_record_storage_snapshot(job.bucket,job.object_name)", source)
         self.assertIn("'review-media:' || media.bucket || ':' || media.object_name", source)
         self.assertIn("ADMIN_PRIVATE_CLEANUP_ACTION_SOURCE_DRIFT", source)
+        self.assertEqual(
+            source.count("to_jsonb(p) - ARRAY['prosrc', 'proargdefaults']"), 4
+        )
+        self.assertEqual(source.count("pg_get_expr(p.proargdefaults, 0)"), 4)
         self.assertIn("FROM PUBLIC, anon, authenticated, service_role", source)
         self.assertNotIn("admin_record_media_retirement", source)
         self.assertNotIn("DELETE FROM storage.objects", source)
@@ -54,7 +58,27 @@ class AdminRecordPrivateCleanupPostgreSQL(unittest.TestCase):
 
         AdminRecordActions.setUpClass.__func__(cls)
         with cls.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT p.oid::regprocedure::text,"
+                "to_jsonb(p) - ARRAY['prosrc','proargdefaults'],"
+                "pg_get_expr(p.proargdefaults,0) "
+                "FROM pg_proc p WHERE p.oid=ANY(ARRAY["
+                "'pipeline_control.admin_record_snapshot(text,uuid[])'::regprocedure,"
+                "'public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)'::regprocedure"
+                "]) ORDER BY 1"
+            )
+            cls.metadata_before = cursor.fetchall()
             cursor.execute(FORWARD.read_text())
+            cursor.execute(
+                "SELECT p.oid::regprocedure::text,"
+                "to_jsonb(p) - ARRAY['prosrc','proargdefaults'],"
+                "pg_get_expr(p.proargdefaults,0) "
+                "FROM pg_proc p WHERE p.oid=ANY(ARRAY["
+                "'pipeline_control.admin_record_snapshot(text,uuid[])'::regprocedure,"
+                "'public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)'::regprocedure"
+                "]) ORDER BY 1"
+            )
+            cls.metadata_after = cursor.fetchall()
 
     def setUp(self):
         self.actor = str(uuid.uuid4())
@@ -164,6 +188,17 @@ class AdminRecordPrivateCleanupPostgreSQL(unittest.TestCase):
         )
         self.assertTrue(claimed["claimed"])
         self.call("cleanup_absent", op=operation_id, payload={"jobId": job["id"]})
+
+    def test_recreated_functions_preserve_metadata_and_canonical_defaults(self):
+        self.assertEqual(self.metadata_after, self.metadata_before)
+        defaults = {signature: value for signature, _, value in self.metadata_after}
+        self.assertIsNone(
+            defaults["pipeline_control.admin_record_snapshot(text,uuid[])"]
+        )
+        self.assertEqual(
+            defaults["admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)"],
+            "NULL::text, '{}'::uuid[], '{}'::jsonb, NULL::text",
+        )
 
     def test_private_and_public_jobs_have_independent_cas_readback_and_fences(self):
         from psycopg2.extras import Json

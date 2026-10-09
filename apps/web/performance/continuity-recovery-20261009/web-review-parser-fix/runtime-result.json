@@ -1,0 +1,48 @@
+{
+  "schema": "tzudong-sql-parser-runtime-result-v1",
+  "measured_at": "2026-10-09",
+  "environment": {
+    "postgres": "17.6",
+    "server_version_num": 170006,
+    "bun": "1.4.0",
+    "node": "24.21.0",
+    "database": "disposable local cluster",
+    "hosted_writes": 0,
+    "provider_calls": 0
+  },
+  "postgres_fixture": {
+    "functions_created": 4,
+    "semantic_assertions": 4,
+    "semantic_assertions_passed": 4,
+    "cluster_stopped": true,
+    "cluster_deleted": true
+  },
+  "tests": [
+    {
+      "command": "bun test tests-unit/supabase-migration-transaction.test.ts",
+      "passed": 20,
+      "failed": 0,
+      "assertions": 119
+    },
+    {
+      "command": "bun test tests-unit/supabase-migration-transaction.test.ts tests-unit/supabase-migration-bundle.test.ts",
+      "passed": 31,
+      "failed": 0,
+      "assertions": 271
+    },
+    {
+      "command": "eslint scripts/supabase-migration-transaction.mjs tests-unit/supabase-migration-transaction.test.ts",
+      "passed": 2,
+      "failed": 0
+    }
+  ],
+  "source": {
+    "apps/web/scripts/supabase-migration-transaction.mjs": "9268c882d1cb128d798f65faeb87ac3b1cc1fc3d52e843f8695b0c2ab3aa5b53",
+    "apps/web/tests-unit/supabase-migration-transaction.test.ts": "a913950719a32a0e28c738adf4cee04297bb3b8ab15fc549c4928aef67bab7d9"
+  },
+  "limitations": [
+    "The pinned Supabase CLI v2.109.1 statement vector mis-splits the four reviewed edge fixtures.",
+    "A future source that depends on those edges remains fail-closed at provider-vector comparison.",
+    "Correctness counts are deterministic fixture coverage, not a production error-rate estimate."
+  ]
+}

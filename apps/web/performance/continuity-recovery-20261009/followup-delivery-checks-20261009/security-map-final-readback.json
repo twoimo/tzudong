@@ -1,0 +1,7 @@
+{
+  "state": "passed",
+  "mapSha256": "73d85c40a60aef403cabfaeb4492df921076a72e3f32c9f79ea19f2f4b190363",
+  "artifacts": 10,
+  "mismatches": [],
+  "clarification": "Current unpublished security map was regenerated after final Bun reconciliation; the earlier audit snapshot described its prior state. No raw runtime receipt was relabeled."
+}

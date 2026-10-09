@@ -1,0 +1,1 @@
+Frozen helper source from commit `c90544c813a89b077084953e42fb1431a4b1efed`. The prior exact-five-stage proof remains bound to these bytes. Followup parser and actual-runner checks are recorded separately; old runtime results are not relabeled as current-source proof.

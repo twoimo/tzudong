@@ -6,38 +6,49 @@ const quote = value => `'${String(value).replaceAll("'", "''")}'`;
 const trim = value => value.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
 const IDENTIFIER_RUNE = /[\p{L}\p{Nd}_$]/u;
 const SPACE_RUNE = /\p{White_Space}/u;
+const SQL_STRUCTURE_KEYWORDS = Object.freeze({ END: 'END', CASE: 'CASE', BEGIN: 'BEGIN', ATOMIC: 'ATOMIC' });
 
 function previousRune(source, end) {
-  return Array.from(source.slice(0, end)).at(-1) ?? '';
+  if (end <= 0) return '';
+  const tail = source.charCodeAt(end - 1);
+  return tail >= 0xdc00 && tail <= 0xdfff && end > 1
+    ? source.slice(end - 2, end)
+    : source[end - 1];
 }
 
-function isBeginAtomic(source, end) {
-  const atomicStart = end - 6;
-  if (atomicStart < 0 || source.slice(atomicStart, end).toUpperCase() !== 'ATOMIC') return false;
-  if (atomicStart > 0 && IDENTIFIER_RUNE.test(previousRune(source, atomicStart))) return false;
-  let cursor = atomicStart;
-  while (cursor > 0) {
-    const rune = previousRune(source, cursor);
-    if (!SPACE_RUNE.test(rune)) break;
-    cursor -= rune.length;
+function sqlWordAt(source, start) {
+  const first = source.charCodeAt(start);
+  if (!((first >= 65 && first <= 90) || first === 95 || (first >= 97 && first <= 122))
+    || (start > 0 && IDENTIFIER_RUNE.test(previousRune(source, start)))) return null;
+  let end = start + 1;
+  while (end < source.length) {
+    const code = source.charCodeAt(end);
+    if (!((code >= 48 && code <= 57) || (code >= 65 && code <= 90) || code === 36 || code === 95 || (code >= 97 && code <= 122))) break;
+    end++;
   }
-  const beginStart = cursor - 5;
-  return beginStart >= 0
-    && source.slice(beginStart, cursor).toUpperCase() === 'BEGIN'
-    && (beginStart === 0 || !IDENTIFIER_RUNE.test(previousRune(source, beginStart)));
+  const codePoint = source.codePointAt(end);
+  const next = codePoint === undefined ? '' : String.fromCodePoint(codePoint);
+  if (next && IDENTIFIER_RUNE.test(next)) return null;
+  const length = end - start;
+  const keyword = length >= 3 && length <= 6
+    ? (SQL_STRUCTURE_KEYWORDS[source.slice(start, end).toUpperCase()] ?? null)
+    : null;
+  return { end, keyword };
 }
 
 // Positions and a masked lexical view only. The returned statement bytes remain untouched.
 function sqlStructure(source) {
-  const spans = [];
   const masked = source.split('');
+  const spans = [];
+  const atomic = [];
   let start = 0;
+  let parentheses = 0;
+  let previousWord = null;
   let quoteKind = null;
   let backslashEscapes = false;
   let dollar = null;
   let block = 0;
   let line = false;
-  const atomic = [];
   const hide = index => { if (source[index] !== '\n' && source[index] !== '\r') masked[index] = ' '; };
   for (let i = 0; i < source.length; i++) {
     const c = source[i], n = source[i + 1];
@@ -70,6 +81,7 @@ function sqlStructure(source) {
     if (c === '-' && n === '-') { hide(i); hide(i + 1); line = true; i++; continue; }
     if (c === '/' && n === '*') { hide(i); hide(i + 1); block = 1; i++; continue; }
     if (c === "'" || c === '"') {
+      previousWord = null;
       const prefix = source[i - 1];
       const beforePrefix = source[i - 2];
       backslashEscapes = c === "'" && (prefix === 'E' || prefix === 'e')
@@ -82,22 +94,41 @@ function sqlStructure(source) {
     if (c === '$') {
       const tag = /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.exec(source.slice(i))?.[0];
       if (tag) {
+        previousWord = null;
         for (let j = 0; j < tag.length; j++) hide(i + j);
         dollar = tag;
         i += tag.length - 1;
         continue;
       }
     }
-    if (c === '(') atomic.push(')');
-    else if (c === ')' && atomic.at(-1) === ')') atomic.pop();
-    else if ((c === 'c' || c === 'C') && isBeginAtomic(source, i + 1)) atomic.push('END');
-    else if ((c === 'd' || c === 'D') && atomic.at(-1) === 'END'
-      && source.slice(Math.max(0, i - 2), i + 1).toUpperCase() === 'END') atomic.pop();
-    if (c === ';' && atomic.length === 0) { const token = trim(source.slice(start, i)); if (token) spans.push({ start, end: i + 1, token }); start = i + 1; }
+    const word = sqlWordAt(source, i);
+    if (word) {
+      if (word.keyword === 'ATOMIC' && previousWord === 'BEGIN') {
+        atomic.push({ caseDepth: 0, parentheses });
+      } else if (atomic.length && word.keyword === 'CASE') {
+        atomic.at(-1).caseDepth++;
+      } else if (atomic.length && word.keyword === 'END') {
+        const frame = atomic.at(-1);
+        if (frame.caseDepth > 0) frame.caseDepth--;
+        else if (parentheses === frame.parentheses) atomic.pop();
+      }
+      previousWord = word.keyword;
+      i = word.end - 1;
+      continue;
+    }
+    if (c === '(') parentheses++;
+    else if (c === ')' && parentheses > 0) parentheses--;
+    if (!SPACE_RUNE.test(c)) previousWord = null;
+    if (c === ';' && atomic.length === 0 && parentheses === 0) {
+      const token = trim(source.slice(start, i));
+      if (token) spans.push({ start, end: i + 1, token });
+      start = i + 1;
+    }
   }
   if (quoteKind || dollar || block) fail('MIGRATION_SQL_UNTERMINATED');
+  const structure = masked.join('');
   const token = trim(source.slice(start)); if (token) spans.push({ start, end: source.length, token });
-  return { spans, masked: masked.join('') };
+  return { spans, masked: structure };
 }
 export function statementSpans(source) {
   return sqlStructure(source).spans;

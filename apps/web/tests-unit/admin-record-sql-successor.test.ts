@@ -16,7 +16,18 @@ import {
 import { fiveMigrationBundleSuffixRoot } from '../scripts/supabase-migration-bundle.mjs';
 import { statementSpans } from '../scripts/supabase-migration-transaction.mjs';
 
-const record = loadSuccessorManifest();
+const manifestBytes = readFileSync(new URL('../../../.github/admin-record-sql-successor.v1.json', import.meta.url));
+const manifestDocument = JSON.parse(manifestBytes.toString('utf8'));
+const record = Object.freeze({
+  bytes: manifestBytes,
+  manifest: manifestDocument,
+  manifestSha256: createHash('sha256').update(manifestBytes).digest('hex'),
+  materials: Object.freeze(manifestDocument.migrations.map((migration: any) => ({
+    path: migration.path,
+    bytes: readFileSync(new URL(`../../../${migration.path}`, import.meta.url)),
+    originalVector: migration.originalStatementVector,
+  }))),
+});
 const executableRecord = Object.freeze({
   ...record,
   manifest: Object.freeze({
@@ -121,11 +132,15 @@ test('dedicated manifest pins the exact five-source chain, full vectors, toolcha
     ['20261004192657', 'admin_evaluation_raw_warning_groups', '66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a', 10, '082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8'],
     ['20261004194715', 'admin_evaluation_raw_warning_invoker_contract', 'e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020', 4, 'f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1'],
     ['20261009022915', 'restaurant_review_manual_preview_eligibility', '8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3', 4, 'ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958'],
-    ['20261009091342', 'admin_record_private_verification_cleanup', 'f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065', 13, 'efd37cbc628681232e53d3b404a90cb52fe57e659b67214826fb475f90a79143'],
+    ['20261009091342', 'admin_record_private_verification_cleanup', '03c8ebabaaf7255e1c5ab5dedf59a95782b78dbc960668870ea80fc8780ab3af', 13, '147414379f4eebdc1274257419629107a80be59ec3203a064f29c82472760003'],
   ]);
   expect(manifest.migrations.every((migration: any) => migration.originalStatementVector.length === migration.statementCount)).toBe(true);
-  expect(manifest.sourceRoot).toBe('3b35eca263d8f257b9d4dbaa07e1a4cdfa2ff538542180a5733b4eba44c4d48d');
-  expect(fiveMigrationBundleSuffixRoot(manifest.migrations)).toBe('264191a36996f815a40a19155666cd18cd7b007b4cdf6638c03ee4b696cb3593');
+  manifest.migrations.forEach((migration: any, index: number) => {
+    expect(record.materials[index].bytes.byteLength).toBe(migration.bytes);
+    expect(sha256(record.materials[index].bytes)).toBe(migration.sha256);
+  });
+  expect(manifest.sourceRoot).toBe('fecccabd16de11d37e54d28517331ba8fcd7fa177859844d8490af7a221cc732');
+  expect(fiveMigrationBundleSuffixRoot(manifest.migrations)).toBe('d900875b7e1b1723a0813c3bd8af78252f86ccc69a731f9ba336a5afa98e3b8d');
   expect(manifest.legacyReleaseManifest).toEqual({
     entries: 3,
     path: '.github/supabase-migration-release-manifest.v1.json',
@@ -137,6 +152,18 @@ test('dedicated manifest pins the exact five-source chain, full vectors, toolcha
     reason: 'protected-release-and-fresh-admission-required',
     state: 'held',
   });
+});
+
+test('production manifest loader either binds the exact current toolchain or fails closed on source drift', () => {
+  const toolchainMatches = record.manifest.toolchain.every((entry: any) => {
+    const bytes = readFileSync(new URL(`../../../${entry.path}`, import.meta.url));
+    return sha256(bytes) === entry.sha256;
+  });
+  if (toolchainMatches) {
+    expect(() => loadSuccessorManifest()).not.toThrow();
+  } else {
+    expect(() => loadSuccessorManifest()).toThrow('SUCCESSOR_SOURCE_DRIFT');
+  }
 });
 
 test('production manifest launch hold rejects before checkout, transport or journal creation', () => {
@@ -290,22 +317,55 @@ test('lost acknowledgement never resends and journals bounded unconfirmed outcom
   expect(journal).not.toContain(marker);
 });
 
-test('target identity accepts the exact project through direct or pooler identity and rejects another project', () => {
-  expect(() => assertSuccessorDatabaseTarget(databaseUrl, record.manifest)).not.toThrow();
-  expect(() => assertSuccessorDatabaseTarget('postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres', record.manifest)).not.toThrow();
-  expect(() => assertSuccessorDatabaseTarget('postgresql://postgres.otherproject:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres', record.manifest)).toThrow('SUCCESSOR_DATABASE_TARGET_INVALID');
-  expect(() => assertSuccessorDatabaseTarget('postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/other', record.manifest)).toThrow('SUCCESSOR_DATABASE_TARGET_INVALID');
+test('target identity accepts only exact direct and official project-bound pooler endpoints', () => {
+  const valid = [
+    databaseUrl,
+    'postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:6543/postgres',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?sslmode=verify-full',
+  ];
+  for (const candidate of valid) {
+    expect(() => assertSuccessorDatabaseTarget(candidate, record.manifest)).not.toThrow();
+  }
+
+  const invalid = [
+    'postgresql://postgres.otherproject:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres',
+    'postgresql://postgres:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres',
+    'postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres',
+    'postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/other',
+    'postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@arbitrary.example.com:6543/postgres',
+    'postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@aws-x-ap-southeast-1.pooler.supabase.com:6543/postgres',
+    'postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@aws-0-ap-southeast-1.pooler.supabase.com:6432/postgres',
+    'postgresql://postgres.aqlcofblfxdrjhhdmarw:secret@aws-0-ap-southeast-1.pooler.supabase.com/postgres',
+    'postgresql://postgres%2Eaqlcofblfxdrjhhdmarw:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/%70ostgres',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres#redirect',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?sslmode=disable',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?sslmode=require&sslmode=require',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?application_name=successor',
+    'postgresql://postgres%ZZ:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres',
+    'postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?sslmode=%ZZ',
+    ...['host', 'hostaddr', 'port', 'dbname', 'user', 'service', 'options'].map(
+      key => `postgresql://postgres:secret@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?${key}=redirect`,
+    ),
+  ];
+  for (const candidate of invalid) {
+    expect(() => assertSuccessorDatabaseTarget(candidate, record.manifest)).toThrow('SUCCESSOR_DATABASE_TARGET_INVALID');
+  }
 });
 
 test('psql transport keeps the URI out of argv and bounds verbose server diagnostics', () => {
   let observedArgs: string[] = [];
   let observedEnvironment: Record<string, string> = {};
+  let observedInput = '';
   const runner = createSuccessorPsqlRunner(databaseUrl, {
     environment: {},
     psql: '/pinned/psql',
-    spawnImpl: (_command: string, args: string[], options: { env: Record<string, string> }) => {
+    spawnImpl: (_command: string, args: string[], options: { env: Record<string, string>, input: string }) => {
       observedArgs = args;
       observedEnvironment = options.env;
+      observedInput = options.input;
       return {
         error: null,
         status: 1,
@@ -318,9 +378,31 @@ test('psql transport keeps the URI out of argv and bounds verbose server diagnos
   try { runner(databaseUrl, 'SELECT 1', true); } catch (error) { caught = error; }
   expect(observedArgs.join(' ')).not.toContain(databaseUrl);
   expect(observedArgs.join(' ')).not.toContain('private-password');
-  expect(observedEnvironment.PGDATABASE).toBe(databaseUrl);
+  expect(observedArgs.filter(arg => arg === '--single-transaction')).toHaveLength(1);
+  expect(observedArgs.filter(arg => arg === '--file=-')).toHaveLength(1);
+  expect(observedEnvironment).toMatchObject({
+    PGDATABASE: 'postgres',
+    PGHOST: 'aws-0-ap-southeast-1.pooler.supabase.com',
+    PGPASSWORD: 'private-password',
+    PGPORT: '6543',
+    PGUSER: 'postgres.aqlcofblfxdrjhhdmarw',
+  });
+  expect(Object.values(observedEnvironment)).not.toContain(databaseUrl);
+  expect(observedInput).toBe('\\set VERBOSITY verbose\nSELECT 1');
   expect((caught as Error & { code: string }).code).toBe('MIGRATION_PSQL_FAILED_P0001');
   expect((caught as Error).message).not.toContain('private provider detail');
+
+  let nonTransactionalArgs: string[] = [];
+  const nonTransactionalRunner = createSuccessorPsqlRunner(databaseUrl, {
+    environment: {},
+    spawnImpl: (_command: string, args: string[]) => {
+      nonTransactionalArgs = args;
+      return { error: null, status: 0, stderr: '', stdout: 'ok' };
+    },
+  });
+  expect(nonTransactionalRunner(databaseUrl, 'SELECT 1', false)).toBe('ok');
+  expect(nonTransactionalArgs).toContain('--file=-');
+  expect(nonTransactionalArgs).not.toContain('--single-transaction');
 });
 
 test('state query is a single read-only SELECT contract and does not expand the generic G016 path', () => {

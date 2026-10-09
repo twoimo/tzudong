@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   boundedMigrationError,
+  psqlConnectionEnvironment,
   readOriginalStatementVector,
   selectDirectDatabaseTransport,
 } from './apply-supabase-migration.mjs';
@@ -545,13 +546,31 @@ function assertCheckout(admission, facts) {
 export function assertSuccessorDatabaseTarget(databaseUrl, manifest) {
   let target;
   try { target = new URL(databaseUrl); } catch { fail('SUCCESSOR_DATABASE_TARGET_INVALID'); }
-  const user = decodeURIComponent(target.username || '');
-  const hostMatch = target.hostname === `db.${manifest.projectRef}.supabase.co`;
-  const poolerMatch = user === `postgres.${manifest.projectRef}`;
+  const malformedPercentEncoding = value => /%(?![0-9a-f]{2})/i.test(value);
+  const queryKeys = [...target.searchParams.keys()];
+  const sslModes = target.searchParams.getAll('sslmode');
+  const safeQuery = queryKeys.length === 0
+    || (queryKeys.length === 1
+      && queryKeys[0] === 'sslmode'
+      && sslModes.length === 1
+      && ['require', 'verify-ca', 'verify-full'].includes(sslModes[0]));
+  const directHost = target.hostname === `db.${manifest.projectRef}.supabase.co`;
+  const sharedPoolerHost = /^aws-[0-9]+-[a-z0-9]+(?:-[a-z0-9]+)*\.pooler\.supabase\.com$/.test(target.hostname);
+  const directTarget = directHost
+    && target.username === 'postgres'
+    && ['5432', '6543'].includes(target.port);
+  const sharedPoolerTarget = sharedPoolerHost
+    && target.username === `postgres.${manifest.projectRef}`
+    && ['5432', '6543'].includes(target.port);
   if (!['postgres:', 'postgresql:'].includes(target.protocol)
     || target.hash
-    || (!hostMatch && !poolerMatch)
-    || decodeURIComponent(target.pathname) !== `/${manifest.databaseName}`) fail('SUCCESSOR_DATABASE_TARGET_INVALID');
+    || malformedPercentEncoding(target.username)
+    || malformedPercentEncoding(target.password)
+    || malformedPercentEncoding(target.pathname)
+    || malformedPercentEncoding(target.search)
+    || target.pathname !== `/${manifest.databaseName}`
+    || !safeQuery
+    || (!directTarget && !sharedPoolerTarget)) fail('SUCCESSOR_DATABASE_TARGET_INVALID');
 }
 
 function transportError(result) {
@@ -571,9 +590,10 @@ export function createSuccessorPsqlRunner(databaseUrl, {
   return (_databaseUrl, sql, singleTransaction) => {
     const args = ['--no-psqlrc', '--set=ON_ERROR_STOP=1', '--quiet', '--tuples-only', '--no-align'];
     if (singleTransaction) args.splice(1, 0, '--single-transaction');
+    args.push('--file=-');
     const result = spawnImpl(psql, args, {
       encoding: 'utf8',
-      env: { ...environment, PGDATABASE: databaseUrl },
+      env: psqlConnectionEnvironment(databaseUrl, environment),
       input: `\\set VERBOSITY verbose\n${sql}`,
       maxBuffer: 16 * 1024 * 1024,
     });

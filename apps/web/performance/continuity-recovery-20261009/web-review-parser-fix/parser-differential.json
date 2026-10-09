@@ -1,0 +1,49 @@
+{
+  "schema": "tzudong-sql-parser-differential-v1",
+  "measured_at": "2026-10-09",
+  "cases": [
+    {
+      "case": "case_expression",
+      "expected_top_level_statements": 2,
+      "before": 3,
+      "after": 2,
+      "pinned_provider": 3,
+      "postgres17_6_valid": true
+    },
+    {
+      "case": "nested_case_expression",
+      "expected_top_level_statements": 2,
+      "before": 3,
+      "after": 2,
+      "pinned_provider": 3,
+      "postgres17_6_valid": true
+    },
+    {
+      "case": "end_identifier_suffix",
+      "expected_top_level_statements": 2,
+      "before": 4,
+      "after": 2,
+      "pinned_provider": 4,
+      "postgres17_6_valid": true
+    },
+    {
+      "case": "comment_separated_begin_atomic",
+      "expected_top_level_statements": 2,
+      "before": 3,
+      "after": 2,
+      "pinned_provider": 3,
+      "postgres17_6_valid": true
+    }
+  ],
+  "summary": {
+    "correctly_grouped_before": 0,
+    "correctly_grouped_after": 4,
+    "correctly_grouped_absolute_difference": 4,
+    "correctly_grouped_rate_before": 0,
+    "correctly_grouped_rate_after": 1,
+    "postgres17_6_accepted": 4,
+    "pinned_provider_correctly_grouped": 0,
+    "existing_reviewed_vector_parity": 4,
+    "existing_reviewed_vector_total": 4
+  }
+}

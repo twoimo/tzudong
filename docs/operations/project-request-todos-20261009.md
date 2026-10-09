@@ -15,7 +15,10 @@
 - 정확한 PostgreSQL 17.6에서 다섯 SQL의 단일 transaction, 중간·최종 불일치 rollback, G014와 guarded/manual/private 검증을 통과했다. 합성 전체 스키마 증빙이며 운영 적용이나 Storage API 물리 삭제 증빙은 아니다.
 - Preview OAuth·CSRF의 정확한 서버 origin, 오류 표시, GitHub 파이프라인 fallback을 수정했다. 관련 109개 검사·두 TypeScript 컴파일러 검사는 통과했다. 현재 수정 소스는 아직 배포되지 않았다.
 - Gemini 3.8 Flash schema control 실호출 1회는 HTTP 200·253 tokens였다. 영상 없는 제어 입력은 전체 영상 validator를 통과하지 않았으므로 영상 품질 완료나 비용 절감으로 세지 않는다.
-- 사용자 요청대로 `chatgpt-web/` 병렬 검토를 준비한다. CLI Web turn은 성공했지만 이 native V2 작업의 암호화 collaboration 전달은 거부됐다. 전역 feature·모델·큐를 바꾸지 않고 지원되는 별도 plaintext CLI 작업으로 전환 중이다. Astra는 새로 사용하지 않았다.
+- `chatgpt-web/gpt-6-sol high`와 `chatgpt-web/gpt-5.6-sol high`의 병렬 독립 검토2건과 GPT-6 Web의 출시 절차 추가 검토1건을 완료했다. native V2 암호화 전달 거부 후 별도 plaintext CLI를 사용했으며, 첫 SQL 파일 읽기는 자동 승인 검토에서 거절되어 고정 소스 입력으로 검토했다. 실제 psql transport와 DB target 결함을 수정·검증했고, 추적 manifest의 커밋 자기참조도 제거해 실제 Git readback 검사를 통과했다. 전역 feature·모델·큐를 바꾸지 않았으며 Astra는 새로 사용하지 않았다.
+
+- 후속 검토에서 실제 psql transport의 stdin/transaction 결함과 DB target 허용 범위를 수정했다. PG17.6의 두 실제 runner commit/rollback, 파서 경계4/4, 최종 다섯 SQL+user/audit forward의 단일 transaction·ACL·조회 bounds·audit fixture 검증을 통과했다. 운영 적용은 아직 하지 않았다.
+- 보안 공지에 따라 sharp0.35.5(librsvg2.63.2)와 source-map-js1.2.2로 최소 패치했다. 전체 npm audit 취약점0, 설치 버전·이미지 처리·관련14개 검사·production bundle/CSS 경계를 확인했다. 전체 웹 검사에서 찾은 Bun patch metadata와 source-only replay inventory fixture 누락도 수정했다. 최종 웹 검사3283통과·11건너뜀·0실패이며, clean-checkout PG15 generate와 새 커밋의 CI·보호 승격·실제 운영 적용은 남았다.
 
 증빙: `apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/`, `actual-five-stage-replay-20261009/`, `gemini-schema/wire-schema-acceptance-20261009/`.
 
@@ -24,7 +27,7 @@
 | 우선순위 | 작업 | 현재 상태 / 다음 조치 |
 | --- | --- | --- |
 | 1 | 관리자 저장·물리 파일 삭제·실패 복구 | 현재 스키마 atomic 승인·2연결 경합 검증 통과. Storage 8개 격리 시나리오 통과; managed 물리 삭제 admission은 미완료 |
-| 1 | 현재 운영 DB·배포·작업 큐·롤백 기준선 | 현재 운영 읽기 preflight 확인: ledger 80, 맛집 1,659건/해시 유지, 자동 검수 꺼짐, 대기 RPC 부재. 대기 SQL 4개 적용·배포·롤백 확인 필요 |
+| 1 | 현재 운영 DB·배포·작업 큐·롤백 기준선 | 현재 운영 읽기 preflight 확인: ledger 80, 맛집 1,659건/해시 유지, 자동 검수 꺼짐, 대기 RPC 부재. 다섯 SQL과 새 user/audit RPC forward의 순차 적용·배포·롤백 확인 필요 |
 | 1 | 크롤링→미디어→추출→평가→저장 최적화 | 증분·캐시·쿼터·병렬·배치 소스와 부분 측정 있음. 전체 공급자/운영 관측·품질 검증 필요 |
 | 1 | 검수 검색·페이지·전체 통계·상세·중복 경고 | 소스/로컬 증빙 있음. 운영 DB·실제 서비스에서 전체 의미 보존 확인 필요 |
 | 1 | Gemini 자동 분류·재검수·조건부 승인·자동 승인·보류 | 정책·원문·수동 수정·CAS·frozen target·중지/재개와 독립 정답 검증 필요 |

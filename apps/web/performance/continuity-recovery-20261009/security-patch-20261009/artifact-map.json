@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "scope": "two advisory patches; final npm/Bun graph and local checks",
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/README.md",
+      "bytes": 539,
+      "sha256": "dd9f34ca1847526d6c6195047bc7cc4dba9842d5b1c436932d23ae7fe3734c71"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/audit-after.json",
+      "bytes": 367,
+      "sha256": "a9d397f318d3c444e511b7dc518bb610c3b47c28f86a966b117eb78de6a54590"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/audit-all-after.json",
+      "bytes": 367,
+      "sha256": "a9d397f318d3c444e511b7dc518bb610c3b47c28f86a966b117eb78de6a54590"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/build-result.json",
+      "bytes": 911,
+      "sha256": "4e8d8eabf9ffbe6005ece6ce9675578709335eef8733b53ad588822e04d8aa7c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/lock-delta.json",
+      "bytes": 7109,
+      "sha256": "e9809995365326b825173b9a39724e8325113987d565d67f15a35f5a8692763a"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/runtime-checks.json",
+      "bytes": 804,
+      "sha256": "cbf21d47832141f30a56af0acaadf72685d0d6b4510c73167f4e5825d0873f1c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/security-patch-20261009/unit-checks.txt",
+      "bytes": 2165,
+      "sha256": "93718adafb0a6fbb6c532de4021d2d3c733ec9f6a084285fb92a4830a0b8d28d"
+    },
+    {
+      "path": "apps/web/package.json",
+      "bytes": 7675,
+      "sha256": "d271e307e944fca7aa8c354bf664733807ee6f03958de2ab05c2adf96fcd44be"
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "bytes": 503171,
+      "sha256": "ce2e7d9dee5cb837a77f504028452b5e04f9f96a3413bfa2e9a005fa5de7531d"
+    },
+    {
+      "path": "apps/web/bun.lock",
+      "bytes": 247903,
+      "sha256": "fd7434274c9ddf7b7d93df3a43ce6a06ba447a7da1e139c7971b0d6d6150eccf"
+    }
+  ]
+}

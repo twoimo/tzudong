@@ -53,6 +53,33 @@ _CONTRACTS = {'backend/supabase/migrations/20260906040116_admin_user_ids_catalog
                                                                                       'sql_sha256': '3a95ed40845582f62d8f404c509539eb35f2f82f841c6c91830a9c6a8921fb69'}}
 
 
+_CONTRACTS['backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql'] = {
+    'source': 'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql',
+    'bindings': {
+        'backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql': 'b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26',
+        'backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql': '4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00',
+        'backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql': 'b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf',
+        'backend/supabase/scripts/admin_management_group_plan.py': 'c640778e56ed2e2399fe5c26b35e8fe96a2ee3a02418eb371ac634a5199a5bf9',
+        'backend/supabase/scripts/advisor_successor_plan.py': 'cb5d84b85d09b8c89a1d88abdd142551930b33445bfda178b30f982015d83813',
+        'backend/supabase/scripts/g037_supabase_statement_vector.mjs': '398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd',
+        'backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py': 'ce83b548f2488be4e64f6f859e1a03466624303cb7aaf62dc866c75905cf9f76',
+    },
+    'disposition': 'verified-existing',
+    'receipt': {
+        'schema': 'admin-user-rpc-forward-source-replay-v1',
+        'source_sha256': 'b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26',
+        'accepted_source_sha256': '4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00',
+        'predecessor_sha256': 'b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf',
+        'disposition': 'already-present-contract-verified',
+        'read_only': True,
+        'operating_sql_executed': False,
+        'required_operating_server_version_num': 170006,
+        'required_operating_ledger_count': 85,
+    },
+    'sql_sha256': '1f59707fd6b1d8743fa2b69140728265f1d5ff76fb1fb5e495b64b8cc7a3daa7',
+}
+
+
 _CONTRACTS['backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql'] = {'source': 'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql',
  'bindings': {'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql': 'a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545',
               'backend/supabase/scripts/verify_g014_owner_final_replay.py': 'e2bf725020498cea26b18ae131f09c7b0f1ffed6918ce9302ff1d39ebdf7efef',

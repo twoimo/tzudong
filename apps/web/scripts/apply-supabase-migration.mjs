@@ -369,7 +369,53 @@ export function selectDirectDatabaseTransport(environment = process.env) {
   return { databaseUrl };
 }
 
-function runPsql(databaseUrl, query, singleTransaction) {
+export function psqlConnectionEnvironment(databaseUrl, environment = process.env) {
+  let target;
+  try {
+    target = new URL(databaseUrl);
+  } catch {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  if (!['postgres:', 'postgresql:'].includes(target.protocol) || target.hash) {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  const queryKeys = [...target.searchParams.keys()];
+  const sslModes = target.searchParams.getAll('sslmode');
+  if (queryKeys.some(key => key !== 'sslmode') || sslModes.length > 1) {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  let host;
+  let database;
+  let user;
+  let password;
+  try {
+    host = decodeURIComponent(target.hostname);
+    database = decodeURIComponent(target.pathname.slice(1));
+    user = decodeURIComponent(target.username);
+    password = decodeURIComponent(target.password);
+  } catch {
+    throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+  }
+  if (!host || !database) throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
+
+  const scoped = { ...environment };
+  for (const key of Object.keys(scoped)) {
+    if (/^PG[A-Z0-9_]+$/.test(key)) delete scoped[key];
+  }
+  scoped.PGHOST = host;
+  scoped.PGDATABASE = database;
+  if (target.port) scoped.PGPORT = target.port;
+  if (user) scoped.PGUSER = user;
+  if (password) scoped.PGPASSWORD = password;
+  if (sslModes[0]) scoped.PGSSLMODE = sslModes[0];
+  return scoped;
+}
+
+export function runPsql(databaseUrl, query, singleTransaction, {
+  environment = process.env,
+  psql = 'psql',
+  spawnImpl = spawnSync,
+} = {}) {
   const args = [
     '--no-psqlrc',
     '--set=ON_ERROR_STOP=1',
@@ -378,9 +424,10 @@ function runPsql(databaseUrl, query, singleTransaction) {
     '--no-align',
   ];
   if (singleTransaction) args.splice(1, 0, '--single-transaction');
-  args.push(databaseUrl);
-  const result = spawnSync('psql', args, {
+  args.push('--file=-');
+  const result = spawnImpl(psql, args, {
     encoding: 'utf8',
+    env: psqlConnectionEnvironment(databaseUrl, environment),
     input: `\\set VERBOSITY verbose\n${query}`,
     maxBuffer: 10 * 1024 * 1024,
   });
