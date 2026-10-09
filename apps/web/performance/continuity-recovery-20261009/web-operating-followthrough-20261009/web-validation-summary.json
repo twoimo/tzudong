@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "plaintext-parallel-web-review-readback",
+  "gitHead": "dd9fcfd291843c59ced8d3da55fcc04e09e82b2c",
+  "wrapper": "/Users/twoimo/.codex-router/evidence/native-v2-plaintext-reviews-20261009T1920KST/run-two-web-reviews.sh",
+  "runDirectory": "/Users/twoimo/.codex-router/evidence/native-v2-plaintext-reviews-20261009T1920KST/run-20261009T141112Z-27712",
+  "routingReadback": [
+    {
+      "model": "chatgpt-web/gpt-5.6-sol",
+      "target": "http://127.0.0.1:17841/v1/responses",
+      "routerLogLine": 8464
+    },
+    {
+      "model": "chatgpt-web/gpt-6-sol",
+      "target": "http://127.0.0.1:17841/v1/responses",
+      "routerLogLine": 8465
+    }
+  ],
+  "reviewA": {
+    "requestedModel": "chatgpt-web/gpt-6-sol",
+    "effort": "high",
+    "exit": 0,
+    "validationExit": 0,
+    "promptSha256": "9f709f50738810f475f67562f20fff34cb679d3e17910e81610c03aa01623f04",
+    "threadId": "01a12100-fc38-7cc1-b441-e4597a04d7d6",
+    "turnCompleted": true,
+    "turnFailed": false,
+    "modelToolInvocations": 0,
+    "eventTypes": {
+      "item.completed": 4,
+      "thread.started": 1,
+      "turn.completed": 1,
+      "turn.started": 1
+    },
+    "eventsSha256": "67151533c49cdaee56804e611c59c1bcc011590b204bfc290df2a52390e4c7da",
+    "finalSha256": "5c9ec70955dafcafee693ca2889a03048df5a599456cbe367dc7654137da3f24",
+    "stderrSha256": "a1311d26821425e8a401e4d5a43e708d9c47a1d9b9ab7fd086565bd8073f42a4"
+  },
+  "reviewB": {
+    "requestedModel": "chatgpt-web/gpt-5.6-sol",
+    "effort": "high",
+    "exit": 0,
+    "validationExit": 0,
+    "promptSha256": "0212bb1fe6d752daeba3a19c45aa1c3aaa05b7a8f0847896dd03c585cb43fe75",
+    "threadId": "01a12100-fc37-7492-b722-30dc7ffb2c4d",
+    "turnCompleted": true,
+    "turnFailed": false,
+    "modelToolInvocations": 0,
+    "eventTypes": {
+      "item.completed": 3,
+      "thread.started": 1,
+      "turn.completed": 1,
+      "turn.started": 1
+    },
+    "eventsSha256": "f65ad1133d337ffaed1eae66a6686d5b995aef0630b448279141efadd95604e5",
+    "finalSha256": "dc051d0c92e87c81f204948a995c3ca6fba0ffb9f2835e353f3afe39edd484b3",
+    "stderrSha256": "c7b79a9c94cc47a0b12ba3056d8714406e86443f73e0ff639a980f1891e9e12c"
+  },
+  "boundaries": {
+    "sharedWorktreeWrites": 0,
+    "hostedWrites": 0,
+    "modelToolInvocations": 0,
+    "automaticCliStartupMcpHandshake": "TradingView MCP authentication failed during CLI startup; it was not model-invoked and produced no operation/write.",
+    "firstAttempt": "Both plaintext routes started but ended turn.failed after bridge final-DOM streaming errors; raw evidence retained under raw/. Compact bounded retry is the completed result.",
+    "scope": "Frozen tracked public source at gitHead only; no live/hosted receipts."
+  }
+}

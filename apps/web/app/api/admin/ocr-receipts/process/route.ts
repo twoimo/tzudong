@@ -6,8 +6,8 @@ import { NextResponse } from 'next/server';
 import {
     downloadReviewVerification,
     REVIEW_VERIFICATION_BUCKET,
-    type ReviewVerificationBucket,
 } from '@/lib/reviews/private-verification';
+import { canDiscardReceiptReplacement } from '@/lib/ocr/receipt-replacement-reconciliation';
 import { buildReviewPhotoObjectPath, getOwnedReviewPhotoObjectPath } from '@/lib/review-photo-url';
 
 import {
@@ -493,29 +493,12 @@ async function removeReplacementObject(
     } catch { return false; }
 }
 
-async function removeOriginalReceiptObject(
-    storageAdmin: ReturnType<typeof getSupabaseStorageAdmin>,
-    bucket: ReviewVerificationBucket,
-    objectPath: string,
-): Promise<boolean> {
-    const storage = storageAdmin.from(bucket);
-    const separator = objectPath.lastIndexOf('/');
-    const directory = objectPath.slice(0, separator);
-    const filename = objectPath.slice(separator + 1);
-    try { await storage.remove([objectPath]); } catch { /* exact metadata readback below */ }
-    try {
-        const { data, error } = await storage.list(directory, { search: filename, limit: 100 });
-        return !error && data !== null && data.length < 100 && !data.some(item => item.name === filename);
-    } catch { return false; }
-}
-
 async function replaceReceiptWithCompressedObject(
     supabase: ReturnType<typeof getSupabaseAdmin>,
     storageAdmin: ReturnType<typeof getSupabaseStorageAdmin>,
     reviewId: string,
     oldStoredValue: string,
     oldObjectPath: string,
-    oldBucket: ReviewVerificationBucket,
     canonicalImage: Buffer,
 ): Promise<string> {
     const newObjectPath = buildReplacementReceiptObjectPath(oldObjectPath, reviewId);
@@ -575,11 +558,9 @@ async function replaceReceiptWithCompressedObject(
 
             if (!currentReadbackError && hasExpectedReplacementReadback(currentReadback, reviewId, newObjectPath)) {
                 databaseUpdated = true;
-            } else if (
-                definiteNoMatch
-                && !currentReadbackError
-                && hasExpectedReplacementReadback(currentReadback, reviewId, oldStoredValue)
-            ) {
+            } else if (canDiscardReceiptReplacement(
+                definiteNoMatch, Boolean(currentReadbackError), currentReadback, reviewId, newObjectPath,
+            )) {
                 if (!(await removeReplacementObject(storageAdmin, newObjectPath))) {
                     throw new OcrPersistenceError();
                 }
@@ -590,11 +571,9 @@ async function replaceReceiptWithCompressedObject(
             if (!databaseUpdated) throw new OcrPersistenceError();
         }
 
-        if (!(await removeOriginalReceiptObject(storageAdmin, oldBucket, oldObjectPath))) {
-            // The atomic queue retains the source bucket and key for a later
-            // owner/admin drain; do not erase that durable obligation.
-            throw new OcrPersistenceError();
-        }
+        // The authoritative review-media UPDATE enqueues the original. Only
+        // its durable retirement fence may remove it after all references end.
+        // A privileged direct removal here would break another legacy review.
         return newObjectPath;
     } catch {
         if (
@@ -699,7 +678,6 @@ export async function POST(request: Request) {
                 body.reviewId,
                 review.verification_photo,
                 receiptObjectPath,
-                receiptDownload.bucket,
                 canonicalStorageImage.bytes,
             );
         }

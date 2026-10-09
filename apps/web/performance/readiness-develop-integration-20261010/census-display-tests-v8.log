@@ -1,0 +1,22 @@
+bun test v1.4.0 (34cbb9a40)
+
+apps/web/tests-unit/tzuyang-review-display.test.ts:
+(pass) public Tzuyang review display > removes single and grouped source references without erasing sentences [0.16ms]
+(pass) public Tzuyang review display > handles case, whitespace, fractional seconds and compact lists [0.01ms]
+(pass) public Tzuyang review display > preserves meaningful dates, times, brackets and paragraph structure [0.02ms]
+(pass) public Tzuyang review display > cleans legacy wrappers and emphasis without erasing criticism or quantities [0.03ms]
+(pass) public Tzuyang review display > leaves source review identity, visit count inputs and video metadata intact [0.56ms]
+
+apps/web/tests-unit/restaurant-merged-media.test.ts:
+(pass) restaurant merged media helpers > collects every youtube video and tzuyang review from merged restaurant records [0.53ms]
+(pass) restaurant merged media helpers > feeds merged media counts into natural detail copy [0.21ms]
+(pass) restaurant merged media helpers > keeps distinct youtube metadata when different videos share the same title [0.04ms]
+(pass) restaurant merged media helpers > hydrates a fetched single detail row with the selected merge context [0.20ms]
+(pass) restaurant merged media helpers > keeps a known tzuyang review when the fetched row has an empty review [0.04ms]
+(pass) restaurant merged media helpers > collects tzuyang reviews stored as arrays or review objects [0.09ms]
+(pass) restaurant merged media helpers > pairs each tzuyang review with its video title and publish date [0.04ms]
+
+ 12 pass
+ 0 fail
+ 29 expect() calls
+Ran 12 tests across 2 files. [156.00ms]

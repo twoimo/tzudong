@@ -906,7 +906,9 @@ export default function StampPage() {
     const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
     const shouldShowStampFilters = isMounted && (!isMobileOrTablet || isFilterExpanded);
 
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
+    const hasReviewContinuation = searchParams?.get('writeReview') === '1'
+        || isReviewModalOpen;
+    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax && !hasReviewContinuation) return null;
 
     return (
         <>
@@ -1374,7 +1376,16 @@ export default function StampPage() {
             {isReviewModalOpen && (
                 <ReviewModal
                     isOpen={isReviewModalOpen}
-                    onClose={() => setIsReviewModalOpen(false)}
+                    onClose={() => {
+                        setIsReviewModalOpen(false);
+                        if (window.innerWidth > BREAKPOINTS.tabletMax && reviewContinuationHandled.current) {
+                            reviewContinuationHandled.current = null;
+                            const parameters = new URLSearchParams(window.location.search);
+                            parameters.delete('writeReview');
+                            const redirectPath = buildDesktopStampHomeRedirectPath(parameters.toString());
+                            if (redirectPath) router.replace(redirectPath);
+                        }
+                    }}
                     restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
                     onSuccess={() => {
                         queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });

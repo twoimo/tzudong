@@ -1424,7 +1424,7 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply 'registration-pg15-replay-window' "$registration_replay"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$registration_replay"
       ;;
-    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
+    20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
       storyboard_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_storyboard_history_replay.py" \
         --source "$migration" --bundle "$g026_bundle" --output "$storyboard_replay"

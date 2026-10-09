@@ -484,15 +484,15 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
 
     def test_manifest_contains_exactly_current_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 130)
-        self.assertEqual(len(manifest["source"]["files"]), 130)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 132)
+        self.assertEqual(len(manifest["source"]["files"]), 132)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
-            "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+            "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
         )
         self.assertEqual(
             manifest["source"]["files"][-1]["transaction"]["class"],
-            "self_committing",
+            "transactional",
         )
 
     def test_receipt_ledger_rejects_missing_extra_or_changed_current_units(self) -> None:
@@ -514,7 +514,9 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
             elif mutation == "checksum":
                 changed[-1][3] = "0" * 64
             elif mutation == "status":
-                changed[-1][6] = "verified-existing"
+                changed[-1][6] = (
+                    "applied" if changed[-1][6] != "applied" else "verified-existing"
+                )
             else:
                 changed[-1][7] = "0" * 64
             with self.subTest(mutation=mutation):

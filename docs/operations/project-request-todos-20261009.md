@@ -9,11 +9,11 @@
 
 ## 2026-10-09 현재 실행 갱신
 
-- PR #3099가 `develop`의 `614b249175c35636a7062bf05cb01ebad538b10d`로 합쳐졌다. PR #3150의 커밋 `8571b65b5e8079d2f238389aaf68f41740aa170e`는 CI 통과 후 후속 수정 중이며, `data`·`main` 승격과 운영 적용은 아직 하지 않았다.
+- PR #3150은 `develop`의 `a3c30cdb379f4bfe930a355bbe13175958d98aef`로, PR #3151은 `data`의 `8087fd994bc8ac8f603797a4e2a655ef203e5af0`로 병합됐다. 기존 main의 병합 이력을 포함하도록 파일 변경 0건/tree 동일성을 확인한 PR #3154·#3155를 거쳐 현재 develop은 `671d9ca1ee88c484674087c6640732b7de6ac5b2`, data는 `ea67d5273dbe3a95754d4e390b80d43cf8707b00`다. main PR #3153에는 실제 missing-RPC fallback 검토를 수정한 소스를 추가 승격해야 한다. 운영 SQL 적용은 아직 0회다.
 - `tzudong`의 `preview/develop`에 기존 검증된 서버 키를 1회 설정하고 같은 SHA를 1회 재배포했다. 배포 `dpl_DRLjCuw7iGP8pH1ZwyMtvqjXAmuE`의 READY·SHA·프로젝트를 확인했다. 실제 인증 GET 6개가 500/503에서 200으로 복구됐다. 이는 기능 복구 증빙이며 성능·오류율 실험이 아니다.
 - 현재 Preview의 맛집은 전체 1,659건·표시 50건이며 자동 운영은 중지 상태다. 사용자 관리·감사 로그에는 세 RPC가 부재하므로 새 forward migration을 준비한다. 이전 ledger 52용 SQL을 현재 ledger 80에 그대로 실행하지 않는다.
 - 정확한 PostgreSQL 17.6에서 다섯 SQL의 단일 transaction, 중간·최종 불일치 rollback, G014와 guarded/manual/private 검증을 통과했다. 합성 전체 스키마 증빙이며 운영 적용이나 Storage API 물리 삭제 증빙은 아니다.
-- Preview OAuth·CSRF의 정확한 서버 origin, 오류 표시, GitHub 파이프라인 fallback을 수정했다. 관련 109개 검사·두 TypeScript 컴파일러 검사는 통과했다. 현재 수정 소스는 아직 배포되지 않았다.
+- Preview OAuth·CSRF의 정확한 서버 origin, 오류 표시, GitHub 파이프라인 fallback을 수정했다. develop `671d9ca1`의 실제 배포 `dpl_DMwYPnHVDRtr5oWNXu8VaxTi8tHo`가 READY임을 확인했다. 승인된 exact callback 한 개만 Supabase에 추가하고 새로고침 후 기존 Site URL·주소 5개 보존과 전체 6개를 확인했다. 기존 Google 관리자 계정의 Preview 사용자 관리 복귀가 성공했다. 사용자 목록 RPC 부재와 실제 저장 검증은 별도 미완료다.
 - Gemini 3.8 Flash schema control 실호출 1회는 HTTP 200·253 tokens였다. 영상 없는 제어 입력은 전체 영상 validator를 통과하지 않았으므로 영상 품질 완료나 비용 절감으로 세지 않는다.
 - `chatgpt-web/gpt-6-sol high`와 `chatgpt-web/gpt-5.6-sol high`의 병렬 독립 검토2건과 GPT-6 Web의 출시 절차 추가 검토1건을 완료했다. native V2 암호화 전달 거부 후 별도 plaintext CLI를 사용했으며, 첫 SQL 파일 읽기는 자동 승인 검토에서 거절되어 고정 소스 입력으로 검토했다. 실제 psql transport와 DB target 결함을 수정·검증했고, 추적 manifest의 커밋 자기참조도 제거해 실제 Git readback 검사를 통과했다. 전역 feature·모델·큐를 바꾸지 않았으며 Astra는 새로 사용하지 않았다.
 
@@ -695,3 +695,14 @@ Gemini의 최소 flat structured control은 model match·schema validation·vide
 M5는 13,185 bytes/SHA256 `b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da`, vector13/SHA256 `c7b5ae6c7c64b00a31658bbf42165dd9e25ac41f794a1149c62d47f39cf33f4d`다. 후속 SQL은 새 M5 함수 preimage를 반영한 `2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae`다. 이전 raw proof는 유지했고 새 증빙은 `five-plus-admin-user-rpc-forward-m5-pagination-amendment-20261009/`에 분리했다.
 
 Five-stage 11개 private receipt와 forward prior-state receipt의 실제 canonical bytes·해시·project/revision/state·freshness를 확인하고 실제 origin/main과 clean detached checkout을 비교하도록 보완했다. 기본 launch는 held다. 별도로 넓은 publication/runtime 81개 묶음에서 failure2/error37의 기존 frozen closure·count drift가 관측돼 원시 로그와 기준선 대조를 남긴다. 이 결과를 통과로 표시하거나 frozen 조건을 완화하지 않는다.
+
+## 추가 Web 병렬 검토와 실제 로그인 복구
+
+- `chatgpt-web/gpt-6-sol` High·`chatgpt-web/gpt-5.6-sol` High를 독립 plaintext CLI로 병렬 실행해 두 턴의 완료와 실제 Web 경로를 확인했다. 최초 final-DOM 실패 2건은 보존했고 입력을 줄인 1회 재실행에서 두 리뷰가 완료됐다. 모델 도구·운영 쓰기 0회이며 새 Astra·유료 용량을 추가하지 않았다. 보고서는 고정 공개 소스 검토이며 실제 운영 완료 증빙이 아니다.
+- Preview Redirect URLs는 5→6개(+1개), 기존 Site URL과 5개 주소는 전부 유지했다. 실제 Google 관리자 로그인 후 branch Preview의 `/admin?module=users` 복귀를 확인했다. 맛집·제보·리뷰·배너 화면은 로그인된 실제 읽기 probe에서 각각 일관된 페이지 헤더와 고정 조회 오류 부재를 확인했다. 사용자 목록은 여전히 unavailable 상태다. 조회 화면 검증은 저장·삭제·승인 검증을 대신하지 않는다.
+- PR #3153에서 발견된 raw-warning RPC 부재 경로는 기존 집계 RPC 1회로 전환했다. 이전 이론적 콜드 캐시 최대 255회→5회(차이 -250회, 상한 감소 98.04%), compatibility 행 전송 최대 50,000→0행이다. 관련 fixture는 300행 전체 경고 동등성과 range 요청 0을 확인했다. 고정 상한이므로 표본 신뢰구간 적용 대상이 아니며 실제 운영 지연·금액·쿼타 절감을 주장하지 않는다.
+- production callback 설정은 HTTPS origin·userinfo·custom port·path/query/fragment 검증을 추가했다. 유효한 설정, Preview alias와 로컬 loopback 동작은 보존했다.
+- local publication의 126개 고정값을 실제 129개 canonical migration에 맞췄다. closure 후보 107개뿐 아니라 전체 집합 해시 `d42754ee0c8e79c7f970072c87dbf96831ba505ff22441e298ca56b211c74884`도 함께 고정한다. 이전 failure2/error37 기록을 보존하고 수정 후 publication/runtime 81/81 통과를 별도 증빙으로 남겼다. fresh closure apply/rescan/smoke 영수증 부재와 운영 launch held는 유지한다.
+- root의 현재 영향받은 검사: auth/same-origin43, nightly30, seed21, page server19 = 고유113개 통과. TypeScript native/compat parity diagnostics0·logical inputs3,134, auth ESLint와 소유 변경의 diff check 통과. agent가 별도로 publication/runtime81, evaluation/normalization24를 확인했으며 중복 합산하지 않는다. 새 source 수정은 아직 배포되지 않았다.
+
+현재 운영 PostgreSQL170006·ledger80/latest20261008124858·맛집1,659건이다. 이번 후속의 Auth 설정 쓰기1회 외 운영 SQL·Storage 삭제·추가 충전·신규 Gemini inference는 0회다. 증빙: `continuity-recovery-20261009/web-operating-followthrough-20261009/`.

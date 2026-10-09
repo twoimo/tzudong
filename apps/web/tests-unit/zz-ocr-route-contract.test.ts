@@ -587,7 +587,7 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).toContain('downloadReviewVerification(storageAdmin, receiptObjectPath)');
     expect(processRouteSource).toContain(".eq('verification_photo', oldStoredValue)");
     expect(processRouteSource).toContain('the authoritative review-media UPDATE');
-    expect(processRouteSource).toContain('removeOriginalReceiptObject(storageAdmin, oldBucket, oldObjectPath)');
+    expect(processRouteSource).not.toContain('removeOriginalReceiptObject');
     expect(processRouteSource).not.toContain('getPublicUrl');
     expect(processRouteSource).not.toContain('publicUrl');
     expect(processRouteSource).not.toContain('fetch(');
@@ -663,7 +663,6 @@ describe('OCR extract route privacy and normalization contract', () => {
       'const uploadedImage = await downloadPrivateReceiptObject',
     );
     const conditionalUpdateIndex = replacementSource.indexOf(".eq('verification_photo', oldStoredValue)");
-    const oldDeleteIndex = replacementSource.indexOf('removeOriginalReceiptObject(storageAdmin, oldBucket, oldObjectPath)');
 
     expect(processRouteSource).toContain('canonicalStorageImage.bytes.byteLength < downloadedImage.bytes.byteLength');
     expect(processRouteSource).toContain('assertSafeReceiptObjectPath(receiptObjectPath)');
@@ -672,7 +671,8 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(uploadIndex).toBeGreaterThanOrEqual(0);
     expect(verifyIndex).toBeGreaterThan(uploadIndex);
     expect(conditionalUpdateIndex).toBeGreaterThan(verifyIndex);
-    expect(oldDeleteIndex).toBeGreaterThan(conditionalUpdateIndex);
+    expect(replacementSource).not.toContain('removeOriginalReceiptObject');
+    expect(replacementSource).toContain('durable retirement fence');
     for (const failureBoundary of [
       'uploadError',
       'uploadedImage.bytes.equals(canonicalImage)',
@@ -680,7 +680,7 @@ describe('OCR extract route privacy and normalization contract', () => {
       'currentReadbackError',
       'removeReplacementObject(storageAdmin, newObjectPath)',
       'replacementStateIndeterminate',
-      'removeOriginalReceiptObject(storageAdmin, oldBucket, oldObjectPath)',
+      'canDiscardReceiptReplacement(',
     ]) {
       expect(replacementSource).toContain(failureBoundary);
     }

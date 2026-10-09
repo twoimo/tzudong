@@ -1086,11 +1086,11 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_130_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 130)
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 130)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 130)
-        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 130)
+    def test_publication_uses_the_current_132_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 132)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 132)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 132)
+        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 132)
     def test_publication_rejects_review_media_catalog_counts_even_with_matching_total(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -1135,7 +1135,7 @@ complete_lifecycle_stage
             summary = payloads["local-migration-summary.json"]
             manifest = payloads["local-migration-manifest.json"]
             proofs = summary["replay_proofs"]
-            first, second, _ = sorted(proofs)
+            first, second, *_ = sorted(proofs)
             cases = [None, {}, {key: value for key, value in proofs.items() if key != first},
                      {**proofs, "unrecognized.sql": proofs[first]},
                      {**proofs, first: proofs[second]},

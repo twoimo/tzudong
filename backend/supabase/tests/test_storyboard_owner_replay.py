@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 from backend.supabase.scripts.transform_storyboard_owner_replay import transform, PREFIX, SUFFIX, SOURCE_NAME, SOURCE_BINDINGS
 
@@ -30,6 +31,12 @@ class StoryboardOwnerReplayTests(unittest.TestCase):
         self.assertIn('transform_storyboard_owner_replay.py',case)
         self.assertIn('storyboard-owner-lease-replay:',case)
         self.assertIn('ON_ERROR_STOP=1',case)
+        # Earlier alternatives previously shadowed this branch even though
+        # the transformer and its own source tests passed.
+        alternatives = re.findall(r'^\s+([^\n]+\.sql)\)\s*$', source, re.M)
+        for name in SOURCE_BINDINGS:
+            matches = [row for row in alternatives if name in row.split('|')]
+            self.assertEqual(len(matches), 1, name)
         workflow=(ROOT/'.github/workflows/g014-catalog-contract-baseline.yml').read_text()
         self.assertIn('backend/supabase/tests/test_storyboard_owner_replay.py',workflow)
         self.assertIn('backend.supabase.tests.test_storyboard_owner_replay',workflow)

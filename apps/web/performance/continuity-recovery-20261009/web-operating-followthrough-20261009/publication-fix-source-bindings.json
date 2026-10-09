@@ -1,0 +1,95 @@
+{
+  "changedSources": [
+    {
+      "afterSha256": "bafa8fcb2d6e425f6a10e4391342b623dc68c1a4cc903781691b8a94be7de4bb",
+      "beforeSha256": "3a4994844f24f49afb783bee8958a3dda11b7ea6202b9ceaccecba4af86e8095",
+      "bytes": 203640,
+      "path": "backend/supabase/scripts/local-migrate.py",
+      "trackedOldHashReferences": []
+    },
+    {
+      "afterSha256": "d293cb0103292ee116bb8a2285ba33e87958f2f309a37d8d3b4e06cd2f27bf58",
+      "beforeSha256": "7b136682a42f413cfae54093683106835159502d96dd3d457ee57622d8743790",
+      "bytes": 50065,
+      "path": ".github/scripts/verify-nightly-local-publication.py",
+      "trackedOldHashReferences": []
+    },
+    {
+      "afterSha256": "5cf5a648791955d2673ebc6931325aeae1c89cd03767acb8e310d6d8821c3c11",
+      "beforeSha256": "4ba616185ecae27501329a5782c3fe8ac7ceaf39a261c9304b1a8254e786b87c",
+      "bytes": 15253,
+      "path": ".github/scripts/build-nightly-local-publication.py",
+      "trackedOldHashReferences": []
+    },
+    {
+      "afterSha256": "13b995ef40f823a7570dab905ff3a6602e30311688508605de304a399441132f",
+      "beforeSha256": "1096de1f4663aafd7e53b8acec268519e140460abce7f3c0627790aac8bee7cf",
+      "bytes": 71719,
+      "path": "backend/supabase/tests/test_local_publication_verifier.py",
+      "trackedOldHashReferences": []
+    },
+    {
+      "afterSha256": "72631cc6f0a2fb57d0dcd2c8579fcc12fd597908b0638ce1dae7a9144cbe33ce",
+      "beforeSha256": "7f99ca87deec6b68c1f70988bdf559e52e9b103fdb13044c5c5e44e5d5aa5376",
+      "bytes": 24809,
+      "path": "backend/supabase/tests/test_local_function_runtime_contract.py",
+      "trackedOldHashReferences": [
+        "HEAD:apps/web/performance/continuity-recovery-20261009/followup-delivery-audit-20261009/source-bindings.json:32:    {\"path\":\"backend/supabase/tests/test_local_function_runtime_contract.py\",\"bytes\":24471,\"sha256\":\"7f99ca87deec6b68c1f70988bdf559e52e9b103fdb13044c5c5e44e5d5aa5376\"},",
+        "HEAD:apps/web/performance/continuity-recovery-20261009/followup-delivery-checks-20261009/final-source-bindings.json:131:      \"sha256\": \"7f99ca87deec6b68c1f70988bdf559e52e9b103fdb13044c5c5e44e5d5aa5376\""
+      ]
+    }
+  ],
+  "closureCandidates": {
+    "candidateSetSha256": "d42754ee0c8e79c7f970072c87dbf96831ba505ff22441e298ca56b211c74884",
+    "count": 107,
+    "reasonCounts": {
+      "missing_search_path": 92,
+      "trusted_extension_omitted": 15
+    },
+    "uniqueCount": 107
+  },
+  "constants": {
+    ".github/scripts/build-nightly-local-publication.py": 129,
+    ".github/scripts/verify-nightly-local-publication.py": 129,
+    "backend/supabase/scripts/local-migrate.py": 129
+  },
+  "kind": "nightly-local-ledger-and-closure-static-binding",
+  "manifest": {
+    "chainSha256": "7db104448ece577587931787fe464e75daa83ce776e422d4978e055908da9d09",
+    "last": {
+      "byteLength": 40392,
+      "ordinal": 129,
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae",
+      "transaction": {
+        "class": "transactional",
+        "hasBegin": false,
+        "hasCommit": false,
+        "hasRollback": false,
+        "hasSavepoint": false,
+        "tokens": []
+      }
+    },
+    "ledgerCount": 129,
+    "manifestSha256": "a51cd6f7f68d0a2973481fbd86858c87aed7ae12c28619877b44a001f3693a03",
+    "migrationCount": 129,
+    "ordinalsContinuous": true,
+    "replayProofPaths": [
+      "backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql",
+      "backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql"
+    ],
+    "uniquePaths": 129
+  },
+  "observedAt": "2026-10-09T14:24:44.390029Z",
+  "revision": "671d9ca1ee88c484674087c6640732b7de6ac5b2",
+  "runtimeBoundary": {
+    "freshClosureApplyReceiptPresent": false,
+    "freshClosureRescanReceiptPresent": false,
+    "freshClosureSmokeReceiptPresent": false,
+    "operatingHoldRequired": true
+  },
+  "schemaVersion": 1,
+  "tree": "1efc0ab666aadcfd52ce1047007001436d07fb5c"
+}

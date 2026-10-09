@@ -179,6 +179,9 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
     const [cleanupFailureMessage, setCleanupFailureMessage] = useState<string | null>(null);
     useEffect(() => {
+        // The pending operation holds its original owner and operation UUID.
+        // Account transitions must not discard an uncertain commit receipt.
+        if (mutationRef.current?.pending) return;
         mutationRef.current = new ReviewMediaMutation(createReviewMediaDependencies(supabase, () => ownerRef.current, compressFoodImage));
         setRetryKind(null);
         setCanCancelMissingUpload(false);
